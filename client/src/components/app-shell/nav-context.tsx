@@ -12,11 +12,7 @@ interface NavContextItem {
   link: React.ReactElement;
 }
 
-export function NavContext({
-  items,
-}: {
-  items: NavContextItem[];
-}) {
+export function NavContext({ items }: { items: NavContextItem[] }) {
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Folders</SidebarGroupLabel>
@@ -26,7 +22,9 @@ export function NavContext({
             <SidebarMenuButton render={item.link} size="sm">
               <span>{item.title}</span>
               {typeof item.count === "number" ? (
-                <span className="ml-auto text-xs text-sidebar-foreground/40">{item.count}</span>
+                <span className="ml-auto text-xs text-sidebar-foreground/40">
+                  {item.count}
+                </span>
               ) : null}
             </SidebarMenuButton>
           </SidebarMenuItem>

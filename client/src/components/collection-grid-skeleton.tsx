@@ -12,8 +12,8 @@ export function CollectionGridSkeleton() {
             className="overflow-hidden rounded-lg border bg-sidebar"
           >
             <div className="relative flex aspect-3/2 items-center justify-center overflow-hidden bg-sidebar/50">
-              <div className="absolute h-3/5 w-3/5 translate-x-1 translate-y-2 rotate-[2deg] rounded-xl bg-muted/50" />
-              <div className="absolute h-3/5 w-3/5 -translate-x-1 -translate-y-1 rotate-[-2deg] rounded-xl bg-muted/80" />
+              <div className="absolute h-3/5 w-3/5 translate-x-1 translate-y-2 rotate-2 rounded-xl bg-muted/50" />
+              <div className="absolute h-3/5 w-3/5 -translate-x-1 -translate-y-1 -rotate-2 rounded-xl bg-muted/80" />
             </div>
             <div className="flex items-center gap-2 bg-sidebar/60 px-3 py-2.5">
               <Skeleton className="size-4 shrink-0 rounded-sm" />

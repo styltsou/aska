@@ -1,8 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 const masonrySkeletonHeights = [
-  260, 132, 190, 300, 170, 224, 150, 260, 210, 300, 170, 224, 280, 190, 244,
-  170, 260, 210, 132, 224, 180, 280, 190, 244,
+  260, 132, 190, 300, 170, 224, 150, 260, 210, 300, 170, 224,
 ];
 
 export function MasonryGridSkeleton() {
@@ -26,7 +25,10 @@ export function MasonryGridSkeleton() {
 
           if (isFolder) {
             return (
-              <div key={i} className="overflow-hidden rounded-lg border bg-sidebar">
+              <div
+                key={i}
+                className="overflow-hidden rounded-lg border bg-sidebar"
+              >
                 <div className="grid grid-cols-2 gap-3 p-3">
                   <Skeleton className="aspect-square rounded-sm" />
                   <Skeleton className="aspect-square rounded-sm" />

@@ -11,15 +11,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CreateWorkspaceDialog } from "@/components/app-shell/create-workspace-dialog";
+import { authClient } from "@/lib/auth-client";
+import { setActiveWorkspace } from "@/lib/auth-flow";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 
-const workspaces = [
-  { name: "Personal", plan: "Pro", initial: "P" },
-  { name: "Design Studio", plan: "Team", initial: "D" },
-  { name: "Client Work", plan: "Free", initial: "C" },
-];
+function workspaceInitial(name: string) {
+  return name.charAt(0).toUpperCase();
+}
 
 export function WorkspaceSwitcher() {
-  const [active, setActive] = useState(workspaces[0]);
+  const navigate = useNavigate();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const workspaceSlug = pathname.split("/")[1] || "";
+  const { data, isPending } = authClient.useListOrganizations();
+  const workspaces = data ?? [];
+  const active =
+    workspaces.find((workspace) => workspace.slug === workspaceSlug) ??
+    workspaces[0];
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   return (
     <SidebarMenu>
@@ -29,28 +42,30 @@ export function WorkspaceSwitcher() {
             render={(triggerProps) => (
               <div
                 {...triggerProps}
-                className="flex h-12 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-sm outline-none transition-colors duration-150 hover:bg-sidebar-hover hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring data-open:bg-sidebar-active data-open:text-sidebar-accent-foreground"
+                className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-sm transition-colors duration-150 outline-none hover:bg-sidebar-hover hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring aria-expanded:bg-sidebar-active aria-expanded:text-sidebar-accent-foreground"
               >
-                <Avatar
-                  size="sm"
-                  className="rounded-md after:rounded-md"
-                >
-                  <AvatarFallback className="rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-xs font-semibold">
-                    {active.initial}
+                <Avatar size="sm" className="rounded-md after:rounded-md">
+                  <AvatarFallback className="rounded-md bg-foreground text-xs font-semibold text-background">
+                    {active ? workspaceInitial(active.name) : ""}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{active.name}</span>
-                  <span className="truncate text-xs text-sidebar-foreground/50">{active.plan}</span>
+                  {isPending ? (
+                    <Skeleton className="h-4 w-20" />
+                  ) : (
+                    <span className="truncate font-medium">
+                      {active?.name ?? "Workspace"}
+                    </span>
+                  )}
                 </div>
-                <ChevronsUpDownIcon className="ml-auto size-4 text-sidebar-foreground/50" />
+                <ChevronsUpDownIcon className="ml-auto size-4" />
               </div>
             )}
           />
           <DropdownMenuContent
             className="w-80 rounded-lg"
             align="end"
-            side="bottom"
+            side="right"
             sideOffset={4}
             style={{ backdropFilter: "blur(4px) saturate(1.5)" }}
           >
@@ -61,31 +76,45 @@ export function WorkspaceSwitcher() {
               {workspaces.map((w) => (
                 <DropdownMenuItem
                   key={w.name}
-                  className="cursor-pointer gap-2 transition-colors duration-150"
-                  onClick={() => setActive(w)}
+                  className="cursor-pointer gap-2 py-1.5 transition-colors duration-150"
+                  onClick={async () => {
+                    await setActiveWorkspace(w);
+                    void navigate({
+                      to: "/$workspaceSlug",
+                      params: { workspaceSlug: w.slug },
+                    });
+                  }}
                 >
                   <Avatar
                     size="sm"
-                    className="rounded-md after:rounded-md"
+                    className="rounded-md after:rounded-md data-[size=sm]:size-5"
                   >
-                    <AvatarFallback className="rounded-md bg-sidebar-primary !text-sidebar-primary-foreground text-xs font-semibold">
-                      {w.initial}
+                    <AvatarFallback className="rounded-md bg-foreground text-[10px] font-semibold text-background group-focus/dropdown-menu-item:text-background!">
+                      {workspaceInitial(w.name)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{w.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">{w.plan}</span>
                   </div>
-                  {w.name === active.name && <CheckIcon className="size-4" />}
+                  {w.id === active?.id && <CheckIcon className="size-4" />}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer gap-2 transition-colors duration-150">
-              <PlusIcon className="size-4" />
+            <DropdownMenuItem
+              className="cursor-pointer gap-2 py-1.5 transition-colors duration-150"
+              onClick={() => setIsCreateOpen(true)}
+            >
+              <div className="flex size-5 items-center justify-center">
+                <PlusIcon className="size-4" />
+              </div>
               <span>New workspace</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
+          <CreateWorkspaceDialog
+            open={isCreateOpen}
+            onOpenChange={setIsCreateOpen}
+          />
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>

@@ -1,0 +1,1817 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Aska API",
+    "summary": "Backend API for Aska's visual workspace and archive.",
+    "description": "Aska is a multi-tenant visual workspace. Workspaces contain collections, folders, and assets such as images and notes. Assets can be organised within collection folder trees or live in the inbox (unplaced).\n\nAll endpoints under `/api/v1` require authentication via `authMiddleware`. The authenticated session must belong to the workspace's organisation.",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "System",
+      "description": "Health checks and API metadata."
+    },
+    {
+      "name": "Session",
+      "description": "Current authenticated user session."
+    },
+    {
+      "name": "Workspaces",
+      "description": "Workspace metadata and collection listing."
+    },
+    {
+      "name": "Collections",
+      "description": "Collection CRUD, folder tree navigation, and node (folder/asset) deletion."
+    },
+    {
+      "name": "Assets",
+      "description": "Inbox contents, note creation, asset placement and permanent deletion."
+    },
+    {
+      "name": "Image Uploads",
+      "description": "Direct upload (presigned URL) and remote URL ingestion for images, scoped to a collection or the inbox."
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": ["System"],
+        "summary": "Check server health",
+        "responses": {
+          "200": {
+            "description": "The server is running.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiDocument",
+        "tags": ["System"],
+        "summary": "Get the OpenAPI document",
+        "responses": {
+          "200": {
+            "description": "The source-controlled OpenAPI specification.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "getCurrentSession",
+        "tags": ["Session"],
+        "summary": "Get current authenticated session",
+        "description": "Returns the authenticated user's session, user object, and the ID of the organisation they are currently acting within.",
+        "responses": {
+          "200": {
+            "description": "The current session and user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}": {
+      "get": {
+        "operationId": "getWorkspaceWithCollections",
+        "tags": ["Workspaces"],
+        "summary": "Get workspace and light collection list",
+        "description": "Returns workspace metadata together with a lightweight list of its collections (id, name, slug, asset count).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workspace and light collection list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceWithCollectionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections": {
+      "get": {
+        "operationId": "getCollections",
+        "tags": ["Workspaces"],
+        "summary": "Get detailed collection list",
+        "description": "Returns detailed collection records including descriptions, timestamps, asset counts, and preview thumbnails.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detailed collection list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createCollection",
+        "tags": ["Collections"],
+        "summary": "Create a collection",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The collection was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateCollectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/folders": {
+      "post": {
+        "operationId": "createFolder",
+        "tags": ["Collections"],
+        "summary": "Create a folder in a collection",
+        "description": "Creates a new folder at the root of the collection or within a parent folder specified by `parentFolderPath`.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CollectionSlug"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFolderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The folder was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateFolderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/notes": {
+      "post": {
+        "operationId": "createNote",
+        "tags": ["Collections"],
+        "summary": "Create a note in a collection",
+        "description": "Creates a text note asset directly inside a collection, optionally nested within a folder subtree via `parentFolderPath`.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CollectionSlug"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The note was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateNoteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/contents": {
+      "get": {
+        "operationId": "getCollectionContents",
+        "tags": ["Collections"],
+        "summary": "Get collection contents at a folder path",
+        "description": "Returns the breadcrumb trail and child nodes (folders, images, notes) at the specified folder path within a collection. Omit `folderPath` to list the collection root.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CollectionSlug"
+          },
+          {
+            "name": "folderPath",
+            "in": "query",
+            "required": false,
+            "description": "Slash-separated folder path relative to the collection root, e.g. `designs/2024`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The collection contents at the requested path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionContentsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/nodes/{nodeId}": {
+      "delete": {
+        "operationId": "deleteCollectionNode",
+        "tags": ["Collections"],
+        "summary": "Delete a node (folder or asset) from a collection",
+        "description": "Deletes a node from the collection tree.\n\n- **Folder**: recursively deletes the folder, all descendant folders, and all descendant assets (including their R2 storage objects).\n- **Asset**: removes the asset node from the collection. The asset is **not** permanently deleted — it becomes an orphaned inbox asset. Use `DELETE /assets/{assetId}` for permanent deletion.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CollectionSlug"
+          },
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "description": "Node identifier in the form `{kind}-{id}`, e.g. `folder-42` or `image-7`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(folder|image|note)-\\d+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The node was deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteNodeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/inbox": {
+      "get": {
+        "operationId": "getInboxContents",
+        "tags": ["Assets"],
+        "summary": "Get inbox contents",
+        "description": "Returns all assets (images and notes) that are not placed in any collection. This is the default landing view for orphaned assets.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Inbox contents.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionContentsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/inbox/notes": {
+      "post": {
+        "operationId": "createInboxNote",
+        "tags": ["Assets"],
+        "summary": "Create a note in the inbox",
+        "description": "Creates a text note asset in the inbox (unplaced). The note can later be moved to a collection via the placement endpoint.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The note was created in the inbox.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateNoteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/assets/{assetId}": {
+      "delete": {
+        "operationId": "deleteAsset",
+        "tags": ["Assets"],
+        "summary": "Permanently delete an asset",
+        "description": "Permanently deletes the asset, its metadata, and its associated R2 storage objects (original image, display variant, preview variant, and upload object). This action cannot be undone.\n\nTo only remove an asset from a collection without deleting it, use `DELETE /collections/{slug}/nodes/{nodeId}` instead.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "description": "Asset identifier in the form `{kind}-{id}`, e.g. `image-42` or `note-17`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(image|note)-\\d+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The asset was permanently deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAssetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/assets/{assetId}/placements": {
+      "post": {
+        "operationId": "placeAsset",
+        "tags": ["Assets"],
+        "summary": "Place an inbox asset into a collection",
+        "description": "Moves an asset from the inbox into a collection at the specified folder path. If the asset already belongs to a collection, it is moved (only one placement is allowed per asset).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "description": "Asset identifier in the form `{kind}-{id}`, e.g. `image-42`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(image|note)-\\d+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceAssetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The asset was placed in the collection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceAssetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/images/uploads": {
+      "post": {
+        "operationId": "createDirectImageUpload",
+        "tags": ["Image Uploads"],
+        "summary": "Initiate a direct image upload to a collection",
+        "description": "Generates a presigned PUT URL for uploading an image file directly to R2 object storage scoped to a collection. R2 creation events start asynchronous processing; poll the upload status endpoint after the PUT succeeds.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CollectionSlug"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateImageUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload session created. Upload the file to the returned `url` via PUT with the returned `headers`, then poll the upload status endpoint.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateImageUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/images/uploads/{uploadId}": {
+      "get": {
+        "operationId": "getDirectImageUploadStatus",
+        "tags": ["Image Uploads"],
+        "summary": "Get direct upload status",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CollectionSlug"
+          },
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current asynchronous upload status. Includes the image node after completion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageUploadStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/images/remote": {
+      "post": {
+        "operationId": "createImageFromRemoteUrl",
+        "tags": ["Image Uploads"],
+        "summary": "Import an image from a remote URL into a collection",
+        "description": "Downloads an image from a remote URL into R2 and returns an asynchronous upload status. The Worker generates variants and creates the image asset.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CollectionSlug"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRemoteImageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The remote image was accepted for asynchronous processing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageUploadStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/inbox/images/uploads": {
+      "post": {
+        "operationId": "createInboxDirectImageUpload",
+        "tags": ["Image Uploads"],
+        "summary": "Initiate a direct image upload to the inbox",
+        "description": "Same as `createDirectImageUpload` but scoped to the inbox. R2 creation events start asynchronous processing, and the completed asset will appear in the inbox.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateImageUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload session created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateImageUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/inbox/images/uploads/{uploadId}": {
+      "get": {
+        "operationId": "getInboxImageUploadStatus",
+        "tags": ["Image Uploads"],
+        "summary": "Get inbox upload status",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "name": "uploadId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current asynchronous upload status. Includes the image node after completion.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageUploadStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/inbox/images/remote": {
+      "post": {
+        "operationId": "createInboxImageFromRemoteUrl",
+        "tags": ["Image Uploads"],
+        "summary": "Import an image from a remote URL into the inbox",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRemoteImageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The remote image was accepted for asynchronous processing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageUploadStatusResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "WorkspaceSlug": {
+        "name": "workspaceSlug",
+        "in": "path",
+        "required": true,
+        "description": "The URL slug of the workspace.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CollectionSlug": {
+        "name": "collectionSlug",
+        "in": "path",
+        "required": true,
+        "description": "The URL slug of the collection within the workspace.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "The request body or parameters are invalid.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "The request does not have a valid session.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "The authenticated user does not have access to this resource.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The requested resource (workspace, collection, folder, asset, or upload) was not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "The request conflicts with the current state (e.g. duplicate name).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "An unexpected server error occurred.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Machine-readable error code, e.g. `not_found`, `validation_error`, `unauthorized`."
+              },
+              "message": {
+                "type": "string",
+                "description": "Human-readable error message."
+              }
+            }
+          }
+        },
+        "description": "Standard error body returned on all 4xx and 5xx responses."
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status", "timestamp", "version"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "description": "Health check response."
+      },
+      "SessionResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["user", "session", "activeOrganizationId"],
+            "properties": {
+              "user": {
+                "type": "object",
+                "description": "Better Auth user object."
+              },
+              "session": {
+                "type": "object",
+                "description": "Better Auth session object."
+              },
+              "activeOrganizationId": {
+                "type": "string",
+                "nullable": true,
+                "description": "The organisation ID the user is currently acting within."
+              }
+            }
+          }
+        }
+      },
+      "WorkspaceInfo": {
+        "type": "object",
+        "required": ["id", "name", "slug"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "logo": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "description": "A workspace (organisation) within the Aska system."
+      },
+      "LightCollection": {
+        "type": "object",
+        "required": ["id", "name", "slug", "assetCount"],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "assetCount": {
+            "type": "integer",
+            "description": "Total number of assets across all folders in this collection."
+          }
+        },
+        "description": "Lightweight collection summary."
+      },
+      "FolderChildPreview": {
+        "type": "object",
+        "required": ["assetId", "type"],
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "description": "Asset node ID used to reconcile optimistic previews."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["image", "note"]
+          },
+          "url": {
+            "type": "string",
+            "description": "Presigned thumbnail URL for image previews."
+          },
+          "blurDataURL": {
+            "type": "string",
+            "nullable": true,
+            "description": "Blur placeholder data URL for image previews."
+          },
+          "color": {
+            "type": "string",
+            "description": "Accent colour for note previews."
+          },
+          "snippet": {
+            "type": "string",
+            "description": "Text snippet for note previews."
+          }
+        },
+        "description": "Preview thumbnail for a folder child."
+      },
+      "DetailedCollection": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "description",
+          "createdAt",
+          "updatedAt",
+          "assetCount",
+          "previews"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "assetCount": {
+            "type": "integer"
+          },
+          "previews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FolderChildPreview"
+            }
+          }
+        },
+        "description": "Detailed collection record with previews."
+      },
+      "CreateCollectionRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Display name for the new collection."
+          }
+        }
+      },
+      "CreatedCollection": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "description",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WorkspaceWithCollectionsResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["workspace", "collections"],
+            "properties": {
+              "workspace": {
+                "$ref": "#/components/schemas/WorkspaceInfo"
+              },
+              "collections": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/LightCollection"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CollectionsResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["collections"],
+            "properties": {
+              "collections": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DetailedCollection"
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreateCollectionResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["collection"],
+            "properties": {
+              "collection": {
+                "$ref": "#/components/schemas/CreatedCollection"
+              }
+            }
+          }
+        }
+      },
+      "CreateFolderRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Display name for the new folder."
+          },
+          "parentFolderPath": {
+            "type": "string",
+            "description": "Slash-separated path to the parent folder (e.g. `designs/2024`). Omit or leave empty to create at the collection root."
+          }
+        }
+      },
+      "CreatedFolder": {
+        "type": "object",
+        "required": ["id", "name", "slug", "path", "count", "previews"],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string",
+            "description": "Full path of the new folder, e.g. `designs/2024/logos`."
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of child assets (direct children, not recursive)."
+          },
+          "previews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FolderChildPreview"
+            }
+          }
+        }
+      },
+      "CreateFolderResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["folder"],
+            "properties": {
+              "folder": {
+                "$ref": "#/components/schemas/CreatedFolder"
+              }
+            }
+          }
+        }
+      },
+      "CreateNoteRequest": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Note content in markdown format."
+          },
+          "color": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "Accent colour for the note (hex or named colour)."
+          },
+          "parentFolderPath": {
+            "type": "string",
+            "description": "Folder path to create the note in. Omit for collection root."
+          }
+        }
+      },
+      "CollectionFolderNode": {
+        "type": "object",
+        "required": ["id", "type", "name", "slug", "count", "previews"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Node identifier, e.g. `folder-42`."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["folder"]
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of direct child assets."
+          },
+          "previews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FolderChildPreview"
+            }
+          }
+        }
+      },
+      "CollectionImageNode": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "url",
+          "width",
+          "height",
+          "isFavorite",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Node identifier, e.g. `image-42`."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["image"]
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Presigned URL for the display variant."
+          },
+          "originalUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Presigned URL for the original image file."
+          },
+          "originalWidth": {
+            "type": "integer",
+            "description": "Original image width in pixels."
+          },
+          "originalHeight": {
+            "type": "integer",
+            "description": "Original image height in pixels."
+          },
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "alt": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "isFavorite": {
+            "type": "boolean"
+          },
+          "blurDataURL": {
+            "type": "string",
+            "nullable": true,
+            "description": "Base64-encoded blur placeholder."
+          },
+          "dominantColors": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^#[0-9A-Fa-f]{6}$"
+            },
+            "description": "Image palette colours, ordered by dominance."
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "description": "Display variant file size in bytes."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CollectionNoteNode": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "content",
+          "isFavorite",
+          "wordCount",
+          "readingTimeMinutes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Node identifier, e.g. `note-42`."
+          },
+          "type": {
+            "type": "string",
+            "enum": ["note"]
+          },
+          "content": {
+            "type": "string",
+            "description": "Note content in markdown."
+          },
+          "color": {
+            "type": "string",
+            "nullable": true
+          },
+          "isFavorite": {
+            "type": "boolean"
+          },
+          "wordCount": {
+            "type": "integer"
+          },
+          "readingTimeMinutes": {
+            "type": "number",
+            "description": "Estimated reading time in minutes."
+          }
+        }
+      },
+      "Breadcrumb": {
+        "type": "object",
+        "required": ["id", "name", "slug"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Folder ID."
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "description": "A breadcrumb entry for folder navigation."
+      },
+      "CollectionContentsResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["collection", "breadcrumbs", "nodes"],
+            "properties": {
+              "collection": {
+                "type": "object",
+                "required": ["id", "name", "slug"],
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "slug": {
+                    "type": "string"
+                  }
+                }
+              },
+              "breadcrumbs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Breadcrumb"
+                }
+              },
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/CollectionFolderNode"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CollectionImageNode"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CollectionNoteNode"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "type",
+                    "mapping": {
+                      "folder": "#/components/schemas/CollectionFolderNode",
+                      "image": "#/components/schemas/CollectionImageNode",
+                      "note": "#/components/schemas/CollectionNoteNode"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreateNoteResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["note"],
+            "properties": {
+              "note": {
+                "$ref": "#/components/schemas/CollectionNoteNode"
+              }
+            }
+          }
+        }
+      },
+      "PlaceAssetRequest": {
+        "type": "object",
+        "required": ["collectionSlug"],
+        "properties": {
+          "collectionSlug": {
+            "type": "string",
+            "description": "Slug of the target collection."
+          },
+          "parentFolderPath": {
+            "type": "string",
+            "description": "Folder path within the collection to place the asset in. Omit for collection root."
+          }
+        }
+      },
+      "PlaceAssetResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["node"],
+            "properties": {
+              "node": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CollectionImageNode"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CollectionNoteNode"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "image": "#/components/schemas/CollectionImageNode",
+                    "note": "#/components/schemas/CollectionNoteNode"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "DeleteNodeResult": {
+        "type": "object",
+        "required": ["deletedNodeId", "deletedAssetCount"],
+        "properties": {
+          "deletedNodeId": {
+            "type": "string",
+            "description": "The identifier of the deleted node, e.g. `folder-42`."
+          },
+          "deletedAssetCount": {
+            "type": "integer",
+            "description": "Number of assets deleted (0 for asset nodes, 1+ for folder deletions)."
+          }
+        }
+      },
+      "DeleteNodeResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DeleteNodeResult"
+          }
+        }
+      },
+      "DeleteAssetResult": {
+        "type": "object",
+        "required": ["deletedAssetId"],
+        "properties": {
+          "deletedAssetId": {
+            "type": "string",
+            "description": "The identifier of the permanently deleted asset, e.g. `image-42`."
+          }
+        }
+      },
+      "DeleteAssetResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DeleteAssetResult"
+          }
+        }
+      },
+      "CreateImageUploadRequest": {
+        "type": "object",
+        "required": ["fileName", "contentType", "sizeBytes"],
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Original file name (used for R2 key generation only; not retained as the asset title)."
+          },
+          "contentType": {
+            "type": "string",
+            "enum": ["image/jpeg", "image/png", "image/webp", "image/gif"],
+            "description": "MIME type of the image."
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "File size in bytes. Default maximum is 20 MB."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional display title for the image asset."
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Optional alt text for the image."
+          },
+          "parentFolderPath": {
+            "type": "string",
+            "description": "Folder path to create the asset in once the upload is completed. Omit for collection root."
+          }
+        }
+      },
+      "CreateImageUploadResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["upload"],
+            "properties": {
+              "upload": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "objectKey",
+                  "url",
+                  "headers",
+                  "expiresAt",
+                  "maxSizeBytes"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Upload session ID to use when polling asynchronous processing status."
+                  },
+                  "objectKey": {
+                    "type": "string",
+                    "description": "R2 object key for the uploaded file."
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Presigned PUT URL for uploading the file."
+                  },
+                  "headers": {
+                    "type": "object",
+                    "description": "Required HTTP headers to include in the PUT request (e.g. Content-Type).",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Expiration time of the presigned URL."
+                  },
+                  "maxSizeBytes": {
+                    "type": "integer",
+                    "description": "Maximum allowed file size in bytes."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "CreateRemoteImageRequest": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Remote URL of the image to import."
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Optional display title."
+          },
+          "alt": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Optional alt text."
+          },
+          "parentFolderPath": {
+            "type": "string",
+            "description": "Folder path to place the imported asset in. Omit for collection root."
+          }
+        }
+      },
+      "ImageUploadStatusResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["upload"],
+            "properties": {
+              "upload": {
+                "$ref": "#/components/schemas/ImageUploadStatus"
+              }
+            }
+          }
+        }
+      },
+      "ImageUploadStatus": {
+        "type": "object",
+        "required": ["id", "status", "errorMessage"],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "uploaded", "processing", "completed", "failed"]
+          },
+          "errorMessage": {
+            "type": ["string", "null"]
+          },
+          "image": {
+            "$ref": "#/components/schemas/CollectionImageNode"
+          }
+        }
+      }
+    }
+  }
+}

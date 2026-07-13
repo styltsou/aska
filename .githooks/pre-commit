@@ -1,0 +1,31 @@
+#!/bin/sh
+
+set -eu
+
+staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+client_files="$(printf '%s\n' "$staged_files" | grep -E '^client/.*\.(css|js|jsx|json|ts|tsx)$' || true)"
+server_files="$(printf '%s\n' "$staged_files" | grep -E '^server/.*\.(json|ts)$' || true)"
+worker_files="$(printf '%s\n' "$staged_files" | grep -E '^workers/image-pipeline/.*\.(json|ts)$' || true)"
+client_relative_files="$(printf '%s\n' "$client_files" | sed 's#^client/##')"
+server_relative_files="$(printf '%s\n' "$server_files" | sed 's#^server/##')"
+worker_relative_files="$(printf '%s\n' "$worker_files" | sed 's#^workers/image-pipeline/##')"
+
+if [ -n "$client_files" ]; then
+  (cd client && bunx oxfmt --write $client_relative_files)
+fi
+
+if [ -n "$server_files" ]; then
+  (cd server && bunx oxfmt --write $server_relative_files)
+fi
+
+if [ -n "$worker_files" ]; then
+  (
+    cd workers/image-pipeline &&
+      bunx oxfmt --write $worker_relative_files
+  )
+fi
+
+if [ -n "$client_files$server_files$worker_files" ]; then
+  git add $client_files $server_files $worker_files
+fi

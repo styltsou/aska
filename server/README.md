@@ -1,11 +1,50 @@
-To install dependencies:
+# Aska Server
+
+The server is a Bun + Hono API using Drizzle, Postgres, Better Auth, and Zod.
+
 ```sh
 bun install
-```
-
-To run:
-```sh
 bun run dev
 ```
 
-open http://localhost:3000
+The API runs at `http://localhost:3000` by default.
+
+## Quality Checks
+
+```sh
+bun run lint
+bun run typecheck
+bun run format
+bun run test
+```
+
+## Database
+
+Schema changes belong in `src/db/schema`. Generate and review a Drizzle
+migration, then apply it deliberately:
+
+```sh
+bun run db:generate
+bun run db:migrate
+```
+
+`collection_nodes.node_type` distinguishes asset and folder placements. Counts
+are descendant asset counts, backed by the `(collection_id, node_type)` index
+and cached folder paths. See [Assets Schema](../docs/server/assets-schema.md)
+for details.
+
+## Useful Endpoints
+
+```txt
+GET /health
+GET /openapi.json
+GET /docs
+```
+
+## Image pipeline
+
+Image uploads are finalized asynchronously by `../workers/image-pipeline`.
+Set `IMAGE_PIPELINE_CALLBACK_SECRET` to the same value as the Worker secret
+before deploying either service. The Worker setup, R2 notification rule, and
+object-key namespaces are documented in
+[`../workers/image-pipeline/README.md`](../workers/image-pipeline/README.md).

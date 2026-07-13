@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Client
+            directory: client
+            command: bun run lint && bun run typecheck && bun run format && bun run test
+          - name: Server
+            directory: server
+            command: bun run lint && bun run typecheck && bun run format && bun run test
+          - name: Image pipeline
+            directory: workers/image-pipeline
+            command: bun run lint && bun run typecheck && bun run format && bun run test
+    defaults:
+      run:
+        working-directory: ${{ matrix.directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: ${{ matrix.command }}

@@ -10,24 +10,41 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { FolderPlusIcon, PlusIcon } from "lucide-react";
-import { collections } from "@/data/collections";
+import { FolderPlusIcon, PlusIcon, UploadIcon } from "lucide-react";
+import { CreateCollectionDialog } from "@/components/app-shell/create-collection-dialog";
+import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
+import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
+import { useWorkspace } from "@/api/workspace";
+import { useCollectionContents } from "@/api/collection";
 import { titleFromSlug } from "@/lib/slug";
 
 function AppBreadcrumbs() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const [, workspaceSlug, collectionsSegment, ...pathSegments] = pathname.split("/");
-  const isNestedCollectionPath = collectionsSegment === "collections" &&
-    pathSegments.length > 0;
+  const [, workspaceSlug, collectionsSegment, ...pathSegments] =
+    pathname.split("/");
+  const isInboxPath = collectionsSegment === "inbox";
+  const isNestedCollectionPath =
+    collectionsSegment === "collections" && pathSegments.length > 0;
+  const [collectionSlug = "", ...folderSegments] = pathSegments;
+  const folderPath = folderSegments.join("/");
+  const { data: workspaceData } = useWorkspace(workspaceSlug ?? "");
+  const { data: collectionContents } = useCollectionContents(
+    workspaceSlug ?? "",
+    collectionSlug,
+    folderPath || undefined,
+    { enabled: folderSegments.length > 0 },
+  );
 
   const breadcrumbSegments = pathSegments.map((segment, index) => ({
     slug: segment,
-    label: index === 0
-      ? collections.find((collection) => collection.slug === segment)?.name ??
-        titleFromSlug(segment)
-      : titleFromSlug(segment),
+    label:
+      index === 0
+        ? (workspaceData?.collections.find((c) => c.slug === segment)?.name ??
+          titleFromSlug(segment))
+        : (collectionContents?.breadcrumbs[index - 1]?.name ??
+          titleFromSlug(segment)),
     path: pathSegments.slice(0, index + 1).join("/"),
   }));
 
@@ -35,7 +52,9 @@ function AppBreadcrumbs() {
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          {isNestedCollectionPath && workspaceSlug ? (
+          {isInboxPath ? (
+            <BreadcrumbPage>Inbox</BreadcrumbPage>
+          ) : isNestedCollectionPath && workspaceSlug ? (
             <BreadcrumbLink
               render={
                 <Link
@@ -69,6 +88,7 @@ function AppBreadcrumbs() {
                           workspaceSlug,
                           _splat: segment.path,
                         }}
+                        search={{ note: undefined, image: undefined }}
                         activeOptions={{ exact: true }}
                       />
                     }
@@ -89,26 +109,47 @@ export function AppHeader() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const [, , collectionsSegment, ...pathSegments] = pathname.split("/");
-  const isCollectionsView = collectionsSegment !== "collections";
-  const isBoardView = collectionsSegment === "collections" && pathSegments.length > 0;
+  const [, workspaceSlug, collectionsSegment, ...pathSegments] =
+    pathname.split("/");
+  const isCollectionsView = pathname === `/${workspaceSlug}`;
+  const isBoardView =
+    collectionsSegment === "collections" && pathSegments.length > 0;
+  const collectionPath = pathSegments.join("/");
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 bg-sidebar transition-[height] duration-150 ease-linear group-has-data-[state=collapsed]/sidebar-wrapper:h-12">
+    <header className="sticky top-0 z-20 flex h-14 min-w-0 shrink-0 items-center gap-2 bg-sidebar pr-2 transition-[height] duration-150 ease-linear group-has-data-[state=collapsed]/sidebar-wrapper:h-12">
       <SidebarTrigger />
       <AppBreadcrumbs />
       <div className="ml-auto flex items-center gap-2">
         {isCollectionsView ? (
-          <Button type="button" size="sm">
-            <PlusIcon />
-            <span>New collection</span>
-          </Button>
+          <CreateCollectionDialog workspaceSlug={workspaceSlug}>
+            <Button type="button" size="sm">
+              <PlusIcon />
+              <span>New collection</span>
+            </Button>
+          </CreateCollectionDialog>
         ) : null}
         {isBoardView ? (
-          <Button type="button" size="sm">
-            <FolderPlusIcon />
-            <span>New folder</span>
-          </Button>
+          <>
+            <CreateFolderDialog
+              workspaceSlug={workspaceSlug}
+              collectionPath={collectionPath}
+            >
+              <Button type="button" size="sm" variant="outline">
+                <FolderPlusIcon />
+                <span>New folder</span>
+              </Button>
+            </CreateFolderDialog>
+            <UploadImagesDialog
+              workspaceSlug={workspaceSlug}
+              collectionPath={collectionPath}
+            >
+              <Button type="button" size="sm">
+                <UploadIcon />
+                <span>Upload</span>
+              </Button>
+            </UploadImagesDialog>
+          </>
         ) : null}
       </div>
     </header>

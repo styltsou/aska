@@ -9,11 +9,30 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as WorkspaceSlugRouteRouteImport } from './routes/$workspaceSlug/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkspaceSlugIndexRouteImport } from './routes/$workspaceSlug/index'
+import { Route as WorkspaceSlugInboxRouteImport } from './routes/$workspaceSlug/inbox'
 import { Route as WorkspaceSlugCollectionsSplatRouteImport } from './routes/$workspaceSlug/collections/$'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceSlugRouteRoute = WorkspaceSlugRouteRouteImport.update({
   id: '/$workspaceSlug',
   path: '/$workspaceSlug',
@@ -29,6 +48,11 @@ const WorkspaceSlugIndexRoute = WorkspaceSlugIndexRouteImport.update({
   path: '/',
   getParentRoute: () => WorkspaceSlugRouteRoute,
 } as any)
+const WorkspaceSlugInboxRoute = WorkspaceSlugInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => WorkspaceSlugRouteRoute,
+} as any)
 const WorkspaceSlugCollectionsSplatRoute =
   WorkspaceSlugCollectionsSplatRouteImport.update({
     id: '/collections/$',
@@ -39,11 +63,19 @@ const WorkspaceSlugCollectionsSplatRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$workspaceSlug': typeof WorkspaceSlugRouteRouteWithChildren
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/signup': typeof SignupRoute
+  '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRoute
   '/$workspaceSlug/': typeof WorkspaceSlugIndexRoute
   '/$workspaceSlug/collections/$': typeof WorkspaceSlugCollectionsSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/signup': typeof SignupRoute
+  '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRoute
   '/$workspaceSlug': typeof WorkspaceSlugIndexRoute
   '/$workspaceSlug/collections/$': typeof WorkspaceSlugCollectionsSplatRoute
 }
@@ -51,6 +83,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$workspaceSlug': typeof WorkspaceSlugRouteRouteWithChildren
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/signup': typeof SignupRoute
+  '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRoute
   '/$workspaceSlug/': typeof WorkspaceSlugIndexRoute
   '/$workspaceSlug/collections/$': typeof WorkspaceSlugCollectionsSplatRoute
 }
@@ -59,14 +95,29 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$workspaceSlug'
+    | '/login'
+    | '/onboarding'
+    | '/signup'
+    | '/$workspaceSlug/inbox'
     | '/$workspaceSlug/'
     | '/$workspaceSlug/collections/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$workspaceSlug' | '/$workspaceSlug/collections/$'
+  to:
+    | '/'
+    | '/login'
+    | '/onboarding'
+    | '/signup'
+    | '/$workspaceSlug/inbox'
+    | '/$workspaceSlug'
+    | '/$workspaceSlug/collections/$'
   id:
     | '__root__'
     | '/'
     | '/$workspaceSlug'
+    | '/login'
+    | '/onboarding'
+    | '/signup'
+    | '/$workspaceSlug/inbox'
     | '/$workspaceSlug/'
     | '/$workspaceSlug/collections/$'
   fileRoutesById: FileRoutesById
@@ -74,10 +125,34 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   WorkspaceSlugRouteRoute: typeof WorkspaceSlugRouteRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
+  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$workspaceSlug': {
       id: '/$workspaceSlug'
       path: '/$workspaceSlug'
@@ -99,6 +174,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceSlugIndexRouteImport
       parentRoute: typeof WorkspaceSlugRouteRoute
     }
+    '/$workspaceSlug/inbox': {
+      id: '/$workspaceSlug/inbox'
+      path: '/inbox'
+      fullPath: '/$workspaceSlug/inbox'
+      preLoaderRoute: typeof WorkspaceSlugInboxRouteImport
+      parentRoute: typeof WorkspaceSlugRouteRoute
+    }
     '/$workspaceSlug/collections/$': {
       id: '/$workspaceSlug/collections/$'
       path: '/collections/$'
@@ -110,11 +192,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface WorkspaceSlugRouteRouteChildren {
+  WorkspaceSlugInboxRoute: typeof WorkspaceSlugInboxRoute
   WorkspaceSlugIndexRoute: typeof WorkspaceSlugIndexRoute
   WorkspaceSlugCollectionsSplatRoute: typeof WorkspaceSlugCollectionsSplatRoute
 }
 
 const WorkspaceSlugRouteRouteChildren: WorkspaceSlugRouteRouteChildren = {
+  WorkspaceSlugInboxRoute: WorkspaceSlugInboxRoute,
   WorkspaceSlugIndexRoute: WorkspaceSlugIndexRoute,
   WorkspaceSlugCollectionsSplatRoute: WorkspaceSlugCollectionsSplatRoute,
 }
@@ -125,6 +209,9 @@ const WorkspaceSlugRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   WorkspaceSlugRouteRoute: WorkspaceSlugRouteRouteWithChildren,
+  LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
+  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

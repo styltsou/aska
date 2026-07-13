@@ -36,6 +36,30 @@ Aska ingests content from multiple streams — image uploads, social media links
 
 ## Architecture
 
-Multi-tenant from day one. Every asset is linked to a `workspace_id` and `created_by`. Collections sit between workspaces and assets — a simple routing table pointing polymorphic assets to their collection canvas.
+Aska is multi-tenant from day one. Every asset, collection, and folder belongs
+to a workspace and has creator metadata. Collections contain an ordered tree of
+nodes: image and note assets are leaf nodes, while folders organize nested
+content. Folders are not assets.
 
-Tech: React + TypeScript frontend with a masonry grid layout. Backend TBD.
+The application consists of a React/Vite client, a Bun/Hono API backed by
+Postgres and Drizzle, and a Cloudflare Worker that processes image uploads from
+R2 asynchronously. Collection and folder badges show descendant asset counts:
+images and notes count, folders do not.
+
+See [the engineering docs](./docs/README.md) for the data model, backend
+conventions, and local development workflow.
+
+## Development
+
+Each package is independently installed and run with Bun:
+
+```sh
+cd client && bun install && bun run dev
+cd server && bun install && bun run dev
+cd workers/image-pipeline && bun install && bun run dev
+```
+
+Run the full package-local quality suite with `bun run lint`,
+`bun run typecheck`, `bun run format`, and `bun run test`. The same commands run
+in CI. Running `bun install` at the repository root installs the tracked
+pre-commit hook, which formats staged source files with Oxfmt.
