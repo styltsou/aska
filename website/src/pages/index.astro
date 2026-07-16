@@ -27,3 +27,13 @@ const signupHref = `${appBaseUrl}/signup`;
 	</main>
 	<SiteFooter loginHref={loginHref} signupHref={signupHref} />
 </Layout>
+
+<style>
+	main { position: relative; z-index: 1; margin: 6px 6px 0; border-radius: 18px 18px 0 0; background: var(--canvas); isolation: isolate; }
+	main::after { position: absolute; right: 0; bottom: -22px; left: 0; z-index: 2; height: 22px; border-radius: 0 0 18px 18px; background: var(--canvas); content: ""; pointer-events: none; }
+
+	@media (max-width: 640px) {
+		main { border-radius: 14px 14px 0 0; }
+		main::after { bottom: -16px; height: 16px; border-radius: 0 0 14px 14px; }
+	}
+</style>

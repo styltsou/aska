@@ -9,7 +9,10 @@ const { loginHref, signupHref } = Astro.props;
 
 <footer class="site-footer">
 	<div class="page-width site-footer__topline">
-		<span>Made by <a href="https://styltsoum.com" target="_blank" rel="noreferrer" class="site-footer__credit">styltsou</a></span>
+		<div class="site-footer__credit-block">
+			<span>Made by <a href="https://styltsoum.com" target="_blank" rel="noreferrer" class="site-footer__credit">styltsou</a></span>
+			<a href="https://github.com/stlytsou/aska" target="_blank" rel="noreferrer" class="site-footer__github">GitHub</a>
+		</div>
 		<span>&copy; {new Date().getFullYear()} Aska</span>
 	</div>
 	<div class="site-footer__wordmark" aria-hidden="true">aska</div>
@@ -22,3 +25,41 @@ const { loginHref, signupHref } = Astro.props;
 		</div>
 	</div>
 </footer>
+
+<style>
+	.site-footer { --footer-wordmark-shift: 53px; position: sticky; bottom: 0; z-index: 0; min-height: min(72vh, 650px); margin-top: -84px; padding-top: 144px; overflow: hidden; background: var(--footer-surface) url('/footer-grain.svg') repeat; }
+	.site-footer__topline { --footer-topline-size: 11px; position: absolute; top: 116px; left: 50%; z-index: 1; display: flex; align-items: center; justify-content: space-between; color: #72726c; font-size: var(--footer-topline-size); line-height: 1; transform: translateX(-50%); }
+	.site-footer__credit-block { display: grid; justify-items: start; gap: 7px; }
+	.site-footer__topline span, .site-footer__topline a { font-size: var(--footer-topline-size); text-decoration: none; }
+	.site-footer a.site-footer__credit { color: var(--ink); transition: color 100ms ease; }
+	.site-footer__credit:hover { text-decoration: underline; text-underline-offset: 2px; }
+	.site-footer__github { color: inherit; }
+	.site-footer__github:hover { color: var(--ink); }
+	.site-footer__inner { position: relative; z-index: 1; display: flex; align-items: flex-end; min-height: min(58vh, 506px); padding-bottom: 34px; }
+	.site-footer__wordmark { position: absolute; top: calc(50% + var(--footer-wordmark-shift)); left: 0; width: 100%; color: #20201e; font-size: clamp(150px, 27vw, 410px); font-weight: 600; letter-spacing: 0; line-height: .77; text-align: center; transform: translateY(-50%); }
+	.site-footer__meta { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 22px; padding-top: 18px; border-top: 1px solid rgb(21 21 21 / 16%); }
+	.site-footer p, .site-footer a { margin: 0; color: #5e5e58; font-size: 12px; }
+	.site-footer a { transition: color 100ms ease; }
+	.site-footer a:hover { color: var(--ink); }
+
+	@media (prefers-color-scheme: dark) {
+		.site-footer__topline { color: var(--ink-muted); }
+		.site-footer__credit:hover { text-decoration-color: #fff; }
+		.site-footer__wordmark { color: #e7eae4; }
+		.site-footer__meta { border-color: rgb(241 243 238 / 16%); }
+		.site-footer p, .site-footer a { color: var(--ink-muted); }
+	}
+
+	@media (max-width: 640px) {
+		.site-footer { --footer-wordmark-shift: 32px; min-height: 430px; margin-top: -48px; padding-top: 94px; }
+		.site-footer__topline { top: 76px; font-size: 10px; }
+		.site-footer__inner { min-height: 336px; padding-bottom: 24px; }
+		.site-footer__wordmark { font-size: clamp(116px, 35vw, 160px); line-height: .82; }
+		.site-footer__meta { flex-wrap: wrap; gap: 12px 18px; }
+		.site-footer__meta p { width: 100%; order: 4; }
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.site-footer a { transition: none; }
+	}
+</style>

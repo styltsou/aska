@@ -24,3 +24,28 @@ const { signupHref } = Astro.props;
 	<HeroReferenceField />
 	<div class="hero-workspace-stage"><HeroWorkspace /></div>
 </section>
+
+<style>
+	.hero { --hero-fade-depth: 64px; --hero-fade-one: 56px; --hero-fade-two: 48px; --hero-fade-three: 38px; --hero-fade-four: 28px; --hero-fade-five: 18px; --hero-fade-six: 8px; position: relative; height: calc(100dvh + var(--hero-fade-depth)); padding-top: clamp(132px, 18dvh, 180px); overflow: hidden; text-align: center; }
+	.hero__copy { position: relative; z-index: 4; max-width: 670px; margin-inline: auto; }
+	h1 { max-width: 660px; margin-bottom: 14px; font-size: clamp(40px, 4.2vw, 58px); line-height: 1.04; }
+	.hero__lede { max-width: 500px; margin-right: auto; margin-bottom: 20px; margin-left: auto; color: var(--ink-muted); font-size: 14px; line-height: 1.55; }
+	.hero__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+	.hero-workspace-stage { position: absolute; bottom: 0; left: 50%; z-index: 2; width: min(1280px, calc(100vw - 96px), 125dvh); height: min(533.333px, calc(41.6667vw - 40px), 52.083dvh); transform: translateX(-50%); -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--hero-fade-depth)), rgb(0 0 0 / 98%) calc(100% - var(--hero-fade-one)), rgb(0 0 0 / 93%) calc(100% - var(--hero-fade-two)), rgb(0 0 0 / 82%) calc(100% - var(--hero-fade-three)), rgb(0 0 0 / 64%) calc(100% - var(--hero-fade-four)), rgb(0 0 0 / 39%) calc(100% - var(--hero-fade-five)), rgb(0 0 0 / 14%) calc(100% - var(--hero-fade-six)), transparent 100%); mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - var(--hero-fade-depth)), rgb(0 0 0 / 98%) calc(100% - var(--hero-fade-one)), rgb(0 0 0 / 93%) calc(100% - var(--hero-fade-two)), rgb(0 0 0 / 82%) calc(100% - var(--hero-fade-three)), rgb(0 0 0 / 64%) calc(100% - var(--hero-fade-four)), rgb(0 0 0 / 39%) calc(100% - var(--hero-fade-five)), rgb(0 0 0 / 14%) calc(100% - var(--hero-fade-six)), transparent 100%); }
+
+	@media (max-width: 900px) {
+		.hero { padding-top: clamp(94px, 12dvh, 112px); }
+		.hero__copy { max-width: 620px; }
+		.hero-workspace-stage { width: min(960px, calc(100vw - 48px), 125dvh); height: min(400px, calc(41.6667vw - 20px), 52.083dvh); }
+	}
+
+	@media (min-width: 1200px) and (min-height: 1100px) {
+		.hero { padding-top: clamp(180px, 20dvh, 280px); }
+	}
+
+	@media (max-width: 640px) {
+		.hero { --hero-fade-depth: 40px; --hero-fade-one: 35px; --hero-fade-two: 30px; --hero-fade-three: 24px; --hero-fade-four: 17px; --hero-fade-five: 10px; --hero-fade-six: 4px; padding-top: 88px; }
+		h1 { font-size: clamp(36px, 10vw, 44px); }
+		.hero-workspace-stage { width: calc(100vw - 32px); height: calc(41.6667vw - 13.333px); }
+	}
+</style>

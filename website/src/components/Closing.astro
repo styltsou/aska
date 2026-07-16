@@ -10,3 +10,13 @@ const { signupHref } = Astro.props;
 	<h2>Make space for the work before it has a name.</h2>
 	<a class="button button--primary" href={signupHref}>Create account</a>
 </section>
+
+<style>
+	.closing { max-width: 680px; padding-top: 124px; padding-bottom: 176px; text-align: center; }
+	h2 { max-width: 620px; margin-right: auto; margin-bottom: 13px; margin-left: auto; font-size: clamp(30px, 3.4vw, 43px); line-height: 1.12; }
+	.closing .button { margin-top: 6px; }
+
+	@media (max-width: 640px) {
+		.closing { padding-top: 92px; padding-bottom: 128px; }
+	}
+</style>
