@@ -1,0 +1,76 @@
+<section class="feature-showcase page-width" aria-label="Aska features">
+	<article id="workflow" class="feature-panel feature-panel--capture">
+		<div class="feature-panel__copy">
+			<h2>Save what catches your eye, in the moment.</h2>
+			<p>Add an image, social link, article, or note. Aska keeps the source and context close.</p>
+		</div>
+		<div class="capture-preview" role="img" aria-label="An Aska inbox containing different kinds of saved references">
+			<div class="capture-preview__head"><strong>New to your Inbox</strong><span>Today</span></div>
+			<div class="capture-stream" aria-hidden="true">
+				<div class="stream-item stream-item--image"><img src="/images/blue-red-wall.jpg" alt="" /><span>Image</span><small>Folded surface</small></div>
+				<div class="stream-item stream-item--article"><span>Article</span><strong>Designing systems that leave room for intuition.</strong><small>reading list / 7 min</small></div>
+				<div class="stream-item stream-item--note"><span>Note</span><strong>Keep the tension between precise and imperfect.</strong><small>personal thought</small></div>
+				<div class="stream-item stream-item--image stream-item--dark"><img src="/images/brutalist-shadows.jpg" alt="" /><span>Image</span><small>Studio light</small></div>
+			</div>
+			<div class="capture-toast" aria-hidden="true"><span class="saved-dot"></span>Reference added</div>
+		</div>
+	</article>
+
+	<article id="archive" class="feature-panel feature-panel--search">
+		<div class="feature-panel__copy">
+			<h2>Find a reference by the feeling it left behind.</h2>
+			<p>Search by colour, content, and the fragments you still remember.</p>
+		</div>
+		<div class="search-preview" role="img" aria-label="An Aska colour search showing forest-green abstract references">
+			<div class="search-field"><span>Search your archive</span><strong>Forest green</strong></div>
+			<div class="colour-filter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><span>Colour match</span></div>
+			<div class="search-results" aria-hidden="true">
+				<div class="search-result search-result--one"><img src="/images/green-abstract-05.webp" alt="" /><span>Emerald folds</span></div>
+				<div class="search-result search-result--two"><img src="/images/green-abstract-02.webp" alt="" /><span>Layer study</span></div>
+				<div class="search-result search-result--three"><img src="/images/green-abstract-03.webp" alt="" /><span>Woven field</span></div>
+				<div class="search-result search-result--four"><img src="/images/green-abstract-07.webp" alt="" /><span>Dark weave</span></div>
+			</div>
+		</div>
+	</article>
+
+	<article class="feature-panel feature-panel--canvas">
+		<div class="feature-panel__copy">
+			<h2>Give an idea room to become a direction.</h2>
+			<p>Move references, cluster thoughts, and build a point of view on an open spatial canvas.</p>
+		</div>
+		<div class="canvas-preview" role="img" aria-label="An Aska collection canvas with references positioned in a moodboard">
+			<div class="canvas-preview__top"><span>Collections / Soft systems</span><span>48 items</span></div>
+			<div class="canvas-grid" aria-hidden="true">
+				<div class="canvas-object canvas-object--image-one"><img src="/images/blue-red-wall.jpg" alt="" /></div>
+				<div class="canvas-object canvas-object--folder">
+					<div class="canvas-folder__previews"><img src="/images/curved-architecture.jpg" alt="" /><img src="/images/concrete-sculptures.jpg" alt="" /><img src="/images/brutalist-shadows.jpg" alt="" /><span></span></div>
+					<div class="canvas-folder__label"><strong>Material studies</strong><small>24</small></div>
+				</div>
+				<div class="canvas-object canvas-object--note"><p><strong>Keep the useful friction.</strong></p><p>Every reference needs room around it.</p></div>
+				<div class="canvas-object canvas-object--image-two"><img src="/images/concrete-sculptures.jpg" alt="" /></div>
+				<div class="canvas-object canvas-object--image-three"><img src="/images/curved-architecture.jpg" alt="" /></div>
+				<div class="canvas-object canvas-object--folder-small">
+					<div class="canvas-folder__previews"><img src="/images/brutalist-shadows.jpg" alt="" /><img src="/images/blue-red-wall.jpg" alt="" /><span></span><img src="/images/concrete-sculptures.jpg" alt="" /></div>
+					<div class="canvas-folder__label"><strong>Drafts</strong><small>8</small></div>
+				</div>
+			</div>
+			<div class="canvas-preview__controls" aria-hidden="true"><span>-</span><span>+</span></div>
+		</div>
+	</article>
+</section>
+
+<script>
+	const featurePanels = Array.from(document.querySelectorAll<HTMLElement>('.feature-panel'));
+	const featureListeners = new AbortController();
+
+	featurePanels.forEach((panel) => {
+		panel.addEventListener('mouseenter', () => panel.classList.add('is-preview-active'), {
+			signal: featureListeners.signal,
+		});
+		panel.addEventListener('mouseleave', () => panel.classList.remove('is-preview-active'), {
+			signal: featureListeners.signal,
+		});
+	});
+
+	document.addEventListener('astro:before-swap', () => featureListeners.abort(), { once: true });
+</script>

@@ -1,11 +1,29 @@
 ---
-import Welcome from '../components/Welcome.astro';
+import Closing from '../components/Closing.astro';
+import FeatureShowcase from '../components/FeatureShowcase.astro';
+import Hero from '../components/Hero.astro';
+import InteractionHighlights from '../components/InteractionHighlights.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import StatementBand from '../components/StatementBand.astro';
 import Layout from '../layouts/Layout.astro';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const appBaseUrl = (import.meta.env.PUBLIC_APP_URL ?? 'http://localhost:5173').replace(/\/+$/, '');
+const loginHref = `${appBaseUrl}/login`;
+const signupHref = `${appBaseUrl}/signup`;
 ---
 
-<Layout>
-	<Welcome />
+<Layout
+	title="Aska | A visual archive for creative work"
+	description="Aska is a quieter home for visual references, ideas, and moodboards."
+>
+	<SiteHeader loginHref={loginHref} signupHref={signupHref} />
+	<main id="top">
+		<Hero signupHref={signupHref} />
+		<StatementBand />
+		<FeatureShowcase />
+		<InteractionHighlights />
+		<Closing signupHref={signupHref} />
+	</main>
+	<SiteFooter loginHref={loginHref} signupHref={signupHref} />
 </Layout>

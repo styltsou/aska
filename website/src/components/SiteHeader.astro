@@ -1,0 +1,35 @@
+---
+interface Props {
+	loginHref: string;
+	signupHref: string;
+}
+
+const { loginHref, signupHref } = Astro.props;
+---
+
+<header class="site-header">
+	<div class="site-header__inner">
+		<a class="brand" href="#top" aria-label="Aska home">
+			<img class="brand__logo" src="/aska-logo.svg" alt="" />
+		</a>
+		<nav class="desktop-nav" aria-label="Primary navigation">
+			<a href="#product">Product</a>
+			<a href="#workflow">Workflow</a>
+			<a href="#archive">Archive</a>
+		</nav>
+		<div class="desktop-actions">
+			<a class="text-link" href={loginHref}>Log in</a>
+			<a class="button button--primary" href={signupHref}>Create account</a>
+		</div>
+		<details class="mobile-nav">
+			<summary>Menu</summary>
+			<div class="mobile-nav__panel">
+				<a href="#product">Product</a>
+				<a href="#workflow">Workflow</a>
+				<a href="#archive">Archive</a>
+				<a href={loginHref}>Log in</a>
+				<a class="button button--primary" href={signupHref}>Create account</a>
+			</div>
+		</details>
+	</div>
+</header>

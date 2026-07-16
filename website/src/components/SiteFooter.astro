@@ -1,0 +1,24 @@
+---
+interface Props {
+	loginHref: string;
+	signupHref: string;
+}
+
+const { loginHref, signupHref } = Astro.props;
+---
+
+<footer class="site-footer">
+	<div class="page-width site-footer__topline">
+		<span>Made by <a href="https://styltsoum.com" target="_blank" rel="noreferrer" class="site-footer__credit">styltsou</a></span>
+		<span>&copy; {new Date().getFullYear()} Aska</span>
+	</div>
+	<div class="site-footer__wordmark" aria-hidden="true">aska</div>
+	<div class="page-width site-footer__inner">
+		<div class="site-footer__meta">
+			<p>Visual archive for creative work.</p>
+			<a href="#top">Back to top</a>
+			<a href={loginHref}>Log in</a>
+			<a href={signupHref}>Create account</a>
+		</div>
+	</div>
+</footer>

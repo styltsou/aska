@@ -1,0 +1,12 @@
+---
+interface Props {
+	signupHref: string;
+}
+
+const { signupHref } = Astro.props;
+---
+
+<section class="closing page-width">
+	<h2>Make space for the work before it has a name.</h2>
+	<a class="button button--primary" href={signupHref}>Create account</a>
+</section>

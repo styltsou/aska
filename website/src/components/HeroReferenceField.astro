@@ -1,0 +1,150 @@
+<div class="hero-reference-field" aria-hidden="true">
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--brick">
+		<img src="/images/hero-red-01.webp" alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--left-edge">
+		<img src="/images/hero-fuchsia-02.webp" alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note">
+		<p><strong>Keep the rough edge.</strong></p>
+		<p>Let the material lead.</p>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note-left-one">
+		<p><strong>## Layout study</strong></p>
+		<p>spacing / hierarchy / weight</p>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note-left-two">
+		<p><strong>Materials to compare</strong></p>
+		<p>glass / paper / concrete</p>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--blue">
+		<img src="/images/hero-blue-02.webp" alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--plinth">
+		<img src="/images/hero-orange-01.webp" alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-material">
+		<div class="reference-folder__preview">
+			<img src="/images/hero-red-02.webp" alt="" />
+			<img src="/images/hero-green-03.webp" alt="" />
+			<img src="/images/hero-blue-01.webp" alt="" />
+			<span></span>
+		</div>
+		<div class="reference-folder__label"><strong>Material studies</strong><small>24</small></div>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-working">
+		<div class="reference-folder__preview">
+			<img src="/images/hero-fuchsia-01.webp" alt="" />
+			<span></span>
+			<img src="/images/hero-orange-03.webp" alt="" />
+			<img src="/images/hero-green-02.webp" alt="" />
+		</div>
+		<div class="reference-folder__label"><strong>Working set</strong><small>16</small></div>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--curve">
+		<img src="/images/hero-green-01.webp" alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-prelude">
+		<img src="/images/hero-fuchsia-03.webp" alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note-right">
+		<p><strong>## Search cues</strong></p>
+		<p>material / colour / shape</p>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--shadow-wide">
+		<img src="/images/hero-orange-02.webp" alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-blue">
+		<img src="/images/hero-blue-04.webp" alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-shadows">
+		<img src="/images/hero-red-04.webp" alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-soft">
+		<div class="reference-folder__preview">
+			<img src="/images/hero-blue-03.webp" alt="" />
+			<img src="/images/hero-red-03.webp" alt="" />
+			<span></span>
+			<img src="/images/hero-orange-04.webp" alt="" />
+		</div>
+		<div class="reference-folder__label"><strong>Soft systems</strong><small>12</small></div>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--sculptures reference-canvas-card--sculptures">
+		<img src="/images/hero-green-05.webp" alt="" />
+		<span>MONUMENT / 1981</span>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-archive">
+		<div class="reference-folder__preview">
+			<img src="/images/hero-fuchsia-04.webp" alt="" />
+			<img src="/images/hero-green-04.webp" alt="" />
+			<img src="/images/hero-blue-05.webp" alt="" />
+			<img src="/images/hero-red-05.webp" alt="" />
+		</div>
+		<div class="reference-folder__label"><strong>Archive fragments</strong><small>36</small></div>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note-lower">
+		<p><strong>In progress, on purpose.</strong></p>
+		<p>Hold the useful uncertainty.</p>
+	</article>
+</div>
+
+<script>
+	const cards = Array.from(document.querySelectorAll<HTMLElement>('.reference-canvas-card'));
+	const listeners = new AbortController();
+
+	cards.forEach((card) => {
+		let x = 0;
+		let y = 0;
+		let animationFrame: number | undefined;
+
+		const renderPosition = () => {
+			card.style.setProperty('--drag-x', `${x}px`);
+			card.style.setProperty('--drag-y', `${y}px`);
+			animationFrame = undefined;
+		};
+
+		card.addEventListener(
+			'pointerdown',
+			(event) => {
+				if (event.button !== 0) return;
+
+				event.preventDefault();
+				const pointerId = event.pointerId;
+				const startX = event.clientX;
+				const startY = event.clientY;
+				const originX = x;
+				const originY = y;
+
+				card.classList.add('is-dragging');
+				card.setPointerCapture(pointerId);
+
+				const move = (moveEvent: PointerEvent) => {
+					if (moveEvent.pointerId !== pointerId) return;
+					x = Math.round(originX + moveEvent.clientX - startX);
+					y = Math.round(originY + moveEvent.clientY - startY);
+					if (animationFrame === undefined) animationFrame = requestAnimationFrame(renderPosition);
+				};
+
+				const release = (releaseEvent: PointerEvent) => {
+					if (releaseEvent.pointerId !== pointerId) return;
+					if (animationFrame !== undefined) {
+						cancelAnimationFrame(animationFrame);
+						renderPosition();
+					}
+					card.classList.remove('is-dragging');
+					card.removeEventListener('pointermove', move);
+					card.removeEventListener('pointerup', release);
+					card.removeEventListener('pointercancel', release);
+				};
+
+				card.addEventListener('pointermove', move);
+				card.addEventListener('pointerup', release);
+				card.addEventListener('pointercancel', release);
+			},
+			{ signal: listeners.signal },
+		);
+		card.addEventListener('dragstart', (event) => event.preventDefault(), { signal: listeners.signal });
+	});
+
+	document.addEventListener('astro:before-swap', () => listeners.abort(), { once: true });
+</script>

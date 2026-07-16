@@ -1,0 +1,26 @@
+---
+import HeroWorkspace from './HeroWorkspace.astro';
+import HeroReferenceField from './HeroReferenceField.astro';
+
+interface Props {
+	signupHref: string;
+}
+
+const { signupHref } = Astro.props;
+---
+
+<section class="hero">
+	<div class="hero__copy">
+		<h1>A home for visual work.</h1>
+		<p class="hero__lede">
+			Keep the references, fragments, and ideas that matter together - then turn them into collections
+			that move the work forward.
+		</p>
+		<div class="hero__actions">
+			<a class="button button--primary" href={signupHref}>Create account</a>
+			<a class="button button--quiet" href="#workflow">See how it works</a>
+		</div>
+	</div>
+	<HeroReferenceField />
+	<div class="hero-workspace-stage"><HeroWorkspace /></div>
+</section>
