@@ -6,17 +6,27 @@ interface Props {
 const { signupHref } = Astro.props;
 ---
 
-<section class="closing page-width">
-	<h2>Make space for the work before it has a name.</h2>
-	<a class="button button--primary" href={signupHref}>Create account</a>
+<section class="closing">
+	<div class="closing__frame page-width">
+		<h2>Bring all your references into one place.</h2>
+		<p>Start with an infinite canvas and let the connections take shape.</p>
+		<a class="button button--primary" href={signupHref}>Start now</a>
+	</div>
 </section>
 
 <style>
-	.closing { max-width: 680px; padding-top: 124px; padding-bottom: 176px; text-align: center; }
+	.closing { padding-top: 124px; padding-bottom: 176px; text-align: center; }
+	.closing__frame { width: calc(min(calc(100% - 48px), 980px) - 26px); padding: 68px 48px; border: 1px solid var(--feature-frame-border-end); border-radius: var(--radius); background: var(--glass-surface); box-shadow: 0 0 0 12px var(--glass-surface), 0 0 0 13px var(--feature-frame-border-end), var(--glass-shadow); backdrop-filter: blur(22px) saturate(145%); }
 	h2 { max-width: 620px; margin-right: auto; margin-bottom: 13px; margin-left: auto; font-size: clamp(30px, 3.4vw, 43px); line-height: 1.12; }
-	.closing .button { margin-top: 6px; }
+	p { max-width: 460px; margin: 0 auto; color: var(--ink-muted); font-size: 14px; line-height: 1.55; }
+	.closing .button { margin-top: 20px; }
 
 	@media (max-width: 640px) {
 		.closing { padding-top: 92px; padding-bottom: 128px; }
+		.closing__frame { width: calc(min(calc(100% - 32px), var(--page-width)) - 26px); padding: 48px 22px; }
+	}
+
+	@media (prefers-reduced-transparency: reduce) {
+		.closing__frame { background: var(--surface); backdrop-filter: none; }
 	}
 </style>

@@ -18,8 +18,29 @@ const {
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="description" content={description} />
-		<meta name="theme-color" content="#e9ebe7" media="(prefers-color-scheme: light)" />
-		<meta name="theme-color" content="#0d0f0d" media="(prefers-color-scheme: dark)" />
+		<meta name="theme-color" content="#e9ebe7" />
+		<script is:inline>
+			(() => {
+				const storageKey = 'aska-theme';
+				let savedTheme: string | null = null;
+
+				try {
+					savedTheme = localStorage.getItem(storageKey);
+				} catch {
+					// Storage can be unavailable in private browsing contexts.
+				}
+
+				const theme = savedTheme === 'light' || savedTheme === 'dark'
+					? savedTheme
+					: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+				document.documentElement.dataset.theme = theme;
+				document.querySelector('meta[name="theme-color"]')?.setAttribute(
+					'content',
+					theme === 'dark' ? '#000000' : '#e9ebe7',
+				);
+			})();
+		</script>
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
 		<title>{title}</title>

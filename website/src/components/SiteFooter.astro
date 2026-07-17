@@ -18,13 +18,64 @@ const { loginHref, signupHref } = Astro.props;
 	<div class="site-footer__wordmark" aria-hidden="true">aska</div>
 	<div class="page-width site-footer__inner">
 		<div class="site-footer__meta">
-			<p>Visual archive for creative work.</p>
 			<a href="#top">Back to top</a>
 			<a href={loginHref}>Log in</a>
 			<a href={signupHref}>Create account</a>
+			<div class="theme-control" role="group" aria-label="Theme">
+				<span aria-hidden="true">Theme:</span>
+				<button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+				<span aria-hidden="true">/</span>
+				<button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+			</div>
 		</div>
 	</div>
 </footer>
+
+<script>
+	const storageKey = 'aska-theme';
+	const root = document.documentElement;
+	const themeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-theme-option]'));
+	const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+
+	const updateTheme = (theme: 'light' | 'dark') => {
+		root.dataset.theme = theme;
+		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#000000' : '#e9ebe7');
+		themeButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.themeOption === theme)));
+	};
+
+	const savedTheme = (() => {
+		try {
+			const theme = localStorage.getItem(storageKey);
+			return theme === 'light' || theme === 'dark' ? theme : null;
+		} catch {
+			return null;
+		}
+	})();
+
+	updateTheme(savedTheme ?? (systemTheme.matches ? 'dark' : 'light'));
+
+	themeButtons.forEach((button) => {
+		button.addEventListener('click', () => {
+			const theme = button.dataset.themeOption as 'light' | 'dark';
+			try {
+				localStorage.setItem(storageKey, theme);
+			} catch {
+				// Keep the selected theme for this visit when storage is unavailable.
+			}
+			updateTheme(theme);
+		});
+	});
+
+	systemTheme.addEventListener('change', (event) => {
+		try {
+			const theme = localStorage.getItem(storageKey);
+			if (theme === 'light' || theme === 'dark') return;
+		} catch {
+			// Without storage, continue tracking the system preference.
+		}
+		updateTheme(event.matches ? 'dark' : 'light');
+	});
+</script>
 
 <style>
 	.site-footer { --footer-wordmark-shift: 53px; position: sticky; bottom: 0; z-index: 0; min-height: min(72vh, 650px); margin-top: -84px; padding-top: 144px; overflow: hidden; background: var(--footer-surface) url('/footer-grain.svg') repeat; }
@@ -41,14 +92,19 @@ const { loginHref, signupHref } = Astro.props;
 	.site-footer p, .site-footer a { margin: 0; color: #5e5e58; font-size: 12px; }
 	.site-footer a { transition: color 100ms ease; }
 	.site-footer a:hover { color: var(--ink); }
+	.theme-control { display: inline-flex; align-items: center; gap: 5px; color: #5e5e58; font-size: 12px; }
+	.theme-control button { padding: 0; border: 0; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+	.theme-control button[aria-pressed='true'] { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
-	@media (prefers-color-scheme: dark) {
-		.site-footer__topline { color: var(--ink-muted); }
-		.site-footer__credit:hover { text-decoration-color: #fff; }
-		.site-footer__wordmark { color: #e7eae4; }
-		.site-footer__meta { border-color: rgb(241 243 238 / 16%); }
-		.site-footer p, .site-footer a { color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .site-footer__topline {
+		color: var(--ink-muted);
 	}
+	:global(html[data-theme='dark']) .site-footer__credit:hover { text-decoration-color: #fff; }
+	:global(html[data-theme='dark']) .site-footer__wordmark { color: #e7eae4; }
+	:global(html[data-theme='dark']) .site-footer__meta { border-color: rgb(241 243 238 / 16%); }
+	:global(html[data-theme='dark']) .site-footer p,
+	:global(html[data-theme='dark']) .site-footer a { color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .theme-control { color: var(--ink-muted); }
 
 	@media (max-width: 640px) {
 		.site-footer { --footer-wordmark-shift: 32px; min-height: 430px; margin-top: -48px; padding-top: 94px; }
@@ -56,7 +112,6 @@ const { loginHref, signupHref } = Astro.props;
 		.site-footer__inner { min-height: 336px; padding-bottom: 24px; }
 		.site-footer__wordmark { font-size: clamp(116px, 35vw, 160px); line-height: .82; }
 		.site-footer__meta { flex-wrap: wrap; gap: 12px 18px; }
-		.site-footer__meta p { width: 100%; order: 4; }
 	}
 
 	@media (prefers-reduced-motion: reduce) {

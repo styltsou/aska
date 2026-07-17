@@ -177,9 +177,9 @@ import heroRed05 from '../assets/images/hero-red-05.webp';
 </script>
 
 <style>
-	.hero-reference-field { position: absolute; inset: 30% 0 0; z-index: auto; background-image: url('/canvas-dots.svg'); background-position: center top; pointer-events: none; }
+	.hero-reference-field { position: absolute; inset: 30% 0 0; background-image: url('/canvas-dots.svg'); background-position: center top; pointer-events: none; }
 	.reference-canvas-card { position: absolute; z-index: 1; contain: paint; isolation: isolate; cursor: grab; transform: translate(var(--drag-x, 0), var(--drag-y, 0)); backface-visibility: hidden; touch-action: none; user-select: none; will-change: transform; pointer-events: auto; }
-	.reference-canvas-card.is-dragging { z-index: 3; cursor: grabbing; }
+	.reference-canvas-card.is-dragging { z-index: 5; cursor: grabbing; }
 	.reference-canvas-card.reference-field__item--folder { position: absolute; }
 	.reference-field__item { min-width: 0; overflow: hidden; border-radius: 8px; }
 	.reference-field__item img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
@@ -217,19 +217,24 @@ import heroRed05 from '../assets/images/hero-red-05.webp';
 	.reference-canvas-card--folder-archive { top: 385px; left: 30px; z-index: 3; width: 176px; height: 190px; }
 	.reference-canvas-card--note-lower { display: none; }
 
-	@media (prefers-color-scheme: dark) {
-		.hero-reference-field { background-image: radial-gradient(circle, rgb(241 243 238 / 15%) .6px, transparent .7px); background-size: 24px 24px; }
-		.reference-field__item--note, .reference-field__item--folder { background: var(--surface); }
-		.reference-field__item--note { color: var(--ink); }
-		.reference-field__item--note p { color: var(--ink-muted); }
-		.reference-field__item--note p:first-child { color: var(--ink); }
-		.reference-folder__preview img, .reference-folder__preview span { background: var(--surface-muted); }
-		.reference-folder__label { background: var(--surface); }
-		.reference-folder__label small { color: var(--ink-muted); }
-	}
+
+	:global(html[data-theme='dark']) .hero-reference-field { background-image: radial-gradient(circle, rgb(241 243 238 / 15%) .6px, transparent .7px); background-size: 24px 24px; }
+	:global(html[data-theme='dark']) .reference-field__item--note,
+	:global(html[data-theme='dark']) .reference-field__item--folder { background: var(--surface); }
+	:global(html[data-theme='dark']) .reference-field__item--note { color: var(--ink); }
+	:global(html[data-theme='dark']) .reference-field__item--note p { color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .reference-field__item--note p:first-child { color: var(--ink); }
+	:global(html[data-theme='dark']) .reference-folder__preview img,
+	:global(html[data-theme='dark']) .reference-folder__preview span { background: var(--surface-muted); }
+	:global(html[data-theme='dark']) .reference-folder__label { background: var(--surface); }
+	:global(html[data-theme='dark']) .reference-folder__label small { color: var(--ink-muted); }
 
 	@media (max-width: 900px) {
 		.reference-canvas-card--note-right, .reference-canvas-card--note-left-one, .reference-canvas-card--note-left-two, .reference-canvas-card--folder-working { display: none; }
+	}
+
+	@media (max-width: 1100px) {
+		.reference-canvas-card--note-left-two { display: none; }
 	}
 
 	@media (max-width: 640px) {

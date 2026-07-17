@@ -38,7 +38,7 @@
 </div>
 
 <style>
-	.hero-workspace { position: relative; display: flex; width: 100%; min-width: 0; padding: 14px 12px 12px; border: 1px solid var(--glass-line); border-radius: 9px; background: rgb(233 235 231 / 72%); box-shadow: 0 10px 25px rgb(21 21 21 / 6%); aspect-ratio: 16 / 10; backdrop-filter: blur(22px) saturate(145%); }
+	.hero-workspace { position: relative; display: flex; width: 100%; min-width: 0; padding: 14px 12px 12px; border: 1px solid var(--glass-line); border-radius: 9px; background: transparent; box-shadow: 0 10px 25px rgb(21 21 21 / 6%); aspect-ratio: 16 / 10; }
 	.hero-workspace__browser { display: flex; flex: 1; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid #d1d2ce; border-radius: 7px; background: #f9f9f7; }
 	.browser-bar { display: flex; align-items: center; height: 33px; gap: 9px; padding: 0 10px; border-bottom: 1px solid #deded9; color: #888883; font-size: 8px; }
 	.browser-bar__dots { display: flex; gap: 3px; }
@@ -83,21 +83,22 @@
 	.reference--green b:nth-of-type(1) { left: 15%; }
 	.reference--green b:nth-of-type(2) { right: 15%; }
 
-	@media (prefers-color-scheme: dark) {
-		.hero-workspace { background: rgb(18 21 18 / 78%); box-shadow: 0 10px 28px rgb(0 0 0 / 28%); }
-		.hero-workspace__browser { border-color: var(--line); background: var(--surface); }
-		.browser-bar { border-color: var(--line); color: var(--ink-muted); }
-		.browser-bar__dots i { background: #5e645d; }
-		.browser-bar__profile, .workspace-heading__add { color: #151715; background: var(--ink); }
-		.workspace-sidebar { border-color: var(--line); color: var(--ink-muted); background: var(--surface); }
-		.workspace-content { background: var(--canvas); }
-		.workspace-sidebar__brand { color: var(--ink); }
-		.workspace-nav-item--active { color: var(--ink); background: #303530; }
-		.workspace-sidebar__label, .workspace-heading span { color: #858b83; }
-		.reference { border-color: rgb(255 255 255 / 8%); }
-		.reference--paper { color: #f3f1ec; background: #77746c; }
-		.reference--note { color: var(--ink-muted); background: #2b2f2b; }
-	}
+
+	:global(html[data-theme='dark']) .hero-workspace { box-shadow: 0 10px 28px rgb(0 0 0 / 28%); }
+	:global(html[data-theme='dark']) .hero-workspace__browser { border-color: var(--line); background: var(--surface); }
+	:global(html[data-theme='dark']) .browser-bar { border-color: var(--line); color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .browser-bar__dots i { background: #5e645d; }
+	:global(html[data-theme='dark']) .browser-bar__profile,
+	:global(html[data-theme='dark']) .workspace-heading__add { color: #151715; background: var(--ink); }
+	:global(html[data-theme='dark']) .workspace-sidebar { border-color: var(--line); color: var(--ink-muted); background: var(--surface); }
+	:global(html[data-theme='dark']) .workspace-content { background: var(--canvas); }
+	:global(html[data-theme='dark']) .workspace-sidebar__brand { color: var(--ink); }
+	:global(html[data-theme='dark']) .workspace-nav-item--active { color: var(--ink); background: #303530; }
+	:global(html[data-theme='dark']) .workspace-sidebar__label,
+	:global(html[data-theme='dark']) .workspace-heading span { color: #858b83; }
+	:global(html[data-theme='dark']) .reference { border-color: rgb(255 255 255 / 8%); }
+	:global(html[data-theme='dark']) .reference--paper { color: #f3f1ec; background: #77746c; }
+	:global(html[data-theme='dark']) .reference--note { color: var(--ink-muted); background: #2b2f2b; }
 
 	@media (max-width: 640px) {
 		.hero-workspace { padding: 8px; }
@@ -107,9 +108,5 @@
 		.workspace-sidebar__label { margin-top: 8px; }
 		.workspace-content { padding: 12px; }
 		.reference-grid { gap: 5px; }
-	}
-
-	@media (prefers-reduced-transparency: reduce) {
-		.hero-workspace { background: var(--surface); backdrop-filter: none; }
 	}
 </style>
