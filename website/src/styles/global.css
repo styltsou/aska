@@ -41,7 +41,6 @@ h1, h2 { font-weight: 560; letter-spacing: 0; }
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { border: 3px solid var(--canvas); border-radius: 999px; background: #777772; }
-::-webkit-scrollbar-thumb:hover { background: #30302e; }
 
 .page-width { width: min(calc(100% - 48px), var(--page-width)); margin-inline: auto; }
 
@@ -62,9 +61,7 @@ h1, h2 { font-weight: 560; letter-spacing: 0; }
 
 .button:active { transform: translateY(1px); }
 .button--primary { color: #fff; background: var(--ink); border-color: var(--ink); }
-.button--primary:hover { background: #30302e; border-color: #30302e; }
 .button--quiet { background: rgb(255 255 255 / 52%); border-color: var(--line); }
-.button--quiet:hover { background: var(--surface); border-color: var(--line-strong); }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
@@ -94,10 +91,22 @@ h1, h2 { font-weight: 560; letter-spacing: 0; }
 
 html[data-theme='dark'] { scrollbar-color: #737970 var(--canvas); }
 html[data-theme='dark']::-webkit-scrollbar-thumb { background: #737970; }
-html[data-theme='dark']::-webkit-scrollbar-thumb:hover { background: #a6aca3; }
 html[data-theme='dark'] .button--primary { color: #151715; }
-html[data-theme='dark'] .button--primary:hover { background: #d8dcd5; border-color: #d8dcd5; }
 html[data-theme='dark'] .button--quiet { background: rgb(255 255 255 / 6%); }
+
+@media (hover: hover) {
+	::-webkit-scrollbar-thumb:hover { background: #30302e; }
+	.button--primary:hover { background: #30302e; border-color: #30302e; }
+	.button--quiet:hover { background: var(--surface); border-color: var(--line-strong); }
+	html[data-theme='dark']::-webkit-scrollbar-thumb:hover { background: #a6aca3; }
+	html[data-theme='dark'] .button--primary:hover { background: #d8dcd5; border-color: #d8dcd5; }
+}
+
+@media (hover: none) {
+	.button--primary:active { background: #30302e; border-color: #30302e; }
+	.button--quiet:active { background: var(--surface); border-color: var(--line-strong); }
+	html[data-theme='dark'] .button--primary:active { background: #d8dcd5; border-color: #d8dcd5; }
+}
 
 @media (max-width: 640px) {
 	.page-width { width: min(calc(100% - 32px), var(--page-width)); }

@@ -75,16 +75,18 @@ import greenAbstract07 from '../assets/images/green-abstract-07.webp';
 	const featurePanels = Array.from(document.querySelectorAll<HTMLElement>('.feature-panel'));
 	const featureListeners = new AbortController();
 
-	featurePanels.forEach((panel) => {
-		panel.addEventListener('mouseenter', () => panel.classList.add('is-preview-active'), {
-			signal: featureListeners.signal,
+	if (window.matchMedia('(hover: hover)').matches) {
+		featurePanels.forEach((panel) => {
+			panel.addEventListener('mouseenter', () => panel.classList.add('is-preview-active'), {
+				signal: featureListeners.signal,
+			});
+			panel.addEventListener('mouseleave', () => panel.classList.remove('is-preview-active'), {
+				signal: featureListeners.signal,
+			});
 		});
-		panel.addEventListener('mouseleave', () => panel.classList.remove('is-preview-active'), {
-			signal: featureListeners.signal,
-		});
-	});
 
-	document.addEventListener('astro:before-swap', () => featureListeners.abort(), { once: true });
+		document.addEventListener('astro:before-swap', () => featureListeners.abort(), { once: true });
+	}
 </script>
 
 <style>
@@ -170,9 +172,11 @@ import greenAbstract07 from '../assets/images/green-abstract-07.webp';
 		100% { border-color: var(--feature-frame-border-end); box-shadow: var(--feature-frame-shadow-end); }
 	}
 
-	.feature-panel--capture:is(:hover, .is-preview-active) .capture-preview, .feature-panel--search:is(:hover, .is-preview-active) .search-preview { transform: translate3d(var(--preview-x), calc(var(--preview-y) - 22px), 0); }
-	.feature-panel--canvas:is(:hover, .is-preview-active) .canvas-preview { transform: translate3d(calc(var(--preview-x) - 22px), calc(var(--preview-y) - 22px), 0); }
-	.feature-panel:is(:hover, .is-preview-active) .capture-preview, .feature-panel:is(:hover, .is-preview-active) .search-preview, .feature-panel:is(:hover, .is-preview-active) .canvas-preview { animation: feature-glass-frame-in 420ms cubic-bezier(.22, .8, .24, 1) both; }
+	@media (hover: hover) {
+		.feature-panel--capture:is(:hover, .is-preview-active) .capture-preview, .feature-panel--search:is(:hover, .is-preview-active) .search-preview { transform: translate3d(var(--preview-x), calc(var(--preview-y) - 22px), 0); }
+		.feature-panel--canvas:is(:hover, .is-preview-active) .canvas-preview { transform: translate3d(calc(var(--preview-x) - 22px), calc(var(--preview-y) - 22px), 0); }
+		.feature-panel:is(:hover, .is-preview-active) .capture-preview, .feature-panel:is(:hover, .is-preview-active) .search-preview, .feature-panel:is(:hover, .is-preview-active) .canvas-preview { animation: feature-glass-frame-in 420ms cubic-bezier(.22, .8, .24, 1) both; }
+	}
 
 
 	:global(html[data-theme='dark']) .feature-panel { box-shadow: 0 2px 10px rgb(0 0 0 / 18%); }
