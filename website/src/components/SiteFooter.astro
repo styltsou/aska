@@ -18,14 +18,18 @@ const { loginHref, signupHref } = Astro.props;
 	<div class="site-footer__wordmark" aria-hidden="true">aska</div>
 	<div class="page-width site-footer__inner">
 		<div class="site-footer__meta">
-			<a href="#top">Back to top</a>
-			<a href={loginHref}>Log in</a>
-			<a href={signupHref}>Create account</a>
-			<div class="theme-control" role="group" aria-label="Theme">
-				<span aria-hidden="true">Theme:</span>
-				<button type="button" data-theme-option="light" aria-pressed="false">Light</button>
-				<span aria-hidden="true">/</span>
-				<button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+			<div class="site-footer__meta-group site-footer__meta-group--start">
+				<a href="#top">Back to top</a>
+				<div class="theme-control" role="group" aria-label="Theme">
+					<span aria-hidden="true">Theme:</span>
+					<button type="button" data-theme-option="light" aria-pressed="false">Light</button>
+					<span aria-hidden="true">/</span>
+					<button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
+				</div>
+			</div>
+			<div class="site-footer__meta-group site-footer__meta-group--end">
+				<a href={signupHref}>Create account</a>
+				<a href={loginHref}>Log in</a>
 			</div>
 		</div>
 	</div>
@@ -87,6 +91,7 @@ const { loginHref, signupHref } = Astro.props;
 	.site-footer__inner { position: relative; z-index: 1; display: flex; align-items: flex-end; min-height: min(58vh, 506px); padding-bottom: 34px; }
 	.site-footer__wordmark { position: absolute; top: calc(50% + var(--footer-wordmark-shift)); left: 0; width: 100%; color: #20201e; font-size: clamp(150px, 27vw, 410px); font-weight: 600; letter-spacing: 0; line-height: .77; text-align: center; transform: translateY(-50%); }
 	.site-footer__meta { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 22px; padding-top: 18px; border-top: 1px solid rgb(21 21 21 / 16%); }
+	.site-footer__meta-group { display: flex; align-items: center; gap: 22px; }
 	.site-footer p, .site-footer a { margin: 0; color: #5e5e58; font-size: 12px; }
 	.site-footer a { transition: color 100ms ease; }
 	.theme-control { display: inline-flex; align-items: center; gap: 5px; color: #5e5e58; font-size: 12px; }
@@ -119,7 +124,9 @@ const { loginHref, signupHref } = Astro.props;
 		.site-footer__topline { top: 76px; font-size: 10px; }
 		.site-footer__inner { min-height: 336px; padding-bottom: 24px; }
 		.site-footer__wordmark { font-size: clamp(116px, 35vw, 160px); line-height: .82; }
-		.site-footer__meta { flex-wrap: wrap; gap: 12px 18px; }
+		.site-footer__meta { align-items: flex-start; }
+		.site-footer__meta-group { flex-direction: column; align-items: flex-start; gap: 12px; }
+		.site-footer__meta-group--end { align-items: flex-end; text-align: right; }
 	}
 
 	@media (prefers-reduced-motion: reduce) {

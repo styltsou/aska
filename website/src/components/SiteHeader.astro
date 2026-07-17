@@ -108,14 +108,14 @@ const { loginHref, signupHref } = Astro.props;
 		.site-header__inner { width: min(calc(100% - 32px), var(--page-width)); min-height: 46px; padding-left: 12px; }
 		.desktop-nav, .desktop-actions { display: none; }
 		.mobile-menu-toggle { width: 46px; height: 38px; display: inline-grid; flex: 0 0 46px; padding: 0; border: 0; color: var(--ink); background: transparent; cursor: pointer; place-items: center; }
-		.mobile-menu-toggle__icon { position: relative; width: 24px; height: 18px; display: block; }
+		.mobile-menu-toggle__icon { position: relative; width: 21px; height: 14px; display: block; }
 		.mobile-menu-toggle__icon span { position: absolute; top: 50%; right: 0; height: 2px; border-radius: 2px; background: currentColor; transform-origin: center; transition: width 260ms cubic-bezier(.22, .8, .24, 1), transform 320ms cubic-bezier(.22, .8, .24, 1); }
-		.mobile-menu-toggle__icon span:first-child { width: 24px; transform: translateY(-5px); }
-		.mobile-menu-toggle__icon span:last-child { width: 15px; transform: translateY(4px); }
-		.mobile-menu-toggle[aria-expanded="true"] .mobile-menu-toggle__icon span { width: 22px; }
+		.mobile-menu-toggle__icon span:first-child { width: 21px; transform: translateY(-3px); }
+		.mobile-menu-toggle__icon span:last-child { width: 13px; transform: translateY(3px); }
+		.mobile-menu-toggle[aria-expanded="true"] .mobile-menu-toggle__icon span { width: 19px; }
 		.mobile-menu-toggle[aria-expanded="true"] .mobile-menu-toggle__icon span:first-child { transform: translateY(-1px) rotate(45deg); }
 		.mobile-menu-toggle[aria-expanded="true"] .mobile-menu-toggle__icon span:last-child { transform: translateY(-1px) rotate(-45deg); }
-		.mobile-menu-drawer { position: fixed; inset: 0; z-index: 25; display: block; visibility: hidden; overflow: hidden; background: rgb(243 244 241 / 48%); opacity: 0; pointer-events: none; transform: translateY(-14px); transition: opacity 260ms ease, transform 360ms cubic-bezier(.22, .8, .24, 1), visibility 0s linear 360ms; backdrop-filter: blur(28px) saturate(155%); -webkit-backdrop-filter: blur(28px) saturate(155%); }
+		.mobile-menu-drawer { position: fixed; inset: 0; z-index: 25; display: block; visibility: hidden; overflow: hidden; background: rgb(243 244 241 / 68%); opacity: 0; pointer-events: none; transform: translateY(-14px); transition: opacity 260ms ease, transform 360ms cubic-bezier(.22, .8, .24, 1), visibility 0s linear 360ms; backdrop-filter: blur(40px) saturate(155%); -webkit-backdrop-filter: blur(40px) saturate(155%); }
 		.mobile-menu-drawer.is-open { visibility: visible; opacity: 1; pointer-events: auto; transform: translateY(0); transition-delay: 0s; }
 		.mobile-menu-drawer__inner { width: min(calc(100% - 48px), 520px); height: 100dvh; display: flex; flex-direction: column; justify-content: space-between; margin-inline: auto; padding: 112px 0 36px; }
 		.mobile-menu-drawer__nav { display: grid; gap: 18px; }
@@ -126,7 +126,7 @@ const { loginHref, signupHref } = Astro.props;
 	}
 
 	@media (max-width: 640px) {
-		:global(html[data-theme='dark']) .mobile-menu-drawer { background: rgb(0 0 0 / 48%); }
+		:global(html[data-theme='dark']) .mobile-menu-drawer { background: rgb(0 0 0 / 68%); }
 	}
 
 	@media (prefers-reduced-motion: reduce) {
