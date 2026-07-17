@@ -1,3 +1,15 @@
+---
+import { Image } from 'astro:assets';
+import blueRedWall from '../assets/images/blue-red-wall.jpg';
+import brutalistShadows from '../assets/images/brutalist-shadows.jpg';
+import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
+import curvedArchitecture from '../assets/images/curved-architecture.jpg';
+import greenAbstract02 from '../assets/images/green-abstract-02.webp';
+import greenAbstract03 from '../assets/images/green-abstract-03.webp';
+import greenAbstract05 from '../assets/images/green-abstract-05.webp';
+import greenAbstract07 from '../assets/images/green-abstract-07.webp';
+---
+
 <section class="feature-showcase page-width" aria-label="Aska features">
 	<article id="workflow" class="feature-panel feature-panel--capture">
 		<div class="feature-panel__copy">
@@ -7,10 +19,10 @@
 		<div class="capture-preview" role="img" aria-label="An Aska inbox containing different kinds of saved references">
 			<div class="capture-preview__head"><strong>New to your Inbox</strong><span>Today</span></div>
 			<div class="capture-stream" aria-hidden="true">
-				<div class="stream-item stream-item--image"><img src="/images/blue-red-wall.jpg" alt="" /><span>Image</span><small>Folded surface</small></div>
+				<div class="stream-item stream-item--image"><Image src={blueRedWall} alt="" /><span>Image</span><small>Folded surface</small></div>
 				<div class="stream-item stream-item--article"><span>Article</span><strong>Designing systems that leave room for intuition.</strong><small>reading list / 7 min</small></div>
 				<div class="stream-item stream-item--note"><span>Note</span><strong>Keep the tension between precise and imperfect.</strong><small>personal thought</small></div>
-				<div class="stream-item stream-item--image stream-item--dark"><img src="/images/brutalist-shadows.jpg" alt="" /><span>Image</span><small>Studio light</small></div>
+				<div class="stream-item stream-item--image stream-item--dark"><Image src={brutalistShadows} alt="" /><span>Image</span><small>Studio light</small></div>
 			</div>
 			<div class="capture-toast" aria-hidden="true"><span class="saved-dot"></span>Reference added</div>
 		</div>
@@ -25,10 +37,10 @@
 			<div class="search-field"><span>Search your archive</span><strong>Forest green</strong></div>
 			<div class="colour-filter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><span>Colour match</span></div>
 			<div class="search-results" aria-hidden="true">
-				<div class="search-result search-result--one"><img src="/images/green-abstract-05.webp" alt="" /><span>Emerald folds</span></div>
-				<div class="search-result search-result--two"><img src="/images/green-abstract-02.webp" alt="" /><span>Layer study</span></div>
-				<div class="search-result search-result--three"><img src="/images/green-abstract-03.webp" alt="" /><span>Woven field</span></div>
-				<div class="search-result search-result--four"><img src="/images/green-abstract-07.webp" alt="" /><span>Dark weave</span></div>
+				<div class="search-result search-result--one"><Image src={greenAbstract05} alt="" /><span>Emerald folds</span></div>
+				<div class="search-result search-result--two"><Image src={greenAbstract02} alt="" /><span>Layer study</span></div>
+				<div class="search-result search-result--three"><Image src={greenAbstract03} alt="" /><span>Woven field</span></div>
+				<div class="search-result search-result--four"><Image src={greenAbstract07} alt="" /><span>Dark weave</span></div>
 			</div>
 		</div>
 	</article>
@@ -41,16 +53,16 @@
 		<div class="canvas-preview" role="img" aria-label="An Aska collection canvas with references positioned in a moodboard">
 			<div class="canvas-preview__top"><span>Collections / Soft systems</span><span>48 items</span></div>
 			<div class="canvas-grid" aria-hidden="true">
-				<div class="canvas-object canvas-object--image-one"><img src="/images/blue-red-wall.jpg" alt="" /></div>
+				<div class="canvas-object canvas-object--image-one"><Image src={blueRedWall} alt="" /></div>
 				<div class="canvas-object canvas-object--folder">
-					<div class="canvas-folder__previews"><img src="/images/curved-architecture.jpg" alt="" /><img src="/images/concrete-sculptures.jpg" alt="" /><img src="/images/brutalist-shadows.jpg" alt="" /><span></span></div>
+					<div class="canvas-folder__previews"><Image src={curvedArchitecture} alt="" /><Image src={concreteSculptures} alt="" /><Image src={brutalistShadows} alt="" /><span></span></div>
 					<div class="canvas-folder__label"><strong>Material studies</strong><small>24</small></div>
 				</div>
 				<div class="canvas-object canvas-object--note"><p><strong>Keep the useful friction.</strong></p><p>Every reference needs room around it.</p></div>
-				<div class="canvas-object canvas-object--image-two"><img src="/images/concrete-sculptures.jpg" alt="" /></div>
-				<div class="canvas-object canvas-object--image-three"><img src="/images/curved-architecture.jpg" alt="" /></div>
+				<div class="canvas-object canvas-object--image-two"><Image src={concreteSculptures} alt="" /></div>
+				<div class="canvas-object canvas-object--image-three"><Image src={curvedArchitecture} alt="" /></div>
 				<div class="canvas-object canvas-object--folder-small">
-					<div class="canvas-folder__previews"><img src="/images/brutalist-shadows.jpg" alt="" /><img src="/images/blue-red-wall.jpg" alt="" /><span></span><img src="/images/concrete-sculptures.jpg" alt="" /></div>
+					<div class="canvas-folder__previews"><Image src={brutalistShadows} alt="" /><Image src={blueRedWall} alt="" /><span></span><Image src={concreteSculptures} alt="" /></div>
 					<div class="canvas-folder__label"><strong>Drafts</strong><small>8</small></div>
 				</div>
 			</div>

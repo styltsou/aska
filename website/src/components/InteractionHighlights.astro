@@ -1,3 +1,11 @@
+---
+import { Image } from 'astro:assets';
+import toolsBlue01 from '../assets/images/tools-blue-01.webp';
+import toolsFuchsia02 from '../assets/images/tools-fuchsia-02.webp';
+import toolsGreen01 from '../assets/images/tools-green-01.webp';
+import toolsRed01 from '../assets/images/tools-red-01.webp';
+---
+
 <section class="interaction-highlights page-width" aria-labelledby="interaction-heading">
 	<div class="interaction-highlights__intro">
 		<h2 id="interaction-heading">Small tools that keep the work moving.</h2>
@@ -49,10 +57,10 @@
 				<div class="folder-canvas-preview__grid">
 					<div class="folder-canvas-preview__folder">
 						<div class="folder-canvas-preview__folder-grid">
-							<img src="/images/tools-red-01.webp" alt="" />
-							<img src="/images/tools-green-01.webp" alt="" />
-							<img src="/images/tools-blue-01.webp" alt="" />
-							<img src="/images/tools-fuchsia-02.webp" alt="" />
+							<Image src={toolsRed01} alt="" />
+							<Image src={toolsGreen01} alt="" />
+							<Image src={toolsBlue01} alt="" />
+							<Image src={toolsFuchsia02} alt="" />
 						</div>
 						<div class="folder-canvas-preview__folder-label"><strong>Material studies</strong><small>24</small></div>
 					</div>

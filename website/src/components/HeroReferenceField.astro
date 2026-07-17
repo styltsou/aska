@@ -1,9 +1,36 @@
+---
+import { Image } from 'astro:assets';
+import heroBlue01 from '../assets/images/hero-blue-01.webp';
+import heroBlue02 from '../assets/images/hero-blue-02.webp';
+import heroBlue03 from '../assets/images/hero-blue-03.webp';
+import heroBlue04 from '../assets/images/hero-blue-04.webp';
+import heroBlue05 from '../assets/images/hero-blue-05.webp';
+import heroFuchsia01 from '../assets/images/hero-fuchsia-01.webp';
+import heroFuchsia02 from '../assets/images/hero-fuchsia-02.webp';
+import heroFuchsia03 from '../assets/images/hero-fuchsia-03.webp';
+import heroFuchsia04 from '../assets/images/hero-fuchsia-04.webp';
+import heroGreen01 from '../assets/images/hero-green-01.webp';
+import heroGreen02 from '../assets/images/hero-green-02.webp';
+import heroGreen03 from '../assets/images/hero-green-03.webp';
+import heroGreen04 from '../assets/images/hero-green-04.webp';
+import heroGreen05 from '../assets/images/hero-green-05.webp';
+import heroOrange01 from '../assets/images/hero-orange-01.webp';
+import heroOrange02 from '../assets/images/hero-orange-02.webp';
+import heroOrange03 from '../assets/images/hero-orange-03.webp';
+import heroOrange04 from '../assets/images/hero-orange-04.webp';
+import heroRed01 from '../assets/images/hero-red-01.webp';
+import heroRed02 from '../assets/images/hero-red-02.webp';
+import heroRed03 from '../assets/images/hero-red-03.webp';
+import heroRed04 from '../assets/images/hero-red-04.webp';
+import heroRed05 from '../assets/images/hero-red-05.webp';
+---
+
 <div class="hero-reference-field" aria-hidden="true">
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--brick">
-		<img src="/images/hero-red-01.webp" alt="" />
+		<Image src={heroRed01} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--left-edge">
-		<img src="/images/hero-fuchsia-02.webp" alt="" />
+		<Image src={heroFuchsia02} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note">
 		<p><strong>Keep the rough edge.</strong></p>
@@ -18,67 +45,67 @@
 		<p>glass / paper / concrete</p>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--blue">
-		<img src="/images/hero-blue-02.webp" alt="" />
+		<Image src={heroBlue02} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--plinth">
-		<img src="/images/hero-orange-01.webp" alt="" />
+		<Image src={heroOrange01} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-material">
 		<div class="reference-folder__preview">
-			<img src="/images/hero-red-02.webp" alt="" />
-			<img src="/images/hero-green-03.webp" alt="" />
-			<img src="/images/hero-blue-01.webp" alt="" />
+			<Image src={heroRed02} alt="" />
+			<Image src={heroGreen03} alt="" />
+			<Image src={heroBlue01} alt="" />
 			<span></span>
 		</div>
 		<div class="reference-folder__label"><strong>Material studies</strong><small>24</small></div>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-working">
 		<div class="reference-folder__preview">
-			<img src="/images/hero-fuchsia-01.webp" alt="" />
+			<Image src={heroFuchsia01} alt="" />
 			<span></span>
-			<img src="/images/hero-orange-03.webp" alt="" />
-			<img src="/images/hero-green-02.webp" alt="" />
+			<Image src={heroOrange03} alt="" />
+			<Image src={heroGreen02} alt="" />
 		</div>
 		<div class="reference-folder__label"><strong>Working set</strong><small>16</small></div>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--curve">
-		<img src="/images/hero-green-01.webp" alt="" />
+		<Image src={heroGreen01} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-prelude">
-		<img src="/images/hero-fuchsia-03.webp" alt="" />
+		<Image src={heroFuchsia03} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note-right">
 		<p><strong>## Search cues</strong></p>
 		<p>material / colour / shape</p>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--shadow-wide">
-		<img src="/images/hero-orange-02.webp" alt="" />
+		<Image src={heroOrange02} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-blue">
-		<img src="/images/hero-blue-04.webp" alt="" />
+		<Image src={heroBlue04} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-shadows">
-		<img src="/images/hero-red-04.webp" alt="" />
+		<Image src={heroRed04} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-soft">
 		<div class="reference-folder__preview">
-			<img src="/images/hero-blue-03.webp" alt="" />
-			<img src="/images/hero-red-03.webp" alt="" />
+			<Image src={heroBlue03} alt="" />
+			<Image src={heroRed03} alt="" />
 			<span></span>
-			<img src="/images/hero-orange-04.webp" alt="" />
+			<Image src={heroOrange04} alt="" />
 		</div>
 		<div class="reference-folder__label"><strong>Soft systems</strong><small>12</small></div>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--sculptures reference-canvas-card--sculptures">
-		<img src="/images/hero-green-05.webp" alt="" />
+		<Image src={heroGreen05} alt="" />
 		<span>MONUMENT / 1981</span>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-archive">
 		<div class="reference-folder__preview">
-			<img src="/images/hero-fuchsia-04.webp" alt="" />
-			<img src="/images/hero-green-04.webp" alt="" />
-			<img src="/images/hero-blue-05.webp" alt="" />
-			<img src="/images/hero-red-05.webp" alt="" />
+			<Image src={heroFuchsia04} alt="" />
+			<Image src={heroGreen04} alt="" />
+			<Image src={heroBlue05} alt="" />
+			<Image src={heroRed05} alt="" />
 		</div>
 		<div class="reference-folder__label"><strong>Archive fragments</strong><small>36</small></div>
 	</article>
