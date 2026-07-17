@@ -8,10 +8,14 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "deploy": "bun run build && wrangler deploy",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
     "astro": "^7.0.9"
+  },
+  "devDependencies": {
+    "wrangler": "^4.112.0"
   }
 }
