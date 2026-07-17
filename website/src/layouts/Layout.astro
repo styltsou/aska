@@ -22,7 +22,7 @@ const {
 		<script is:inline>
 			(() => {
 				const storageKey = 'aska-theme';
-				let savedTheme: string | null = null;
+				let savedTheme = null;
 
 				try {
 					savedTheme = localStorage.getItem(storageKey);
