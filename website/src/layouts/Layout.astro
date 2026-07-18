@@ -18,7 +18,7 @@ const {
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="description" content={description} />
-		<meta name="theme-color" content="#e9ebe7" />
+		<meta name="theme-color" content="#ffffff" />
 		<script is:inline>
 			(() => {
 				const storageKey = 'aska-theme';
@@ -37,7 +37,7 @@ const {
 				document.documentElement.dataset.theme = theme;
 				document.querySelector('meta[name="theme-color"]')?.setAttribute(
 					'content',
-					theme === 'dark' ? '#000000' : '#e9ebe7',
+					theme === 'dark' ? 'oklch(0.145 0 0)' : '#ffffff',
 				);
 			})();
 		</script>

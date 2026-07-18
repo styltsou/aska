@@ -43,7 +43,7 @@ const { loginHref, signupHref } = Astro.props;
 
 	const updateTheme = (theme: 'light' | 'dark') => {
 		root.dataset.theme = theme;
-		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#000000' : '#e9ebe7');
+		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? 'oklch(0.145 0 0)' : '#ffffff');
 		themeButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.themeOption === theme)));
 	};
 
@@ -82,7 +82,7 @@ const { loginHref, signupHref } = Astro.props;
 </script>
 
 <style>
-	.site-footer { --footer-wordmark-shift: 53px; position: sticky; bottom: 0; z-index: 0; min-height: min(72vh, 650px); margin-top: -84px; padding-top: 144px; overflow: hidden; background: var(--footer-surface) url('/footer-grain.svg') repeat; }
+	.site-footer { --footer-wordmark-shift: 53px; position: sticky; bottom: 0; z-index: 0; min-height: min(72vh, 650px); margin-top: -84px; padding-top: 144px; overflow: hidden; background: var(--footer-surface); }
 	.site-footer__topline { --footer-topline-size: 11px; position: absolute; top: 116px; left: 50%; z-index: 1; display: flex; align-items: center; justify-content: space-between; color: #72726c; font-size: var(--footer-topline-size); line-height: 1; transform: translateX(-50%); }
 	.site-footer__credit-block { display: grid; justify-items: start; gap: 7px; }
 	.site-footer__topline span, .site-footer__topline a { font-size: var(--footer-topline-size); text-decoration: none; }

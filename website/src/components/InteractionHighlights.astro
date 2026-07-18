@@ -10,7 +10,7 @@ import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
 <section class="interaction-highlights page-width" aria-labelledby="interaction-heading">
 	<div class="interaction-highlights__intro">
 		<h2 id="interaction-heading">Small tools that keep the work moving.</h2>
-		<p>Quick actions stay close to the canvas, so the archive never interrupts the thought.</p>
+		<p>Quick actions stay close to the canvas, so you can keep sorting, capturing, and moving without losing context.</p>
 	</div>
 	<div class="interaction-grid">
 		<span class="interaction-grid__rule interaction-grid__rule--top" aria-hidden="true"></span>
@@ -435,8 +435,8 @@ import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
 	:global(html[data-theme='dark']) .source-import-preview__social--pinterest { color: #ff6b77; }
 	:global(html[data-theme='dark']) .source-import-preview__social--x { color: var(--ink); }
 	:global(html[data-theme='dark']) .source-import-preview__social--dribbble { color: #ff8fbd; }
-	:global(html[data-theme='dark']) .command-preview__dialog { border-color: rgb(255 255 255 / 5%); background: rgb(22 22 22 / 30%); color: var(--ink); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%), 0 0 0 1px rgb(241 243 238 / 10%); }
-	:global(html[data-theme='dark']) .command-preview__body { border-color: rgb(255 255 255 / 6%); background: rgb(22 22 22 / 70%); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%), 0 0 0 1px rgb(241 243 238 / 10%); }
+	:global(html[data-theme='dark']) .command-preview__dialog { border-color: oklch(1 0 0 / 5%); background: color-mix(in srgb, var(--surface) 30%, transparent); color: var(--ink); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%), 0 0 0 1px var(--line); }
+	:global(html[data-theme='dark']) .command-preview__body { border-color: oklch(1 0 0 / 6%); background: color-mix(in srgb, var(--surface) 70%, transparent); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%), 0 0 0 1px var(--line); }
 	:global(html[data-theme='dark']) .command-preview__search,
 	:global(html[data-theme='dark']) .command-preview__group,
 	:global(html[data-theme='dark']) .command-preview__footer,
@@ -444,15 +444,15 @@ import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
 	:global(html[data-theme='dark']) .command-preview__search { border-color: var(--line); }
 	:global(html[data-theme='dark']) .command-preview__separator { background-color: var(--line); }
 	:global(html[data-theme='dark']) kbd { border-color: var(--line-strong); background: var(--surface-muted); color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .command-preview__item { color: #c5c9c2; }
+	:global(html[data-theme='dark']) .command-preview__item { color: var(--ink); }
 	:global(html[data-theme='dark']) .command-preview__item svg,
 	:global(html[data-theme='dark']) .command-preview__item strong { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .command-preview__item--active { color: var(--ink); background: #303530; }
+	:global(html[data-theme='dark']) .command-preview__item--active { color: var(--ink); background: color-mix(in srgb, var(--ink) 10%, transparent); }
 	:global(html[data-theme='dark']) .command-preview__item--active svg,
 	:global(html[data-theme='dark']) .command-preview__item--active strong { color: var(--ink); }
 	:global(html[data-theme='dark']) .scratchpad-preview__overlay { background: transparent; }
-	:global(html[data-theme='dark']) .scratchpad-preview__frame { border-color: rgb(255 255 255 / 5%); background: rgb(22 22 22 / 30%); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%), 0 0 0 1px rgb(241 243 238 / 10%); }
-	:global(html[data-theme='dark']) .scratchpad-preview__surface { border-color: rgb(255 255 255 / 6%); background: rgb(22 22 22 / 70%); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%), 0 0 0 1px rgb(241 243 238 / 10%); }
+	:global(html[data-theme='dark']) .scratchpad-preview__frame { border-color: oklch(1 0 0 / 5%); background: color-mix(in srgb, var(--surface) 30%, transparent); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%), 0 0 0 1px var(--line); }
+	:global(html[data-theme='dark']) .scratchpad-preview__surface { border-color: oklch(1 0 0 / 6%); background: color-mix(in srgb, var(--surface) 70%, transparent); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%), 0 0 0 1px var(--line); }
 	:global(html[data-theme='dark']) .scratchpad-preview__textarea { color: var(--ink-muted); }
 	:global(html[data-theme='dark']) .selection-preview__marquee { border-color: rgb(241 243 238 / 100%); background: rgb(241 243 238 / 10%); box-shadow: none; }
 	:global(html[data-theme='dark']) .selection-preview__marquee rect { stroke: rgb(241 243 238 / 100%); }

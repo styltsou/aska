@@ -14,11 +14,11 @@ const { loginHref, signupHref } = Astro.props;
 
 <style is:global>
 	.site-header { position: fixed; inset: 10px 0 auto; z-index: 20; pointer-events: none; }
-	.site-header__inner { position: relative; width: min(calc(100% - 48px), 980px); min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-inline: auto; padding: 4px 5px 4px 12px; pointer-events: auto; }
+	.site-header__inner { position: relative; width: min(calc(100% - 48px), 980px); min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-inline: auto; padding: 8px; pointer-events: auto; }
 	.site-header__chrome { position: absolute; inset: 0; z-index: 0; border: 1px solid var(--glass-line); border-radius: 8px; background: var(--glass-surface); box-shadow: 0 5px 14px rgb(21 21 21 / 5%); backdrop-filter: blur(22px) saturate(150%); pointer-events: none; }
 	.site-header__row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%; }
 	.brand { display: inline-flex; align-items: center; }
-	.brand__logo { width: 76px; height: 25px; display: block; }
+	.brand__logo { width: 82px; height: 27px; display: block; }
 	.desktop-nav, .desktop-actions { display: flex; align-items: center; gap: 20px; }
 	.desktop-nav { margin-right: 4px; margin-left: auto; }
 	.desktop-nav a, .text-link { color: var(--ink-muted); font-size: 13px; font-weight: 500; transition: color 140ms ease; }
@@ -41,8 +41,8 @@ const { loginHref, signupHref } = Astro.props;
 	@media (max-width: 640px) {
 		html.has-mobile-menu { overflow: hidden; }
 		.site-header { inset: 0; z-index: 30; }
-		.site-header__inner { position: fixed; z-index: 1; top: 8px; left: 8px; right: 8px; width: auto; height: calc(100dvh - 8px); min-height: 0; margin-inline: 0; padding: 4px 8px 4px 12px; overflow: visible; display: flex; flex-direction: column; align-items: stretch; pointer-events: none; }
-		.site-header__chrome { inset: 0 0 calc(100dvh - 54px); border-radius: 10px; box-shadow: var(--glass-shadow); transition: top 380ms cubic-bezier(.22, .8, .24, 1), right 380ms cubic-bezier(.22, .8, .24, 1), bottom 380ms cubic-bezier(.22, .8, .24, 1), left 380ms cubic-bezier(.22, .8, .24, 1), border-radius 380ms cubic-bezier(.22, .8, .24, 1), background 240ms ease, border-color 240ms ease, box-shadow 240ms ease, backdrop-filter 240ms ease; }
+		.site-header__inner { position: fixed; z-index: 1; top: 8px; left: 8px; right: 8px; width: auto; height: calc(100dvh - 8px); min-height: 0; margin-inline: 0; padding: 8px; overflow: visible; display: flex; flex-direction: column; align-items: stretch; pointer-events: none; }
+		.site-header__chrome { inset: 0 0 calc(100dvh - 62px); border-radius: 10px; box-shadow: var(--glass-shadow); transition: top 380ms cubic-bezier(.22, .8, .24, 1), right 380ms cubic-bezier(.22, .8, .24, 1), bottom 380ms cubic-bezier(.22, .8, .24, 1), left 380ms cubic-bezier(.22, .8, .24, 1), border-radius 380ms cubic-bezier(.22, .8, .24, 1), background 240ms ease, border-color 240ms ease, box-shadow 240ms ease, backdrop-filter 240ms ease; }
 		.site-header__inner[data-menu-open] .site-header__chrome { top: -8px; right: -8px; bottom: 0; left: -8px; border-radius: 0; background: var(--glass-surface-strong); border-color: var(--line); box-shadow: 0 18px 44px rgb(21 21 21 / 16%); }
 		.site-header__row { flex-shrink: 0; gap: 0; pointer-events: auto; }
 		.mobile-menu-toggle, .mobile-menu-content { display: flex; }

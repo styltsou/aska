@@ -25,7 +25,7 @@ const { signupHref } = Astro.props;
 </section>
 
 <style>
-	.hero { --hero-surface-rgb: 243 244 241; --hero-fade-rgb: var(--hero-surface-rgb); --hero-fade-depth: 64px; --hero-fade-one: 56px; --hero-fade-two: 48px; --hero-fade-three: 38px; --hero-fade-four: 28px; --hero-fade-five: 18px; --hero-fade-six: 8px; position: relative; height: calc(100dvh + var(--hero-fade-depth)); padding-top: clamp(132px, 18dvh, 180px); overflow: hidden; text-align: center; }
+	.hero { --hero-surface-rgb: 243 244 241; --hero-fade-rgb: var(--hero-surface-rgb); --hero-surface: var(--canvas); --hero-dot: rgb(21 21 21 / 10%); --hero-fade-depth: 64px; --hero-fade-one: 56px; --hero-fade-two: 48px; --hero-fade-three: 38px; --hero-fade-four: 28px; --hero-fade-five: 18px; --hero-fade-six: 8px; position: relative; height: calc(100dvh + var(--hero-fade-depth)); padding-top: clamp(132px, 18dvh, 180px); overflow: hidden; text-align: center; }
 	.hero__copy { position: relative; z-index: 20; max-width: 670px; margin-inline: auto; }
 	h1 { max-width: 660px; margin-bottom: 14px; font-size: clamp(40px, 4.2vw, 58px); line-height: 1.04; }
 	.hero__lede { max-width: 500px; margin-right: auto; margin-bottom: 20px; margin-left: auto; color: var(--ink-muted); font-size: 14px; line-height: 1.55; }
@@ -34,6 +34,10 @@ const { signupHref } = Astro.props;
 	.hero-workspace-stage::after { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to bottom, transparent 0, transparent calc(100% - var(--hero-fade-depth)), rgb(var(--hero-fade-rgb) / 2%) calc(100% - var(--hero-fade-one)), rgb(var(--hero-fade-rgb) / 7%) calc(100% - var(--hero-fade-two)), rgb(var(--hero-fade-rgb) / 18%) calc(100% - var(--hero-fade-three)), rgb(var(--hero-fade-rgb) / 36%) calc(100% - var(--hero-fade-four)), rgb(var(--hero-fade-rgb) / 61%) calc(100% - var(--hero-fade-five)), rgb(var(--hero-fade-rgb) / 86%) calc(100% - var(--hero-fade-six)), rgb(var(--hero-fade-rgb) / 100%) 100%); content: ""; pointer-events: none; }
 
 	:global(html[data-theme='dark']) .hero { --hero-surface-rgb: 22 24 22; }
+	.hero::before { position: absolute; inset: 0; z-index: 0; background-image: radial-gradient(circle, var(--hero-dot) .6px, transparent .75px); background-position: center top; background-size: 24px 24px; content: ''; pointer-events: none; }
+	.hero-workspace-stage { background: color-mix(in srgb, var(--hero-surface) 82%, transparent); }
+	.hero-workspace-stage::after { background: linear-gradient(to bottom, transparent 0, transparent calc(100% - var(--hero-fade-depth)), color-mix(in srgb, var(--hero-surface) 2%, transparent) calc(100% - var(--hero-fade-one)), color-mix(in srgb, var(--hero-surface) 7%, transparent) calc(100% - var(--hero-fade-two)), color-mix(in srgb, var(--hero-surface) 18%, transparent) calc(100% - var(--hero-fade-three)), color-mix(in srgb, var(--hero-surface) 36%, transparent) calc(100% - var(--hero-fade-four)), color-mix(in srgb, var(--hero-surface) 61%, transparent) calc(100% - var(--hero-fade-five)), color-mix(in srgb, var(--hero-surface) 86%, transparent) calc(100% - var(--hero-fade-six)), var(--hero-surface) 100%); }
+	:global(html[data-theme='dark']) .hero { --hero-dot: rgb(241 243 238 / 13%); }
 
 	@media (max-width: 900px) {
 		.hero { padding-top: clamp(94px, 12dvh, 112px); }
