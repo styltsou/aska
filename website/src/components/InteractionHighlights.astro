@@ -13,39 +13,133 @@ import toolsRed01 from '../assets/images/tools-red-01.webp';
 	</div>
 	<div class="interaction-grid">
 		<span class="interaction-grid__rule interaction-grid__rule--top" aria-hidden="true"></span>
+		<span class="interaction-grid__rule interaction-grid__rule--middle" aria-hidden="true"></span>
 		<span class="interaction-grid__rule interaction-grid__rule--bottom" aria-hidden="true"></span>
 		<span class="interaction-grid__junction interaction-grid__junction--top interaction-grid__junction--start" aria-hidden="true"></span>
 		<span class="interaction-grid__junction interaction-grid__junction--top interaction-grid__junction--one" aria-hidden="true"></span>
 		<span class="interaction-grid__junction interaction-grid__junction--top interaction-grid__junction--two" aria-hidden="true"></span>
 		<span class="interaction-grid__junction interaction-grid__junction--top interaction-grid__junction--end" aria-hidden="true"></span>
+		<span class="interaction-grid__junction interaction-grid__junction--middle interaction-grid__junction--start" aria-hidden="true"></span>
+		<span class="interaction-grid__junction interaction-grid__junction--middle interaction-grid__junction--one" aria-hidden="true"></span>
+		<span class="interaction-grid__junction interaction-grid__junction--middle interaction-grid__junction--two" aria-hidden="true"></span>
+		<span class="interaction-grid__junction interaction-grid__junction--middle interaction-grid__junction--end" aria-hidden="true"></span>
 		<span class="interaction-grid__junction interaction-grid__junction--bottom interaction-grid__junction--start" aria-hidden="true"></span>
 		<span class="interaction-grid__junction interaction-grid__junction--bottom interaction-grid__junction--one" aria-hidden="true"></span>
 		<span class="interaction-grid__junction interaction-grid__junction--bottom interaction-grid__junction--two" aria-hidden="true"></span>
 		<span class="interaction-grid__junction interaction-grid__junction--bottom interaction-grid__junction--end" aria-hidden="true"></span>
 		<article class="interaction-item">
 			<div class="interaction-item__copy">
-				<h3>Command palette</h3>
-				<p>Open collections, make folders, and capture a note without leaving the work.</p>
+				<h3>Source imports</h3>
+				<p>Save an Instagram or X post straight into a collection with media and context intact.</p>
 			</div>
-			<div class="command-preview" role="img" aria-label="A compact Aska command palette">
-				<div class="command-preview__search">Type a command or search... <kbd>Ctrl K</kbd></div>
-				<div class="command-preview__group">Navigate</div>
-				<div class="command-preview__item command-preview__item--active"><span>Open Inbox</span><kbd>G I</kbd></div>
-				<div class="command-preview__item"><span>Browse collections</span><kbd>G C</kbd></div>
-				<div class="command-preview__group">Create</div>
-				<div class="command-preview__item"><span>New folder</span><kbd>F</kbd></div>
+			<div class="source-import-preview" role="img" aria-label="An imported social post becoming a canvas reference">
+				<svg class="source-import-preview__connector source-import-preview__connector--instagram" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
+					<path class="source-import-preview__connector-rail" d="M0 3 C34 4 40 25 100 28"></path>
+					<path class="source-import-preview__connector-flow" d="M0 3 C34 4 40 25 100 28"></path>
+				</svg>
+				<svg class="source-import-preview__connector source-import-preview__connector--pinterest" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true">
+					<path class="source-import-preview__connector-rail" d="M0 9 C34 9 48 2 100 0"></path>
+					<path class="source-import-preview__connector-flow" d="M0 9 C34 9 48 2 100 0"></path>
+				</svg>
+				<svg class="source-import-preview__connector source-import-preview__connector--x" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
+					<path class="source-import-preview__connector-rail" d="M0 28 C60 25 66 4 100 3"></path>
+					<path class="source-import-preview__connector-flow" d="M0 28 C60 25 66 4 100 3"></path>
+				</svg>
+				<svg class="source-import-preview__connector source-import-preview__connector--dribbble" viewBox="0 0 100 18" preserveAspectRatio="none" aria-hidden="true">
+					<path class="source-import-preview__connector-rail" d="M0 0 C52 2 66 9 100 9"></path>
+					<path class="source-import-preview__connector-flow" d="M0 0 C52 2 66 9 100 9"></path>
+				</svg>
+				<div class="source-import-preview__social source-import-preview__social--instagram">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"></path></svg>
+				</div>
+				<div class="source-import-preview__social source-import-preview__social--pinterest">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z"></path></svg>
+				</div>
+				<div class="source-import-preview__social source-import-preview__social--x">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"></path></svg>
+				</div>
+				<div class="source-import-preview__social source-import-preview__social--dribbble">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm10.12-10.358c-.35-.11-3.17-.953-6.384-.438 1.34 3.684 1.887 6.684 1.992 7.308 2.3-1.555 3.936-4.02 4.395-6.87zm-6.115 7.808c-.153-.9-.75-4.032-2.19-7.77l-.066.02c-5.79 2.015-7.86 6.025-8.04 6.4 1.73 1.358 3.92 2.166 6.29 2.166 1.42 0 2.77-.29 4-.814zm-11.62-2.58c.232-.4 3.045-5.055 8.332-6.765.135-.045.27-.084.405-.12-.26-.585-.54-1.167-.832-1.74C7.17 11.775 2.206 11.71 1.756 11.7l-.004.312c0 2.633.998 5.037 2.634 6.855zm-2.42-8.955c.46.008 4.683.026 9.477-1.248-1.698-3.018-3.53-5.558-3.8-5.928-2.868 1.35-5.01 3.99-5.676 7.17zM9.6 2.052c.282.38 2.145 2.914 3.822 6 3.645-1.365 5.19-3.44 5.373-3.702-1.81-1.61-4.19-2.586-6.795-2.586-.825 0-1.63.1-2.4.285zm10.335 3.483c-.218.29-1.935 2.493-5.724 4.04.24.49.47.985.68 1.486.08.18.15.36.22.53 3.41-.43 6.8.26 7.14.33-.02-2.42-.88-4.64-2.31-6.38z"></path></svg>
+				</div>
+				<div class="source-import-preview__collection">
+					<div class="source-import-preview__collection-preview">
+						<div class="source-import-preview__asset source-import-preview__asset--one"><Image src={toolsRed01} alt="" /></div>
+						<div class="source-import-preview__asset source-import-preview__asset--two"><Image src={toolsFuchsia02} alt="" /></div>
+						<div class="source-import-preview__asset source-import-preview__asset--three"><span>Visual notes</span></div>
+					</div>
+					<div class="source-import-preview__collection-meta"><strong>Inspiration</strong><span>24</span></div>
+				</div>
 			</div>
 		</article>
 		<article class="interaction-item">
 			<div class="interaction-item__copy">
-				<h3>Global scratchpad</h3>
-				<p>Hold a thought in one place, then move it into the collection when it is ready.</p>
+				<h3>Paste to capture</h3>
+				<p>Paste an image, URL, or text and Aska turns it into the right kind of asset.</p>
 			</div>
-			<div class="scratchpad-preview" role="img" aria-label="An Aska global scratchpad note">
-				<div class="scratchpad-preview__bar"><span>Scratchpad</span><span>Saved</span></div>
-				<p><strong>Things to return to</strong></p>
-				<p>What changes when the archive becomes part of the process?</p>
-				<div class="scratchpad-preview__footer"><span>Move to collection</span><span>...</span></div>
+			<div class="paste-preview" role="img" aria-label="Clipboard content being turned into Aska assets">
+				<div class="paste-preview__clipboard">
+					<div class="paste-preview__clip"></div>
+					<div class="paste-preview__line paste-preview__line--long"></div>
+					<div class="paste-preview__line"></div>
+					<div class="paste-preview__keys"><kbd>Ctrl</kbd><kbd>V</kbd></div>
+				</div>
+				<div class="paste-preview__arrow"><span></span></div>
+				<div class="paste-preview__assets">
+					<div class="paste-preview__asset paste-preview__asset--image"><Image src={toolsGreen01} alt="" /></div>
+					<div class="paste-preview__asset paste-preview__asset--note"><strong>Note</strong><span>saved text</span></div>
+					<div class="paste-preview__asset paste-preview__asset--link"><strong>URL</strong><span>source</span></div>
+				</div>
+			</div>
+		</article>
+		<article class="interaction-item">
+			<div class="interaction-item__copy">
+				<h3>Command palette</h3>
+				<p>Open collections, make folders, and capture a note without leaving the work.</p>
+			</div>
+			<div class="command-preview" role="img" aria-label="A compact Aska command palette">
+				<div class="command-preview__dialog">
+					<div class="command-preview__body">
+						<div class="command-preview__search">
+							<span>Type a command or search...</span>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+						</div>
+						<div class="command-preview__list">
+							<div class="command-preview__group">Create</div>
+							<div class="command-preview__item command-preview__item--active">
+								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+								<span>New note</span>
+								<strong>N</strong>
+							</div>
+							<div class="command-preview__item">
+								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 10v6"></path><path d="M9 13h6"></path><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>
+								<span>New folder</span>
+								<strong>F</strong>
+							</div>
+							<div class="command-preview__item">
+								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h6"></path><path d="M19 2v6"></path><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"></path><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"></path><circle cx="9" cy="9" r="2"></circle></svg>
+								<span>Upload images</span>
+								<strong>U</strong>
+							</div>
+							<div class="command-preview__separator"></div>
+							<div class="command-preview__group">Navigate</div>
+							<div class="command-preview__item">
+								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
+								<span>Search all assets</span>
+								<strong>/</strong>
+							</div>
+							<div class="command-preview__item">
+								<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
+								<span>Open Inbox</span>
+								<strong>I</strong>
+							</div>
+						</div>
+					</div>
+					<div class="command-preview__footer">
+						<span><kbd>Esc</kbd> Close</span>
+						<span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+						<span><kbd>Enter</kbd> Select</span>
+					</div>
+				</div>
 			</div>
 		</article>
 		<article class="interaction-item">
@@ -72,6 +166,39 @@ import toolsRed01 from '../assets/images/tools-red-01.webp';
 				</div>
 			</div>
 		</article>
+		<article class="interaction-item">
+			<div class="interaction-item__copy">
+				<h3>Global scratchpad</h3>
+				<p>Hold a thought in one place, then move it into the collection when it is ready.</p>
+			</div>
+			<div class="scratchpad-preview" role="img" aria-label="An Aska global scratchpad note">
+				<div class="scratchpad-preview__overlay">
+					<div class="scratchpad-preview__panel">
+						<div class="scratchpad-preview__frame">
+							<div class="scratchpad-preview__surface">
+								<div class="scratchpad-preview__textarea">Capture to Inbox...</div>
+							</div>
+							<div class="scratchpad-preview__shortcuts">
+								<span class="scratchpad-preview__shortcut scratchpad-preview__shortcut--close"><kbd>Esc</kbd> Close</span>
+								<span class="scratchpad-preview__shortcut"><kbd>Shift</kbd><em>+</em><kbd>Enter</kbd> New line</span>
+								<span class="scratchpad-preview__shortcut"><kbd>Enter</kbd> Save</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</article>
+		<article class="interaction-item">
+			<div class="interaction-item__copy">
+				<h3>Image crop</h3>
+				<p>Open a reference, adjust the crop, and keep the useful detail close to the archive.</p>
+			</div>
+			<div class="crop-preview" role="img" aria-label="An image crop tool over a saved reference">
+				<Image src={toolsBlue01} alt="" />
+				<div class="crop-preview__frame"><span></span><span></span><span></span><span></span></div>
+				<div class="crop-preview__toolbar"><span>Free</span><span>1:1</span><span>Apply</span></div>
+			</div>
+		</article>
 	</div>
 </section>
 
@@ -86,35 +213,115 @@ import toolsRed01 from '../assets/images/tools-red-01.webp';
 	.interaction-grid::after { right: 0; }
 	.interaction-grid__rule { position: absolute; right: -24px; left: -24px; z-index: 1; height: 1px; background: linear-gradient(to right, transparent, var(--line) 44px, var(--line) calc(100% - 44px), transparent); }
 	.interaction-grid__rule--top { top: 0; }
+	.interaction-grid__rule--middle { top: 50%; }
 	.interaction-grid__rule--bottom { bottom: 0; }
 	.interaction-grid__junction { position: absolute; z-index: 2; width: 7px; height: 7px; pointer-events: none; }
 	.interaction-grid__junction::before, .interaction-grid__junction::after { position: absolute; background: rgb(21 21 21 / 48%); content: ""; }
 	.interaction-grid__junction::before { top: 3px; left: 0; width: 7px; height: 1px; }
 	.interaction-grid__junction::after { top: 0; left: 3px; width: 1px; height: 7px; }
 	.interaction-grid__junction--top { top: 0; transform: translate(-50%, -50%); }
+	.interaction-grid__junction--middle { top: 50%; transform: translate(-50%, -50%); }
 	.interaction-grid__junction--bottom { bottom: 0; transform: translate(-50%, 50%); }
 	.interaction-grid__junction--start { left: 0; }
 	.interaction-grid__junction--one { left: 33.333%; }
 	.interaction-grid__junction--two { left: 66.667%; }
 	.interaction-grid__junction--end { left: 100%; }
 	.interaction-item { position: relative; min-width: 0; padding: 34px 30px 36px; }
-	.interaction-item + .interaction-item::before { position: absolute; top: -44px; bottom: -44px; left: -1px; width: 1px; background: linear-gradient(to bottom, transparent, var(--line) 44px, var(--line) calc(100% - 44px), transparent); content: ""; }
+	.interaction-item:not(:nth-of-type(3n + 1))::before { position: absolute; top: -44px; bottom: -44px; left: -1px; width: 1px; background: linear-gradient(to bottom, transparent, var(--line) 44px, var(--line) calc(100% - 44px), transparent); content: ""; }
 	.interaction-item__copy { min-height: 135px; }
 	.interaction-item h3 { margin: 0 0 8px; font-size: 17px; font-weight: 600; }
 	.interaction-item p { margin: 0; color: var(--ink-muted); font-size: 13px; line-height: 1.5; }
-	.command-preview, .scratchpad-preview, .folder-canvas-preview { position: relative; min-height: 205px; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #fff; box-shadow: 0 2px 7px rgb(21 21 21 / 3%); }
-	.command-preview { padding: 8px; }
-	.command-preview__search { display: flex; align-items: center; justify-content: space-between; height: 33px; padding: 0 9px; border-bottom: 1px solid var(--line); color: #898982; font-size: 9px; }
-	kbd { padding: 2px 4px; border: 1px solid #d8d8d3; border-radius: 3px; background: #f8f8f6; color: #6f6f69; font: inherit; font-size: 8px; }
-	.command-preview__group { padding: 10px 8px 4px; color: #999991; font-size: 8px; }
-	.command-preview__item { display: flex; align-items: center; justify-content: space-between; padding: 7px 8px; border-radius: 4px; color: #4a4a45; font-size: 10px; }
-	.command-preview__item--active { color: #20201e; background: #efefec; }
-	.scratchpad-preview { padding: 13px; text-align: left; }
-	.scratchpad-preview__bar, .scratchpad-preview__footer { display: flex; justify-content: space-between; color: #8b8b84; font-size: 8px; }
-	.scratchpad-preview__bar { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
-	.scratchpad-preview > p { margin: 13px 0 0; color: #41413c; font-size: 11px; line-height: 1.45; }
-	.scratchpad-preview > p + p { margin-top: 8px; color: #777771; }
-	.scratchpad-preview__footer { position: absolute; right: 13px; bottom: 13px; left: 13px; align-items: center; padding-top: 10px; border-top: 1px solid var(--line); }
+	.command-preview, .scratchpad-preview, .folder-canvas-preview, .source-import-preview, .paste-preview, .crop-preview { position: relative; min-height: 205px; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #fff; box-shadow: 0 2px 7px rgb(21 21 21 / 3%); }
+	.source-import-preview { border: 0; background-color: transparent; background-image: url(/canvas-dots.svg); background-position: 0 0; box-shadow: none; }
+	.source-import-preview__connector { position: absolute; z-index: 1; color: rgb(21 21 21 / 32%); overflow: visible; pointer-events: none; }
+	.source-import-preview__connector path { fill: none; stroke: currentColor; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+	.source-import-preview__connector-rail { stroke-width: 1.15; }
+	.source-import-preview__connector-flow { animation: source-import-flow 1.85s linear infinite; filter: drop-shadow(0 0 5px currentColor); opacity: .9; stroke-dasharray: 10 74; stroke-dashoffset: 84; stroke-width: 2; }
+	.source-import-preview__connector--instagram { top: 63px; left: calc(50% - 93px); width: 28px; height: 28px; }
+	.source-import-preview__connector--pinterest { top: 121px; left: calc(50% - 93px); width: 28px; height: 18px; }
+	.source-import-preview__connector--pinterest .source-import-preview__connector-flow { animation-delay: .3s; }
+	.source-import-preview__connector--x { top: 61px; left: calc(50% + 65px); width: 28px; height: 28px; }
+	.source-import-preview__connector--x .source-import-preview__connector-flow,
+	.source-import-preview__connector--dribbble .source-import-preview__connector-flow { animation-name: source-import-flow-reverse; }
+	.source-import-preview__connector--x .source-import-preview__connector-flow { animation-delay: .15s; }
+	.source-import-preview__connector--dribbble { top: 122px; left: calc(50% + 65px); width: 28px; height: 18px; }
+	.source-import-preview__connector--dribbble .source-import-preview__connector-flow { animation-delay: .45s; }
+	.source-import-preview__social { position: absolute; z-index: 3; display: grid; width: 44px; height: 44px; border: 1px solid rgb(21 21 21 / 9%); border-radius: 50%; background: rgb(255 255 255 / 76%); box-shadow: 0 3px 9px rgb(21 21 21 / 6%); color: #282824; backdrop-filter: blur(14px) saturate(145%); place-items: center; }
+	.source-import-preview__social svg { width: 17px; height: 17px; fill: currentColor; }
+	.source-import-preview__social--instagram { top: 42px; left: calc(50% - 137px); color: #c13584; }
+	.source-import-preview__social--pinterest { top: 108px; left: calc(50% - 137px); color: #bd081c; }
+	.source-import-preview__social--x { top: 40px; right: calc(50% - 137px); color: #151515; }
+	.source-import-preview__social--dribbble { top: 109px; right: calc(50% - 137px); color: #ea4c89; }
+	.source-import-preview__collection { position: absolute; top: 46px; left: 50%; z-index: 2; width: 130px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 4px 10px rgb(21 21 21 / 5%); transform: translateX(-50%); }
+	.source-import-preview__collection-preview { position: relative; display: flex; aspect-ratio: 3 / 2; align-items: center; justify-content: center; overflow: hidden; background: #fff; }
+	.source-import-preview__collection-meta { display: flex; align-items: center; gap: 5px; padding: 7px 8px; border-top: 1px solid var(--line); background: #fff; color: #3d3d38; }
+	.source-import-preview__collection-meta strong { min-width: 0; overflow: hidden; font-size: 8px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+	.source-import-preview__collection-meta span { margin-left: auto; color: #8a8a83; font-size: 7px; }
+	.source-import-preview__asset { position: absolute; top: 50%; left: 50%; width: 60%; height: 60%; overflow: hidden; border: 1px solid rgb(0 0 0 / 8%); border-radius: 8px; background: #fff; box-shadow: 0 3px 8px rgb(21 21 21 / 10%); transform-origin: bottom center; }
+	.source-import-preview__asset img { display: block; width: 100%; height: 100%; object-fit: cover; }
+	.source-import-preview__asset--one { z-index: 2; translate: calc(-50% - 4px) calc(-50% + 0px); transform: rotate(-4deg); }
+	.source-import-preview__asset--two { z-index: 1; translate: calc(-50% + 0px) calc(-50% + 5px); transform: rotate(0deg); }
+	.source-import-preview__asset--three { z-index: 0; display: flex; align-items: flex-start; justify-content: flex-start; padding: 8px; color: #575750; translate: calc(-50% + 4px) calc(-50% + 10px); transform: rotate(4deg); }
+	.source-import-preview__asset--three span { font-size: 7px; font-weight: 600; line-height: 1.2; opacity: .55; }
+	@keyframes source-import-flow { to { stroke-dashoffset: 0; } }
+	@keyframes source-import-flow-reverse { to { stroke-dashoffset: 168; } }
+	.paste-preview { background: #fafaf8; }
+	.paste-preview__clipboard { position: absolute; top: 36px; left: 16px; width: 92px; height: 122px; padding: 22px 12px 12px; border: 1px solid var(--line); border-radius: 7px; background: #fff; box-shadow: 0 4px 10px rgb(21 21 21 / 5%); }
+	.paste-preview__clip { position: absolute; top: 9px; left: 50%; width: 30px; height: 8px; border: 1px solid #d7d7d1; border-radius: 999px; transform: translateX(-50%); }
+	.paste-preview__line { height: 5px; margin-top: 8px; border-radius: 999px; background: #deded9; }
+	.paste-preview__line--long { width: 100%; }
+	.paste-preview__line:not(.paste-preview__line--long) { width: 68%; }
+	.paste-preview__keys { position: absolute; right: 10px; bottom: 10px; left: 10px; display: flex; gap: 5px; justify-content: center; }
+	.paste-preview__arrow { position: absolute; top: 50%; left: 118px; z-index: 2; width: 48px; height: 1px; background: linear-gradient(to right, rgb(21 21 21 / 12%), rgb(21 21 21 / 46%)); }
+	.paste-preview__arrow::after { position: absolute; top: 50%; right: 0; width: 7px; height: 7px; border-top: 1.5px solid rgb(21 21 21 / 46%); border-right: 1.5px solid rgb(21 21 21 / 46%); content: ""; transform: translateY(-50%) rotate(45deg); transform-origin: center; }
+	.paste-preview__assets { position: absolute; top: 26px; right: 15px; bottom: 18px; width: 112px; }
+	.paste-preview__asset { position: absolute; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #fff; box-shadow: 0 4px 10px rgb(21 21 21 / 5%); }
+	.paste-preview__asset--image { top: 0; left: 6px; width: 70px; height: 82px; }
+	.paste-preview__asset--image img { display: block; width: 100%; height: 100%; object-fit: cover; }
+	.paste-preview__asset--note, .paste-preview__asset--link { right: 0; width: 68px; height: 48px; padding: 8px; }
+	.paste-preview__asset--note { top: 58px; }
+	.paste-preview__asset--link { bottom: 0; left: 0; right: auto; }
+	.paste-preview__asset strong { display: block; color: #464641; font-size: 9px; line-height: 1; }
+	.paste-preview__asset span { display: block; margin-top: 6px; color: #8b8b84; font-size: 8px; }
+	.crop-preview img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+	.crop-preview::after { position: absolute; inset: 0; background: rgb(0 0 0 / 22%); content: ""; }
+	.crop-preview__frame { position: absolute; top: 34px; right: 34px; bottom: 48px; left: 34px; z-index: 2; border: 1px solid rgb(255 255 255 / 86%); box-shadow: 0 0 0 999px rgb(0 0 0 / 18%); }
+	.crop-preview__frame span { position: absolute; width: 11px; height: 11px; border-color: #fff; }
+	.crop-preview__frame span:nth-child(1) { top: -1px; left: -1px; border-top: 2px solid; border-left: 2px solid; }
+	.crop-preview__frame span:nth-child(2) { top: -1px; right: -1px; border-top: 2px solid; border-right: 2px solid; }
+	.crop-preview__frame span:nth-child(3) { right: -1px; bottom: -1px; border-right: 2px solid; border-bottom: 2px solid; }
+	.crop-preview__frame span:nth-child(4) { bottom: -1px; left: -1px; border-bottom: 2px solid; border-left: 2px solid; }
+	.crop-preview__toolbar { position: absolute; right: 13px; bottom: 13px; left: 13px; z-index: 3; display: flex; gap: 6px; padding: 6px; border: 1px solid rgb(255 255 255 / 22%); border-radius: 6px; background: rgb(20 20 18 / 70%); color: #fff; backdrop-filter: blur(16px); }
+	.crop-preview__toolbar span { flex: 1; padding: 6px 4px; border-radius: 4px; background: rgb(255 255 255 / 10%); font-size: 8px; text-align: center; }
+	.command-preview { display: flex; align-items: flex-start; justify-content: center; padding: 15px 11px 10px; background: rgb(21 21 21 / 5%); }
+	.command-preview__dialog { width: min(100%, 232px); overflow: hidden; border: 1px solid rgb(21 21 21 / 10%); border-radius: 8px; background: rgb(255 255 255 / 88%); box-shadow: 0 16px 38px rgb(21 21 21 / 10%); color: #2d2d29; }
+	.command-preview__body { padding: 6px; }
+	.command-preview__search { display: flex; align-items: center; height: 31px; gap: 8px; padding: 0 8px 0 10px; border-bottom: 1px solid rgb(21 21 21 / 8%); color: #8b8b84; font-size: 8.5px; line-height: 1; }
+	.command-preview__search span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.command-preview svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+	.command-preview__search svg { opacity: .55; }
+	.command-preview__list { max-height: 134px; overflow: hidden; padding-top: 5px; }
+	.command-preview__group { padding: 5px 8px 3px; color: #8f8f88; font-size: 7.5px; font-weight: 500; line-height: 1; }
+	.command-preview__separator { height: 1px; margin: 3px -6px; background: rgb(21 21 21 / 8%); }
+	.command-preview__item { display: flex; align-items: center; min-height: 26px; gap: 7px; padding: 5px 8px; border-radius: 7px; color: #3f3f3a; font-size: 9px; line-height: 1; }
+	.command-preview__item svg { width: 13px; height: 13px; color: #8b8b84; }
+	.command-preview__item span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.command-preview__item strong { margin-left: auto; color: #8f8f88; font-size: 7.5px; font-weight: 500; letter-spacing: .08em; }
+	.command-preview__item--active { color: #20201e; background: rgb(21 21 21 / 8%); }
+	.command-preview__item--active svg, .command-preview__item--active strong { color: #20201e; }
+	.command-preview__footer { display: flex; align-items: center; gap: 8px; padding: 6px 2px 2px; color: #8b8b84; font-size: 7px; line-height: 1; }
+	.command-preview__footer span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+	kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 14px; height: 14px; padding: 0 3px; border: 0; border-radius: 2px; background: #eeeeea; color: #6f6f69; font: inherit; font-size: 7px; font-weight: 500; line-height: 1; }
+	.scratchpad-preview { border: 0; background: linear-gradient(135deg, #efefe9 0%, #fafaf8 58%, #e6ebe1 100%); box-shadow: none; text-align: left; }
+	.scratchpad-preview__overlay { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: center; padding: 37px 12px 0; background: rgb(0 0 0 / 10%); backdrop-filter: blur(2px); }
+	.scratchpad-preview__panel { width: min(100%, 238px); color: #242420; }
+	.scratchpad-preview__frame { border: 1px solid rgb(21 21 21 / 10%); border-radius: 8px; background: rgb(255 255 255 / 30%); box-shadow: 0 14px 30px rgb(21 21 21 / 12%); padding: 6px; backdrop-filter: blur(18px) saturate(150%); }
+	.scratchpad-preview__surface { border: 1px solid rgb(21 21 21 / 12%); border-radius: 6px; background: rgb(255 255 255 / 70%); box-shadow: 0 5px 14px rgb(21 21 21 / 8%); backdrop-filter: blur(18px) saturate(150%); }
+	.scratchpad-preview__textarea { min-height: 33px; padding: 9px 11px; color: #8a8a83; font-size: 10px; line-height: 1.4; }
+	.scratchpad-preview__shortcuts { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 3px 7px; padding: 6px 2px 1px; color: #777770; font-size: 7px; line-height: 14px; }
+	.scratchpad-preview__shortcut { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+	.scratchpad-preview__shortcut--close { margin-right: auto; }
+	.scratchpad-preview__shortcut em { color: rgb(119 119 112 / 50%); font-style: normal; }
 	.folder-canvas-preview { border: 0; background-color: transparent; background-image: url('/canvas-dots.svg'); box-shadow: none; }
 	.folder-canvas-preview__grid { position: absolute; inset: 0; }
 	.folder-canvas-preview__folder { position: absolute; top: 7px; left: 50%; z-index: 2; width: 178px; height: 192px; overflow: hidden; border: 1px solid rgb(0 0 0 / 9%); border-radius: 6px; background: #fff; box-shadow: 0 3px 10px rgb(21 21 21 / 5%); transform: translateX(-50%); }
@@ -130,16 +337,43 @@ import toolsRed01 from '../assets/images/tools-red-01.webp';
 	:global(html[data-theme='dark']) .interaction-grid__junction::before,
 	:global(html[data-theme='dark']) .interaction-grid__junction::after { background: rgb(241 243 238 / 46%); }
 	:global(html[data-theme='dark']) .command-preview,
-	:global(html[data-theme='dark']) .scratchpad-preview { background: var(--surface); box-shadow: 0 2px 8px rgb(0 0 0 / 18%); }
+	:global(html[data-theme='dark']) .paste-preview { background: var(--surface); box-shadow: 0 2px 8px rgb(0 0 0 / 18%); }
+	:global(html[data-theme='dark']) .scratchpad-preview { background: linear-gradient(135deg, #232723 0%, #171a17 58%, #293026 100%); }
+	:global(html[data-theme='dark']) .source-import-preview { background-image: radial-gradient(circle, rgb(241 243 238 / 15%) .6px, transparent .7px); background-size: 24px 24px; }
+	:global(html[data-theme='dark']) .source-import-preview__collection,
+	:global(html[data-theme='dark']) .source-import-preview__collection-meta { border-color: var(--line); background: var(--surface); color: var(--ink); }
+	:global(html[data-theme='dark']) .source-import-preview__collection-preview { background: var(--surface); }
+	:global(html[data-theme='dark']) .source-import-preview__collection-meta span,
+	:global(html[data-theme='dark']) .source-import-preview__asset--three span { color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .source-import-preview__social,
+	:global(html[data-theme='dark']) .source-import-preview__asset,
+	:global(html[data-theme='dark']) .paste-preview__clipboard,
+	:global(html[data-theme='dark']) .paste-preview__asset { border-color: var(--line); background: var(--surface-muted); box-shadow: 0 4px 12px rgb(0 0 0 / 24%); }
+	:global(html[data-theme='dark']) .source-import-preview__connector { color: rgb(241 243 238 / 28%); }
+	:global(html[data-theme='dark']) .source-import-preview__social--instagram { color: #ff7ac4; }
+	:global(html[data-theme='dark']) .source-import-preview__social--pinterest { color: #ff6b77; }
+	:global(html[data-theme='dark']) .source-import-preview__social--x { color: var(--ink); }
+	:global(html[data-theme='dark']) .source-import-preview__social--dribbble { color: #ff8fbd; }
+	:global(html[data-theme='dark']) .paste-preview__asset strong { color: var(--ink); }
+	:global(html[data-theme='dark']) .paste-preview__asset span { color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .command-preview__dialog { border-color: var(--line); background: rgb(27 30 27 / 88%); color: var(--ink); box-shadow: 0 16px 38px rgb(0 0 0 / 30%); }
 	:global(html[data-theme='dark']) .command-preview__search,
 	:global(html[data-theme='dark']) .command-preview__group,
-	:global(html[data-theme='dark']) .scratchpad-preview__bar,
-	:global(html[data-theme='dark']) .scratchpad-preview__footer { color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .command-preview__footer,
+	:global(html[data-theme='dark']) .scratchpad-preview__shortcuts { color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .command-preview__search { border-color: var(--line); }
+	:global(html[data-theme='dark']) .command-preview__separator { background-color: var(--line); }
 	:global(html[data-theme='dark']) kbd { border-color: var(--line-strong); background: var(--surface-muted); color: var(--ink-muted); }
 	:global(html[data-theme='dark']) .command-preview__item { color: #c5c9c2; }
+	:global(html[data-theme='dark']) .command-preview__item svg,
+	:global(html[data-theme='dark']) .command-preview__item strong { color: var(--ink-muted); }
 	:global(html[data-theme='dark']) .command-preview__item--active { color: var(--ink); background: #303530; }
-	:global(html[data-theme='dark']) .scratchpad-preview > p { color: #d4d7d1; }
-	:global(html[data-theme='dark']) .scratchpad-preview > p + p { color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .command-preview__item--active svg,
+	:global(html[data-theme='dark']) .command-preview__item--active strong { color: var(--ink); }
+	:global(html[data-theme='dark']) .scratchpad-preview__overlay { background: rgb(0 0 0 / 20%); }
+	:global(html[data-theme='dark']) .scratchpad-preview__frame { border-color: var(--line); background: rgb(27 30 27 / 34%); box-shadow: 0 14px 30px rgb(0 0 0 / 30%); }
+	:global(html[data-theme='dark']) .scratchpad-preview__surface { border-color: var(--line); background: rgb(27 30 27 / 72%); box-shadow: 0 5px 14px rgb(0 0 0 / 24%); }
+	:global(html[data-theme='dark']) .scratchpad-preview__textarea { color: var(--ink-muted); }
 	:global(html[data-theme='dark']) .folder-canvas-preview { background-image: radial-gradient(circle, rgb(241 243 238 / 15%) .6px, transparent .7px); background-size: 24px 24px; }
 	:global(html[data-theme='dark']) .folder-canvas-preview__folder { border-color: rgb(255 255 255 / 10%); background: var(--surface); box-shadow: 0 3px 10px rgb(0 0 0 / 24%); }
 	:global(html[data-theme='dark']) .folder-canvas-preview__folder-label { color: var(--ink); background: var(--surface); }
@@ -149,7 +383,9 @@ import toolsRed01 from '../assets/images/tools-red-01.webp';
 
 	@media (max-width: 820px) {
 		.interaction-grid { grid-template-columns: 1fr; }
-		.interaction-item + .interaction-item::before { top: 0; right: -24px; bottom: auto; left: -24px; width: auto; height: 1px; background: linear-gradient(to right, transparent, var(--line) 44px, var(--line) calc(100% - 44px), transparent); display: block; }
+		.interaction-grid__rule--middle, .interaction-grid__junction--middle { display: none; }
+		.interaction-item:not(:nth-of-type(3n + 1))::before { display: none; }
+		.interaction-item + .interaction-item::before { position: absolute; top: 0; right: -24px; bottom: auto; left: -24px; width: auto; height: 1px; background: linear-gradient(to right, transparent, var(--line) 44px, var(--line) calc(100% - 44px), transparent); display: block; content: ""; }
 		.interaction-item + .interaction-item::after { position: absolute; top: 0; right: -3px; left: -3px; z-index: 2; height: 7px; background: linear-gradient(rgb(21 21 21 / 48%), rgb(21 21 21 / 48%)) left center / 7px 1px no-repeat, linear-gradient(rgb(21 21 21 / 48%), rgb(21 21 21 / 48%)) left 3px center / 1px 7px no-repeat, linear-gradient(rgb(21 21 21 / 48%), rgb(21 21 21 / 48%)) right center / 7px 1px no-repeat, linear-gradient(rgb(21 21 21 / 48%), rgb(21 21 21 / 48%)) right 3px center / 1px 7px no-repeat; content: ""; pointer-events: none; transform: translateY(-50%); }
 		.interaction-grid__junction--one, .interaction-grid__junction--two { display: none; }
 		.interaction-item__copy { min-height: auto; margin-bottom: 24px; }
@@ -157,12 +393,16 @@ import toolsRed01 from '../assets/images/tools-red-01.webp';
 
 	:global(html[data-theme=dark]) .interaction-item + .interaction-item::after { background: linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) left center / 7px 1px no-repeat, linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) left 3px center / 1px 7px no-repeat, linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) right center / 7px 1px no-repeat, linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) right 3px center / 1px 7px no-repeat; }
 
+	@media (prefers-reduced-motion: reduce) {
+		.source-import-preview__connector-flow { animation: none; opacity: 0; }
+	}
+
 	@media (max-width: 640px) {
 		.interaction-highlights { padding-top: 126px; padding-bottom: 92px; }
 		.interaction-highlights__intro { margin-bottom: 60px; }
 		.interaction-grid__rule { right: -16px; left: -16px; }
 		.interaction-item + .interaction-item::before { right: -16px; left: -16px; }
 		.interaction-item { padding: 28px 18px 32px; }
-		.command-preview, .scratchpad-preview, .folder-canvas-preview { min-height: 196px; }
+		.command-preview, .scratchpad-preview, .folder-canvas-preview, .source-import-preview, .paste-preview, .crop-preview { min-height: 196px; }
 	}
 </style>
