@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 
 interface Props {
 	loginHref: string;
@@ -7,55 +7,33 @@ interface Props {
 
 export function HeaderInner({ loginHref, signupHref }: Props) {
 	const [isOpen, setIsOpen] = useState(false);
-	const isOpenRef = useRef(false);
-	const animLockRef = useRef(false);
-
-	const open = useCallback(() => {
-		if (animLockRef.current) return;
-		animLockRef.current = true;
-
-		isOpenRef.current = true;
-		setIsOpen(true);
-		document.documentElement.classList.add('has-mobile-menu');
-	}, []);
 
 	const close = useCallback(() => {
-		if (animLockRef.current) return;
-		animLockRef.current = true;
-
-		isOpenRef.current = false;
 		setIsOpen(false);
 	}, []);
 
 	const toggle = useCallback(() => {
-		if (isOpenRef.current) close();
-		else open();
-	}, [open, close]);
-
-	const handleTransitionEnd = useCallback((e: React.TransitionEvent) => {
-		if (e.target !== e.currentTarget) return;
-		if (e.propertyName === 'height') {
-			animLockRef.current = false;
-			if (!isOpenRef.current) {
-				document.documentElement.classList.remove('has-mobile-menu');
-			}
-		}
+		setIsOpen((current) => !current);
 	}, []);
 
 	useEffect(() => {
+		document.documentElement.classList.toggle("has-mobile-menu", isOpen);
+		return () => document.documentElement.classList.remove("has-mobile-menu");
+	}, [isOpen]);
+
+	useEffect(() => {
+		if (!isOpen) return;
+
 		function onKeyDown(e: KeyboardEvent) {
-			if (e.key === 'Escape' && isOpenRef.current && !animLockRef.current) close();
+			if (e.key === "Escape") close();
 		}
-		document.addEventListener('keydown', onKeyDown);
-		return () => document.removeEventListener('keydown', onKeyDown);
-	}, [close]);
+		document.addEventListener("keydown", onKeyDown);
+		return () => document.removeEventListener("keydown", onKeyDown);
+	}, [close, isOpen]);
 
 	return (
-		<div
-			className="site-header__inner"
-			data-menu-open={isOpen || undefined}
-			onTransitionEnd={handleTransitionEnd}
-		>
+		<div className="site-header__inner" data-menu-open={isOpen || undefined}>
+			<div className="site-header__chrome" aria-hidden="true" />
 			<div className="site-header__row">
 				<a className="brand" href="#top" aria-label="Aska home">
 					<img className="brand__logo" src="/aska-logo.svg" alt="" />
@@ -73,7 +51,8 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 					className="mobile-menu-toggle"
 					type="button"
 					aria-expanded={isOpen}
-					aria-label={isOpen ? 'Close menu' : 'Open menu'}
+					aria-controls="mobile-menu"
+					aria-label={isOpen ? "Close menu" : "Open menu"}
 					onClick={toggle}
 				>
 					<span className="mobile-menu-toggle__icon" aria-hidden="true">
@@ -83,15 +62,15 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 				</button>
 			</div>
 
-			<div className="mobile-menu-content">
+			<div className="mobile-menu-content" id="mobile-menu" aria-hidden={!isOpen}>
 				<nav className="mobile-menu-nav" aria-label="Mobile navigation">
 					<a onClick={close} href="#product">Product</a>
 					<a onClick={close} href="#workflow">Workflow</a>
 					<a onClick={close} href="#archive">Archive</a>
 				</nav>
 				<div className="mobile-menu-footer">
-					<a onClick={close} className="button button--quiet" href={signupHref}>Create account</a>
 					<a onClick={close} className="button button--primary" href={loginHref}>Log in</a>
+					<a onClick={close} className="button button--quiet" href={signupHref}>Create account</a>
 				</div>
 			</div>
 		</div>
