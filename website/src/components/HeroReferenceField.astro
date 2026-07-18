@@ -177,20 +177,21 @@ import heroRed05 from '../assets/images/hero-red-05.webp';
 </script>
 
 <style>
-	.hero-reference-field { position: absolute; inset: 30% 0 0; background-image: url('/canvas-dots.svg'); background-position: center top; pointer-events: none; }
-	.reference-canvas-card { position: absolute; z-index: 1; contain: paint; isolation: isolate; cursor: grab; transform: translate(var(--drag-x, 0), var(--drag-y, 0)); backface-visibility: hidden; touch-action: none; user-select: none; will-change: transform; pointer-events: auto; }
+	.hero-reference-field { --reference-card-muted-line: rgb(21 21 21 / 7%); --reference-card-line: var(--line); --reference-card-hover-line: var(--reference-card-muted-line); position: absolute; inset: 30% 0 0; background-image: url('/canvas-dots.svg'); background-position: center top; pointer-events: none; }
+	.reference-canvas-card { position: absolute; z-index: 1; contain: paint; isolation: isolate; cursor: grab; transform: translate(var(--drag-x, 0), var(--drag-y, 0)); backface-visibility: hidden; touch-action: none; user-select: none; will-change: transform; pointer-events: auto; transition: border-color 0.1s cubic-bezier(0.16, 1, 0.3, 1); }
 	.reference-canvas-card.is-dragging { z-index: 5; cursor: grabbing; }
 	.reference-canvas-card.reference-field__item--folder { position: absolute; }
-	.reference-field__item { min-width: 0; overflow: hidden; border-radius: 8px; }
+	.reference-field__item { min-width: 0; overflow: hidden; border: 1px solid var(--reference-card-muted-line); border-radius: 8px; }
 	.reference-field__item img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
-	.reference-field__item--image { border: 1px solid transparent; background: transparent; }
-	.reference-field__item--note { display: flex; flex-direction: column; justify-content: flex-start; gap: 10px; padding: 15px; border: 1px solid var(--line); background: #fff; color: #353532; text-align: left; }
+	.reference-field__item--image { background: transparent; }
+	.reference-field__item--note, .reference-field__item--folder { border-color: var(--reference-card-line); }
+	.reference-field__item--note { display: flex; flex-direction: column; justify-content: flex-start; gap: 10px; padding: 15px; background: #fff; color: #353532; text-align: left; }
 	.reference-field__item--note p { margin: 0; color: #777771; font-size: 10px; line-height: 1.45; }
 	.reference-field__item--note p:first-child { color: #353532; font-size: 14px; line-height: 1.16; }
 	.reference-field__item--note strong { font-weight: 600; }
 	.reference-field__item--sculptures span { position: absolute; bottom: 11px; left: 12px; color: rgb(255 255 255 / 88%); font-size: 8px; letter-spacing: .07em; }
 	.reference-field__item--blue img { object-position: center 32%; }
-	.reference-field__item--folder { position: relative; border: 1px solid var(--line); background: #fff; }
+	.reference-field__item--folder { position: relative; background: #fff; }
 	.reference-folder__preview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; padding: 6px; aspect-ratio: 1; }
 	.reference-folder__preview img, .reference-folder__preview span { min-width: 0; min-height: 0; overflow: hidden; border-radius: 2px; background: #eef0ed; aspect-ratio: 1; }
 	.reference-folder__label { position: absolute; right: 1px; bottom: 1px; left: 1px; display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 0 0 7px 7px; background: #fff; }
@@ -218,7 +219,13 @@ import heroRed05 from '../assets/images/hero-red-05.webp';
 	.reference-canvas-card--note-lower { display: none; }
 
 
-	:global(html[data-theme='dark']) .hero-reference-field { background-image: radial-gradient(circle, rgb(241 243 238 / 15%) .6px, transparent .7px); background-size: 24px 24px; }
+	@media (hover: hover) {
+		.reference-canvas-card:hover { border-color: var(--reference-card-hover-line); }
+	}
+
+	.reference-canvas-card.is-dragging { border-color: var(--reference-card-hover-line); }
+
+	:global(html[data-theme='dark']) .hero-reference-field { --reference-card-muted-line: rgb(241 243 238 / 8%); --reference-card-line: var(--line); --reference-card-hover-line: var(--reference-card-muted-line); background-image: radial-gradient(circle, rgb(241 243 238 / 15%) .6px, transparent .7px); background-size: 24px 24px; }
 	:global(html[data-theme='dark']) .reference-field__item--note,
 	:global(html[data-theme='dark']) .reference-field__item--folder { background: var(--surface); }
 	:global(html[data-theme='dark']) .reference-field__item--note { color: var(--ink); }
