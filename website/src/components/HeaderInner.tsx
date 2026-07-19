@@ -79,8 +79,8 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 					<a onClick={close} href="#archive">Archive</a>
 				</nav>
 				<div className="mobile-menu-footer">
-					<a onClick={close} className="button button--primary" href={loginHref}>Log in</a>
-					<a onClick={close} className="button button--quiet" href={signupHref}>Create account</a>
+					<a onClick={close} className="button button--primary" href={signupHref}>Create account</a>
+					<a onClick={close} className="button button--quiet" href={loginHref}>Log in</a>
 				</div>
 			</div>
 		</div>
