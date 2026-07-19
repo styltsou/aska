@@ -269,6 +269,15 @@ const withReferenceBlur = (image) => ({ ...referenceImageProps, src: image, clas
 	:global(html[data-theme='dark']) .reference-folder__label { background: var(--surface); }
 	:global(html[data-theme='dark']) .reference-folder__label small { color: var(--ink-muted); }
 
+	@media (min-width: 1281px) and (max-width: 2315px) {
+		.reference-canvas-card--left-edge,
+		.reference-canvas-card--note-left-one,
+		.reference-canvas-card--note-left-two,
+		.reference-canvas-card--folder-working {
+			display: none;
+		}
+	}
+
 	@media (max-width: 1280px) {
 		.hero-reference-field { inset: 31% 0 0; }
 		.reference-canvas-card--left-edge, .reference-canvas-card--note-left-one, .reference-canvas-card--note-left-two, .reference-canvas-card--folder-working, .reference-canvas-card--right-prelude, .reference-canvas-card--note-right, .reference-canvas-card--right-blue, .reference-canvas-card--right-shadows, .reference-canvas-card--folder-soft, .reference-canvas-card--folder-archive { display: none; }
