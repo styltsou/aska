@@ -211,7 +211,7 @@ const withReferenceBlur = (image) => ({ ...referenceImageProps, src: image, clas
 </script>
 
 <style>
-	.hero-reference-field { --reference-card-muted-line: rgb(21 21 21 / 7%); --reference-card-line: var(--line); --reference-card-hover-line: var(--reference-card-muted-line); position: absolute; inset: 30% 0 0; pointer-events: none; }
+	.hero-reference-field { --reference-card-muted-line: rgb(21 21 21 / 7%); --reference-card-line: var(--line); --reference-card-hover-line: var(--line-strong); position: absolute; inset: 30% 0 0; pointer-events: none; }
 	.reference-canvas-card { position: absolute; z-index: 1; contain: paint; isolation: isolate; cursor: grab; transform: translate(var(--drag-x, 0), var(--drag-y, 0)); backface-visibility: hidden; touch-action: none; user-select: none; will-change: transform; pointer-events: auto; transition: border-color 0.1s cubic-bezier(0.16, 1, 0.3, 1); }
 	.reference-canvas-card.is-dragging { z-index: 5; cursor: grabbing; }
 	.reference-canvas-card.reference-field__item--folder { position: absolute; }
@@ -259,7 +259,7 @@ const withReferenceBlur = (image) => ({ ...referenceImageProps, src: image, clas
 
 	.reference-canvas-card.is-dragging { border-color: var(--reference-card-hover-line); }
 
-	:global(html[data-theme='dark']) .hero-reference-field { --reference-card-muted-line: rgb(241 243 238 / 8%); --reference-card-line: var(--line); --reference-card-hover-line: var(--reference-card-muted-line); }
+	:global(html[data-theme='dark']) .hero-reference-field { --reference-card-muted-line: rgb(241 243 238 / 8%); --reference-card-line: var(--line); --reference-card-hover-line: var(--line-strong); }
 	:global(html[data-theme='dark']) .reference-field__item--note,
 	:global(html[data-theme='dark']) .reference-field__item--folder { background: var(--surface); }
 	:global(html[data-theme='dark']) .reference-field__item--note { color: var(--ink); }
