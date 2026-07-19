@@ -236,6 +236,9 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 							<rect x="0.75" y="0.75" width="262.5" height="164.5" rx="9"></rect>
 						</svg>
 					</div>
+					<svg class="selection-preview__cursor" viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M5 3.5 18.5 15 12.2 15.8 15.1 21.6 12.7 22.8 9.8 17 5 21.1Z"></path>
+					</svg>
 					<div class="selection-preview__card selection-preview__card--image selection-preview__card--selected">
 						<Image {...withMiniPreviewBlur(concreteSculptures)} alt="" />
 					</div>
@@ -294,7 +297,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.source-import-preview__connector { position: absolute; z-index: 1; color: rgb(21 21 21 / 38%); overflow: visible; pointer-events: none; }
 	.source-import-preview__connector path { fill: none; stroke: currentColor; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 	.source-import-preview__connector-rail { stroke-width: 1.15; }
-	.source-import-preview__connector-flow { animation: source-import-flow 1.8s linear infinite; filter: drop-shadow(0 0 2px rgb(21 21 21 / 24%)); opacity: .96; stroke: rgb(21 21 21 / 86%); stroke-dasharray: 10 16; stroke-dashoffset: 52; stroke-width: 2.45; }
+	.source-import-preview__connector-flow { animation: source-import-flow 1.8s linear infinite; filter: drop-shadow(0 0 5px rgb(21 21 21 / 18%)); opacity: .68; stroke: rgb(21 21 21 / 58%); stroke-dasharray: 5 18; stroke-dashoffset: 46; stroke-width: 1.55; }
 	.source-import-preview__flow-dot { display: none; }
 	.source-import-preview__pulse { display: none; }
 	.source-import-preview__pulse--instagram { top: 63px; left: calc(50% - 90px); animation: source-import-pulse-left-top 1.35s linear infinite; }
@@ -329,7 +332,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.source-import-preview__asset--three span { font-size: 7px; font-weight: 600; line-height: 1.2; opacity: .55; }
 	@keyframes source-import-flow { to { stroke-dashoffset: 0; } }
 	@keyframes paste-preview-flow { to { stroke-dashoffset: 0; } }
-	@keyframes source-import-flow-reverse { to { stroke-dashoffset: 104; } }
+	@keyframes source-import-flow-reverse { to { stroke-dashoffset: 92; } }
 	@keyframes source-import-pulse-left-top {
 		0% { opacity: 0; transform: translate(0, 0) rotate(18deg) scale(.65); }
 		18%, 78% { opacity: 1; }
@@ -350,6 +353,36 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 		18%, 78% { opacity: 1; }
 		100% { opacity: 0; transform: translate(-44px, -23px) rotate(18deg) scale(1); }
 	}
+	@keyframes selection-marquee-draw {
+		0%, 2% { opacity: 0; transform: translate(40px, 28px) scale(.02, .02); }
+		4% { opacity: 1; transform: translate(40px, 28px) scale(.02, .02); }
+		22% { opacity: 1; transform: translate(14px, 10px) scale(.55, .86); }
+		36%, 74% { opacity: 1; transform: translate(0, 0) scale(1); }
+		78%, 100% { opacity: 0; transform: translate(0, 0) scale(1); }
+	}
+	@keyframes selection-marquee-dash {
+		to { stroke-dashoffset: -24; }
+	}
+	@keyframes selection-cursor-drag {
+		0%, 2% { opacity: 0; transform: translate(40px, 28px) scale(.96); }
+		4% { opacity: 1; transform: translate(40px, 28px) scale(.96); }
+		23% { opacity: 1; transform: translate(158px, 150px) scale(.96); }
+		36%, 74% { opacity: 1; transform: translate(258px, 162px) scale(.96); }
+		78%, 100% { opacity: 0; transform: translate(258px, 162px) scale(.96); }
+	}
+	@keyframes selection-card-one {
+		0%, 10.4%, 78%, 100% { outline-color: transparent; box-shadow: 0 0 0 0 rgb(38 38 34 / 0%); transform: translateY(0); }
+		10.5%, 74% { outline-color: var(--selection-outline); box-shadow: var(--selection-card-shadow); transform: translateY(-1px); }
+	}
+	@keyframes selection-card-two {
+		0%, 24.4%, 78%, 100% { outline-color: transparent; box-shadow: 0 0 0 0 rgb(38 38 34 / 0%); transform: translateY(0); }
+		24.5%, 74% { outline-color: var(--selection-outline); box-shadow: var(--selection-card-shadow); transform: translateY(-1px); }
+	}
+	@keyframes selection-action-bar-reveal {
+		0%, 24.8% { opacity: 0; transform: translate(-50%, 10px) scale(.96); }
+		25.8%, 74% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+		78%, 100% { opacity: 0; transform: translate(-50%, 6px) scale(.98); }
+	}
 	.paste-preview { border: 0; background: transparent; box-shadow: none; }
 	.paste-preview__surface { position: absolute; inset: 0; overflow: hidden; }
 	.paste-preview__gesture { position: absolute; top: 19px; left: 50%; display: inline-flex; align-items: baseline; color: rgb(21 21 21 / 13%); font-size: 26px; font-weight: 700; line-height: 1; pointer-events: none; transform: translateX(-50%); }
@@ -362,22 +395,24 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.paste-preview__payload svg { width: 14px; height: 14px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 	.paste-preview__payload span { white-space: nowrap; }
 	.paste-preview__flow { position: absolute; top: 64px; left: calc(50% - 142px); z-index: 2; width: 284px; height: 120px; overflow: visible; }
-	.paste-preview__flow path { animation: paste-preview-flow 2s linear infinite; fill: none; opacity: .9; stroke: rgb(21 21 21 / 54%); stroke-dasharray: 12 18; stroke-dashoffset: 60; stroke-linecap: round; stroke-width: 1.65; vector-effect: non-scaling-stroke; }
+	.paste-preview__flow path { animation: paste-preview-flow 1.25s linear infinite; fill: none; opacity: .9; stroke: rgb(21 21 21 / 54%); stroke-dasharray: 6 12; stroke-dashoffset: 36; stroke-linecap: round; stroke-width: 1.35; vector-effect: non-scaling-stroke; }
 	.paste-preview__flow path:nth-child(2) { animation-delay: .16s; }
 	.paste-preview__flow path:nth-child(3) { animation-delay: .32s; }
 	.paste-preview__inserted { position: absolute; top: 62px; right: calc(50% - 140px); z-index: 3; width: 112px; height: 86px; overflow: hidden; border: 1px solid rgb(21 21 21 / 10%); border-radius: 9px; background: #fff; box-shadow: 0 7px 18px rgb(21 21 21 / 12%); transform-origin: bottom center; }
 	.paste-preview__inserted img { display: block; width: 100%; height: 100%; object-fit: cover; }
-	.selection-preview { min-height: 260px; border: 0; background-color: transparent; box-shadow: none; }
+	.selection-preview { --selection-cycle: 4.2s; --selection-outline: #262622; --selection-card-shadow: 0 6px 15px rgb(21 21 21 / 12%); min-height: 260px; border: 0; background-color: transparent; box-shadow: none; }
 	.selection-preview__board { position: absolute; inset: 0; }
-	.selection-preview__marquee { position: absolute; top: 0; left: calc(50% - 132px); z-index: 1; width: 264px; height: 166px; border-radius: 9px; background: rgb(32 32 30 / 10%); }
+	.selection-preview__marquee { position: absolute; top: 0; left: calc(50% - 132px); z-index: 1; width: 264px; height: 166px; border-radius: 9px; background: rgb(32 32 30 / 10%); opacity: 0; transform-origin: 0 0; animation: selection-marquee-draw var(--selection-cycle) cubic-bezier(.2, .78, .18, 1) infinite; will-change: opacity, transform; }
 	.selection-preview__marquee svg { display: block; width: 100%; height: 100%; overflow: visible; }
-	.selection-preview__marquee rect { fill: none; stroke: rgb(32 32 30 / 100%); stroke-dasharray: 7 5; stroke-linecap: round; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-	.selection-preview__card { position: absolute; overflow: hidden; border: 1px solid transparent; border-radius: 8px; transition: all .1s cubic-bezier(0.16, 1, 0.3, 1); }
-	.selection-preview__card--selected { outline: 2px solid #262622; outline-offset: 2px; }
-	.selection-preview__card--image { top: 20px; left: calc(50% - 100px); z-index: 2; width: 92px; height: 124px; }
-	.selection-preview__card--image-two { top: 34px; left: calc(50% + 7px); z-index: 2; width: 88px; height: 108px; }
+	.selection-preview__marquee rect { fill: none; stroke: rgb(32 32 30 / 100%); stroke-dasharray: 7 5; stroke-dashoffset: 0; stroke-linecap: round; stroke-width: 1.5; vector-effect: non-scaling-stroke; animation: selection-marquee-dash 820ms linear infinite; }
+	.selection-preview__cursor { position: absolute; top: 0; left: calc(50% - 132px); z-index: 6; width: 24px; height: 24px; overflow: visible; color: #252522; filter: drop-shadow(0 2px 3px rgb(21 21 21 / 18%)); opacity: 0; pointer-events: none; animation: selection-cursor-drag var(--selection-cycle) cubic-bezier(.2, .78, .18, 1) infinite; will-change: opacity, transform; }
+	.selection-preview__cursor path { fill: #fff; stroke: currentColor; stroke-linejoin: round; stroke-width: 1.4; }
+	.selection-preview__card { position: absolute; overflow: hidden; border: 1px solid transparent; border-radius: 8px; outline: 2px solid transparent; outline-offset: 2px; will-change: outline-color, box-shadow, transform; }
+	.selection-preview__card--selected { outline-color: transparent; }
+	.selection-preview__card--image { top: 20px; left: calc(50% - 100px); z-index: 2; width: 92px; height: 124px; animation: selection-card-one var(--selection-cycle) linear infinite; }
+	.selection-preview__card--image-two { top: 34px; left: calc(50% + 7px); z-index: 2; width: 88px; height: 108px; animation: selection-card-two var(--selection-cycle) linear infinite; }
 	.selection-preview__card--image img, .selection-preview__card--image-two img { display: block; width: 100%; height: 100%; border-radius: 6px; object-fit: cover; }
-	.selection-preview__action-bar { position: absolute; bottom: 12px; left: 50%; z-index: 5; display: flex; align-items: center; justify-content: center; gap: 4px; width: max-content; max-width: calc(100% - 24px); padding: 4px 6px; border: 1px solid rgb(222 222 217 / 60%); border-radius: 8px; background: rgb(255 255 255 / 70%); box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); color: #262622; transform: translateX(-50%); backdrop-filter: blur(18px) saturate(150%); }
+	.selection-preview__action-bar { position: absolute; bottom: 12px; left: 50%; z-index: 5; display: flex; align-items: center; justify-content: center; gap: 4px; width: max-content; max-width: calc(100% - 24px); padding: 4px 6px; border: 1px solid rgb(222 222 217 / 60%); border-radius: 8px; background: rgb(255 255 255 / 70%); box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); color: #262622; opacity: 0; transform: translate(-50%, 10px) scale(.96); transform-origin: bottom center; backdrop-filter: blur(18px) saturate(150%); animation: selection-action-bar-reveal var(--selection-cycle) ease-in-out infinite; will-change: opacity, transform; }
 	.selection-preview__count { padding: 0 6px; font-size: 10px; font-weight: 500; line-height: 22px; white-space: nowrap; }
 	.selection-preview__action-bar i { width: 1px; height: 20px; background: rgb(222 222 217 / 70%); }
 	.selection-preview__action-bar button { display: grid; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #55554e; place-items: center; }
@@ -468,6 +503,9 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	:global(html[data-theme='dark']) .scratchpad-preview__frame { border-color: oklch(1 0 0 / 5%); background: color-mix(in srgb, var(--surface) 30%, transparent); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%), 0 0 0 1px var(--line); }
 	:global(html[data-theme='dark']) .scratchpad-preview__surface { border-color: oklch(1 0 0 / 6%); background: color-mix(in srgb, var(--surface) 70%, transparent); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%), 0 0 0 1px var(--line); }
 	:global(html[data-theme='dark']) .scratchpad-preview__textarea { color: var(--ink-muted); }
+	:global(html[data-theme=dark]) .selection-preview { --selection-outline: var(--ink); --selection-card-shadow: 0 6px 16px rgb(0 0 0 / 26%); }
+	:global(html[data-theme=dark]) .selection-preview__cursor { color: var(--ink); filter: drop-shadow(0 2px 4px rgb(0 0 0 / 38%)); }
+	:global(html[data-theme=dark]) .selection-preview__cursor path { fill: var(--surface); }
 	:global(html[data-theme='dark']) .selection-preview__marquee { border-color: rgb(241 243 238 / 100%); background: rgb(241 243 238 / 10%); box-shadow: none; }
 	:global(html[data-theme='dark']) .selection-preview__marquee rect { stroke: rgb(241 243 238 / 100%); }
 	:global(html[data-theme='dark']) .selection-preview__card { background: var(--surface); }
@@ -528,12 +566,6 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 
 	:global(html[data-theme=dark]) .interaction-item + .interaction-item::after { background: linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) left center / 7px 1px no-repeat, linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) left 3px center / 1px 7px no-repeat, linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) right center / 7px 1px no-repeat, linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) right 3px center / 1px 7px no-repeat; }
 
-	@media (prefers-reduced-motion: reduce) {
-		.source-import-preview__connector-flow { animation: none; opacity: .62; stroke-dasharray: none; stroke-dashoffset: 0; }
-		.source-import-preview__flow-dot { display: none; }
-		.source-import-preview__pulse { display: none; }
-		.paste-preview__flow path { animation: none; stroke-dasharray: none; stroke-dashoffset: 0; }
-	}
 
 	@media (max-width: 640px) {
 		.interaction-highlights { padding-top: 126px; padding-bottom: 92px; }
