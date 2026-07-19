@@ -449,7 +449,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.scratchpad-preview__shortcut { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 	.scratchpad-preview__shortcut--close { margin-right: auto; }
 	.scratchpad-preview__shortcut em { color: rgb(119 119 112 / 50%); font-style: normal; }
-	.folder-canvas-preview { --folder-cycle: 5.4s; border: 0; background-color: transparent; box-shadow: none; }
+	.folder-canvas-preview { --folder-cycle: 3.8s; border: 0; background-color: transparent; box-shadow: none; }
 	.folder-canvas-preview__grid { position: absolute; inset: 0; }
 	.folder-canvas-preview__folder { position: absolute; top: 7px; left: 50%; z-index: 2; width: 178px; height: 192px; overflow: hidden; border: 1px solid rgb(0 0 0 / 9%); border-radius: 6px; background: #fff; box-shadow: 0 3px 10px rgb(21 21 21 / 5%); transform: translateX(-50%); }
 	.folder-canvas-preview__folder-grid { position: relative; width: 100%; height: 178px; padding: 6px; }
@@ -471,62 +471,62 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.folder-canvas-preview__count--before { animation-name: folder-count-before; }
 	.folder-canvas-preview__count--after { opacity: 0; animation-name: folder-count-after; }
 	.folder-canvas-preview__source { position: absolute; bottom: 12px; left: calc(50% - 124px); z-index: 4; width: 62px; height: 62px; overflow: hidden; border: 1px solid rgb(0 0 0 / 11%); border-radius: 4px; background: #fff; box-shadow: 0 6px 16px rgb(21 21 21 / 14%); animation: folder-source-drag var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
-	.folder-canvas-preview__cursor { position: absolute; bottom: 44px; left: calc(50% - 109px); z-index: 5; width: 24px; height: 24px; overflow: visible; color: #252522; filter: drop-shadow(0 2px 3px rgb(21 21 21 / 18%)); opacity: 0; pointer-events: none; animation: folder-cursor-drag var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; will-change: opacity, transform; }
+	.folder-canvas-preview__cursor { position: absolute; bottom: 31px; left: calc(50% - 105px); z-index: 5; width: 24px; height: 24px; overflow: visible; color: #252522; filter: drop-shadow(0 2px 3px rgb(21 21 21 / 18%)); opacity: 0; pointer-events: none; animation: folder-cursor-drag var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; will-change: opacity, transform; }
 	.folder-canvas-preview__cursor path { fill: #fff; stroke: currentColor; stroke-linejoin: round; stroke-width: 1.4; }
 	@keyframes folder-cursor-drag {
-		0%, 4% { opacity: 0; transform: translate(-2px, -2px) scale(.96); }
-		6%, 12% { opacity: 1; transform: translate(0, 0) scale(1); }
-		26% { opacity: 1; transform: translate(43px, -101px) scale(1); }
-		34% { opacity: 1; transform: translate(50px, -117px) scale(1); }
-		38%, 100% { opacity: 0; transform: translate(50px, -117px) scale(1); }
+		0%, 6% { opacity: 1; transform: translate(0, 0) scale(1); }
+		17% { opacity: 1; transform: translate(43px, -94px) scale(1); }
+		22% { opacity: 1; transform: translate(50px, -109px) scale(1); }
+		26%, 52% { opacity: 0; transform: translate(50px, -109px) scale(1); }
+		58%, 100% { opacity: 1; transform: translate(0, 0) scale(1); }
 	}
 	@keyframes folder-source-drag {
-		0% { opacity: 0; transform: translate(0, 0) scale(.98); }
-		3%, 10% { opacity: 1; transform: translate(0, 0) scale(1); }
-		13% { opacity: 1; transform: translate(0, 0) scale(.98); }
-		26% { opacity: 1; transform: translate(43px, -94px) scale(1.22); }
-		34% { opacity: 1; transform: translate(50px, -109px) scale(1.3); }
-		38%, 100% { opacity: 0; transform: translate(50px, -109px) scale(1.3); }
+		0%, 6% { opacity: 1; transform: translate(0, 0) scale(1); }
+		7% { opacity: 1; transform: translate(0, 0) scale(.98); }
+		17% { opacity: 1; transform: translate(43px, -94px) scale(1.22); }
+		22% { opacity: 1; transform: translate(50px, -109px) scale(1.3); }
+		26%, 52% { opacity: 0; transform: translate(50px, -109px) scale(1.3); }
+		56%, 100% { opacity: 1; transform: translate(0, 0) scale(1); }
 	}
 	@keyframes folder-slot {
-		0%, 20% { opacity: 0; transform: scale(.9); }
-		23%, 34% { opacity: 1; transform: scale(1); }
-		38%, 100% { opacity: 0; transform: scale(.96); }
+		0%, 12% { opacity: 0; transform: scale(.9); }
+		15%, 22% { opacity: 1; transform: scale(1); }
+		26%, 100% { opacity: 0; transform: scale(.96); }
 	}
 	@keyframes folder-incoming {
-		0%, 34% { opacity: 0; transform: scale(.96); }
-		38%, 75% { opacity: 1; transform: scale(1); }
-		79%, 100% { opacity: 0; transform: scale(.96); }
+		0%, 22% { opacity: 0; transform: scale(.96); }
+		26%, 46% { opacity: 1; transform: scale(1); }
+		50%, 100% { opacity: 0; transform: scale(.96); }
 	}
 	@keyframes folder-preview-one {
-		0%, 20% { transform: translate(0, 0); }
-		24%, 75% { transform: translate(calc(100% + 8px), 0); }
-		79%, 100% { transform: translate(0, 0); }
+		0%, 12% { transform: translate(0, 0); }
+		15%, 46% { transform: translate(calc(100% + 8px), 0); }
+		50%, 100% { transform: translate(0, 0); }
 	}
 	@keyframes folder-preview-two {
-		0%, 20% { transform: translate(0, 0); }
-		24%, 75% { transform: translate(calc(-100% - 8px), calc(100% + 8px)); }
-		79%, 100% { transform: translate(0, 0); }
+		0%, 12% { transform: translate(0, 0); }
+		15%, 46% { transform: translate(calc(-100% - 8px), calc(100% + 8px)); }
+		50%, 100% { transform: translate(0, 0); }
 	}
 	@keyframes folder-preview-three {
-		0%, 20% { transform: translate(0, 0); }
-		24%, 75% { transform: translate(calc(100% + 8px), 0); }
-		79%, 100% { transform: translate(0, 0); }
+		0%, 12% { transform: translate(0, 0); }
+		15%, 46% { transform: translate(calc(100% + 8px), 0); }
+		50%, 100% { transform: translate(0, 0); }
 	}
 	@keyframes folder-preview-four {
-		0%, 20% { opacity: 1; transform: scale(1); }
-		24%, 75% { opacity: 0; transform: scale(.94); }
-		79%, 100% { opacity: 1; transform: scale(1); }
+		0%, 12% { opacity: 1; transform: scale(1); }
+		15%, 46% { opacity: 0; transform: scale(.94); }
+		50%, 100% { opacity: 1; transform: scale(1); }
 	}
 	@keyframes folder-count-before {
-		0%, 34% { opacity: 1; transform: translateY(0); }
-		35%, 75% { opacity: 0; transform: translateY(-3px); }
-		79%, 100% { opacity: 1; transform: translateY(0); }
+		0%, 22% { opacity: 1; transform: translateY(0); }
+		26%, 46% { opacity: 0; transform: translateY(-3px); }
+		50%, 100% { opacity: 1; transform: translateY(0); }
 	}
 	@keyframes folder-count-after {
-		0%, 34% { opacity: 0; transform: translateY(3px); }
-		35%, 75% { opacity: 1; transform: translateY(0); }
-		79%, 100% { opacity: 0; transform: translateY(3px); }
+		0%, 22% { opacity: 0; transform: translateY(3px); }
+		26%, 46% { opacity: 1; transform: translateY(0); }
+		50%, 100% { opacity: 0; transform: translateY(3px); }
 	}
 
 
