@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import type { MouseEvent } from "react";
 
 interface Props {
 	loginHref: string;
@@ -15,6 +16,15 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 	const toggle = useCallback(() => {
 		setIsOpen((current) => !current);
 	}, []);
+
+	const scrollToTop = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
+		event.preventDefault();
+		close();
+		window.scrollTo({ top: 0, behavior: "smooth" });
+		if (window.location.hash) {
+			window.history.replaceState(null, "", window.location.pathname + window.location.search);
+		}
+	}, [close]);
 
 	useEffect(() => {
 		document.documentElement.classList.toggle("has-mobile-menu", isOpen);
@@ -35,7 +45,7 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 		<div className="site-header__inner" data-menu-open={isOpen || undefined}>
 			<div className="site-header__chrome" aria-hidden="true" />
 			<div className="site-header__row">
-				<a className="brand" href="#top" aria-label="Aska home">
+				<a className="brand" href="/" aria-label="Aska home" onClick={scrollToTop}>
 					<img className="brand__logo" src="/aska-logo.svg" alt="" />
 				</a>
 				<nav className="desktop-nav" aria-label="Primary navigation">

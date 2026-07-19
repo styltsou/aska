@@ -19,7 +19,7 @@ const { loginHref, signupHref } = Astro.props;
 	<div class="page-width site-footer__inner">
 		<div class="site-footer__meta">
 			<div class="site-footer__meta-group site-footer__meta-group--start">
-				<a href="#top">Back to top</a>
+				<button type="button" data-scroll-top>Back to top</button>
 				<div class="theme-control" role="group" aria-label="Theme">
 					<span aria-hidden="true">Theme:</span>
 					<button type="button" data-theme-option="light" aria-pressed="false">Light</button>
@@ -38,6 +38,15 @@ const { loginHref, signupHref } = Astro.props;
 <script>
 	const storageKey = 'aska-theme';
 	const root = document.documentElement;
+	const scrollTopButton = document.querySelector<HTMLButtonElement>("[data-scroll-top]");
+
+	scrollTopButton?.addEventListener("click", () => {
+		window.scrollTo({ top: 0, behavior: "smooth" });
+		if (window.location.hash) {
+			window.history.replaceState(null, "", window.location.pathname + window.location.search);
+		}
+	});
+
 	const themeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-theme-option]'));
 	const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -92,10 +101,12 @@ const { loginHref, signupHref } = Astro.props;
 	.site-footer__wordmark { position: absolute; top: calc(50% + var(--footer-wordmark-shift)); left: 0; width: 100%; color: #20201e; font-size: clamp(150px, 27vw, 410px); font-weight: 600; letter-spacing: 0; line-height: .77; text-align: center; transform: translateY(-50%); }
 	.site-footer__meta { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 22px; padding-top: 18px; border-top: 1px solid rgb(21 21 21 / 16%); }
 	.site-footer__meta-group { display: flex; align-items: center; gap: 22px; }
-	.site-footer p, .site-footer a { margin: 0; color: #5e5e58; font-size: 12px; }
-	.site-footer a { transition: color 100ms ease; }
+	.site-footer p, .site-footer a, .site-footer button { margin: 0; color: #5e5e58; font-size: 12px; }
+	.site-footer a, .site-footer button { transition: color 100ms ease; }
+	.site-footer button { padding: 0; border: 0; background: transparent; font: inherit; cursor: pointer; }
 	.theme-control { display: inline-flex; align-items: center; gap: 5px; color: #5e5e58; font-size: 12px; }
 	.theme-control button { padding: 0; border: 0; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+	:global(html[data-theme=dark]) .site-footer button { color: var(--ink-muted); }
 	.theme-control button[aria-pressed='true'] { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
 	:global(html[data-theme='dark']) .site-footer__topline {
@@ -109,13 +120,13 @@ const { loginHref, signupHref } = Astro.props;
 
 	@media (hover: hover) {
 		.site-footer__credit:hover { text-decoration: underline; text-underline-offset: 2px; }
-		.site-footer__github:hover, .site-footer a:hover { color: var(--ink); }
+		.site-footer__github:hover, .site-footer a:hover, .site-footer button:hover { color: var(--ink); }
 		:global(html[data-theme='dark']) .site-footer__credit:hover { text-decoration-color: #fff; }
 	}
 
 	@media (hover: none) {
 		.site-footer__credit:active { text-decoration: underline; text-underline-offset: 2px; }
-		.site-footer a:active, .theme-control button:active { color: var(--ink); }
+		.site-footer a:active, .site-footer button:active, .theme-control button:active { color: var(--ink); }
 		:global(html[data-theme='dark']) .site-footer__credit:active { text-decoration-color: #fff; }
 	}
 
@@ -130,6 +141,6 @@ const { loginHref, signupHref } = Astro.props;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.site-footer a { transition: none; }
+		.site-footer a, .site-footer button { transition: none; }
 	}
 </style>

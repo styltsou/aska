@@ -1,10 +1,20 @@
 ---
-import { Image } from 'astro:assets';
+import { Image, getImage } from 'astro:assets';
 import toolsBlue01 from '../assets/images/tools-blue-01.webp';
 import toolsFuchsia02 from '../assets/images/tools-fuchsia-02.webp';
 import toolsGreen01 from '../assets/images/tools-green-01.webp';
 import toolsRed01 from '../assets/images/tools-red-01.webp';
 import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
+const miniPreviewImageProps = { width: 220, densities: [1, 2], quality: 78 };
+const miniPreviewImages = [toolsRed01, toolsFuchsia02, toolsGreen01, toolsBlue01, concreteSculptures];
+const getBlurStyle = async (image) => {
+	const placeholder = await getImage({ src: image, width: 28, format: 'webp', quality: 30 });
+	return `--blur-image: url("${placeholder.src}");`;
+};
+const miniPreviewBlurStyles = Object.fromEntries(
+	await Promise.all(miniPreviewImages.map(async (image) => [image.src, await getBlurStyle(image)])),
+);
+const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, class: 'blur-image', style: miniPreviewBlurStyles[image.src] });
 ---
 
 <section class="interaction-highlights page-width" aria-labelledby="interaction-heading">
@@ -76,8 +86,8 @@ import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
 				</div>
 				<div class="source-import-preview__collection">
 					<div class="source-import-preview__collection-preview">
-						<div class="source-import-preview__asset source-import-preview__asset--one"><Image src={toolsRed01} alt="" /></div>
-						<div class="source-import-preview__asset source-import-preview__asset--two"><Image src={toolsFuchsia02} alt="" /></div>
+						<div class="source-import-preview__asset source-import-preview__asset--one"><Image {...withMiniPreviewBlur(toolsRed01)} alt="" /></div>
+						<div class="source-import-preview__asset source-import-preview__asset--two"><Image {...withMiniPreviewBlur(toolsFuchsia02)} alt="" /></div>
 						<div class="source-import-preview__asset source-import-preview__asset--three"><span>Visual notes</span></div>
 					</div>
 					<div class="source-import-preview__collection-meta"><strong>Inspiration</strong><span>24</span></div>
@@ -112,7 +122,7 @@ import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
 						<path d="M54 107 C104 107 130 54 171 49"></path>
 					</svg>
 					<div class="paste-preview__inserted">
-						<Image src={toolsGreen01} alt="" />
+						<Image {...withMiniPreviewBlur(toolsGreen01)} alt="" />
 					</div>
 				</div>
 			</div>
@@ -177,10 +187,10 @@ import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
 				<div class="folder-canvas-preview__grid">
 					<div class="folder-canvas-preview__folder">
 						<div class="folder-canvas-preview__folder-grid">
-							<Image src={toolsRed01} alt="" />
-							<Image src={toolsGreen01} alt="" />
-							<Image src={toolsBlue01} alt="" />
-							<Image src={toolsFuchsia02} alt="" />
+							<Image {...withMiniPreviewBlur(toolsRed01)} alt="" />
+							<Image {...withMiniPreviewBlur(toolsGreen01)} alt="" />
+							<Image {...withMiniPreviewBlur(toolsBlue01)} alt="" />
+							<Image {...withMiniPreviewBlur(toolsFuchsia02)} alt="" />
 						</div>
 						<div class="folder-canvas-preview__folder-label"><strong>Material studies</strong><small>24</small></div>
 					</div>
@@ -227,10 +237,10 @@ import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
 						</svg>
 					</div>
 					<div class="selection-preview__card selection-preview__card--image selection-preview__card--selected">
-						<Image src={concreteSculptures} alt="" />
+						<Image {...withMiniPreviewBlur(concreteSculptures)} alt="" />
 					</div>
 					<div class="selection-preview__card selection-preview__card--image-two selection-preview__card--selected">
-						<Image src={toolsFuchsia02} alt="" />
+						<Image {...withMiniPreviewBlur(toolsFuchsia02)} alt="" />
 					</div>
 				</div>
 				<div class="selection-preview__action-bar">

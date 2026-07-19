@@ -1,5 +1,5 @@
 ---
-import { Image } from 'astro:assets';
+import { Image, getImage } from 'astro:assets';
 import bauhausArchitecture01 from '../assets/images/bauhaus-architecture-01.jpg';
 import bauhausFurniture01 from '../assets/images/bauhaus-furniture-01.jpg';
 import bauhausFurniture02 from '../assets/images/bauhaus-furniture-02.jpg';
@@ -14,10 +14,35 @@ import greenAbstract02 from '../assets/images/green-abstract-02.webp';
 import greenAbstract03 from '../assets/images/green-abstract-03.webp';
 import greenAbstract05 from '../assets/images/green-abstract-05.webp';
 import greenAbstract07 from '../assets/images/green-abstract-07.webp';
+const mockImageProps = { width: 280, densities: [1, 2], quality: 78 };
+const mockImages = [
+	blueRedWall,
+	curvedArchitecture,
+	brutalistShadows,
+	concreteSculptures,
+	greenAbstract05,
+	greenAbstract02,
+	greenAbstract03,
+	greenAbstract07,
+	bauhausRoom01,
+	bauhausFurniture01,
+	bauhausFurniture02,
+	bauhausFurniture03,
+	bauhausArchitecture01,
+	bauhausRoom02,
+];
+const getBlurStyle = async (image) => {
+	const placeholder = await getImage({ src: image, width: 28, format: 'webp', quality: 30 });
+	return `--blur-image: url("${placeholder.src}");`;
+};
+const mockBlurStyles = Object.fromEntries(
+	await Promise.all(mockImages.map(async (image) => [image.src, await getBlurStyle(image)])),
+);
+const withMockBlur = (image) => ({ ...mockImageProps, src: image, class: 'blur-image', style: mockBlurStyles[image.src] });
 ---
 
-<section class="feature-showcase page-width" aria-label="Aska features">
-	<article id="workflow" class="feature-panel feature-panel--capture">
+<section id="workflow" class="feature-showcase page-width scroll-anchor" aria-label="Aska features">
+	<article class="feature-panel feature-panel--capture">
 		<div class="feature-panel__copy">
 			<h2>Everything lands in one place first.</h2>
 			<p>New saves, connected social posts and quick notes arrive in the Inbox until you are ready to sort them.</p>
@@ -30,14 +55,14 @@ import greenAbstract07 from '../assets/images/green-abstract-07.webp';
 				<span>Inbox</span>
 			</div>
 			<div class="capture-board" aria-hidden="true">
-				<div class="inbox-asset inbox-asset--image inbox-asset--tall"><Image src={blueRedWall} alt="" /></div>
+				<div class="inbox-asset inbox-asset--image inbox-asset--tall"><Image {...withMockBlur(blueRedWall)} alt="" /></div>
 				<div class="inbox-asset inbox-asset--note">
 					<p><strong>Keep the useful friction.</strong></p>
 					<p>Pull in the fragments before the direction is obvious.</p>
 				</div>
-				<div class="inbox-asset inbox-asset--image inbox-asset--wide"><Image src={curvedArchitecture} alt="" /></div>
-				<div class="inbox-asset inbox-asset--image"><Image src={brutalistShadows} alt="" /></div>
-				<div class="inbox-asset inbox-asset--image"><Image src={concreteSculptures} alt="" /></div>
+				<div class="inbox-asset inbox-asset--image inbox-asset--wide"><Image {...withMockBlur(curvedArchitecture)} alt="" /></div>
+				<div class="inbox-asset inbox-asset--image"><Image {...withMockBlur(brutalistShadows)} alt="" /></div>
+				<div class="inbox-asset inbox-asset--image"><Image {...withMockBlur(concreteSculptures)} alt="" /></div>
 				<div class="inbox-asset inbox-asset--note inbox-asset--small-note">
 					<p>Ask whether the palette is doing work or just decorating.</p>
 				</div>
@@ -45,7 +70,7 @@ import greenAbstract07 from '../assets/images/green-abstract-07.webp';
 		</div>
 	</article>
 
-	<article id="archive" class="feature-panel feature-panel--search">
+	<article id="archive" class="feature-panel feature-panel--search scroll-anchor">
 		<div class="feature-panel__copy">
 			<h2>Search beyond file names.</h2>
 			<p>Use color-based search and text search to find the references you saved in a collection.</p>
@@ -60,10 +85,10 @@ import greenAbstract07 from '../assets/images/green-abstract-07.webp';
 			<div class="search-board" aria-hidden="true">
 				<div class="colour-filter"><i></i><i></i><i></i><i></i><i></i><span>Forest green</span></div>
 				<div class="search-results">
-					<div class="search-result search-result--one"><Image src={greenAbstract05} alt="" /></div>
-					<div class="search-result search-result--two"><Image src={greenAbstract02} alt="" /></div>
-					<div class="search-result search-result--three"><Image src={greenAbstract03} alt="" /></div>
-					<div class="search-result search-result--four"><Image src={greenAbstract07} alt="" /></div>
+					<div class="search-result search-result--one"><Image {...withMockBlur(greenAbstract05)} alt="" /></div>
+					<div class="search-result search-result--two"><Image {...withMockBlur(greenAbstract02)} alt="" /></div>
+					<div class="search-result search-result--three"><Image {...withMockBlur(greenAbstract03)} alt="" /></div>
+					<div class="search-result search-result--four"><Image {...withMockBlur(greenAbstract07)} alt="" /></div>
 				</div>
 			</div>
 		</div>
@@ -83,14 +108,14 @@ import greenAbstract07 from '../assets/images/green-abstract-07.webp';
 				<span class="canvas-preview__count">48 items</span>
 			</div>
 			<div class="canvas-grid" aria-hidden="true">
-				<div class="canvas-object canvas-object--image-one"><Image src={bauhausRoom01} alt="" /></div>
+				<div class="canvas-object canvas-object--image-one"><Image {...withMockBlur(bauhausRoom01)} alt="" /></div>
 				<div class="canvas-object canvas-object--folder">
-					<div class="canvas-folder__previews"><Image src={bauhausFurniture01} alt="" /><Image src={bauhausFurniture02} alt="" /><Image src={bauhausFurniture03} alt="" /><span></span></div>
+					<div class="canvas-folder__previews"><Image {...withMockBlur(bauhausFurniture01)} alt="" /><Image {...withMockBlur(bauhausFurniture02)} alt="" /><Image {...withMockBlur(bauhausFurniture03)} alt="" /><span></span></div>
 					<div class="canvas-folder__label"><strong>Furniture</strong><small>24</small></div>
 				</div>
 				<div class="canvas-object canvas-object--note"><p><strong>Keep the useful friction.</strong></p><p>Every reference needs room around it.</p></div>
-				<div class="canvas-object canvas-object--image-two"><Image src={bauhausArchitecture01} alt="" /></div>
-				<div class="canvas-object canvas-object--image-three"><Image src={bauhausRoom02} alt="" /></div>
+				<div class="canvas-object canvas-object--image-two"><Image {...withMockBlur(bauhausArchitecture01)} alt="" /></div>
+				<div class="canvas-object canvas-object--image-three"><Image {...withMockBlur(bauhausRoom02)} alt="" /></div>
 			</div>
 			<div class="canvas-preview__controls" aria-hidden="true"><span>-</span><span>+</span></div>
 		</div>

@@ -1,5 +1,5 @@
 ---
-import { Image } from 'astro:assets';
+import { Image, getImage } from 'astro:assets';
 import heroBlue01 from '../assets/images/hero-blue-01.webp';
 import heroBlue02 from '../assets/images/hero-blue-02.webp';
 import heroBlue03 from '../assets/images/hero-blue-03.webp';
@@ -23,14 +23,48 @@ import heroRed02 from '../assets/images/hero-red-02.webp';
 import heroRed03 from '../assets/images/hero-red-03.webp';
 import heroRed04 from '../assets/images/hero-red-04.webp';
 import heroRed05 from '../assets/images/hero-red-05.webp';
+const referenceImageProps = { width: 240, densities: [1, 2], quality: 78 };
+const referenceImages = [
+	heroRed01,
+	heroFuchsia02,
+	heroBlue02,
+	heroOrange01,
+	heroRed02,
+	heroGreen03,
+	heroBlue01,
+	heroFuchsia01,
+	heroOrange03,
+	heroGreen02,
+	heroGreen01,
+	heroFuchsia03,
+	heroOrange02,
+	heroBlue04,
+	heroRed04,
+	heroBlue03,
+	heroRed03,
+	heroOrange04,
+	heroGreen05,
+	heroFuchsia04,
+	heroGreen04,
+	heroBlue05,
+	heroRed05,
+];
+const getBlurStyle = async (image) => {
+	const placeholder = await getImage({ src: image, width: 28, format: 'webp', quality: 30 });
+	return `--blur-image: url("${placeholder.src}");`;
+};
+const referenceBlurStyles = Object.fromEntries(
+	await Promise.all(referenceImages.map(async (image) => [image.src, await getBlurStyle(image)])),
+);
+const withReferenceBlur = (image) => ({ ...referenceImageProps, src: image, class: 'blur-image', style: referenceBlurStyles[image.src] });
 ---
 
 <div class="hero-reference-field" aria-hidden="true">
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--brick">
-		<Image src={heroRed01} alt="" loading="eager" />
+		<Image {...withReferenceBlur(heroRed01)} alt="" loading="eager" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--left-edge">
-		<Image src={heroFuchsia02} alt="" />
+		<Image {...withReferenceBlur(heroFuchsia02)} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note">
 		<p><strong>Keep the rough edge.</strong></p>
@@ -45,67 +79,67 @@ import heroRed05 from '../assets/images/hero-red-05.webp';
 		<p>glass / paper / concrete</p>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--blue">
-		<Image src={heroBlue02} alt="" loading="eager" />
+		<Image {...withReferenceBlur(heroBlue02)} alt="" loading="eager" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--plinth">
-		<Image src={heroOrange01} alt="" />
+		<Image {...withReferenceBlur(heroOrange01)} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-material">
 		<div class="reference-folder__preview">
-			<Image src={heroRed02} alt="" loading="eager" />
-			<Image src={heroGreen03} alt="" loading="eager" />
-			<Image src={heroBlue01} alt="" loading="eager" />
+			<Image {...withReferenceBlur(heroRed02)} alt="" loading="eager" />
+			<Image {...withReferenceBlur(heroGreen03)} alt="" loading="eager" />
+			<Image {...withReferenceBlur(heroBlue01)} alt="" loading="eager" />
 			<span></span>
 		</div>
 		<div class="reference-folder__label"><strong>Material studies</strong><small>24</small></div>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-working">
 		<div class="reference-folder__preview">
-			<Image src={heroFuchsia01} alt="" />
+			<Image {...withReferenceBlur(heroFuchsia01)} alt="" />
 			<span></span>
-			<Image src={heroOrange03} alt="" />
-			<Image src={heroGreen02} alt="" />
+			<Image {...withReferenceBlur(heroOrange03)} alt="" />
+			<Image {...withReferenceBlur(heroGreen02)} alt="" />
 		</div>
 		<div class="reference-folder__label"><strong>Working set</strong><small>16</small></div>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--curve">
-		<Image src={heroGreen01} alt="" loading="eager" />
+		<Image {...withReferenceBlur(heroGreen01)} alt="" loading="eager" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-prelude">
-		<Image src={heroFuchsia03} alt="" />
+		<Image {...withReferenceBlur(heroFuchsia03)} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note-right">
 		<p><strong>## Search cues</strong></p>
 		<p>material / colour / shape</p>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--shadow-wide">
-		<Image src={heroOrange02} alt="" />
+		<Image {...withReferenceBlur(heroOrange02)} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-blue">
-		<Image src={heroBlue04} alt="" />
+		<Image {...withReferenceBlur(heroBlue04)} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-shadows">
-		<Image src={heroRed04} alt="" />
+		<Image {...withReferenceBlur(heroRed04)} alt="" />
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-soft">
 		<div class="reference-folder__preview">
-			<Image src={heroBlue03} alt="" />
-			<Image src={heroRed03} alt="" />
+			<Image {...withReferenceBlur(heroBlue03)} alt="" />
+			<Image {...withReferenceBlur(heroRed03)} alt="" />
 			<span></span>
-			<Image src={heroOrange04} alt="" />
+			<Image {...withReferenceBlur(heroOrange04)} alt="" />
 		</div>
 		<div class="reference-folder__label"><strong>Soft systems</strong><small>12</small></div>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--sculptures reference-canvas-card--sculptures">
-		<Image src={heroGreen05} alt="" loading="eager" />
+		<Image {...withReferenceBlur(heroGreen05)} alt="" loading="eager" />
 		<span>MONUMENT / 1981</span>
 	</article>
 	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-archive">
 		<div class="reference-folder__preview">
-			<Image src={heroFuchsia04} alt="" />
-			<Image src={heroGreen04} alt="" />
-			<Image src={heroBlue05} alt="" />
-			<Image src={heroRed05} alt="" />
+			<Image {...withReferenceBlur(heroFuchsia04)} alt="" />
+			<Image {...withReferenceBlur(heroGreen04)} alt="" />
+			<Image {...withReferenceBlur(heroBlue05)} alt="" />
+			<Image {...withReferenceBlur(heroRed05)} alt="" />
 		</div>
 		<div class="reference-folder__label"><strong>Archive fragments</strong><small>36</small></div>
 	</article>
