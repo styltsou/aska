@@ -449,7 +449,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.scratchpad-preview__shortcut { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 	.scratchpad-preview__shortcut--close { margin-right: auto; }
 	.scratchpad-preview__shortcut em { color: rgb(119 119 112 / 50%); font-style: normal; }
-	.folder-canvas-preview { --folder-cycle: 3.8s; border: 0; background-color: transparent; box-shadow: none; }
+	.folder-canvas-preview { --folder-cycle: 4.2s; border: 0; background-color: transparent; box-shadow: none; }
 	.folder-canvas-preview__grid { position: absolute; inset: 0; }
 	.folder-canvas-preview__folder { position: absolute; top: 7px; left: 50%; z-index: 2; width: 178px; height: 192px; overflow: hidden; border: 1px solid rgb(0 0 0 / 9%); border-radius: 6px; background: #fff; box-shadow: 0 3px 10px rgb(21 21 21 / 5%); transform: translateX(-50%); }
 	.folder-canvas-preview__folder-grid { position: relative; width: 100%; height: 178px; padding: 6px; }
@@ -478,7 +478,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 		17% { opacity: 1; transform: translate(43px, -94px) scale(1); }
 		22% { opacity: 1; transform: translate(50px, -109px) scale(1); }
 		26%, 52% { opacity: 0; transform: translate(50px, -109px) scale(1); }
-		58%, 100% { opacity: 1; transform: translate(0, 0) scale(1); }
+		80%, 100% { opacity: 1; transform: translate(0, 0) scale(1); }
 	}
 	@keyframes folder-source-drag {
 		0%, 6% { opacity: 1; transform: translate(0, 0) scale(1); }
