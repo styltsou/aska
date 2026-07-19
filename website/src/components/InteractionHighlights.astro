@@ -322,9 +322,9 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.source-import-preview__collection-meta span { margin-left: auto; color: #8a8a83; font-size: 7px; }
 	.source-import-preview__asset { position: absolute; top: 50%; left: 50%; width: 60%; height: 60%; overflow: hidden; border: 1px solid rgb(0 0 0 / 8%); border-radius: 8px; background: #fff; box-shadow: 0 3px 8px rgb(21 21 21 / 10%); transform-origin: bottom center; }
 	.source-import-preview__asset img { display: block; width: 100%; height: 100%; object-fit: cover; }
-	.source-import-preview__asset--one { z-index: 2; translate: calc(-50% - 4px) calc(-50% - 5px); transform: rotate(-4deg); }
-	.source-import-preview__asset--two { z-index: 1; translate: -50% -50%; transform: rotate(0deg); }
-	.source-import-preview__asset--three { z-index: 0; display: flex; align-items: flex-start; justify-content: flex-start; padding: 8px; color: #575750; translate: calc(-50% + 4px) calc(-50% + 5px); transform: rotate(4deg); }
+	.source-import-preview__asset--one { z-index: 2; transform: translate(calc(-50% - 4px), calc(-50% - 5px)) rotate(-4deg); }
+	.source-import-preview__asset--two { z-index: 1; transform: translate(-50%, -50%) rotate(0deg); }
+	.source-import-preview__asset--three { z-index: 0; display: flex; align-items: flex-start; justify-content: flex-start; padding: 8px; color: #575750; transform: translate(calc(-50% + 4px), calc(-50% + 5px)) rotate(4deg); }
 	.source-import-preview__asset--three span { font-size: 7px; font-weight: 600; line-height: 1.2; opacity: .55; }
 	@keyframes source-import-flow { to { stroke-dashoffset: 0; } }
 	@keyframes source-import-flow-reverse { to { stroke-dashoffset: 200; } }
