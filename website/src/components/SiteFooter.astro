@@ -117,17 +117,24 @@ const { loginHref, signupHref } = Astro.props;
 	:global(html[data-theme='dark']) .site-footer p,
 	:global(html[data-theme='dark']) .site-footer a { color: var(--ink-muted); }
 	:global(html[data-theme='dark']) .theme-control { color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .site-footer a.site-footer__credit,
+	:global(html[data-theme='dark']) .site-footer .theme-control button[aria-pressed='true'] { color: var(--ink); }
 
 	@media (hover: hover) {
 		.site-footer__credit:hover { text-decoration: underline; text-underline-offset: 2px; }
 		.site-footer__github:hover, .site-footer a:hover, .site-footer button:hover { color: var(--ink); }
-		:global(html[data-theme='dark']) .site-footer__credit:hover { text-decoration-color: #fff; }
+		:global(html[data-theme='dark']) .site-footer a:hover,
+		:global(html[data-theme='dark']) .site-footer button:hover { color: var(--ink); }
+		:global(html[data-theme='dark']) .site-footer__credit:hover { text-decoration-color: var(--ink); }
 	}
 
 	@media (hover: none) {
 		.site-footer__credit:active { text-decoration: underline; text-underline-offset: 2px; }
 		.site-footer a:active, .site-footer button:active, .theme-control button:active { color: var(--ink); }
-		:global(html[data-theme='dark']) .site-footer__credit:active { text-decoration-color: #fff; }
+		:global(html[data-theme='dark']) .site-footer a:active,
+		:global(html[data-theme='dark']) .site-footer button:active,
+		:global(html[data-theme='dark']) .theme-control button:active { color: var(--ink); }
+		:global(html[data-theme='dark']) .site-footer__credit:active { text-decoration-color: var(--ink); }
 	}
 
 	@media (max-width: 640px) {
