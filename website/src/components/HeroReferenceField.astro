@@ -270,8 +270,31 @@ const withReferenceBlur = (image) => ({ ...referenceImageProps, src: image, clas
 	:global(html[data-theme='dark']) .reference-folder__label { background: var(--surface); }
 	:global(html[data-theme='dark']) .reference-folder__label small { color: var(--ink-muted); }
 
+	@media (max-width: 1280px) {
+		.hero-reference-field { inset: 31% 0 0; }
+		.reference-canvas-card--left-edge, .reference-canvas-card--note-left-one, .reference-canvas-card--note-left-two, .reference-canvas-card--folder-working, .reference-canvas-card--right-prelude, .reference-canvas-card--note-right, .reference-canvas-card--right-blue, .reference-canvas-card--right-shadows, .reference-canvas-card--folder-soft, .reference-canvas-card--folder-archive { display: none; }
+		.reference-canvas-card--brick { top: 10px; left: max(18px, calc(50% - 560px)); }
+		.reference-canvas-card--blue { top: 18px; left: max(214px, calc(50% - 364px)); }
+		.reference-canvas-card--note { top: 166px; left: max(214px, calc(50% - 364px)); }
+		.reference-canvas-card--folder-material { top: 222px; left: max(18px, calc(50% - 560px)); }
+		.reference-canvas-card--plinth { top: 312px; left: max(214px, calc(50% - 364px)); }
+		.reference-canvas-card--shadow-wide { top: 34px; right: max(214px, calc(50% - 364px)); }
+		.reference-canvas-card--curve { top: 172px; right: max(18px, calc(50% - 560px)); }
+		.reference-canvas-card--sculptures { top: 406px; right: max(18px, calc(50% - 560px)); }
+	}
+
 	@media (max-width: 900px) {
-		.reference-canvas-card--note-right, .reference-canvas-card--note-left-one, .reference-canvas-card--note-left-two, .reference-canvas-card--folder-working { display: none; }
+		.hero-reference-field { inset: 32% 0 0; }
+		.reference-canvas-card--note-right, .reference-canvas-card--note-left-one, .reference-canvas-card--note-left-two, .reference-canvas-card--folder-working, .reference-canvas-card--left-edge, .reference-canvas-card--right-prelude, .reference-canvas-card--right-blue, .reference-canvas-card--right-shadows, .reference-canvas-card--folder-archive { display: none; }
+		.reference-canvas-card--brick { left: max(18px, calc(50% - 448px)); }
+		.reference-canvas-card--note { left: max(174px, calc(50% - 300px)); }
+		.reference-canvas-card--blue { left: max(174px, calc(50% - 300px)); }
+		.reference-canvas-card--plinth { left: max(174px, calc(50% - 300px)); }
+		.reference-canvas-card--folder-material { left: max(18px, calc(50% - 448px)); }
+		.reference-canvas-card--curve { right: max(18px, calc(50% - 448px)); }
+		.reference-canvas-card--shadow-wide { right: max(174px, calc(50% - 300px)); }
+		.reference-canvas-card--folder-soft { right: max(18px, calc(50% - 448px)) !important; }
+		.reference-canvas-card--sculptures { right: max(18px, calc(50% - 448px)); }
 	}
 
 	@media (max-width: 1100px) {
@@ -279,15 +302,16 @@ const withReferenceBlur = (image) => ({ ...referenceImageProps, src: image, clas
 	}
 
 	@media (max-width: 640px) {
-		.hero-reference-field { top: 40%; right: 0; bottom: auto; left: 0; height: 390px; }
-		.reference-canvas-card--brick { top: 42px; left: 20px; width: 82px; height: 120px; }
-		.reference-canvas-card--note { top: 286px; left: 20px; width: 82px; height: 80px; }
-		.reference-canvas-card--blue { top: 176px; left: 20px; width: 82px; height: 94px; }
+		.hero-reference-field { inset: 0; height: auto; }
+		.reference-canvas-card { pointer-events: none; }
+		.reference-canvas-card--brick { top: max(70px, calc(50% - 316px)); left: -18px; width: clamp(80px, 23vw, 98px); height: clamp(112px, 33vw, 132px); }
+		.reference-canvas-card--note { top: auto; bottom: max(72px, calc(50% - 326px)); left: 28px; width: clamp(94px, 28vw, 116px); height: clamp(76px, 22vw, 92px); }
+		.reference-canvas-card--blue { top: calc(50% - 184px); left: 18px; width: clamp(78px, 22vw, 94px); height: clamp(88px, 27vw, 110px); }
 		.reference-canvas-card--plinth, .reference-canvas-card--shadow-wide { display: none; }
-		.reference-canvas-card--folder-material { top: 22px; right: 20px; left: auto; width: 82px; height: 88px; }
-		.reference-canvas-card--curve { top: 126px; right: 20px; width: 82px; height: 116px; }
+		.reference-canvas-card--folder-material { top: max(94px, calc(50% - 282px)); right: 14px; left: auto; width: clamp(86px, 25vw, 106px); height: clamp(92px, 26vw, 112px); }
+		.reference-canvas-card--curve { top: calc(50% + 104px); right: -14px; width: clamp(78px, 23vw, 98px); height: clamp(104px, 31vw, 128px); }
 		.reference-canvas-card--folder-soft, .reference-canvas-card--folder-archive, .reference-canvas-card--folder-working, .reference-canvas-card--note-right, .reference-canvas-card--note-left-one, .reference-canvas-card--note-left-two, .reference-canvas-card--note-lower, .reference-canvas-card--right-blue, .reference-canvas-card--right-shadows, .reference-canvas-card--left-edge, .reference-canvas-card--right-prelude { display: none; }
-		.reference-canvas-card--sculptures { top: 258px; right: 20px; width: 82px; height: 114px; }
+		.reference-canvas-card--sculptures { top: auto; right: 58px; bottom: max(56px, calc(50% - 340px)); width: clamp(82px, 24vw, 104px); height: clamp(108px, 32vw, 132px); }
 		.reference-field__item--note { padding: 8px; }
 		.reference-field__item--note p { font-size: 7px; }
 		.reference-field__item--note p:first-child { font-size: 10px; }

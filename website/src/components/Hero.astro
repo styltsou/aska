@@ -50,9 +50,10 @@ const { signupHref } = Astro.props;
 	}
 
 	@media (max-width: 640px) {
-		.hero { --hero-fade-depth: 40px; --hero-fade-one: 35px; --hero-fade-two: 30px; --hero-fade-three: 24px; --hero-fade-four: 17px; --hero-fade-five: 10px; --hero-fade-six: 4px; padding-top: 88px; }
+		.hero { --hero-fade-depth: 40px; --hero-fade-one: 35px; --hero-fade-two: 30px; --hero-fade-three: 24px; --hero-fade-four: 17px; --hero-fade-five: 10px; --hero-fade-six: 4px; display: grid; min-height: 100svh; height: calc(100svh + var(--hero-fade-depth)); align-items: center; padding: 0 20px var(--hero-fade-depth); }
+		.hero__copy { width: 100%; max-width: 350px; transform: translateY(-8px); }
 		h1 { font-size: clamp(36px, 10vw, 44px); }
-		.hero-workspace-stage { width: calc(100vw - 32px); height: calc(41.6667vw - 13.333px); }
+		.hero-workspace-stage { display: none; }
 	}
 
 	@media (prefers-reduced-transparency: reduce) {
