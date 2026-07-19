@@ -188,6 +188,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 			<div class="folder-canvas-preview" role="img" aria-label="An Aska canvas with a folder containing references">
 				<div class="folder-canvas-preview__grid">
 					<div class="folder-canvas-preview__source"><Image {...withMiniPreviewBlur(toolsBlue01)} alt="" /></div>
+					<svg class="folder-canvas-preview__cursor" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 12V6.5a1.5 1.5 0 0 1 3 0V10M10.5 10V5a1.5 1.5 0 0 1 3 0v5M13.5 10V6.5a1.5 1.5 0 0 1 3 0v4M16.5 11V8a1.5 1.5 0 0 1 3 0v6.5c0 4-2.8 6.5-6.4 6.5h-1.3c-2.5 0-4.3-1.2-5.4-3.3L4.8 14.8a1.5 1.5 0 0 1 2.5-1.6Z"></path></svg>
 					<div class="folder-canvas-preview__folder">
 						<div class="folder-canvas-preview__folder-grid">
 							<div class="folder-canvas-preview__preview folder-canvas-preview__preview--one"><Image {...withMiniPreviewBlur(toolsRed01)} alt="" /></div>
@@ -470,13 +471,22 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.folder-canvas-preview__count--before { animation-name: folder-count-before; }
 	.folder-canvas-preview__count--after { opacity: 0; animation-name: folder-count-after; }
 	.folder-canvas-preview__source { position: absolute; bottom: 12px; left: calc(50% - 124px); z-index: 4; width: 62px; height: 62px; overflow: hidden; border: 1px solid rgb(0 0 0 / 11%); border-radius: 4px; background: #fff; box-shadow: 0 6px 16px rgb(21 21 21 / 14%); animation: folder-source-drag var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
+	.folder-canvas-preview__cursor { position: absolute; bottom: 44px; left: calc(50% - 109px); z-index: 5; width: 24px; height: 24px; overflow: visible; color: #252522; filter: drop-shadow(0 2px 3px rgb(21 21 21 / 18%)); opacity: 0; pointer-events: none; animation: folder-cursor-drag var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; will-change: opacity, transform; }
+	.folder-canvas-preview__cursor path { fill: #fff; stroke: currentColor; stroke-linejoin: round; stroke-width: 1.4; }
+	@keyframes folder-cursor-drag {
+		0%, 4% { opacity: 0; transform: translate(-2px, -2px) scale(.96); }
+		6%, 12% { opacity: 1; transform: translate(0, 0) scale(1); }
+		26% { opacity: 1; transform: translate(43px, -101px) scale(1); }
+		34% { opacity: 1; transform: translate(50px, -117px) scale(1); }
+		38%, 100% { opacity: 0; transform: translate(50px, -117px) scale(1); }
+	}
 	@keyframes folder-source-drag {
-		0%, 10% { opacity: 1; transform: translate(0, 0) scale(1); }
+		0% { opacity: 0; transform: translate(0, 0) scale(.98); }
+		3%, 10% { opacity: 1; transform: translate(0, 0) scale(1); }
 		13% { opacity: 1; transform: translate(0, 0) scale(.98); }
 		26% { opacity: 1; transform: translate(43px, -94px) scale(1.22); }
 		34% { opacity: 1; transform: translate(50px, -109px) scale(1.3); }
-		38%, 77% { opacity: 0; transform: translate(50px, -109px) scale(1.3); }
-		81%, 100% { opacity: 1; transform: translate(0, 0) scale(1); }
+		38%, 100% { opacity: 0; transform: translate(50px, -109px) scale(1.3); }
 	}
 	@keyframes folder-slot {
 		0%, 20% { opacity: 0; transform: scale(.9); }
@@ -567,6 +577,8 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	:global(html[data-theme=dark]) .selection-preview { --selection-outline: var(--ink); --selection-card-shadow: 0 6px 16px rgb(0 0 0 / 26%); }
 	:global(html[data-theme=dark]) .selection-preview__cursor { color: var(--ink); filter: drop-shadow(0 2px 4px rgb(0 0 0 / 38%)); }
 	:global(html[data-theme=dark]) .selection-preview__cursor path { fill: var(--surface); }
+	:global(html[data-theme=dark]) .folder-canvas-preview__cursor { color: var(--ink); filter: drop-shadow(0 2px 4px rgb(0 0 0 / 38%)); }
+	:global(html[data-theme=dark]) .folder-canvas-preview__cursor path { fill: var(--surface); }
 	:global(html[data-theme='dark']) .selection-preview__marquee { border-color: rgb(241 243 238 / 100%); background: rgb(241 243 238 / 10%); box-shadow: none; }
 	:global(html[data-theme='dark']) .selection-preview__marquee rect { stroke: rgb(241 243 238 / 100%); }
 	:global(html[data-theme='dark']) .selection-preview__card { background: var(--surface); }
