@@ -137,34 +137,36 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 				<div class="command-preview__dialog">
 					<div class="command-preview__body">
 						<div class="command-preview__search">
-							<span>Type a command or search...</span>
+							<span class="command-preview__placeholder">Type a command or search...</span>
+							<span class="command-preview__query">search</span>
+							<i class="command-preview__caret" aria-hidden="true"></i>
 							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
 						</div>
 						<div class="command-preview__list">
-							<div class="command-preview__group">Create</div>
-							<div class="command-preview__item command-preview__item--active">
+							<div class="command-preview__group command-preview__filter-away">Create</div>
+							<div class="command-preview__item command-preview__item--active command-preview__filter-away">
 								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
 								<span>New note</span>
 								<strong>N</strong>
 							</div>
-							<div class="command-preview__item">
+							<div class="command-preview__item command-preview__filter-away">
 								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 10v6"></path><path d="M9 13h6"></path><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>
 								<span>New folder</span>
 								<strong>F</strong>
 							</div>
-							<div class="command-preview__item">
+							<div class="command-preview__item command-preview__filter-away">
 								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h6"></path><path d="M19 2v6"></path><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"></path><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"></path><circle cx="9" cy="9" r="2"></circle></svg>
 								<span>Upload images</span>
 								<strong>U</strong>
 							</div>
-							<div class="command-preview__separator"></div>
-							<div class="command-preview__group">Navigate</div>
-							<div class="command-preview__item">
+							<div class="command-preview__separator command-preview__filter-away"></div>
+							<div class="command-preview__group command-preview__group--navigate">Navigate</div>
+							<div class="command-preview__item command-preview__item--search-result">
 								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
 								<span>Search all assets</span>
 								<strong>/</strong>
 							</div>
-							<div class="command-preview__item">
+							<div class="command-preview__item command-preview__filter-away">
 								<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
 								<span>Open Inbox</span>
 								<strong>I</strong>
@@ -213,7 +215,11 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 					<div class="scratchpad-preview__panel">
 						<div class="scratchpad-preview__frame">
 							<div class="scratchpad-preview__surface">
-								<div class="scratchpad-preview__textarea">Capture to Inbox...</div>
+								<div class="scratchpad-preview__textarea">
+									<span class="scratchpad-preview__placeholder">Capture to Inbox...</span>
+									<span class="scratchpad-preview__note">Keep useful friction in play.</span>
+									<i class="scratchpad-preview__caret" aria-hidden="true"></i>
+								</div>
 							</div>
 							<div class="scratchpad-preview__shortcuts">
 								<span class="scratchpad-preview__shortcut scratchpad-preview__shortcut--close"><kbd>Esc</kbd> Close</span>
@@ -221,6 +227,10 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 								<span class="scratchpad-preview__shortcut"><kbd>Enter</kbd> Save</span>
 							</div>
 						</div>
+					</div>
+					<div class="scratchpad-preview__toast" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="m5 12 4.2 4.2L19 6.8"></path></svg>
+						<span>Saved to Inbox</span>
 					</div>
 				</div>
 			</div>
@@ -384,6 +394,82 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 		25.8%, 74% { opacity: 1; transform: translate(-50%, 0) scale(1); }
 		78%, 100% { opacity: 0; transform: translate(-50%, 6px) scale(.98); }
 	}
+	@keyframes command-query {
+		0%, 12% { width: 0; opacity: 0; }
+		16% { width: 0; opacity: 1; }
+		38%, 68% { width: 43px; opacity: 1; }
+		74%, 100% { width: 0; opacity: 0; }
+	}
+	@keyframes command-placeholder {
+		0%, 21% { opacity: 1; transform: translate(0, -50%); }
+		27%, 70% { opacity: 0; transform: translate(-4px, -50%); }
+		77%, 100% { opacity: 1; transform: translate(0, -50%); }
+	}
+	@keyframes command-filter-away {
+		0%, 35% { min-height: 35px; max-height: 46px; margin-top: 0; margin-bottom: 0; padding-top: 8px; padding-bottom: 8px; opacity: 1; transform: translateX(0); }
+		44%, 72% { min-height: 0; max-height: 0; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; opacity: 0; transform: translateX(-6px); }
+		80%, 100% { min-height: 35px; max-height: 46px; margin-top: 0; margin-bottom: 0; padding-top: 8px; padding-bottom: 8px; opacity: 1; transform: translateX(0); }
+	}
+	@keyframes command-filter-away-group {
+		0%, 35% { max-height: 23px; padding-top: 7px; padding-bottom: 5px; opacity: 1; transform: translateX(0); }
+		44%, 72% { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; transform: translateX(-6px); }
+		80%, 100% { max-height: 23px; padding-top: 7px; padding-bottom: 5px; opacity: 1; transform: translateX(0); }
+	}
+	@keyframes command-filter-away-separator {
+		0%, 35% { max-height: 1px; margin: 5px -8px; opacity: 1; }
+		44%, 72% { max-height: 0; margin: 0 -8px; opacity: 0; }
+		80%, 100% { max-height: 1px; margin: 5px -8px; opacity: 1; }
+	}
+	@keyframes command-search-match {
+		0%, 39% { color: var(--ink-muted); background: transparent; }
+		46%, 72% { color: var(--ink); background: color-mix(in srgb, var(--ink) 8%, transparent); }
+		80%, 100% { color: var(--ink-muted); background: transparent; }
+	}
+	@keyframes command-search-match-icon {
+		0%, 39% { color: var(--ink-muted); }
+		46%, 72% { color: var(--ink); }
+		80%, 100% { color: var(--ink-muted); }
+	}
+	@keyframes command-caret-position {
+		0%, 12% { opacity: 0; transform: translate(0, -50%); }
+		16% { opacity: 1; transform: translate(0, -50%); }
+		38%, 68% { opacity: 1; transform: translate(43px, -50%); }
+		74%, 100% { opacity: 0; transform: translate(0, -50%); }
+	}
+	@keyframes command-caret { 50% { opacity: 0; } }
+	@keyframes scratchpad-panel {
+		0%, 57% { opacity: 1; transform: translateY(0) scale(1); }
+		61% { opacity: 1; transform: translateY(0) scale(.985); }
+		70%, 86% { opacity: 0; transform: translateY(-14px) scale(.97); }
+		94%, 100% { opacity: 1; transform: translateY(0) scale(1); }
+	}
+	@keyframes scratchpad-placeholder {
+		0%, 7% { opacity: 1; transform: translateY(0); }
+		13%, 86% { opacity: 0; transform: translateY(-3px); }
+		94%, 100% { opacity: 1; transform: translateY(0); }
+	}
+	@keyframes scratchpad-note {
+		0%, 7% { width: 0; opacity: 0; }
+		13% { width: 0; opacity: 1; }
+		48%, 57% { width: 143px; opacity: 1; }
+		64%, 100% { width: 143px; opacity: 0; }
+	}
+	@keyframes scratchpad-caret-position {
+		0%, 7% { opacity: 0; transform: translateX(0); }
+		13% { opacity: 1; transform: translateX(0); }
+		48%, 57% { opacity: 1; transform: translateX(143px); }
+		64%, 100% { opacity: 0; transform: translateX(143px); }
+	}
+	@keyframes scratchpad-submit {
+		0%, 51% { box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); }
+		56% { box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 2px rgb(21 21 21 / 32%); }
+		61%, 100% { box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); }
+	}
+	@keyframes scratchpad-toast {
+		0%, 63% { opacity: 0; transform: translate(-50%, 8px) scale(.96); }
+		69%, 84% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+		91%, 100% { opacity: 0; transform: translate(-50%, -4px) scale(.98); }
+	}
 	.paste-preview { border: 0; background: transparent; box-shadow: none; }
 	.paste-preview__surface { position: absolute; inset: 0; overflow: hidden; }
 	.paste-preview__gesture { position: absolute; top: 19px; left: 50%; display: inline-flex; align-items: baseline; color: rgb(21 21 21 / 13%); font-size: 26px; font-weight: 700; line-height: 1; pointer-events: none; transform: translateX(-50%); }
@@ -420,35 +506,50 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.selection-preview__action-bar button:disabled { opacity: 1; }
 	.selection-preview__action-bar svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
 	.command-preview__clip { min-width: 0; }
-	.command-preview { min-height: 241px; margin-bottom: -36px; border: 0; background: transparent; box-shadow: none; }
+	.command-preview { --command-cycle: 5.4s; min-height: 241px; margin-bottom: -36px; border: 0; background: transparent; box-shadow: none; }
 	.command-preview__dialog { position: absolute; top: 10px; left: 0; width: 330px; overflow: hidden; padding: 6px; border: 1px solid rgb(229 229 229 / 50%); border-radius: 8px; background: rgb(255 255 255 / 30%); box-shadow: 0 10px 15px -3px rgb(21 21 21 / 10%), 0 4px 6px -4px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); color: #2d2d29; backdrop-filter: blur(24px) saturate(150%); }
 	.command-preview__body { padding: 8px; border: 1px solid rgb(229 229 229 / 60%); border-radius: 6px; background: rgb(255 255 255 / 70%); box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); backdrop-filter: blur(24px) saturate(150%); }
-	.command-preview__search { display: flex; align-items: center; height: 40px; gap: 11px; padding: 0 10px 0 12px; border-bottom: 1px solid rgb(21 21 21 / 8%); color: #8b8b84; font-size: 12px; line-height: 1; }
+	.command-preview__search { position: relative; display: flex; align-items: center; height: 40px; padding: 0 38px 0 12px; border-bottom: 1px solid rgb(21 21 21 / 8%); color: #8b8b84; font-size: 12px; line-height: 1; }
 	.command-preview__search span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1; }
+	.command-preview__placeholder { position: absolute; top: 50%; left: 12px; animation: command-placeholder var(--command-cycle) ease-in-out infinite; }
+	.command-preview__query { position: absolute; top: 50%; left: 12px; display: block; width: 0; color: #4b4b46; opacity: 0; text-overflow: clip !important; transform: translateY(-50%); animation: command-query var(--command-cycle) steps(6, end) infinite; }
+	.command-preview__caret { position: absolute; top: 50%; left: 12px; width: 1px; height: 13px; opacity: 0; pointer-events: none; animation: command-caret-position var(--command-cycle) steps(6, end) infinite; }
+	.command-preview__caret::after { position: absolute; inset: 0; background: #4b4b46; content: ""; animation: command-caret 650ms steps(1, end) infinite; }
 	.command-preview svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
-	.command-preview__search svg { display: block; flex: none; opacity: .55; }
-	.command-preview__list { overflow: visible; padding-top: 7px; }
-	.command-preview__group { padding: 7px 10px 5px; color: #8f8f88; font-size: 11px; font-weight: 500; line-height: 1; }
+	.command-preview__search svg { position: absolute; top: 50%; right: 12px; display: block; width: 16px; height: 16px; opacity: .55; transform: translateY(-50%); }
+	.command-preview__list { overflow: hidden; padding-top: 7px; }
+	.command-preview__group { overflow: hidden; padding: 7px 10px 5px; color: #8f8f88; font-size: 11px; font-weight: 500; line-height: 1; }
 	.command-preview__separator { height: 1px; margin: 5px -8px; background: rgb(21 21 21 / 8%); }
 	.command-preview__item { display: flex; align-items: center; min-height: 35px; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #3f3f3a; font-size: 12px; line-height: 1; }
+	.command-preview__filter-away { overflow: hidden; animation: command-filter-away var(--command-cycle) cubic-bezier(.22, .8, .24, 1) infinite; }
+	.command-preview__group.command-preview__filter-away { animation-name: command-filter-away-group; }
+	.command-preview__separator.command-preview__filter-away { overflow: hidden; animation-name: command-filter-away-separator; }
 	.command-preview__item svg { width: 16px; height: 16px; color: #8b8b84; }
 	.command-preview__item span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.command-preview__item strong { margin-left: auto; color: #8f8f88; font-size: 10px; font-weight: 500; letter-spacing: .08em; }
 	.command-preview__item--active { color: #20201e; background: rgb(21 21 21 / 8%); }
 	.command-preview__item--active svg, .command-preview__item--active strong { color: #20201e; }
+	.command-preview__item--search-result { animation: command-search-match var(--command-cycle) ease-in-out infinite; }
+	.command-preview__item--search-result svg, .command-preview__item--search-result strong { animation: command-search-match-icon var(--command-cycle) ease-in-out infinite; }
 	.command-preview__footer { display: flex; align-items: center; gap: 12px; padding: 8px 2px 2px; color: #8b8b84; font-size: 10px; line-height: 1; }
 	.command-preview__footer span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 	kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; border: 0; border-radius: 2px; background: #eeeeea; color: #6f6f69; font: inherit; font-size: 9px; font-weight: 500; line-height: 1; }
-	.scratchpad-preview { border: 0; background: transparent; box-shadow: none; text-align: left; }
+	.scratchpad-preview { --scratchpad-cycle: 5.4s; border: 0; background: transparent; box-shadow: none; text-align: left; }
 	.scratchpad-preview__overlay { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: flex-start; padding: 47px 0 0 24px; background: transparent; }
-	.scratchpad-preview__panel { width: 455px; color: #242420; }
+	.scratchpad-preview__panel { width: 455px; color: #242420; transform-origin: top center; animation: scratchpad-panel var(--scratchpad-cycle) cubic-bezier(.22, .8, .24, 1) infinite; }
 	.scratchpad-preview__frame { border: 1px solid rgb(229 229 229 / 50%); border-radius: 8px; background: rgb(255 255 255 / 30%); box-shadow: 0 10px 15px -3px rgb(21 21 21 / 10%), 0 4px 6px -4px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); padding: 6px; backdrop-filter: blur(24px) saturate(150%); }
-	.scratchpad-preview__surface { border: 1px solid rgb(229 229 229 / 60%); border-radius: 6px; background: rgb(255 255 255 / 70%); box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); backdrop-filter: blur(24px) saturate(150%); }
-	.scratchpad-preview__textarea { min-height: 40px; padding: 10px 12px; color: #8a8a83; font-size: 13px; line-height: 1.45; }
+	.scratchpad-preview__surface { border: 1px solid rgb(229 229 229 / 60%); border-radius: 6px; background: rgb(255 255 255 / 70%); box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); backdrop-filter: blur(24px) saturate(150%); animation: scratchpad-submit var(--scratchpad-cycle) ease-in-out infinite; }
+	.scratchpad-preview__textarea { position: relative; min-height: 40px; padding: 10px 12px; color: #8a8a83; font-size: 13px; line-height: 1.45; }
+	.scratchpad-preview__placeholder { display: block; animation: scratchpad-placeholder var(--scratchpad-cycle) ease-in-out infinite; }
+	.scratchpad-preview__note { position: absolute; top: 10px; left: 12px; display: block; width: 0; overflow: hidden; color: var(--ink); font-size: 12px; line-height: 1.45; white-space: nowrap; animation: scratchpad-note var(--scratchpad-cycle) steps(14, end) infinite; }
+	.scratchpad-preview__caret { position: absolute; top: 10px; left: 12px; width: 1px; height: 17px; opacity: 0; pointer-events: none; animation: scratchpad-caret-position var(--scratchpad-cycle) steps(14, end) infinite; }
+	.scratchpad-preview__caret::after { position: absolute; inset: 0; background: var(--ink); content: ""; animation: command-caret 650ms steps(1, end) infinite; }
 	.scratchpad-preview__shortcuts { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 4px 10px; padding: 7px 2px 1px; color: #777770; font-size: 10px; line-height: 18px; }
 	.scratchpad-preview__shortcut { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 	.scratchpad-preview__shortcut--close { margin-right: auto; }
 	.scratchpad-preview__shortcut em { color: rgb(119 119 112 / 50%); font-style: normal; }
+	.scratchpad-preview__toast { position: absolute; top: 72px; left: 50%; z-index: 2; display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: color-mix(in srgb, var(--surface) 82%, transparent); box-shadow: 0 6px 16px rgb(21 21 21 / 12%); color: var(--ink); font-size: 10px; font-weight: 600; line-height: 1; opacity: 0; pointer-events: none; transform: translate(-50%, 8px) scale(.96); backdrop-filter: blur(14px) saturate(150%); animation: scratchpad-toast var(--scratchpad-cycle) cubic-bezier(.22, .8, .24, 1) infinite; }
+	.scratchpad-preview__toast svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
 	.folder-canvas-preview { --folder-cycle: 4.2s; border: 0; background-color: transparent; box-shadow: none; }
 	.folder-canvas-preview__grid { position: absolute; inset: 0; }
 	.folder-canvas-preview__folder { position: absolute; top: 7px; left: 50%; z-index: 2; width: 178px; height: 192px; overflow: hidden; border: 1px solid rgb(0 0 0 / 9%); border-radius: 6px; background: #fff; box-shadow: 0 3px 10px rgb(21 21 21 / 5%); transform: translateX(-50%); }
