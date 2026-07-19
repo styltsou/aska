@@ -422,10 +422,10 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.command-preview { min-height: 241px; margin-bottom: -36px; border: 0; background: transparent; box-shadow: none; }
 	.command-preview__dialog { position: absolute; top: 10px; left: 0; width: 330px; overflow: hidden; padding: 6px; border: 1px solid rgb(229 229 229 / 50%); border-radius: 8px; background: rgb(255 255 255 / 30%); box-shadow: 0 10px 15px -3px rgb(21 21 21 / 10%), 0 4px 6px -4px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); color: #2d2d29; backdrop-filter: blur(24px) saturate(150%); }
 	.command-preview__body { padding: 8px; border: 1px solid rgb(229 229 229 / 60%); border-radius: 6px; background: rgb(255 255 255 / 70%); box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); backdrop-filter: blur(24px) saturate(150%); }
-	.command-preview__search { display: flex; align-items: center; height: 42px; gap: 11px; padding: 0 10px 0 12px; border-bottom: 1px solid rgb(21 21 21 / 8%); color: #8b8b84; font-size: 12px; line-height: 1; }
-	.command-preview__search span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.command-preview__search { display: flex; align-items: center; height: 40px; gap: 11px; padding: 0 10px 0 12px; border-bottom: 1px solid rgb(21 21 21 / 8%); color: #8b8b84; font-size: 12px; line-height: 1; }
+	.command-preview__search span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1; }
 	.command-preview svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
-	.command-preview__search svg { opacity: .55; }
+	.command-preview__search svg { display: block; flex: none; opacity: .55; }
 	.command-preview__list { overflow: visible; padding-top: 7px; }
 	.command-preview__group { padding: 7px 10px 5px; color: #8f8f88; font-size: 11px; font-weight: 500; line-height: 1; }
 	.command-preview__separator { height: 1px; margin: 5px -8px; background: rgb(21 21 21 / 8%); }
@@ -622,7 +622,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	}
 
 	@media (min-width: 641px) and (max-width: 820px) {
-		.command-preview__clip { min-height: 300px; margin-bottom: -36px; overflow: hidden; }
+		.command-preview__clip { width: calc(100% + 30px); min-height: 300px; margin-bottom: -36px; overflow: hidden; }
 		.command-preview { width: calc(100% + 30px); min-height: 300px; margin-bottom: 0; overflow: hidden; }
 		.command-preview__dialog { left: 0; width: calc(100% + 48px); transform: none; }
 		.selection-preview__board { transform: translateY(8px); }
@@ -639,7 +639,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 		.interaction-item + .interaction-item::before { right: -16px; left: -16px; }
 		.interaction-item { padding: 28px 18px 32px; }
 		.command-preview, .scratchpad-preview, .folder-canvas-preview, .source-import-preview, .paste-preview, .selection-preview { min-height: 196px; }
-		.command-preview__clip { min-height: 228px; margin-bottom: -32px; overflow: hidden; }
+		.command-preview__clip { width: calc(100% + 18px); min-height: 228px; margin-bottom: -32px; overflow: hidden; }
 		.command-preview { width: calc(100% + 34px); min-height: 228px; margin-bottom: 0; overflow: hidden; }
 		.command-preview__dialog { left: 0; width: 100%; transform: none; }
 		.scratchpad-preview { overflow: visible; }
