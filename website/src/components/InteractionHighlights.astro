@@ -132,6 +132,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 				<h3>Command palette</h3>
 				<p>Search the archive, jump between collections, or create something new from one keyboard-first menu.</p>
 			</div>
+			<div class="command-preview__clip">
 			<div class="command-preview" role="img" aria-label="A compact Aska command palette">
 				<div class="command-preview__dialog">
 					<div class="command-preview__body">
@@ -177,6 +178,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 					</div>
 				</div>
 			</div>
+			</div>
 		</article>
 		<article class="interaction-item">
 			<div class="interaction-item__copy">
@@ -185,19 +187,17 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 			</div>
 			<div class="folder-canvas-preview" role="img" aria-label="An Aska canvas with a folder containing references">
 				<div class="folder-canvas-preview__grid">
+					<div class="folder-canvas-preview__source"><Image {...withMiniPreviewBlur(toolsBlue01)} alt="" /></div>
 					<div class="folder-canvas-preview__folder">
 						<div class="folder-canvas-preview__folder-grid">
-							<Image {...withMiniPreviewBlur(toolsRed01)} alt="" />
-							<Image {...withMiniPreviewBlur(toolsGreen01)} alt="" />
-							<Image {...withMiniPreviewBlur(toolsBlue01)} alt="" />
-							<Image {...withMiniPreviewBlur(toolsFuchsia02)} alt="" />
+							<div class="folder-canvas-preview__preview folder-canvas-preview__preview--one"><Image {...withMiniPreviewBlur(toolsRed01)} alt="" /></div>
+							<div class="folder-canvas-preview__preview folder-canvas-preview__preview--two"><Image {...withMiniPreviewBlur(toolsGreen01)} alt="" /></div>
+							<div class="folder-canvas-preview__preview folder-canvas-preview__preview--three"><Image {...withMiniPreviewBlur(toolsFuchsia02)} alt="" /></div>
+							<div class="folder-canvas-preview__preview folder-canvas-preview__preview--four"><Image {...withMiniPreviewBlur(concreteSculptures)} alt="" /></div>
+							<div class="folder-canvas-preview__slot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></div>
+							<div class="folder-canvas-preview__incoming"><Image {...withMiniPreviewBlur(toolsBlue01)} alt="" /></div>
 						</div>
-						<div class="folder-canvas-preview__folder-label"><strong>Material studies</strong><small>24</small></div>
-					</div>
-					<div class="folder-canvas-preview__bubble">
-						<svg viewBox="0 0 24 24" aria-hidden="true">
-							<path d="M3 6.75A1.75 1.75 0 0 1 4.75 5h4.1l2 2h8.4A1.75 1.75 0 0 1 21 8.75v8.5A1.75 1.75 0 0 1 19.25 19H4.75A1.75 1.75 0 0 1 3 17.25z"></path>
-						</svg>
+						<div class="folder-canvas-preview__folder-label"><strong>Material studies</strong><small><span class="folder-canvas-preview__count folder-canvas-preview__count--before">24</span><span class="folder-canvas-preview__count folder-canvas-preview__count--after">25</span></small></div>
 					</div>
 				</div>
 			</div>
@@ -418,6 +418,7 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.selection-preview__action-bar button { display: grid; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #55554e; place-items: center; }
 	.selection-preview__action-bar button:disabled { opacity: 1; }
 	.selection-preview__action-bar svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+	.command-preview__clip { min-width: 0; }
 	.command-preview { min-height: 241px; margin-bottom: -36px; border: 0; background: transparent; box-shadow: none; }
 	.command-preview__dialog { position: absolute; top: 10px; left: 0; width: 330px; overflow: hidden; padding: 6px; border: 1px solid rgb(229 229 229 / 50%); border-radius: 8px; background: rgb(255 255 255 / 30%); box-shadow: 0 10px 15px -3px rgb(21 21 21 / 10%), 0 4px 6px -4px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); color: #2d2d29; backdrop-filter: blur(24px) saturate(150%); }
 	.command-preview__body { padding: 8px; border: 1px solid rgb(229 229 229 / 60%); border-radius: 6px; background: rgb(255 255 255 / 70%); box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); backdrop-filter: blur(24px) saturate(150%); }
@@ -447,16 +448,76 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	.scratchpad-preview__shortcut { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 	.scratchpad-preview__shortcut--close { margin-right: auto; }
 	.scratchpad-preview__shortcut em { color: rgb(119 119 112 / 50%); font-style: normal; }
-	.folder-canvas-preview { border: 0; background-color: transparent; box-shadow: none; }
+	.folder-canvas-preview { --folder-cycle: 5.4s; border: 0; background-color: transparent; box-shadow: none; }
 	.folder-canvas-preview__grid { position: absolute; inset: 0; }
 	.folder-canvas-preview__folder { position: absolute; top: 7px; left: 50%; z-index: 2; width: 178px; height: 192px; overflow: hidden; border: 1px solid rgb(0 0 0 / 9%); border-radius: 6px; background: #fff; box-shadow: 0 3px 10px rgb(21 21 21 / 5%); transform: translateX(-50%); }
-	.folder-canvas-preview__folder-grid { display: grid; width: 100%; height: 178px; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 6px; }
-	.folder-canvas-preview__folder-grid img { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; border-radius: 2px; object-fit: cover; }
-	.folder-canvas-preview__folder-label { position: absolute; right: 1px; bottom: 1px; left: 1px; display: flex; align-items: center; min-height: 29px; gap: 6px; padding: 6px 8px; border-radius: 0 0 5px 5px; background: #fff; color: #464641; font-size: 8px; }
+	.folder-canvas-preview__folder-grid { position: relative; width: 100%; height: 178px; padding: 6px; }
+	.folder-canvas-preview__preview, .folder-canvas-preview__slot, .folder-canvas-preview__incoming { position: absolute; width: calc(50% - 10px); height: calc(50% - 10px); overflow: hidden; border-radius: 2px; }
+	.folder-canvas-preview__preview { background: #f3f3f1; animation-duration: var(--folder-cycle); animation-fill-mode: both; animation-iteration-count: infinite; animation-timing-function: cubic-bezier(.16, 1, .3, 1); }
+	.folder-canvas-preview__preview img, .folder-canvas-preview__incoming img, .folder-canvas-preview__source img { display: block; width: 100%; height: 100%; object-fit: cover; }
+	.folder-canvas-preview__preview--one { top: 6px; left: 6px; animation-name: folder-preview-one; }
+	.folder-canvas-preview__preview--two { top: 6px; right: 6px; animation-name: folder-preview-two; }
+	.folder-canvas-preview__preview--three { bottom: 6px; left: 6px; animation-name: folder-preview-three; }
+	.folder-canvas-preview__preview--four { right: 6px; bottom: 6px; animation-name: folder-preview-four; }
+	.folder-canvas-preview__slot, .folder-canvas-preview__incoming { top: 6px; left: 6px; }
+	.folder-canvas-preview__slot { display: grid; border: 1px dashed rgb(21 21 21 / 42%); background: rgb(21 21 21 / 4%); color: rgb(21 21 21 / 58%); opacity: 0; place-items: center; animation: folder-slot var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
+	.folder-canvas-preview__slot svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.5; }
+	.folder-canvas-preview__incoming { opacity: 0; animation: folder-incoming var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
+	.folder-canvas-preview__folder-label { position: absolute; right: 1px; bottom: 1px; left: 1px; z-index: 3; display: flex; align-items: center; min-height: 29px; gap: 6px; padding: 6px 8px; border-radius: 0 0 5px 5px; background: rgb(255 255 255 / 70%); backdrop-filter: blur(10px); color: #464641; font-size: 8px; }
 	.folder-canvas-preview__folder-label strong { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-	.folder-canvas-preview__folder-label small { margin-left: auto; color: #85857e; }
-	.folder-canvas-preview__bubble { position: absolute; top: 0; left: calc(50% - 113px); z-index: 3; display: grid; width: 58px; height: 58px; border: 1px solid rgb(21 21 21 / 9%); border-radius: 50%; background: rgb(255 255 255 / 72%); box-shadow: 0 3px 9px rgb(21 21 21 / 6%); backdrop-filter: blur(14px) saturate(145%); place-items: center; }
-	.folder-canvas-preview__bubble svg { width: 23px; height: 23px; fill: none; stroke: #4d4d48; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.5; }
+	.folder-canvas-preview__folder-label small { position: relative; width: 12px; height: 10px; margin-left: auto; color: #85857e; }
+	.folder-canvas-preview__count { position: absolute; top: 0; right: 0; animation-duration: var(--folder-cycle); animation-iteration-count: infinite; }
+	.folder-canvas-preview__count--before { animation-name: folder-count-before; }
+	.folder-canvas-preview__count--after { opacity: 0; animation-name: folder-count-after; }
+	.folder-canvas-preview__source { position: absolute; bottom: 12px; left: calc(50% - 124px); z-index: 4; width: 62px; height: 62px; overflow: hidden; border: 1px solid rgb(0 0 0 / 11%); border-radius: 4px; background: #fff; box-shadow: 0 6px 16px rgb(21 21 21 / 14%); animation: folder-source-drag var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
+	@keyframes folder-source-drag {
+		0%, 10% { opacity: 1; transform: translate(0, 0) scale(1); }
+		13% { opacity: 1; transform: translate(0, 0) scale(.98); }
+		26% { opacity: 1; transform: translate(43px, -94px) scale(1.22); }
+		34% { opacity: 1; transform: translate(50px, -109px) scale(1.3); }
+		38%, 77% { opacity: 0; transform: translate(50px, -109px) scale(1.3); }
+		81%, 100% { opacity: 1; transform: translate(0, 0) scale(1); }
+	}
+	@keyframes folder-slot {
+		0%, 20% { opacity: 0; transform: scale(.9); }
+		23%, 34% { opacity: 1; transform: scale(1); }
+		38%, 100% { opacity: 0; transform: scale(.96); }
+	}
+	@keyframes folder-incoming {
+		0%, 34% { opacity: 0; transform: scale(.96); }
+		38%, 75% { opacity: 1; transform: scale(1); }
+		79%, 100% { opacity: 0; transform: scale(.96); }
+	}
+	@keyframes folder-preview-one {
+		0%, 20% { transform: translate(0, 0); }
+		24%, 75% { transform: translate(calc(100% + 8px), 0); }
+		79%, 100% { transform: translate(0, 0); }
+	}
+	@keyframes folder-preview-two {
+		0%, 20% { transform: translate(0, 0); }
+		24%, 75% { transform: translate(calc(-100% - 8px), calc(100% + 8px)); }
+		79%, 100% { transform: translate(0, 0); }
+	}
+	@keyframes folder-preview-three {
+		0%, 20% { transform: translate(0, 0); }
+		24%, 75% { transform: translate(calc(100% + 8px), 0); }
+		79%, 100% { transform: translate(0, 0); }
+	}
+	@keyframes folder-preview-four {
+		0%, 20% { opacity: 1; transform: scale(1); }
+		24%, 75% { opacity: 0; transform: scale(.94); }
+		79%, 100% { opacity: 1; transform: scale(1); }
+	}
+	@keyframes folder-count-before {
+		0%, 34% { opacity: 1; transform: translateY(0); }
+		35%, 75% { opacity: 0; transform: translateY(-3px); }
+		79%, 100% { opacity: 1; transform: translateY(0); }
+	}
+	@keyframes folder-count-after {
+		0%, 34% { opacity: 0; transform: translateY(3px); }
+		35%, 75% { opacity: 1; transform: translateY(0); }
+		79%, 100% { opacity: 0; transform: translateY(3px); }
+	}
 
 
 	:global(html[data-theme='dark']) .interaction-grid__junction::before,
@@ -514,6 +575,9 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	:global(html[data-theme='dark']) .selection-preview__action-bar i { background: var(--line); }
 	:global(html[data-theme='dark']) .selection-preview__action-bar button { color: var(--ink-muted); }
 	:global(html[data-theme='dark']) .folder-canvas-preview__folder { border-color: rgb(255 255 255 / 10%); background: var(--surface); box-shadow: 0 3px 10px rgb(0 0 0 / 24%); }
+	:global(html[data-theme='dark']) .folder-canvas-preview__preview { background: var(--surface-muted); }
+	:global(html[data-theme='dark']) .folder-canvas-preview__slot { border-color: rgb(241 243 238 / 48%); background: rgb(241 243 238 / 8%); color: rgb(241 243 238 / 68%); }
+	:global(html[data-theme='dark']) .folder-canvas-preview__source { border-color: var(--line); background: var(--surface); box-shadow: 0 6px 16px rgb(0 0 0 / 30%); }
 	:global(html[data-theme='dark']) .folder-canvas-preview__folder-label { color: var(--ink); background: var(--surface); }
 	:global(html[data-theme='dark']) .folder-canvas-preview__folder-label small { color: var(--ink-muted); }
 	:global(html[data-theme='dark']) .folder-canvas-preview__bubble { border-color: rgb(255 255 255 / 11%); background: rgb(27 30 27 / 76%); box-shadow: 0 3px 10px rgb(0 0 0 / 28%); }
@@ -558,7 +622,8 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 	}
 
 	@media (min-width: 641px) and (max-width: 820px) {
-		.command-preview { width: calc(100% + 30px); min-height: 300px; margin-bottom: -36px; overflow: hidden; }
+		.command-preview__clip { min-height: 300px; margin-bottom: -36px; overflow: hidden; }
+		.command-preview { width: calc(100% + 30px); min-height: 300px; margin-bottom: 0; overflow: hidden; }
 		.command-preview__dialog { left: 0; width: calc(100% + 48px); transform: none; }
 		.selection-preview__board { transform: translateY(8px); }
 		.selection-preview__action-bar { bottom: 4px; }
@@ -574,7 +639,8 @@ const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, 
 		.interaction-item + .interaction-item::before { right: -16px; left: -16px; }
 		.interaction-item { padding: 28px 18px 32px; }
 		.command-preview, .scratchpad-preview, .folder-canvas-preview, .source-import-preview, .paste-preview, .selection-preview { min-height: 196px; }
-		.command-preview { width: calc(100% + 34px); min-height: 228px; margin-bottom: -32px; overflow: hidden; }
+		.command-preview__clip { min-height: 228px; margin-bottom: -32px; overflow: hidden; }
+		.command-preview { width: calc(100% + 34px); min-height: 228px; margin-bottom: 0; overflow: hidden; }
 		.command-preview__dialog { left: 0; width: 100%; transform: none; }
 		.scratchpad-preview { overflow: visible; }
 		.scratchpad-preview__overlay { padding-left: 0; }
