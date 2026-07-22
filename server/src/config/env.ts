@@ -1,5 +1,3 @@
-import "dotenv/config";
-
 import { z } from "zod";
 
 export const NodeEnv = {
@@ -71,13 +69,30 @@ const envSchema = z.object({
     }),
 });
 
-const parsed = envSchema.safeParse(process.env);
+export type Env = z.infer<typeof envSchema>;
 
-if (!parsed.success) {
-  console.error("Invalid environment variables:");
-  console.error(parsed.error.issues);
-  process.exit(1);
+let _env: Env | undefined;
+
+export function configureEnv(bindings: Record<string, unknown>): void {
+  if (_env) return;
+  const result = envSchema.safeParse(bindings);
+  if (!result.success) {
+    console.error("Invalid environment variables:");
+    for (const issue of result.error.issues) {
+      console.error(`  ${issue.path.join(".")}: ${issue.message}`);
+    }
+    throw new Error("Invalid environment variables");
+  }
+  _env = result.data;
 }
 
-export const env = parsed.data;
-export type Env = z.infer<typeof envSchema>;
+export const env = new Proxy<Env>({} as Env, {
+  get(_, prop) {
+    if (!_env) {
+      throw new Error(
+        `env not initialized (accessed .${String(prop)}). Call configureEnv() first.`,
+      );
+    }
+    return _env[prop as keyof Env];
+  },
+});

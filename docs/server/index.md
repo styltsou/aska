@@ -10,7 +10,8 @@ OpenAPI documentation, and Scalar API docs.
 - `server/src/index.ts`: Bun server export.
 - `server/src/routes`: route grouping.
 - `server/src/controllers`: HTTP adapters.
-- `server/src/services`: business operations.
+- `server/src/services`: business operations and feature-local helpers such as
+  repositories, resolvers, mappers, and finalizers.
 - `server/src/dto`: Zod request schemas and inferred request types.
 - `server/src/db/schema`: Drizzle schema and inferred database row types.
 - `server/src/lib`: shared backend primitives and reusable feature libraries.
@@ -60,7 +61,12 @@ R2_PRESIGNED_UPLOAD_EXPIRES_SECONDS
 R2_PRESIGNED_READ_EXPIRES_SECONDS
 MAX_DIRECT_UPLOAD_BYTES
 IMAGE_PIPELINE_CALLBACK_SECRET
+TEST_DATABASE_URL
 ```
+
+`TEST_DATABASE_URL` is test-only. It must refer to a disposable database and
+is required by `bun run test:integration`; regular server commands continue to
+use `DATABASE_URL`.
 
 `BETTER_AUTH_URL`, `CORS_ORIGINS`, and `BETTER_AUTH_TRUSTED_ORIGINS` are passed
 to Better Auth as trusted origins. Keep `BETTER_AUTH_URL` aligned with the URL
@@ -106,12 +112,21 @@ bun run format
 bun run test
 ```
 
+Run database integration tests separately when a disposable database is
+available:
+
+```sh
+TEST_DATABASE_URL=postgresql://... bun run test:integration
+```
+
 CI runs the same commands for the client, server, and image pipeline. See the
 [Development Workflow](../development-workflow.md) for the pre-commit hook and
 cross-package commands.
 
 ## Related Docs
 
+- [Collection Canvas Architecture](../collection-canvas.md)
+- [Color Image Search](../color-image-search.md)
 - [Controller Pattern](./controller-pattern.md)
 - [Service Method Pattern](./service-method-pattern.md)
 - [Assets Schema](./assets-schema.md)

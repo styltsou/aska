@@ -2,6 +2,11 @@
 
 This directory keeps product and engineering conventions close to the codebase.
 
+- [Board Product Specification](../BOARD_PRODUCT_SPEC.md)
+- [Collection Canvas Architecture](./collection-canvas.md)
+- [Color Image Search](./color-image-search.md)
+- [Premium Interaction Ideas](./premium-interaction-ideas.md)
+- [Color-Based Image Search Plan](../COLOR_IMAGE_SEARCH_PLAN.md) (delivery plan)
 - [Development Workflow](./development-workflow.md)
 
 ## Backend

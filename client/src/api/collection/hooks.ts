@@ -1,6 +1,12 @@
 import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  keepPreviousData,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
+  bulkDeleteNodes,
   fetchCollections,
   createCollection,
   createInboxImageUpload,
@@ -17,11 +23,16 @@ import {
   fetchCollectionContents,
   fetchInboxContents,
   placeAsset,
+  markInboxSeen,
+  updateCollectionNodePosition,
+  updateCollectionNodePositions,
 } from "./fetchers";
 import type {
+  BoardInsertionPlacement,
   CollectionContentsResponse,
   CollectionImageNode,
   CollectionNode,
+  ContentTypeFilter,
   CollectionsData,
   CreateCollectionInput,
   CreateImageUploadResponse,
@@ -32,8 +43,14 @@ import type {
   ImageUploadStatus,
   InboxContentsResponse,
   PlaceAssetInput,
+  UpdateNodePositionInput,
+  UpdateNodePositionsInput,
 } from "./types";
 import type { WorkspaceData } from "@/api/workspace";
+import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
+import { collectionQueryKeys } from "./query-keys";
+
+export { collectionQueryKeys } from "./query-keys";
 
 const COLLECTIONS_STALE_TIME = 60_000;
 const COLLECTION_CONTENTS_STALE_TIME = 30_000;
@@ -41,17 +58,45 @@ const MAX_COLLECTION_PREVIEWS = 4;
 const UPLOAD_POLL_INTERVAL_MS = 1_000;
 const UPLOAD_POLL_TIMEOUT_MS = 2 * 60 * 1_000;
 
-export const collectionQueryKeys = {
-  collections: (workspaceSlug: string) =>
-    ["collections", workspaceSlug] as const,
-  contents: (
-    workspaceSlug: string,
-    collectionSlug: string,
-    folderPath?: string,
-  ) =>
-    ["collectionContents", workspaceSlug, collectionSlug, folderPath] as const,
-  inbox: (workspaceSlug: string) => ["inboxContents", workspaceSlug] as const,
+type CreateFolderMutationInput = CreateFolderInput & {
+  placement?: BoardInsertionPlacement;
 };
+
+type CreateNoteMutationInput = CreateNoteInput & {
+  placement?: BoardInsertionPlacement;
+};
+
+type CreateRemoteImageMutationInput = CreateRemoteImageInput & {
+  placement?: BoardInsertionPlacement;
+};
+
+type UploadLocalImagesMutationInput = {
+  files: File[];
+  parentFolderPath?: string;
+  position?: { x: number; y: number };
+  placement?: BoardInsertionPlacement;
+};
+
+export function collectionsQueryOptions(workspaceSlug: string) {
+  return {
+    queryKey: collectionQueryKeys.collections(workspaceSlug),
+    queryFn: () => fetchCollections(workspaceSlug),
+    staleTime: COLLECTIONS_STALE_TIME,
+  };
+}
+
+export function inboxContentsQueryOptions(
+  workspaceSlug: string,
+  types?: readonly ContentTypeFilter[],
+) {
+  const normalizedTypes = types ? [...types].sort() : undefined;
+  const typeSignature = normalizedTypes?.join(",");
+  return {
+    queryKey: collectionQueryKeys.inbox(workspaceSlug, typeSignature),
+    queryFn: () => fetchInboxContents(workspaceSlug, normalizedTypes),
+    staleTime: COLLECTION_CONTENTS_STALE_TIME,
+  };
+}
 
 async function waitForProcessedImage(
   fetchStatus: () => Promise<{ upload: ImageUploadStatus }>,
@@ -299,33 +344,50 @@ function updateCollectionAssetCount(
   );
 }
 
-function appendImageToCollectionContents(
+function updateInboxUnreadCount(
   queryClient: ReturnType<typeof useQueryClient>,
   workspaceSlug: string,
-  collectionSlug: string,
-  folderPath: string | undefined,
-  image: Extract<CollectionNode, { type: "image" }>,
-  countDelta = 1,
+  update: (count: number) => number,
 ) {
-  queryClient.setQueryData<CollectionContentsResponse>(
-    collectionQueryKeys.contents(workspaceSlug, collectionSlug, folderPath),
+  queryClient.setQueryData<WorkspaceData>(
+    ["workspace", workspaceSlug],
     (current) => {
-      if (!current || current.nodes.some((node) => node.id === image.id)) {
-        return current;
-      }
+      if (!current) return current;
 
       return {
         ...current,
-        nodes: [...current.nodes, image],
+        inbox: {
+          ...current.inbox,
+          unreadCount: Math.max(0, update(current.inbox.unreadCount)),
+        },
       };
     },
   );
-  updateCollectionAssetCount(
-    queryClient,
-    workspaceSlug,
-    collectionSlug,
-    countDelta,
-  );
+}
+
+function reconcileCollectionCaches(
+  queryClient: ReturnType<typeof useQueryClient>,
+  workspaceSlug: string,
+  collectionSlug: string,
+) {
+  reconcileCollectionMetadata(queryClient, workspaceSlug);
+  void queryClient.invalidateQueries({
+    queryKey: collectionQueryKeys.contentScope(workspaceSlug, collectionSlug),
+  });
+}
+
+function reconcileCollectionMetadata(
+  queryClient: ReturnType<typeof useQueryClient>,
+  workspaceSlug: string,
+) {
+  void Promise.all([
+    queryClient.invalidateQueries({
+      queryKey: collectionQueryKeys.collections(workspaceSlug),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: ["workspace", workspaceSlug],
+    }),
+  ]);
 }
 
 function appendNodeToInboxContents(
@@ -409,6 +471,7 @@ async function makeOptimisticImageNode(
     previewObjectUrl,
     clientId: id,
     createdAt: new Date().toISOString(),
+    position: null,
   };
 }
 
@@ -510,10 +573,8 @@ function uploadFileToPresignedUrl(
 
 export function useCollections(workspaceSlug: string) {
   return useQuery<CollectionsData>({
-    queryKey: collectionQueryKeys.collections(workspaceSlug),
-    queryFn: () => fetchCollections(workspaceSlug),
+    ...collectionsQueryOptions(workspaceSlug),
     enabled: !!workspaceSlug,
-    staleTime: COLLECTIONS_STALE_TIME,
   });
 }
 
@@ -590,8 +651,33 @@ export function useCreateFolder(workspaceSlug: string, collectionSlug: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateFolderInput) =>
-      createFolder(workspaceSlug, collectionSlug, data),
+    mutationFn: ({ placement, ...data }: CreateFolderMutationInput) => {
+      const current = queryClient.getQueryData<CollectionContentsResponse>(
+        collectionQueryKeys.contents(
+          workspaceSlug,
+          collectionSlug,
+          data.parentFolderPath,
+        ),
+      );
+      const placeholder: CollectionNode = {
+        id: "folder-pending",
+        type: "folder",
+        name: data.name,
+        slug: "pending",
+        count: 0,
+        previews: [],
+        position: null,
+      };
+      const position = reserveNodePositions(
+        current?.nodes ?? [],
+        [placeholder],
+        placement ?? data.position,
+      )[0];
+      return createFolder(workspaceSlug, collectionSlug, {
+        ...data,
+        position,
+      });
+    },
     onSuccess: (data, variables) => {
       queryClient.setQueryData<CollectionContentsResponse>(
         collectionQueryKeys.contents(
@@ -618,6 +704,7 @@ export function useCreateFolder(workspaceSlug: string, collectionSlug: string) {
                 slug: data.folder.slug,
                 count: data.folder.count,
                 previews: data.folder.previews,
+                position: data.folder.position,
               },
             ],
           };
@@ -631,8 +718,33 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateNoteInput) =>
-      createNote(workspaceSlug, collectionSlug, data),
+    mutationFn: ({ placement, ...data }: CreateNoteMutationInput) => {
+      const current = queryClient.getQueryData<CollectionContentsResponse>(
+        collectionQueryKeys.contents(
+          workspaceSlug,
+          collectionSlug,
+          data.parentFolderPath,
+        ),
+      );
+      const placeholder: CollectionNode = {
+        id: "note-pending",
+        type: "note",
+        content: data.content,
+        color: data.color ?? null,
+        isFavorite: false,
+        wordCount: countWords(data.content),
+        readingTimeMinutes: 1,
+        position: null,
+      };
+      const position = reserveNodePositions(
+        current?.nodes.filter(
+          (node) => !node.id.startsWith("note-optimistic-"),
+        ) ?? [],
+        [placeholder],
+        placement ?? data.position,
+      )[0];
+      return createNote(workspaceSlug, collectionSlug, { ...data, position });
+    },
     onMutate: async (variables) => {
       const contentsKey = collectionQueryKeys.contents(
         workspaceSlug,
@@ -651,6 +763,23 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         workspaceSlug,
       ]);
       const optimisticId = `note-optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimisticNote: CollectionNode = {
+        id: optimisticId,
+        type: "note",
+        content: variables.content,
+        color: variables.color ?? null,
+        isFavorite: false,
+        wordCount: 0,
+        readingTimeMinutes: 1,
+        clientId: optimisticId,
+        position: null,
+      };
+      optimisticNote.position =
+        reserveNodePositions(
+          previousContents?.nodes ?? [],
+          [optimisticNote],
+          variables.placement ?? variables.position,
+        )[0] ?? null;
 
       queryClient.setQueryData<CollectionContentsResponse>(
         contentsKey,
@@ -659,18 +788,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
 
           return {
             ...current,
-            nodes: [
-              ...current.nodes,
-              {
-                id: optimisticId,
-                type: "note",
-                content: variables.content,
-                color: variables.color ?? null,
-                isFavorite: false,
-                wordCount: 0,
-                readingTimeMinutes: 1,
-              },
-            ],
+            nodes: [...current.nodes, optimisticNote],
           };
         },
       );
@@ -685,6 +803,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
 
       return {
         contentsKey,
+        clientId: optimisticId,
         optimisticId,
         previousContents,
         previousCollections,
@@ -735,7 +854,13 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
           return {
             ...current,
             nodes: current.nodes.map((node) =>
-              node.id === context?.optimisticId ? data.note : node,
+              node.id === context?.optimisticId
+                ? {
+                    ...data.note,
+                    clientId: context?.clientId,
+                    position: data.note.position ?? node.position,
+                  }
+                : node,
             ),
           };
         },
@@ -760,22 +885,41 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         preview,
         0,
       );
-      void queryClient.invalidateQueries({
-        queryKey: collectionQueryKeys.collections(workspaceSlug),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: collectionQueryKeys.contents(workspaceSlug, collectionSlug),
-      });
+      reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
     },
   });
 }
 
-export function useInboxContents(workspaceSlug: string) {
+export function useInboxContents(
+  workspaceSlug: string,
+  types?: readonly ContentTypeFilter[],
+) {
   return useQuery<InboxContentsResponse>({
-    queryKey: collectionQueryKeys.inbox(workspaceSlug),
-    queryFn: () => fetchInboxContents(workspaceSlug),
+    ...inboxContentsQueryOptions(workspaceSlug, types),
     enabled: !!workspaceSlug,
-    staleTime: COLLECTION_CONTENTS_STALE_TIME,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useMarkInboxSeen(workspaceSlug: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => markInboxSeen(workspaceSlug),
+    onMutate: async () => {
+      const workspaceKey = ["workspace", workspaceSlug] as const;
+      await queryClient.cancelQueries({ queryKey: workspaceKey });
+
+      const previousWorkspace =
+        queryClient.getQueryData<WorkspaceData>(workspaceKey);
+      updateInboxUnreadCount(queryClient, workspaceSlug, () => 0);
+
+      return { workspaceKey, previousWorkspace };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return;
+      queryClient.setQueryData(context.workspaceKey, context.previousWorkspace);
+    },
   });
 }
 
@@ -786,10 +930,13 @@ export function useCreateInboxNote(workspaceSlug: string) {
     mutationFn: (data: CreateNoteInput) => createInboxNote(workspaceSlug, data),
     onMutate: async (variables) => {
       const inboxKey = collectionQueryKeys.inbox(workspaceSlug);
+      const workspaceKey = ["workspace", workspaceSlug] as const;
       await queryClient.cancelQueries({ queryKey: inboxKey });
 
       const previousInbox =
         queryClient.getQueryData<InboxContentsResponse>(inboxKey);
+      const previousWorkspace =
+        queryClient.getQueryData<WorkspaceData>(workspaceKey);
       const optimisticId = `note-optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const optimisticNote = {
         id: optimisticId,
@@ -802,6 +949,7 @@ export function useCreateInboxNote(workspaceSlug: string) {
           1,
           Math.ceil(countWords(variables.content) / 200),
         ),
+        position: null,
       };
 
       queryClient.setQueryData<InboxContentsResponse>(inboxKey, (current) => {
@@ -822,12 +970,20 @@ export function useCreateInboxNote(workspaceSlug: string) {
           nodes: [optimisticNote, ...current.nodes],
         };
       });
+      updateInboxUnreadCount(queryClient, workspaceSlug, (count) => count + 1);
 
-      return { inboxKey, optimisticId, previousInbox };
+      return {
+        inboxKey,
+        optimisticId,
+        previousInbox,
+        workspaceKey,
+        previousWorkspace,
+      };
     },
     onError: (_error, _variables, context) => {
       if (!context) return;
       queryClient.setQueryData(context.inboxKey, context.previousInbox);
+      queryClient.setQueryData(context.workspaceKey, context.previousWorkspace);
     },
     onSuccess: (data, _variables, context) => {
       queryClient.setQueryData<InboxContentsResponse>(
@@ -870,10 +1026,9 @@ export function useUploadLocalImages(
     mutationFn: async ({
       files,
       parentFolderPath,
-    }: {
-      files: File[];
-      parentFolderPath?: string;
-    }) => {
+      position,
+      placement,
+    }: UploadLocalImagesMutationInput) => {
       const contentsKey = collectionQueryKeys.contents(
         workspaceSlug,
         collectionSlug,
@@ -893,6 +1048,14 @@ export function useUploadLocalImages(
       const optimisticImages = await Promise.all(
         files.map(makeOptimisticImageNode),
       );
+      const positions = reserveNodePositions(
+        previousContents?.nodes ?? [],
+        optimisticImages,
+        placement ?? position,
+      );
+      for (const [index, image] of optimisticImages.entries()) {
+        image.position = positions[index] ?? null;
+      }
 
       queryClient.setQueryData<CollectionContentsResponse>(
         contentsKey,
@@ -936,6 +1099,7 @@ export function useUploadLocalImages(
               contentType: file.type,
               sizeBytes: file.size,
               parentFolderPath,
+              position: optimisticImage.position ?? undefined,
             },
           );
 
@@ -978,6 +1142,7 @@ export function useUploadLocalImages(
               const image = {
                 ...processedImage,
                 clientId: optimisticImage.clientId,
+                position: optimisticImage.position,
               };
 
               if (cancelled) return image;
@@ -1024,17 +1189,14 @@ export function useUploadLocalImages(
         const images = await Promise.all(processingImages);
 
         revokeOptimisticImageUrlsLater(optimisticImages);
-        void queryClient.invalidateQueries({
-          queryKey: collectionQueryKeys.collections(workspaceSlug),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: collectionQueryKeys.contents(workspaceSlug, collectionSlug),
-        });
+        reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
         toast.success(`${label} uploaded`, { id: toastId });
         return { images, parentFolderPath };
       } catch (error) {
         cancelled = true;
-        void Promise.allSettled(processingImages);
+        void Promise.allSettled(processingImages).then(() => {
+          reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
+        });
         toast.error("Upload failed", { id: toastId });
         revokeOptimisticImageUrls(optimisticImages);
         queryClient.setQueryData(contentsKey, previousContents);
@@ -1065,10 +1227,13 @@ export function useUploadInboxImages(workspaceSlug: string) {
   return useMutation({
     mutationFn: async ({ files }: { files: File[] }) => {
       const inboxKey = collectionQueryKeys.inbox(workspaceSlug);
+      const workspaceKey = ["workspace", workspaceSlug] as const;
       await queryClient.cancelQueries({ queryKey: inboxKey });
 
       const previousInbox =
         queryClient.getQueryData<InboxContentsResponse>(inboxKey);
+      const previousWorkspace =
+        queryClient.getQueryData<WorkspaceData>(workspaceKey);
       const optimisticImages = await Promise.all(
         files.map(makeOptimisticImageNode),
       );
@@ -1081,6 +1246,11 @@ export function useUploadInboxImages(workspaceSlug: string) {
           nodes: [...optimisticImages, ...current.nodes],
         };
       });
+      updateInboxUnreadCount(
+        queryClient,
+        workspaceSlug,
+        (count) => count + files.length,
+      );
 
       const processingImages: Promise<CollectionImageNode>[] = [];
       const multiple = files.length > 1;
@@ -1160,6 +1330,7 @@ export function useUploadInboxImages(workspaceSlug: string) {
         toast.error("Upload failed", { id: toastId });
         revokeOptimisticImageUrls(optimisticImages);
         queryClient.setQueryData(inboxKey, previousInbox);
+        queryClient.setQueryData(workspaceKey, previousWorkspace);
         throw error;
       }
     },
@@ -1173,103 +1344,173 @@ export function useCreateRemoteImage(
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateRemoteImageInput) => {
-      const created = await createRemoteImage(
-        workspaceSlug,
-        collectionSlug,
-        data,
-      );
-      return waitForProcessedImage(
-        () =>
-          fetchImageUploadStatus(
-            workspaceSlug,
-            collectionSlug,
-            created.upload.id,
-          ),
-        created.upload,
-      );
-    },
-    onMutate: async (variables) => {
+    mutationFn: async ({
+      placement,
+      ...data
+    }: CreateRemoteImageMutationInput) => {
       const contentsKey = collectionQueryKeys.contents(
         workspaceSlug,
         collectionSlug,
-        variables.parentFolderPath,
+        data.parentFolderPath,
       );
       await queryClient.cancelQueries({ queryKey: contentsKey });
 
-      const previousCollections = queryClient.getQueryData<CollectionsData>(
-        collectionQueryKeys.collections(workspaceSlug),
+      const current =
+        queryClient.getQueryData<CollectionContentsResponse>(contentsKey);
+      const expectedParentFolderNodeId = data.parentFolderPath
+        ? current?.breadcrumbs.at(-1)
+          ? `folder-${current.breadcrumbs.at(-1)!.id}`
+          : undefined
+        : null;
+      const optimisticId = `image-importing-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimisticImage: Extract<CollectionNode, { type: "image" }> = {
+        id: optimisticId,
+        type: "image",
+        // The source URL gives the board an immediate preview while the server imports it.
+        url: data.url,
+        width: 1,
+        height: 1,
+        title: data.title ?? null,
+        alt: data.alt ?? null,
+        sourceLabel: null,
+        sourceUrl: data.url,
+        isFavorite: false,
+        uploadStatus: "processing",
+        uploadProgress: 100,
+        clientId: optimisticId,
+        createdAt: new Date().toISOString(),
+        position: null,
+      };
+      const reservedPosition = reserveNodePositions(
+        current?.nodes ?? [],
+        [optimisticImage],
+        placement ?? data.position,
+      )[0];
+      optimisticImage.position = reservedPosition ?? null;
+
+      queryClient.setQueryData<CollectionContentsResponse>(
+        contentsKey,
+        (contents) => {
+          if (!contents) return contents;
+
+          return {
+            ...contents,
+            nodes: [...contents.nodes, optimisticImage],
+          };
+        },
       );
-      const previousWorkspace = queryClient.getQueryData<WorkspaceData>([
-        "workspace",
-        workspaceSlug,
-      ]);
 
       updateCollectionAssetCount(queryClient, workspaceSlug, collectionSlug, 1);
       updateFolderAncestorCounts(
         queryClient,
         workspaceSlug,
         collectionSlug,
-        variables.parentFolderPath,
+        data.parentFolderPath,
         1,
       );
 
-      return { previousCollections, previousWorkspace };
-    },
-    onError: (_error, variables, context) => {
-      if (!context) return;
+      try {
+        const created = await createRemoteImage(workspaceSlug, collectionSlug, {
+          ...data,
+          position: optimisticImage.position ?? undefined,
+        });
+        const image = await waitForProcessedImage(
+          () =>
+            fetchImageUploadStatus(
+              workspaceSlug,
+              collectionSlug,
+              created.upload.id,
+            ),
+          created.upload,
+        );
+        const position = optimisticImage.position ?? image.position;
 
-      queryClient.setQueryData(
-        collectionQueryKeys.collections(workspaceSlug),
-        context.previousCollections,
-      );
-      queryClient.setQueryData(
-        ["workspace", workspaceSlug],
-        context.previousWorkspace,
-      );
-      updateFolderAncestorCounts(
-        queryClient,
-        workspaceSlug,
-        collectionSlug,
-        variables.parentFolderPath,
-        -1,
-      );
-    },
-    onSuccess: (data, variables) => {
-      appendImageToCollectionContents(
-        queryClient,
-        workspaceSlug,
-        collectionSlug,
-        variables.parentFolderPath,
-        data,
-        0,
-      );
-      const preview: FolderChildPreview = {
-        assetId: data.id,
-        type: "image",
-        url: data.url,
-        blurDataURL: data.blurDataURL,
-      };
-      addPreviewToCollection(
-        queryClient,
-        workspaceSlug,
-        collectionSlug,
-        preview,
-      );
-      addPreviewToParentFolder(
-        queryClient,
-        workspaceSlug,
-        collectionSlug,
-        variables.parentFolderPath,
-        preview,
-        0,
-      );
-      void queryClient.invalidateQueries({
-        queryKey: collectionQueryKeys.collections(workspaceSlug),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: collectionQueryKeys.contents(workspaceSlug, collectionSlug),
-      });
+        if (
+          position &&
+          (image.position?.x !== position.x ||
+            image.position?.y !== position.y) &&
+          expectedParentFolderNodeId !== undefined
+        ) {
+          await updateCollectionNodePosition(
+            workspaceSlug,
+            collectionSlug,
+            image.id,
+            { position, expectedParentFolderNodeId },
+          );
+        }
+
+        const completedImage = {
+          ...image,
+          clientId: optimisticImage.clientId,
+          position,
+        };
+        queryClient.setQueryData<CollectionContentsResponse>(
+          contentsKey,
+          (contents) => {
+            if (!contents) return contents;
+
+            return {
+              ...contents,
+              nodes: contents.nodes.map((node) =>
+                node.id === optimisticImage.id ? completedImage : node,
+              ),
+            };
+          },
+        );
+        const preview: FolderChildPreview = {
+          assetId: completedImage.id,
+          type: "image",
+          url: completedImage.url,
+          blurDataURL: completedImage.blurDataURL,
+        };
+        addPreviewToCollection(
+          queryClient,
+          workspaceSlug,
+          collectionSlug,
+          preview,
+        );
+        addPreviewToParentFolder(
+          queryClient,
+          workspaceSlug,
+          collectionSlug,
+          data.parentFolderPath,
+          preview,
+          0,
+        );
+        // Multiple URL imports can finish out of order. Refetching contents here
+        // would replace any sibling placeholders that are still processing.
+        reconcileCollectionMetadata(queryClient, workspaceSlug);
+        return completedImage;
+      } catch (error) {
+        queryClient.setQueryData<CollectionContentsResponse>(
+          contentsKey,
+          (contents) => {
+            if (!contents) return contents;
+
+            return {
+              ...contents,
+              nodes: contents.nodes.filter(
+                (node) => node.id !== optimisticImage.id,
+              ),
+            };
+          },
+        );
+        updateCollectionAssetCount(
+          queryClient,
+          workspaceSlug,
+          collectionSlug,
+          -1,
+        );
+        updateFolderAncestorCounts(
+          queryClient,
+          workspaceSlug,
+          collectionSlug,
+          data.parentFolderPath,
+          -1,
+        );
+        reconcileCollectionMetadata(queryClient, workspaceSlug);
+        throw error;
+      }
     },
   });
 }
@@ -1285,8 +1526,142 @@ export function useCreateInboxRemoteImage(workspaceSlug: string) {
         created.upload,
       );
     },
+    onMutate: () => {
+      const workspaceKey = ["workspace", workspaceSlug] as const;
+      const previousWorkspace =
+        queryClient.getQueryData<WorkspaceData>(workspaceKey);
+      updateInboxUnreadCount(queryClient, workspaceSlug, (count) => count + 1);
+
+      return { workspaceKey, previousWorkspace };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return;
+      queryClient.setQueryData(context.workspaceKey, context.previousWorkspace);
+    },
     onSuccess: (data) => {
       appendNodeToInboxContents(queryClient, workspaceSlug, data);
+    },
+  });
+}
+
+export function useUpdateCollectionNodePosition(
+  workspaceSlug: string,
+  collectionSlug: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: UpdateNodePositionInput) =>
+      updateCollectionNodePosition(workspaceSlug, collectionSlug, data.nodeId, {
+        position: data.position,
+        expectedParentFolderNodeId: data.expectedParentFolderNodeId,
+      }),
+    onMutate: async (variables) => {
+      const contentsKey = collectionQueryKeys.contents(
+        workspaceSlug,
+        collectionSlug,
+        variables.folderPath,
+      );
+      await queryClient.cancelQueries({ queryKey: contentsKey });
+      const previousPosition = queryClient
+        .getQueryData<CollectionContentsResponse>(contentsKey)
+        ?.nodes.find((node) => node.id === variables.nodeId)?.position;
+
+      queryClient.setQueryData<CollectionContentsResponse>(
+        contentsKey,
+        (current) =>
+          current
+            ? {
+                ...current,
+                nodes: current.nodes.map((node) =>
+                  node.id === variables.nodeId
+                    ? { ...node, position: variables.position }
+                    : node,
+                ),
+              }
+            : current,
+      );
+
+      return { contentsKey, previousPosition };
+    },
+    onError: (_error, variables, context) => {
+      if (!context) return;
+
+      queryClient.setQueryData<CollectionContentsResponse>(
+        context.contentsKey,
+        (current) =>
+          current
+            ? {
+                ...current,
+                nodes: current.nodes.map((node) => {
+                  if (
+                    node.id !== variables.nodeId ||
+                    node.position?.x !== variables.position.x ||
+                    node.position?.y !== variables.position.y
+                  ) {
+                    return node;
+                  }
+
+                  return {
+                    ...node,
+                    position: context.previousPosition ?? null,
+                  };
+                }),
+              }
+            : current,
+      );
+      toast.error("Unable to save the new card position.");
+    },
+  });
+}
+
+export function useUpdateCollectionNodePositions(
+  workspaceSlug: string,
+  collectionSlug: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: UpdateNodePositionsInput) =>
+      updateCollectionNodePositions(workspaceSlug, collectionSlug, data),
+    onMutate: async (variables) => {
+      const contentsKey = collectionQueryKeys.contents(
+        workspaceSlug,
+        collectionSlug,
+        variables.folderPath,
+      );
+      await queryClient.cancelQueries({ queryKey: contentsKey });
+      const previousNodes =
+        queryClient.getQueryData<CollectionContentsResponse>(
+          contentsKey,
+        )?.nodes;
+      const positions = new Map(
+        variables.positions.map(({ nodeId, position }) => [nodeId, position]),
+      );
+
+      queryClient.setQueryData<CollectionContentsResponse>(
+        contentsKey,
+        (current) =>
+          current
+            ? {
+                ...current,
+                nodes: current.nodes.map((node) => {
+                  const position = positions.get(node.id);
+                  return position ? { ...node, position } : node;
+                }),
+              }
+            : current,
+      );
+
+      return { contentsKey, previousNodes };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context?.previousNodes) return;
+      const previousNodes = context.previousNodes;
+      queryClient.setQueryData<CollectionContentsResponse>(
+        context.contentsKey,
+        (current) => (current ? { ...current, nodes: previousNodes } : current),
+      );
     },
   });
 }
@@ -1403,16 +1778,11 @@ export function usePlaceAsset(workspaceSlug: string) {
     },
     onSuccess: (data, variables, context) => {
       if (context?.optimistic) {
-        void queryClient.invalidateQueries({
-          queryKey: collectionQueryKeys.contents(
-            workspaceSlug,
-            variables.collectionSlug,
-            variables.parentFolderPath,
-          ),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: collectionQueryKeys.collections(workspaceSlug),
-        });
+        reconcileCollectionCaches(
+          queryClient,
+          workspaceSlug,
+          variables.collectionSlug,
+        );
         return;
       }
       queryClient.setQueryData<InboxContentsResponse>(
@@ -1467,16 +1837,11 @@ export function usePlaceAsset(workspaceSlug: string) {
         );
       }
 
-      void queryClient.invalidateQueries({
-        queryKey: collectionQueryKeys.contents(
-          workspaceSlug,
-          variables.collectionSlug,
-          variables.parentFolderPath,
-        ),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: collectionQueryKeys.collections(workspaceSlug),
-      });
+      reconcileCollectionCaches(
+        queryClient,
+        workspaceSlug,
+        variables.collectionSlug,
+      );
     },
   });
 }
@@ -1611,15 +1976,24 @@ export function useDeleteCollectionNode(
     mutationFn: (nodeId: string) =>
       deleteCollectionNode(workspaceSlug, collectionSlug, nodeId),
     onMutate: async (nodeId) => {
+      const contentsScope = collectionQueryKeys.contentScope(
+        workspaceSlug,
+        collectionSlug,
+      );
       const contentsKey = collectionQueryKeys.contents(
         workspaceSlug,
         collectionSlug,
         folderPath,
       );
-      await queryClient.cancelQueries({ queryKey: contentsKey });
+      await queryClient.cancelQueries({ queryKey: contentsScope });
 
-      const previousContents =
-        queryClient.getQueryData<CollectionContentsResponse>(contentsKey);
+      const previousContentsMap = new Map(
+        queryClient
+          .getQueriesData<CollectionContentsResponse>({
+            queryKey: contentsScope,
+          })
+          .filter(([, data]) => data != null),
+      );
       const previousCollections = queryClient.getQueryData<CollectionsData>(
         collectionQueryKeys.collections(workspaceSlug),
       );
@@ -1680,7 +2054,7 @@ export function useDeleteCollectionNode(
       return {
         contentsKey,
         optimisticDeletedAssetCount,
-        previousContents,
+        previousContentsMap,
         previousCollections,
         previousWorkspace,
       };
@@ -1688,7 +2062,9 @@ export function useDeleteCollectionNode(
     onError: (_error, _nodeId, context) => {
       if (!context) return;
 
-      queryClient.setQueryData(context.contentsKey, context.previousContents);
+      for (const [key, data] of context.previousContentsMap) {
+        queryClient.setQueryData(key, data);
+      }
       queryClient.setQueryData(
         collectionQueryKeys.collections(workspaceSlug),
         context.previousCollections,
@@ -1712,8 +2088,34 @@ export function useDeleteCollectionNode(
           queryKey: collectionQueryKeys.inbox(workspaceSlug),
         });
       }
+      reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
+    },
+  });
+}
+
+export function useBulkDelete(workspaceSlug: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      nodeIds,
+      collectionSlug,
+    }: {
+      nodeIds: string[];
+      collectionSlug?: string;
+    }) => bulkDeleteNodes(workspaceSlug, nodeIds, collectionSlug),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["collectionContents", workspaceSlug],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: collectionQueryKeys.inbox(workspaceSlug),
+      });
       void queryClient.invalidateQueries({
         queryKey: collectionQueryKeys.collections(workspaceSlug),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["workspace", workspaceSlug],
       });
     },
   });
@@ -1723,17 +2125,24 @@ export function useCollectionContents(
   workspaceSlug: string,
   collectionSlug: string,
   folderPath?: string,
-  options?: { enabled?: boolean },
+  options?: {
+    enabled?: boolean;
+    types?: readonly ContentTypeFilter[];
+  },
 ) {
+  const types = options?.types ? [...options.types].sort() : undefined;
+  const typeSignature = types?.join(",");
   return useQuery<CollectionContentsResponse>({
     queryKey: collectionQueryKeys.contents(
       workspaceSlug,
       collectionSlug,
       folderPath,
+      typeSignature,
     ),
     queryFn: () =>
-      fetchCollectionContents(workspaceSlug, collectionSlug, folderPath),
+      fetchCollectionContents(workspaceSlug, collectionSlug, folderPath, types),
     enabled: (options?.enabled ?? true) && !!workspaceSlug && !!collectionSlug,
     staleTime: COLLECTION_CONTENTS_STALE_TIME,
+    placeholderData: keepPreviousData,
   });
 }

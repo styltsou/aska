@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { LoaderCircleIcon, PlusIcon } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -75,47 +78,31 @@ export function CreateWorkspaceDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New workspace</DialogTitle>
-          <DialogDescription>
-            Create a shared space for your collections.
-          </DialogDescription>
-        </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-1.5">
-            <label
-              className="text-sm font-medium"
-              htmlFor="dialog-workspace-name"
-            >
-              Workspace name
-            </label>
-            <Input
-              autoComplete="organization"
-              id="dialog-workspace-name"
-              required
-              value={workspaceName}
-              onChange={(event) => setWorkspaceName(event.target.value)}
-            />
-          </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => handleOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
+        <form className="contents" onSubmit={handleSubmit}>
+          <DialogBody className="flex flex-col gap-4">
+            <DialogHeader>
+              <DialogTitle>New workspace</DialogTitle>
+              <DialogDescription>
+                Create a shared space for your collections.
+              </DialogDescription>
+            </DialogHeader>
+            <div>
+              <Input
+                autoComplete="organization"
+                placeholder="Workspace name"
+                required
+                value={workspaceName}
+                onChange={(event) => setWorkspaceName(event.target.value)}
+              />
+            </div>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          </DialogBody>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline">Cancel</Button>} />
             <Button disabled={isSubmitting} type="submit">
-              {isSubmitting ? (
-                <LoaderCircleIcon className="animate-spin" />
-              ) : (
-                <PlusIcon />
-              )}
-              <span>{isSubmitting ? "Creating" : "Create"}</span>
+              {isSubmitting ? "Creating" : "Create"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

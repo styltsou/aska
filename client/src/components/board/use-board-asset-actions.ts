@@ -9,6 +9,7 @@ import {
   useUploadInboxImages,
   useUploadLocalImages,
 } from "@/api/collection";
+import type { BoardInsertionPlacement } from "@/api/collection";
 import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
 import type { ClipboardAssetPayload } from "@/lib/clipboard";
 import { parseHttpUrl } from "@/lib/utils";
@@ -19,10 +20,12 @@ export function useBoardAssetActions({
   workspaceSlug,
   collectionPath,
   target = "collection",
+  placement,
 }: {
   workspaceSlug: string;
   collectionPath: string;
   target?: BoardAssetTarget;
+  placement?: BoardInsertionPlacement;
 }) {
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
@@ -76,6 +79,7 @@ export function useBoardAssetActions({
           await uploadLocalImages.mutateAsync({
             files: imageFiles,
             parentFolderPath,
+            placement,
           });
         }
         toast.success(
@@ -87,7 +91,7 @@ export function useBoardAssetActions({
         );
       }
     },
-    [parentFolderPath, target, uploadInboxImages, uploadLocalImages],
+    [parentFolderPath, placement, target, uploadInboxImages, uploadLocalImages],
   );
 
   const importRemoteUrl = useCallback(
@@ -104,6 +108,7 @@ export function useBoardAssetActions({
           await createRemoteImage.mutateAsync({
             url,
             parentFolderPath,
+            placement,
           });
         }
         toast.success("Image imported");
@@ -113,7 +118,13 @@ export function useBoardAssetActions({
         );
       }
     },
-    [createInboxRemoteImage, createRemoteImage, parentFolderPath, target],
+    [
+      createInboxRemoteImage,
+      createRemoteImage,
+      parentFolderPath,
+      placement,
+      target,
+    ],
   );
 
   const createTextNote = useCallback(
@@ -129,6 +140,7 @@ export function useBoardAssetActions({
           await createNote.mutateAsync({
             content,
             parentFolderPath,
+            placement,
           });
         }
         toast.success("Note created");
@@ -138,7 +150,7 @@ export function useBoardAssetActions({
         );
       }
     },
-    [createInboxNote, createNote, parentFolderPath, target],
+    [createInboxNote, createNote, parentFolderPath, placement, target],
   );
 
   const addClipboardAsset = useCallback(

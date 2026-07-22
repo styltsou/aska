@@ -5,6 +5,7 @@ import {
   eq,
   inArray,
   isNull,
+  or,
   sql,
 } from "drizzle-orm";
 
@@ -18,11 +19,11 @@ import {
   member,
   noteAssets,
   organization,
-  type ImageAssetVariants,
 } from "@/db/schema";
 import type {
   CollectionContentsResponse,
   CollectionNode,
+  ContentTypeFilter,
   FolderChildPreview,
   LightCollection,
 } from "@/dto/collection.dto";
@@ -30,21 +31,23 @@ import { AppError, ErrorCode } from "@/lib/errors";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import { first } from "@/lib/query";
 import type { IObjectStorageService } from "@/services/object-storage.service";
+import {
+  firstPreviewRowsByParent,
+  makeSnippet,
+  toBoardPosition,
+  toFolderPreview,
+  type FolderPreviewRow,
+  type ImageVariantLookup,
+} from "./collection-node-mappers";
+import {
+  getCollectionBySlug,
+  resolveTargetInCollection,
+} from "./collection-target-resolver";
 import type { DetailedCollectionRow, WorkspaceInfo } from "./collection.types";
 
 type Deps = {
   objectStorageService: IObjectStorageService;
 };
-
-type ImageVariantLookup = Map<
-  number,
-  ImageAssetVariants & {
-    original?: ImageAssetVariants["original"] & { url?: string };
-    display?: ImageAssetVariants["display"] & { url?: string };
-    preview?: ImageAssetVariants["preview"] & { url?: string };
-    blurDataURL?: string | null;
-  }
->;
 
 export class CollectionQueryService {
   private readonly objectStorageService: IObjectStorageService;
@@ -84,16 +87,17 @@ export class CollectionQueryService {
         name: collectionsTable.name,
         slug: collectionsTable.slug,
         assetCount: sql<number>`
-          (
-            SELECT COUNT(*)
-            FROM ${collectionNodes}
-            WHERE ${collectionNodes.collectionId} = ${collectionsTable.id}
-              AND ${collectionNodes.nodeType} = 'asset'
-          )
+          COUNT(${collectionNodes.id})
+          FILTER (WHERE ${collectionNodes.nodeType} = 'asset')
         `,
       })
       .from(collectionsTable)
+      .leftJoin(
+        collectionNodes,
+        eq(collectionNodes.collectionId, collectionsTable.id),
+      )
       .where(eq(collectionsTable.organizationId, orgId))
+      .groupBy(collectionsTable.id)
       .orderBy(collectionsTable.name);
 
     return rows.map((r) => ({
@@ -114,16 +118,17 @@ export class CollectionQueryService {
         createdAt: collectionsTable.createdAt,
         updatedAt: collectionsTable.updatedAt,
         assetCount: sql<number>`
-          (
-            SELECT COUNT(*)
-            FROM ${collectionNodes}
-            WHERE ${collectionNodes.collectionId} = ${collectionsTable.id}
-              AND ${collectionNodes.nodeType} = 'asset'
-          )
+          COUNT(${collectionNodes.id})
+          FILTER (WHERE ${collectionNodes.nodeType} = 'asset')
         `,
       })
       .from(collectionsTable)
+      .leftJoin(
+        collectionNodes,
+        eq(collectionNodes.collectionId, collectionsTable.id),
+      )
       .where(eq(collectionsTable.organizationId, orgId))
+      .groupBy(collectionsTable.id)
       .orderBy(collectionsTable.name);
 
     if (rows.length === 0) return [];
@@ -212,65 +217,34 @@ export class CollectionQueryService {
     orgId: string,
     collectionSlug: string,
     folderPath?: string,
+    types?: ContentTypeFilter[],
   ): Promise<CollectionContentsResponse> {
-    const collection = first(
-      await db
-        .select({
-          id: collectionsTable.id,
-          name: collectionsTable.name,
-          slug: collectionsTable.slug,
-        })
-        .from(collectionsTable)
-        .where(
-          and(
-            eq(collectionsTable.organizationId, orgId),
-            eq(collectionsTable.slug, collectionSlug),
-          ),
-        ),
+    const collection = await getCollectionBySlug(orgId, collectionSlug);
+    const target = await resolveTargetInCollection(collection, folderPath);
+    const assetTypes = types?.filter(
+      (type): type is "image" | "note" => type !== "folder",
     );
-
-    if (!collection) {
-      throw new AppError(ErrorCode.NOT_FOUND, "Collection not found");
-    }
-
-    const pathSlugs = folderPath ? folderPath.split("/").filter(Boolean) : [];
-    let parentFolderId: number | null = null;
-    let breadcrumbFolderIds: number[] = [];
-
-    if (pathSlugs.length > 0) {
-      const folderNode = first(
-        await db
-          .select({
-            folderId: collectionNodes.folderId,
-            pathFolderIds: collectionNodes.pathFolderIds,
-            pathFolderNames: collectionNodes.pathFolderNames,
-          })
-          .from(collectionNodes)
-          .where(
-            and(
-              eq(collectionNodes.collectionId, collection.id),
-              eq(collectionNodes.pathFolderSlugs, pathSlugs),
-              eq(collectionNodes.nodeType, "folder"),
-            ),
-          ),
-      );
-
-      if (!folderNode || !folderNode.folderId) {
-        throw new AppError(
-          ErrorCode.NOT_FOUND,
-          "Folder not found in collection",
-        );
-      }
-
-      parentFolderId = folderNode.folderId;
-      breadcrumbFolderIds = folderNode.pathFolderIds;
-    }
+    const typeCondition =
+      types === undefined
+        ? undefined
+        : or(
+            types.includes("folder")
+              ? eq(collectionNodes.nodeType, "folder")
+              : undefined,
+            assetTypes && assetTypes.length > 0
+              ? and(
+                  eq(collectionNodes.nodeType, "asset"),
+                  inArray(assets.type, assetTypes),
+                )
+              : undefined,
+          );
 
     const children = await db
       .select({
         nodeId: collectionNodes.id,
         nodeType: collectionNodes.nodeType,
-        sortKey: collectionNodes.sortKey,
+        positionX: collectionNodes.positionX,
+        positionY: collectionNodes.positionY,
         assetId: assets.id,
         assetType: assets.type,
         title: assets.title,
@@ -294,12 +268,13 @@ export class CollectionQueryService {
       .where(
         and(
           eq(collectionNodes.collectionId, collection.id),
-          parentFolderId !== null
-            ? eq(collectionNodes.parentFolderId, parentFolderId)
+          target.parentFolderId !== null
+            ? eq(collectionNodes.parentFolderId, target.parentFolderId)
             : isNull(collectionNodes.parentFolderId),
+          typeCondition,
         ),
       )
-      .orderBy(collectionNodes.sortKey);
+      .orderBy(collectionNodes.createdAt, collectionNodes.id);
 
     const folderChildIds = children
       .filter((c) => c.nodeType === "folder" && c.folderId !== null)
@@ -307,13 +282,7 @@ export class CollectionQueryService {
 
     const countMap = new Map<number, number>();
     const previewMap = new Map<number, FolderChildPreview[]>();
-    let folderPreviewRows: Array<{
-      folderId: number | null;
-      assetType: string | null;
-      assetId: number | null;
-      color: string | null;
-      content: string | null;
-    }> = [];
+    let folderPreviewRows: FolderPreviewRow[] = [];
 
     if (folderChildIds.length > 0) {
       const countRows = await db
@@ -377,7 +346,7 @@ export class CollectionQueryService {
     for (const row of selectedFolderPreviewRows) {
       if (!row.folderId) continue;
       const list = previewMap.get(row.folderId);
-      const folderPreview = toPreview(row, imageVariants);
+      const folderPreview = toFolderPreview(row, imageVariants);
       if (!list) {
         previewMap.set(row.folderId, [folderPreview]);
       } else if (list.length < 4) {
@@ -386,6 +355,8 @@ export class CollectionQueryService {
     }
 
     const nodes: CollectionNode[] = children.map((child) => {
+      const position = toBoardPosition(child.positionX, child.positionY);
+
       if (child.nodeType === "folder") {
         const fid = child.folderId!;
         return {
@@ -395,6 +366,7 @@ export class CollectionQueryService {
           slug: child.folderSlug!,
           count: countMap.get(fid) ?? 0,
           previews: previewMap.get(fid) ?? [],
+          position,
         };
       }
 
@@ -427,6 +399,7 @@ export class CollectionQueryService {
           dominantColors: child.imageDominantColors ?? undefined,
           sizeBytes: variant?.display?.sizeBytes,
           createdAt: child.createdAt.toISOString(),
+          position,
         };
       }
 
@@ -442,12 +415,13 @@ export class CollectionQueryService {
         isFavorite: child.isFavorite ?? false,
         wordCount,
         readingTimeMinutes,
+        position,
       };
     });
 
     let breadcrumbs: { id: number; name: string; slug: string }[] = [];
 
-    if (breadcrumbFolderIds.length > 0 && pathSlugs.length > 0) {
+    if (target.pathFolderIds.length > 0) {
       const breadcrumbFolders = await db
         .select({
           id: folders.id,
@@ -455,11 +429,11 @@ export class CollectionQueryService {
           slug: folders.slug,
         })
         .from(folders)
-        .where(inArray(folders.id, breadcrumbFolderIds))
+        .where(inArray(folders.id, target.pathFolderIds))
         .orderBy(folders.id);
 
       const folderMap = new Map(breadcrumbFolders.map((f) => [f.id, f]));
-      breadcrumbs = breadcrumbFolderIds
+      breadcrumbs = target.pathFolderIds
         .map((id) => folderMap.get(id))
         .filter((f): f is NonNullable<typeof f> => f !== undefined);
     }
@@ -540,60 +514,4 @@ export class CollectionQueryService {
 
     return lookup;
   }
-}
-
-function makeSnippet(content: string): string {
-  const singleLine = content.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
-  return singleLine.length > 1000
-    ? singleLine.slice(0, 1000).trimEnd() + "…"
-    : singleLine;
-}
-
-function toPreview(
-  row: {
-    assetType: string | null;
-    assetId: number | null;
-    color: string | null;
-    content: string | null;
-  },
-  imageVariants: ImageVariantLookup,
-): FolderChildPreview {
-  const variants = row.assetId ? imageVariants.get(row.assetId) : undefined;
-  const previewUrl = variants?.preview?.url;
-  if (row.assetType === "image" && previewUrl) {
-    return {
-      assetId: `image-${row.assetId}`,
-      type: "image",
-      url: previewUrl,
-      blurDataURL: variants?.blurDataURL,
-    };
-  }
-  const snippet = row.content ? makeSnippet(row.content) : undefined;
-  return {
-    assetId: `note-${row.assetId}`,
-    type: "note",
-    color: row.color ?? undefined,
-    snippet,
-  };
-}
-
-function firstPreviewRowsByParent<T>(
-  rows: T[],
-  getParentId: (row: T) => number | null,
-): T[] {
-  const counts = new Map<number, number>();
-  const selected: T[] = [];
-
-  for (const row of rows) {
-    const parentId = getParentId(row);
-    if (parentId === null) continue;
-
-    const count = counts.get(parentId) ?? 0;
-    if (count >= 4) continue;
-
-    counts.set(parentId, count + 1);
-    selected.push(row);
-  }
-
-  return selected;
 }

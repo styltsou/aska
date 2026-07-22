@@ -31,3 +31,8 @@ export type DeleteCollectionNodeResult = {
   deletedNodeId: string;
   deletedAssetCount: number;
 };
+
+export type BulkDeleteResult = {
+  deletedCount: number;
+  deletedAssetCount: number;
+};

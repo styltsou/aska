@@ -16,6 +16,10 @@ import {
   ObjectStorageService,
   type IObjectStorageService,
 } from "@/services/object-storage.service";
+import {
+  ColorSearchService,
+  type IColorSearchService,
+} from "@/services/color-search.service";
 
 type Cradle = {
   db: typeof db;
@@ -25,6 +29,7 @@ type Cradle = {
   collectionService: ICollectionService;
   objectStorageService: IObjectStorageService;
   imageUploadService: IImageUploadService;
+  colorSearchService: IColorSearchService;
 };
 
 export const container = createContainer<Cradle>({
@@ -38,6 +43,7 @@ export const container = createContainer<Cradle>({
   collectionService: asClass(CollectionService).singleton(),
   objectStorageService: asClass(ObjectStorageService).singleton(),
   imageUploadService: asClass(ImageUploadService).singleton(),
+  colorSearchService: asClass(ColorSearchService).singleton(),
 });
 
 export type Container = typeof container;

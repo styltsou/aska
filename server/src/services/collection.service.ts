@@ -1,12 +1,20 @@
 import type {
   CollectionContentsResponse,
+  ContentTypeFilter,
   CollectionNoteNode,
   CreateCollectionInput,
   CreateFolderInput,
   CreateNoteInput,
   CreatedFolder,
+  MoveCollectionNodeParentInput,
   LightCollection,
+  UpdateNodePositionInput,
+  UpdateNodePositionsInput,
 } from "@/dto/collection.dto";
+import {
+  CollectionAssetMoveService,
+  type MoveCollectionNodeParentResult,
+} from "@/services/collection/collection-asset-move.service";
 import { CollectionDeleteService } from "@/services/collection/collection-delete.service";
 import { CollectionMutationService } from "@/services/collection/collection-mutation.service";
 import { CollectionQueryService } from "@/services/collection/collection-query.service";
@@ -51,16 +59,40 @@ export interface ICollectionService {
     collectionSlug: string,
     nodeId: string,
   ): Promise<DeleteCollectionNodeResult>;
+  deleteFolders(
+    orgId: string,
+    collectionSlug: string,
+    folderIds: number[],
+  ): Promise<number>;
   getCollectionContents(
     orgId: string,
     collectionSlug: string,
     folderPath?: string,
+    types?: ContentTypeFilter[],
   ): Promise<CollectionContentsResponse>;
+  updateNodePosition(
+    orgId: string,
+    collectionSlug: string,
+    nodeId: string,
+    data: UpdateNodePositionInput,
+  ): Promise<{ nodeId: string; position: UpdateNodePositionInput["position"] }>;
+  updateNodePositions(
+    orgId: string,
+    collectionSlug: string,
+    data: UpdateNodePositionsInput,
+  ): Promise<{ nodeIds: string[] }>;
+  moveNodeToFolder(
+    orgId: string,
+    collectionSlug: string,
+    nodeId: string,
+    data: MoveCollectionNodeParentInput,
+  ): Promise<MoveCollectionNodeParentResult>;
 }
 
 export class CollectionService implements ICollectionService {
   private readonly queries: CollectionQueryService;
   private readonly mutations = new CollectionMutationService();
+  private readonly moves = new CollectionAssetMoveService();
   private readonly deletes: CollectionDeleteService;
 
   constructor(deps: { objectStorageService: IObjectStorageService }) {
@@ -118,15 +150,59 @@ export class CollectionService implements ICollectionService {
     return this.deletes.deleteNode(orgId, collectionSlug, nodeId);
   }
 
+  deleteFolders(
+    orgId: string,
+    collectionSlug: string,
+    folderIds: number[],
+  ): Promise<number> {
+    return this.deletes.deleteFolders(orgId, collectionSlug, folderIds);
+  }
+
   getCollectionContents(
     orgId: string,
     collectionSlug: string,
     folderPath?: string,
+    types?: ContentTypeFilter[],
   ): Promise<CollectionContentsResponse> {
     return this.queries.getCollectionContents(
       orgId,
       collectionSlug,
       folderPath,
+      types,
     );
+  }
+
+  updateNodePosition(
+    orgId: string,
+    collectionSlug: string,
+    nodeId: string,
+    data: UpdateNodePositionInput,
+  ): Promise<{
+    nodeId: string;
+    position: UpdateNodePositionInput["position"];
+  }> {
+    return this.mutations.updateNodePosition(
+      orgId,
+      collectionSlug,
+      nodeId,
+      data,
+    );
+  }
+
+  updateNodePositions(
+    orgId: string,
+    collectionSlug: string,
+    data: UpdateNodePositionsInput,
+  ): Promise<{ nodeIds: string[] }> {
+    return this.mutations.updateNodePositions(orgId, collectionSlug, data);
+  }
+
+  moveNodeToFolder(
+    orgId: string,
+    collectionSlug: string,
+    nodeId: string,
+    data: MoveCollectionNodeParentInput,
+  ): Promise<MoveCollectionNodeParentResult> {
+    return this.moves.moveNodeToFolder(orgId, collectionSlug, nodeId, data);
   }
 }

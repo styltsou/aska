@@ -75,7 +75,12 @@ export function BoardUploadZone({
 
   return (
     <div
-      className="relative min-h-[calc(100vh-5rem)] outline-none"
+      className={cn(
+        "relative outline-none",
+        target === "collection"
+          ? "h-full min-h-0"
+          : "min-h-[calc(100svh-5rem)] md:min-h-[calc(100svh-5.5rem)]",
+      )}
       tabIndex={0}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -85,7 +90,7 @@ export function BoardUploadZone({
       {children}
       <div
         className={cn(
-          "border-primary/50 bg-background/70 pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-lg border border-dashed opacity-0 backdrop-blur-sm transition-opacity",
+          "border-primary/50 bg-background/70 pointer-events-none absolute inset-0 z-10 flex items-center justify-center border border-dashed opacity-0 backdrop-blur-sm transition-opacity",
           isDraggingImage && "opacity-100",
         )}
       >

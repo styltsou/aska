@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aska-server",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-17",
+  "compatibility_flags": ["nodejs_compat"],
+  "upload_source_maps": true,
+  "secrets": {
+    "required": [
+      "DATABASE_URL",
+      "BETTER_AUTH_SECRET",
+      "RESEND_API_KEY",
+      "R2_ACCESS_KEY_ID",
+      "R2_SECRET_ACCESS_KEY",
+      "IMAGE_PIPELINE_CALLBACK_SECRET",
+    ],
+  },
+  "vars": {
+    "NODE_ENV": "production",
+    "CORS_ORIGINS": "https://aska-client.pages.dev",
+    "BETTER_AUTH_URL": "https://api.example.com",
+    "R2_ACCOUNT_ID": "0a45f75ab7b71b5f16b7c173cfda7f82",
+    "R2_BUCKET": "aska",
+  },
+  "r2_buckets": [
+    {
+      "binding": "ASKA_BUCKET",
+      "bucket_name": "aska",
+    },
+  ],
+}

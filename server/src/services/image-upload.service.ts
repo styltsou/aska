@@ -1,16 +1,8 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { env } from "@/config";
 import { db } from "@/db";
-import {
-  assets,
-  collectionNodes,
-  collectionsTable,
-  imageAssets,
-  imageColors,
-  uploads,
-  type ImageAssetVariants,
-} from "@/db/schema";
+import { assets, imageAssets, uploads } from "@/db/schema";
 import type { CollectionImageNode } from "@/dto/collection.dto";
 import {
   AllowedImageContentTypes as allowedImageContentTypes,
@@ -21,44 +13,23 @@ import {
 } from "@/dto/upload.dto";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { first } from "@/lib/query";
+import { resolveCollectionTargetBySlug } from "@/services/collection/collection-target-resolver";
+import { resolvePipelineCallbackAction } from "@/services/image-upload/callback-state";
+import { finalizeImageUpload } from "@/services/image-upload/image-upload-finalizer";
+import {
+  fileNameFromRemoteImageUrl,
+  makeOriginalObjectKey,
+  normalizeRemoteImageContentType,
+  parseRemoteImageUrl,
+} from "@/services/image-upload/remote-image";
+import {
+  getUploadById,
+  getUploadByOriginalObjectKey,
+  getUploadForAccess,
+  type UploadRecord,
+  type UploadStatus,
+} from "@/services/image-upload/upload-repository";
 import type { IObjectStorageService } from "@/services/object-storage.service";
-
-type ResolvedCollectionTarget = {
-  collection: { id: number; slug: string };
-  parentFolderId: number | null;
-  pathFolderIds: number[];
-  pathFolderSlugs: string[];
-  pathFolderNames: string[];
-};
-
-type UploadStatus =
-  | "pending"
-  | "uploaded"
-  | "processing"
-  | "completed"
-  | "failed";
-
-type UploadRecord = {
-  id: number;
-  organizationId: string;
-  collectionId: number | null;
-  parentFolderPath: string | null;
-  source: "direct" | "remote_url";
-  status: UploadStatus;
-  originalObjectKey: string;
-  storageId: string;
-  assetId: number | null;
-  fileName: string | null;
-  title: string | null;
-  alt: string | null;
-  sourceLabel: string | null;
-  sourceUrl: string | null;
-  contentType: string;
-  sizeBytes: number;
-  processingEtag: string | null;
-  errorMessage: string | null;
-  createdByUserId: string | null;
-};
 
 export type ImageUploadStatus = {
   id: number;
@@ -130,7 +101,7 @@ export class ImageUploadService implements IImageUploadService {
     collectionSlug: string | null,
     data: CreateImageUploadInput,
   ): Promise<CreateImageUploadResponse["upload"]> {
-    const target = await this.resolveCollectionTarget(
+    const target = await resolveCollectionTargetBySlug(
       orgId,
       collectionSlug,
       data.parentFolderPath,
@@ -152,6 +123,8 @@ export class ImageUploadService implements IImageUploadService {
         organizationId: orgId,
         collectionId: target?.collection.id,
         parentFolderPath: target ? data.parentFolderPath : null,
+        positionX: target ? data.position?.x : null,
+        positionY: target ? data.position?.y : null,
         source: "direct",
         status: "pending",
         originalObjectKey: objectKey,
@@ -185,8 +158,8 @@ export class ImageUploadService implements IImageUploadService {
     collectionSlug: string,
     uploadId: number,
   ): Promise<ImageUploadStatus> {
-    const target = await this.resolveCollectionTarget(orgId, collectionSlug);
-    const upload = await this.getUploadForAccess(
+    const target = await resolveCollectionTargetBySlug(orgId, collectionSlug);
+    const upload = await getUploadForAccess(
       orgId,
       target?.collection.id ?? null,
       uploadId,
@@ -199,7 +172,7 @@ export class ImageUploadService implements IImageUploadService {
     orgId: string,
     uploadId: number,
   ): Promise<ImageUploadStatus> {
-    const upload = await this.getUploadForAccess(orgId, null, uploadId);
+    const upload = await getUploadForAccess(orgId, null, uploadId);
     if (!upload) throw new AppError(ErrorCode.NOT_FOUND, "Upload not found");
     return this.toUploadStatus(upload);
   }
@@ -232,7 +205,7 @@ export class ImageUploadService implements IImageUploadService {
     collectionSlug: string | null,
     data: CreateRemoteImageInput,
   ): Promise<ImageUploadStatus> {
-    const target = await this.resolveCollectionTarget(
+    const target = await resolveCollectionTargetBySlug(
       orgId,
       collectionSlug,
       data.parentFolderPath,
@@ -250,7 +223,7 @@ export class ImageUploadService implements IImageUploadService {
       );
     }
 
-    const contentType = normalizeImageContentType(
+    const contentType = normalizeRemoteImageContentType(
       response.headers.get("content-type"),
     );
     const contentLength = Number(response.headers.get("content-length") ?? 0);
@@ -272,7 +245,7 @@ export class ImageUploadService implements IImageUploadService {
     }
 
     const storageId = crypto.randomUUID();
-    const fileName = fileNameFromRemoteUrl(remoteUrl, contentType);
+    const fileName = fileNameFromRemoteImageUrl(remoteUrl, contentType);
     const objectKey = makeOriginalObjectKey(storageId, fileName, contentType);
     const [upload] = await db
       .insert(uploads)
@@ -280,6 +253,8 @@ export class ImageUploadService implements IImageUploadService {
         organizationId: orgId,
         collectionId: target?.collection.id,
         parentFolderPath: target ? data.parentFolderPath : null,
+        positionX: target ? data.position?.x : null,
+        positionY: target ? data.position?.y : null,
         source: "remote_url",
         status: "pending",
         originalObjectKey: objectKey,
@@ -330,17 +305,17 @@ export class ImageUploadService implements IImageUploadService {
   async handlePipelineCallback(
     input: ImagePipelineCallbackInput,
   ): Promise<{ ignored: boolean }> {
-    const upload = await this.getUploadByOriginalObjectKey(
-      input.originalObjectKey,
-    );
-    if (!upload || !input.originalObjectKey.startsWith("ingest/"))
-      return { ignored: true };
-    if (upload.processingEtag && upload.processingEtag !== input.originalEtag)
-      return { ignored: true };
-    if (upload.status === "completed") return { ignored: false };
-    if (upload.status === "failed") return { ignored: true };
+    const upload = await getUploadByOriginalObjectKey(input.originalObjectKey);
+    const action = resolvePipelineCallbackAction(upload, input);
+    if (action.type === "ignore") return { ignored: action.ignored };
+    if (!upload) {
+      throw new AppError(
+        ErrorCode.INTERNAL_ERROR,
+        "Pipeline callback action requires an upload",
+      );
+    }
 
-    if (input.status === "processing") {
+    if (action.type === "mark-processing") {
       await db
         .update(uploads)
         .set({
@@ -352,7 +327,7 @@ export class ImageUploadService implements IImageUploadService {
       return { ignored: false };
     }
 
-    if (input.status === "failed") {
+    if (action.type === "mark-failed" && input.status === "failed") {
       await db
         .update(uploads)
         .set({
@@ -364,107 +339,21 @@ export class ImageUploadService implements IImageUploadService {
       return { ignored: false };
     }
 
-    validatePipelineResult(upload, input);
-    await db.transaction(async (tx) => {
-      const current = first(
-        await tx
-          .select({
-            status: uploads.status,
-            assetId: uploads.assetId,
-            processingEtag: uploads.processingEtag,
-          })
-          .from(uploads)
-          .where(eq(uploads.id, upload.id))
-          .limit(1),
+    if (input.status !== "completed") {
+      throw new AppError(
+        ErrorCode.INTERNAL_ERROR,
+        "Pipeline callback action does not match its status",
       );
-      if (!current || current.status === "completed") return;
-      if (current.status === "failed")
-        throw new AppError(ErrorCode.CONFLICT, "Upload is already failed");
-      if (
-        current.processingEtag &&
-        current.processingEtag !== input.originalEtag
-      )
-        return;
+    }
 
-      const [insertedAsset] = await tx
-        .insert(assets)
-        .values({
-          organizationId: upload.organizationId,
-          type: "image",
-          title: upload.title,
-          createdByUserId: upload.createdByUserId,
-          updatedByUserId: upload.createdByUserId,
-        })
-        .returning();
-      if (!insertedAsset)
-        throw new AppError(
-          ErrorCode.INTERNAL_ERROR,
-          "Failed to create image asset",
-        );
-
-      const variants = toStoredVariants(upload, input);
-      await tx.insert(imageAssets).values({
-        assetId: insertedAsset.id,
-        width: input.width,
-        height: input.height,
-        alt: upload.alt,
-        sourceLabel: upload.sourceLabel,
-        sourceUrl: upload.sourceUrl,
-        variants,
-        blurDataURL: input.blurDataURL,
-        dominantColors: input.palette.map((color) => color.hex),
-      });
-
-      if (input.palette.length > 0) {
-        await tx.insert(imageColors).values(
-          input.palette.map((color) => ({
-            assetId: insertedAsset.id,
-            hex: color.hex,
-            oklabL: color.oklabL,
-            oklabA: color.oklabA,
-            oklabB: color.oklabB,
-            coverage: color.coverage,
-            salience: color.salience,
-            isAccent: color.isAccent,
-            extractionVersion: input.extractionVersion,
-          })),
-        );
-      }
-
-      const target = await this.resolveStoredTarget(upload);
-      if (target) {
-        await tx.insert(collectionNodes).values({
-          organizationId: upload.organizationId,
-          collectionId: target.collection.id,
-          parentFolderId: target.parentFolderId,
-          nodeType: "asset",
-          assetId: insertedAsset.id,
-          sortKey: makeSortKey(),
-          depth: target.pathFolderSlugs.length,
-          pathFolderIds: target.pathFolderIds,
-          pathFolderSlugs: target.pathFolderSlugs,
-          pathFolderNames: target.pathFolderNames,
-        });
-      }
-
-      await tx
-        .update(uploads)
-        .set({
-          status: "completed",
-          assetId: insertedAsset.id,
-          processingEtag: input.originalEtag,
-          errorMessage: null,
-          finalizedAt: new Date(),
-        })
-        .where(eq(uploads.id, upload.id));
-    });
+    await finalizeImageUpload(upload, input);
     return { ignored: false };
   }
 
   private async getUploadStatusById(
     uploadId: number,
   ): Promise<ImageUploadStatus> {
-    const upload = await this.getUploadById(uploadId);
+    const upload = await getUploadById(uploadId);
     if (!upload) throw new AppError(ErrorCode.NOT_FOUND, "Upload not found");
     return this.toUploadStatus(upload);
   }
@@ -477,148 +366,17 @@ export class ImageUploadService implements IImageUploadService {
       status: upload.status,
       errorMessage: upload.errorMessage,
       ...(upload.status === "completed" && upload.assetId
-        ? { image: await this.getImageNode(upload.assetId) }
+        ? {
+            image: {
+              ...(await this.getImageNode(upload.assetId)),
+              position:
+                upload.positionX === null || upload.positionY === null
+                  ? null
+                  : { x: upload.positionX, y: upload.positionY },
+            },
+          }
         : {}),
     };
-  }
-
-  private async getUploadForAccess(
-    orgId: string,
-    collectionId: number | null,
-    uploadId: number,
-  ): Promise<UploadRecord | undefined> {
-    return (
-      first(
-        await db
-          .select(uploadSelection)
-          .from(uploads)
-          .where(
-            and(
-              eq(uploads.id, uploadId),
-              eq(uploads.organizationId, orgId),
-              collectionId === null
-                ? isNull(uploads.collectionId)
-                : eq(uploads.collectionId, collectionId),
-            ),
-          )
-          .limit(1),
-      ) ?? undefined
-    );
-  }
-
-  private async getUploadById(
-    uploadId: number,
-  ): Promise<UploadRecord | undefined> {
-    return (
-      first(
-        await db
-          .select(uploadSelection)
-          .from(uploads)
-          .where(eq(uploads.id, uploadId))
-          .limit(1),
-      ) ?? undefined
-    );
-  }
-
-  private async getUploadByOriginalObjectKey(
-    objectKey: string,
-  ): Promise<UploadRecord | undefined> {
-    return (
-      first(
-        await db
-          .select(uploadSelection)
-          .from(uploads)
-          .where(eq(uploads.originalObjectKey, objectKey))
-          .limit(1),
-      ) ?? undefined
-    );
-  }
-
-  private async resolveCollectionTarget(
-    orgId: string,
-    collectionSlug: string | null,
-    folderPath?: string,
-  ): Promise<ResolvedCollectionTarget | null> {
-    if (!collectionSlug) return null;
-    const collection = first(
-      await db
-        .select({ id: collectionsTable.id, slug: collectionsTable.slug })
-        .from(collectionsTable)
-        .where(
-          and(
-            eq(collectionsTable.organizationId, orgId),
-            eq(collectionsTable.slug, collectionSlug),
-          ),
-        )
-        .limit(1),
-    );
-    if (!collection)
-      throw new AppError(ErrorCode.NOT_FOUND, "Collection not found");
-    return this.resolveTargetInCollection(collection, folderPath);
-  }
-
-  private async resolveStoredTarget(
-    upload: UploadRecord,
-  ): Promise<ResolvedCollectionTarget | null> {
-    if (!upload.collectionId) return null;
-    const collection = first(
-      await db
-        .select({ id: collectionsTable.id, slug: collectionsTable.slug })
-        .from(collectionsTable)
-        .where(
-          and(
-            eq(collectionsTable.id, upload.collectionId),
-            eq(collectionsTable.organizationId, upload.organizationId),
-          ),
-        )
-        .limit(1),
-    );
-    if (!collection)
-      throw new AppError(ErrorCode.NOT_FOUND, "Collection no longer exists");
-    return this.resolveTargetInCollection(
-      collection,
-      upload.parentFolderPath ?? undefined,
-    );
-  }
-
-  private async resolveTargetInCollection(
-    collection: ResolvedCollectionTarget["collection"],
-    folderPath?: string,
-  ): Promise<ResolvedCollectionTarget> {
-    const pathFolderSlugs = folderPath?.split("/").filter(Boolean) ?? [];
-    if (pathFolderSlugs.length === 0) {
-      return {
-        collection,
-        parentFolderId: null,
-        pathFolderIds: [],
-        pathFolderSlugs: [],
-        pathFolderNames: [],
-      };
-    }
-    const folderNode = first(
-      await db
-        .select({
-          folderId: collectionNodes.folderId,
-          pathFolderIds: collectionNodes.pathFolderIds,
-          pathFolderSlugs: collectionNodes.pathFolderSlugs,
-          pathFolderNames: collectionNodes.pathFolderNames,
-        })
-        .from(collectionNodes)
-        .where(
-          and(
-            eq(collectionNodes.collectionId, collection.id),
-            eq(collectionNodes.pathFolderSlugs, pathFolderSlugs),
-            eq(collectionNodes.nodeType, "folder"),
-          ),
-        )
-        .limit(1),
-    );
-    if (!folderNode?.folderId)
-      throw new AppError(
-        ErrorCode.NOT_FOUND,
-        "Parent folder not found in collection",
-      );
-    return { collection, parentFolderId: folderNode.folderId, ...folderNode };
   }
 
   private async getImageNode(assetId: number): Promise<CollectionImageNode> {
@@ -676,157 +434,7 @@ export class ImageUploadService implements IImageUploadService {
       dominantColors: row.dominantColors,
       sizeBytes: row.variants.display.sizeBytes,
       createdAt: row.createdAt.toISOString(),
+      position: null,
     };
   }
-}
-
-const uploadSelection = {
-  id: uploads.id,
-  organizationId: uploads.organizationId,
-  collectionId: uploads.collectionId,
-  parentFolderPath: uploads.parentFolderPath,
-  source: uploads.source,
-  status: uploads.status,
-  originalObjectKey: uploads.originalObjectKey,
-  storageId: uploads.storageId,
-  assetId: uploads.assetId,
-  fileName: uploads.fileName,
-  title: uploads.title,
-  alt: uploads.alt,
-  sourceLabel: uploads.sourceLabel,
-  sourceUrl: uploads.sourceUrl,
-  contentType: uploads.contentType,
-  sizeBytes: uploads.sizeBytes,
-  processingEtag: uploads.processingEtag,
-  errorMessage: uploads.errorMessage,
-  createdByUserId: uploads.createdByUserId,
-} as const;
-
-function validatePipelineResult(
-  upload: UploadRecord,
-  input: Extract<ImagePipelineCallbackInput, { status: "completed" }>,
-): void {
-  const expectedRoles = new Set(input.variants.map((variant) => variant.role));
-  if (
-    expectedRoles.size !== 2 ||
-    !expectedRoles.has("display") ||
-    !expectedRoles.has("preview")
-  ) {
-    throw new AppError(
-      ErrorCode.VALIDATION_ERROR,
-      "Pipeline result is missing required variants",
-    );
-  }
-  for (const variant of input.variants) {
-    if (
-      variant.objectKey !== makeVariantObjectKey(upload.storageId, variant.role)
-    ) {
-      throw new AppError(
-        ErrorCode.VALIDATION_ERROR,
-        "Pipeline variant key is invalid",
-      );
-    }
-  }
-}
-
-function toStoredVariants(
-  upload: UploadRecord,
-  input: Extract<ImagePipelineCallbackInput, { status: "completed" }>,
-): ImageAssetVariants {
-  const variants = Object.fromEntries(
-    input.variants.map((variant) => [variant.role, variant]),
-  );
-  const display = variants.display!;
-  const preview = variants.preview!;
-  return {
-    original: {
-      objectKey: upload.originalObjectKey,
-      width: input.width,
-      height: input.height,
-      contentType: upload.contentType,
-      sizeBytes: upload.sizeBytes,
-    },
-    display,
-    preview,
-  };
-}
-
-function makeOriginalObjectKey(
-  storageId: string,
-  fileName: string,
-  contentType: string,
-): string {
-  return `ingest/${storageId}/original${extensionForImage(fileName, contentType)}`;
-}
-
-function makeVariantObjectKey(
-  storageId: string,
-  role: "display" | "preview",
-): string {
-  return `assets/${storageId}/${role}.webp`;
-}
-
-function extensionForImage(fileName: string, contentType: string): string {
-  const fileExt = fileName
-    .trim()
-    .toLowerCase()
-    .match(/\.[a-z0-9]+$/)?.[0];
-  if (fileExt && fileExt.length <= 12)
-    return fileExt === ".jpeg" ? ".jpg" : fileExt;
-  return (
-    (
-      {
-        "image/jpeg": ".jpg",
-        "image/png": ".png",
-        "image/webp": ".webp",
-        "image/gif": ".gif",
-      } as Record<string, string>
-    )[contentType] ?? ""
-  );
-}
-
-function makeSortKey(): string {
-  return `${Date.now().toString(36)}-${crypto.randomUUID()}`;
-}
-
-function parseRemoteImageUrl(value: string): URL {
-  const url = new URL(value);
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new AppError(
-      ErrorCode.VALIDATION_ERROR,
-      "Remote image URL must use HTTP or HTTPS",
-    );
-  }
-  return url;
-}
-
-function normalizeImageContentType(contentTypeHeader: string | null): string {
-  const contentType = contentTypeHeader?.split(";")[0]?.trim().toLowerCase();
-  if (
-    !contentType ||
-    !allowedImageContentTypes.includes(
-      contentType as (typeof allowedImageContentTypes)[number],
-    )
-  ) {
-    throw new AppError(
-      ErrorCode.VALIDATION_ERROR,
-      "Remote URL did not return a supported image type",
-    );
-  }
-  return contentType;
-}
-
-function fileNameFromRemoteUrl(url: URL, contentType: string): string {
-  const pathName = url.pathname.split("/").filter(Boolean).at(-1);
-  if (pathName) return pathName;
-  const extension =
-    (
-      {
-        "image/jpeg": "jpg",
-        "image/png": "png",
-        "image/webp": "webp",
-        "image/gif": "gif",
-      } as Record<string, string>
-    )[contentType] ?? "img";
-  return `remote-image.${extension}`;
 }

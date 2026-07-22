@@ -17,6 +17,7 @@ export function NavSecondary({
     icon: React.ReactNode;
     link?: React.ReactElement;
     disabled?: boolean;
+    onClick?: () => void;
   }[];
 } & React.ComponentPropsWithoutRef<typeof SidebarGroup>) {
   return (
@@ -28,6 +29,7 @@ export function NavSecondary({
               <SidebarMenuButton
                 size="sm"
                 disabled={item.disabled}
+                onClick={item.onClick}
                 render={item.link}
               >
                 {item.icon}

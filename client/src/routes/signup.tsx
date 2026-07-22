@@ -12,6 +12,7 @@ import {
   UserPlusIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,6 +25,9 @@ import { signUp } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/signup")({
   beforeLoad: redirectIfSignedIn,
+  head: () => ({
+    meta: [{ title: "Create account | Aska" }],
+  }),
   component: SignupPage,
 });
 
@@ -69,25 +73,7 @@ function SignupPage() {
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center bg-background px-4 py-8">
-      <div className="mb-8 flex items-center gap-2.5">
-        <svg
-          aria-label="Aska"
-          className="size-8"
-          fill="none"
-          viewBox="0 0 32 32"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect height="32" rx="8" width="32" fill="currentColor" />
-          <path
-            d="M10 22V10l12 12V10"
-            stroke="hsl(var(--background))"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2.5"
-          />
-        </svg>
-        <span className="text-lg font-semibold tracking-tight">aska</span>
-      </div>
+      <BrandLogo className="mb-8" />
       <div className="w-full max-w-sm space-y-1">
         <h1 className="text-xl font-semibold">Create account</h1>
         <p className="text-sm text-muted-foreground">

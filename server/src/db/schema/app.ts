@@ -108,6 +108,7 @@ export const assets = pgTable(
     updatedByUserId: text("updated_by_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
+    lastAddedToInboxAt: timestamp("last_added_to_inbox_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -116,6 +117,10 @@ export const assets = pgTable(
   },
   (table) => [
     index("assets_organizationId_idx").on(table.organizationId),
+    index("assets_organizationId_lastAddedToInboxAt_idx").on(
+      table.organizationId,
+      table.lastAddedToInboxAt,
+    ),
     index("assets_type_idx").on(table.type),
     index("assets_createdAt_idx").on(table.createdAt),
     uniqueIndex("assets_id_organizationId_uidx").on(
@@ -208,6 +213,8 @@ export const uploads = pgTable(
       },
     ),
     parentFolderPath: text("parent_folder_path"),
+    positionX: integer("position_x"),
+    positionY: integer("position_y"),
     source: uploadSourceEnum().notNull(),
     status: uploadStatusEnum().notNull().default("pending"),
     originalObjectKey: text("original_object_key").notNull(),
@@ -242,6 +249,10 @@ export const uploads = pgTable(
     uniqueIndex("uploads_storageId_uidx").on(table.storageId),
     index("uploads_assetId_idx").on(table.assetId),
     check("uploads_sizeBytes_positive_chk", sql`${table.sizeBytes} > 0`),
+    check(
+      "uploads_position_pair_chk",
+      sql`(${table.positionX} is null and ${table.positionY} is null) or (${table.positionX} is not null and ${table.positionY} is not null)`,
+    ),
   ],
 );
 
@@ -296,7 +307,8 @@ export const collectionNodes = pgTable(
     nodeType: collectionNodeTypeEnum("node_type").notNull(),
     assetId: integer("asset_id"),
     folderId: integer("folder_id"),
-    sortKey: varchar("sort_key", { length: 255 }).notNull(),
+    positionX: integer("position_x"),
+    positionY: integer("position_y"),
     depth: integer().default(0).notNull(),
     pathFolderIds: integer("path_folder_ids")
       .array()
@@ -354,17 +366,12 @@ export const collectionNodes = pgTable(
       table.collectionId,
       table.assetId,
     ),
+    uniqueIndex("collection_nodes_assetId_uidx").on(table.assetId),
     uniqueIndex("collection_nodes_folderId_uidx").on(table.folderId),
     uniqueIndex("collection_nodes_collectionId_folderId_uidx").on(
       table.collectionId,
       table.folderId,
     ),
-    uniqueIndex("collection_nodes_collectionId_rootSortKey_uidx")
-      .on(table.collectionId, table.sortKey)
-      .where(sql`${table.parentFolderId} is null`),
-    uniqueIndex("collection_nodes_collectionId_parentFolderId_sortKey_uidx")
-      .on(table.collectionId, table.parentFolderId, table.sortKey)
-      .where(sql`${table.parentFolderId} is not null`),
     uniqueIndex("collection_nodes_collectionId_folderPathSlugs_uidx")
       .on(table.collectionId, table.pathFolderSlugs)
       .where(sql`${table.nodeType} = 'folder'`),
@@ -385,5 +392,9 @@ export const collectionNodes = pgTable(
       `,
     ),
     check("collection_nodes_depth_non_negative_chk", sql`${table.depth} >= 0`),
+    check(
+      "collection_nodes_position_pair_chk",
+      sql`(${table.positionX} is null and ${table.positionY} is null) or (${table.positionX} is not null and ${table.positionY} is not null)`,
+    ),
   ],
 );

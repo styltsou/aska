@@ -1,16 +1,20 @@
 import React, { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { LoaderCircleIcon, PlusIcon } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { LoaderCircleIcon } from "lucide-react";
 import { useCreateCollection } from "@/api/collection";
 
 export function CreateCollectionDialog({
@@ -61,44 +65,38 @@ export function CreateCollectionDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={children} />
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New collection</DialogTitle>
-          <DialogDescription>
-            Create a collection to organize your assets.
-          </DialogDescription>
-        </DialogHeader>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium" htmlFor="collection-name">
-              Collection name
-            </label>
-            <Input
-              autoComplete="off"
-              id="collection-name"
-              required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => handleOpenChange(false)}
-              disabled={createCollection.isPending}
-            >
-              Cancel
-            </Button>
+        <form className="contents" onSubmit={handleSubmit}>
+          <DialogBody className="flex flex-col gap-4">
+            <DialogHeader>
+              <DialogTitle>New collection</DialogTitle>
+              <DialogDescription>
+                Create a collection to organize your assets.
+              </DialogDescription>
+            </DialogHeader>
+            <div>
+              <Input
+                autoComplete="off"
+                placeholder="Collection name"
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </div>
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          </DialogBody>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline">Cancel</Button>} />
             <Button disabled={createCollection.isPending} type="submit">
               {createCollection.isPending ? (
-                <LoaderCircleIcon className="animate-spin" />
+                <>
+                  <LoaderCircleIcon className="size-4 animate-spin" />
+                  Creating
+                </>
               ) : (
-                <PlusIcon />
+                "Create"
               )}
-              <span>{createCollection.isPending ? "Creating" : "Create"}</span>
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

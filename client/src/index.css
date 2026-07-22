@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
+@import "@xyflow/react/dist/style.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -165,4 +166,72 @@
 .aska-crop-area::before,
 .aska-crop-area::after {
   border-color: currentcolor !important;
+}
+
+.aska-flow {
+  --xy-background-color: transparent;
+  --xy-controls-button-background-color-default: var(--popover);
+  --xy-controls-button-background-color-hover-default: var(--muted);
+  --xy-controls-button-color-default: var(--popover-foreground);
+  --xy-controls-button-border-color-default: var(--border);
+}
+
+.aska-flow .react-flow__node-asset {
+  cursor: grab;
+}
+
+.aska-flow .react-flow__node-asset.dragging {
+  cursor: grabbing;
+}
+
+/* The selection region is a gesture, while selected cards provide the lasting state. */
+.aska-flow .react-flow__nodesselection {
+  display: none;
+}
+
+.selection-marquee,
+.aska-flow .react-flow__selection {
+  --marquee-dash-color: color-mix(in oklch, var(--primary) 78%, transparent);
+  background-color: color-mix(in oklch, var(--primary) 9%, transparent);
+  background-image:
+    linear-gradient(
+      90deg,
+      var(--marquee-dash-color) 0 60%,
+      transparent 60% 100%
+    ),
+    linear-gradient(
+      0deg,
+      var(--marquee-dash-color) 0 60%,
+      transparent 60% 100%
+    ),
+    linear-gradient(
+      90deg,
+      var(--marquee-dash-color) 0 60%,
+      transparent 60% 100%
+    ),
+    linear-gradient(0deg, var(--marquee-dash-color) 0 60%, transparent 60% 100%);
+  background-position:
+    0 0,
+    100% 0,
+    0 100%,
+    0 0;
+  background-repeat: repeat-x, repeat-y, repeat-x, repeat-y;
+  background-size:
+    20px 1px,
+    1px 20px,
+    20px 1px,
+    1px 20px;
+  border: 0;
+  border-radius: var(--radius-md);
+  animation: selection-marquee-dashes 700ms linear infinite;
+}
+
+@keyframes selection-marquee-dashes {
+  to {
+    background-position:
+      20px 0,
+      100% 20px,
+      -20px 100%,
+      0 -20px;
+  }
 }

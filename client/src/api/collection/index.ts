@@ -1,4 +1,5 @@
 export {
+  useBulkDelete,
   useCollections,
   useCreateCollection,
   useCreateFolder,
@@ -10,10 +11,16 @@ export {
   useDeleteCollectionNode,
   useCollectionContents,
   useInboxContents,
+  useMarkInboxSeen,
   usePlaceAsset,
   useUploadInboxImages,
   useUploadLocalImages,
+  useUpdateCollectionNodePosition,
+  useUpdateCollectionNodePositions,
+  collectionsQueryOptions,
+  inboxContentsQueryOptions,
 } from "./hooks";
+export { useMoveCollectionNodeToFolder } from "./use-move-collection-node";
 export type {
   Breadcrumb,
   CollectionContentsResponse,
@@ -43,4 +50,13 @@ export type {
   InboxContentsResponse,
   PlaceAssetInput,
   PlaceAssetResponse,
+  BoardInsertionPlacement,
+  BoardPosition,
+  BoardVisibleBounds,
+  MoveCollectionNodeToFolderInput,
+  MoveCollectionNodeToFolderResponse,
+  UpdateNodePositionInput,
+  UpdateNodePositionResponse,
+  UpdateNodePositionsInput,
+  UpdateNodePositionsResponse,
 } from "./types";

@@ -1,5 +1,6 @@
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -21,8 +22,13 @@ import {
 } from "lucide-react";
 import type { ImageAsset } from "@/types/asset";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import Cropper, { type Area, type Size } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
+import {
+  getImageViewerLayoutId,
+  IMAGE_VIEWER_TRANSITION,
+} from "@/components/board/image-viewer-transition";
 import { ImageMetadata } from "./image-metadata";
 import { ASPECT_RATIOS, CropToolbar } from "./crop-toolbar";
 
@@ -360,7 +366,7 @@ function CropInspector({
 }
 
 export function ImageAssetViewer({
-  asset,
+  asset: selectedAsset,
   open,
   onOpenChange,
 }: {
@@ -368,6 +374,13 @@ export function ImageAssetViewer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const retainedAssetRef = useRef(selectedAsset);
+  useEffect(() => {
+    if (selectedAsset) retainedAssetRef.current = selectedAsset;
+  }, [selectedAsset]);
+
+  const asset = selectedAsset ?? retainedAssetRef.current;
+  const shouldReduceMotion = useReducedMotion();
   const title = asset?.title || asset?.sourceLabel || "Image preview";
 
   const originalAspect = asset
@@ -570,185 +583,198 @@ export function ImageAssetViewer({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="grid h-[min(90vh,58rem)] w-[min(94vw,80rem)] max-w-none grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden rounded-xl bg-background p-0 text-foreground sm:h-[min(88vh,56rem)] lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-1"
+        overlayClassName="bg-black/20 duration-150"
+        className="top-1/2 h-[min(90vh,58rem)] w-[min(94vw,80rem)] max-w-none -translate-y-1/2 transition-none data-ending-style:scale-100 data-ending-style:opacity-100 data-starting-style:scale-100 data-starting-style:opacity-100 sm:h-[min(88vh,56rem)]"
       >
-        <DialogTitle className="sr-only">{title}</DialogTitle>
-        <DialogDescription className="sr-only">
-          Larger preview and details for the selected image asset.
-        </DialogDescription>
+        <DialogBody className="grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-visible rounded-md bg-background p-0 text-foreground lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-1">
+          <DialogTitle className="sr-only">{title}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Larger preview and details for the selected image asset.
+          </DialogDescription>
 
-        <div className="flex min-h-0 flex-col bg-muted/35 lg:order-1">
-          {cropMode && asset ? (
-            <div className="min-h-0 flex-1 p-3 sm:p-5">
-              <div ref={cropperContainerRef} className="relative size-full">
-                <Cropper
-                  image={asset.originalUrl ?? asset.url}
-                  crop={crop}
-                  zoom={zoom}
-                  aspect={resolvedAspect}
-                  cropSize={
-                    aspect === 0 ? (freeCropSize ?? undefined) : undefined
-                  }
-                  onCropChange={setCrop}
-                  onZoomChange={setZoom}
-                  onCropComplete={handleCropComplete}
-                  onCropSizeChange={handleCropSizeChange}
-                  classes={{ cropAreaClassName: cropFrameColors.className }}
-                  disableAutomaticStylesInjection
-                  showGrid
-                />
-                {aspect === 0 && freeCropSize && cropperContainerSize ? (
-                  <FreeCropResizeHandles
-                    cropSize={freeCropSize}
-                    frameColors={cropFrameColors}
-                    maxCropSize={{
-                      width: Math.max(
-                        MIN_FREE_CROP_SIZE,
-                        cropperContainerSize.width - 12,
-                      ),
-                      height: Math.max(
-                        MIN_FREE_CROP_SIZE,
-                        cropperContainerSize.height - 12,
-                      ),
-                    }}
-                    onResize={handleFreeCropResize}
+          <div className="flex min-h-0 flex-col rounded-t-md bg-muted/35 lg:order-1 lg:rounded-l-md lg:rounded-tr-none">
+            {cropMode && asset ? (
+              <div className="min-h-0 flex-1 p-3 sm:p-5">
+                <div ref={cropperContainerRef} className="relative size-full">
+                  <Cropper
+                    image={asset.originalUrl ?? asset.url}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={resolvedAspect}
+                    cropSize={
+                      aspect === 0 ? (freeCropSize ?? undefined) : undefined
+                    }
+                    onCropChange={setCrop}
+                    onZoomChange={setZoom}
+                    onCropComplete={handleCropComplete}
+                    onCropSizeChange={handleCropSizeChange}
+                    classes={{ cropAreaClassName: cropFrameColors.className }}
+                    disableAutomaticStylesInjection
+                    showGrid
+                  />
+                  {aspect === 0 && freeCropSize && cropperContainerSize ? (
+                    <FreeCropResizeHandles
+                      cropSize={freeCropSize}
+                      frameColors={cropFrameColors}
+                      maxCropSize={{
+                        width: Math.max(
+                          MIN_FREE_CROP_SIZE,
+                          cropperContainerSize.width - 12,
+                        ),
+                        height: Math.max(
+                          MIN_FREE_CROP_SIZE,
+                          cropperContainerSize.height - 12,
+                        ),
+                      }}
+                      onResize={handleFreeCropResize}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="flex min-h-0 flex-1 items-center justify-center p-3 sm:p-5">
+                {displayUrl ? (
+                  <motion.img
+                    src={displayUrl}
+                    alt={asset?.alt ?? ""}
+                    width={asset?.width}
+                    height={asset?.height}
+                    draggable={false}
+                    layoutId={
+                      asset && !shouldReduceMotion && !croppedPreviewUrl
+                        ? getImageViewerLayoutId(asset.id)
+                        : undefined
+                    }
+                    transition={IMAGE_VIEWER_TRANSITION}
+                    className="relative z-10 max-h-full max-w-full rounded-[6px] object-contain shadow-sm"
+                    style={{ borderRadius: 6 }}
                   />
                 ) : null}
               </div>
-            </div>
-          ) : (
-            <div className="flex min-h-0 flex-1 items-center justify-center p-3 sm:p-5">
-              {displayUrl ? (
-                <img
-                  src={displayUrl}
-                  alt={asset?.alt ?? ""}
-                  className="max-h-full max-w-full rounded-md object-contain shadow-sm"
-                />
-              ) : null}
-            </div>
-          )}
-          {cropMode && asset ? (
-            <CropToolbar
-              aspect={aspect}
-              zoom={zoom}
-              onAspectChange={handleAspectChange}
-              onZoomChange={setZoom}
-            />
-          ) : null}
-        </div>
-
-        <aside className="flex min-h-0 flex-col border-t bg-background lg:order-2 lg:border-t-0 lg:border-l">
-          <div className="flex h-12 shrink-0 items-center justify-between border-b px-3">
-            <span className="truncate text-sm font-medium">{title}</span>
-            <DialogClose render={<Button variant="ghost" size="icon-sm" />}>
-              <XIcon />
-              <span className="sr-only">Close</span>
-            </DialogClose>
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
-              {asset?.sourceUrl ? (
-                <div className="mb-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                  <ExternalLinkIcon className="size-3 shrink-0" />
-                  <a
-                    href={asset.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="truncate transition-colors hover:text-foreground"
-                  >
-                    {asset.sourceLabel ?? "Source"}
-                  </a>
-                </div>
-              ) : null}
-
-              {cropMode && asset ? (
-                <CropInspector
-                  asset={asset}
-                  croppedAreaPixels={croppedAreaPixels}
-                  aspect={aspect}
-                  frameColors={cropFrameColors}
-                  onOutputDimensionChange={handleOutputDimensionChange}
-                />
-              ) : asset ? (
-                <ImageMetadata asset={asset} />
-              ) : null}
-            </div>
-            {cropMode ? (
-              <div className="flex shrink-0 justify-end gap-2 p-3">
-                <Button variant="ghost" size="sm" onClick={handleCancelCrop}>
-                  Cancel
-                </Button>
-                <Button variant="default" size="sm" onClick={handleApplyCrop}>
-                  <CheckIcon className="size-3.5" />
-                  Apply
-                </Button>
-              </div>
-            ) : asset ? (
-              <div className="flex shrink-0 items-center justify-between gap-3 p-3">
-                <div className="flex items-center gap-1">
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <a
-                          href={asset.url}
-                          download={asset.title || "image-asset"}
-                          className={buttonVariants({
-                            variant: "ghost",
-                            size: "icon-sm",
-                          })}
-                        >
-                          <DownloadIcon />
-                          <span className="sr-only">Download</span>
-                        </a>
-                      }
-                    />
-                    <TooltipContent>Download</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <a
-                          href={asset.sourceUrl ?? asset.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={buttonVariants({
-                            variant: "ghost",
-                            size: "icon-sm",
-                          })}
-                        >
-                          <ExternalLinkIcon />
-                          <span className="sr-only">Open</span>
-                        </a>
-                      }
-                    />
-                    <TooltipContent>Open</TooltipContent>
-                  </Tooltip>
-                </div>
-                {croppedPreviewUrl ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={handleResetCrop}
-                  >
-                    <RotateCcwIcon className="size-3.5" />
-                    Reset crop
-                  </Button>
-                ) : (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={handleStartCrop}
-                  >
-                    <CropIcon className="size-3.5" />
-                    Crop
-                  </Button>
-                )}
-              </div>
+            )}
+            {cropMode && asset ? (
+              <CropToolbar
+                aspect={aspect}
+                zoom={zoom}
+                onAspectChange={handleAspectChange}
+                onZoomChange={setZoom}
+              />
             ) : null}
           </div>
-        </aside>
+
+          <aside className="flex min-h-0 flex-col rounded-b-md border-t bg-background lg:order-2 lg:rounded-r-md lg:rounded-bl-none lg:border-t-0 lg:border-l">
+            <div className="flex h-12 shrink-0 items-center justify-between border-b px-3">
+              <span className="truncate text-sm font-medium">{title}</span>
+              <DialogClose render={<Button variant="ghost" size="icon-sm" />}>
+                <XIcon />
+                <span className="sr-only">Close</span>
+              </DialogClose>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                {asset?.sourceUrl ? (
+                  <div className="mb-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                    <ExternalLinkIcon className="size-3 shrink-0" />
+                    <a
+                      href={asset.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="truncate transition-colors hover:text-foreground"
+                    >
+                      {asset.sourceLabel ?? "Source"}
+                    </a>
+                  </div>
+                ) : null}
+
+                {cropMode && asset ? (
+                  <CropInspector
+                    asset={asset}
+                    croppedAreaPixels={croppedAreaPixels}
+                    aspect={aspect}
+                    frameColors={cropFrameColors}
+                    onOutputDimensionChange={handleOutputDimensionChange}
+                  />
+                ) : asset ? (
+                  <ImageMetadata asset={asset} />
+                ) : null}
+              </div>
+              {cropMode ? (
+                <div className="flex shrink-0 justify-end gap-2 p-3">
+                  <Button variant="ghost" size="sm" onClick={handleCancelCrop}>
+                    Cancel
+                  </Button>
+                  <Button variant="default" size="sm" onClick={handleApplyCrop}>
+                    <CheckIcon className="size-3.5" />
+                    Apply
+                  </Button>
+                </div>
+              ) : asset ? (
+                <div className="flex shrink-0 items-center justify-between gap-3 p-3">
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <a
+                            href={asset.url}
+                            download={asset.title || "image-asset"}
+                            className={buttonVariants({
+                              variant: "ghost",
+                              size: "icon-sm",
+                            })}
+                          >
+                            <DownloadIcon />
+                            <span className="sr-only">Download</span>
+                          </a>
+                        }
+                      />
+                      <TooltipContent>Download</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <a
+                            href={asset.sourceUrl ?? asset.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={buttonVariants({
+                              variant: "ghost",
+                              size: "icon-sm",
+                            })}
+                          >
+                            <ExternalLinkIcon />
+                            <span className="sr-only">Open</span>
+                          </a>
+                        }
+                      />
+                      <TooltipContent>Open</TooltipContent>
+                    </Tooltip>
+                  </div>
+                  {croppedPreviewUrl ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={handleResetCrop}
+                    >
+                      <RotateCcwIcon className="size-3.5" />
+                      Reset crop
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={handleStartCrop}
+                    >
+                      <CropIcon className="size-3.5" />
+                      Crop
+                    </Button>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </aside>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

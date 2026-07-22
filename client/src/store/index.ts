@@ -5,38 +5,46 @@ import {
   createFilterBarSlice,
   type FilterBarSlice,
 } from "@/store/slices/filter-bar-slice";
+import {
+  createPersistedBoardSlice,
+  createTransientBoardSlice,
+  type PersistedBoardSlice,
+  type TransientBoardSlice,
+} from "@/store/slices/board-slice";
+import {
+  createSelectionSlice,
+  type SelectionSlice,
+} from "@/store/slices/selection-slice";
 
-export type AppStore = AssetSlice & FilterBarSlice;
-type PersistedAppStore = Pick<
-  FilterBarSlice,
-  "filterBarOpen" | "selectedColors" | "filterType"
->;
+export type PersistedStore = FilterBarSlice & PersistedBoardSlice;
+export type TransientStore = AssetSlice & SelectionSlice & TransientBoardSlice;
 
-export const useStore = create<AppStore>()(
-  persist<AppStore, [], [], PersistedAppStore>(
+export const useTransientStore = create<TransientStore>()((...a) => ({
+  ...createAssetSlice(...a),
+  ...createSelectionSlice(...a),
+  ...createTransientBoardSlice(...a),
+}));
+
+export const usePersistedStore = create<PersistedStore>()(
+  persist<PersistedStore>(
     (...a) => ({
-      ...createAssetSlice(...a),
       ...createFilterBarSlice(...a),
+      ...createPersistedBoardSlice(...a),
     }),
     {
       name: "app-store",
       storage: {
         getItem: (name) => {
-          const raw = sessionStorage.getItem(name);
+          const raw = localStorage.getItem(name);
           return raw ? JSON.parse(raw) : null;
         },
         setItem: (name, value) => {
-          sessionStorage.setItem(name, JSON.stringify(value));
+          localStorage.setItem(name, JSON.stringify(value));
         },
         removeItem: (name) => {
-          sessionStorage.removeItem(name);
+          localStorage.removeItem(name);
         },
       },
-      partialize: (state) => ({
-        filterBarOpen: state.filterBarOpen,
-        selectedColors: state.selectedColors,
-        filterType: state.filterType,
-      }),
     },
   ),
 );

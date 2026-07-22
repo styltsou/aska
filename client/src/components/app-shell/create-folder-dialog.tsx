@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { FolderPlusIcon, LoaderCircleIcon } from "lucide-react";
 import { useCreateFolder } from "@/api/collection";
+import type { BoardInsertionPlacement } from "@/api/collection";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
@@ -13,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { LoaderCircleIcon } from "lucide-react";
 import { slugFromTitle } from "@/lib/slug";
 
 export function CreateFolderDialog({
@@ -21,12 +23,14 @@ export function CreateFolderDialog({
   children,
   open: controlledOpen,
   onOpenChange,
+  placement,
 }: {
   workspaceSlug: string;
   collectionPath: string;
   children?: React.ReactElement;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  placement?: BoardInsertionPlacement;
 }) {
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
@@ -65,6 +69,7 @@ export function CreateFolderDialog({
       await createFolder.mutateAsync({
         name,
         parentFolderPath,
+        placement,
       });
       handleOpenChange(false);
     } catch (err) {
@@ -76,37 +81,41 @@ export function CreateFolderDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {children ? <DialogTrigger render={children} /> : null}
       <DialogContent>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>New folder</DialogTitle>
-            <DialogDescription>
-              Create a folder to organize images and notes.
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <Input
-              aria-label="Folder name"
-              autoComplete="off"
-              autoFocus
-              disabled={isSubmitting}
-              placeholder="Folder name"
-              required
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-            {error ? (
-              <p className="mt-2 text-sm text-destructive">{error}</p>
-            ) : null}
-          </div>
+        <form className="contents" onSubmit={handleSubmit}>
+          <DialogBody className="flex flex-col gap-4">
+            <DialogHeader>
+              <DialogTitle>New folder</DialogTitle>
+              <DialogDescription>
+                Create a folder to organize images and notes.
+              </DialogDescription>
+            </DialogHeader>
+            <div>
+              <Input
+                aria-label="Folder name"
+                autoComplete="off"
+                autoFocus
+                disabled={isSubmitting}
+                placeholder="Folder name"
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+              {error ? (
+                <p className="mt-2 text-sm text-destructive">{error}</p>
+              ) : null}
+            </div>
+          </DialogBody>
           <DialogFooter>
             <DialogClose render={<Button variant="outline">Cancel</Button>} />
             <Button disabled={isSubmitting} type="submit">
               {isSubmitting ? (
-                <LoaderCircleIcon className="animate-spin" />
+                <>
+                  <LoaderCircleIcon className="size-4 animate-spin" />
+                  Creating
+                </>
               ) : (
-                <FolderPlusIcon />
+                "Create"
               )}
-              <span>{isSubmitting ? "Creating" : "Create"}</span>
             </Button>
           </DialogFooter>
         </form>

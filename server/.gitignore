@@ -1,2 +1,7 @@
-# deps
 node_modules/
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
+!.env.production.example

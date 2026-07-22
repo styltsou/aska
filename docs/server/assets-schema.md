@@ -1,6 +1,6 @@
 # Assets Schema
 
-Collections render an ordered tree of heterogeneous nodes. Assets are archived
+Collections render a spatial tree of heterogeneous nodes. Assets are archived
 content. Folders are organizational containers.
 
 For the design rationale and tradeoffs, see
@@ -12,7 +12,7 @@ For the design rationale and tradeoffs, see
 - `image_assets`: image-specific fields keyed by `asset_id`.
 - `note_assets`: markdown note fields keyed by `asset_id`.
 - `folders`: folder identity, display name, and slug.
-- `collection_nodes`: collection placement, ordering, nesting, and path cache.
+- `collection_nodes`: collection placement, nesting, and path cache.
 
 `image_assets.variants` is JSONB render metadata for image renditions:
 
@@ -42,6 +42,12 @@ value, indexed OKLab coordinates, `coverage`, `salience`, `is_accent`, and
 `image_assets.dominant_colors` display cache, for color search and moodboard
 similarity.
 
+The implemented search endpoint, local scope rules, ranking algorithm,
+thresholds, and client behavior are documented in
+[Color Image Search](../color-image-search.md). The original
+[Color-Based Image Search Plan](../../COLOR_IMAGE_SEARCH_PLAN.md) records the
+delivery decisions and future evaluation work.
+
 See [Image Upload and Processing Pipeline](./image-upload-implementation-plan.md)
 for lifecycle and extraction details.
 
@@ -68,7 +74,7 @@ Assets are placed into a collection through a `collection_nodes` row with
 `node_type = "asset"` and `asset_id` set. Asset nodes can point to any asset
 subtype, currently images and notes.
 
-This keeps the collection view as one ordered stream of image, note, and folder
+This keeps the collection view as one spatial stream of image, note, and folder
 nodes instead of forcing folders to the top.
 
 Child nodes use `parent_folder_id`, not `parent_node_id`, because only folders
@@ -108,14 +114,23 @@ collection-wide scan, while the `path_folder_ids` GIN index supports the
 descendant-path filter. Do not count folder nodes or issue a recursive query per
 folder card.
 
-## Ordering
+## Canvas Positions
 
-`collection_nodes.sort_key` stores an opaque sortable rank for mixed folder and
-asset ordering. Treat it as a LexoRank-style value, not a numeric index. The
-default board order should sort by `sort_key`.
+`collection_nodes.position_x` and `position_y` hold the authored canvas
+coordinate for every placed folder and asset. They are signed PostgreSQL
+integers stored as a nullable pair: either both coordinates are set or both are
+null. There is deliberately no nonnegative constraint because the canvas
+supports placement in every direction.
 
-`sort_key` is unique among siblings, separately for root-level nodes and folder
-children.
+The client rounds completed drags to whole pixels and persists them through the
+node position endpoint. Existing rows without coordinates receive a
+deterministic client fallback layout based on the API's stable `created_at, id`
+order. `uploads` stores the same optional coordinate pair so a position reserved
+before asynchronous image processing survives finalization.
+
+Viewport position and zoom are client session state, not collection data. See
+[Collection Canvas Architecture](../collection-canvas.md) for the client/server
+ownership boundary.
 
 ## Tenant Integrity
 

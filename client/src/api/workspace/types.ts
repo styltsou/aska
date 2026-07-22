@@ -15,4 +15,7 @@ export type WorkspaceInfo = {
 export type WorkspaceData = {
   workspace: WorkspaceInfo;
   collections: LightCollection[];
+  inbox: {
+    unreadCount: number;
+  };
 };

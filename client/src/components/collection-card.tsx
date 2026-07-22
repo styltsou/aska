@@ -14,6 +14,7 @@ import {
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogBody,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -57,7 +58,7 @@ export function CollectionCard({
               onMouseEnter={() => setHovered(true)}
               onMouseLeave={() => setHovered(false)}
             >
-              <div className="relative flex aspect-3/2 items-center justify-center overflow-hidden bg-sidebar/50">
+              <div className="relative flex aspect-3/2 items-center justify-center overflow-hidden bg-sidebar">
                 {collection.previews.length === 0 ? (
                   <div className="grid grid-cols-2 gap-1 opacity-20">
                     {Array.from({ length: 4 }).map((_, i) => (
@@ -211,7 +212,7 @@ export function CollectionCard({
                   })
                 )}
               </div>
-              <div className="flex items-center gap-2 bg-sidebar/60 px-3 py-2.5 backdrop-blur-sm">
+              <div className="flex items-center gap-2 bg-sidebar px-3 py-2.5">
                 <span className="truncate text-sm font-medium">
                   {collection.name}
                 </span>
@@ -245,13 +246,16 @@ export function CollectionCard({
       </ContextMenu>
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete collection</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{collection.name}</strong>
-              ? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+          <AlertDialogBody>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete collection</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete{" "}
+                <strong>{collection.name}</strong>? This action cannot be
+                undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </AlertDialogBody>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction variant="destructive">Delete</AlertDialogAction>

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogBody,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -23,17 +25,16 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
-  useCollections,
-  useDeleteAsset,
-  useDeleteCollectionNode,
-  usePlaceAsset,
-} from "@/api/collection";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useDeleteAsset, useDeleteCollectionNode } from "@/api/collection";
 import type { Asset } from "@/types/asset";
 
 function imageActions() {
@@ -87,7 +88,6 @@ export function AssetContextMenu({
   };
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const isFavorite = asset.isFavorite ?? false;
   const removeNode = useDeleteCollectionNode(
@@ -98,10 +98,6 @@ export function AssetContextMenu({
   const deleteAsset = useDeleteAsset(
     inboxContext?.workspaceSlug ?? deleteContext?.workspaceSlug ?? "",
   );
-  const canMoveFromInbox =
-    inboxContext !== undefined && asset.type !== "folder";
-  const canRemoveFromCollection =
-    deleteContext !== undefined && asset.type !== "folder";
 
   function handleDelete() {
     setDeleteDialogOpen(false);
@@ -124,19 +120,6 @@ export function AssetContextMenu({
     }
   }
 
-  function handleRemoveFromCollection() {
-    if (!deleteContext) return;
-
-    setRemoveDialogOpen(false);
-    removeNode.mutate(asset.id, {
-      onError: (err) => {
-        toast.error(
-          err instanceof Error ? err.message : "Unable to remove asset.",
-        );
-      },
-    });
-  }
-
   return (
     <>
       <ContextMenu>
@@ -145,23 +128,9 @@ export function AssetContextMenu({
           <ContextMenuItem>
             {isFavorite ? "Remove from favorites" : "Add to favorites"}
           </ContextMenuItem>
-          <ContextMenuSub>
-            <ContextMenuSubTrigger>Move to...</ContextMenuSubTrigger>
-            <ContextMenuSubContent>
-              <ContextMenuItem disabled>Collection</ContextMenuItem>
-              <ContextMenuItem disabled>Folder</ContextMenuItem>
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-          {canMoveFromInbox ? (
-            <ContextMenuItem onClick={() => setMoveDialogOpen(true)}>
-              Move to collection
-            </ContextMenuItem>
-          ) : null}
-          {canRemoveFromCollection ? (
-            <ContextMenuItem onClick={() => setRemoveDialogOpen(true)}>
-              Remove from collection
-            </ContextMenuItem>
-          ) : null}
+          <ContextMenuItem onClick={() => setMoveDialogOpen(true)}>
+            Move to...
+          </ContextMenuItem>
           <ContextMenuSeparator />
           {typeActions[asset.type]()}
           <ContextMenuSeparator />
@@ -175,16 +144,18 @@ export function AssetContextMenu({
       </ContextMenu>
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {asset.type === "folder" ? "Delete folder" : "Delete asset"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {asset.type === "folder"
-                ? "This deletes the folder. Assets inside it will move back to Inbox."
-                : "Are you sure you want to delete this asset? This action cannot be undone."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+          <AlertDialogBody>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {asset.type === "folder" ? "Delete folder" : "Delete asset"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {asset.type === "folder"
+                  ? "This deletes the folder. Assets inside it will move back to Inbox."
+                  : "Are you sure you want to delete this asset? This action cannot be undone."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </AlertDialogBody>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
@@ -199,104 +170,196 @@ export function AssetContextMenu({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove from collection</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the asset from this collection and sends it back to
-              Inbox.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(event) => {
-                event.preventDefault();
-                handleRemoveFromCollection();
-              }}
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      {inboxContext ? (
-        <MoveToCollectionDialog
-          assetId={asset.id}
-          workspaceSlug={inboxContext.workspaceSlug}
-          open={moveDialogOpen}
-          onOpenChange={setMoveDialogOpen}
-        />
-      ) : null}
+      <MoveToDialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen} />
     </>
   );
 }
 
-function MoveToCollectionDialog({
-  assetId,
-  workspaceSlug,
+type MockPreview = { type: "image" | "note"; color?: string; snippet?: string };
+
+type MockFolder = {
+  id: string;
+  name: string;
+  slug: string;
+  count: number;
+  previews: MockPreview[];
+};
+
+const MOCK_COLLECTIONS = [
+  { id: 1, name: "Design System", slug: "design-system" },
+  { id: 2, name: "Marketing", slug: "marketing" },
+  { id: 3, name: "Personal", slug: "personal" },
+];
+
+const MOCK_FOLDERS: Record<number, MockFolder[]> = {
+  1: [
+    {
+      id: "f1",
+      name: "Components",
+      slug: "components",
+      count: 12,
+      previews: [
+        { type: "note", color: "#fef3c7", snippet: "Button states" },
+        { type: "note", color: "#dbeafe", snippet: "Card layout" },
+        { type: "image" },
+      ],
+    },
+    {
+      id: "f2",
+      name: "Icons",
+      slug: "icons",
+      count: 8,
+      previews: [{ type: "image" }, { type: "image" }],
+    },
+    {
+      id: "f3",
+      name: "Screenshots",
+      slug: "screenshots",
+      count: 24,
+      previews: [
+        { type: "image" },
+        { type: "image" },
+        { type: "image" },
+        { type: "image" },
+      ],
+    },
+  ],
+  2: [
+    {
+      id: "f4",
+      name: "Social",
+      slug: "social",
+      count: 6,
+      previews: [{ type: "note", color: "#fce7f3", snippet: "Q2 campaign" }],
+    },
+  ],
+  3: [],
+};
+
+function FolderPreviewRow({ previews }: { previews: MockPreview[] }) {
+  const visible = previews.slice(0, 3);
+  const remaining = Math.max(0, previews.length - 3);
+
+  return (
+    <div className="flex gap-0.5">
+      {visible.map((preview, i) =>
+        preview.type === "note" ? (
+          <div
+            key={i}
+            className="size-7 overflow-hidden rounded-[3px] border"
+            style={{ backgroundColor: preview.color ?? "#f0f0f0" }}
+          >
+            {preview.snippet && (
+              <span className="line-clamp-2 block px-1 pt-1 text-[6px] leading-[1.1] text-[#666] opacity-60">
+                {preview.snippet}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div
+            key={i}
+            className="size-7 rounded-[3px] bg-gradient-to-br from-sidebar-foreground/8 to-sidebar-foreground/3 ring-1 ring-sidebar-foreground/5 ring-inset"
+          />
+        ),
+      )}
+      {remaining > 0 && (
+        <div className="flex size-7 items-center justify-center rounded-[3px] bg-sidebar-foreground/5 text-[10px] font-medium text-sidebar-foreground/40">
+          +{remaining}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MoveToDialog({
   open,
   onOpenChange,
 }: {
-  assetId: string;
-  workspaceSlug: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data, isLoading } = useCollections(workspaceSlug);
-  const placeAsset = usePlaceAsset(workspaceSlug);
-  const collections = data?.collections ?? [];
+  const [selectedCollection, setSelectedCollection] = useState(
+    MOCK_COLLECTIONS[0]!.id,
+  );
 
-  function handleMove(collectionSlug: string) {
-    placeAsset.mutate(
-      { assetId, collectionSlug },
-      {
-        onSuccess: () => {
-          onOpenChange(false);
-        },
-        onError: (err) => {
-          toast.error(
-            err instanceof Error ? err.message : "Unable to move asset.",
-          );
-        },
-      },
+  const folders = MOCK_FOLDERS[selectedCollection] ?? [];
+
+  function handleMoveToRoot() {
+    const collection = MOCK_COLLECTIONS.find(
+      (c) => c.id === selectedCollection,
     );
+    toast.success(`Moved to ${collection!.name} root`);
+    onOpenChange(false);
+  }
+
+  function handleMoveToFolder(folderName: string) {
+    const collection = MOCK_COLLECTIONS.find(
+      (c) => c.id === selectedCollection,
+    );
+    toast.success(`Moved to ${collection!.name} / ${folderName}`);
+    onOpenChange(false);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Move to collection</DialogTitle>
-          <DialogDescription>
-            Choose where this asset should live.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="max-h-80 space-y-1 overflow-y-auto">
-          {isLoading ? (
-            <p className="px-1 py-2 text-sm text-muted-foreground">
-              Loading collections
-            </p>
-          ) : null}
-          {!isLoading && collections.length === 0 ? (
-            <p className="px-1 py-2 text-sm text-muted-foreground">
-              No collections yet
-            </p>
-          ) : null}
-          {collections.map((collection) => (
-            <Button
-              key={collection.id}
-              className="w-full justify-start"
-              disabled={placeAsset.isPending}
+      <DialogContent className="max-w-md">
+        <DialogBody className="flex flex-col gap-4">
+          <DialogHeader>
+            <DialogTitle>Move to...</DialogTitle>
+            <DialogDescription>
+              Pick a collection and destination folder.
+            </DialogDescription>
+          </DialogHeader>
+          <Select
+            value={String(selectedCollection)}
+            onValueChange={(v) => setSelectedCollection(Number(v))}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MOCK_COLLECTIONS.map((collection) => (
+                <SelectItem key={collection.id} value={String(collection.id)}>
+                  {collection.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="max-h-72 space-y-0.5 overflow-y-auto">
+            <button
               type="button"
-              variant="ghost"
-              onClick={() => handleMove(collection.slug)}
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-sidebar-foreground/5"
+              onClick={handleMoveToRoot}
             >
-              {collection.name}
-            </Button>
-          ))}
-        </div>
+              <div className="flex size-7 items-center justify-center rounded-[3px] bg-sidebar-foreground/5 text-xs text-sidebar-foreground/40">
+                /
+              </div>
+              <span className="text-muted-foreground">Root</span>
+            </button>
+            {folders.length === 0 ? (
+              <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                No folders in this collection
+              </p>
+            ) : (
+              folders.map((folder) => (
+                <button
+                  key={folder.id}
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-sidebar-foreground/5"
+                  onClick={() => handleMoveToFolder(folder.name)}
+                >
+                  <FolderPreviewRow previews={folder.previews} />
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="truncate font-medium">{folder.name}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {folder.count}
+                    </span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

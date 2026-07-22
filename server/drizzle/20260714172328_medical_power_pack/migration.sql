@@ -1,0 +1,2 @@
+ALTER TABLE "collection_nodes" DROP CONSTRAINT "collection_nodes_position_pair_chk", ADD CONSTRAINT "collection_nodes_position_pair_chk" CHECK (("position_x" is null and "position_y" is null) or ("position_x" is not null and "position_y" is not null));--> statement-breakpoint
+ALTER TABLE "uploads" DROP CONSTRAINT "uploads_position_pair_chk", ADD CONSTRAINT "uploads_position_pair_chk" CHECK (("position_x" is null and "position_y" is null) or ("position_x" is not null and "position_y" is not null));

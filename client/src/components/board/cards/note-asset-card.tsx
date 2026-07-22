@@ -3,6 +3,7 @@ import ReactMarkdown, { type Components } from "react-markdown";
 
 import { CodeBlock } from "@/components/ui/code-block";
 import { cn } from "@/lib/utils";
+import { hasSelectionModifier } from "@/lib/selection";
 import type { NoteAsset } from "@/types/asset";
 
 const MD_COMPONENTS: Components = {
@@ -191,7 +192,9 @@ export function NoteAssetCard({
       )}
       role={effectiveOnOpen ? "button" : undefined}
       tabIndex={effectiveOnOpen ? 0 : undefined}
-      onClick={effectiveOnOpen}
+      onClick={(event) => {
+        if (!hasSelectionModifier(event)) effectiveOnOpen?.();
+      }}
       onKeyDown={(event) => {
         if (!effectiveOnOpen || (event.key !== "Enter" && event.key !== " ")) {
           return;
@@ -205,10 +208,10 @@ export function NoteAssetCard({
         <NoteMarkdown content={asset.content} className="min-w-0" />
       </div>
       {hasOverflow ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-b from-sidebar/0 via-sidebar/85 to-sidebar transition-opacity duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-90" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-b from-sidebar/0 via-sidebar/85 to-sidebar transition-opacity duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-60" />
       ) : null}
       {hasOverflow ? (
-        <div className="absolute inset-x-0 bottom-0 flex translate-y-2 justify-center px-2.5 pb-2.5 opacity-0 transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-0 group-hover:opacity-100">
+        <div className="invisible absolute inset-x-0 bottom-0 flex translate-y-2 justify-center px-2.5 pb-2.5 transition-transform duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:visible group-hover:translate-y-0">
           <div className="inline-flex items-center gap-1.5 rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm">
             <span>Expand</span>
           </div>

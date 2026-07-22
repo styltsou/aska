@@ -6,16 +6,38 @@ on:
     branches: [main]
 
 jobs:
+  changes:
+    name: Detect deployable changes
+    runs-on: ubuntu-latest
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+      pipeline: ${{ steps.filter.outputs.pipeline }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            server:
+              - 'server/**'
+            pipeline:
+              - 'workers/image-pipeline/**'
+
   quality:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aska
+      BETTER_AUTH_SECRET: 01234567890123456789012345678901
+      BETTER_AUTH_URL: http://localhost:3000
+      RESEND_API_KEY: re_test
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: Client
             directory: client
-            command: bun run lint && bun run typecheck && bun run format && bun run test
+            command: bun run lint && bun run typecheck && bun run format && bun run test && bun run build
           - name: Server
             directory: server
             command: bun run lint && bun run typecheck && bun run format && bun run test
@@ -30,3 +52,51 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: ${{ matrix.command }}
+      - if: matrix.name == 'Server'
+        run: bun run db:generate && git diff --exit-code
+
+  deploy-server:
+    name: Deploy server
+    needs: [changes, quality]
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.server == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: aska-production-workers
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run deploy
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+  deploy-image-pipeline:
+    name: Deploy image pipeline
+    needs: [changes, quality]
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.pipeline == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: aska-production-workers
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: workers/image-pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run deploy
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -1,8 +1,9 @@
 # Development Workflow
 
-Each package uses Bun for dependency installation and scripts. CI runs the same
+Each package uses Bun for dependency installation and scripts. CI runs the
 quality commands for the client, server, and image pipeline on pull requests and
-pushes to `main`.
+pushes to `main`. It also verifies the client production build and checks that
+the server schema does not generate an uncommitted migration.
 
 ## Pre-commit Formatting
 
@@ -14,15 +15,22 @@ so the same pass also normalizes Tailwind class order.
 
 ## Tests
 
-Every package exposes `bun run test`. The server contains the initial Vitest
-smoke test in `src/lib/note-metrics.test.ts`; add future tests next to the code
-they cover. The client and image pipeline use Vitest with `--passWithNoTests`
-until they have test files.
+Every package exposes `bun run test`. Server unit tests live beside the code
+they cover and do not require external infrastructure. Database-backed server
+tests use `bun run test:integration`; they are excluded from the normal unit
+suite and require `TEST_DATABASE_URL` to point to a disposable database.
+
+```sh
+cd server && TEST_DATABASE_URL=postgresql://... bun run test:integration
+```
+
+The client and image pipeline use Vitest with `--passWithNoTests` until they
+have test files.
 
 Run the package-local checks before pushing:
 
 ```sh
-cd client && bun run lint && bun run typecheck && bun run format && bun run test
+cd client && bun run lint && bun run typecheck && bun run format && bun run test && bun run build
 cd server && bun run lint && bun run typecheck && bun run format && bun run test
 cd workers/image-pipeline && bun run lint && bun run typecheck && bun run format && bun run test
 ```

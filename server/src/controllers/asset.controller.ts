@@ -1,5 +1,6 @@
 import {
   AssetPathParamSchema,
+  ContentTypeQuerySchema,
   CreateNoteSchema,
   PlaceAssetSchema,
   WorkspaceParamSchema,
@@ -20,15 +21,17 @@ const collectionService: ICollectionService =
 export const getInboxContents = factory.createHandlers(
   authMiddleware,
   validate.param(WorkspaceParamSchema),
+  validate.query(ContentTypeQuerySchema),
   async (c) => {
     const { workspaceSlug } = c.req.valid("param");
+    const { types } = c.req.valid("query");
     const userId = c.get("userId");
 
     const workspace = await collectionService.getWorkspaceBySlug(
       workspaceSlug,
       userId,
     );
-    const contents = await assetService.getInboxContents(workspace.id);
+    const contents = await assetService.getInboxContents(workspace.id, types);
 
     return c.json(success(contents));
   },
@@ -50,6 +53,22 @@ export const createInboxNote = factory.createHandlers(
     const note = await assetService.createInboxNote(workspace.id, userId, data);
 
     return c.json(success({ note }), 201);
+  },
+);
+
+export const markInboxSeen = factory.createHandlers(
+  authMiddleware,
+  validate.param(WorkspaceParamSchema),
+  async (c) => {
+    const { workspaceSlug } = c.req.valid("param");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const inbox = await assetService.markInboxSeen(workspace.id, userId);
+
+    return c.json(success(inbox));
   },
 );
 

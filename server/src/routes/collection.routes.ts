@@ -1,4 +1,5 @@
 import {
+  bulkDelete,
   createCollection,
   createFolder,
   createNote,
@@ -6,6 +7,9 @@ import {
   getCollectionContents,
   getCollections,
   getWorkspaceWithCollections,
+  moveCollectionNodeToFolder,
+  updateCollectionNodePosition,
+  updateCollectionNodePositions,
 } from "@/controllers/collection.controller";
 import { factory } from "@/factory";
 
@@ -26,9 +30,22 @@ const collectionRoutes = factory
     "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId",
     ...deleteCollectionNode,
   )
+  .patch(
+    "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/positions",
+    ...updateCollectionNodePositions,
+  )
+  .patch(
+    "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId/position",
+    ...updateCollectionNodePosition,
+  )
+  .patch(
+    "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId/parent",
+    ...moveCollectionNodeToFolder,
+  )
   .get(
     "/workspace/:workspaceSlug/collections/:collectionSlug/contents",
     ...getCollectionContents,
-  );
+  )
+  .post("/workspace/:workspaceSlug/bulk-delete", ...bulkDelete);
 
 export default collectionRoutes;

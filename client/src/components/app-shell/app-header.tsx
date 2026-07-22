@@ -10,12 +10,18 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { FolderPlusIcon, PlusIcon, UploadIcon } from "lucide-react";
+import {
+  FileTextIcon,
+  FolderPlusIcon,
+  PlusIcon,
+  UploadIcon,
+} from "lucide-react";
 import { CreateCollectionDialog } from "@/components/app-shell/create-collection-dialog";
-import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
+import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
 import { useWorkspace } from "@/api/workspace";
 import { useCollectionContents } from "@/api/collection";
+import { useBoardInsertionPlacement } from "@/components/canvas";
 import { titleFromSlug } from "@/lib/slug";
 
 function AppBreadcrumbs() {
@@ -75,7 +81,9 @@ function AppBreadcrumbs() {
 
           return (
             <Fragment key={segment.path}>
-              <BreadcrumbSeparator />
+              <BreadcrumbSeparator>
+                <span className="relative flex size-3.5 items-center justify-center before:absolute before:h-3 before:w-px before:[transform:rotate(20deg)] before:bg-current" />
+              </BreadcrumbSeparator>
               <BreadcrumbItem>
                 {isLast ? (
                   <BreadcrumbPage>{segment.label}</BreadcrumbPage>
@@ -115,9 +123,10 @@ export function AppHeader() {
   const isBoardView =
     collectionsSegment === "collections" && pathSegments.length > 0;
   const collectionPath = pathSegments.join("/");
+  const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 min-w-0 shrink-0 items-center gap-2 bg-sidebar pr-2 transition-[height] duration-150 ease-linear group-has-data-[state=collapsed]/sidebar-wrapper:h-12">
+    <header className="sticky top-0 z-20 flex h-14 min-w-0 shrink-0 items-center gap-2 bg-sidebar transition-[height] duration-120 ease-linear group-has-data-[state=collapsed]/sidebar-wrapper:h-12">
       <SidebarTrigger />
       <AppBreadcrumbs />
       <div className="ml-auto flex items-center gap-2">
@@ -131,18 +140,22 @@ export function AppHeader() {
         ) : null}
         {isBoardView ? (
           <>
-            <CreateFolderDialog
+            <CreateNoteDialog
               workspaceSlug={workspaceSlug}
               collectionPath={collectionPath}
+              restoreOpen
+              placement={placement}
             >
               <Button type="button" size="sm" variant="outline">
-                <FolderPlusIcon />
-                <span>New folder</span>
+                <FileTextIcon />
+                <span>New note</span>
               </Button>
-            </CreateFolderDialog>
+            </CreateNoteDialog>
             <UploadImagesDialog
               workspaceSlug={workspaceSlug}
               collectionPath={collectionPath}
+              restoreOpen
+              placement={placement}
             >
               <Button type="button" size="sm">
                 <UploadIcon />

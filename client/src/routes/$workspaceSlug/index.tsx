@@ -7,6 +7,9 @@ import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/$workspaceSlug/")({
+  head: () => ({
+    meta: [{ title: "Collections | Aska" }],
+  }),
   component: WorkspacePage,
   pendingComponent: CollectionGridSkeleton,
 });

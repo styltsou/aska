@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { LoaderCircleIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { clearAuthStateCache, getAuthState } from "@/lib/auth-flow";
@@ -23,6 +24,9 @@ export const Route = createFileRoute("/onboarding")({
       });
     }
   },
+  head: () => ({
+    meta: [{ title: "Create workspace | Aska" }],
+  }),
   component: OnboardingPage,
 });
 
@@ -67,6 +71,7 @@ function OnboardingPage() {
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center bg-background px-4 py-8">
+      <BrandLogo className="mb-8" />
       <div className="w-full max-w-md space-y-1">
         <h1 className="text-xl font-semibold">Create workspace</h1>
         <p className="text-sm text-muted-foreground">
@@ -74,21 +79,15 @@ function OnboardingPage() {
         </p>
       </div>
       <form className="mt-6 w-full max-w-md space-y-4" onSubmit={handleSubmit}>
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium" htmlFor="workspace-name">
-            Workspace name
-          </label>
-          <Input
-            id="workspace-name"
-            autoComplete="organization"
-            required
-            value={workspaceName}
-            onChange={(event) => setWorkspaceName(event.target.value)}
-          />
-        </div>
-        <div className="rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground">
-          /{slug || "workspace-slug"}
-        </div>
+        <Input
+          id="workspace-name"
+          autoComplete="organization"
+          placeholder="Workspace name"
+          autoFocus
+          required
+          value={workspaceName}
+          onChange={(event) => setWorkspaceName(event.target.value)}
+        />
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <Button className="w-full" disabled={isSubmitting} type="submit">
           {isSubmitting ? (

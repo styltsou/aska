@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useTheme } from "@/components/theme-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   AlertDialog,
+  AlertDialogBody,
   AlertDialogContent,
   AlertDialogHeader,
   AlertDialogFooter,
@@ -33,8 +33,6 @@ import {
   SparklesIcon,
   BadgeCheckIcon,
   CreditCardIcon,
-  MoonIcon,
-  SunIcon,
   LogOutIcon,
 } from "lucide-react";
 import { signOut, type AuthUser } from "@/lib/auth-client";
@@ -43,17 +41,11 @@ import { useRouter } from "@tanstack/react-router";
 
 export function NavUser({ user }: { user: AuthUser }) {
   const { isMobile } = useSidebar();
-  const { theme, setTheme } = useTheme();
   const router = useRouter();
-  const isDark = theme === "dark";
   const avatarUrl = user.image ?? undefined;
   const fallback =
     user.name?.charAt(0).toUpperCase() ?? user.email.charAt(0).toUpperCase();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  const toggleTheme = () => {
-    setTheme(isDark ? "light" : "dark");
-  };
 
   return (
     <>
@@ -80,9 +72,9 @@ export function NavUser({ user }: { user: AuthUser }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               className="min-w-56 rounded-lg"
-              side={isMobile ? "bottom" : "right"}
+              side={isMobile ? "bottom" : "top"}
               align="end"
-              sideOffset={4}
+              sideOffset={8}
               style={{ backdropFilter: "blur(4px) saturate(1.5)" }}
             >
               <DropdownMenuGroup>
@@ -116,13 +108,6 @@ export function NavUser({ user }: { user: AuthUser }) {
                   <CreditCardIcon />
                   Billing
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={toggleTheme}
-                >
-                  {isDark ? <SunIcon /> : <MoonIcon />}
-                  {isDark ? "Switch to light mode" : "Switch to dark mode"}
-                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -138,12 +123,14 @@ export function NavUser({ user }: { user: AuthUser }) {
       </SidebarMenu>
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Sign out</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to sign out?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+          <AlertDialogBody>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Sign out</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to sign out?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </AlertDialogBody>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction

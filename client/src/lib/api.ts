@@ -20,10 +20,22 @@ export async function apiGet<T>(path: string): Promise<T> {
   return request<T>(path);
 }
 
-export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
+export async function apiPost<T>(
+  path: string,
+  body?: unknown,
+  options?: Omit<RequestInit, "body" | "method">,
+): Promise<T> {
   return request<T>(path, {
+    ...options,
     method: "POST",
     body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, {
+    method: "PATCH",
+    body: JSON.stringify(body),
   });
 }
 

@@ -21,7 +21,8 @@ const loggerService = container.cradle.loggerService;
 baseApp.use(
   "*",
   cors({
-    origin: env.CORS_ORIGINS,
+    origin: (origin) =>
+      env.CORS_ORIGINS.includes(origin) ? origin : env.CORS_ORIGINS[0],
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     exposeHeaders: ["Content-Length"],

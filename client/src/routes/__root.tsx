@@ -1,5 +1,6 @@
 import {
   createRootRoute,
+  HeadContent,
   Outlet,
   useRouterState,
 } from "@tanstack/react-router";
@@ -8,6 +9,9 @@ import { AppShell } from "@/components/app-shell";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createRootRoute({
+  head: () => ({
+    meta: [{ title: "Aska" }],
+  }),
   component: RootLayout,
   pendingComponent: RootPending,
 });
@@ -23,6 +27,7 @@ function RootLayout() {
 
   return (
     <ThemeProvider>
+      <HeadContent />
       <Toaster />
       {isShelllessRoute ? (
         <Outlet />

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { env } from "@/config";
+import { BoardPositionSchema } from "@/dto/collection.dto";
 
 export const AllowedImageContentTypes = [
   "image/jpeg",
@@ -9,13 +9,16 @@ export const AllowedImageContentTypes = [
   "image/gif",
 ] as const;
 
+const DEFAULT_MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+
 export const CreateImageUploadSchema = z.object({
   fileName: z.string().min(1).max(255),
   contentType: z.enum(AllowedImageContentTypes),
-  sizeBytes: z.number().int().positive().max(env.MAX_DIRECT_UPLOAD_BYTES),
+  sizeBytes: z.number().int().positive().max(DEFAULT_MAX_UPLOAD_BYTES),
   title: z.string().min(1).max(255).optional(),
   alt: z.string().max(1000).optional(),
   parentFolderPath: z.string().optional(),
+  position: BoardPositionSchema.optional(),
 });
 
 export type CreateImageUploadInput = z.infer<typeof CreateImageUploadSchema>;
@@ -73,6 +76,7 @@ export const CreateRemoteImageSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   alt: z.string().max(1000).optional(),
   parentFolderPath: z.string().optional(),
+  position: BoardPositionSchema.optional(),
 });
 
 export type CreateRemoteImageInput = z.infer<typeof CreateRemoteImageSchema>;

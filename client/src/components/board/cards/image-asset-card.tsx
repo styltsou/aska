@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import type { Transition } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ExternalLink, LoaderCircleIcon } from "lucide-react";
+import {
+  getImageViewerLayoutId,
+  IMAGE_VIEWER_TRANSITION,
+} from "@/components/board/image-viewer-transition";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import type { ImageAsset } from "@/types/asset";
-
-const imageTransition: Transition = { duration: 0.1, ease: [0.16, 1, 0.3, 1] };
+import { hasSelectionModifier } from "@/lib/selection";
 
 export function ImageAssetCard({
   asset,
@@ -15,6 +17,7 @@ export function ImageAssetCard({
   onOpen?: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
   const hasBar = asset.title || asset.sourceLabel;
   const uploadLabel =
     asset.uploadStatus === "processing"
@@ -27,7 +30,9 @@ export function ImageAssetCard({
       tabIndex={onOpen ? 0 : undefined}
       className="group relative cursor-pointer overflow-hidden rounded-lg border border-transparent transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20"
       style={{ aspectRatio: `${asset.width} / ${asset.height}` }}
-      onClick={onOpen}
+      onClick={(event) => {
+        if (!hasSelectionModifier(event)) onOpen?.();
+      }}
       onKeyDown={(event) => {
         if (!onOpen || (event.key !== "Enter" && event.key !== " ")) {
           return;
@@ -43,9 +48,14 @@ export function ImageAssetCard({
         src={asset.url}
         blurDataURL={asset.uploadStatus ? undefined : asset.blurDataURL}
         alt={asset.alt ?? ""}
-        className="absolute inset-0 h-full w-full object-cover"
-        whileHover={{ scale: 1.05 }}
-        transition={imageTransition}
+        className="absolute inset-0 h-full w-full rounded-[6px] object-cover"
+        layoutId={
+          onOpen && !shouldReduceMotion
+            ? getImageViewerLayoutId(asset.id)
+            : undefined
+        }
+        whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
+        transition={IMAGE_VIEWER_TRANSITION}
         loading="lazy"
       />
       {asset.uploadStatus ? (

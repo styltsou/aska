@@ -1,7 +1,5 @@
-/* eslint-disable react-refresh/only-export-components */
 import * as React from "react";
 
-import { KEYBINDINGS } from "@/lib/keybindings";
 import { useEventListener } from "@/hooks/use-event-listener";
 
 type Theme = "dark" | "light" | "system";
@@ -59,25 +57,6 @@ function disableTransitionsTemporarily() {
       });
     });
   };
-}
-
-function isEditableTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false;
-  }
-
-  if (target.isContentEditable) {
-    return true;
-  }
-
-  const editableParent = target.closest(
-    "input, textarea, select, [contenteditable='true']",
-  );
-  if (editableParent) {
-    return true;
-  }
-
-  return false;
 }
 
 export function ThemeProvider({
@@ -141,38 +120,6 @@ export function ThemeProvider({
       mediaQuery.removeEventListener("change", handleChange);
     };
   }, [theme, applyTheme]);
-
-  useEventListener("keydown", (event) => {
-    if (event.repeat) {
-      return;
-    }
-
-    if (event.metaKey || event.ctrlKey || event.altKey) {
-      return;
-    }
-
-    if (isEditableTarget(event.target)) {
-      return;
-    }
-
-    if (event.key.toLowerCase() !== KEYBINDINGS.THEME_TOGGLE.key) {
-      return;
-    }
-
-    setThemeState((currentTheme) => {
-      const nextTheme =
-        currentTheme === "dark"
-          ? "light"
-          : currentTheme === "light"
-            ? "dark"
-            : getSystemTheme() === "dark"
-              ? "light"
-              : "dark";
-
-      localStorage.setItem(storageKey, nextTheme);
-      return nextTheme;
-    });
-  });
 
   useEventListener("storage", (event) => {
     if (event.storageArea !== localStorage) {

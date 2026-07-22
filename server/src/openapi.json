@@ -27,7 +27,7 @@
     },
     {
       "name": "Collections",
-      "description": "Collection CRUD, folder tree navigation, and node (folder/asset) deletion."
+      "description": "Collection CRUD, spatial canvas positions, folder navigation, and node (folder/asset) deletion."
     },
     {
       "name": "Assets",
@@ -342,6 +342,23 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated node types to include. Omit to include folders, images, and notes.",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["image", "note", "folder"]
+              },
+              "minItems": 1,
+              "maxItems": 3
+            }
           }
         ],
         "responses": {
@@ -371,8 +388,8 @@
       "delete": {
         "operationId": "deleteCollectionNode",
         "tags": ["Collections"],
-        "summary": "Delete a node (folder or asset) from a collection",
-        "description": "Deletes a node from the collection tree.\n\n- **Folder**: recursively deletes the folder, all descendant folders, and all descendant assets (including their R2 storage objects).\n- **Asset**: removes the asset node from the collection. The asset is **not** permanently deleted — it becomes an orphaned inbox asset. Use `DELETE /assets/{assetId}` for permanent deletion.",
+        "summary": "Delete a folder from a collection",
+        "description": "Recursively deletes the folder, all descendant folders, and all descendant assets (including their R2 storage objects). For deleting individual assets use `DELETE /workspace/{workspaceSlug}/assets/{assetId}`.",
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
@@ -417,6 +434,182 @@
         }
       }
     },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/nodes/positions": {
+      "patch": {
+        "operationId": "updateCollectionNodePositions",
+        "tags": ["Collections"],
+        "summary": "Update collection node canvas positions in one transaction",
+        "description": "Atomically persists the positions of a dragged group after verifying every node is still in the expected parent folder.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CollectionSlug"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNodePositionsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The node positions were updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateNodePositionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/nodes/{nodeId}/position": {
+      "patch": {
+        "operationId": "updateCollectionNodePosition",
+        "tags": ["Collections"],
+        "summary": "Update a collection node's canvas position",
+        "description": "Persists the signed integer canvas coordinate for an image, note, or folder after placement or dragging. The request includes the current parent folder ID so a delayed source-canvas position write is rejected after an asset moves.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CollectionSlug"
+          },
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "description": "Node identifier in the form `{kind}-{id}`, e.g. `folder-42` or `image-7`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(folder|image|note)-\\d+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNodePositionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The node position was updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateNodePositionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/nodes/{nodeId}/parent": {
+      "patch": {
+        "operationId": "moveCollectionNodeToFolder",
+        "tags": ["Collections"],
+        "summary": "Move a collection node into a folder",
+        "description": "Moves a persisted image, note, or folder from the current collection or folder canvas into a folder in the same collection. The operation is idempotent for a repeated drop onto the same target and resets the moved node's destination position to null. Folder moves preserve descendant placements and positions while transactionally updating cached subtree paths.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "$ref": "#/components/parameters/CollectionSlug"
+          },
+          {
+            "name": "nodeId",
+            "in": "path",
+            "required": true,
+            "description": "Persisted image, note, or folder node identifier, e.g. `image-7`, `note-42`, or `folder-3`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^(folder|image|note)-\\d+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveCollectionNodeParentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The node was moved, or was already in the requested folder.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MoveCollectionNodeParentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}/inbox": {
       "get": {
         "operationId": "getInboxContents",
@@ -426,6 +619,23 @@
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "required": false,
+            "description": "Comma-separated asset types to include. Inbox has images and notes only.",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["image", "note", "folder"]
+              },
+              "minItems": 1,
+              "maxItems": 3
+            }
           }
         ],
         "responses": {
@@ -444,6 +654,50 @@
           },
           "403": {
             "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/images/search": {
+      "post": {
+        "operationId": "searchImagesByColor",
+        "tags": ["Assets"],
+        "summary": "Search images by palette colors",
+        "description": "Finds images whose extracted palette contains every requested OKLab color. The first increment supports the Inbox and a direct collection folder board; results are ranked by perceptual distance and palette prominence.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColorSearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ranked image results that clear the adaptive relevance cutoff.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorSearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
@@ -968,6 +1222,34 @@
       }
     },
     "schemas": {
+      "BoardPosition": {
+        "type": "object",
+        "required": ["x", "y"],
+        "properties": {
+          "x": {
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "y": {
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          }
+        },
+        "description": "A signed whole-pixel coordinate in collection canvas space."
+      },
+      "NullableBoardPosition": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/BoardPosition"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "An authored canvas position, or null for a legacy node using deterministic client fallback placement."
+      },
       "ErrorResponse": {
         "type": "object",
         "required": ["error"],
@@ -1263,12 +1545,24 @@
           "parentFolderPath": {
             "type": "string",
             "description": "Slash-separated path to the parent folder (e.g. `designs/2024`). Omit or leave empty to create at the collection root."
+          },
+          "position": {
+            "$ref": "#/components/schemas/BoardPosition",
+            "description": "Optional initial position in the target canvas."
           }
         }
       },
       "CreatedFolder": {
         "type": "object",
-        "required": ["id", "name", "slug", "path", "count", "previews"],
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "path",
+          "count",
+          "previews",
+          "position"
+        ],
         "properties": {
           "id": {
             "type": "integer"
@@ -1285,13 +1579,16 @@
           },
           "count": {
             "type": "integer",
-            "description": "Number of child assets (direct children, not recursive)."
+            "description": "Number of descendant assets. Newly created folders have a count of zero."
           },
           "previews": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FolderChildPreview"
             }
+          },
+          "position": {
+            "$ref": "#/components/schemas/NullableBoardPosition"
           }
         }
       },
@@ -1328,12 +1625,24 @@
           "parentFolderPath": {
             "type": "string",
             "description": "Folder path to create the note in. Omit for collection root."
+          },
+          "position": {
+            "$ref": "#/components/schemas/BoardPosition",
+            "description": "Optional initial position in the target canvas."
           }
         }
       },
       "CollectionFolderNode": {
         "type": "object",
-        "required": ["id", "type", "name", "slug", "count", "previews"],
+        "required": [
+          "id",
+          "type",
+          "name",
+          "slug",
+          "count",
+          "previews",
+          "position"
+        ],
         "properties": {
           "id": {
             "type": "string",
@@ -1351,13 +1660,16 @@
           },
           "count": {
             "type": "integer",
-            "description": "Number of direct child assets."
+            "description": "Number of descendant assets, including assets in nested folders."
           },
           "previews": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/FolderChildPreview"
             }
+          },
+          "position": {
+            "$ref": "#/components/schemas/NullableBoardPosition"
           }
         }
       },
@@ -1370,7 +1682,8 @@
           "width",
           "height",
           "isFavorite",
-          "createdAt"
+          "createdAt",
+          "position"
         ],
         "properties": {
           "id": {
@@ -1445,6 +1758,9 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "position": {
+            "$ref": "#/components/schemas/NullableBoardPosition"
           }
         }
       },
@@ -1456,7 +1772,8 @@
           "content",
           "isFavorite",
           "wordCount",
-          "readingTimeMinutes"
+          "readingTimeMinutes",
+          "position"
         ],
         "properties": {
           "id": {
@@ -1484,6 +1801,9 @@
           "readingTimeMinutes": {
             "type": "number",
             "description": "Estimated reading time in minutes."
+          },
+          "position": {
+            "$ref": "#/components/schemas/NullableBoardPosition"
           }
         }
       },
@@ -1642,6 +1962,174 @@
           }
         }
       },
+      "UpdateNodePositionRequest": {
+        "type": "object",
+        "required": ["position", "expectedParentFolderNodeId"],
+        "properties": {
+          "position": {
+            "$ref": "#/components/schemas/BoardPosition"
+          },
+          "expectedParentFolderNodeId": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^folder-\\d+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Parent folder expected when the drag started, or null for the collection root."
+          }
+        }
+      },
+      "UpdateNodePositionResult": {
+        "type": "object",
+        "required": ["nodeId", "position"],
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "The updated node identifier."
+          },
+          "position": {
+            "$ref": "#/components/schemas/BoardPosition"
+          }
+        }
+      },
+      "UpdateNodePositionResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UpdateNodePositionResult"
+          }
+        }
+      },
+      "UpdateNodePositionsRequest": {
+        "type": "object",
+        "required": ["positions", "expectedParentFolderNodeId"],
+        "properties": {
+          "positions": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "required": ["nodeId", "position"],
+              "properties": {
+                "nodeId": {
+                  "type": "string",
+                  "pattern": "^(folder|image|note)-\\d+$"
+                },
+                "position": {
+                  "$ref": "#/components/schemas/BoardPosition"
+                }
+              }
+            }
+          },
+          "expectedParentFolderNodeId": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^folder-\\d+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "UpdateNodePositionsResult": {
+        "type": "object",
+        "required": ["nodeIds"],
+        "properties": {
+          "nodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "UpdateNodePositionsResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UpdateNodePositionsResult"
+          }
+        }
+      },
+      "MoveCollectionNodeParentRequest": {
+        "type": "object",
+        "required": ["targetFolderNodeId", "expectedParentFolderNodeId"],
+        "properties": {
+          "targetFolderNodeId": {
+            "type": "string",
+            "pattern": "^folder-\\d+$",
+            "description": "Folder node receiving the asset."
+          },
+          "expectedParentFolderNodeId": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^folder-\\d+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Parent folder expected when the drag started, or null for the collection root."
+          }
+        }
+      },
+      "MoveCollectionNodeParentResult": {
+        "type": "object",
+        "required": [
+          "nodeId",
+          "sourceParentFolderNodeId",
+          "sourceFolderPath",
+          "targetParentFolderNodeId",
+          "targetFolderPath",
+          "position",
+          "moved"
+        ],
+        "properties": {
+          "nodeId": {
+            "type": "string"
+          },
+          "sourceParentFolderNodeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "sourceFolderPath": {
+            "type": "string"
+          },
+          "targetParentFolderNodeId": {
+            "type": "string"
+          },
+          "targetFolderPath": {
+            "type": "string"
+          },
+          "position": {
+            "type": "null"
+          },
+          "moved": {
+            "type": "boolean",
+            "description": "False when the asset was already in the target folder."
+          }
+        }
+      },
+      "MoveCollectionNodeParentResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MoveCollectionNodeParentResult"
+          }
+        }
+      },
       "DeleteAssetResult": {
         "type": "object",
         "required": ["deletedAssetId"],
@@ -1695,6 +2183,10 @@
           "parentFolderPath": {
             "type": "string",
             "description": "Folder path to create the asset in once the upload is completed. Omit for collection root."
+          },
+          "position": {
+            "$ref": "#/components/schemas/BoardPosition",
+            "description": "Optional position reserved for the finalized image in the target canvas."
           }
         }
       },
@@ -1775,6 +2267,10 @@
           "parentFolderPath": {
             "type": "string",
             "description": "Folder path to place the imported asset in. Omit for collection root."
+          },
+          "position": {
+            "$ref": "#/components/schemas/BoardPosition",
+            "description": "Optional position reserved for the finalized image in the target canvas."
           }
         }
       },
@@ -1790,6 +2286,266 @@
                 "$ref": "#/components/schemas/ImageUploadStatus"
               }
             }
+          }
+        }
+      },
+      "ColorSearchOklabColor": {
+        "type": "object",
+        "required": ["oklabL", "oklabA", "oklabB"],
+        "additionalProperties": false,
+        "properties": {
+          "oklabL": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "oklabA": {
+            "type": "number",
+            "minimum": -0.5,
+            "maximum": 0.5
+          },
+          "oklabB": {
+            "type": "number",
+            "minimum": -0.5,
+            "maximum": 0.5
+          }
+        },
+        "description": "A color represented in the OKLab perceptual color space."
+      },
+      "ColorSearchScope": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["type"],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "inbox"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["type", "collectionSlug", "includeDescendants"],
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "collection"
+              },
+              "collectionSlug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255
+              },
+              "folderPath": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "includeDescendants": {
+                "const": false,
+                "description": "Recursive scope is reserved for a later navigator-aware increment."
+              }
+            }
+          }
+        ]
+      },
+      "ColorSearchRequest": {
+        "type": "object",
+        "required": ["colors", "scope"],
+        "additionalProperties": false,
+        "properties": {
+          "colors": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/ColorSearchOklabColor"
+            }
+          },
+          "scope": {
+            "$ref": "#/components/schemas/ColorSearchScope"
+          }
+        }
+      },
+      "ColorSearchImage": {
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "width",
+          "height",
+          "title",
+          "alt",
+          "blurDataURL",
+          "dominantColors"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Image node identifier."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Presigned preview URL."
+          },
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "title": {
+            "type": ["string", "null"]
+          },
+          "alt": {
+            "type": ["string", "null"]
+          },
+          "blurDataURL": {
+            "type": ["string", "null"]
+          },
+          "dominantColors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ColorSearchMatch": {
+        "type": "object",
+        "required": ["queryColorIndex", "paletteHex", "distance"],
+        "properties": {
+          "queryColorIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "paletteHex": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "distance": {
+            "type": "number"
+          }
+        }
+      },
+      "ColorSearchLocation": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["type", "nodeId", "position"],
+            "properties": {
+              "type": {
+                "const": "inbox"
+              },
+              "nodeId": {
+                "type": "string"
+              },
+              "position": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["type", "collectionSlug", "nodeId", "position"],
+            "properties": {
+              "type": {
+                "const": "collection"
+              },
+              "collectionSlug": {
+                "type": "string"
+              },
+              "folderPath": {
+                "type": "string"
+              },
+              "nodeId": {
+                "type": "string"
+              },
+              "position": {
+                "$ref": "#/components/schemas/NullableBoardPosition"
+              }
+            }
+          }
+        ]
+      },
+      "ColorSearchResult": {
+        "type": "object",
+        "required": ["image", "relevance", "matches", "location"],
+        "properties": {
+          "image": {
+            "$ref": "#/components/schemas/ColorSearchImage"
+          },
+          "relevance": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColorSearchMatch"
+            }
+          },
+          "location": {
+            "$ref": "#/components/schemas/ColorSearchLocation"
+          }
+        }
+      },
+      "ColorSearchPayload": {
+        "type": "object",
+        "required": ["query", "results", "meta", "algorithmVersion"],
+        "properties": {
+          "query": {
+            "type": "object",
+            "required": ["colors", "scope"],
+            "properties": {
+              "colors": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ColorSearchOklabColor"
+                }
+              },
+              "scope": {
+                "$ref": "#/components/schemas/ColorSearchScope"
+              }
+            }
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColorSearchResult"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": ["returned", "cutoff", "truncated"],
+            "properties": {
+              "returned": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 50
+              },
+              "cutoff": {
+                "type": "number"
+              },
+              "truncated": {
+                "type": "boolean"
+              }
+            }
+          },
+          "algorithmVersion": {
+            "const": "oklab-color-search-v1"
+          }
+        }
+      },
+      "ColorSearchResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ColorSearchPayload"
           }
         }
       },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
@@ -6,6 +6,8 @@ import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog"
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { readClipboardAssetPayload } from "@/lib/clipboard";
 import { useBoardAssetActions } from "./use-board-asset-actions";
+import { useTransientStore } from "@/store";
+import { cn } from "@/lib/utils";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -19,17 +21,30 @@ export function BoardContextMenu({
   workspaceSlug,
   collectionPath,
   target = "collection",
+  boardKey,
   children,
 }: {
   workspaceSlug: string;
   collectionPath: string;
   target?: "collection" | "inbox";
+  boardKey?: string;
   children: React.ReactNode;
 }) {
+  const position = useTransientStore((state) =>
+    boardKey ? state.insertionPositions[boardKey] : undefined,
+  );
+  const visibleBounds = useTransientStore((state) =>
+    boardKey ? state.boardVisibleBounds[boardKey] : undefined,
+  );
+  const placement = useMemo(
+    () => (position || visibleBounds ? { position, visibleBounds } : undefined),
+    [position, visibleBounds],
+  );
   const { addClipboardAsset, isPending } = useBoardAssetActions({
     workspaceSlug,
     collectionPath,
     target,
+    placement,
   });
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
@@ -49,22 +64,27 @@ export function BoardContextMenu({
   return (
     <>
       <ContextMenu disabled={hasActiveModalLayer}>
-        <ContextMenuTrigger className="block min-h-[calc(100vh-5rem)] w-full">
+        <ContextMenuTrigger
+          className={cn(
+            "block w-full",
+            target === "collection"
+              ? "h-full min-h-0"
+              : "min-h-[calc(100svh-5rem)] md:min-h-[calc(100svh-5.5rem)]",
+          )}
+        >
           {children}
         </ContextMenuTrigger>
         <ContextMenuContent>
-          {target === "collection" ? (
-            <ContextMenuItem onClick={() => setFolderDialogOpen(true)}>
-              New folder
-            </ContextMenuItem>
-          ) : null}
+          <ContextMenuItem onClick={() => setUploadDialogOpen(true)}>
+            Upload images
+          </ContextMenuItem>
           <ContextMenuItem onClick={() => setNoteDialogOpen(true)}>
             New note
           </ContextMenuItem>
           {target === "collection" ? (
             <>
-              <ContextMenuItem onClick={() => setUploadDialogOpen(true)}>
-                Upload images
+              <ContextMenuItem onClick={() => setFolderDialogOpen(true)}>
+                New folder
               </ContextMenuItem>
               <ContextMenuSeparator />
             </>
@@ -85,6 +105,7 @@ export function BoardContextMenu({
         collectionPath={collectionPath}
         open={folderDialogOpen}
         onOpenChange={setFolderDialogOpen}
+        placement={placement}
       />
       <CreateNoteDialog
         workspaceSlug={workspaceSlug}
@@ -92,6 +113,7 @@ export function BoardContextMenu({
         target={target}
         open={noteDialogOpen}
         onOpenChange={setNoteDialogOpen}
+        placement={placement}
       />
       {target === "collection" ? (
         <UploadImagesDialog
@@ -99,6 +121,7 @@ export function BoardContextMenu({
           collectionPath={collectionPath}
           open={uploadDialogOpen}
           onOpenChange={setUploadDialogOpen}
+          placement={placement}
         />
       ) : null}
     </>

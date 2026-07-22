@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { HighlighterIcon, PackagePlusIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -16,12 +22,14 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { markdownFromSelection } from "@/lib/markdown";
 import { cn } from "@/lib/utils";
 import type { NoteAsset } from "@/types/asset";
 
 const DRAWER_MIN_WIDTH = 672;
 const DRAWER_MAX_WIDTH = 1344;
+const DEFAULT_DRAWER_WIDTH = 800;
 
 function getStoredWidth(): number {
   try {
@@ -33,7 +41,7 @@ function getStoredWidth(): number {
       }
     }
   } catch {}
-  return DRAWER_MIN_WIDTH;
+  return DEFAULT_DRAWER_WIDTH;
 }
 
 export function NoteDetailDrawer({
@@ -55,6 +63,8 @@ export function NoteDetailDrawer({
   const isResizing = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
+  const deferredContent = useDeferredValue(note?.content);
+  const isContentReady = note === undefined || deferredContent === note.content;
 
   widthRef.current = width;
 
@@ -139,7 +149,7 @@ export function NoteDetailDrawer({
             viewportRef={noteContentRef}
             className="min-h-0 flex-1 px-5 py-4 text-sm"
           >
-            {noteExtractionTarget ? (
+            {noteExtractionTarget && isContentReady ? (
               <NoteSelectionToolbar
                 containerRef={noteContentRef}
                 active={note !== undefined}
@@ -149,11 +159,33 @@ export function NoteDetailDrawer({
                 onExtract={onClose}
               />
             ) : null}
-            {note?.content ? <NoteMarkdown content={note.content} /> : null}
+            {!isContentReady ? <NoteDrawerContentSkeleton /> : null}
+            {isContentReady && deferredContent ? (
+              <NoteMarkdown content={deferredContent} />
+            ) : null}
           </ScrollArea>
         </div>
       </DrawerContent>
     </Drawer>
+  );
+}
+
+function NoteDrawerContentSkeleton() {
+  return (
+    <div className="space-y-4 py-0.5" role="status">
+      <span className="sr-only">Loading note</span>
+      <Skeleton className="h-5 w-2/5" />
+      <div className="space-y-2">
+        <Skeleton className="h-3.5 w-full" />
+        <Skeleton className="h-3.5 w-11/12" />
+        <Skeleton className="h-3.5 w-4/5" />
+      </div>
+      <Skeleton className="h-28 w-full" />
+      <div className="space-y-2">
+        <Skeleton className="h-3.5 w-full" />
+        <Skeleton className="h-3.5 w-3/4" />
+      </div>
+    </div>
   );
 }
 

@@ -6,7 +6,7 @@ folder, and asset model.
 ## Goals
 
 - Keep archived content separate from board organization.
-- Return a collection as one ordered stream of images, notes, and folders.
+- Return a collection as one spatial stream of images, notes, and folders.
 - Support nested folders.
 - Support slug-based reads and ID-based mutations.
 - Keep common reads simple and fast.
@@ -93,7 +93,7 @@ from the name. IDs remain the stable identity.
 ## Collection Nodes Model Placement
 
 `collection_nodes` exists because collection membership is not flat membership.
-It is placement in an ordered tree.
+It is placement in a spatial tree.
 
 A node stores:
 
@@ -103,16 +103,27 @@ parent_folder_id
 node_type
 asset_id
 folder_id
-sort_key
+position_x
+position_y
 path_folder_ids
 path_folder_slugs
 path_folder_names
 depth
 ```
 
-This lets one query return mixed image, note, and folder nodes in board order.
+This lets one query return mixed image, note, and folder nodes with authored
+canvas coordinates. Positions belong to placements rather than assets or
+folder identities because the same archived content and container identity are
+separate from how a moodboard is composed.
+
+Coordinates are signed integers and stored as a nullable pair. A database
+constraint requires both coordinates to be set or both to be null, but does not
+require nonnegative values. This supports free placement in every direction
+while preserving legacy rows that still need deterministic client fallback
+positions.
+
 Without this table, placement columns would need to be duplicated across assets
-and folders, and every board read would need a union of two different table
+and folders, and every canvas read would need a union of two different table
 shapes.
 
 ## Parent Folders, Not Parent Nodes
@@ -191,17 +202,6 @@ DELETE /api/v1/collection-nodes/:nodeId
 API responses should include both IDs and slug/name path data so the client can
 render URLs and send precise mutations.
 
-## Sort Keys Are Opaque Ranks
-
-`sort_key` is not a numeric position. It is an opaque sortable rank intended for
-a LexoRank-style algorithm. This allows insertion between siblings without
-renumbering every row.
-
-The database enforces sibling uniqueness separately for:
-
-- root nodes in a collection
-- children under the same parent folder
-
 ## Tenant Integrity Is Enforced
 
 `collection_nodes.organization_id` is intentionally redundant. It keeps common
@@ -220,7 +220,7 @@ This keeps the denormalization useful without weakening isolation.
 
 ## Folder Moves Are Explicit Transactions
 
-Moving a folder subtree across collections is a rare write. Normal board reads
+Moving a folder subtree across collections is a rare write. Normal canvas reads
 are common. The schema therefore stores `collection_id` on every node and pays
 the update cost during moves.
 
@@ -231,8 +231,7 @@ A move service should:
 3. Update `collection_id` for the subtree.
 4. Recompute `path_folder_ids`, `path_folder_slugs`, `path_folder_names`, and
    `depth`.
-5. Assign a new `sort_key` for the moved root.
-6. Commit the transaction.
+5. Commit the transaction.
 
 The parent-folder foreign key uses `ON DELETE CASCADE`, not `ON UPDATE CASCADE`,
 so subtree moves remain explicit service behavior.

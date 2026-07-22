@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { EyeIcon, EyeOffIcon, LoaderCircleIcon, LogInIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,6 +31,9 @@ export const Route = createFileRoute("/login")({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
   beforeLoad: redirectIfSignedIn,
+  head: () => ({
+    meta: [{ title: "Sign in | Aska" }],
+  }),
   component: LoginPage,
 });
 
@@ -73,25 +77,7 @@ function LoginPage() {
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center bg-background px-4 py-8">
-      <div className="mb-8 flex items-center gap-2.5">
-        <svg
-          aria-label="Aska"
-          className="size-8"
-          fill="none"
-          viewBox="0 0 32 32"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <rect height="32" rx="8" width="32" fill="currentColor" />
-          <path
-            d="M10 22V10l12 12V10"
-            stroke="hsl(var(--background))"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2.5"
-          />
-        </svg>
-        <span className="text-lg font-semibold tracking-tight">aska</span>
-      </div>
+      <BrandLogo className="mb-8" />
       <div className="w-full max-w-sm space-y-1">
         <h1 className="text-xl font-semibold">Sign in</h1>
         <p className="text-sm text-muted-foreground">

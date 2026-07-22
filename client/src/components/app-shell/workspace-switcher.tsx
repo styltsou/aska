@@ -40,8 +40,9 @@ export function WorkspaceSwitcher() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={(triggerProps) => (
-              <div
+              <button
                 {...triggerProps}
+                type="button"
                 className="flex h-10 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-sm transition-colors duration-150 outline-none hover:bg-sidebar-hover hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring aria-expanded:bg-sidebar-active aria-expanded:text-sidebar-accent-foreground"
               >
                 <Avatar size="sm" className="rounded-md after:rounded-md">
@@ -59,7 +60,7 @@ export function WorkspaceSwitcher() {
                   )}
                 </div>
                 <ChevronsUpDownIcon className="ml-auto size-4" />
-              </div>
+              </button>
             )}
           />
           <DropdownMenuContent

@@ -28,10 +28,25 @@ Use this order unless the operation has a specific reason to differ:
 - Services prefer explicit update payloads over spreading partial DTOs into
   Drizzle `.set(...)`.
 
+## Feature-Local Modules
+
+A service remains the public boundary for a business operation, but it may
+delegate cohesive implementation details to modules in the same feature
+directory. Good examples are repositories for repeated persistence reads,
+resolvers for shared placement/path semantics, pure mappers, and finalizers for
+an atomic workflow stage.
+
+Those modules do not become a generic domain layer. They exist to keep one
+service from mixing unrelated query shapes, transformations, and transactions.
+The service still coordinates the operation, chooses dependencies, and exposes
+the interface used by controllers and the container.
+
 ## Type Sources
 
 - Request input types come from Zod DTOs: `z.infer<typeof Schema>`.
 - Database row types come from Drizzle inferred models.
 - Response projection types can use `Pick`, `Omit`, or small composed aliases.
 
-Keep each service interface in the same file as its implementation.
+Keep each service interface in the same file as its implementation. Keep its
+feature-local helpers adjacent to that service rather than in a global utility
+directory.

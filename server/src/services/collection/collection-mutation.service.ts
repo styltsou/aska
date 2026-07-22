@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import slugify from "slugify";
 
 import { db } from "@/db";
@@ -15,10 +15,16 @@ import type {
   CreateFolderInput,
   CreateNoteInput,
   CreatedFolder,
+  UpdateNodePositionInput,
+  UpdateNodePositionsInput,
 } from "@/dto/collection.dto";
 import { AppError, ErrorCode } from "@/lib/errors";
+import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
-import { first } from "@/lib/query";
+import {
+  getCollectionBySlug,
+  resolveTargetInCollection,
+} from "./collection-target-resolver";
 import type { CreatedCollectionRow } from "./collection.types";
 
 export class CollectionMutationService {
@@ -82,14 +88,14 @@ export class CollectionMutationService {
     collectionSlug: string,
     data: CreateFolderInput,
   ): Promise<CreatedFolder> {
-    const collection = await getCollection(orgId, collectionSlug);
-    const parentPath = await resolveParentPath(
-      collection.id,
+    const collection = await getCollectionBySlug(orgId, collectionSlug);
+    const parentTarget = await resolveTargetInCollection(
+      collection,
       data.parentFolderPath,
     );
     const slug = await getAvailableFolderSlug(
       collection.id,
-      parentPath.slugs,
+      parentTarget.pathFolderSlugs,
       data.name,
     );
 
@@ -112,14 +118,15 @@ export class CollectionMutationService {
       await tx.insert(collectionNodes).values({
         organizationId: orgId,
         collectionId: collection.id,
-        parentFolderId: parentPath.folderId,
+        parentFolderId: parentTarget.parentFolderId,
         nodeType: "folder",
         folderId: insertedFolder.id,
-        sortKey: makeSortKey(),
-        depth: parentPath.slugs.length,
-        pathFolderIds: [...parentPath.folderIds, insertedFolder.id],
-        pathFolderSlugs: [...parentPath.slugs, insertedFolder.slug],
-        pathFolderNames: [...parentPath.names, insertedFolder.name],
+        positionX: data.position?.x,
+        positionY: data.position?.y,
+        depth: parentTarget.pathFolderSlugs.length,
+        pathFolderIds: [...parentTarget.pathFolderIds, insertedFolder.id],
+        pathFolderSlugs: [...parentTarget.pathFolderSlugs, insertedFolder.slug],
+        pathFolderNames: [...parentTarget.pathFolderNames, insertedFolder.name],
       });
 
       return insertedFolder;
@@ -133,9 +140,10 @@ export class CollectionMutationService {
       id: folder.id,
       name: folder.name,
       slug: folder.slug,
-      path: [...parentPath.slugs, folder.slug].join("/"),
+      path: [...parentTarget.pathFolderSlugs, folder.slug].join("/"),
       count: 0,
       previews: [],
+      position: data.position ?? null,
     };
   }
 
@@ -145,9 +153,9 @@ export class CollectionMutationService {
     collectionSlug: string,
     data: CreateNoteInput,
   ): Promise<CollectionNoteNode> {
-    const collection = await getCollection(orgId, collectionSlug);
-    const parentPath = await resolveParentPath(
-      collection.id,
+    const collection = await getCollectionBySlug(orgId, collectionSlug);
+    const parentTarget = await resolveTargetInCollection(
+      collection,
       data.parentFolderPath,
     );
 
@@ -175,14 +183,15 @@ export class CollectionMutationService {
       await tx.insert(collectionNodes).values({
         organizationId: orgId,
         collectionId: collection.id,
-        parentFolderId: parentPath.folderId,
+        parentFolderId: parentTarget.parentFolderId,
         nodeType: "asset",
         assetId: insertedAsset.id,
-        sortKey: makeSortKey(),
-        depth: parentPath.slugs.length,
-        pathFolderIds: parentPath.folderIds,
-        pathFolderSlugs: parentPath.slugs,
-        pathFolderNames: parentPath.names,
+        positionX: data.position?.x,
+        positionY: data.position?.y,
+        depth: parentTarget.pathFolderSlugs.length,
+        pathFolderIds: parentTarget.pathFolderIds,
+        pathFolderSlugs: parentTarget.pathFolderSlugs,
+        pathFolderNames: parentTarget.pathFolderNames,
       });
 
       return insertedAsset;
@@ -204,78 +213,140 @@ export class CollectionMutationService {
       isFavorite: false,
       wordCount,
       readingTimeMinutes,
-    };
-  }
-}
-
-async function getCollection(orgId: string, collectionSlug: string) {
-  const collection = first(
-    await db
-      .select({
-        id: collectionsTable.id,
-        name: collectionsTable.name,
-        slug: collectionsTable.slug,
-      })
-      .from(collectionsTable)
-      .where(
-        and(
-          eq(collectionsTable.organizationId, orgId),
-          eq(collectionsTable.slug, collectionSlug),
-        ),
-      ),
-  );
-
-  if (!collection) {
-    throw new AppError(ErrorCode.NOT_FOUND, "Collection not found");
-  }
-
-  return collection;
-}
-
-async function resolveParentPath(
-  collectionId: number,
-  parentFolderPath?: string,
-) {
-  const slugs = parentFolderPath?.split("/").filter(Boolean) ?? [];
-  if (slugs.length === 0) {
-    return {
-      folderId: null,
-      folderIds: [] as number[],
-      slugs,
-      names: [] as string[],
+      position: data.position ?? null,
     };
   }
 
-  const parentFolder = first(
-    await db
-      .select({
-        folderId: collectionNodes.folderId,
-        pathFolderIds: collectionNodes.pathFolderIds,
-        pathFolderNames: collectionNodes.pathFolderNames,
-      })
-      .from(collectionNodes)
+  async updateNodePosition(
+    orgId: string,
+    collectionSlug: string,
+    nodeId: string,
+    data: UpdateNodePositionInput,
+  ): Promise<{
+    nodeId: string;
+    position: UpdateNodePositionInput["position"];
+  }> {
+    const collection = await getCollectionBySlug(orgId, collectionSlug);
+    const target = parseCollectionNodeId(nodeId);
+    const expectedParent = data.expectedParentFolderNodeId
+      ? parseCollectionNodeId(data.expectedParentFolderNodeId)
+      : null;
+    if (expectedParent && expectedParent.nodeType !== "folder") {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        "Expected parent must be a folder node",
+      );
+    }
+    const targetCondition =
+      target.nodeType === "folder"
+        ? and(
+            eq(collectionNodes.nodeType, "folder"),
+            eq(collectionNodes.folderId, target.entityId),
+          )
+        : and(
+            eq(collectionNodes.nodeType, "asset"),
+            eq(collectionNodes.assetId, target.entityId),
+          );
+    const [updated] = await db
+      .update(collectionNodes)
+      .set({ positionX: data.position.x, positionY: data.position.y })
       .where(
         and(
-          eq(collectionNodes.collectionId, collectionId),
-          eq(collectionNodes.pathFolderSlugs, slugs),
-          eq(collectionNodes.nodeType, "folder"),
+          eq(collectionNodes.organizationId, orgId),
+          eq(collectionNodes.collectionId, collection.id),
+          targetCondition,
+          data.expectedParentFolderNodeId === null
+            ? isNull(collectionNodes.parentFolderId)
+            : eq(collectionNodes.parentFolderId, expectedParent!.entityId),
         ),
-      ),
-  );
+      )
+      .returning({ id: collectionNodes.id });
 
-  if (!parentFolder?.folderId) {
-    throw new AppError(
-      ErrorCode.NOT_FOUND,
-      "Parent folder not found in collection",
-    );
+    if (!updated) {
+      const existing = await db
+        .select({ id: collectionNodes.id })
+        .from(collectionNodes)
+        .where(
+          and(
+            eq(collectionNodes.organizationId, orgId),
+            eq(collectionNodes.collectionId, collection.id),
+            targetCondition,
+          ),
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        throw new AppError(
+          ErrorCode.CONFLICT,
+          "Collection node moved before its position could be saved",
+        );
+      }
+      throw new AppError(ErrorCode.NOT_FOUND, "Collection node not found");
+    }
+
+    return { nodeId, position: data.position };
   }
 
-  return {
-    folderId: parentFolder.folderId,
-    folderIds: parentFolder.pathFolderIds,
-    slugs,
-    names: parentFolder.pathFolderNames,
-  };
+  async updateNodePositions(
+    orgId: string,
+    collectionSlug: string,
+    data: UpdateNodePositionsInput,
+  ): Promise<{ nodeIds: string[] }> {
+    const collection = await getCollectionBySlug(orgId, collectionSlug);
+    const expectedParent = data.expectedParentFolderNodeId
+      ? parseCollectionNodeId(data.expectedParentFolderNodeId)
+      : null;
+    if (expectedParent && expectedParent.nodeType !== "folder") {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        "Expected parent must be a folder node",
+      );
+    }
+
+    const targets = data.positions.map(({ nodeId, position }) => ({
+      nodeId,
+      position,
+      target: parseCollectionNodeId(nodeId),
+    }));
+
+    await db.transaction(async (tx) => {
+      for (const { target, position } of targets) {
+        const targetCondition =
+          target.nodeType === "folder"
+            ? and(
+                eq(collectionNodes.nodeType, "folder"),
+                eq(collectionNodes.folderId, target.entityId),
+              )
+            : and(
+                eq(collectionNodes.nodeType, "asset"),
+                eq(collectionNodes.assetId, target.entityId),
+              );
+        const [updated] = await tx
+          .update(collectionNodes)
+          .set({ positionX: position.x, positionY: position.y })
+          .where(
+            and(
+              eq(collectionNodes.organizationId, orgId),
+              eq(collectionNodes.collectionId, collection.id),
+              targetCondition,
+              data.expectedParentFolderNodeId === null
+                ? isNull(collectionNodes.parentFolderId)
+                : eq(collectionNodes.parentFolderId, expectedParent!.entityId),
+            ),
+          )
+          .returning({ id: collectionNodes.id });
+
+        if (!updated) {
+          throw new AppError(
+            ErrorCode.CONFLICT,
+            "A collection node moved before its positions could be saved",
+          );
+        }
+      }
+    });
+
+    return { nodeIds: data.positions.map(({ nodeId }) => nodeId) };
+  }
 }
 
 async function getAvailableFolderSlug(
@@ -314,8 +385,4 @@ async function getAvailableFolderSlug(
     ErrorCode.CONFLICT,
     "A folder with this name already exists",
   );
-}
-
-function makeSortKey(): string {
-  return `${Date.now().toString(36)}-${crypto.randomUUID()}`;
 }

@@ -148,6 +148,9 @@ with two complementary passes:
 Use OKLab distance as the primary search criterion. Use coverage and salience
 only as secondary ranking signals. `image_assets.dominant_colors` is a compact
 display cache sorted by salience; do not use it as the search source of truth.
+The endpoint contract, collection scopes, multi-color matching, and relevance
+cutoffs are specified in the
+[Color-Based Image Search Plan](../../COLOR_IMAGE_SEARCH_PLAN.md).
 
 ## Failure, Retry, and Observability
 

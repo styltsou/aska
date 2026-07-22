@@ -1,4 +1,14 @@
-import { and, desc, eq, inArray, isNull, notExists } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  notExists,
+} from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -6,6 +16,7 @@ import {
   collectionNodes,
   collectionsTable,
   imageAssets,
+  member,
   noteAssets,
   uploads,
   type ImageAssetVariants,
@@ -14,11 +25,14 @@ import type {
   CollectionImageNode,
   CollectionNode,
   CollectionNoteNode,
+  ContentTypeFilter,
   CreateNoteInput,
   InboxContentsResponse,
   PlaceAssetInput,
 } from "@/dto/collection.dto";
+import type { BulkDeleteResult } from "@/services/collection/collection.types";
 import { AppError, ErrorCode } from "@/lib/errors";
+import { parseAssetNodeId } from "@/lib/collection-node-id";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import { first } from "@/lib/query";
 import type { IObjectStorageService } from "@/services/object-storage.service";
@@ -35,7 +49,15 @@ type ParentPath = {
 };
 
 export interface IAssetService {
-  getInboxContents(orgId: string): Promise<InboxContentsResponse>;
+  getInboxContents(
+    orgId: string,
+    types?: ContentTypeFilter[],
+  ): Promise<InboxContentsResponse>;
+  getInboxStatus(
+    orgId: string,
+    userId: string,
+  ): Promise<{ unreadCount: number }>;
+  markInboxSeen(orgId: string, userId: string): Promise<{ lastSeenAt: Date }>;
   createInboxNote(
     orgId: string,
     userId: string,
@@ -50,6 +72,7 @@ export interface IAssetService {
     orgId: string,
     assetNodeId: string,
   ): Promise<{ deletedAssetId: string }>;
+  bulkDeleteAssets(orgId: string, nodeIds: string[]): Promise<BulkDeleteResult>;
 }
 
 export class AssetService implements IAssetService {
@@ -59,7 +82,22 @@ export class AssetService implements IAssetService {
     this.objectStorageService = deps.objectStorageService;
   }
 
-  async getInboxContents(orgId: string): Promise<InboxContentsResponse> {
+  async getInboxContents(
+    orgId: string,
+    types?: ContentTypeFilter[],
+  ): Promise<InboxContentsResponse> {
+    const assetTypes = types?.filter(
+      (type): type is "image" | "note" => type !== "folder",
+    );
+
+    if (types !== undefined && assetTypes?.length === 0) {
+      return {
+        collection: { id: 0, name: "Inbox", slug: "inbox" },
+        breadcrumbs: [],
+        nodes: [],
+      };
+    }
+
     const rows = await db
       .select({
         assetId: assets.id,
@@ -94,6 +132,9 @@ export class AssetService implements IAssetService {
                 ),
               ),
           ),
+          assetTypes && assetTypes.length > 0
+            ? inArray(assets.type, assetTypes)
+            : undefined,
         ),
       )
       .orderBy(desc(assets.createdAt), desc(assets.id));
@@ -109,6 +150,70 @@ export class AssetService implements IAssetService {
     };
   }
 
+  async getInboxStatus(
+    orgId: string,
+    userId: string,
+  ): Promise<{ unreadCount: number }> {
+    const membership = first(
+      await db
+        .select({ inboxLastSeenAt: member.inboxLastSeenAt })
+        .from(member)
+        .where(and(eq(member.organizationId, orgId), eq(member.userId, userId)))
+        .limit(1),
+    );
+
+    if (!membership) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Workspace membership not found");
+    }
+
+    const unread = first(
+      await db
+        .select({ count: count() })
+        .from(assets)
+        .where(
+          and(
+            eq(assets.organizationId, orgId),
+            isNotNull(assets.lastAddedToInboxAt),
+            membership.inboxLastSeenAt
+              ? gt(assets.lastAddedToInboxAt, membership.inboxLastSeenAt)
+              : undefined,
+            notExists(
+              db
+                .select({ id: collectionNodes.id })
+                .from(collectionNodes)
+                .where(
+                  and(
+                    eq(collectionNodes.organizationId, orgId),
+                    eq(collectionNodes.nodeType, "asset"),
+                    eq(collectionNodes.assetId, assets.id),
+                  ),
+                ),
+            ),
+          ),
+        ),
+    );
+
+    return { unreadCount: Number(unread?.count ?? 0) };
+  }
+
+  async markInboxSeen(
+    orgId: string,
+    userId: string,
+  ): Promise<{ lastSeenAt: Date }> {
+    const lastSeenAt = new Date();
+    const [membership] = await db
+      .update(member)
+      .set({ inboxLastSeenAt: lastSeenAt })
+      .where(and(eq(member.organizationId, orgId), eq(member.userId, userId)))
+      .returning({ id: member.id });
+
+    if (!membership) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Workspace membership not found");
+    }
+
+    return { lastSeenAt };
+  }
+
   async createInboxNote(
     orgId: string,
     userId: string,
@@ -120,6 +225,7 @@ export class AssetService implements IAssetService {
         .values({
           organizationId: orgId,
           type: "note",
+          lastAddedToInboxAt: new Date(),
           createdByUserId: userId,
           updatedByUserId: userId,
         })
@@ -150,6 +256,7 @@ export class AssetService implements IAssetService {
       isFavorite: false,
       wordCount,
       readingTimeMinutes,
+      position: null,
     };
   }
 
@@ -184,7 +291,6 @@ export class AssetService implements IAssetService {
         parentFolderId: parentPath.folderId,
         nodeType: "asset",
         assetId: asset.id,
-        sortKey: makeSortKey(),
         depth: parentPath.slugs.length,
         pathFolderIds: parentPath.folderIds,
         pathFolderSlugs: parentPath.slugs,
@@ -214,6 +320,40 @@ export class AssetService implements IAssetService {
       .where(and(eq(assets.organizationId, orgId), eq(assets.id, assetId)));
 
     return { deletedAssetId: assetNodeId };
+  }
+
+  async bulkDeleteAssets(
+    orgId: string,
+    nodeIds: string[],
+  ): Promise<BulkDeleteResult> {
+    const parsed = nodeIds.map((id) => ({
+      nodeId: id,
+      parsed: parseAssetNodeId(id),
+    }));
+
+    const imageAssetIds = parsed
+      .filter((p) => p.parsed.assetType === "image")
+      .map((p) => p.parsed.entityId);
+
+    if (imageAssetIds.length > 0) {
+      const keys = await collectAssetObjectKeys(orgId, imageAssetIds);
+      if (keys.length > 0) {
+        await this.objectStorageService.deleteObjects(keys);
+      }
+    }
+
+    const allAssetIds = parsed.map((p) => p.parsed.entityId);
+
+    await db
+      .delete(assets)
+      .where(
+        and(eq(assets.organizationId, orgId), inArray(assets.id, allAssetIds)),
+      );
+
+    return {
+      deletedCount: parsed.length,
+      deletedAssetCount: parsed.length,
+    };
   }
 
   private async getAssetNode(
@@ -320,6 +460,7 @@ export class AssetService implements IAssetService {
           dominantColors: row.imageDominantColors ?? undefined,
           sizeBytes: display.sizeBytes,
           createdAt: row.createdAt.toISOString(),
+          position: null,
         } satisfies CollectionImageNode);
         continue;
       }
@@ -334,6 +475,7 @@ export class AssetService implements IAssetService {
         isFavorite: row.isFavorite,
         wordCount,
         readingTimeMinutes,
+        position: null,
       } satisfies CollectionNoteNode);
     }
 
@@ -453,25 +595,4 @@ async function resolveParentPath(
     slugs,
     names: parentFolder.pathFolderNames,
   };
-}
-
-function parseAssetNodeId(nodeId: string): {
-  assetType: "image" | "note";
-  entityId: number;
-} {
-  const [assetType, rawId] = nodeId.split("-");
-  const entityId = Number(rawId);
-
-  if (
-    (assetType !== "image" && assetType !== "note") ||
-    !Number.isInteger(entityId)
-  ) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid asset id");
-  }
-
-  return { assetType, entityId };
-}
-
-function makeSortKey(): string {
-  return `${Date.now().toString(36)}-${crypto.randomUUID()}`;
 }

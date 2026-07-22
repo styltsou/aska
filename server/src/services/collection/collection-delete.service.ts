@@ -8,6 +8,7 @@ import {
   folders,
 } from "@/db/schema";
 import { AppError, ErrorCode } from "@/lib/errors";
+import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import { first } from "@/lib/query";
 import type { IObjectStorageService } from "@/services/object-storage.service";
 import { collectAssetObjectKeys } from "@/services/asset.service";
@@ -28,19 +29,41 @@ export class CollectionDeleteService {
     const collectionId = await getCollectionIdBySlug(orgId, collectionSlug);
     const target = parseCollectionNodeId(nodeId);
 
-    if (target.nodeType === "folder") {
-      const deletedAssetCount = await deleteFolderNode(
-        orgId,
-        collectionId,
-        target.entityId,
-        this.objectStorageService,
+    if (target.nodeType !== "folder") {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        "Only folders can be deleted from a collection. Use the asset delete endpoint for assets.",
       );
-
-      return { deletedNodeId: nodeId, deletedAssetCount };
     }
 
-    await removeAssetNode(orgId, collectionId, target.entityId);
-    return { deletedNodeId: nodeId, deletedAssetCount: 1 };
+    const deletedAssetCount = await deleteFolderNode(
+      orgId,
+      collectionId,
+      target.entityId,
+      this.objectStorageService,
+    );
+
+    return { deletedNodeId: nodeId, deletedAssetCount };
+  }
+
+  async deleteFolders(
+    orgId: string,
+    collectionSlug: string,
+    folderIds: number[],
+  ): Promise<number> {
+    const collectionId = await getCollectionIdBySlug(orgId, collectionSlug);
+    let deletedAssetCount = 0;
+
+    for (const folderId of folderIds) {
+      deletedAssetCount += await deleteFolderNode(
+        orgId,
+        collectionId,
+        folderId,
+        this.objectStorageService,
+      );
+    }
+
+    return deletedAssetCount;
   }
 }
 
@@ -65,42 +88,6 @@ async function getCollectionIdBySlug(
   }
 
   return collection.id;
-}
-
-async function removeAssetNode(
-  orgId: string,
-  collectionId: number,
-  assetId: number,
-): Promise<void> {
-  const node = first(
-    await db
-      .select({ assetId: collectionNodes.assetId })
-      .from(collectionNodes)
-      .where(
-        and(
-          eq(collectionNodes.organizationId, orgId),
-          eq(collectionNodes.collectionId, collectionId),
-          eq(collectionNodes.nodeType, "asset"),
-          eq(collectionNodes.assetId, assetId),
-        ),
-      )
-      .limit(1),
-  );
-
-  if (!node?.assetId) {
-    throw new AppError(ErrorCode.NOT_FOUND, "Asset not found in collection");
-  }
-
-  await db
-    .delete(collectionNodes)
-    .where(
-      and(
-        eq(collectionNodes.organizationId, orgId),
-        eq(collectionNodes.collectionId, collectionId),
-        eq(collectionNodes.nodeType, "asset"),
-        eq(collectionNodes.assetId, node.assetId),
-      ),
-    );
 }
 
 async function deleteFolderNode(
@@ -167,23 +154,6 @@ async function deleteFolderNode(
   });
 
   return assetIds.length;
-}
-
-function parseCollectionNodeId(nodeId: string): {
-  nodeType: "asset" | "folder";
-  entityId: number;
-} {
-  const [nodeType, rawId] = nodeId.split("-");
-  const entityId = Number(rawId);
-
-  if (!nodeType || !Number.isInteger(entityId)) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid node id");
-  }
-
-  return {
-    nodeType: nodeType === "folder" ? "folder" : "asset",
-    entityId,
-  };
 }
 
 async function getFolderDeleteTargets(

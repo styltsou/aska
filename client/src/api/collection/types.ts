@@ -7,6 +7,22 @@ export type FolderChildPreview = {
   snippet?: string;
 };
 
+export type BoardPosition = { x: number; y: number };
+export type ContentTypeFilter = "image" | "note" | "folder";
+
+export type BoardVisibleBounds = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
+export type BoardInsertionPlacement = {
+  position?: BoardPosition;
+  visibleBounds?: BoardVisibleBounds;
+  batch?: { index: number; size: number };
+};
+
 export type DetailedCollection = {
   id: number;
   name: string;
@@ -42,6 +58,7 @@ export type CreateCollectionResponse = {
 export type CreateFolderInput = {
   name: string;
   parentFolderPath?: string;
+  position?: BoardPosition;
 };
 
 export type CollectionFolderNode = {
@@ -51,6 +68,7 @@ export type CollectionFolderNode = {
   slug: string;
   count: number;
   previews: FolderChildPreview[];
+  position: BoardPosition | null;
 };
 
 export type CreatedFolder = {
@@ -60,6 +78,7 @@ export type CreatedFolder = {
   path: string;
   count: number;
   previews: FolderChildPreview[];
+  position: BoardPosition | null;
 };
 
 export type CreateFolderResponse = {
@@ -70,6 +89,7 @@ export type CreateNoteInput = {
   content: string;
   color?: string;
   parentFolderPath?: string;
+  position?: BoardPosition;
 };
 
 export type CollectionImageNode = {
@@ -93,6 +113,7 @@ export type CollectionImageNode = {
   clientId?: string;
   sizeBytes?: number;
   createdAt: string;
+  position: BoardPosition | null;
 };
 
 export type CollectionNoteNode = {
@@ -103,6 +124,8 @@ export type CollectionNoteNode = {
   isFavorite: boolean;
   wordCount: number;
   readingTimeMinutes: number;
+  clientId?: string;
+  position: BoardPosition | null;
 };
 
 export type CreateNoteResponse = {
@@ -116,6 +139,7 @@ export type CreateImageUploadInput = {
   title?: string;
   alt?: string;
   parentFolderPath?: string;
+  position?: BoardPosition;
 };
 
 export type CreateImageUploadResponse = {
@@ -141,6 +165,7 @@ export type CreateRemoteImageInput = {
   title?: string;
   alt?: string;
   parentFolderPath?: string;
+  position?: BoardPosition;
 };
 
 export type CreateRemoteImageResponse = {
@@ -167,6 +192,50 @@ export type DeleteAssetResponse = {
 export type DeleteCollectionNodeResponse = {
   deletedNodeId: string;
   deletedAssetCount: number;
+};
+
+export type BulkDeleteResponse = {
+  deletedCount: number;
+  deletedAssetCount: number;
+};
+
+export type UpdateNodePositionInput = {
+  nodeId: string;
+  folderPath?: string;
+  position: BoardPosition;
+  expectedParentFolderNodeId: string | null;
+};
+
+export type UpdateNodePositionResponse = {
+  nodeId: string;
+  position: BoardPosition;
+};
+
+export type UpdateNodePositionsInput = {
+  folderPath?: string;
+  positions: Array<{ nodeId: string; position: BoardPosition }>;
+  expectedParentFolderNodeId: string | null;
+};
+
+export type UpdateNodePositionsResponse = {
+  nodeIds: string[];
+};
+
+export type MoveCollectionNodeToFolderInput = {
+  nodeId: string;
+  folderPath?: string;
+  targetFolderNodeId: string;
+  expectedParentFolderNodeId: string | null;
+};
+
+export type MoveCollectionNodeToFolderResponse = {
+  nodeId: string;
+  sourceParentFolderNodeId: string | null;
+  sourceFolderPath: string;
+  targetParentFolderNodeId: string;
+  targetFolderPath: string;
+  position: null;
+  moved: boolean;
 };
 
 export type CollectionNode =

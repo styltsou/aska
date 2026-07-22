@@ -2,12 +2,12 @@ import { env } from "@/config/env";
 import { container } from "@/container";
 import { factory } from "@/factory";
 
-const isDevelopment = env.NODE_ENV === "development";
 const loggerService = container.cradle.loggerService;
 
 export const requestLogger = factory.createMiddleware(async (c, next) => {
   const start = Date.now();
   const requestId = c.get("requestId");
+  const isDevelopment = env.NODE_ENV === "development";
 
   if (isDevelopment) {
     console.log(`-> ${c.req.method} ${c.req.path}`);
