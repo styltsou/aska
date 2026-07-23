@@ -6,23 +6,35 @@ staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
 
 client_files="$(printf '%s\n' "$staged_files" | grep -E '^client/.*\.(css|js|jsx|json|ts|tsx)$' || true)"
 server_files="$(printf '%s\n' "$staged_files" | grep -E '^server/.*\.(json|ts)$' || true)"
-worker_files="$(printf '%s\n' "$staged_files" | grep -E '^workers/image-pipeline/.*\.(jsonc?|ts)$' || true)"
+variant_files="$(printf '%s\n' "$staged_files" | grep -E '^services/image-variants/.*\.(json|ts)$' || true)"
+palette_files="$(printf '%s\n' "$staged_files" | grep -E '^services/image-palette/.*\.(json|ts)$' || true)"
+shared_files="$(printf '%s\n' "$staged_files" | grep -E '^services/image-shared/.*\.(json|ts)$' || true)"
 client_relative_files="$(printf '%s\n' "$client_files" | sed 's#^client/##')"
 server_relative_files="$(printf '%s\n' "$server_files" | sed 's#^server/##')"
-worker_relative_files="$(printf '%s\n' "$worker_files" | sed 's#^workers/image-pipeline/##')"
+variant_relative_files="$(printf '%s\n' "$variant_files" | sed 's#^services/image-variants/##')"
+palette_relative_files="$(printf '%s\n' "$palette_files" | sed 's#^services/image-palette/##')"
+shared_relative_files="$(printf '%s\n' "$shared_files" | sed 's#^services/image-shared/##')"
 
 if [ -n "$client_files" ]; then
-  (cd client && bunx oxfmt --write $client_relative_files) || true
+  (cd client && bun ./node_modules/oxfmt/bin/oxfmt --write $client_relative_files)
 fi
 
 if [ -n "$server_files" ]; then
-  (cd server && bunx oxfmt --write $server_relative_files) || true
+  (cd server && bun ./node_modules/oxfmt/bin/oxfmt --write $server_relative_files)
 fi
 
-if [ -n "$worker_files" ]; then
-  (cd workers/image-pipeline && bunx oxfmt --write $worker_relative_files) || true
+if [ -n "$variant_files" ]; then
+  (cd services/image-variants && bun ./node_modules/oxfmt/bin/oxfmt --write $variant_relative_files)
 fi
 
-if [ -n "$client_files$server_files$worker_files" ]; then
-  git add $client_files $server_files $worker_files
+if [ -n "$palette_files" ]; then
+  (cd services/image-palette && bun ./node_modules/oxfmt/bin/oxfmt --write $palette_relative_files)
+fi
+
+if [ -n "$shared_files" ]; then
+  (cd services/image-shared && bun ./node_modules/oxfmt/bin/oxfmt --write $shared_relative_files)
+fi
+
+if [ -n "$client_files$server_files$variant_files$palette_files$shared_files" ]; then
+  git add $client_files $server_files $variant_files $palette_files $shared_files
 fi
