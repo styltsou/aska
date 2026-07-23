@@ -10,11 +10,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import {
-  FileTextIcon,
-  PlusIcon,
-  UploadIcon,
-} from "lucide-react";
+import { FileTextIcon, PlusIcon, UploadIcon } from "lucide-react";
 import { CreateCollectionDialog } from "@/components/app-shell/create-collection-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
