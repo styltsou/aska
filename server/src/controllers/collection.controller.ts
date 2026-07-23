@@ -23,9 +23,8 @@ import { container } from "@/container";
 import type { IAssetService } from "@/services/asset.service";
 import type { ICollectionService } from "@/services/collection.service";
 
-const collectionService: ICollectionService =
-  container.cradle.collectionService;
-const assetService: IAssetService = container.cradle.assetService;
+const collectionService: ICollectionService = container.collectionService;
+const assetService: IAssetService = container.assetService;
 
 export const getWorkspaceWithCollections = factory.createHandlers(
   authMiddleware,

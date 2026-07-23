@@ -7,7 +7,8 @@ Use these recipes when adding backend functionality.
 1. Add request schemas in `server/src/dto/<feature>.dto.ts`.
 2. Add service methods in `server/src/services/<feature>.service.ts`, following
    [Service Method Pattern](./service-method-pattern.md).
-3. Register the service in `server/src/container.ts`.
+3. Construct the service explicitly in `server/src/container.ts`, passing its
+   dependencies to the constructor.
 4. Add controller handlers in `server/src/controllers/<feature>.controller.ts`,
    following [Controller Pattern](./controller-pattern.md).
 5. Add `authMiddleware` to protected controller handlers.

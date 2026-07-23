@@ -22,29 +22,21 @@ const envSchema = z.object({
     .string()
     .min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
   BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL"),
-  BETTER_AUTH_TRUSTED_ORIGINS: z
-    .string()
-    .optional()
-    .transform(
-      (value) =>
-        value
-          ?.split(",")
-          .map((origin) => origin.trim())
-          .filter(Boolean) ?? [],
-    ),
   RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
-  R2_ACCOUNT_ID: z.string().optional(),
-  R2_ACCESS_KEY_ID: z.string().optional(),
-  R2_SECRET_ACCESS_KEY: z.string().optional(),
-  R2_BUCKET: z.string().optional(),
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().default("eu-central-1"),
+  // Optional only for local S3-compatible emulators such as LocalStack.
+  S3_ENDPOINT: z.url().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
   IMAGE_PIPELINE_CALLBACK_SECRET: z.string().min(32).optional(),
-  R2_PRESIGNED_UPLOAD_EXPIRES_SECONDS: z.coerce
+  S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: z.coerce
     .number()
     .int()
     .min(60)
     .max(3600)
     .default(900),
-  R2_PRESIGNED_READ_EXPIRES_SECONDS: z.coerce
+  S3_PRESIGNED_READ_EXPIRES_SECONDS: z.coerce
     .number()
     .int()
     .min(60)

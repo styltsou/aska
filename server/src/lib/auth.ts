@@ -16,11 +16,7 @@ function createAuth() {
     baseURL: env.BETTER_AUTH_URL,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [
-      env.BETTER_AUTH_URL,
-      ...env.CORS_ORIGINS,
-      ...env.BETTER_AUTH_TRUSTED_ORIGINS,
-    ],
+    trustedOrigins: [env.BETTER_AUTH_URL, ...env.CORS_ORIGINS],
     database: drizzleAdapter(db, {
       provider: "pg",
       schema,
@@ -28,6 +24,12 @@ function createAuth() {
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,
+    },
+    advanced: {
+      useSecureCookies: true,
+      defaultCookieAttributes: {
+        sameSite: "none",
+      },
     },
     emailVerification: {
       sendVerificationEmail: async ({ user, url }) => {

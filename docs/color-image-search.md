@@ -64,8 +64,9 @@ the server's [OpenAPI document](./server/index.md#public-backend-docs).
 
 1. The service validates and de-duplicates near-identical OKLab query colors.
 2. It resolves the authenticated Inbox or exact collection/folder scope.
-3. A PostgreSQL `cube` GiST index retrieves a broad set of nearby palette
-   colors from `image_colors`; an Inbox query then excludes placed assets.
+3. A tenant-first PostgreSQL `cube` GiST index retrieves a broad set of nearby
+   palette colors from `image_colors` without scanning other organizations; an
+   Inbox query then excludes placed assets.
 4. Candidates must contain a close match for every selected query color.
 5. A minimum-cost one-to-one assignment prevents one palette color from
    satisfying several selected swatches. Relevance combines OKLab distance,

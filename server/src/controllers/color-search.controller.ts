@@ -8,10 +8,8 @@ import { validate } from "@/middleware/validate";
 import type { ICollectionService } from "@/services/collection.service";
 import type { IColorSearchService } from "@/services/color-search.service";
 
-const collectionService: ICollectionService =
-  container.cradle.collectionService;
-const colorSearchService: IColorSearchService =
-  container.cradle.colorSearchService;
+const collectionService: ICollectionService = container.collectionService;
+const colorSearchService: IColorSearchService = container.colorSearchService;
 
 export const searchImagesByColor = factory.createHandlers(
   authMiddleware,

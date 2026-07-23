@@ -78,8 +78,8 @@ export interface IAssetService {
 export class AssetService implements IAssetService {
   private readonly objectStorageService: IObjectStorageService;
 
-  constructor(deps: Deps) {
-    this.objectStorageService = deps.objectStorageService;
+  constructor({ objectStorageService }: Deps) {
+    this.objectStorageService = objectStorageService;
   }
 
   async getInboxContents(

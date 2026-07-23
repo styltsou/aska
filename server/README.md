@@ -55,8 +55,8 @@ GET /docs
 
 ## Image pipeline
 
-Image uploads are finalized asynchronously by `../workers/image-pipeline`.
-Set `IMAGE_PIPELINE_CALLBACK_SECRET` to the same value as the Worker secret
-before deploying either service. The Worker setup, R2 notification rule, and
+Image uploads are finalized asynchronously by `../services/image-pipeline`.
+Set `IMAGE_PIPELINE_CALLBACK_SECRET` to the same value as the image-pipeline
+Lambda secret before deploying. The S3 notification route, SQS consumer, and
 object-key namespaces are documented in
-[`../workers/image-pipeline/README.md`](../workers/image-pipeline/README.md).
+[`../services/image-pipeline/README.md`](../services/image-pipeline/README.md).

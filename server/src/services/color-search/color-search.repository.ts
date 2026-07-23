@@ -176,10 +176,11 @@ export class ColorSearchRepository {
   }
 
   /**
-   * Retrieves complete-query candidates. Inbox searches begin with the GiST
-   * cube expression index; a small direct board begins with scoped asset IDs.
-   * The safety cap is applied after grouping by asset, never per selected
-   * color, so a common color cannot starve balanced palette matches.
+   * Retrieves complete-query candidates. Inbox searches begin with the
+   * tenant-first GiST cube expression index; a small direct board begins with
+   * scoped asset IDs. The safety cap is applied after grouping by asset, never
+   * per selected color, so a common color cannot starve balanced palette
+   * matches.
    */
   async findBroadCandidateAssets(
     orgId: string,
@@ -241,7 +242,8 @@ export class ColorSearchRepository {
           ${paletteCube} <-> ${queryCube} AS distance
         FROM query_colors q
         JOIN image_colors ic
-          ON ${paletteCube} <@
+          ON ic.organization_id = ${orgId}
+          AND ${paletteCube} <@
                cube_enlarge(
                  ${queryCube},
                  ${COLOR_SEARCH_CONFIG.candidateRadius},
@@ -313,6 +315,7 @@ export class ColorSearchRepository {
   }
 
   async getPaletteColors(
+    orgId: string,
     assetIds: readonly number[],
   ): Promise<SearchPaletteRow[]> {
     if (assetIds.length === 0) return [];
@@ -330,7 +333,12 @@ export class ColorSearchRepository {
         isAccent: imageColors.isAccent,
       })
       .from(imageColors)
-      .where(inArray(imageColors.assetId, [...assetIds]));
+      .where(
+        and(
+          eq(imageColors.organizationId, orgId),
+          inArray(imageColors.assetId, [...assetIds]),
+        ),
+      );
   }
 
   async getImageMetadata(

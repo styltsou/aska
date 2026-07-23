@@ -2,6 +2,12 @@
   "name": "aska",
   "private": true,
   "scripts": {
-    "prepare": "git config core.hooksPath .githooks"
+    "prepare": "git config core.hooksPath .githooks",
+    "sst": "eval \"$(aws configure export-credentials --profile default --format env)\" && sst",
+    "deploy": "bun sst deploy",
+    "dev:aws": "bun sst dev"
+  },
+  "devDependencies": {
+    "sst": "^4.17.1"
   }
 }

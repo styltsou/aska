@@ -103,7 +103,6 @@ function GeneralSection() {
 
 export function SettingsDialog() {
   const [open, setOpen] = useState(isSettingsOpen);
-  const [activeSection, setActiveSection] = useState<"general">("general");
 
   useEventListener("keydown", (event) => {
     if (event.repeat || open) return;

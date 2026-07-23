@@ -91,6 +91,10 @@ describe("ColorSearchService", () => {
       { type: "inbox" },
       [{ oklabL: 0.628, oklabA: 0.225, oklabB: 0.126 }],
     );
+    expect(repository.getPaletteColors).toHaveBeenCalledWith(
+      "workspace-1",
+      [17, 99],
+    );
     expect(repository.getImageMetadata).toHaveBeenCalledWith(
       "workspace-1",
       [17],

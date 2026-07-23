@@ -64,7 +64,7 @@ export class ObjectStorageService implements IObjectStorageService {
   }): Promise<PresignedPutUrl> {
     const { bucket } = this.getRequiredConfig();
     const expiresInSeconds =
-      input.expiresInSeconds ?? env.R2_PRESIGNED_UPLOAD_EXPIRES_SECONDS;
+      input.expiresInSeconds ?? env.S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS;
     const command = new PutObjectCommand({
       Bucket: bucket,
       Key: input.key,
@@ -86,7 +86,7 @@ export class ObjectStorageService implements IObjectStorageService {
 
   async createPresignedGetUrl(
     key: string,
-    expiresInSeconds = env.R2_PRESIGNED_READ_EXPIRES_SECONDS,
+    expiresInSeconds = env.S3_PRESIGNED_READ_EXPIRES_SECONDS,
   ): Promise<PresignedGetUrl> {
     const cacheKey = `${expiresInSeconds}:${key}`;
     const cached = this.presignedReadUrls.get(cacheKey);
@@ -117,7 +117,7 @@ export class ObjectStorageService implements IObjectStorageService {
 
   async createPresignedGetUrls(
     keys: Iterable<string>,
-    expiresInSeconds = env.R2_PRESIGNED_READ_EXPIRES_SECONDS,
+    expiresInSeconds = env.S3_PRESIGNED_READ_EXPIRES_SECONDS,
   ): Promise<Map<string, PresignedGetUrl>> {
     const uniqueKeys = [...new Set(keys)];
     const signed = await Promise.all(
@@ -184,12 +184,20 @@ export class ObjectStorageService implements IObjectStorageService {
   private getClient(): S3Client {
     const config = this.getRequiredConfig();
     this.client ??= new S3Client({
-      region: "auto",
-      endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-      credentials: {
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-      },
+      region: config.region,
+      ...(config.endpoint
+        ? { endpoint: config.endpoint, forcePathStyle: true }
+        : {}),
+      // Lambda obtains production credentials from its execution role. Local
+      // development can provide an explicit key pair or use an AWS profile.
+      ...(config.accessKeyId && config.secretAccessKey
+        ? {
+            credentials: {
+              accessKeyId: config.accessKeyId,
+              secretAccessKey: config.secretAccessKey,
+            },
+          }
+        : {}),
     });
 
     return this.client;
@@ -206,32 +214,27 @@ export class ObjectStorageService implements IObjectStorageService {
   }
 
   private getRequiredConfig(): {
-    accountId: string;
-    accessKeyId: string;
-    secretAccessKey: string;
     bucket: string;
+    region: string;
+    endpoint?: string;
+    accessKeyId?: string;
+    secretAccessKey?: string;
   } {
-    const missing = [
-      ["R2_ACCOUNT_ID", env.R2_ACCOUNT_ID],
-      ["R2_ACCESS_KEY_ID", env.R2_ACCESS_KEY_ID],
-      ["R2_SECRET_ACCESS_KEY", env.R2_SECRET_ACCESS_KEY],
-      ["R2_BUCKET", env.R2_BUCKET],
-    ]
-      .filter(([, value]) => !value)
-      .map(([name]) => name);
-
-    if (missing.length > 0) {
+    if (!env.S3_BUCKET) {
       throw new AppError(
         ErrorCode.INTERNAL_ERROR,
-        `Object storage is not configured. Missing: ${missing.join(", ")}`,
+        "Object storage is not configured. Missing: S3_BUCKET",
       );
     }
 
     return {
-      accountId: env.R2_ACCOUNT_ID!,
-      accessKeyId: env.R2_ACCESS_KEY_ID!,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY!,
-      bucket: env.R2_BUCKET!,
+      bucket: env.S3_BUCKET,
+      region: env.S3_REGION,
+      ...(env.S3_ENDPOINT ? { endpoint: env.S3_ENDPOINT } : {}),
+      ...(env.S3_ACCESS_KEY_ID ? { accessKeyId: env.S3_ACCESS_KEY_ID } : {}),
+      ...(env.S3_SECRET_ACCESS_KEY
+        ? { secretAccessKey: env.S3_SECRET_ACCESS_KEY }
+        : {}),
     };
   }
 }

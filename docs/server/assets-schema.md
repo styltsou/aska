@@ -36,9 +36,11 @@ collection/folder, source metadata, original object key, lifecycle status,
 processing ETag, terminal error, and final asset ID. It is not an asset and is
 created before an original is written to R2.
 
-`image_colors` is the searchable palette table. It stores the display-ready hex
-value, indexed OKLab coordinates, `coverage`, `salience`, `is_accent`, and
-`extraction_version`. Use this table, not the compact
+`image_colors` is the searchable palette table. It stores `organization_id`,
+the display-ready hex value, indexed OKLab coordinates, `coverage`, `salience`,
+`is_accent`, and `extraction_version`. A composite foreign key keeps its tenant
+equal to the parent asset, while a tenant-first GiST index bounds color scans to
+one organization. Use this table, not the compact
 `image_assets.dominant_colors` display cache, for color search and moodboard
 similarity.
 
@@ -137,6 +139,11 @@ ownership boundary.
 `collection_nodes.organization_id` is intentionally redundant for fast tenant
 scoping. Composite foreign keys enforce that a node's collection, asset, and
 folder references all belong to the same organization.
+
+`image_colors.organization_id` is likewise redundant by design: it makes the
+tenant predicate part of the palette GiST index. Its composite foreign key to
+`assets(id, organization_id)` prevents the denormalized value from drifting
+from its parent image asset.
 
 ## Folder Moves
 

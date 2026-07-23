@@ -52,14 +52,17 @@ content. Each placement has an authored position on its collection or folder
 canvas. Folders are not assets.
 
 The application consists of a React/Vite client, a Bun/Hono API backed by
-Postgres and Drizzle, and a Cloudflare Worker that processes image uploads from
-R2 asynchronously. Collection and folder badges show descendant asset counts:
+Postgres and Drizzle, plus an AWS Lambda image pipeline that processes S3
+uploads asynchronously through SQS. Collection and folder badges show descendant asset counts:
 images and notes count, folders do not. The client uses XYFlow for collection
 canvas rendering and interaction while Aska's API remains the source of truth
 for node identity, hierarchy, and position.
 
 See [the engineering docs](./docs/README.md) for the data model, backend
 conventions, and local development workflow.
+
+The real-AWS development, deployment, stage, secret, and React/Vite hosting
+workflow is documented in [SST_DEPLOYMENT.md](./SST_DEPLOYMENT.md).
 
 ## Development
 
@@ -68,8 +71,11 @@ Each package is independently installed and run with Bun:
 ```sh
 cd client && bun install && bun run dev
 cd server && bun install && bun run dev
-cd workers/image-pipeline && bun install && bun run dev
+cd services/image-pipeline && bun install && bun run dev
 ```
+
+For normal end-to-end development, use real AWS S3 and SQS through SST instead
+of the isolated package commands; see [SST_DEPLOYMENT.md](./SST_DEPLOYMENT.md).
 
 Run the full package-local quality suite with `bun run lint`,
 `bun run typecheck`, `bun run format`, and `bun run test`. The same commands run

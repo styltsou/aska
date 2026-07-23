@@ -40,11 +40,13 @@ for the maintained implementation documentation.
 
 The repository already has the important search data:
 
-- `image_colors` stores up to ten extracted palette entries per image.
+- `image_colors` stores `organization_id` and up to ten extracted palette
+  entries per image.
 - Every entry has `oklab_l`, `oklab_a`, `oklab_b`, `coverage`, `salience`,
   `is_accent`, and `extraction_version`.
-- `image_colors_oklab_cube_gist_idx` is a GiST expression index over the
-  three-dimensional OKLab point using PostgreSQL's `cube` extension.
+- `image_colors_organizationId_oklab_cube_gist_idx` is a tenant-first
+  multicolumn GiST index over `organization_id` and the three-dimensional
+  OKLab point. It uses PostgreSQL's `cube` and `btree_gist` extensions.
 - `image_colors_assetId_idx` supports inexpensive palette reads after candidate
   image IDs are known.
 - Palette extraction version 2 deliberately preserves both broad coverage
@@ -56,8 +58,8 @@ The repository already has the important search data:
   without recursive SQL.
 
 The existing three-column B-tree OKLab index is not a nearest-neighbor index.
-The GiST `cube` expression index is the relevant index for color-distance
-candidate retrieval.
+The tenant-first GiST index is the relevant index for color-distance candidate
+retrieval and prevents cross-organization palette scans.
 
 ## Search Semantics
 
@@ -241,7 +243,7 @@ loosening the relevance gates or silently increasing the payload.
 2. Remove near-duplicate colors while preserving the first color's index.
 3. Resolve the tenant-scoped search scope to collection/folder IDs.
 4. Convert every query color to the same `cube(array[l, a, b])` expression used
-   by the existing GiST index.
+   by the tenant-first GiST index.
 
 ### 2. Resolve scoped image IDs
 
@@ -294,7 +296,8 @@ SELECT
     AS distance
 FROM query_colors q
 JOIN image_colors ic
-  ON cube(array[ic.oklab_l, ic.oklab_a, ic.oklab_b])
+  ON ic.organization_id = $tenant_id
+ AND cube(array[ic.oklab_l, ic.oklab_a, ic.oklab_b])
      <@ cube_enlarge(q.query_point, $candidate_radius, 3)
 JOIN scoped_images scoped ON scoped.asset_id = ic.asset_id
 WHERE cube(array[ic.oklab_l, ic.oklab_a, ic.oklab_b]) <-> q.query_point
@@ -325,12 +328,10 @@ representative seed shows where the crossover is. A bounded scope count can
 choose the plan. Do not assume the optimizer will choose the best direction
 through a materialized scope CTE.
 
-The current GiST index spans every workspace because `image_colors` does not
-store `organization_id`. This is correct for authorization after joining
-`assets`, but it may become inefficient for large workspace-wide searches. Do
-not denormalize immediately. If benchmarks show cross-tenant index scanning is
-the bottleneck, add `organization_id` with a composite tenant-consistency
-constraint and evaluate a composite GiST index using `btree_gist`.
+`image_colors` stores `organization_id` with a composite tenant-consistency
+constraint to its parent asset. A multicolumn GiST index, backed by
+`btree_gist`, places the tenant key before the OKLab cube so workspace-wide
+searches do not scan palette colors belonging to other organizations.
 
 ### 4. Match the complete palette
 
@@ -629,6 +630,8 @@ than from a few manual examples.
   realistic tenant/scope distributions.
 - Capture `EXPLAIN (ANALYZE, BUFFERS)` for direct-board, large Inbox, recursive
   collection, and workspace queries.
+- Confirm the GiST `Index Cond` includes both `organization_id` and the OKLab
+  bounding-cube predicate.
 - Confirm the expression in SQL exactly matches the GiST index expression.
 - Verify broad candidate caps bound memory and ranking CPU.
 - Verify metadata loading and object signing are batched.

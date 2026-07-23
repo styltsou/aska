@@ -2,7 +2,7 @@ import { env } from "@/config/env";
 import { container } from "@/container";
 import { factory } from "@/factory";
 
-const loggerService = container.cradle.loggerService;
+const { loggerService } = container;
 
 export const requestLogger = factory.createMiddleware(async (c, next) => {
   const start = Date.now();

@@ -121,6 +121,7 @@ function ControlButton({
           <Button
             type="button"
             variant="ghost"
+            size="sm"
             className={cn(
               "transition-all duration-100 hover:bg-foreground/5 active:scale-95",
               isActive && "bg-foreground/8",

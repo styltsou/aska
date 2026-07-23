@@ -127,7 +127,7 @@ async function deleteFolderNode(
   if (assetIds.length > 0) {
     const keys = await collectAssetObjectKeys(orgId, assetIds);
     if (keys.length > 0) {
-      // TODO: if this becomes slow, move R2 deletion to a background job
+      // TODO: if this becomes slow, move S3 deletion to a background job
       await objectStorageService.deleteObjects(keys);
     }
   }

@@ -42,10 +42,12 @@ export const createCollection = factory.createHandlers(
 Resolve services once at module scope:
 
 ```typescript
-const collectionService = container.cradle.collectionService;
+const collectionService = container.collectionService;
 ```
 
-Do not create service instances manually in controllers.
+Do not create service instances manually in controllers. Shared instances are
+explicitly constructed in `server/src/container.ts`; see the
+[Service Composition](./index.md#service-composition) convention.
 
 ## Authenticated Internal Callbacks
 

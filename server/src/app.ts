@@ -15,8 +15,7 @@ import { getOpenApiSpec } from "@/openapi";
 import { apiRoutes } from "@/routes";
 
 const baseApp = factory.createApp();
-const healthService = container.cradle.healthService;
-const loggerService = container.cradle.loggerService;
+const { healthService, loggerService } = container;
 
 baseApp.use(
   "*",

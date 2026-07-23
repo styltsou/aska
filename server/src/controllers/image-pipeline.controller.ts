@@ -10,8 +10,7 @@ import {
 } from "@/services/image-upload/callback-auth";
 import type { IImageUploadService } from "@/services/image-upload.service";
 
-const imageUploadService: IImageUploadService =
-  container.cradle.imageUploadService;
+const imageUploadService: IImageUploadService = container.imageUploadService;
 export const handleImagePipelineCallback = factory.createHandlers(async (c) => {
   const secret = env.IMAGE_PIPELINE_CALLBACK_SECRET;
   const timestamp = c.req.header("x-aska-timestamp");

@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import {
   FileTextIcon,
-  FolderPlusIcon,
   PlusIcon,
   UploadIcon,
 } from "lucide-react";

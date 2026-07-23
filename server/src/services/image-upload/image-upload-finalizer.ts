@@ -86,6 +86,7 @@ export async function finalizeImageUpload(
     if (input.palette.length > 0) {
       await tx.insert(imageColors).values(
         input.palette.map((color) => ({
+          organizationId: upload.organizationId,
           assetId: insertedAsset.id,
           hex: color.hex,
           oklabL: color.oklabL,

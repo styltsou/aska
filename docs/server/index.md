@@ -7,7 +7,8 @@ OpenAPI documentation, and Scalar API docs.
 
 - `server/src/app.ts`: Hono app, global middleware, health, auth, OpenAPI,
   Scalar, and API route mounting.
-- `server/src/index.ts`: Bun server export.
+- `server/src/index.ts`: Bun local-development entrypoint.
+- `server/src/lambda.ts`: AWS Lambda handler entrypoint.
 - `server/src/routes`: route grouping.
 - `server/src/controllers`: HTTP adapters.
 - `server/src/services`: business operations and feature-local helpers such as
@@ -23,7 +24,8 @@ OpenAPI documentation, and Scalar API docs.
 - Do not use a domain layer by default.
 - Use Drizzle inferred row types for database models.
 - Use Zod `z.infer` for request DTO types.
-- Resolve services through the typed Awilix cradle in `server/src/container.ts`.
+- `server/src/container.ts` is the composition root: explicitly construct shared
+  dependencies once and export the resulting `container` object.
 - Chain Hono route registration and assign the returned app value so exported
   route types carry endpoint schemas.
 - Services own business logic and database queries.
@@ -35,6 +37,29 @@ OpenAPI documentation, and Scalar API docs.
 - Successful JSON responses use `success(...)`.
 - Errors use `errorResponse(...)`.
 - Every API change updates `server/src/openapi.json`.
+
+## Service Composition
+
+The server uses manual dependency injection. `server/src/container.ts` creates
+the object graph explicitly, in dependency order, and exports the shared
+instances:
+
+```ts
+const loggerService = new LoggerService();
+const objectStorageService = new ObjectStorageService();
+
+export const container = {
+  loggerService,
+  objectStorageService,
+  assetService: new AssetService({ objectStorageService }),
+};
+```
+
+Add a service there when it is shared by application code. Pass its dependencies
+to its constructor directly; do not add a DI framework or resolve dependencies
+dynamically. Controllers import `container` and select the services they use.
+Tests should construct the service under test directly with focused fakes or
+real test dependencies.
 
 ## Environment
 
@@ -52,13 +77,13 @@ Optional:
 PORT
 NODE_ENV
 CORS_ORIGINS
-BETTER_AUTH_TRUSTED_ORIGINS
-R2_ACCOUNT_ID
-R2_ACCESS_KEY_ID
-R2_SECRET_ACCESS_KEY
-R2_BUCKET
-R2_PRESIGNED_UPLOAD_EXPIRES_SECONDS
-R2_PRESIGNED_READ_EXPIRES_SECONDS
+S3_BUCKET
+S3_REGION
+S3_ENDPOINT
+S3_ACCESS_KEY_ID
+S3_SECRET_ACCESS_KEY
+S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS
+S3_PRESIGNED_READ_EXPIRES_SECONDS
 MAX_DIRECT_UPLOAD_BYTES
 IMAGE_PIPELINE_CALLBACK_SECRET
 TEST_DATABASE_URL
@@ -68,9 +93,8 @@ TEST_DATABASE_URL
 is required by `bun run test:integration`; regular server commands continue to
 use `DATABASE_URL`.
 
-`BETTER_AUTH_URL`, `CORS_ORIGINS`, and `BETTER_AUTH_TRUSTED_ORIGINS` are passed
-to Better Auth as trusted origins. Keep `BETTER_AUTH_URL` aligned with the URL
-where `/api/auth/*` is served.
+`CORS_ORIGINS` is also passed to Better Auth as its trusted-origin list. Keep
+`BETTER_AUTH_URL` aligned with the URL where `/api/auth/*` is served.
 
 Use `server/.env.example` as the local template.
 

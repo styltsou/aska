@@ -32,5 +32,5 @@ Run the package-local checks before pushing:
 ```sh
 cd client && bun run lint && bun run typecheck && bun run format && bun run test && bun run build
 cd server && bun run lint && bun run typecheck && bun run format && bun run test
-cd workers/image-pipeline && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/image-pipeline && bun run lint && bun run typecheck && bun run format && bun run test
 ```

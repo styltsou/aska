@@ -28,9 +28,12 @@ export class ColorSearchService implements IColorSearchService {
   private readonly loggerService: ILoggerService;
   private readonly repository: ColorSearchRepository;
 
-  constructor(deps: Deps, repository = new ColorSearchRepository()) {
-    this.objectStorageService = deps.objectStorageService;
-    this.loggerService = deps.loggerService;
+  constructor(
+    { objectStorageService, loggerService }: Deps,
+    repository = new ColorSearchRepository(),
+  ) {
+    this.objectStorageService = objectStorageService;
+    this.loggerService = loggerService;
     this.repository = repository;
   }
 
@@ -46,6 +49,7 @@ export class ColorSearchService implements IColorSearchService {
       this.repository.findBroadCandidateAssets(orgId, scope, queryColors),
     ]);
     const paletteRows = await this.repository.getPaletteColors(
+      orgId,
       broadCandidates.assetIds,
     );
     const palettesByAssetId = groupPaletteRows(paletteRows);

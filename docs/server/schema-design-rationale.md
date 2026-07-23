@@ -60,10 +60,12 @@ variants from recursively scheduling more work.
 
 The compact `dominant_colors` array on `image_assets` is a UI cache. The
 normalized `image_colors` table is the query model for color search and future
-moodboard similarity. Each color stores perceptual OKLab coordinates, area
-coverage, salience, an accent flag, and an extraction version. This preserves
-the distinction between a color that occupies most of an image and a small,
-visually important accent.
+moodboard similarity. Each color stores `organization_id`, perceptual OKLab
+coordinates, area coverage, salience, an accent flag, and an extraction
+version. A composite foreign key keeps the denormalized organization equal to
+the parent asset, and the tenant-first GiST palette index avoids scanning other
+organizations during color retrieval. This preserves the distinction between a
+color that occupies most of an image and a small, visually important accent.
 
 See [Image Upload and Processing Pipeline](./image-upload-implementation-plan.md)
 for the callback contract and extraction algorithm.
@@ -204,8 +206,9 @@ render URLs and send precise mutations.
 
 ## Tenant Integrity Is Enforced
 
-`collection_nodes.organization_id` is intentionally redundant. It keeps common
-tenant-scoped reads simple and indexable.
+`collection_nodes.organization_id` and `image_colors.organization_id` are
+intentionally redundant. They keep common tenant-scoped reads simple and
+indexable.
 
 Because redundant tenant fields can drift, composite foreign keys enforce that
 node references stay in one organization:
@@ -214,6 +217,8 @@ node references stay in one organization:
 (collection_id, organization_id) -> collections(id, organization_id)
 (asset_id, organization_id)      -> assets(id, organization_id)
 (folder_id, organization_id)     -> folders(id, organization_id)
+
+image_colors(asset_id, organization_id) -> assets(id, organization_id)
 ```
 
 This keeps the denormalization useful without weakening isolation.

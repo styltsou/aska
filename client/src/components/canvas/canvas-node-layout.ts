@@ -596,38 +596,6 @@ function getCompactScore({ width, height }: MasonryLayout): number {
   return width * height * (1 + Math.abs(Math.log(width / height)));
 }
 
-function getAxisPositions(
-  nodes: PositionedNode[],
-  positions: number,
-  getPosition: (node: PositionedNode) => number,
-): number[] {
-  const sorted = [...nodes].sort((a, b) => getPosition(a) - getPosition(b));
-  let targets = Array.from({ length: positions }, (_, position) => {
-    const quantileIndex = Math.min(
-      sorted.length - 1,
-      Math.round((position * (sorted.length - 1)) / (positions - 1 || 1)),
-    );
-    return getPosition(sorted[quantileIndex]!);
-  });
-
-  for (let iteration = 0; iteration < 3; iteration += 1) {
-    const totals = Array.from({ length: positions }, () => 0);
-    const counts = Array.from({ length: positions }, () => 0);
-
-    for (const node of nodes) {
-      const position = getClosestPosition(getPosition(node), targets);
-      totals[position] += getPosition(node);
-      counts[position] += 1;
-    }
-
-    targets = targets.map((target, position) =>
-      counts[position]! > 0 ? totals[position]! / counts[position]! : target,
-    );
-  }
-
-  return targets;
-}
-
 function getClosestPosition(position: number, positions: number[]): number {
   let closest = 0;
 

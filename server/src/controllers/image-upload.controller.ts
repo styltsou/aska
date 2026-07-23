@@ -14,10 +14,8 @@ import { validate } from "@/middleware/validate";
 import type { ICollectionService } from "@/services/collection.service";
 import type { IImageUploadService } from "@/services/image-upload.service";
 
-const collectionService: ICollectionService =
-  container.cradle.collectionService;
-const imageUploadService: IImageUploadService =
-  container.cradle.imageUploadService;
+const collectionService: ICollectionService = container.collectionService;
+const imageUploadService: IImageUploadService = container.imageUploadService;
 
 export const createDirectImageUpload = factory.createHandlers(
   authMiddleware,

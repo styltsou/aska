@@ -95,12 +95,14 @@ export class CollectionService implements ICollectionService {
   private readonly moves = new CollectionAssetMoveService();
   private readonly deletes: CollectionDeleteService;
 
-  constructor(deps: { objectStorageService: IObjectStorageService }) {
+  constructor({
+    objectStorageService,
+  }: { objectStorageService: IObjectStorageService }) {
     this.queries = new CollectionQueryService({
-      objectStorageService: deps.objectStorageService,
+      objectStorageService,
     });
     this.deletes = new CollectionDeleteService({
-      objectStorageService: deps.objectStorageService,
+      objectStorageService,
     });
   }
 

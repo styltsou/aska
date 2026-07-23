@@ -161,6 +161,7 @@ export const imageColors = pgTable(
   "image_colors",
   {
     id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    organizationId: text("organization_id").notNull(),
     assetId: integer("asset_id")
       .notNull()
       .references(() => imageAssets.assetId, { onDelete: "cascade" }),
@@ -178,14 +179,20 @@ export const imageColors = pgTable(
     extractionVersion: integer("extraction_version").notNull(),
   },
   (table) => [
+    foreignKey({
+      name: "image_colors_asset_org_fkey",
+      columns: [table.assetId, table.organizationId],
+      foreignColumns: [assets.id, assets.organizationId],
+    }).onDelete("cascade"),
     index("image_colors_assetId_idx").on(table.assetId),
     index("image_colors_oklab_idx").on(
       table.oklabL,
       table.oklabA,
       table.oklabB,
     ),
-    index("image_colors_oklab_cube_gist_idx").using(
+    index("image_colors_organizationId_oklab_cube_gist_idx").using(
       "gist",
+      table.organizationId,
       sql`cube(array[${table.oklabL}, ${table.oklabA}, ${table.oklabB}])`,
     ),
     check(

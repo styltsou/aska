@@ -5,25 +5,24 @@ the earlier synchronous server-side processing plan.
 
 ## Ownership
 
-The browser owns transferring a local source file to R2. The image pipeline
-Worker owns CPU-bound post-processing. The Hono API owns authorization, upload
+The browser owns transferring a local source file to S3. The image-pipeline
+Lambda owns CPU-bound post-processing. The Hono API owns authorization, upload
 records, and the transactional database write that makes an image visible in a
 collection.
 
 ```txt
 Browser or remote URL
   -> Hono creates uploads row
-  -> original written to R2 ingest/
-  -> R2 object-create notification
-  -> Cloudflare Queue
-  -> image-pipeline Worker
-  -> R2 assets/ variants + signed Hono callback
+  -> original written to S3 ingest/
+  -> S3 ingest/ object-created event -> SQS
+  -> image-pipeline Lambda
+  -> S3 assets/ variants + signed Hono callback
   -> asset, image_assets, image_colors, collection_nodes transaction
   -> client polls upload status and renders the completed image
 ```
 
 The main server must not decode images, generate variants, or extract colors.
-Those responsibilities live in `workers/image-pipeline`.
+Those responsibilities live in `services/image-pipeline`.
 
 ## Object Namespaces
 
@@ -35,8 +34,8 @@ assets/{storageId}/display.webp
 assets/{storageId}/preview.webp
 ```
 
-R2 must publish `object-create` events only for the `ingest/` prefix. Generated
-objects use `assets/`, so they cannot recursively invoke the Worker. The Worker
+S3 publishes object-created events only for the `ingest/` prefix. Generated
+objects use `assets/`, so they cannot recursively invoke the Lambda. The Lambda
 also acknowledges any event outside `ingest/` as a defensive second check.
 
 ## Upload Lifecycle
@@ -84,9 +83,10 @@ polls every second for up to two minutes. This separates byte-transfer progress
 from asynchronous Worker time and allows later files to upload while earlier
 files process.
 
-## Worker Callback
+## Image pipeline callback
 
-The Worker sends `processing`, `completed`, or terminal `failed` callbacks to:
+The image pipeline Lambda sends `processing`, `completed`, or terminal `failed`
+callbacks to:
 
 ```txt
 POST /api/v1/internal/image-pipeline/callback
@@ -99,12 +99,11 @@ x-aska-timestamp: Unix epoch milliseconds
 x-aska-signature: HMAC-SHA256(timestamp + "." + raw JSON body)
 ```
 
-Hono rejects missing, malformed, stale, or invalid signatures. The shared value
-is `IMAGE_PIPELINE_CALLBACK_SECRET` in Hono and
-`PIPELINE_CALLBACK_SECRET` in the Worker.
+Hono rejects missing, malformed, stale, or invalid signatures. Both functions
+use the same `IMAGE_PIPELINE_CALLBACK_SECRET` value.
 
 The callback identifies an upload by `originalObjectKey` and guards it with the
-source R2 ETag. Completion is idempotent: duplicate callbacks for an already
+source S3 ETag. Completion is idempotent: duplicate callbacks for an already
 completed upload succeed without creating another asset. Hono also validates
 that received variants use the exact expected `assets/{storageId}/...` keys.
 
@@ -138,6 +137,7 @@ with two complementary passes:
 
 | Field                           | Meaning                                                                   |
 | ------------------------------- | ------------------------------------------------------------------------- |
+| `organization_id`               | Denormalized tenant key, constrained to match the parent asset.           |
 | `hex`                           | Canonical sRGB display value, used directly by swatches and copy actions. |
 | `coverage`                      | Fraction of visible sampled pixels assigned to the color.                 |
 | `salience`                      | Bounded relevance score combining coverage, chroma, and accent status.    |
@@ -148,6 +148,9 @@ with two complementary passes:
 Use OKLab distance as the primary search criterion. Use coverage and salience
 only as secondary ranking signals. `image_assets.dominant_colors` is a compact
 display cache sorted by salience; do not use it as the search source of truth.
+The upload finalizer writes the upload's organization ID into every palette row
+so the tenant-first GiST index can bound color candidate retrieval before the
+asset join.
 The endpoint contract, collection scopes, multi-color matching, and relevance
 cutoffs are specified in the
 [Color-Based Image Search Plan](../../COLOR_IMAGE_SEARCH_PLAN.md).
@@ -184,45 +187,35 @@ justifies it.
 Server configuration:
 
 ```txt
-R2_ACCOUNT_ID
-R2_ACCESS_KEY_ID
-R2_SECRET_ACCESS_KEY
-R2_BUCKET
-R2_PRESIGNED_UPLOAD_EXPIRES_SECONDS
-R2_PRESIGNED_READ_EXPIRES_SECONDS
+S3_BUCKET
+S3_REGION
+S3_ENDPOINT
+S3_ACCESS_KEY_ID
+S3_SECRET_ACCESS_KEY
+S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS
+S3_PRESIGNED_READ_EXPIRES_SECONDS
 MAX_DIRECT_UPLOAD_BYTES
 IMAGE_PIPELINE_CALLBACK_SECRET
 ```
 
-Worker configuration:
+Image-pipeline Lambda configuration:
 
 ```txt
-ASKA_BUCKET
 PIPELINE_API_BASE_URL
-PIPELINE_CALLBACK_SECRET
+IMAGE_PIPELINE_CALLBACK_SECRET
 ```
 
-Set the same random callback secret in both environments. `PIPELINE_API_BASE_URL`
-must be externally reachable by Cloudflare; a local-only server needs a tunnel
-for Worker development. The Worker currently rejects source objects above 20 MiB,
-so keep `MAX_DIRECT_UPLOAD_BYTES` at or below that value until the Worker limit
-is made configurable as well.
+Set the same random callback secret in both environments. The SST configuration
+creates the prefix-filtered S3-to-SQS route and the Lambda consumer. The pipeline
+rejects source objects above 20 MiB, so keep `MAX_DIRECT_UPLOAD_BYTES` at or
+below that value until the limit is made configurable.
 
-Create the Queue, deploy the Worker, and create exactly one ingest-only R2
-notification rule:
+See [`SST_DEPLOYMENT.md`](../../SST_DEPLOYMENT.md) for deployment and local
+pipeline invocation.
 
-```sh
-npx wrangler queues create aska-image-processing
-npx wrangler deploy
-npx wrangler r2 bucket notification create aska --event-type object-create --queue aska-image-processing --prefix "ingest/"
-```
+## Browser-to-S3 CORS
 
-See [`workers/image-pipeline/README.md`](../../workers/image-pipeline/README.md)
-for the operational setup beside the Worker configuration.
-
-## Browser-to-R2 CORS
-
-Direct browser uploads use a presigned R2 PUT URL, so the Hono server's CORS
+Direct browser uploads use a presigned S3 PUT URL, so the Hono server's CORS
 middleware does not govern that request. Configure the bucket to allow the
 application origins and the signed upload headers:
 
@@ -246,7 +239,7 @@ origin for this authenticated application flow.
 ```sh
 cd server && bun run lint && bun run typecheck && bun run format && bun run test
 cd client && bun run lint && bun run typecheck && bun run format && bun run test
-cd workers/image-pipeline && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/image-pipeline && bun run lint && bun run typecheck && bun run format && bun run test
 ```
 
 For palette changes, include a synthetic test with a large neutral background,

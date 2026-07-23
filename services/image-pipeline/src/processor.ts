@@ -17,7 +17,7 @@ import { rgbToOklab, type Oklab } from "./color";
 
 export const VARIANT_WIDTHS = { display: 960, preview: 320 } as const;
 
-/** A generated, display-ready derivative that will be written to R2. */
+/** A generated, display-ready derivative that will be written to S3. */
 export type ProcessedVariant = {
 	role: "display" | "preview";
 	width: number;
