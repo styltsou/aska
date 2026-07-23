@@ -8,11 +8,11 @@
  */
 
 import {
-	oklabChroma,
-	oklabDistanceSquared,
-	oklabToRgb,
-	rgbToHex,
-	type Oklab,
+  oklabChroma,
+  oklabDistanceSquared,
+  oklabToRgb,
+  rgbToHex,
+  type Oklab,
 } from "./color";
 
 /** Increment when the extraction algorithm or its persisted metrics change. */
@@ -20,10 +20,10 @@ export const PALETTE_EXTRACTION_VERSION = 2;
 
 /** A palette colour with both search metrics and a display-ready CSS colour. */
 export type ImagePaletteColor = Oklab & {
-	hex: string;
-	coverage: number;
-	salience: number;
-	isAccent: boolean;
+  hex: string;
+  coverage: number;
+  salience: number;
+  isAccent: boolean;
 };
 
 /** Maximum clusters fitted to the proportionally sampled full image. */
@@ -57,21 +57,21 @@ const SALIENCE_ACCENT_BONUS = 0.15;
 
 /** Assigns every sample to its closest centroid in Oklab space. */
 function assignToNearest(samples: Oklab[], centroids: Oklab[]): number[] {
-	return samples.map((sample) => {
-		let nearest = 0;
-		let nearestDistance = Infinity;
+  return samples.map((sample) => {
+    let nearest = 0;
+    let nearestDistance = Infinity;
 
-		for (let index = 0; index < centroids.length; index++) {
-			const distance = oklabDistanceSquared(sample, centroids[index]!);
+    for (let index = 0; index < centroids.length; index++) {
+      const distance = oklabDistanceSquared(sample, centroids[index]!);
 
-			if (distance < nearestDistance) {
-				nearest = index;
-				nearestDistance = distance;
-			}
-		}
+      if (distance < nearestDistance) {
+        nearest = index;
+        nearestDistance = distance;
+      }
+    }
 
-		return nearest;
-	});
+    return nearest;
+  });
 }
 
 /**
@@ -81,103 +81,103 @@ function assignToNearest(samples: Oklab[], centroids: Oklab[]): number[] {
  * across worker runs.
  */
 function farthestFirst(samples: Oklab[], k: number): Oklab[] {
-	const centroids = [{ ...samples[0]! }];
-	const nearestDistances = Array.from(
-		{ length: samples.length },
-		() => Infinity,
-	);
+  const centroids = [{ ...samples[0]! }];
+  const nearestDistances = Array.from(
+    { length: samples.length },
+    () => Infinity,
+  );
 
-	while (centroids.length < k) {
-		let farthestIndex = 0;
-		let farthestDistance = -1;
-		const lastCentroid = centroids.at(-1)!;
+  while (centroids.length < k) {
+    let farthestIndex = 0;
+    let farthestDistance = -1;
+    const lastCentroid = centroids.at(-1)!;
 
-		for (let index = 0; index < samples.length; index++) {
-			nearestDistances[index] = Math.min(
-				nearestDistances[index]!,
-				oklabDistanceSquared(samples[index]!, lastCentroid),
-			);
+    for (let index = 0; index < samples.length; index++) {
+      nearestDistances[index] = Math.min(
+        nearestDistances[index]!,
+        oklabDistanceSquared(samples[index]!, lastCentroid),
+      );
 
-			if (nearestDistances[index]! > farthestDistance) {
-				farthestDistance = nearestDistances[index]!;
-				farthestIndex = index;
-			}
-		}
+      if (nearestDistances[index]! > farthestDistance) {
+        farthestDistance = nearestDistances[index]!;
+        farthestIndex = index;
+      }
+    }
 
-		centroids.push({ ...samples[farthestIndex]! });
-	}
+    centroids.push({ ...samples[farthestIndex]! });
+  }
 
-	return centroids;
+  return centroids;
 }
 
 /** Runs bounded K-means and returns its converged centroids and sample labels. */
 function runKMeans(
-	samples: Oklab[],
-	k: number,
-	initialCentroids = farthestFirst(samples, k),
+  samples: Oklab[],
+  k: number,
+  initialCentroids = farthestFirst(samples, k),
 ) {
-	let centroids = initialCentroids;
-	let labels = assignToNearest(samples, centroids);
+  let centroids = initialCentroids;
+  let labels = assignToNearest(samples, centroids);
 
-	for (let iteration = 0; iteration < MAX_K_MEANS_ITERATIONS; iteration++) {
-		const sums = Array.from({ length: k }, () => ({
-			l: 0,
-			a: 0,
-			b: 0,
-			count: 0,
-		}));
+  for (let iteration = 0; iteration < MAX_K_MEANS_ITERATIONS; iteration++) {
+    const sums = Array.from({ length: k }, () => ({
+      l: 0,
+      a: 0,
+      b: 0,
+      count: 0,
+    }));
 
-		for (let index = 0; index < samples.length; index++) {
-			const sample = samples[index]!;
-			const sum = sums[labels[index]!]!;
+    for (let index = 0; index < samples.length; index++) {
+      const sample = samples[index]!;
+      const sum = sums[labels[index]!]!;
 
-			sum.l += sample.oklabL;
-			sum.a += sample.oklabA;
-			sum.b += sample.oklabB;
-			sum.count++;
-		}
+      sum.l += sample.oklabL;
+      sum.a += sample.oklabA;
+      sum.b += sample.oklabB;
+      sum.count++;
+    }
 
-		const nextCentroids = sums.map((sum, index) =>
-			sum.count === 0
-				? centroids[index]!
-				: {
-						oklabL: sum.l / sum.count,
-						oklabA: sum.a / sum.count,
-						oklabB: sum.b / sum.count,
-					},
-		);
-		const movement = Math.max(
-			...centroids.map((centroid, index) =>
-				oklabDistanceSquared(centroid, nextCentroids[index]!),
-			),
-		);
+    const nextCentroids = sums.map((sum, index) =>
+      sum.count === 0
+        ? centroids[index]!
+        : {
+            oklabL: sum.l / sum.count,
+            oklabA: sum.a / sum.count,
+            oklabB: sum.b / sum.count,
+          },
+    );
+    const movement = Math.max(
+      ...centroids.map((centroid, index) =>
+        oklabDistanceSquared(centroid, nextCentroids[index]!),
+      ),
+    );
 
-		centroids = nextCentroids;
-		labels = assignToNearest(samples, centroids);
+    centroids = nextCentroids;
+    labels = assignToNearest(samples, centroids);
 
-		if (movement < K_MEANS_MOVEMENT_THRESHOLD) break;
-	}
+    if (movement < K_MEANS_MOVEMENT_THRESHOLD) break;
+  }
 
-	return { centroids, labels };
+  return { centroids, labels };
 }
 
 /** Calculates the Bayesian information criterion used to decide whether a split improves the model. */
 function bic(samples: Oklab[], centroids: Oklab[], labels: number[]): number {
-	let squaredError = 0;
+  let squaredError = 0;
 
-	for (let index = 0; index < samples.length; index++) {
-		squaredError += oklabDistanceSquared(
-			samples[index]!,
-			centroids[labels[index]!]!,
-		);
-	}
+  for (let index = 0; index < samples.length; index++) {
+    squaredError += oklabDistanceSquared(
+      samples[index]!,
+      centroids[labels[index]!]!,
+    );
+  }
 
-	if (squaredError === 0) return -Infinity;
+  if (squaredError === 0) return -Infinity;
 
-	return (
-		samples.length * Math.log(squaredError / samples.length) +
-		centroids.length * 3 * Math.log(samples.length)
-	);
+  return (
+    samples.length * Math.log(squaredError / samples.length) +
+    centroids.length * 3 * Math.log(samples.length)
+  );
 }
 
 /**
@@ -187,75 +187,75 @@ function bic(samples: Oklab[], centroids: Oklab[], labels: number[]): number {
  * visually redundant colours merely because the maximum permits them.
  */
 function xMeansCluster(
-	samples: Oklab[],
-	maxK: number,
+  samples: Oklab[],
+  maxK: number,
 ): { centroids: Oklab[]; labels: number[] } {
-	if (samples.length === 1)
-		return { centroids: [{ ...samples[0]! }], labels: [0] };
+  if (samples.length === 1)
+    return { centroids: [{ ...samples[0]! }], labels: [0] };
 
-	let result = runKMeans(samples, Math.min(2, samples.length));
+  let result = runKMeans(samples, Math.min(2, samples.length));
 
-	while (result.centroids.length < maxK) {
-		const baseline = bic(samples, result.centroids, result.labels);
-		let best = baseline;
-		let replacement: Oklab[] | null = null;
+  while (result.centroids.length < maxK) {
+    const baseline = bic(samples, result.centroids, result.labels);
+    let best = baseline;
+    let replacement: Oklab[] | null = null;
 
-		for (let index = 0; index < result.centroids.length; index++) {
-			const members = samples.filter(
-				(_, sampleIndex) => result.labels[sampleIndex] === index,
-			);
+    for (let index = 0; index < result.centroids.length; index++) {
+      const members = samples.filter(
+        (_, sampleIndex) => result.labels[sampleIndex] === index,
+      );
 
-			if (members.length < MIN_CLUSTER_MEMBERS_TO_SPLIT) continue;
+      if (members.length < MIN_CLUSTER_MEMBERS_TO_SPLIT) continue;
 
-			const split = runKMeans(members, 2);
-			const candidate = [
-				...result.centroids.slice(0, index),
-				...result.centroids.slice(index + 1),
-				...split.centroids,
-			];
-			const candidateLabels = assignToNearest(samples, candidate);
-			const candidateBic = bic(samples, candidate, candidateLabels);
+      const split = runKMeans(members, 2);
+      const candidate = [
+        ...result.centroids.slice(0, index),
+        ...result.centroids.slice(index + 1),
+        ...split.centroids,
+      ];
+      const candidateLabels = assignToNearest(samples, candidate);
+      const candidateBic = bic(samples, candidate, candidateLabels);
 
-			if (candidateBic < best - BIC_IMPROVEMENT_THRESHOLD) {
-				best = candidateBic;
-				replacement = candidate;
-			}
-		}
+      if (candidateBic < best - BIC_IMPROVEMENT_THRESHOLD) {
+        best = candidateBic;
+        replacement = candidate;
+      }
+    }
 
-		if (!replacement) break;
+    if (!replacement) break;
 
-		result = runKMeans(samples, replacement.length, replacement);
-	}
+    result = runKMeans(samples, replacement.length, replacement);
+  }
 
-	return result;
+  return result;
 }
 
 type PaletteCandidate = { color: Oklab; isAccent: boolean };
 
 /** Merges visually indistinguishable candidates while retaining their accent classification. */
 function mergeCandidates(candidates: PaletteCandidate[]): PaletteCandidate[] {
-	const merged: PaletteCandidate[] = [];
+  const merged: PaletteCandidate[] = [];
 
-	for (const candidate of candidates) {
-		const existing = merged.find(
-			(entry) =>
-				oklabDistanceSquared(entry.color, candidate.color) <
-				MERGE_DISTANCE_SQUARED,
-		);
+  for (const candidate of candidates) {
+    const existing = merged.find(
+      (entry) =>
+        oklabDistanceSquared(entry.color, candidate.color) <
+        MERGE_DISTANCE_SQUARED,
+    );
 
-		if (existing) {
-			existing.isAccent ||= candidate.isAccent;
-		} else {
-			merged.push({ color: candidate.color, isAccent: candidate.isAccent });
-		}
-	}
+    if (existing) {
+      existing.isAccent ||= candidate.isAccent;
+    } else {
+      merged.push({ color: candidate.color, isAccent: candidate.isAccent });
+    }
+  }
 
-	return merged;
+  return merged;
 }
 
 /** Returns whether a colour is sufficiently saturated to participate in accent discovery. */
 export function isAccentSample(color: Oklab): boolean {
-	return oklabChroma(color) >= ACCENT_CHROMA_THRESHOLD;
+  return oklabChroma(color) >= ACCENT_CHROMA_THRESHOLD;
 }
 
 /**
@@ -266,56 +266,56 @@ export function isAccentSample(color: Oklab): boolean {
  * the persisted `coverage` metric.
  */
 export function extractPaletteFromSamples(
-	coverageSamples: Oklab[],
-	accentSamples: Oklab[],
-	measurementSamples = coverageSamples,
+  coverageSamples: Oklab[],
+  accentSamples: Oklab[],
+  measurementSamples = coverageSamples,
 ): ImagePaletteColor[] {
-	if (coverageSamples.length === 0) return [];
+  if (coverageSamples.length === 0) return [];
 
-	const coverageClusters = xMeansCluster(
-		coverageSamples,
-		COVERAGE_CLUSTER_LIMIT,
-	).centroids;
-	const accentClusters =
-		accentSamples.length > 0
-			? xMeansCluster(accentSamples, ACCENT_CLUSTER_LIMIT).centroids
-			: [];
-	const candidates = mergeCandidates([
-		...coverageClusters.map((color) => ({ color, isAccent: false })),
-		...accentClusters.map((color) => ({ color, isAccent: true })),
-	]).slice(0, COVERAGE_CLUSTER_LIMIT + ACCENT_CLUSTER_LIMIT);
-	const labels = assignToNearest(
-		measurementSamples,
-		candidates.map((candidate) => candidate.color),
-	);
-	const counts = Array.from({ length: candidates.length }, () => 0);
+  const coverageClusters = xMeansCluster(
+    coverageSamples,
+    COVERAGE_CLUSTER_LIMIT,
+  ).centroids;
+  const accentClusters =
+    accentSamples.length > 0
+      ? xMeansCluster(accentSamples, ACCENT_CLUSTER_LIMIT).centroids
+      : [];
+  const candidates = mergeCandidates([
+    ...coverageClusters.map((color) => ({ color, isAccent: false })),
+    ...accentClusters.map((color) => ({ color, isAccent: true })),
+  ]).slice(0, COVERAGE_CLUSTER_LIMIT + ACCENT_CLUSTER_LIMIT);
+  const labels = assignToNearest(
+    measurementSamples,
+    candidates.map((candidate) => candidate.color),
+  );
+  const counts = Array.from({ length: candidates.length }, () => 0);
 
-	for (const label of labels) counts[label]!++;
+  for (const label of labels) counts[label]!++;
 
-	return candidates
-		.map((candidate, index) => {
-			const coverage = counts[index]! / measurementSamples.length;
-			const chromaScore = Math.min(
-				1,
-				oklabChroma(candidate.color) / OKLAB_CHROMA_NORMALIZATION,
-			);
-			const isAccent = candidate.isAccent && isAccentSample(candidate.color);
-			const salience = Math.min(
-				1,
-				SALIENCE_COVERAGE_WEIGHT * Math.sqrt(coverage) +
-					SALIENCE_CHROMA_WEIGHT * chromaScore +
-					(isAccent ? SALIENCE_ACCENT_BONUS : 0),
-			);
+  return candidates
+    .map((candidate, index) => {
+      const coverage = counts[index]! / measurementSamples.length;
+      const chromaScore = Math.min(
+        1,
+        oklabChroma(candidate.color) / OKLAB_CHROMA_NORMALIZATION,
+      );
+      const isAccent = candidate.isAccent && isAccentSample(candidate.color);
+      const salience = Math.min(
+        1,
+        SALIENCE_COVERAGE_WEIGHT * Math.sqrt(coverage) +
+          SALIENCE_CHROMA_WEIGHT * chromaScore +
+          (isAccent ? SALIENCE_ACCENT_BONUS : 0),
+      );
 
-			return {
-				hex: rgbToHex(oklabToRgb(candidate.color)),
-				...candidate.color,
-				coverage,
-				salience,
-				isAccent,
-			};
-		})
-		.filter((color) => color.coverage >= MINIMUM_COVERAGE || color.isAccent)
-		.sort((a, b) => b.salience - a.salience || b.coverage - a.coverage)
-		.slice(0, MAXIMUM_PALETTE_COLORS);
+      return {
+        hex: rgbToHex(oklabToRgb(candidate.color)),
+        ...candidate.color,
+        coverage,
+        salience,
+        isAccent,
+      };
+    })
+    .filter((color) => color.coverage >= MINIMUM_COVERAGE || color.isAccent)
+    .sort((a, b) => b.salience - a.salience || b.coverage - a.coverage)
+    .slice(0, MAXIMUM_PALETTE_COLORS);
 }

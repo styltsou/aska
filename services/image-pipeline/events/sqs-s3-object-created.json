@@ -1,15 +1,15 @@
 {
-	"Records": [
-		{
-			"messageId": "local-image-event",
-			"body": "{\"Records\":[{\"s3\":{\"bucket\":{\"name\":\"aska-dev\"},\"object\":{\"key\":\"ingest%2Freplace-me%2Foriginal.jpg\",\"eTag\":\"replace-me\",\"size\":1234}}}]}",
-			"attributes": { "ApproximateReceiveCount": "1" },
-			"messageAttributes": {},
-			"md5OfBody": "",
-			"eventSource": "aws:sqs",
-			"eventSourceARN": "arn:aws:sqs:eu-central-1:000000000000:aska-image",
-			"awsRegion": "eu-central-1",
-			"receiptHandle": "local"
-		}
-	]
+  "Records": [
+    {
+      "messageId": "local-image-event",
+      "body": "{\"Records\":[{\"s3\":{\"bucket\":{\"name\":\"aska-dev\"},\"object\":{\"key\":\"ingest%2Freplace-me%2Foriginal.jpg\",\"eTag\":\"replace-me\",\"size\":1234}}}]}",
+      "attributes": { "ApproximateReceiveCount": "1" },
+      "messageAttributes": {},
+      "md5OfBody": "",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:eu-central-1:000000000000:aska-image",
+      "awsRegion": "eu-central-1",
+      "receiptHandle": "local"
+    }
+  ]
 }

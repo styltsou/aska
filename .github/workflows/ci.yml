@@ -1,28 +1,14 @@
-name: CI
+name: CI and deploy
 
 on:
   pull_request:
   push:
     branches: [main]
 
-jobs:
-  changes:
-    name: Detect deployable changes
-    runs-on: ubuntu-latest
-    outputs:
-      server: ${{ steps.filter.outputs.server }}
-      pipeline: ${{ steps.filter.outputs.pipeline }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            server:
-              - 'server/**'
-            pipeline:
-              - 'workers/image-pipeline/**'
+permissions:
+  contents: read
 
+jobs:
   quality:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
@@ -42,7 +28,7 @@ jobs:
             directory: server
             command: bun run lint && bun run typecheck && bun run format && bun run test
           - name: Image pipeline
-            directory: workers/image-pipeline
+            directory: services/image-pipeline
             command: bun run lint && bun run typecheck && bun run format && bun run test
     defaults:
       run:
@@ -55,48 +41,33 @@ jobs:
       - if: matrix.name == 'Server'
         run: bun run db:generate && git diff --exit-code
 
-  deploy-server:
-    name: Deploy server
-    needs: [changes, quality]
-    if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
-      needs.changes.outputs.server == 'true'
+  deploy-dev:
+    name: Deploy AWS dev
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     concurrency:
-      group: aska-production-workers
+      group: aska-dev-deploy
       cancel-in-progress: false
-    defaults:
-      run:
-        working-directory: server
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun run deploy
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-  deploy-image-pipeline:
-    name: Deploy image pipeline
-    needs: [changes, quality]
-    if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
-      needs.changes.outputs.pipeline == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    concurrency:
-      group: aska-production-workers
-      cancel-in-progress: false
-    defaults:
-      run:
-        working-directory: workers/image-pipeline
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - run: bun run deploy
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Install SST
+        run: bun install --frozen-lockfile
+      - name: Install application dependencies
+        run: |
+          bun install --frozen-lockfile --cwd client
+          bun install --frozen-lockfile --cwd server
+          bun install --frozen-lockfile --cwd services/image-pipeline
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: eu-central-1
+          role-to-assume: arn:aws:iam::089972278413:role/aska-github-actions-deploy
+          role-session-name: aska-github-actions-deploy
+      - name: Deploy SST dev stage
+        run: bunx sst deploy --stage dev

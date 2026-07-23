@@ -1,29 +1,29 @@
 {
-	"name": "image-pipeline",
-	"version": "0.0.0",
-	"private": true,
-	"scripts": {
-		"dev": "tsx watch src/local.ts",
-		"start": "tsx src/local.ts",
-		"lint": "oxlint .",
-		"format": "oxfmt --check",
-		"format:fix": "oxfmt --write",
-		"typecheck": "tsc --noEmit",
-		"test": "vitest run --passWithNoTests",
-		"test:watch": "vitest"
-	},
-	"dependencies": {
-		"@aws-sdk/client-s3": "^3.1081.0",
-		"sharp": "^0.35.3"
-	},
-	"devDependencies": {
-		"@types/aws-lambda": "^8.10.152",
-		"@types/node": "^26.1.1",
-		"esbuild": "^0.25.10",
-		"oxfmt": "^0.58.0",
-		"oxlint": "^1.73.0",
-		"tsx": "^4.23.0",
-		"typescript": "^5.5.2",
-		"vitest": "^4.1.10"
-	}
+  "name": "image-pipeline",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/local.ts",
+    "start": "tsx src/local.ts",
+    "lint": "oxlint .",
+    "format": "oxfmt --check",
+    "format:fix": "oxfmt --write",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1081.0",
+    "sharp": "^0.35.3"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.152",
+    "@types/node": "^26.1.1",
+    "esbuild": "^0.25.10",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0",
+    "tsx": "^4.23.0",
+    "typescript": "^5.5.2",
+    "vitest": "^4.1.10"
+  }
 }

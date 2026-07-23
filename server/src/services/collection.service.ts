@@ -97,7 +97,9 @@ export class CollectionService implements ICollectionService {
 
   constructor({
     objectStorageService,
-  }: { objectStorageService: IObjectStorageService }) {
+  }: {
+    objectStorageService: IObjectStorageService;
+  }) {
     this.queries = new CollectionQueryService({
       objectStorageService,
     });

@@ -205,6 +205,26 @@ Your local Vite client can still use the same `VITE_SERVER_URL` whenever you
 want to work locally. It shares the deployed `dev` API, bucket, queue, and
 database with the cloud client.
 
+## Continuous deployment
+
+GitHub Actions runs the full client, server, and image-pipeline quality checks
+for pull requests and pushes to `main`. After the checks pass for a push to
+`main`, the workflow deploys the SST `dev` stage automatically.
+
+The deployment job exchanges a GitHub OIDC token for short-lived AWS
+credentials. It does not use AWS access keys or copy SST secrets into GitHub.
+The AWS role trusts only the `styltsou/aska` repository's `main` branch.
+
+Manual deployment remains available when needed:
+
+```sh
+bun run deploy --stage dev
+```
+
+Use the GitHub Actions run as the deployment record. Do not add a production
+deployment trigger until the production stage, custom domain, and separate
+secrets/database are configured.
+
 ## Production later
 
 When the client has a public domain and you are ready to launch:
