@@ -4,6 +4,7 @@ import { NavProjects } from "@/components/app-shell/nav-projects";
 import { NavSecondary } from "@/components/app-shell/nav-secondary";
 import { NavUser } from "@/components/app-shell/nav-user";
 import { WorkspaceSwitcher } from "@/components/app-shell/workspace-switcher";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sidebar,
   SidebarContent,
@@ -29,7 +30,7 @@ import {
 import { openSettings } from "@/lib/settings-dialog";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -169,7 +170,18 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        {session?.user ? <NavUser user={session.user} /> : null}
+        {isPending ? (
+          <div className="flex items-center gap-2 p-2">
+            <Skeleton className="size-8 rounded-full" />
+            <div className="grid flex-1 gap-1">
+              <Skeleton className="h-3.5 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <Skeleton className="ml-auto size-4" />
+          </div>
+        ) : session?.user ? (
+          <NavUser user={session.user} />
+        ) : null}
       </SidebarFooter>
     </Sidebar>
   );

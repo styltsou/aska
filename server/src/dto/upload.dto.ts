@@ -15,6 +15,8 @@ export const CreateImageUploadSchema = z.object({
   fileName: z.string().min(1).max(255),
   contentType: z.enum(AllowedImageContentTypes),
   sizeBytes: z.number().int().positive().max(DEFAULT_MAX_UPLOAD_BYTES),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
   title: z.string().min(1).max(255).optional(),
   alt: z.string().max(1000).optional(),
   parentFolderPath: z.string().optional(),
@@ -47,22 +49,29 @@ const PipelineBaseSchema = z.object({
   originalEtag: z.string().min(1),
 });
 
-export const ImagePipelineCallbackSchema = z.discriminatedUnion("status", [
+export const ImagePipelineCallbackSchema = z.discriminatedUnion("event", [
   PipelineBaseSchema.extend({
-    status: z.literal("processing"),
+    event: z.literal("image.processing.started"),
   }),
   PipelineBaseSchema.extend({
-    status: z.literal("completed"),
+    event: z.literal("image.variants.completed"),
     width: z.number().int().positive(),
     height: z.number().int().positive(),
     format: z.string().min(1).max(32),
     blurDataURL: z.string().min(1),
-    extractionVersion: z.number().int().positive(),
-    palette: z.array(PipelineColorSchema).max(16),
     variants: z.array(PipelineVariantSchema).length(2),
   }),
   PipelineBaseSchema.extend({
-    status: z.literal("failed"),
+    event: z.literal("image.palette.completed"),
+    extractionVersion: z.number().int().positive(),
+    palette: z.array(PipelineColorSchema).max(16),
+  }),
+  PipelineBaseSchema.extend({
+    event: z.literal("image.variants.failed"),
+    error: z.string().min(1).max(1000),
+  }),
+  PipelineBaseSchema.extend({
+    event: z.literal("image.palette.failed"),
     error: z.string().min(1).max(1000),
   }),
 ]);
@@ -100,6 +109,7 @@ export const CreateImageUploadResponseSchema = z.object({
     headers: z.record(z.string(), z.string()),
     expiresAt: z.string(),
     maxSizeBytes: z.number(),
+    image: z.unknown(),
   }),
 });
 

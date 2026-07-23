@@ -106,6 +106,8 @@ export const CollectionImageNodeSchema = z.object({
   isFavorite: z.boolean(),
   blurDataURL: z.string().nullable().optional(),
   dominantColors: z.array(z.string()).optional(),
+  variantStatus: z.enum(["processing", "completed", "failed"]).optional(),
+  paletteStatus: z.enum(["processing", "completed", "failed"]).optional(),
   sizeBytes: z.number().optional(),
   createdAt: z.string(),
   position: BoardPositionSchema.nullable(),

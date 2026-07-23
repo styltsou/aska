@@ -6,7 +6,7 @@ import {
 import type { SQSBatchResponse, SQSHandler, S3Event } from "aws-lambda";
 import { createHmac } from "node:crypto";
 
-import { processImage } from "./processor";
+import { processImagePalette, processImageVariants } from "./processor";
 
 const MAX_PROCESSING_ATTEMPTS = 3;
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
@@ -23,24 +23,29 @@ type PipelineVariant = {
 
 type PipelineCallback =
   | {
-      status: "processing";
+      event: "image.processing.started";
       originalObjectKey: string;
       originalEtag: string;
     }
   | {
-      status: "completed";
+      event: "image.variants.completed";
       originalObjectKey: string;
       originalEtag: string;
       width: number;
       height: number;
       format: string;
       blurDataURL: string;
-      extractionVersion: number;
-      palette: unknown[];
       variants: PipelineVariant[];
     }
   | {
-      status: "failed";
+      event: "image.palette.completed";
+      originalObjectKey: string;
+      originalEtag: string;
+      extractionVersion: number;
+      palette: unknown[];
+    }
+  | {
+      event: "image.variants.failed" | "image.palette.failed";
       originalObjectKey: string;
       originalEtag: string;
       error: string;
@@ -93,7 +98,7 @@ export const handler: SQSHandler = async (event): Promise<SQSBatchResponse> => {
           const s3Event = JSON.parse(message.body) as S3Event;
           for (const record of s3Event.Records) {
             await sendCallback({
-              status: "failed",
+              event: "image.variants.failed",
               originalObjectKey: decodeS3Key(record.s3.object.key),
               originalEtag: record.s3.object.eTag,
               error: detail.slice(0, 1000),
@@ -129,7 +134,7 @@ async function processRecord(
     throw new Error("Source image exceeds the 20 MiB processing limit");
 
   await sendCallback({
-    status: "processing",
+    event: "image.processing.started",
     originalObjectKey: objectKey,
     originalEtag,
   });
@@ -138,7 +143,8 @@ async function processRecord(
   );
   if (!source.Body) throw new Error("Original object no longer exists");
 
-  const result = await processImage(await source.Body.transformToByteArray());
+  const bytes = await source.Body.transformToByteArray();
+  const result = await processImageVariants(bytes);
   const storageId = storageIdFromOriginalKey(objectKey);
   const variants = await Promise.all(
     result.variants.map(async (variant) => {
@@ -163,23 +169,47 @@ async function processRecord(
   );
 
   await sendCallback({
-    status: "completed",
+    event: "image.variants.completed",
     originalObjectKey: objectKey,
     originalEtag,
     width: result.width,
     height: result.height,
     format: result.format,
     blurDataURL: result.blurDataURL,
-    extractionVersion: result.extractionVersion,
-    palette: result.palette,
     variants,
   });
+  try {
+    const palette = await processImagePalette(bytes);
+    await sendCallback({
+      event: "image.palette.completed",
+      originalObjectKey: objectKey,
+      originalEtag,
+      ...palette,
+    });
+  } catch (error) {
+    await sendCallback({
+      event: "image.palette.failed",
+      originalObjectKey: objectKey,
+      originalEtag,
+      error:
+        error instanceof Error
+          ? error.message.slice(0, 1000)
+          : "Palette extraction failed",
+    });
+    console.error(
+      JSON.stringify({
+        event: "image_pipeline.palette_failed",
+        objectKey,
+        error: String(error),
+      }),
+    );
+  }
   console.log(
     JSON.stringify({
       event: "image_pipeline.completed",
       objectKey,
       variants: variants.length,
-      palette: result.palette.length,
+      palette: "queued",
     }),
   );
 }

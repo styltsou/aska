@@ -24,7 +24,11 @@ export function resolvePipelineCallbackAction(
     return { type: "ignore", ignored: true };
   }
 
-  if (upload.status === "completed") {
+  if (
+    upload.status === "completed" &&
+    input.event !== "image.palette.completed" &&
+    input.event !== "image.palette.failed"
+  ) {
     return { type: "ignore", ignored: false };
   }
 
@@ -32,7 +36,8 @@ export function resolvePipelineCallbackAction(
     return { type: "ignore", ignored: true };
   }
 
-  if (input.status === "processing") return { type: "mark-processing" };
-  if (input.status === "failed") return { type: "mark-failed" };
+  if (input.event === "image.processing.started")
+    return { type: "mark-processing" };
+  if (input.event.endsWith(".failed")) return { type: "mark-failed" };
   return { type: "finalize" };
 }

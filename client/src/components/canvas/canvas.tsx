@@ -44,6 +44,7 @@ import { toast } from "sonner";
 
 import { formatPlatformShortcut } from "@/lib/platform";
 import { makeBoardKey } from "./canvas-key";
+import { setBoardPointerPosition } from "./board-pointer-position";
 import {
   BOARD_CARD_WIDTH,
   arrangeNodesInGrid,
@@ -723,7 +724,15 @@ function CanvasSurface({
       ref={boardRef}
       className="relative h-full min-h-0 w-full bg-transparent"
       onPointerDownCapture={marquee.onPointerDownCapture}
-      onPointerMoveCapture={marquee.onPointerMoveCapture}
+      onPointerMoveCapture={(event) => {
+        marquee.onPointerMoveCapture(event);
+        setBoardPointerPosition(
+          boardKey,
+          roundPosition(
+            screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+          ),
+        );
+      }}
       onPointerUpCapture={marquee.onPointerUpCapture}
       onPointerCancelCapture={marquee.onPointerCancelCapture}
       onClickCapture={(event) => {

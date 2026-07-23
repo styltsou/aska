@@ -34,6 +34,11 @@ export const uploadStatusEnum = pgEnum("upload_status", [
   "completed",
   "failed",
 ]);
+export const imageEnrichmentStatusEnum = pgEnum("image_enrichment_status", [
+  "processing",
+  "completed",
+  "failed",
+]);
 
 export type StoredImageObjectVariant = {
   objectKey: string;
@@ -150,6 +155,14 @@ export const imageAssets = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    variantStatus: imageEnrichmentStatusEnum("variant_status")
+      .notNull()
+      .default("processing"),
+    paletteStatus: imageEnrichmentStatusEnum("palette_status")
+      .notNull()
+      .default("processing"),
+    variantError: text("variant_error"),
+    paletteError: text("palette_error"),
   },
   (table) => [
     check("image_assets_width_positive_chk", sql`${table.width} > 0`),

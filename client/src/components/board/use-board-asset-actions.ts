@@ -21,11 +21,13 @@ export function useBoardAssetActions({
   collectionPath,
   target = "collection",
   placement,
+  getPlacement,
 }: {
   workspaceSlug: string;
   collectionPath: string;
   target?: BoardAssetTarget;
   placement?: BoardInsertionPlacement;
+  getPlacement?: () => BoardInsertionPlacement | undefined;
 }) {
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
@@ -71,6 +73,7 @@ export function useBoardAssetActions({
       if (imageFiles.length === 0) return;
 
       try {
+        const insertionPlacement = getPlacement?.() ?? placement;
         if (target === "inbox") {
           await uploadInboxImages.mutateAsync({
             files: imageFiles,
@@ -79,7 +82,7 @@ export function useBoardAssetActions({
           await uploadLocalImages.mutateAsync({
             files: imageFiles,
             parentFolderPath,
-            placement,
+            placement: insertionPlacement,
           });
         }
         toast.success(
@@ -91,7 +94,14 @@ export function useBoardAssetActions({
         );
       }
     },
-    [parentFolderPath, placement, target, uploadInboxImages, uploadLocalImages],
+    [
+      getPlacement,
+      parentFolderPath,
+      placement,
+      target,
+      uploadInboxImages,
+      uploadLocalImages,
+    ],
   );
 
   const importRemoteUrl = useCallback(
@@ -100,6 +110,7 @@ export function useBoardAssetActions({
       if (!url) return;
 
       try {
+        const insertionPlacement = getPlacement?.() ?? placement;
         if (target === "inbox") {
           await createInboxRemoteImage.mutateAsync({
             url,
@@ -108,7 +119,7 @@ export function useBoardAssetActions({
           await createRemoteImage.mutateAsync({
             url,
             parentFolderPath,
-            placement,
+            placement: insertionPlacement,
           });
         }
         toast.success("Image imported");
@@ -121,6 +132,7 @@ export function useBoardAssetActions({
     [
       createInboxRemoteImage,
       createRemoteImage,
+      getPlacement,
       parentFolderPath,
       placement,
       target,
@@ -132,6 +144,7 @@ export function useBoardAssetActions({
       if (!content.trim()) return;
 
       try {
+        const insertionPlacement = getPlacement?.() ?? placement;
         if (target === "inbox") {
           await createInboxNote.mutateAsync({
             content,
@@ -140,7 +153,7 @@ export function useBoardAssetActions({
           await createNote.mutateAsync({
             content,
             parentFolderPath,
-            placement,
+            placement: insertionPlacement,
           });
         }
         toast.success("Note created");
@@ -150,7 +163,14 @@ export function useBoardAssetActions({
         );
       }
     },
-    [createInboxNote, createNote, parentFolderPath, placement, target],
+    [
+      createInboxNote,
+      createNote,
+      getPlacement,
+      parentFolderPath,
+      placement,
+      target,
+    ],
   );
 
   const addClipboardAsset = useCallback(

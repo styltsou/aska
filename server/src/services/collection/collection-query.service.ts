@@ -253,6 +253,8 @@ export class CollectionQueryService {
         sourceLabel: imageAssets.sourceLabel,
         sourceUrl: imageAssets.sourceUrl,
         imageDominantColors: imageAssets.dominantColors,
+        imageVariantStatus: imageAssets.variantStatus,
+        imagePaletteStatus: imageAssets.paletteStatus,
         createdAt: collectionNodes.createdAt,
         noteContent: noteAssets.markdown,
         noteColor: noteAssets.color,
@@ -372,12 +374,12 @@ export class CollectionQueryService {
 
       if (child.assetType === "image") {
         const variant = imageVariants.get(child.assetId!);
-        const display = variant?.display;
+        const display = variant?.display ?? variant?.original;
 
         if (!display?.url) {
           throw new AppError(
             ErrorCode.INTERNAL_ERROR,
-            "Image display variant is missing a signed URL",
+            "Image original variant is missing a signed URL",
           );
         }
 
@@ -397,7 +399,9 @@ export class CollectionQueryService {
           isFavorite: child.isFavorite ?? false,
           blurDataURL: variant?.blurDataURL,
           dominantColors: child.imageDominantColors ?? undefined,
-          sizeBytes: variant?.display?.sizeBytes,
+          variantStatus: child.imageVariantStatus ?? undefined,
+          paletteStatus: child.imagePaletteStatus ?? undefined,
+          sizeBytes: display.sizeBytes,
           createdAt: child.createdAt.toISOString(),
           position,
         };

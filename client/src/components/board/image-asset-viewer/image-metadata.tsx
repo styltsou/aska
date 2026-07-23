@@ -1,5 +1,11 @@
 import { Fragment } from "react";
+import { toast } from "sonner";
 import type { ImageAsset } from "@/types/asset";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -62,13 +68,24 @@ export function ImageMetadata({ asset }: { asset: ImageAsset }) {
         {dominantColors.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {dominantColors.map((color) => (
-              <span
-                key={color}
-                title={color.toUpperCase()}
-                aria-label={`Dominant color ${color}`}
-                className="size-5 rounded-sm border border-black/10 shadow-sm dark:border-white/15"
-                style={{ backgroundColor: color }}
-              />
+              <Tooltip key={color}>
+                <TooltipTrigger
+                  onClick={() => {
+                    navigator.clipboard.writeText(color.toUpperCase());
+                    toast.success(`Copied ${color.toUpperCase()}`);
+                  }}
+                  aria-label={`Dominant color ${color}`}
+                  className="cursor-pointer"
+                >
+                  <span
+                    className="size-6 rounded-md border border-black/10 shadow-sm dark:border-white/15"
+                    style={{ backgroundColor: color }}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center" sideOffset={6}>
+                  {color.toUpperCase()}
+                </TooltipContent>
+              </Tooltip>
             ))}
           </div>
         ) : (

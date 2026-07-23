@@ -658,25 +658,13 @@ describe("ImageUploadService integration", () => {
 
     expect(upload).toBeDefined();
     const result = await imageUploadService.handlePipelineCallback({
-      status: "completed",
+      event: "image.variants.completed",
       originalObjectKey,
       originalEtag: "etag-1",
       width: 1200,
       height: 800,
       format: "jpeg",
       blurDataURL: "data:image/webp;base64,AA==",
-      extractionVersion: 1,
-      palette: [
-        {
-          hex: "#112233",
-          oklabL: 0.2,
-          oklabA: 0.1,
-          oklabB: -0.1,
-          coverage: 0.75,
-          salience: 0.8,
-          isAccent: true,
-        },
-      ],
       variants: [
         {
           role: "display",

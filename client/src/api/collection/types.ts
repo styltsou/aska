@@ -96,6 +96,8 @@ export type CollectionImageNode = {
   id: string;
   type: "image";
   url: string;
+  /** Browser-only preview retained while the uploaded original is decoded. */
+  localPreviewUrl?: string;
   originalUrl?: string;
   originalWidth?: number;
   originalHeight?: number;
@@ -108,6 +110,8 @@ export type CollectionImageNode = {
   isFavorite: boolean;
   blurDataURL?: string | null;
   dominantColors?: string[];
+  variantStatus?: "processing" | "completed" | "failed";
+  paletteStatus?: "processing" | "completed" | "failed";
   uploadStatus?: "uploading" | "processing";
   uploadProgress?: number;
   clientId?: string;
@@ -136,6 +140,8 @@ export type CreateImageUploadInput = {
   fileName: string;
   contentType: string;
   sizeBytes: number;
+  width: number;
+  height: number;
   title?: string;
   alt?: string;
   parentFolderPath?: string;
@@ -150,6 +156,7 @@ export type CreateImageUploadResponse = {
     headers: Record<string, string>;
     expiresAt: string;
     maxSizeBytes: number;
+    image: CollectionImageNode;
   };
 };
 

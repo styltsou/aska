@@ -34,17 +34,18 @@ const previewVariant = {
 };
 
 const completedResult = {
-  status: "completed" as const,
+  event: "image.variants.completed" as const,
   originalObjectKey: upload.originalObjectKey,
   originalEtag: "etag-1",
   width: 1200,
   height: 800,
   format: "jpeg",
   blurDataURL: "data:image/webp;base64,AA==",
-  extractionVersion: 1,
-  palette: [],
   variants: [displayVariant, previewVariant],
-} satisfies Extract<ImagePipelineCallbackInput, { status: "completed" }>;
+} satisfies Extract<
+  ImagePipelineCallbackInput,
+  { event: "image.variants.completed" }
+>;
 
 describe("completed image pipeline result", () => {
   it("accepts the expected display and preview object keys", () => {
