@@ -15,14 +15,15 @@ finishes.
 Browser or remote URL
   -> Hono creates upload + image asset rows
   -> original written to S3 ingest/
-  -> S3 ingest/ object-created event -> variants SQS + palette SQS
+  -> S3 ingest/ object-created event -> SNS -> variants SQS + palette SQS
   -> variants Lambda -> S3 assets/ variants + signed Hono callback
   -> palette Lambda -> image_colors + signed Hono callback
   -> client observes independent enrichment states
 ```
 
 The main server must not decode images, generate variants, or extract colors.
-Those responsibilities live in `services/image-pipeline`.
+Those responsibilities live in `services/image-variants` and
+`services/image-palette`, with delivery code in `services/image-shared`.
 
 ## Object Namespaces
 
@@ -228,7 +229,8 @@ origin for this authenticated application flow.
 ```sh
 cd server && bun run lint && bun run typecheck && bun run format && bun run test
 cd client && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/image-pipeline && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/image-variants && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
 ```
 
 For palette changes, include a synthetic test with a large neutral background,

@@ -9,7 +9,7 @@ the server schema does not generate an uncommitted migration.
 
 Running `bun install` from the repository root configures Git to use the tracked
 `.githooks` directory. The pre-commit hook formats staged client, server, and
-image-pipeline source files with Oxfmt. Any fixes are re-staged automatically.
+image-worker source files with Oxfmt. Any fixes are re-staged automatically.
 The client Oxfmt configuration enables `sortTailwindcss` against `src/index.css`,
 so the same pass also normalizes Tailwind class order.
 
@@ -32,5 +32,6 @@ Run the package-local checks before pushing:
 ```sh
 cd client && bun run lint && bun run typecheck && bun run format && bun run test && bun run build
 cd server && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/image-pipeline && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/image-variants && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
 ```

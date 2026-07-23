@@ -1,0 +1,7 @@
+{
+  "name": "image-palette",
+  "private": true,
+  "scripts": { "lint": "oxlint .", "format": "oxfmt --check", "typecheck": "tsc --noEmit", "test": "vitest run --passWithNoTests" },
+  "dependencies": { "@aws-sdk/client-s3": "^3.1081.0", "sharp": "^0.35.3" },
+  "devDependencies": { "@types/aws-lambda": "^8.10.152", "@types/node": "^26.1.1", "oxfmt": "^0.58.0", "oxlint": "^1.73.0", "typescript": "^5.5.2", "vitest": "^4.1.10" }
+}

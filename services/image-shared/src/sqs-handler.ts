@@ -18,6 +18,15 @@ type HandlerOptions = {
 const decodeS3Key = (key: string) =>
   decodeURIComponent(key.replace(/\+/g, " "));
 
+function parseS3Event(body: string): S3Event {
+  const notification = JSON.parse(body) as { Message?: unknown };
+  // SNS wraps the S3 notification before delivering it to each SQS subscriber.
+  // Keep accepting a raw S3 body as well so local event fixtures remain useful.
+  return typeof notification.Message === "string"
+    ? (JSON.parse(notification.Message) as S3Event)
+    : (notification as S3Event);
+}
+
 function sourcesFromS3Event(event: S3Event): SourceImage[] {
   // S3 sends an initial test notification without Records when a destination is
   // configured. It is not an image-processing job.
@@ -57,7 +66,7 @@ export function createSqsHandler({
       );
       if (attempts > MAX_PROCESSING_ATTEMPTS) {
         try {
-          const s3Event = JSON.parse(message.body) as S3Event;
+          const s3Event = parseS3Event(message.body);
           for (const source of sourcesFromS3Event(s3Event)) {
             await reportTerminalFailure(
               source,
@@ -79,7 +88,7 @@ export function createSqsHandler({
       }
 
       try {
-        const s3Event = JSON.parse(message.body) as S3Event;
+        const s3Event = parseS3Event(message.body);
         for (const source of sourcesFromS3Event(s3Event)) await process(source);
       } catch (error) {
         const detail =
@@ -101,7 +110,7 @@ export function createSqsHandler({
         }
 
         try {
-          const s3Event = JSON.parse(message.body) as S3Event;
+          const s3Event = parseS3Event(message.body);
           for (const source of sourcesFromS3Event(s3Event)) {
             await reportTerminalFailure(source, detail.slice(0, 1000));
           }

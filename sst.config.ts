@@ -55,6 +55,7 @@ export default $config({
       queue: imagePaletteQueue,
       deadLetterQueue: imagePaletteDeadLetterQueue,
     } = createImageQueue("ImagePaletteQueue", "ImagePaletteDeadLetterQueue");
+    const imageUploadTopic = new sst.aws.SnsTopic("ImageUploadTopic");
 
     const assets = new sst.aws.Bucket("Assets", {
       cors: {
@@ -68,19 +69,15 @@ export default $config({
     assets.notify({
       notifications: [
         {
-          name: "GenerateImageVariants",
-          queue: imageVariantsQueue,
-          events: ["s3:ObjectCreated:*"],
-          filterPrefix: "ingest/",
-        },
-        {
-          name: "ExtractImagePalette",
-          queue: imagePaletteQueue,
+          name: "FanOutIngestedImage",
+          topic: imageUploadTopic,
           events: ["s3:ObjectCreated:*"],
           filterPrefix: "ingest/",
         },
       ],
     });
+    imageUploadTopic.subscribeQueue("GenerateImageVariants", imageVariantsQueue);
+    imageUploadTopic.subscribeQueue("ExtractImagePalette", imagePaletteQueue);
 
     const api = new sst.aws.ApiGatewayV2("Api", {
       cors: {
@@ -112,29 +109,29 @@ export default $config({
       },
     });
 
-    const imageWorkerFiles = [
+    const imageWorkerFiles = (service: "image-variants" | "image-palette") => [
       {
-        from: "services/image-pipeline/node_modules/sharp",
+        from: `services/${service}/node_modules/sharp`,
         to: "node_modules/sharp",
       },
       {
-        from: "services/image-pipeline/node_modules/@img/colour",
+        from: `services/${service}/node_modules/@img/colour`,
         to: "node_modules/@img/colour",
       },
       {
-        from: "services/image-pipeline/node_modules/detect-libc",
+        from: `services/${service}/node_modules/detect-libc`,
         to: "node_modules/detect-libc",
       },
       {
-        from: "services/image-pipeline/node_modules/semver",
+        from: `services/${service}/node_modules/semver`,
         to: "node_modules/semver",
       },
       {
-        from: "services/image-pipeline/node_modules/@img/sharp-linux-x64",
+        from: `services/${service}/node_modules/@img/sharp-linux-x64`,
         to: "node_modules/@img/sharp-linux-x64",
       },
       {
-        from: "services/image-pipeline/node_modules/@img/sharp-libvips-linux-x64",
+        from: `services/${service}/node_modules/@img/sharp-libvips-linux-x64`,
         to: "node_modules/@img/sharp-libvips-linux-x64",
       },
     ];
@@ -153,14 +150,14 @@ export default $config({
         // `nodejs.install` helper.
         esbuild: { external: ["sharp"] },
       },
-      copyFiles: imageWorkerFiles,
       environment: imageWorkerEnvironment,
     };
 
     imageVariantsQueue.subscribe(
       {
-        handler: "services/image-pipeline/src/variants-lambda.handler",
+        handler: "services/image-variants/src/lambda.handler",
         ...imageWorkerDefaults,
+        copyFiles: imageWorkerFiles("image-variants"),
       },
       {
         batch: {
@@ -172,8 +169,9 @@ export default $config({
 
     imagePaletteQueue.subscribe(
       {
-        handler: "services/image-pipeline/src/palette-lambda.handler",
+        handler: "services/image-palette/src/lambda.handler",
         ...imageWorkerDefaults,
+        copyFiles: imageWorkerFiles("image-palette"),
       },
       {
         batch: {

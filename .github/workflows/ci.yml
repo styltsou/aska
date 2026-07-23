@@ -27,8 +27,11 @@ jobs:
           - name: Server
             directory: server
             command: bun run lint && bun run typecheck && bun run format && bun run test
-          - name: Image pipeline
-            directory: services/image-pipeline
+          - name: Image variants
+            directory: services/image-variants
+            command: bun run lint && bun run typecheck && bun run format && bun run test
+          - name: Image palette
+            directory: services/image-palette
             command: bun run lint && bun run typecheck && bun run format && bun run test
     defaults:
       run:
@@ -62,7 +65,9 @@ jobs:
         run: |
           bun install --frozen-lockfile --cwd client
           bun install --frozen-lockfile --cwd server
-          bun install --frozen-lockfile --cwd services/image-pipeline
+          bun install --frozen-lockfile --cwd services/image-shared
+          bun install --frozen-lockfile --cwd services/image-variants
+          bun install --frozen-lockfile --cwd services/image-palette
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:

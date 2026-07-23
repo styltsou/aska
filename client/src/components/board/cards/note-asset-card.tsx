@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
 import type { NoteAsset } from "@/types/asset";
 
-const BARE_URL_RE = /(^|[^(\[])(https?:\/\/[^\s<"'>)\]]+)/gi;
+const BARE_URL_RE = /(^|[^[(])(https?:\/\/[^\s<"'>)\]]+)/gi;
 
 function linkifyBareUrls(text: string): string {
   return text.replace(

@@ -55,8 +55,9 @@ GET /docs
 
 ## Image pipeline
 
-Image uploads are finalized asynchronously by `../services/image-pipeline`.
+Image uploads are enriched asynchronously by `../services/image-variants` and
+`../services/image-palette`.
 Set `IMAGE_PIPELINE_CALLBACK_SECRET` to the same value as the image-pipeline
 Lambda secret before deploying. The S3 notification route, SQS consumer, and
 object-key namespaces are documented in
-[`../services/image-pipeline/README.md`](../services/image-pipeline/README.md).
+[`../services/image-shared/`](../services/image-shared/).

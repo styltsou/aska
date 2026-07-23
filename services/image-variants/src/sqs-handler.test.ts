@@ -1,7 +1,7 @@
 import type { SQSEvent } from "aws-lambda";
 import { describe, expect, it, vi } from "vitest";
 
-import { createSqsHandler } from "./sqs-handler";
+import { createSqsHandler } from "../../image-shared/src/sqs-handler";
 
 const sourceEvent = {
   Records: [
@@ -86,6 +86,21 @@ describe("SQS image processor retry contract", () => {
       batchItemFailures: [{ itemIdentifier: "message-1" }],
     });
     expect(reportTerminalFailure).not.toHaveBeenCalled();
+  });
+
+  it("unwraps the SNS envelope that S3 fan-out delivers to SQS", async () => {
+    const { handler, process } = handlerFor();
+
+    const result = await handler(
+      sqsEvent({ Type: "Notification", Message: JSON.stringify(sourceEvent) }),
+      {} as never,
+      () => undefined,
+    );
+
+    expect(result).toEqual({ batchItemFailures: [] });
+    expect(process).toHaveBeenCalledWith(
+      expect.objectContaining({ objectKey: "ingest/upload-1/original.jpg" }),
+    );
   });
 
   it("reports the processor's own terminal failure on receive five", async () => {

@@ -25,6 +25,8 @@ type InboxContext = {
   workspaceSlug: string;
 };
 
+const EMPTY_SELECTED_IDS: string[] = [];
+
 export function AssetBoard({
   assets,
   emptyTitle,
@@ -66,7 +68,9 @@ export function AssetBoard({
       ),
     [assets],
   );
-  const selectedIds = scopeKey ? selectionIdsForScope(selection, scopeKey) : [];
+  const selectedIds = scopeKey
+    ? selectionIdsForScope(selection, scopeKey)
+    : EMPTY_SELECTED_IDS;
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const selectionRef = useRef({ selectedIds: selectedIdSet, count: 0 });
   selectionRef.current = {

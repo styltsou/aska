@@ -71,7 +71,8 @@ Each package is independently installed and run with Bun:
 ```sh
 cd client && bun install && bun run dev
 cd server && bun install && bun run dev
-cd services/image-pipeline && bun install && bun run dev
+cd services/image-variants && bun install
+cd services/image-palette && bun install
 ```
 
 For normal end-to-end development, use real AWS S3 and SQS through SST instead

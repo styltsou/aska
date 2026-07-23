@@ -6,13 +6,14 @@ S3, so neither processor depends on the other completing first.
 
 ```txt
 browser or remote import -> S3 ingest/ object-created event
-                               ├-> ImageVariantsQueue -> variants Lambda
-                               └-> ImagePaletteQueue  -> palette Lambda
+                               -> ImageUploadTopic (SNS)
+                                   ├-> ImageVariantsQueue -> variants Lambda
+                                   └-> ImagePaletteQueue  -> palette Lambda
 ```
 
-Both notifications are filtered to the `ingest/` prefix. The workers read the
-same immutable original object identity (object key plus ETag) but own separate
-effects:
+The single S3-to-SNS notification is filtered to the `ingest/` prefix. SNS
+fans the event out to both queues. The workers read the same immutable original
+object identity (object key plus ETag) but own separate effects:
 
 - The variants worker writes deterministic display and preview WebP objects,
   then marks `image_assets.variant_status` complete.
