@@ -5,20 +5,20 @@ the earlier synchronous server-side processing plan.
 
 ## Ownership
 
-The browser owns transferring a local source file to S3. The image-pipeline
-Lambda owns CPU-bound post-processing. The Hono API owns authorization, upload
-records, and the transactional database write that makes an image visible in a
-collection.
+The browser owns transferring a local source file to S3. Two independent
+image-pipeline Lambdas own CPU-bound post-processing: one generates variants
+and the other extracts the palette. The Hono API owns authorization, upload
+records, and the asset rows that are visible in a collection before enrichment
+finishes.
 
 ```txt
 Browser or remote URL
-  -> Hono creates uploads row
+  -> Hono creates upload + image asset rows
   -> original written to S3 ingest/
-  -> S3 ingest/ object-created event -> SQS
-  -> image-pipeline Lambda
-  -> S3 assets/ variants + signed Hono callback
-  -> asset, image_assets, image_colors, collection_nodes transaction
-  -> client polls upload status and renders the completed image
+  -> S3 ingest/ object-created event -> variants SQS + palette SQS
+  -> variants Lambda -> S3 assets/ variants + signed Hono callback
+  -> palette Lambda -> image_colors + signed Hono callback
+  -> client observes independent enrichment states
 ```
 
 The main server must not decode images, generate variants, or extract colors.
@@ -51,15 +51,15 @@ pending -> uploaded -> processing -> completed
   confirmed yet.
 - `uploaded`: the browser or remote import stored the original; it is awaiting
   the event consumer.
-- `processing`: the Worker authenticated itself to Hono and began processing.
-- `completed`: Hono persisted the image asset and optional collection node in
-  one transaction.
-- `failed`: processing exhausted its application retries or storing a remote
-  source failed. `error_message` holds the recorded diagnostic.
+- `processing`: the variants worker has begun rendering.
+- `completed`: the variants worker completed; palette extraction may still be
+  processing, completed, or failed on the associated image asset.
+- `failed`: variant processing exhausted its application retries or storing a
+  remote source failed. `error_message` holds the recorded diagnostic.
 
-Optional title/alt metadata is supplied when the upload session is created, so
-the Worker callback has everything needed to persist the asset. A successful
-R2 PUT is the only event needed to start processing.
+Optional title/alt metadata is supplied when the upload session is created, and
+the associated image asset is persisted in the same transaction. A successful
+S3 PUT is the only event needed to start both background jobs.
 
 ## API Contract
 
@@ -71,13 +71,13 @@ GET  /api/v1/workspace/:workspaceSlug/collections/:collectionSlug/images/uploads
 POST /api/v1/workspace/:workspaceSlug/collections/:collectionSlug/images/remote
 ```
 
-The create-direct response contains the server-generated R2 object key and a
-presigned PUT URL. The client PUTs directly to R2, then polls the status
+The create-direct response contains the server-generated S3 object key and a
+presigned PUT URL. The client PUTs directly to S3, then polls the status
 endpoint; it does not make a second request to begin processing. Remote imports
 return `{ upload }` with a lifecycle status, not an image node. The status
 endpoint includes `image` only after completion.
 
-The client reports exact R2 transfer progress from `0` through `100`. Once the
+The client reports exact S3 transfer progress from `0` through `100`. Once the
 PUT succeeds, the tile changes to an indeterminate processing state while it
 polls every second for up to two minutes. This separates byte-transfer progress
 from asynchronous Worker time and allows later files to upload while earlier
@@ -85,8 +85,9 @@ files process.
 
 ## Image pipeline callback
 
-The image pipeline Lambda sends `processing`, `completed`, or terminal `failed`
-callbacks to:
+The variants Lambda sends `image.processing.started`,
+`image.variants.completed`, or `image.variants.failed`. The palette Lambda
+sends `image.palette.completed` or `image.palette.failed` independently to:
 
 ```txt
 POST /api/v1/internal/image-pipeline/callback
@@ -103,13 +104,13 @@ Hono rejects missing, malformed, stale, or invalid signatures. Both functions
 use the same `IMAGE_PIPELINE_CALLBACK_SECRET` value.
 
 The callback identifies an upload by `originalObjectKey` and guards it with the
-source S3 ETag. Completion is idempotent: duplicate callbacks for an already
-completed upload succeed without creating another asset. Hono also validates
-that received variants use the exact expected `assets/{storageId}/...` keys.
+source S3 ETag. Completion is idempotent: duplicate callbacks safely overwrite
+the same enrichment result. Hono also validates that received variants use the
+exact expected `assets/{storageId}/...` keys.
 
 ## Variants and Rendering
 
-The Worker generates these non-upscaled WebP variants:
+The variants Lambda generates these non-upscaled WebP variants:
 
 | Role      | Maximum width | Use                                 |
 | --------- | ------------: | ----------------------------------- |
@@ -148,7 +149,7 @@ with two complementary passes:
 Use OKLab distance as the primary search criterion. Use coverage and salience
 only as secondary ranking signals. `image_assets.dominant_colors` is a compact
 display cache sorted by salience; do not use it as the search source of truth.
-The upload finalizer writes the upload's organization ID into every palette row
+The palette callback writes the upload's organization ID into every palette row
 so the tenant-first GiST index can bound color candidate retrieval before the
 asset join.
 The endpoint contract, collection scopes, multi-color matching, and relevance
@@ -157,30 +158,18 @@ cutoffs are specified in the
 
 ## Failure, Retry, and Observability
 
-The Worker records structured lifecycle logs. It retries ordinary processing
-failures with bounded backoff for the first two deliveries. On a processing
-failure at the third delivery, it sends a signed `failed` callback and
-acknowledges the Queue message only after the API accepts that terminal state.
-This prevents clients from polling an upload that can no longer complete.
+Each worker records structured lifecycle logs and retries only its own SQS
+message. It retries processing for the first four receives and reports the
+matching terminal `failed` callback on receive five. A sixth queue receive is
+reserved for retrying a terminal callback that could not reach the API; then
+the message is retained in that worker's DLQ for investigation and replay.
 
-This processing budget is intentionally separate from the Queue consumer's
-`max_retries` setting, which must be higher. The remaining Queue deliveries are
-reserved for a transient failure while delivering the terminal callback, such
-as an API outage. Configure a dead-letter queue or an operational replay path
-for the exceptional case where Queue delivery is exhausted before that callback
-is accepted.
+The original and any already-written variants remain in S3 on failure for
+debugging and replay. Assets and collection placement are created before the
+upload; failures update their separate variant or palette enrichment state.
 
-The original and any already-written variants remain in R2 on failure for
-debugging and replay. No `assets`, `image_assets`, `image_colors`, or
-`collection_nodes` rows are created until the completed callback transaction
-succeeds.
-
-The current one-Queue topology deliberately retries processing when the API
-callback is unavailable. This is safe and simple, but can repeat expensive
-work. [Image Pipeline Reliability and Evolution](./image-pipeline-reliability.md)
-documents the delivery guarantees, operational invariants, and the two-Queue
-architecture that isolates callback retries from image processing when scale
-justifies it.
+[Image Pipeline Reliability](./image-pipeline-reliability.md) documents the
+delivery guarantees and operational invariants.
 
 ## Configuration and Deployment
 

@@ -85,9 +85,6 @@ export function useBoardAssetActions({
             placement: insertionPlacement,
           });
         }
-        toast.success(
-          imageFiles.length === 1 ? "Image uploaded" : "Images uploaded",
-        );
       } catch (err) {
         toast.error(
           err instanceof Error ? err.message : "Unable to upload images.",

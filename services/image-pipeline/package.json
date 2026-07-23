@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/local.ts",
+    "dev:palette": "IMAGE_PIPELINE_HANDLER=palette tsx watch src/local.ts",
     "start": "tsx src/local.ts",
+    "start:palette": "IMAGE_PIPELINE_HANDLER=palette tsx src/local.ts",
     "lint": "oxlint .",
     "format": "oxfmt --check",
     "format:fix": "oxfmt --write",

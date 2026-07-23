@@ -45,8 +45,9 @@ coding agents.
 
 1. Keep the request-facing API responsible for authorization and durable upload
    state; do not move collection writes into the Worker.
-2. Use distinct R2 prefixes for source objects and generated objects.
-3. Configure the R2 event notification with the source prefix only.
+2. Use distinct S3 prefixes for source objects and generated objects.
+3. Configure S3 event notifications with the source prefix only, and give
+   independent processors separate queues when their retry behavior differs.
 4. Authenticate Worker callbacks over the raw payload and make the persistence
    transaction idempotent.
 5. Persist search-oriented extraction data independently from UI display caches.

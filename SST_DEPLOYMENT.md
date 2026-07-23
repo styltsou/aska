@@ -6,7 +6,7 @@ One stage creates one isolated AWS copy:
 ```text
 stage dev
   API Gateway -> Hono Lambda
-  private S3 assets bucket -> SQS -> image-processing Lambda
+  private S3 assets bucket -> two SQS queues -> variants and palette Lambdas
   private S3 client bucket -> CloudFront -> React/Vite client
   dead-letter queue, IAM permissions, and stage-specific SST secrets
 ```
@@ -25,10 +25,10 @@ another API, bucket, queues, and Lambdas.
 | Direct package commands       | Your laptop                    | No AWS event chain                   | Unit tests and isolated debugging only                   |
 
 Both SST modes are real end-to-end AWS flows. With live development, an image
-uploaded from the browser goes to the real S3 bucket, creates a real SQS
-message, and invokes the image pipeline running locally. With a normal deploy,
-the same pipeline runs in AWS instead. Both test the actual permissions, event
-shape, queue flow, and callback path.
+uploaded from the browser goes to the real S3 bucket, creates one message in
+each image-processing queue, and invokes the variants and palette workers. With
+a normal deploy, those same workers run in AWS instead. Both test the actual
+permissions, event shape, queue flow, and callback path.
 
 ## One-time `dev` setup
 
@@ -180,7 +180,8 @@ this.
 3. Upload an image in the browser. It follows this real path:
 
    ```text
-   browser -> API -> S3 ingest/ -> SQS -> local image Lambda -> API callback
+   browser -> API -> S3 ingest/ -> variants SQS + palette SQS
+           -> local worker callbacks -> API
    ```
 
 When you stop `sst dev`, its AWS Lambda proxies can no longer reach your

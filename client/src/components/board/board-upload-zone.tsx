@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { ImagePlusIcon, LoaderCircleIcon } from "lucide-react";
+import { ImagePlusIcon } from "lucide-react";
 import type { BoardInsertionPlacement } from "@/api/collection";
 import { getBoardPointerPosition } from "@/components/canvas/board-pointer-position";
 import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
@@ -113,12 +113,6 @@ export function BoardUploadZone({
           <span>Drop images to upload</span>
         </div>
       </div>
-      {statusText ? (
-        <div className="pointer-events-none fixed right-4 bottom-4 z-30 flex items-center gap-2 rounded-lg bg-popover px-3 py-2 text-sm font-medium shadow-lg ring-1 ring-border">
-          <LoaderCircleIcon className="size-4 animate-spin" />
-          <span>{statusText}</span>
-        </div>
-      ) : null}
       {isPending ? (
         <span className="sr-only" aria-live="polite">
           {statusText}

@@ -132,7 +132,7 @@ function evenlySample<T>(samples: T[], limit: number): T[] {
 
 /**
  * Decodes an original image and produces its metadata, progressive placeholder,
- * display variants, and search-oriented colour palette.
+ * and display variants.
  */
 export async function processImageVariants(
   buffer: Uint8Array,

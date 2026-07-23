@@ -20,7 +20,7 @@ import {
   SettingsIcon,
   StarIcon,
 } from "lucide-react";
-import { useSession } from "@/lib/auth-client";
+import type { AuthState } from "@/lib/auth-flow";
 import { useWorkspace } from "@/api/workspace";
 import { useCollectionContents, useMarkInboxSeen } from "@/api/collection";
 import {
@@ -30,7 +30,11 @@ import {
 import { openSettings } from "@/lib/settings-dialog";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
-  const { data: session, isPending } = useSession();
+  const authState = useRouterState({
+    select: (state) =>
+      state.matches.find((match) => match.routeId === "/$workspaceSlug")
+        ?.context as AuthState | undefined,
+  });
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -170,19 +174,25 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        {isPending ? (
-          <div className="flex items-center gap-2 p-2">
-            <Skeleton className="size-8 rounded-full" />
-            <div className="grid flex-1 gap-1">
-              <Skeleton className="h-3.5 w-24" />
-              <Skeleton className="h-3 w-32" />
-            </div>
-            <Skeleton className="ml-auto size-4" />
-          </div>
-        ) : session?.user ? (
-          <NavUser user={session.user} />
-        ) : null}
+        {authState?.session.user ? (
+          <NavUser user={authState.session.user} />
+        ) : (
+          <SidebarUserSkeleton />
+        )}
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function SidebarUserSkeleton() {
+  return (
+    <div className="flex items-center gap-2 p-2">
+      <Skeleton className="size-8 rounded-full" />
+      <div className="grid flex-1 gap-1">
+        <Skeleton className="h-3.5 w-24" />
+        <Skeleton className="h-3 w-32" />
+      </div>
+      <Skeleton className="ml-auto size-4" />
+    </div>
   );
 }

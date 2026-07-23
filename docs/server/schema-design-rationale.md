@@ -47,13 +47,14 @@ Read services generate short-lived presigned URLs for the requested variants.
 
 ## Image Processing Is Asynchronous
 
-An image becomes an asset only after the image pipeline Worker has generated its
-variants and returned an authenticated callback to Hono. `uploads` records that
-workflow separately from `assets`, which prevents partially processed images
-from appearing in collections and lets the Worker retry safely.
+The API creates an image asset and its `uploads` workflow row before the
+original is written to S3. The asset can therefore appear immediately with
+independent `variant_status` and `palette_status` enrichment states. Separate
+SQS consumers generate variants and palette data from the original upload;
+neither worker waits for the other.
 
-R2 originals and generated variants use separate namespaces (`ingest/` and
-`assets/`). The R2 event rule matches only `ingest/`, preventing generated
+S3 originals and generated variants use separate namespaces (`ingest/` and
+`assets/`). S3 notification rules match only `ingest/`, preventing generated
 variants from recursively scheduling more work.
 
 ## Image Colors Support More Than Display

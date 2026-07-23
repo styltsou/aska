@@ -78,7 +78,7 @@ export function ImageMetadata({ asset }: { asset: ImageAsset }) {
                   className="cursor-pointer"
                 >
                   <span
-                    className="size-6 rounded-md border border-black/10 shadow-sm dark:border-white/15"
+                    className="size-6 rounded-sm border border-black/10 shadow-sm dark:border-white/15"
                     style={{ backgroundColor: color }}
                   />
                 </TooltipTrigger>
