@@ -1,10 +1,20 @@
 # Image pipeline
 
-This is an AWS Lambda. Only S3 `ingest/` object-created events
-are delivered directly to SQS; Lambda consumes the queue, creates WebP variants under
-`assets/`, and sends a signed callback to the Hono API.
+The image pipeline consists of two independent AWS Lambda consumers:
 
-The SQS retry policy and dead-letter queue are defined in the root
-[`sst.config.ts`](../../sst.config.ts). See
-[`SST_DEPLOYMENT.md`](../../SST_DEPLOYMENT.md) for local invocation and deploy
-instructions.
+```txt
+S3 ingest/ object-created event
+  ├─ ImageVariantsQueue -> variants Lambda -> assets/{storageId}/*.webp
+  └─ ImagePaletteQueue  -> palette Lambda  -> image_colors callback
+```
+
+Both queues receive the same original-object event and read the original from
+S3. The image asset already exists before the upload begins, so either callback
+may arrive first. The variants worker updates rendition metadata; the palette
+worker updates palette data and its own enrichment status.
+
+Each queue has a separate 180-second visibility timeout, retry budget, and
+dead-letter queue. A failure in palette extraction never re-runs variant
+generation. The infrastructure is defined in the root
+[`sst.config.ts`](../../sst.config.ts). Use `bun run dev` for a variants event
+fixture and `bun run dev:palette` for a palette event fixture.

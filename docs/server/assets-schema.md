@@ -34,7 +34,7 @@ while those URLs decode.
 `uploads` is the durable asynchronous ingestion workflow. It stores the target
 collection/folder, source metadata, original object key, lifecycle status,
 processing ETag, terminal error, and final asset ID. It is not an asset and is
-created before an original is written to R2.
+created before an original is written to S3.
 
 `image_colors` is the searchable palette table. It stores `organization_id`,
 the display-ready hex value, indexed OKLab coordinates, `coverage`, `salience`,

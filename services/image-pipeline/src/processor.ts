@@ -28,13 +28,11 @@ export type ProcessedVariant = {
 };
 
 /** All metadata and derivatives produced from one original image. */
-export type ProcessedImage = {
+export type ProcessedImageVariants = {
   width: number;
   height: number;
   format: string;
   blurDataURL: string;
-  extractionVersion: number;
-  palette: ImagePaletteColor[];
   variants: ProcessedVariant[];
 };
 
@@ -134,16 +132,16 @@ function evenlySample<T>(samples: T[], limit: number): T[] {
 
 /**
  * Decodes an original image and produces its metadata, progressive placeholder,
- * display variants, and search-oriented colour palette.
+ * and display variants.
  */
-export async function processImage(
+export async function processImageVariants(
   buffer: Uint8Array,
-): Promise<ProcessedImage> {
+): Promise<ProcessedImageVariants> {
   const metadata = await sharp(buffer).metadata();
   if (!metadata.width || !metadata.height)
     throw new Error("Could not read image dimensions");
 
-  const [display, preview, blurDataURL, palette] = await Promise.all([
+  const [display, preview, blurDataURL] = await Promise.all([
     makeWidthVariant(
       buffer,
       "display",
@@ -159,7 +157,6 @@ export async function processImage(
       metadata.height,
     ),
     makeBlurDataURL(buffer),
-    extractPalette(buffer),
   ]);
 
   return {
@@ -167,9 +164,18 @@ export async function processImage(
     height: metadata.height,
     format: metadata.format ?? "unknown",
     blurDataURL,
-    extractionVersion: PALETTE_EXTRACTION_VERSION,
-    palette,
     variants: [display, preview],
+  };
+}
+
+/** Extracts colour metadata independently of rendition generation. */
+export async function processImagePalette(buffer: Uint8Array): Promise<{
+  extractionVersion: number;
+  palette: ImagePaletteColor[];
+}> {
+  return {
+    extractionVersion: PALETTE_EXTRACTION_VERSION,
+    palette: await extractPalette(buffer),
   };
 }
 

@@ -52,8 +52,8 @@ content. Each placement has an authored position on its collection or folder
 canvas. Folders are not assets.
 
 The application consists of a React/Vite client, a Bun/Hono API backed by
-Postgres and Drizzle, plus an AWS Lambda image pipeline that processes S3
-uploads asynchronously through SQS. Collection and folder badges show descendant asset counts:
+Postgres and Drizzle, plus AWS Lambda image workers that process S3 uploads
+asynchronously through independent SQS queues. Collection and folder badges show descendant asset counts:
 images and notes count, folders do not. The client uses XYFlow for collection
 canvas rendering and interaction while Aska's API remains the source of truth
 for node identity, hierarchy, and position.

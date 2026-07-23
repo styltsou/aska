@@ -13,7 +13,7 @@ const pipelineBase = {
 
 const completedCallback = {
   ...pipelineBase,
-  status: "completed" as const,
+  event: "image.variants.completed" as const,
   width: 1200,
   height: 800,
   format: "jpeg",
@@ -55,7 +55,7 @@ describe("ImagePipelineCallbackSchema", () => {
     expect(
       ImagePipelineCallbackSchema.safeParse({
         ...pipelineBase,
-        status: "processing",
+        event: "image.processing.started",
       }).success,
     ).toBe(true);
     expect(
@@ -64,7 +64,7 @@ describe("ImagePipelineCallbackSchema", () => {
     expect(
       ImagePipelineCallbackSchema.safeParse({
         ...pipelineBase,
-        status: "failed",
+        event: "image.variants.failed",
         error: "Unable to decode image",
       }).success,
     ).toBe(true);
@@ -97,7 +97,9 @@ describe("ImagePipelineCallbackSchema", () => {
   it("rejects invalid variant and palette metadata", () => {
     expect(
       ImagePipelineCallbackSchema.safeParse({
-        ...completedCallback,
+        ...pipelineBase,
+        event: "image.palette.completed",
+        extractionVersion: 1,
         palette: [{ ...completedCallback.palette[0], hex: "not-a-colour" }],
       }).success,
     ).toBe(false);
@@ -120,6 +122,8 @@ describe("image upload request DTOs", () => {
         fileName: "reference.png",
         contentType: "image/png",
         sizeBytes: 1024,
+        width: 1200,
+        height: 800,
         position: { x: 48, y: 96 },
       }),
     ).toMatchObject({

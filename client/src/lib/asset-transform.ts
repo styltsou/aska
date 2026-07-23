@@ -18,6 +18,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
       id: node.id,
       type: "image",
       url: node.url,
+      localPreviewUrl: node.localPreviewUrl,
       originalUrl: node.originalUrl,
       originalWidth: node.originalWidth,
       originalHeight: node.originalHeight,

@@ -389,7 +389,7 @@
         "operationId": "deleteCollectionNode",
         "tags": ["Collections"],
         "summary": "Delete a folder from a collection",
-        "description": "Recursively deletes the folder, all descendant folders, and all descendant assets (including their R2 storage objects). For deleting individual assets use `DELETE /workspace/{workspaceSlug}/assets/{assetId}`.",
+        "description": "Recursively deletes the folder, all descendant folders, and all descendant assets (including their S3 storage objects). For deleting individual assets use `DELETE /workspace/{workspaceSlug}/assets/{assetId}`.",
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
@@ -757,7 +757,7 @@
         "operationId": "deleteAsset",
         "tags": ["Assets"],
         "summary": "Permanently delete an asset",
-        "description": "Permanently deletes the asset, its metadata, and its associated R2 storage objects (original image, display variant, preview variant, and upload object). This action cannot be undone.\n\nTo only remove an asset from a collection without deleting it, use `DELETE /collections/{slug}/nodes/{nodeId}` instead.",
+        "description": "Permanently deletes the asset, its metadata, and its associated S3 storage objects (original image, display variant, preview variant, and upload object). This action cannot be undone.\n\nTo only remove an asset from a collection without deleting it, use `DELETE /collections/{slug}/nodes/{nodeId}` instead.",
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
@@ -864,7 +864,7 @@
         "operationId": "createDirectImageUpload",
         "tags": ["Image Uploads"],
         "summary": "Initiate a direct image upload to a collection",
-        "description": "Generates a presigned PUT URL for uploading an image file directly to R2 object storage scoped to a collection. R2 creation events start asynchronous processing; poll the upload status endpoint after the PUT succeeds.",
+        "description": "Generates a presigned PUT URL for uploading an image file directly to S3 object storage scoped to a collection. S3 creation events start asynchronous processing; poll the upload status endpoint after the PUT succeeds.",
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
@@ -958,7 +958,7 @@
         "operationId": "createImageFromRemoteUrl",
         "tags": ["Image Uploads"],
         "summary": "Import an image from a remote URL into a collection",
-        "description": "Downloads an image from a remote URL into R2 and returns an asynchronous upload status. The Worker generates variants and creates the image asset.",
+        "description": "Downloads an image from a remote URL into S3 and returns an asynchronous upload status. Independent workers generate variants and palette data for the pre-created image asset.",
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
@@ -1008,7 +1008,7 @@
         "operationId": "createInboxDirectImageUpload",
         "tags": ["Image Uploads"],
         "summary": "Initiate a direct image upload to the inbox",
-        "description": "Same as `createDirectImageUpload` but scoped to the inbox. R2 creation events start asynchronous processing, and the completed asset will appear in the inbox.",
+        "description": "Same as `createDirectImageUpload` but scoped to the inbox. S3 creation events start asynchronous processing, and the pre-created asset is enriched as processing completes.",
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
@@ -2157,7 +2157,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 255,
-            "description": "Original file name (used for R2 key generation only; not retained as the asset title)."
+            "description": "Original file name (used for S3 key generation only; not retained as the asset title)."
           },
           "contentType": {
             "type": "string",
@@ -2215,7 +2215,7 @@
                   },
                   "objectKey": {
                     "type": "string",
-                    "description": "R2 object key for the uploaded file."
+                    "description": "S3 object key for the uploaded file."
                   },
                   "url": {
                     "type": "string",

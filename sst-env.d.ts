@@ -6,44 +6,52 @@
 
 declare module "sst" {
   export interface Resource {
-    "Api": {
-      "type": "sst.aws.ApiGatewayV2"
-      "url": string
-    }
-    "Assets": {
-      "name": string
-      "type": "sst.aws.Bucket"
-    }
-    "BetterAuthSecret": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "Client": {
-      "type": "sst.aws.StaticSite"
-      "url": string
-    }
-    "DatabaseUrl": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "ImageDeadLetterQueue": {
-      "type": "sst.aws.Queue"
-      "url": string
-    }
-    "ImagePipelineCallbackSecret": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "ImageQueue": {
-      "type": "sst.aws.Queue"
-      "url": string
-    }
-    "ResendApiKey": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
+    Api: {
+      type: "sst.aws.ApiGatewayV2";
+      url: string;
+    };
+    Assets: {
+      name: string;
+      type: "sst.aws.Bucket";
+    };
+    BetterAuthSecret: {
+      type: "sst.sst.Secret";
+      value: string;
+    };
+    Client: {
+      type: "sst.aws.StaticSite";
+      url: string;
+    };
+    DatabaseUrl: {
+      type: "sst.sst.Secret";
+      value: string;
+    };
+    ImagePaletteDeadLetterQueue: {
+      type: "sst.aws.Queue";
+      url: string;
+    };
+    ImagePipelineCallbackSecret: {
+      type: "sst.sst.Secret";
+      value: string;
+    };
+    ImagePaletteQueue: {
+      type: "sst.aws.Queue";
+      url: string;
+    };
+    ImageVariantsDeadLetterQueue: {
+      type: "sst.aws.Queue";
+      url: string;
+    };
+    ImageVariantsQueue: {
+      type: "sst.aws.Queue";
+      url: string;
+    };
+    ResendApiKey: {
+      type: "sst.sst.Secret";
+      value: string;
+    };
   }
 }
 
-import "sst"
-export {}
+import "sst";
+export {};

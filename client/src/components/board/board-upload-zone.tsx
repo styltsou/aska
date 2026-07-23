@@ -1,6 +1,9 @@
-import React, { useState } from "react";
-import { ImagePlusIcon, LoaderCircleIcon } from "lucide-react";
+import React, { useCallback, useState } from "react";
+import { ImagePlusIcon } from "lucide-react";
+import type { BoardInsertionPlacement } from "@/api/collection";
+import { getBoardPointerPosition } from "@/components/canvas/board-pointer-position";
 import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
+import { useTransientStore } from "@/store";
 import { cn, parseHttpUrl } from "@/lib/utils";
 import { useBoardAssetActions } from "./use-board-asset-actions";
 
@@ -8,13 +11,23 @@ export function BoardUploadZone({
   workspaceSlug,
   collectionPath,
   target = "collection",
+  boardKey,
   children,
 }: {
   workspaceSlug: string;
   collectionPath: string;
   target?: "collection" | "inbox";
+  boardKey?: string;
   children: React.ReactNode;
 }) {
+  const getPlacement = useCallback((): BoardInsertionPlacement | undefined => {
+    if (!boardKey) return undefined;
+
+    const { boardVisibleBounds } = useTransientStore.getState();
+    const position = getBoardPointerPosition(boardKey);
+    const visibleBounds = boardVisibleBounds[boardKey];
+    return position || visibleBounds ? { position, visibleBounds } : undefined;
+  }, [boardKey]);
   const {
     createTextNote,
     importRemoteUrl,
@@ -25,6 +38,7 @@ export function BoardUploadZone({
     workspaceSlug,
     collectionPath,
     target,
+    getPlacement,
   });
   const [isDraggingImage, setIsDraggingImage] = useState(false);
 
@@ -99,12 +113,6 @@ export function BoardUploadZone({
           <span>Drop images to upload</span>
         </div>
       </div>
-      {statusText ? (
-        <div className="pointer-events-none fixed right-4 bottom-4 z-30 flex items-center gap-2 rounded-lg bg-popover px-3 py-2 text-sm font-medium shadow-lg ring-1 ring-border">
-          <LoaderCircleIcon className="size-4 animate-spin" />
-          <span>{statusText}</span>
-        </div>
-      ) : null}
       {isPending ? (
         <span className="sr-only" aria-live="polite">
           {statusText}

@@ -4,7 +4,7 @@ import { AppError, ErrorCode } from "@/lib/errors";
 
 type CompletedPipelineResult = Extract<
   ImagePipelineCallbackInput,
-  { status: "completed" }
+  { event: "image.variants.completed" }
 >;
 
 type PipelineUploadMetadata = {

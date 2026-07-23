@@ -2,7 +2,13 @@ import { and, eq } from "drizzle-orm";
 
 import { env } from "@/config";
 import { db } from "@/db";
-import { assets, imageAssets, uploads } from "@/db/schema";
+import {
+  assets,
+  collectionNodes,
+  imageAssets,
+  imageColors,
+  uploads,
+} from "@/db/schema";
 import type { CollectionImageNode } from "@/dto/collection.dto";
 import {
   AllowedImageContentTypes as allowedImageContentTypes,
@@ -117,27 +123,75 @@ export class ImageUploadService implements IImageUploadService {
       contentType: data.contentType,
     });
 
-    const [upload] = await db
-      .insert(uploads)
-      .values({
-        organizationId: orgId,
-        collectionId: target?.collection.id,
-        parentFolderPath: target ? data.parentFolderPath : null,
-        positionX: target ? data.position?.x : null,
-        positionY: target ? data.position?.y : null,
-        source: "direct",
-        status: "pending",
-        originalObjectKey: objectKey,
-        storageId,
-        fileName: data.fileName,
-        title: data.title,
+    const [upload] = await db.transaction(async (tx) => {
+      const [asset] = await tx
+        .insert(assets)
+        .values({
+          organizationId: orgId,
+          type: "image",
+          title: data.title ?? data.fileName,
+          createdByUserId: userId,
+          updatedByUserId: userId,
+          ...(target ? {} : { lastAddedToInboxAt: new Date() }),
+        })
+        .returning({ id: assets.id });
+      if (!asset)
+        throw new AppError(
+          ErrorCode.INTERNAL_ERROR,
+          "Failed to create image asset",
+        );
+      await tx.insert(imageAssets).values({
+        assetId: asset.id,
+        width: data.width,
+        height: data.height,
         alt: data.alt,
-        contentType: data.contentType,
-        sizeBytes: data.sizeBytes,
-        uploadUrlExpiresAt: presigned.expiresAt,
-        createdByUserId: userId,
-      })
-      .returning({ id: uploads.id });
+        variants: {
+          original: {
+            objectKey,
+            width: data.width,
+            height: data.height,
+            contentType: data.contentType,
+            sizeBytes: data.sizeBytes,
+          },
+        },
+      });
+      if (target)
+        await tx.insert(collectionNodes).values({
+          organizationId: orgId,
+          collectionId: target.collection.id,
+          parentFolderId: target.parentFolderId,
+          nodeType: "asset",
+          assetId: asset.id,
+          positionX: data.position?.x ?? null,
+          positionY: data.position?.y ?? null,
+          depth: target.pathFolderSlugs.length,
+          pathFolderIds: target.pathFolderIds,
+          pathFolderSlugs: target.pathFolderSlugs,
+          pathFolderNames: target.pathFolderNames,
+        });
+      return tx
+        .insert(uploads)
+        .values({
+          organizationId: orgId,
+          collectionId: target?.collection.id,
+          parentFolderPath: target ? data.parentFolderPath : null,
+          positionX: target ? data.position?.x : null,
+          positionY: target ? data.position?.y : null,
+          source: "direct",
+          status: "pending",
+          originalObjectKey: objectKey,
+          storageId,
+          fileName: data.fileName,
+          title: data.title,
+          alt: data.alt,
+          contentType: data.contentType,
+          sizeBytes: data.sizeBytes,
+          uploadUrlExpiresAt: presigned.expiresAt,
+          assetId: asset.id,
+          createdByUserId: userId,
+        })
+        .returning({ id: uploads.id, assetId: uploads.assetId });
+    });
 
     if (!upload) {
       throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create upload");
@@ -150,6 +204,7 @@ export class ImageUploadService implements IImageUploadService {
       headers: presigned.headers,
       expiresAt: presigned.expiresAt.toISOString(),
       maxSizeBytes: env.MAX_DIRECT_UPLOAD_BYTES,
+      image: await this.getImageNode(upload.assetId!),
     };
   }
 
@@ -275,6 +330,63 @@ export class ImageUploadService implements IImageUploadService {
         "Failed to create remote upload",
       );
 
+    // Remote sources are fetched server-side, so dimensions are not available
+    // until the worker decodes them. Persist a usable original-backed asset now;
+    // the variant callback replaces this provisional 1×1 metadata.
+    await db.transaction(async (tx) => {
+      const [asset] = await tx
+        .insert(assets)
+        .values({
+          organizationId: orgId,
+          type: "image",
+          title: data.title ?? fileName,
+          createdByUserId: userId,
+          updatedByUserId: userId,
+          ...(target ? {} : { lastAddedToInboxAt: new Date() }),
+        })
+        .returning({ id: assets.id });
+      if (!asset)
+        throw new AppError(
+          ErrorCode.INTERNAL_ERROR,
+          "Failed to create image asset",
+        );
+      await tx.insert(imageAssets).values({
+        assetId: asset.id,
+        width: 1,
+        height: 1,
+        alt: data.alt,
+        sourceLabel: remoteUrl.hostname,
+        sourceUrl: remoteUrl.toString(),
+        variants: {
+          original: {
+            objectKey,
+            width: 1,
+            height: 1,
+            contentType,
+            sizeBytes: bytes.byteLength,
+          },
+        },
+      });
+      if (target)
+        await tx.insert(collectionNodes).values({
+          organizationId: orgId,
+          collectionId: target.collection.id,
+          parentFolderId: target.parentFolderId,
+          nodeType: "asset",
+          assetId: asset.id,
+          positionX: data.position?.x ?? null,
+          positionY: data.position?.y ?? null,
+          depth: target.pathFolderSlugs.length,
+          pathFolderIds: target.pathFolderIds,
+          pathFolderSlugs: target.pathFolderSlugs,
+          pathFolderNames: target.pathFolderNames,
+        });
+      await tx
+        .update(uploads)
+        .set({ assetId: asset.id })
+        .where(eq(uploads.id, upload.id));
+    });
+
     try {
       await this.objectStorageService.putObject({
         key: objectKey,
@@ -327,19 +439,41 @@ export class ImageUploadService implements IImageUploadService {
       return { ignored: false };
     }
 
-    if (action.type === "mark-failed" && input.status === "failed") {
-      await db
-        .update(uploads)
-        .set({
-          status: "failed",
-          processingEtag: input.originalEtag,
-          errorMessage: input.error,
-        })
-        .where(eq(uploads.id, upload.id));
+    if (
+      action.type === "mark-failed" &&
+      (input.event === "image.variants.failed" ||
+        input.event === "image.palette.failed")
+    ) {
+      await db.transaction(async (tx) => {
+        await tx
+          .update(uploads)
+          .set({
+            status:
+              input.event === "image.variants.failed"
+                ? "failed"
+                : upload.status,
+            processingEtag: input.originalEtag,
+            errorMessage: input.error,
+          })
+          .where(eq(uploads.id, upload.id));
+        if (upload.assetId)
+          await tx
+            .update(imageAssets)
+            .set({
+              ...(input.event === "image.variants.failed"
+                ? { variantStatus: "failed", variantError: input.error }
+                : { paletteStatus: "failed", paletteError: input.error }),
+            })
+            .where(eq(imageAssets.assetId, upload.assetId));
+      });
       return { ignored: false };
     }
 
-    if (input.status !== "completed") {
+    if (input.event === "image.palette.completed") {
+      await this.applyPaletteResult(upload, input);
+      return { ignored: false };
+    }
+    if (input.event !== "image.variants.completed") {
       throw new AppError(
         ErrorCode.INTERNAL_ERROR,
         "Pipeline callback action does not match its status",
@@ -395,21 +529,22 @@ export class ImageUploadService implements IImageUploadService {
           variants: imageAssets.variants,
           blurDataURL: imageAssets.blurDataURL,
           dominantColors: imageAssets.dominantColors,
+          variantStatus: imageAssets.variantStatus,
+          paletteStatus: imageAssets.paletteStatus,
         })
         .from(assets)
         .innerJoin(imageAssets, eq(imageAssets.assetId, assets.id))
         .where(eq(assets.id, assetId))
         .limit(1),
     );
-    if (!row?.variants.display?.objectKey)
+    const preferred = row?.variants.display ?? row?.variants.original;
+    if (!row || !preferred?.objectKey)
       throw new AppError(
         ErrorCode.NOT_FOUND,
         "Image display variant not found",
       );
     const [display, original] = await Promise.all([
-      this.objectStorageService.createPresignedGetUrl(
-        row.variants.display.objectKey,
-      ),
+      this.objectStorageService.createPresignedGetUrl(preferred.objectKey),
       row.variants.original?.objectKey
         ? this.objectStorageService.createPresignedGetUrl(
             row.variants.original.objectKey,
@@ -423,8 +558,8 @@ export class ImageUploadService implements IImageUploadService {
       originalUrl: original?.url,
       originalWidth: row.variants.original?.width,
       originalHeight: row.variants.original?.height,
-      width: row.variants.display.width,
-      height: row.variants.display.height,
+      width: preferred.width,
+      height: preferred.height,
       title: row.title,
       alt: row.alt,
       sourceLabel: row.sourceLabel,
@@ -432,9 +567,43 @@ export class ImageUploadService implements IImageUploadService {
       isFavorite: row.isFavorite,
       blurDataURL: row.blurDataURL,
       dominantColors: row.dominantColors,
-      sizeBytes: row.variants.display.sizeBytes,
+      variantStatus: row.variantStatus,
+      paletteStatus: row.paletteStatus,
+      sizeBytes: preferred.sizeBytes,
       createdAt: row.createdAt.toISOString(),
       position: null,
     };
+  }
+
+  private async applyPaletteResult(
+    upload: UploadRecord,
+    input: Extract<
+      ImagePipelineCallbackInput,
+      { event: "image.palette.completed" }
+    >,
+  ): Promise<void> {
+    if (!upload.assetId) return;
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(imageColors)
+        .where(eq(imageColors.assetId, upload.assetId!));
+      if (input.palette.length)
+        await tx.insert(imageColors).values(
+          input.palette.map((color) => ({
+            ...color,
+            organizationId: upload.organizationId,
+            assetId: upload.assetId!,
+            extractionVersion: input.extractionVersion,
+          })),
+        );
+      await tx
+        .update(imageAssets)
+        .set({
+          dominantColors: input.palette.map((color) => color.hex),
+          paletteStatus: "completed",
+          paletteError: null,
+        })
+        .where(eq(imageAssets.assetId, upload.assetId!));
+    });
   }
 }

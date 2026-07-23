@@ -436,31 +436,23 @@ async function readImageDimensions(file: File): Promise<{
   }
 }
 
-async function makeOptimisticImageNode(
+function makeOptimisticImageNode(
   file: File,
   index: number,
-): Promise<
-  Extract<CollectionNode, { type: "image" }> & {
-    previewObjectUrl: string;
-  }
-> {
+): Extract<CollectionNode, { type: "image" }> & {
+  previewObjectUrl: string;
+} {
   const previewObjectUrl = URL.createObjectURL(file);
   const id = `image-uploading-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
-  let dimensions: { width: number; height: number };
-
-  try {
-    dimensions = await readImageDimensions(file);
-  } catch {
-    // Keep the upload usable if the browser cannot decode a local preview.
-    dimensions = { width: 1, height: 1 };
-  }
 
   return {
     id,
     type: "image",
     url: previewObjectUrl,
-    width: dimensions.width,
-    height: dimensions.height,
+    // Render immediately. The real dimensions replace this provisional square
+    // while the upload request is being prepared.
+    width: 1,
+    height: 1,
     title: file.name || null,
     alt: null,
     sourceLabel: null,
@@ -483,12 +475,6 @@ function revokeOptimisticImageUrls(
       URL.revokeObjectURL(image.previewObjectUrl);
     }
   }
-}
-
-function revokeOptimisticImageUrlsLater(
-  images: Array<{ previewObjectUrl?: string }> | undefined,
-) {
-  window.setTimeout(() => revokeOptimisticImageUrls(images), 30_000);
 }
 
 function updateOptimisticImage(
@@ -1034,7 +1020,9 @@ export function useUploadLocalImages(
         collectionSlug,
         parentFolderPath,
       );
-      await queryClient.cancelQueries({ queryKey: contentsKey });
+      // The local preview is the completion point for this interaction. Do not
+      // wait for an in-flight refetch before placing it on the canvas.
+      void queryClient.cancelQueries({ queryKey: contentsKey });
 
       const previousContents =
         queryClient.getQueryData<CollectionContentsResponse>(contentsKey);
@@ -1045,9 +1033,7 @@ export function useUploadLocalImages(
         "workspace",
         workspaceSlug,
       ]);
-      const optimisticImages = await Promise.all(
-        files.map(makeOptimisticImageNode),
-      );
+      const optimisticImages = files.map(makeOptimisticImageNode);
       const positions = reserveNodePositions(
         previousContents?.nodes ?? [],
         optimisticImages,
@@ -1082,11 +1068,33 @@ export function useUploadLocalImages(
         optimisticImages.length,
       );
 
-      const processingImages: Promise<CollectionImageNode>[] = [];
+      const imageDimensions = await Promise.all(
+        files.map(async (file) => {
+          try {
+            return await readImageDimensions(file);
+          } catch {
+            return { width: 1, height: 1 };
+          }
+        }),
+      );
+      for (const [index, dimensions] of imageDimensions.entries()) {
+        const optimisticImage = optimisticImages[index]!;
+        optimisticImage.width = dimensions.width;
+        optimisticImage.height = dimensions.height;
+        updateOptimisticImage(
+          queryClient,
+          workspaceSlug,
+          collectionSlug,
+          parentFolderPath,
+          optimisticImage.id,
+          dimensions,
+        );
+      }
+
+      const images: CollectionImageNode[] = [];
       const multiple = files.length > 1;
       const label = multiple ? `${files.length} images` : "1 image";
       const toastId = toast.loading(`Uploading ${label}...`);
-      let cancelled = false;
 
       try {
         for (const [index, file] of files.entries()) {
@@ -1098,6 +1106,8 @@ export function useUploadLocalImages(
               fileName: file.name || "clipboard-image.png",
               contentType: file.type,
               sizeBytes: file.size,
+              width: optimisticImage.width,
+              height: optimisticImage.height,
               parentFolderPath,
               position: optimisticImage.position ?? undefined,
             },
@@ -1122,81 +1132,51 @@ export function useUploadLocalImages(
             },
           );
 
-          updateOptimisticImage(
-            queryClient,
-            workspaceSlug,
-            collectionSlug,
-            parentFolderPath,
-            optimisticImage.id,
-            { uploadStatus: "processing", uploadProgress: 100 },
-          );
-
-          processingImages.push(
-            waitForProcessedImage(() =>
-              fetchImageUploadStatus(
-                workspaceSlug,
-                collectionSlug,
-                uploadData.upload.id,
-              ),
-            ).then((processedImage) => {
-              const image = {
-                ...processedImage,
-                clientId: optimisticImage.clientId,
-                position: optimisticImage.position,
-              };
-
-              if (cancelled) return image;
-
-              queryClient.setQueryData<CollectionContentsResponse>(
-                contentsKey,
-                (current) => {
-                  if (!current) return current;
-
-                  return {
+          const image = {
+            ...uploadData.upload.image,
+            clientId: optimisticImage.clientId,
+            position: optimisticImage.position,
+            localPreviewUrl: optimisticImage.previewObjectUrl,
+          };
+          images.push(image);
+          queryClient.setQueryData<CollectionContentsResponse>(
+            contentsKey,
+            (current) =>
+              !current
+                ? current
+                : {
                     ...current,
                     nodes: current.nodes.map((node) =>
                       node.id === optimisticImage.id ? image : node,
                     ),
-                  };
-                },
-              );
-
-              const preview: FolderChildPreview = {
-                assetId: image.id,
-                type: "image",
-                url: image.url,
-                blurDataURL: image.blurDataURL,
-              };
-              addPreviewToCollection(
-                queryClient,
-                workspaceSlug,
-                collectionSlug,
-                preview,
-              );
-              addPreviewToParentFolder(
-                queryClient,
-                workspaceSlug,
-                collectionSlug,
-                parentFolderPath,
-                preview,
-                0,
-              );
-              return image;
-            }),
+                  },
+          );
+          const preview: FolderChildPreview = {
+            assetId: image.id,
+            type: "image",
+            url: image.url,
+            blurDataURL: image.blurDataURL,
+          };
+          addPreviewToCollection(
+            queryClient,
+            workspaceSlug,
+            collectionSlug,
+            preview,
+          );
+          addPreviewToParentFolder(
+            queryClient,
+            workspaceSlug,
+            collectionSlug,
+            parentFolderPath,
+            preview,
+            0,
           );
         }
 
-        const images = await Promise.all(processingImages);
-
-        revokeOptimisticImageUrlsLater(optimisticImages);
         reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
         toast.success(`${label} uploaded`, { id: toastId });
         return { images, parentFolderPath };
       } catch (error) {
-        cancelled = true;
-        void Promise.allSettled(processingImages).then(() => {
-          reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
-        });
         toast.error("Upload failed", { id: toastId });
         revokeOptimisticImageUrls(optimisticImages);
         queryClient.setQueryData(contentsKey, previousContents);
@@ -1228,15 +1208,15 @@ export function useUploadInboxImages(workspaceSlug: string) {
     mutationFn: async ({ files }: { files: File[] }) => {
       const inboxKey = collectionQueryKeys.inbox(workspaceSlug);
       const workspaceKey = ["workspace", workspaceSlug] as const;
-      await queryClient.cancelQueries({ queryKey: inboxKey });
+      // Keep the modal-to-canvas handoff immediate; cancelling a refetch can
+      // happen in parallel with the optimistic cache update.
+      void queryClient.cancelQueries({ queryKey: inboxKey });
 
       const previousInbox =
         queryClient.getQueryData<InboxContentsResponse>(inboxKey);
       const previousWorkspace =
         queryClient.getQueryData<WorkspaceData>(workspaceKey);
-      const optimisticImages = await Promise.all(
-        files.map(makeOptimisticImageNode),
-      );
+      const optimisticImages = files.map(makeOptimisticImageNode);
 
       queryClient.setQueryData<InboxContentsResponse>(inboxKey, (current) => {
         if (!current) return current;
@@ -1252,11 +1232,31 @@ export function useUploadInboxImages(workspaceSlug: string) {
         (count) => count + files.length,
       );
 
-      const processingImages: Promise<CollectionImageNode>[] = [];
+      const imageDimensions = await Promise.all(
+        files.map(async (file) => {
+          try {
+            return await readImageDimensions(file);
+          } catch {
+            return { width: 1, height: 1 };
+          }
+        }),
+      );
+      for (const [index, dimensions] of imageDimensions.entries()) {
+        const optimisticImage = optimisticImages[index]!;
+        optimisticImage.width = dimensions.width;
+        optimisticImage.height = dimensions.height;
+        updateOptimisticInboxImage(
+          queryClient,
+          workspaceSlug,
+          optimisticImage.id,
+          dimensions,
+        );
+      }
+
+      const images: CollectionImageNode[] = [];
       const multiple = files.length > 1;
       const label = multiple ? `${files.length} images` : "1 image";
       const toastId = toast.loading(`Uploading ${label}...`);
-      let cancelled = false;
 
       try {
         for (const [index, file] of files.entries()) {
@@ -1265,6 +1265,8 @@ export function useUploadInboxImages(workspaceSlug: string) {
             fileName: file.name || "clipboard-image.png",
             contentType: file.type,
             sizeBytes: file.size,
+            width: optimisticImage.width,
+            height: optimisticImage.height,
           });
 
           await uploadFileToPresignedUrl(
@@ -1283,50 +1285,27 @@ export function useUploadInboxImages(workspaceSlug: string) {
               );
             },
           );
-          updateOptimisticInboxImage(
-            queryClient,
-            workspaceSlug,
-            optimisticImage.id,
-            { uploadStatus: "processing", uploadProgress: 100 },
-          );
-
-          processingImages.push(
-            waitForProcessedImage(() =>
-              fetchInboxImageUploadStatus(workspaceSlug, uploadData.upload.id),
-            ).then((processedImage) => {
-              const image = {
-                ...processedImage,
-                clientId: optimisticImage.clientId,
-              };
-
-              if (cancelled) return image;
-
-              queryClient.setQueryData<InboxContentsResponse>(
-                inboxKey,
-                (current) => {
-                  if (!current) return current;
-
-                  return {
-                    ...current,
-                    nodes: current.nodes.map((node) =>
-                      node.id === optimisticImage.id ? image : node,
-                    ),
-                  };
+          const image = {
+            ...uploadData.upload.image,
+            clientId: optimisticImage.clientId,
+            localPreviewUrl: optimisticImage.previewObjectUrl,
+          };
+          images.push(image);
+          queryClient.setQueryData<InboxContentsResponse>(inboxKey, (current) =>
+            !current
+              ? current
+              : {
+                  ...current,
+                  nodes: current.nodes.map((node) =>
+                    node.id === optimisticImage.id ? image : node,
+                  ),
                 },
-              );
-              return image;
-            }),
           );
         }
 
-        const images = await Promise.all(processingImages);
-
         toast.success(`${label} uploaded`, { id: toastId });
-        revokeOptimisticImageUrlsLater(optimisticImages);
         return { images };
       } catch (error) {
-        cancelled = true;
-        void Promise.allSettled(processingImages);
         toast.error("Upload failed", { id: toastId });
         revokeOptimisticImageUrls(optimisticImages);
         queryClient.setQueryData(inboxKey, previousInbox);

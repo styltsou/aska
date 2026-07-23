@@ -6,6 +6,15 @@ import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
 import type { NoteAsset } from "@/types/asset";
 
+const BARE_URL_RE = /(^|[^(\[])(https?:\/\/[^\s<"'>)\]]+)/gi;
+
+function linkifyBareUrls(text: string): string {
+  return text.replace(
+    BARE_URL_RE,
+    (_, before, url) => `${before}[${url}](${url})`,
+  );
+}
+
 const MD_COMPONENTS: Components = {
   h1: ({ className, ...props }) => (
     <h1
@@ -67,9 +76,11 @@ const MD_COMPONENTS: Components = {
   a: ({ className, ...props }) => (
     <a
       className={cn(
-        "text-primary hover:text-primary/75 font-medium wrap-break-word underline underline-offset-4 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "text-primary hover:text-primary/75 font-medium break-words underline underline-offset-4 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
         className,
       )}
+      target="_blank"
+      rel="noopener noreferrer"
       {...props}
     />
   ),
@@ -123,7 +134,9 @@ export function NoteMarkdown({
 }) {
   return (
     <div className={className}>
-      <ReactMarkdown components={MD_COMPONENTS}>{content}</ReactMarkdown>
+      <ReactMarkdown components={MD_COMPONENTS}>
+        {linkifyBareUrls(content)}
+      </ReactMarkdown>
     </div>
   );
 }
@@ -204,7 +217,10 @@ export function NoteAssetCard({
         effectiveOnOpen();
       }}
     >
-      <div ref={contentRef} className={cn("min-w-0", hasOverflow && "pb-8")}>
+      <div
+        ref={contentRef}
+        className={cn("min-w-0 break-words", hasOverflow && "pb-8")}
+      >
         <NoteMarkdown content={asset.content} className="min-w-0" />
       </div>
       {hasOverflow ? (

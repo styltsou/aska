@@ -7,26 +7,24 @@ import { resolvePipelineCallbackAction } from "./callback-state";
 const originalObjectKey = "ingest/upload-1/original.jpg";
 
 const processingInput = {
-  status: "processing",
+  event: "image.processing.started",
   originalObjectKey,
   originalEtag: "etag-1",
 } satisfies ImagePipelineCallbackInput;
 
 const failedInput = {
   ...processingInput,
-  status: "failed" as const,
+  event: "image.variants.failed" as const,
   error: "Unable to decode image",
 } satisfies ImagePipelineCallbackInput;
 
 const completedInput = {
   ...processingInput,
-  status: "completed" as const,
+  event: "image.variants.completed" as const,
   width: 1200,
   height: 800,
   format: "jpeg",
   blurDataURL: "data:image/webp;base64,AA==",
-  extractionVersion: 1,
-  palette: [],
   variants: [
     {
       role: "display" as const,

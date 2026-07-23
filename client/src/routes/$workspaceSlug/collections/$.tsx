@@ -210,6 +210,7 @@ function CollectionPage() {
         <BoardUploadZone
           workspaceSlug={workspaceSlug}
           collectionPath={collectionPath}
+          boardKey={boardKey}
         >
           <Canvas
             key={boardKey}

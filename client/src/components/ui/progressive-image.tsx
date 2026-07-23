@@ -1,4 +1,4 @@
-import { useCallback, useState, type ComponentProps } from "react";
+import { useCallback, useEffect, useState, type ComponentProps } from "react";
 import { motion, type MotionStyle } from "motion/react";
 import { cn } from "@/lib/utils";
 
@@ -7,6 +7,8 @@ type ProgressiveImageProps = Omit<
   "src" | "style"
 > & {
   src: string;
+  /** A local Blob preview to keep visible while `src` finishes decoding. */
+  fallbackSrc?: string;
   blurDataURL?: string | null;
   placeholderClassName?: string;
   style?: MotionStyle;
@@ -26,6 +28,7 @@ function rememberDecodedSource(src: string) {
 
 export function ProgressiveImage({
   src,
+  fallbackSrc,
   blurDataURL,
   alt = "",
   className,
@@ -40,6 +43,15 @@ export function ProgressiveImage({
     decodedSources.has(src) ? src : null,
   );
   const isDecoded = decodedSrc === src || decodedSources.has(src);
+  const showFallback = Boolean(fallbackSrc) && !isDecoded;
+
+  useEffect(() => {
+    if (!isDecoded || !fallbackSrc?.startsWith("blob:")) return;
+
+    // Let the decoded remote image paint once before releasing the local Blob.
+    const frame = requestAnimationFrame(() => URL.revokeObjectURL(fallbackSrc));
+    return () => cancelAnimationFrame(frame);
+  }, [fallbackSrc, isDecoded]);
 
   const handleLoad = useCallback<NonNullable<ProgressiveImageProps["onLoad"]>>(
     (event) => {
@@ -66,14 +78,15 @@ export function ProgressiveImage({
   >(
     (event) => {
       onError?.(event);
-      setDecodedSrc(src);
+      // A failed signed URL should not hide the still-valid local preview.
+      if (!fallbackSrc) setDecodedSrc(src);
     },
-    [onError, src],
+    [fallbackSrc, onError, src],
   );
 
   return (
     <>
-      {blurDataURL && !isDecoded ? (
+      {blurDataURL && !showFallback && !isDecoded ? (
         <>
           <motion.img
             src={blurDataURL}
@@ -97,14 +110,23 @@ export function ProgressiveImage({
           />
         </>
       ) : null}
+      {fallbackSrc ? (
+        <motion.img
+          src={fallbackSrc}
+          alt=""
+          aria-hidden="true"
+          className={cn(className, "pointer-events-none transition-opacity")}
+          style={{ ...style, opacity: showFallback ? 1 : 0 }}
+        />
+      ) : null}
       <motion.img
         {...props}
         src={src}
         alt={alt}
-        className={className}
+        className={cn(className, "transition-opacity")}
         style={{
           ...style,
-          opacity: isDecoded || !blurDataURL ? 1 : 0,
+          opacity: isDecoded || (!blurDataURL && !fallbackSrc) ? 1 : 0,
         }}
         loading={loading}
         onLoad={handleLoad}

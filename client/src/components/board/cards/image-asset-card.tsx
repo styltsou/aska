@@ -46,6 +46,7 @@ export function ImageAssetCard({
     >
       <ProgressiveImage
         src={asset.url}
+        fallbackSrc={asset.localPreviewUrl}
         blurDataURL={asset.uploadStatus ? undefined : asset.blurDataURL}
         alt={asset.alt ?? ""}
         className="absolute inset-0 h-full w-full rounded-[6px] object-cover"
@@ -75,8 +76,10 @@ export function ImageAssetCard({
             transition={{ duration: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
           >
-            <div className="inline-flex items-center gap-2 rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm">
-              {asset.title && <span className="truncate">{asset.title}</span>}
+            <div className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm">
+              {asset.title && (
+                <span className="min-w-0 truncate">{asset.title}</span>
+              )}
               {asset.sourceLabel && (
                 <>
                   {asset.title && (
@@ -87,10 +90,10 @@ export function ImageAssetCard({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(event) => event.stopPropagation()}
-                    className="inline-flex items-center gap-1 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:text-sidebar-foreground/70"
+                    className="inline-flex min-w-0 items-center gap-1 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:text-sidebar-foreground/70"
                   >
-                    <ExternalLink className="size-3" />
-                    {asset.sourceLabel}
+                    <ExternalLink className="size-3 shrink-0" />
+                    <span className="truncate">{asset.sourceLabel}</span>
                   </a>
                 </>
               )}

@@ -29,21 +29,32 @@ export default $config({
       "ImagePipelineCallbackSecret",
     );
 
-    const imageDeadLetterQueue = new sst.aws.Queue("ImageDeadLetterQueue", {
-      transform: {
-        queue: {
-          messageRetentionSeconds: 1_209_600,
+    const createImageQueue = (name: string, deadLetterQueueName: string) => {
+      const deadLetterQueue = new sst.aws.Queue(deadLetterQueueName, {
+        transform: {
+          queue: {
+            messageRetentionSeconds: 1_209_600,
+          },
         },
-      },
-    });
+      });
+      const queue = new sst.aws.Queue(name, {
+        visibilityTimeout: "180 seconds",
+        // The worker reports a terminal image status on receive five. Keep one
+        // additional receive for a failed terminal callback before preserving
+        // the message in the DLQ.
+        dlq: { queue: deadLetterQueue.arn, retry: 6 },
+      });
+      return { queue, deadLetterQueue };
+    };
 
-    const imageQueue = new sst.aws.Queue("ImageQueue", {
-      visibilityTimeout: "180 seconds",
-      dlq: {
-        queue: imageDeadLetterQueue.arn,
-        retry: 5,
-      },
-    });
+    const {
+      queue: imageVariantsQueue,
+      deadLetterQueue: imageVariantsDeadLetterQueue,
+    } = createImageQueue("ImageVariantsQueue", "ImageVariantsDeadLetterQueue");
+    const {
+      queue: imagePaletteQueue,
+      deadLetterQueue: imagePaletteDeadLetterQueue,
+    } = createImageQueue("ImagePaletteQueue", "ImagePaletteDeadLetterQueue");
 
     const assets = new sst.aws.Bucket("Assets", {
       cors: {
@@ -57,8 +68,14 @@ export default $config({
     assets.notify({
       notifications: [
         {
-          name: "ProcessIngestedImage",
-          queue: imageQueue,
+          name: "GenerateImageVariants",
+          queue: imageVariantsQueue,
+          events: ["s3:ObjectCreated:*"],
+          filterPrefix: "ingest/",
+        },
+        {
+          name: "ExtractImagePalette",
+          queue: imagePaletteQueue,
           events: ["s3:ObjectCreated:*"],
           filterPrefix: "ingest/",
         },
@@ -95,51 +112,68 @@ export default $config({
       },
     });
 
-    imageQueue.subscribe(
+    const imageWorkerFiles = [
       {
-        handler: "services/image-pipeline/src/lambda.handler",
-        runtime: "nodejs22.x",
-        memory: "2048 MB",
-        timeout: "120 seconds",
-        link: [assets],
-        nodejs: {
-          // Sharp is native code. Keep it external to esbuild and package the
-          // Linux runtime installed by Bun, rather than SST's npm-based
-          // `nodejs.install` helper.
-          esbuild: {
-            external: ["sharp"],
-          },
+        from: "services/image-pipeline/node_modules/sharp",
+        to: "node_modules/sharp",
+      },
+      {
+        from: "services/image-pipeline/node_modules/@img/colour",
+        to: "node_modules/@img/colour",
+      },
+      {
+        from: "services/image-pipeline/node_modules/detect-libc",
+        to: "node_modules/detect-libc",
+      },
+      {
+        from: "services/image-pipeline/node_modules/semver",
+        to: "node_modules/semver",
+      },
+      {
+        from: "services/image-pipeline/node_modules/@img/sharp-linux-x64",
+        to: "node_modules/@img/sharp-linux-x64",
+      },
+      {
+        from: "services/image-pipeline/node_modules/@img/sharp-libvips-linux-x64",
+        to: "node_modules/@img/sharp-libvips-linux-x64",
+      },
+    ];
+    const imageWorkerEnvironment = {
+      PIPELINE_API_BASE_URL: api.url,
+      IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+    };
+    const imageWorkerDefaults = {
+      runtime: "nodejs22.x",
+      memory: "2048 MB",
+      timeout: "120 seconds",
+      link: [assets],
+      nodejs: {
+        // Sharp is native code. Keep it external to esbuild and package the
+        // Linux runtime installed by Bun, rather than SST's npm-based
+        // `nodejs.install` helper.
+        esbuild: { external: ["sharp"] },
+      },
+      copyFiles: imageWorkerFiles,
+      environment: imageWorkerEnvironment,
+    };
+
+    imageVariantsQueue.subscribe(
+      {
+        handler: "services/image-pipeline/src/variants-lambda.handler",
+        ...imageWorkerDefaults,
+      },
+      {
+        batch: {
+          size: 1,
+          partialResponses: true,
         },
-        copyFiles: [
-          {
-            from: "services/image-pipeline/node_modules/sharp",
-            to: "node_modules/sharp",
-          },
-          {
-            from: "services/image-pipeline/node_modules/@img/colour",
-            to: "node_modules/@img/colour",
-          },
-          {
-            from: "services/image-pipeline/node_modules/detect-libc",
-            to: "node_modules/detect-libc",
-          },
-          {
-            from: "services/image-pipeline/node_modules/semver",
-            to: "node_modules/semver",
-          },
-          {
-            from: "services/image-pipeline/node_modules/@img/sharp-linux-x64",
-            to: "node_modules/@img/sharp-linux-x64",
-          },
-          {
-            from: "services/image-pipeline/node_modules/@img/sharp-libvips-linux-x64",
-            to: "node_modules/@img/sharp-libvips-linux-x64",
-          },
-        ],
-        environment: {
-          PIPELINE_API_BASE_URL: api.url,
-          IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
-        },
+      },
+    );
+
+    imagePaletteQueue.subscribe(
+      {
+        handler: "services/image-pipeline/src/palette-lambda.handler",
+        ...imageWorkerDefaults,
       },
       {
         batch: {
@@ -170,8 +204,10 @@ export default $config({
       api: api.url,
       client: client.url,
       assetsBucket: assets.name,
-      imageQueue: imageQueue.url,
-      imageDeadLetterQueue: imageDeadLetterQueue.url,
+      imageVariantsQueue: imageVariantsQueue.url,
+      imageVariantsDeadLetterQueue: imageVariantsDeadLetterQueue.url,
+      imagePaletteQueue: imagePaletteQueue.url,
+      imagePaletteDeadLetterQueue: imagePaletteDeadLetterQueue.url,
     };
   },
 });
