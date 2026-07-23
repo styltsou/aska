@@ -8,7 +8,9 @@ import {
 } from "./palette-extraction";
 import { rgbToOklab, type Oklab } from "./color";
 
-async function extractPalette(buffer: Uint8Array): Promise<ImagePaletteColor[]> {
+async function extractPalette(
+  buffer: Uint8Array,
+): Promise<ImagePaletteColor[]> {
   const [coverage, accent] = await Promise.all([
     sharp(buffer)
       .resize(192, 192, { fit: "inside" })

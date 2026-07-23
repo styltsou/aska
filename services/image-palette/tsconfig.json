@@ -1,1 +1,12 @@
-{"compilerOptions":{"target":"es2024","module":"es2022","moduleResolution":"node","strict":true,"noEmit":true,"skipLibCheck":true,"types":["node"]},"include":["src","../image-shared/src"]}
+{
+  "compilerOptions": {
+    "target": "es2024",
+    "module": "es2022",
+    "moduleResolution": "node",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["src", "../image-shared/src"]
+}

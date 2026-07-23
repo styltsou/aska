@@ -1,6 +1,5 @@
 import sharp from "sharp";
 
-
 /**
  * Image decoding and derivative generation for one queued source image.
  *
@@ -60,7 +59,6 @@ async function makeBlurDataURL(buffer: Uint8Array): Promise<string> {
     .toBuffer();
   return `data:image/webp;base64,${uint8ArrayToBase64(tiny)}`;
 }
-
 
 /**
  * Decodes an original image and produces its metadata, progressive placeholder,
