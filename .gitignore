@@ -6,3 +6,5 @@ dist/
 .env*
 !.env.example
 package-lock.json
+# Local article drafts are useful codebase context but are not repository content.
+blog-drafts/
