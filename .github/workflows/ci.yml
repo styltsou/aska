@@ -29,10 +29,10 @@ jobs:
             command: bun run lint && bun run typecheck && bun run format && bun run test
           - name: Image variants
             directory: services/image-variants
-            command: bun run lint && bun run typecheck && bun run format && bun run test
+            command: bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
           - name: Image palette
             directory: services/image-palette
-            command: bun run lint && bun run typecheck && bun run format && bun run test
+            command: bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
     defaults:
       run:
         working-directory: ${{ matrix.directory }}
