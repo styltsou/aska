@@ -26,10 +26,6 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
-    "ImageDeadLetterQueue": {
-      "type": "sst.aws.Queue"
-      "url": string
-    }
     "ImagePaletteDeadLetterQueue": {
       "type": "sst.aws.Queue"
       "url": string
@@ -42,9 +38,9 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
-    "ImageQueue": {
-      "type": "sst.aws.Queue"
-      "url": string
+    "ImageUploadTopic": {
+      "arn": string
+      "type": "sst.aws.SnsTopic"
     }
     "ImageVariantsDeadLetterQueue": {
       "type": "sst.aws.Queue"

@@ -38,8 +38,15 @@ requested coordinate is never adjusted.
 
 Existing rows without coordinates receive deterministic fallback positions
 based on the API's stable node order. New notes, folders, and images can reserve
-a position captured from the context menu in flow space. Automatic fallback
-placement does not constrain later manual placement.
+a position captured from a canvas context menu or direct drop in flow space.
+Multi-image insertions use a four-column grid with the shared 32-pixel canvas
+gutter; each row advances by its tallest card's height plus that gutter.
+
+Header and command-palette insertions instead find a collision-free anchor in
+the current visible canvas area when the action is confirmed. If the visible
+area has no free slot, the anchor remains at its center so the new card is
+discoverable, even if it overlaps. A tracked pointer position is used only for
+paste, because the browser paste event has no coordinates.
 
 Asset cards have a 280-pixel base width and retain their content-driven height.
 

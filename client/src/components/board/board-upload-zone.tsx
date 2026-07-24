@@ -1,7 +1,10 @@
 import React, { useCallback, useState } from "react";
 import { ImagePlusIcon } from "lucide-react";
 import type { BoardInsertionPlacement } from "@/api/collection";
-import { getBoardPointerPosition } from "@/components/canvas/board-pointer-position";
+import {
+  getBoardFlowPosition,
+  getBoardPointerPosition,
+} from "@/components/canvas/board-pointer-position";
 import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
 import { useTransientStore } from "@/store";
 import { cn, parseHttpUrl } from "@/lib/utils";
@@ -59,7 +62,25 @@ export function BoardUploadZone({
     if (!hasImageFile(event.dataTransfer)) return;
     event.preventDefault();
     setIsDraggingImage(false);
-    void uploadFiles(Array.from(event.dataTransfer.files));
+    const position = boardKey
+      ? getBoardFlowPosition(boardKey, {
+          x: event.clientX,
+          y: event.clientY,
+        })
+      : undefined;
+    const visibleBounds = boardKey
+      ? useTransientStore.getState().boardVisibleBounds[boardKey]
+      : undefined;
+    void uploadFiles(
+      Array.from(event.dataTransfer.files),
+      position
+        ? {
+            position: { x: Math.round(position.x), y: Math.round(position.y) },
+          }
+        : visibleBounds
+          ? { visibleBounds }
+          : {},
+    );
   }
 
   function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {

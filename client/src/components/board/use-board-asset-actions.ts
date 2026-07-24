@@ -66,14 +66,15 @@ export function useBoardAssetActions({
   ]);
 
   const uploadFiles = useCallback(
-    async (files: File[]) => {
+    async (files: File[], actionPlacement?: BoardInsertionPlacement) => {
       const imageFiles = files.filter((file) =>
         SUPPORTED_IMAGE_MIME_TYPE_SET.has(file.type),
       );
       if (imageFiles.length === 0) return;
 
       try {
-        const insertionPlacement = getPlacement?.() ?? placement;
+        const insertionPlacement =
+          actionPlacement ?? getPlacement?.() ?? placement;
         if (target === "inbox") {
           await uploadInboxImages.mutateAsync({
             files: imageFiles,

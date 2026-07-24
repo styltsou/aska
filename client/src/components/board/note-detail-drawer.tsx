@@ -12,6 +12,7 @@ import type { RefObject } from "react";
 
 import { useCreateNote } from "@/api/collection";
 import { NoteMarkdown } from "@/components/board/cards/note-asset-card";
+import { useBoardInsertionPlacement } from "@/components/canvas";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import {
@@ -215,6 +216,10 @@ function NoteSelectionToolbar({
     null,
   );
   const createNote = useCreateNote(workspaceSlug, collectionSlug);
+  const placement = useBoardInsertionPlacement(
+    workspaceSlug,
+    [collectionSlug, parentFolderPath].filter(Boolean).join("/"),
+  );
 
   const getToolbarPosition =
     useCallback((): SelectionToolbarPosition | null => {
@@ -280,7 +285,7 @@ function NoteSelectionToolbar({
     setPosition(null);
 
     createNote.mutate(
-      { content, parentFolderPath },
+      { content, parentFolderPath, placement },
       {
         onError: (err) => {
           toast.error(
@@ -291,7 +296,7 @@ function NoteSelectionToolbar({
         },
       },
     );
-  }, [createNote, parentFolderPath, position, onExtract]);
+  }, [createNote, parentFolderPath, placement, position, onExtract]);
 
   useEffect(() => {
     if (!active) {

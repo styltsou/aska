@@ -1,8 +1,10 @@
 import { Resend } from "resend";
 
 import { env } from "@/config/env";
+import { LoggerService } from "@/services/logger.service";
 
 let _resend: Resend | undefined;
+const logger = new LoggerService();
 
 function getResend(): Resend {
   if (!_resend) _resend = new Resend(env.RESEND_API_KEY);
@@ -26,6 +28,9 @@ export async function sendEmail({
   });
 
   if (error) {
-    console.error("Failed to send email:", error);
+    logger.error("Email delivery provider rejected a message", {
+      event_name: "email.send.failed",
+      error,
+    });
   }
 }

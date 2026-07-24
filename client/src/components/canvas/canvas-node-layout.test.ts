@@ -79,7 +79,7 @@ describe("infinite canvas node placement", () => {
     ).toEqual([{ x: 360, y: 340 }]);
   });
 
-  it("lays a visible batch out in rows before extending beyond the viewport", () => {
+  it("uses a four-column grid from the visible insertion anchor", () => {
     expect(
       reserveNodePositions(
         [],
@@ -94,10 +94,10 @@ describe("infinite canvas node placement", () => {
         },
       ),
     ).toEqual([
-      { x: 48, y: 164 },
-      { x: 360, y: 164 },
-      { x: 672, y: 164 },
-      { x: 48, y: 516 },
+      { x: 360, y: 340 },
+      { x: 672, y: 340 },
+      { x: 984, y: 340 },
+      { x: 1296, y: 340 },
     ]);
   });
 
@@ -109,16 +109,38 @@ describe("infinite canvas node placement", () => {
         visibleBounds,
         batch: { index: 2, size: 4 },
       }),
-    ).toEqual([{ x: 672, y: 164 }]);
+    ).toEqual([{ x: 984, y: 340 }]);
   });
 
-  it("keeps a context-menu insertion fully visible when the click is near an edge", () => {
+  it("keeps a context-menu insertion at the requested canvas coordinate", () => {
     expect(
       reserveNodePositions([], [note], {
         position: { x: 900, y: 900 },
         visibleBounds: { left: 0, top: 0, right: 1_000, bottom: 1_000 },
       }),
-    ).toEqual([{ x: 720, y: 680 }]);
+    ).toEqual([{ x: 900, y: 900 }]);
+  });
+
+  it("uses the tallest card in each insertion row to preserve the shared gutter", () => {
+    expect(
+      reserveNodePositions(
+        [],
+        [
+          note,
+          portraitImage,
+          { ...note, id: "note-3" },
+          { ...note, id: "note-4" },
+          { ...note, id: "note-5" },
+        ],
+        { x: 100, y: 200 },
+      ),
+    ).toEqual([
+      { x: 100, y: 200 },
+      { x: 412, y: 200 },
+      { x: 724, y: 200 },
+      { x: 1036, y: 200 },
+      { x: 100, y: 792 },
+    ]);
   });
 
   it("arranges from the selection's top-left in row-banded reading order", () => {

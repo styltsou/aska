@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState, type ComponentProps } from "react";
 import { motion, type MotionStyle } from "motion/react";
+import {
+  rememberPresignedImageUrl,
+  resolvePresignedImageUrl,
+} from "@/lib/presigned-image-url";
 import { cn } from "@/lib/utils";
 
 type ProgressiveImageProps = Omit<
@@ -39,11 +43,19 @@ export function ProgressiveImage({
   onError,
   ...props
 }: ProgressiveImageProps) {
+  const resolvedSrc = resolvePresignedImageUrl(src);
   const [decodedSrc, setDecodedSrc] = useState<string | null>(() =>
-    decodedSources.has(src) ? src : null,
+    decodedSources.has(resolvedSrc) ? resolvedSrc : null,
   );
-  const isDecoded = decodedSrc === src || decodedSources.has(src);
+  const isDecoded =
+    decodedSrc === resolvedSrc || decodedSources.has(resolvedSrc);
+  const previousDecodedSrc =
+    decodedSrc && decodedSrc !== resolvedSrc ? decodedSrc : null;
   const showFallback = Boolean(fallbackSrc) && !isDecoded;
+
+  useEffect(() => {
+    rememberPresignedImageUrl(src);
+  }, [src]);
 
   useEffect(() => {
     if (!isDecoded || !fallbackSrc?.startsWith("blob:")) return;
@@ -58,8 +70,8 @@ export function ProgressiveImage({
       onLoad?.(event);
 
       const markDecoded = () => {
-        rememberDecodedSource(src);
-        setDecodedSrc(src);
+        rememberDecodedSource(resolvedSrc);
+        setDecodedSrc(resolvedSrc);
       };
 
       const image = event.currentTarget;
@@ -70,7 +82,7 @@ export function ProgressiveImage({
 
       markDecoded();
     },
-    [onLoad, src],
+    [onLoad, resolvedSrc],
   );
 
   const handleError = useCallback<
@@ -79,14 +91,14 @@ export function ProgressiveImage({
     (event) => {
       onError?.(event);
       // A failed signed URL should not hide the still-valid local preview.
-      if (!fallbackSrc) setDecodedSrc(src);
+      if (!fallbackSrc && !previousDecodedSrc) setDecodedSrc(resolvedSrc);
     },
-    [fallbackSrc, onError, src],
+    [fallbackSrc, onError, previousDecodedSrc, resolvedSrc],
   );
 
   return (
     <>
-      {blurDataURL && !showFallback && !isDecoded ? (
+      {blurDataURL && !showFallback && !isDecoded && !previousDecodedSrc ? (
         <>
           <motion.img
             src={blurDataURL}
@@ -119,14 +131,26 @@ export function ProgressiveImage({
           style={{ ...style, opacity: showFallback ? 1 : 0 }}
         />
       ) : null}
+      {previousDecodedSrc ? (
+        <motion.img
+          src={previousDecodedSrc}
+          alt=""
+          aria-hidden="true"
+          className={cn(className, "pointer-events-none transition-opacity")}
+          style={{ ...style, opacity: 1 }}
+        />
+      ) : null}
       <motion.img
         {...props}
-        src={src}
+        src={resolvedSrc}
         alt={alt}
         className={cn(className, "transition-opacity")}
         style={{
           ...style,
-          opacity: isDecoded || (!blurDataURL && !fallbackSrc) ? 1 : 0,
+          opacity:
+            isDecoded || (!blurDataURL && !fallbackSrc && !previousDecodedSrc)
+              ? 1
+              : 0,
         }}
         loading={loading}
         onLoad={handleLoad}

@@ -14,52 +14,76 @@ const NODE_ENV_VALUES = [
 
 const DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://localhost:5174";
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(NODE_ENV_VALUES).default(NodeEnv.Development),
-  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  BETTER_AUTH_SECRET: z
-    .string()
-    .min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
-  BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL"),
-  RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
-  S3_BUCKET: z.string().optional(),
-  S3_REGION: z.string().default("eu-central-1"),
-  // Optional only for local S3-compatible emulators such as LocalStack.
-  S3_ENDPOINT: z.url().optional(),
-  S3_ACCESS_KEY_ID: z.string().optional(),
-  S3_SECRET_ACCESS_KEY: z.string().optional(),
-  IMAGE_PIPELINE_CALLBACK_SECRET: z.string().min(32).optional(),
-  S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: z.coerce
-    .number()
-    .int()
-    .min(60)
-    .max(3600)
-    .default(900),
-  S3_PRESIGNED_READ_EXPIRES_SECONDS: z.coerce
-    .number()
-    .int()
-    .min(60)
-    .max(3600)
-    .default(900),
-  MAX_DIRECT_UPLOAD_BYTES: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(20 * 1024 * 1024),
-  CORS_ORIGINS: z
-    .string()
-    .default(DEFAULT_CORS_ORIGINS)
-    .transform((value) =>
-      value
-        .split(",")
-        .map((origin) => origin.trim())
-        .filter(Boolean),
-    )
-    .refine((origins) => origins.length > 0, {
-      message: "CORS_ORIGINS must include at least one origin",
-    }),
-});
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(NODE_ENV_VALUES).default(NodeEnv.Development),
+    LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+    LOG_SLOW_REQUEST_MS: z.coerce.number().int().min(0).default(1000),
+    LOG_SUCCESS_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(1),
+    OTEL_ENABLED: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
+    OTEL_SERVICE_NAME: z.string().min(1).default("aska-api"),
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: z.url().optional(),
+    OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
+    OTEL_TRACES_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(1),
+    PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+    DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+    BETTER_AUTH_SECRET: z
+      .string()
+      .min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
+    BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL"),
+    CLOUDFLARE_ACCESS_TEAM_DOMAIN: z.url().optional(),
+    CLOUDFLARE_ACCESS_AUD: z.string().min(1).optional(),
+    RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
+    S3_BUCKET: z.string().optional(),
+    S3_REGION: z.string().default("eu-central-1"),
+    // Optional only for local S3-compatible emulators such as LocalStack.
+    S3_ENDPOINT: z.url().optional(),
+    S3_ACCESS_KEY_ID: z.string().optional(),
+    S3_SECRET_ACCESS_KEY: z.string().optional(),
+    IMAGE_PIPELINE_CALLBACK_SECRET: z.string().min(32).optional(),
+    S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(3600)
+      .default(900),
+    S3_PRESIGNED_READ_EXPIRES_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(3600)
+      .default(900),
+    MAX_DIRECT_UPLOAD_BYTES: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(20 * 1024 * 1024),
+    CORS_ORIGINS: z
+      .string()
+      .default(DEFAULT_CORS_ORIGINS)
+      .transform((value) =>
+        value
+          .split(",")
+          .map((origin) => origin.trim())
+          .filter(Boolean),
+      )
+      .refine((origins) => origins.length > 0, {
+        message: "CORS_ORIGINS must include at least one origin",
+      }),
+  })
+  .refine(
+    (value) =>
+      Boolean(value.CLOUDFLARE_ACCESS_TEAM_DOMAIN) ===
+      Boolean(value.CLOUDFLARE_ACCESS_AUD),
+    {
+      message:
+        "CLOUDFLARE_ACCESS_TEAM_DOMAIN and CLOUDFLARE_ACCESS_AUD must be set together",
+      path: ["CLOUDFLARE_ACCESS_AUD"],
+    },
+  );
 
 export type Env = z.infer<typeof envSchema>;
 

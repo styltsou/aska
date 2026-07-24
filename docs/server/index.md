@@ -16,6 +16,7 @@ OpenAPI documentation, and Scalar API docs.
 - `server/src/dto`: Zod request schemas and inferred request types.
 - `server/src/db/schema`: Drizzle schema and inferred database row types.
 - `server/src/lib`: shared backend primitives and reusable feature libraries.
+- `server/src/observability`: OTLP tracer setup and trace lifecycle.
 - `server/src/openapi.json`: source-controlled OpenAPI document.
 
 ## Core Conventions
@@ -86,6 +87,14 @@ S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS
 S3_PRESIGNED_READ_EXPIRES_SECONDS
 MAX_DIRECT_UPLOAD_BYTES
 IMAGE_PIPELINE_CALLBACK_SECRET
+LOG_LEVEL
+LOG_SLOW_REQUEST_MS
+LOG_SUCCESS_SAMPLE_RATIO
+OTEL_ENABLED
+OTEL_SERVICE_NAME
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+OTEL_EXPORTER_OTLP_HEADERS
+OTEL_TRACES_SAMPLE_RATIO
 TEST_DATABASE_URL
 ```
 
@@ -116,6 +125,7 @@ Request
   -> CORS
   -> Security headers
   -> Request ID
+  -> W3C request trace + trace context
   -> Request logger
   -> Better Auth routes or API routes
   -> Zod validation
@@ -158,4 +168,5 @@ cross-package commands.
 - [Image Upload and Processing Pipeline](./image-upload-implementation-plan.md)
 - [Image Pipeline Reliability and Evolution](./image-pipeline-reliability.md)
 - [Error Handling](./error-handling.md)
+- [Observability](./observability.md)
 - [Scaffold Recipes](./scaffold-recipes.md)

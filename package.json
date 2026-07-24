@@ -4,8 +4,8 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks",
     "sst": "eval \"$(aws configure export-credentials --profile default --format env)\" && sst",
-    "deploy": "bun sst deploy",
-    "dev:aws": "bun sst dev"
+    "deploy": "bun run sst -- deploy",
+    "dev:aws": "if [ \"$SST_STAGE\" != \"styltsoy\" ]; then echo \"Run Live forwarding only as: SST_STAGE=styltsoy bun run dev:aws\"; exit 1; fi; bun run sst -- dev --stage \"$SST_STAGE\""
   },
   "devDependencies": {
     "sst": "^4.17.1"

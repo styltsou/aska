@@ -212,7 +212,7 @@ application origins and the signed upload headers:
 ```json
 [
   {
-    "AllowedOrigins": ["http://localhost:5173", "http://localhost:5174"],
+    "AllowedOrigins": ["http://localhost:5173"],
     "AllowedMethods": ["PUT"],
     "AllowedHeaders": ["content-type", "x-amz-*"],
     "ExposeHeaders": ["etag"],

@@ -44,7 +44,10 @@ import { toast } from "sonner";
 
 import { formatPlatformShortcut } from "@/lib/platform";
 import { makeBoardKey } from "./canvas-key";
-import { setBoardPointerPosition } from "./board-pointer-position";
+import {
+  setBoardFlowPositionConverter,
+  setBoardPointerPosition,
+} from "./board-pointer-position";
 import {
   BOARD_CARD_WIDTH,
   arrangeNodesInGrid,
@@ -396,6 +399,11 @@ function CanvasSurface({
     observer.observe(board);
     return () => observer.disconnect();
   }, [getViewport, publishVisibleBounds]);
+
+  useEffect(
+    () => setBoardFlowPositionConverter(boardKey, screenToFlowPosition),
+    [boardKey, screenToFlowPosition],
+  );
 
   const openFolder = useCallback(
     (node: Extract<CollectionNode, { type: "folder" }>) =>

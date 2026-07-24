@@ -75,8 +75,11 @@ switch between a sortable browse view and an arrange view.
   moves neighboring items after a drop. New items requested at an occupied
   canvas coordinate are placed at a nearby available position instead.
 - New items created from a canvas context use the captured canvas coordinate.
-  Batch additions continue horizontally from that point. Items without a
-  captured coordinate receive deterministic fallback placement.
+  Multi-item additions use a four-column grid from that point, with the shared
+  canvas gutter in both directions and row heights determined by the tallest
+  card. Header and command-palette additions find a nearby collision-free
+  anchor in the current viewport; when none exists, they use the viewport
+  center so the new item remains visible.
 - Collections have no automatic sort. An automatic reorder would overwrite the
   spatial meaning a user has created.
 - A dropped position remains visually stable while it is saved. Failed saves

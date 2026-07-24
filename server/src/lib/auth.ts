@@ -27,9 +27,6 @@ function createAuth() {
     },
     advanced: {
       useSecureCookies: true,
-      defaultCookieAttributes: {
-        sameSite: "none",
-      },
     },
     emailVerification: {
       sendVerificationEmail: async ({ user, url }) => {

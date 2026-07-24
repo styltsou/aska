@@ -47,8 +47,6 @@ a palette incident must not delay rendering or create extra resize work.
 
 ## Extending the pipeline
 
-New work that only needs the original upload can receive its own S3-to-SQS
-notification and run in parallel, just as palette extraction does. Introduce
-an event bus only when several independent consumers make direct notification
-rules hard to manage or when routing needs content-based rules. It is not
-needed for the current two-worker topology.
+New work that only needs the original upload can receive its own SNS-to-SQS
+subscription and run in parallel, just as palette extraction does. The S3
+producer remains unchanged; SNS is already the event fan-out boundary.

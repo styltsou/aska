@@ -58,8 +58,8 @@ images and notes count, folders do not. The client uses XYFlow for collection
 canvas rendering and interaction while Aska's API remains the source of truth
 for node identity, hierarchy, and position.
 
-See [the engineering docs](./docs/README.md) for the data model, backend
-conventions, and local development workflow.
+See [the engineering docs](./docs/README.md) for a codebase map, architecture,
+data model, backend conventions, operations, and contribution workflow.
 
 The real-AWS development, deployment, stage, secret, and React/Vite hosting
 workflow is documented in [SST_DEPLOYMENT.md](./SST_DEPLOYMENT.md).

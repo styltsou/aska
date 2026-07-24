@@ -436,9 +436,12 @@ async function readImageDimensions(file: File): Promise<{
   }
 }
 
+const UNKNOWN_IMAGE_DIMENSIONS = { width: 3, height: 4 };
+
 function makeOptimisticImageNode(
   file: File,
   index: number,
+  dimensions = UNKNOWN_IMAGE_DIMENSIONS,
 ): Extract<CollectionNode, { type: "image" }> & {
   previewObjectUrl: string;
 } {
@@ -449,10 +452,8 @@ function makeOptimisticImageNode(
     id,
     type: "image",
     url: previewObjectUrl,
-    // Render immediately. The real dimensions replace this provisional square
-    // while the upload request is being prepared.
-    width: 1,
-    height: 1,
+    width: dimensions.width,
+    height: dimensions.height,
     title: file.name || null,
     alt: null,
     sourceLabel: null,
@@ -1024,6 +1025,15 @@ export function useUploadLocalImages(
       // wait for an in-flight refetch before placing it on the canvas.
       void queryClient.cancelQueries({ queryKey: contentsKey });
 
+      const imageDimensions = await Promise.all(
+        files.map(async (file) => {
+          try {
+            return await readImageDimensions(file);
+          } catch {
+            return UNKNOWN_IMAGE_DIMENSIONS;
+          }
+        }),
+      );
       const previousContents =
         queryClient.getQueryData<CollectionContentsResponse>(contentsKey);
       const previousCollections = queryClient.getQueryData<CollectionsData>(
@@ -1033,7 +1043,9 @@ export function useUploadLocalImages(
         "workspace",
         workspaceSlug,
       ]);
-      const optimisticImages = files.map(makeOptimisticImageNode);
+      const optimisticImages = files.map((file, index) =>
+        makeOptimisticImageNode(file, index, imageDimensions[index]),
+      );
       const positions = reserveNodePositions(
         previousContents?.nodes ?? [],
         optimisticImages,
@@ -1067,29 +1079,6 @@ export function useUploadLocalImages(
         parentFolderPath,
         optimisticImages.length,
       );
-
-      const imageDimensions = await Promise.all(
-        files.map(async (file) => {
-          try {
-            return await readImageDimensions(file);
-          } catch {
-            return { width: 1, height: 1 };
-          }
-        }),
-      );
-      for (const [index, dimensions] of imageDimensions.entries()) {
-        const optimisticImage = optimisticImages[index]!;
-        optimisticImage.width = dimensions.width;
-        optimisticImage.height = dimensions.height;
-        updateOptimisticImage(
-          queryClient,
-          workspaceSlug,
-          collectionSlug,
-          parentFolderPath,
-          optimisticImage.id,
-          dimensions,
-        );
-      }
 
       const images: CollectionImageNode[] = [];
       const multiple = files.length > 1;
@@ -1216,7 +1205,9 @@ export function useUploadInboxImages(workspaceSlug: string) {
         queryClient.getQueryData<InboxContentsResponse>(inboxKey);
       const previousWorkspace =
         queryClient.getQueryData<WorkspaceData>(workspaceKey);
-      const optimisticImages = files.map(makeOptimisticImageNode);
+      const optimisticImages = files.map((file, index) =>
+        makeOptimisticImageNode(file, index),
+      );
 
       queryClient.setQueryData<InboxContentsResponse>(inboxKey, (current) => {
         if (!current) return current;
@@ -1347,8 +1338,10 @@ export function useCreateRemoteImage(
         type: "image",
         // The source URL gives the board an immediate preview while the server imports it.
         url: data.url,
-        width: 1,
-        height: 1,
+        // A remote image's dimensions are not available yet. Reserve a
+        // portrait-sized card so batch rows do not start as provisional squares.
+        width: UNKNOWN_IMAGE_DIMENSIONS.width,
+        height: UNKNOWN_IMAGE_DIMENSIONS.height,
         title: data.title ?? null,
         alt: data.alt ?? null,
         sourceLabel: null,

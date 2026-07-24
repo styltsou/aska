@@ -10,7 +10,12 @@ import { factory } from "@/factory";
 import { auth } from "@/lib/auth";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { errorResponse } from "@/lib/response";
-import { requestLogger, securityHeaders } from "@/middleware";
+import {
+  cloudflareAccess,
+  requestLogger,
+  requestTracing,
+  securityHeaders,
+} from "@/middleware";
 import { getOpenApiSpec } from "@/openapi";
 import { apiRoutes } from "@/routes";
 
@@ -21,10 +26,10 @@ baseApp.use(
   "*",
   cors({
     origin: (origin) =>
-      env.CORS_ORIGINS.includes(origin) ? origin : env.CORS_ORIGINS[0],
+      env.CORS_ORIGINS.includes(origin) ? origin : undefined,
     allowHeaders: ["Content-Type", "Authorization"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    exposeHeaders: ["Content-Length"],
+    exposeHeaders: ["Content-Length", "X-Request-Id", "Traceparent"],
     maxAge: 600,
     credentials: true,
   }),
@@ -32,7 +37,9 @@ baseApp.use(
 
 baseApp.use("*", securityHeaders);
 baseApp.use("*", requestId());
+baseApp.use("*", requestTracing);
 baseApp.use("*", requestLogger);
+baseApp.use("*", cloudflareAccess);
 
 baseApp.onError((err, c) => {
   if (err instanceof AppError) {
@@ -43,7 +50,10 @@ baseApp.onError((err, c) => {
     return err.getResponse();
   }
 
-  loggerService.error("Unhandled error", { error: err });
+  loggerService.error("Unhandled request error", {
+    event_name: "exception",
+    error: err,
+  });
   return c.json(
     errorResponse(ErrorCode.INTERNAL_ERROR, "Internal server error"),
     500,

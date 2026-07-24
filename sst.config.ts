@@ -1,5 +1,4 @@
 /// <reference path="./.sst/platform/config.d.ts" />
-
 export default $config({
   app() {
     return {
@@ -9,31 +8,53 @@ export default $config({
         aws: {
           region: "eu-central-1",
         },
+        cloudflare: { package: "@pulumi/cloudflare", version: "6.18.0" },
       },
     };
   },
-
   async run() {
     const clientOrigins = {
-      dev: ["http://localhost:5173", "https://d3lvxwp2ywqq3a.cloudfront.net"],
-      // Replace this before the first production deployment.
-      production: ["https://replace-with-your-client-domain.example"],
+      // Personal hybrid development: local Vite -> Live API Lambda -> AWS.
+      styltsoy: ["http://localhost:5173"],
+      // Shared, fully deployed cloud environment. Do not add localhost here.
+      dev: ["https://app.aska.styltsou.com"],
     };
     const allowedClientOrigins =
-      clientOrigins[$app.stage as keyof typeof clientOrigins] ??
-      clientOrigins.dev;
+      clientOrigins[$app.stage as keyof typeof clientOrigins];
+    if (!allowedClientOrigins) {
+      throw new Error(
+        `No client origins configured for SST stage ${$app.stage}. Add an explicit entry to clientOrigins.`,
+      );
+    }
+    const stableCloudDomains =
+      $app.stage === "dev"
+        ? {
+            app: "app.aska.styltsou.com",
+            api: "api.aska.styltsou.com",
+            dns: sst.cloudflare.dns({
+              // Supplying the zone explicitly keeps the DNS token narrowly
+              // scoped to styltsou.com and avoids account-wide zone discovery.
+              zone: requireEnvironment("CLOUDFLARE_ZONE_ID"),
+              // Cloudflare Access only protects proxied hostnames.
+              proxy: true,
+            }),
+          }
+        : undefined;
     const databaseUrl = new sst.Secret("DatabaseUrl");
     const betterAuthSecret = new sst.Secret("BetterAuthSecret");
     const resendApiKey = new sst.Secret("ResendApiKey");
     const imagePipelineCallbackSecret = new sst.Secret(
       "ImagePipelineCallbackSecret",
     );
-
+    const observabilityEnvironment = getObservabilityEnvironment();
+    const cloudflareAccessEnvironment = stableCloudDomains
+      ? getCloudflareAccessEnvironment()
+      : {};
     const createImageQueue = (name: string, deadLetterQueueName: string) => {
       const deadLetterQueue = new sst.aws.Queue(deadLetterQueueName, {
         transform: {
           queue: {
-            messageRetentionSeconds: 1_209_600,
+            messageRetentionSeconds: 1209600,
           },
         },
       });
@@ -46,7 +67,6 @@ export default $config({
       });
       return { queue, deadLetterQueue };
     };
-
     const {
       queue: imageVariantsQueue,
       deadLetterQueue: imageVariantsDeadLetterQueue,
@@ -56,7 +76,6 @@ export default $config({
       deadLetterQueue: imagePaletteDeadLetterQueue,
     } = createImageQueue("ImagePaletteQueue", "ImagePaletteDeadLetterQueue");
     const imageUploadTopic = new sst.aws.SnsTopic("ImageUploadTopic");
-
     const assets = new sst.aws.Bucket("Assets", {
       cors: {
         allowHeaders: ["Content-Type"],
@@ -65,7 +84,6 @@ export default $config({
         maxAge: "15 minutes",
       },
     });
-
     assets.notify({
       notifications: [
         {
@@ -76,10 +94,27 @@ export default $config({
         },
       ],
     });
-    imageUploadTopic.subscribeQueue("GenerateImageVariants", imageVariantsQueue);
+    imageUploadTopic.subscribeQueue(
+      "GenerateImageVariants",
+      imageVariantsQueue,
+    );
     imageUploadTopic.subscribeQueue("ExtractImagePalette", imagePaletteQueue);
-
     const api = new sst.aws.ApiGatewayV2("Api", {
+      ...(stableCloudDomains
+        ? {
+            domain: {
+              name: stableCloudDomains.api,
+              dns: stableCloudDomains.dns,
+            },
+            // Cloudflare Access protects the custom hostname. Disable the
+            // default AWS hostname so it cannot bypass that policy.
+            transform: {
+              api: {
+                disableExecuteApiEndpoint: true,
+              },
+            },
+          }
+        : {}),
       cors: {
         allowCredentials: true,
         allowHeaders: ["Content-Type", "Authorization"],
@@ -87,7 +122,6 @@ export default $config({
         allowOrigins: allowedClientOrigins,
       },
     });
-
     api.route("$default", {
       handler: "server/src/lambda.handler",
       runtime: "nodejs22.x",
@@ -95,6 +129,10 @@ export default $config({
       timeout: "29 seconds",
       link: [assets],
       environment: {
+        NODE_ENV: stableCloudDomains ? "production" : "development",
+        LOG_LEVEL: process.env.LOG_LEVEL ?? "info",
+        LOG_SLOW_REQUEST_MS: process.env.LOG_SLOW_REQUEST_MS ?? "1000",
+        LOG_SUCCESS_SAMPLE_RATIO: process.env.LOG_SUCCESS_SAMPLE_RATIO ?? "1",
         DATABASE_URL: databaseUrl.value,
         BETTER_AUTH_SECRET: betterAuthSecret.value,
         BETTER_AUTH_URL: api.url,
@@ -106,9 +144,10 @@ export default $config({
         S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: "900",
         S3_PRESIGNED_READ_EXPIRES_SECONDS: "900",
         MAX_DIRECT_UPLOAD_BYTES: "20971520",
+        ...cloudflareAccessEnvironment,
+        ...observabilityEnvironment,
       },
     });
-
     const imageWorkerFiles = (service: "image-variants" | "image-palette") => [
       {
         from: `services/${service}/node_modules/sharp`,
@@ -152,7 +191,6 @@ export default $config({
       },
       environment: imageWorkerEnvironment,
     };
-
     imageVariantsQueue.subscribe(
       {
         handler: "services/image-variants/src/lambda.handler",
@@ -166,7 +204,6 @@ export default $config({
         },
       },
     );
-
     imagePaletteQueue.subscribe(
       {
         handler: "services/image-palette/src/lambda.handler",
@@ -180,7 +217,6 @@ export default $config({
         },
       },
     );
-
     const client = new sst.aws.StaticSite("Client", {
       path: "client",
       build: {
@@ -193,11 +229,18 @@ export default $config({
       // React Router is a client-side router, so unknown application routes
       // must serve the SPA entry point rather than CloudFront's 404 page.
       errorPage: "index.html",
+      ...(stableCloudDomains
+        ? {
+            domain: {
+              name: stableCloudDomains.app,
+              dns: stableCloudDomains.dns,
+            },
+          }
+        : {}),
       environment: {
         VITE_SERVER_URL: api.url,
       },
     });
-
     return {
       api: api.url,
       client: client.url,
@@ -209,3 +252,38 @@ export default $config({
     };
   },
 });
+function getObservabilityEnvironment(): Record<string, string> {
+  if (process.env.OTEL_ENABLED !== "true") return { OTEL_ENABLED: "false" };
+  const endpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
+  if (!endpoint) {
+    throw new Error(
+      "OTEL_ENABLED=true requires OTEL_EXPORTER_OTLP_TRACES_ENDPOINT during deployment",
+    );
+  }
+  return {
+    OTEL_ENABLED: "true",
+    OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME ?? "aska-api",
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: endpoint,
+    ...(process.env.OTEL_EXPORTER_OTLP_HEADERS
+      ? { OTEL_EXPORTER_OTLP_HEADERS: process.env.OTEL_EXPORTER_OTLP_HEADERS }
+      : {}),
+    OTEL_TRACES_SAMPLE_RATIO: process.env.OTEL_TRACES_SAMPLE_RATIO ?? "1",
+  };
+}
+
+function requireEnvironment(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set for this deployment.`);
+  }
+  return value;
+}
+
+function getCloudflareAccessEnvironment(): Record<string, string> {
+  return {
+    CLOUDFLARE_ACCESS_TEAM_DOMAIN: requireEnvironment(
+      "CLOUDFLARE_ACCESS_TEAM_DOMAIN",
+    ),
+    CLOUDFLARE_ACCESS_AUD: requireEnvironment("CLOUDFLARE_ACCESS_AUD"),
+  };
+}

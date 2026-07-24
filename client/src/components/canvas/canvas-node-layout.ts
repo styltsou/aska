@@ -19,7 +19,8 @@ const FALLBACK_ORIGIN = 48;
 const NOTE_CARD_MAX_HEIGHT = 320;
 const FOLDER_CARD_HEIGHT = BOARD_CARD_WIDTH;
 const COLLISION_SEARCH_STEP = BOARD_ITEM_GAP;
-const COLLISION_SEARCH_LIMIT = 64;
+const COLLISION_SEARCH_LIMIT = 16;
+const INSERTION_GRID_COLUMNS = 4;
 
 export function getInitialNodePosition(
   node: CollectionNode,
@@ -39,32 +40,35 @@ export function reserveNodePositions(
   const occupied = existingNodes.map((node, index) =>
     getNodeBounds(node, getInitialNodePosition(node, index)),
   );
-  const preferredPositions = visibleBounds
-    ? getVisibleBatchPositions(
-        getPlacementNodes(newNodes, placement),
-        requested,
-        visibleBounds,
-      ).slice(
-        getBatchStartIndex(placement),
-        getBatchStartIndex(placement) + newNodes.length,
+  const placementNodes = getPlacementNodes(newNodes, placement);
+  const batchStartIndex = getBatchStartIndex(placement);
+  const viewportAnchor =
+    !requested && visibleBounds
+      ? findViewportInsertionAnchor(placementNodes[0]!, occupied, visibleBounds)
+      : undefined;
+  const anchor = requested ?? viewportAnchor?.position;
+  const preferredPositions = anchor
+    ? getInsertionGridPositions(placementNodes, anchor).slice(
+        batchStartIndex,
+        batchStartIndex + newNodes.length,
       )
     : newNodes.map((_, index) =>
-        requested
-          ? {
-              x: Math.round(
-                requested.x + index * (BOARD_CARD_WIDTH + BOARD_ITEM_GAP),
-              ),
-              y: Math.round(requested.y),
-            }
-          : getFallbackPosition(existingNodes.length + index),
+        getFallbackPosition(existingNodes.length + index),
       );
 
   return newNodes.map((node, index) => {
+    if (index === 0 && viewportAnchor && !viewportAnchor.isAvailable) {
+      // The current view is full. Keep the card discoverable instead of
+      // silently moving it outside the viewport.
+      const position = preferredPositions[index]!;
+      occupied.push(getNodeBounds(node, position));
+      return position;
+    }
+
     const position = findAvailablePosition(
       node,
       preferredPositions[index]!,
       occupied,
-      visibleBounds,
     );
 
     occupied.push(getNodeBounds(node, position));
@@ -83,31 +87,7 @@ function findAvailablePosition(
   node: CollectionNode,
   preferred: BoardPosition,
   occupied: NodeBounds[],
-  visibleBounds?: BoardVisibleBounds,
 ): BoardPosition {
-  if (
-    isAvailablePosition(node, preferred, occupied, visibleBounds) &&
-    (!visibleBounds || isWithinVisibleBounds(node, preferred, visibleBounds))
-  ) {
-    return preferred;
-  }
-
-  for (let radius = 1; radius <= COLLISION_SEARCH_LIMIT; radius += 1) {
-    for (const offset of squarePerimeterOffsets(radius)) {
-      const position = {
-        x: preferred.x + offset.x * COLLISION_SEARCH_STEP,
-        y: preferred.y + offset.y * COLLISION_SEARCH_STEP,
-      };
-
-      if (
-        isAvailablePosition(node, position, occupied, visibleBounds) &&
-        (!visibleBounds || isWithinVisibleBounds(node, position, visibleBounds))
-      ) {
-        return position;
-      }
-    }
-  }
-
   if (isAvailablePosition(node, preferred, occupied)) {
     return preferred;
   }
@@ -204,74 +184,64 @@ function getBatchStartIndex(
   return placement.batch.index;
 }
 
-function getVisibleBatchPositions(
+function getInsertionGridPositions(
   nodes: CollectionNode[],
-  requested: BoardPosition | undefined,
-  visibleBounds: BoardVisibleBounds,
+  anchor: BoardPosition,
 ): BoardPosition[] {
   if (nodes.length === 0) return [];
-
-  const maxColumns = Math.max(
-    1,
-    Math.floor(
-      (visibleBounds.right - visibleBounds.left + BOARD_ITEM_GAP) /
-        (BOARD_CARD_WIDTH + BOARD_ITEM_GAP),
-    ),
-  );
-  const firstPosition = requested
-    ? clampToVisibleBounds(nodes[0]!, requested, visibleBounds)
-    : undefined;
-  const columns = Math.min(
-    nodes.length,
-    firstPosition
-      ? Math.max(
-          1,
-          Math.floor(
-            (visibleBounds.right - firstPosition.x + BOARD_ITEM_GAP) /
-              (BOARD_CARD_WIDTH + BOARD_ITEM_GAP),
-          ),
-        )
-      : maxColumns,
-  );
-  const rowHeights = getRowHeights(nodes, columns);
-  const contentWidth =
-    columns * BOARD_CARD_WIDTH + (columns - 1) * BOARD_ITEM_GAP;
-  const contentHeight =
-    rowHeights.reduce((total, height) => total + height, 0) +
-    (rowHeights.length - 1) * BOARD_ITEM_GAP;
-  const start = firstPosition ?? {
-    x: clamp(
-      (visibleBounds.left + visibleBounds.right - contentWidth) / 2,
-      visibleBounds.left,
-      visibleBounds.right - contentWidth,
-    ),
-    y:
-      contentHeight <= visibleBounds.bottom - visibleBounds.top
-        ? clamp(
-            (visibleBounds.top + visibleBounds.bottom - contentHeight) / 2,
-            visibleBounds.top,
-            visibleBounds.bottom - contentHeight,
-          )
-        : visibleBounds.top,
-  };
+  const rowHeights = getRowHeights(nodes, INSERTION_GRID_COLUMNS);
   const positions: BoardPosition[] = [];
-  let rowTop = start.y;
+  let rowTop = Math.round(anchor.y);
 
   for (let index = 0; index < nodes.length; index += 1) {
-    const row = Math.floor(index / columns);
-    const column = index % columns;
+    const row = Math.floor(index / INSERTION_GRID_COLUMNS);
+    const column = index % INSERTION_GRID_COLUMNS;
 
     if (column === 0 && index > 0) {
       rowTop += rowHeights[row - 1]! + BOARD_ITEM_GAP;
     }
 
     positions.push({
-      x: Math.round(start.x + column * (BOARD_CARD_WIDTH + BOARD_ITEM_GAP)),
+      x: Math.round(anchor.x + column * (BOARD_CARD_WIDTH + BOARD_ITEM_GAP)),
       y: Math.round(rowTop),
     });
   }
 
   return positions;
+}
+
+function findViewportInsertionAnchor(
+  node: CollectionNode,
+  occupied: NodeBounds[],
+  visibleBounds: BoardVisibleBounds,
+): { position: BoardPosition; isAvailable: boolean } {
+  const preferred = clampToVisibleBounds(
+    node,
+    {
+      x: (visibleBounds.left + visibleBounds.right - BOARD_CARD_WIDTH) / 2,
+      y: (visibleBounds.top + visibleBounds.bottom - getNodeHeight(node)) / 2,
+    },
+    visibleBounds,
+  );
+
+  if (isAvailablePosition(node, preferred, occupied, visibleBounds)) {
+    return { position: preferred, isAvailable: true };
+  }
+
+  for (let radius = 1; radius <= COLLISION_SEARCH_LIMIT; radius += 1) {
+    for (const offset of squarePerimeterOffsets(radius)) {
+      const position = {
+        x: preferred.x + offset.x * COLLISION_SEARCH_STEP,
+        y: preferred.y + offset.y * COLLISION_SEARCH_STEP,
+      };
+
+      if (isAvailablePosition(node, position, occupied, visibleBounds)) {
+        return { position, isAvailable: true };
+      }
+    }
+  }
+
+  return { position: preferred, isAvailable: false };
 }
 
 function getRowHeights(nodes: CollectionNode[], columns: number): number[] {
