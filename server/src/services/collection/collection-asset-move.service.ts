@@ -1,12 +1,13 @@
 import { and, arrayContains, eq, ne } from "drizzle-orm";
 
 import { db } from "@/db";
-import { collectionNodes } from "@/db/schema";
+import { assets, collectionNodes, imageAssets } from "@/db/schema";
 import type { MoveCollectionNodeParentInput } from "@/dto/collection.dto";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import { first } from "@/lib/query";
 import { getCollectionBySlug } from "./collection-target-resolver";
+import { getFolderMovePosition } from "./collection-move-placement";
 
 export type MoveCollectionNodeParentResult = {
   nodeId: string;
@@ -14,7 +15,7 @@ export type MoveCollectionNodeParentResult = {
   sourceFolderPath: string;
   targetParentFolderNodeId: string;
   targetFolderPath: string;
-  position: null;
+  position: { x: number; y: number } | null;
   moved: boolean;
 };
 
@@ -59,15 +60,23 @@ export class CollectionAssetMoveService {
         await tx
           .select({
             id: collectionNodes.id,
+            nodeType: collectionNodes.nodeType,
             assetId: collectionNodes.assetId,
             folderId: collectionNodes.folderId,
             parentFolderId: collectionNodes.parentFolderId,
+            positionX: collectionNodes.positionX,
+            positionY: collectionNodes.positionY,
             depth: collectionNodes.depth,
             pathFolderIds: collectionNodes.pathFolderIds,
             pathFolderSlugs: collectionNodes.pathFolderSlugs,
             pathFolderNames: collectionNodes.pathFolderNames,
+            assetType: assets.type,
+            imageWidth: imageAssets.width,
+            imageHeight: imageAssets.height,
           })
           .from(collectionNodes)
+          .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
+          .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
           .where(
             and(
               eq(collectionNodes.organizationId, orgId),
@@ -145,6 +154,27 @@ export class CollectionAssetMoveService {
         );
       }
 
+      const destinationNodes = await tx
+        .select({
+          nodeType: collectionNodes.nodeType,
+          assetType: assets.type,
+          imageWidth: imageAssets.width,
+          imageHeight: imageAssets.height,
+          positionX: collectionNodes.positionX,
+          positionY: collectionNodes.positionY,
+        })
+        .from(collectionNodes)
+        .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
+        .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+        .where(
+          and(
+            eq(collectionNodes.organizationId, orgId),
+            eq(collectionNodes.collectionId, collection.id),
+            eq(collectionNodes.parentFolderId, targetFolder.folderId),
+          ),
+        );
+      const position = getFolderMovePosition(destinationNodes, sourceNode);
+
       if (source.nodeType === "folder") {
         const oldPrefix = sourceNode.pathFolderIds;
         const ownSlug = sourceNode.pathFolderSlugs.at(-1);
@@ -212,8 +242,8 @@ export class CollectionAssetMoveService {
           .update(collectionNodes)
           .set({
             parentFolderId: targetFolder.folderId,
-            positionX: null,
-            positionY: null,
+            positionX: position.x,
+            positionY: position.y,
             depth: newDepth,
             pathFolderIds: newPathFolderIds,
             pathFolderSlugs: newPathFolderSlugs,
@@ -252,8 +282,8 @@ export class CollectionAssetMoveService {
           parentFolderId: targetFolder.folderId,
           nodeType: "asset",
           assetId: source.entityId,
-          positionX: null,
-          positionY: null,
+          positionX: position.x,
+          positionY: position.y,
           depth: targetFolder.pathFolderSlugs.length,
           pathFolderIds: targetFolder.pathFolderIds,
           pathFolderSlugs: targetFolder.pathFolderSlugs,
@@ -261,7 +291,7 @@ export class CollectionAssetMoveService {
         });
       }
 
-      return { ...result, moved: true };
+      return { ...result, position, moved: true };
     });
   }
 }

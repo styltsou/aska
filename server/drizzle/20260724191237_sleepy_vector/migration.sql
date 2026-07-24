@@ -1,0 +1,1 @@
+CREATE INDEX "collection_nodes_destination_contents_idx" ON "collection_nodes" ("organization_id","collection_id","parent_folder_id");

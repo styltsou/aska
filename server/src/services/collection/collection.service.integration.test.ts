@@ -119,7 +119,7 @@ describe("CollectionService integration", () => {
       sourceParentFolderNodeId: null,
       targetParentFolderNodeId: `folder-${targetFolder.id}`,
       targetFolderPath: targetFolder.slug,
-      position: null,
+      position: { x: 48, y: 48 },
       moved: true,
     });
 
@@ -153,15 +153,15 @@ describe("CollectionService integration", () => {
     );
     expect(rootContents.nodes.some((node) => node.id === note.id)).toBe(false);
     expect(targetContents.nodes).toContainEqual(
-      expect.objectContaining({ id: note.id, position: null }),
+      expect.objectContaining({ id: note.id, position: { x: 48, y: 48 } }),
     );
     expect(placement).toEqual([
       {
         parentFolderId: targetFolder.id,
         pathFolderSlugs: [targetFolder.slug],
         depth: 1,
-        positionX: null,
-        positionY: null,
+        positionX: 48,
+        positionY: 48,
       },
     ]);
 
@@ -254,7 +254,7 @@ describe("CollectionService integration", () => {
       sourceParentFolderNodeId: null,
       targetParentFolderNodeId: `folder-${targetFolder.id}`,
       targetFolderPath: targetFolder.slug,
-      position: null,
+      position: { x: 48, y: 48 },
       moved: true,
     });
 

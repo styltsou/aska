@@ -132,9 +132,9 @@ to the composition.
 
 Folders may be nested through explicit creation and navigation flows. Persisted
 image, note, and folder cards can be dragged from the current canvas onto a
-visible child-folder card. The move resets the moved node's destination position
-and preserves asset collection membership. Moving a folder preserves the
-subtree's hierarchy and every descendant's authored position.
+visible child-folder card. The move places the node within the target folder's
+existing composition and preserves asset collection membership. Moving a folder
+preserves the subtree's hierarchy and every descendant's authored position.
 
 ## Design Principles
 

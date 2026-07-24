@@ -90,11 +90,14 @@ PATCH /api/v1/workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId
 
 The pointer must be within the folder bounds. The client uses XYFlow's measured
 geometry and highlights only the deterministic topmost candidate. A successful
-drop removes the source-canvas node, resets its destination position to null,
-and skips the position mutation. Moving a folder preserves every descendant
-placement and authored descendant position while transactionally rewriting the
-subtree's cached folder paths. Optimistic notes, pending uploads, Inbox items,
-group drops, moves to the collection root, and cross-collection moves are not
+drop removes the source-canvas node and transactionally places it within the
+destination composition. The service uses the destination's positioned direct
+children as a virtual viewport, searching centre-outward for a collision-free
+slot; a full composition falls back to its centre and an empty destination
+starts at `(48, 48)`. Moving a folder preserves every descendant placement and
+authored descendant position while transactionally rewriting the subtree's
+cached folder paths. Optimistic notes, pending uploads, Inbox items, group
+drops, moves to the collection root, and cross-collection moves are not
 supported.
 
 The client optimistically patches every cached source and destination type

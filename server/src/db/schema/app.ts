@@ -374,6 +374,11 @@ export const collectionNodes = pgTable(
       table.collectionId,
       table.nodeType,
     ),
+    index("collection_nodes_destination_contents_idx").on(
+      table.organizationId,
+      table.collectionId,
+      table.parentFolderId,
+    ),
     index("collection_nodes_pathFolderIds_gin_idx").using(
       "gin",
       table.pathFolderIds,

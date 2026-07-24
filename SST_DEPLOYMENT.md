@@ -83,6 +83,7 @@ only to the shell running SST:
 
 ```sh
 export CLOUDFLARE_API_TOKEN='...'
+export CLOUDFLARE_DEFAULT_ACCOUNT_ID='...'
 export CLOUDFLARE_ZONE_ID='...'
 ```
 
@@ -309,10 +310,11 @@ The deployment job exchanges a GitHub OIDC token for short-lived AWS
 credentials. It does not use AWS access keys or copy SST secrets into GitHub.
 The AWS role trusts only the `styltsou/aska` repository's `main` branch.
 
-The job also requires two GitHub Actions repository secrets:
+The job also requires these GitHub Actions repository secrets:
 
 ```text
 CLOUDFLARE_API_TOKEN
+CLOUDFLARE_DEFAULT_ACCOUNT_ID
 CLOUDFLARE_ZONE_ID
 CLOUDFLARE_ACCESS_TEAM_DOMAIN
 CLOUDFLARE_ACCESS_AUD
@@ -360,6 +362,7 @@ main development workflow.
 ```sh
 bun sst diff --stage dev
 export CLOUDFLARE_API_TOKEN='...'
+export CLOUDFLARE_DEFAULT_ACCOUNT_ID='...'
 export CLOUDFLARE_ZONE_ID='...'
 export CLOUDFLARE_ACCESS_TEAM_DOMAIN='https://your-team.cloudflareaccess.com'
 export CLOUDFLARE_ACCESS_AUD='the-access-application-aud-tag'

@@ -241,7 +241,7 @@ export type MoveCollectionNodeToFolderResponse = {
   sourceFolderPath: string;
   targetParentFolderNodeId: string;
   targetFolderPath: string;
-  position: null;
+  position: BoardPosition | null;
   moved: boolean;
 };
 
