@@ -72,8 +72,8 @@ bun sst diff --stage dev
 The stable `dev` deployment uses exactly these public hostnames:
 
 ```text
-app.aska.styltsou.com  -> Cloudflare (proxied) -> CloudFront client
-api.aska.styltsou.com  -> Cloudflare (proxied) -> API Gateway HTTP API
+aska-app.styltsou.com  -> Cloudflare (proxied) -> CloudFront client
+aska-api.styltsou.com  -> Cloudflare (proxied) -> API Gateway HTTP API
 ```
 
 Before deploying, create a Cloudflare API token scoped only to the
@@ -105,7 +105,7 @@ In that application's **Advanced settings → CORS settings**, configure
 Cloudflare to answer preflight requests with the same policy as the origin:
 
 ```text
-Access-Control-Allow-Origin: https://app.aska.styltsou.com
+Access-Control-Allow-Origin: https://aska-app.styltsou.com
 Access-Control-Allow-Credentials: true
 Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
 Access-Control-Allow-Headers: Content-Type, Authorization
@@ -119,7 +119,7 @@ Create one additional, more-specific self-hosted Access application for this
 exact callback URL:
 
 ```text
-https://api.aska.styltsou.com/api/v1/internal/image-pipeline/callback
+https://aska-api.styltsou.com/api/v1/internal/image-pipeline/callback
 ```
 
 Give that path-only application a **Bypass / Everyone** policy. Cloudflare's
@@ -198,8 +198,8 @@ build receives `VITE_SERVER_URL` automatically from the API Gateway URL; there
 is no client production `.env` file to create or maintain.
 
 `bun run deploy --stage dev` deploys **both** the backend and this client. The
-client is served as `https://app.aska.styltsou.com` and is built with
-`https://api.aska.styltsou.com` as `VITE_SERVER_URL`. CloudFront remains the
+client is served as `https://aska-app.styltsou.com` and is built with
+`https://aska-api.styltsou.com` as `VITE_SERVER_URL`. CloudFront remains the
 client's origin and its S3 bucket remains private; Cloudflare is the public
 edge and Access gate.
 
@@ -214,7 +214,7 @@ defined once in `sst.config.ts`:
 ```ts
 const clientOrigins = {
   styltsoy: ["http://localhost:5173"],
-  dev: ["https://app.aska.styltsou.com"],
+  dev: ["https://aska-app.styltsou.com"],
 };
 ```
 
@@ -238,8 +238,8 @@ API Gateway URL automatically.
 
 ### Authentication domain note
 
-The stable client and API share the `aska.styltsou.com` parent domain. Browser
-requests to `api.aska.styltsou.com` are therefore same-site, which avoids the
+The stable client and API share the `styltsou.com` parent domain. Browser
+requests to `aska-api.styltsou.com` are therefore same-site, which avoids the
 third-party-cookie behavior that breaks cross-domain authentication in Safari.
 Better Auth keeps host-only secure cookies and its default `SameSite=Lax`
 policy; do not broaden cookie scope to `styltsou.com` or relax CSRF/origin
@@ -291,13 +291,13 @@ and avoids treating the API as a cross-site third party.
 Use this when you want the browser, API, and image pipeline all off your
 laptop:
 
-1. Set the two Cloudflare deployment environment variables described above.
+1. Set the Cloudflare deployment environment variables described above.
 2. Run `bun run deploy --stage dev`.
-3. Open `https://app.aska.styltsou.com`. SST embedded the custom API URL into
+3. Open `https://aska-app.styltsou.com`. SST embedded the custom API URL into
    the Vite build, so no client environment variable is needed.
 
 The shared `dev` API intentionally rejects local Vite requests. Use
-`https://app.aska.styltsou.com` for fully deployed testing, or use `styltsoy`
+`https://aska-app.styltsou.com` for fully deployed testing, or use `styltsoy`
 for hybrid development.
 
 ## Continuous deployment

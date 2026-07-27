@@ -17,7 +17,7 @@ export default $config({
       // Personal hybrid development: local Vite -> Live API Lambda -> AWS.
       styltsoy: ["http://localhost:5173"],
       // Shared, fully deployed cloud environment. Do not add localhost here.
-      dev: ["https://app.aska.styltsou.com"],
+      dev: ["https://aska-app.styltsou.com"],
     };
     const allowedClientOrigins =
       clientOrigins[$app.stage as keyof typeof clientOrigins];
@@ -29,8 +29,8 @@ export default $config({
     const stableCloudDomains =
       $app.stage === "dev"
         ? {
-            app: "app.aska.styltsou.com",
-            api: "api.aska.styltsou.com",
+            app: "aska-app.styltsou.com",
+            api: "aska-api.styltsou.com",
             dns: sst.cloudflare.dns({
               // Supplying the zone explicitly keeps the DNS token narrowly
               // scoped to styltsou.com and avoids account-wide zone discovery.
