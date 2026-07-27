@@ -101,19 +101,15 @@ matching an Allow policy is denied. Keeping both domains on the same Access
 application lets browser navigation and credentialed API requests use the same
 Access session.
 
-In that application's **Advanced settings → CORS settings**, configure
-Cloudflare to answer preflight requests with the same policy as the origin:
+In that application's **Advanced settings → CORS settings**, enable
+**Bypass OPTIONS requests to origin**. Do not configure Access-managed CORS
+response headers for this application.
 
-```text
-Access-Control-Allow-Origin: https://aska-app.styltsou.com
-Access-Control-Allow-Credentials: true
-Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
-Access-Control-Allow-Headers: Content-Type, Authorization
-```
-
-Browsers never send cookies on an `OPTIONS` preflight, so without this Access
-configuration Cloudflare would reject preflight before API Gateway or Hono can
-return their CORS headers.
+Browsers never send cookies on an `OPTIONS` preflight, so Access cannot
+authenticate that request. This narrowly bypasses Access only for the
+preflight; API Gateway and Hono then enforce the exact CORS policy, and every
+real API request still requires a valid Cloudflare Access JWT. The deployment
+config sets the permitted browser origin to `https://aska-app.styltsou.com`.
 
 Create one additional, more-specific self-hosted Access application for this
 exact callback URL:
