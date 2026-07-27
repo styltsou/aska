@@ -1,4 +1,8 @@
-import type { BoardPosition } from "@/api/collection";
+import type {
+  BoardInsertionPlacement,
+  BoardPosition,
+  BoardVisibleBounds,
+} from "@/api/collection";
 
 // Pointer movement is high-frequency. Keep it outside React/Zustand state so
 // paste can read the latest location without re-rendering the canvas.
@@ -37,4 +41,27 @@ export function getBoardFlowPosition(
   clientPosition: BoardPosition,
 ) {
   return flowPositionConverters.get(boardKey)?.(clientPosition);
+}
+
+export function getBoardDropPlacement(
+  boardKey: string,
+  clientPosition: BoardPosition,
+  visibleBounds: BoardVisibleBounds | undefined,
+): BoardInsertionPlacement {
+  const position = getBoardFlowPosition(boardKey, clientPosition);
+  if (position) {
+    return {
+      position: { x: Math.round(position.x), y: Math.round(position.y) },
+    };
+  }
+
+  return visibleBounds ? { visibleBounds } : {};
+}
+
+export function getBoardPastePlacement(
+  boardKey: string,
+  visibleBounds: BoardVisibleBounds | undefined,
+): BoardInsertionPlacement | undefined {
+  const position = getBoardPointerPosition(boardKey);
+  return position || visibleBounds ? { position, visibleBounds } : undefined;
 }

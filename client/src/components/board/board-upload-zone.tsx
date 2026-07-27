@@ -2,8 +2,8 @@ import React, { useCallback, useState } from "react";
 import { ImagePlusIcon } from "lucide-react";
 import type { BoardInsertionPlacement } from "@/api/collection";
 import {
-  getBoardFlowPosition,
-  getBoardPointerPosition,
+  getBoardDropPlacement,
+  getBoardPastePlacement,
 } from "@/components/canvas/board-pointer-position";
 import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
 import { useTransientStore } from "@/store";
@@ -27,9 +27,7 @@ export function BoardUploadZone({
     if (!boardKey) return undefined;
 
     const { boardVisibleBounds } = useTransientStore.getState();
-    const position = getBoardPointerPosition(boardKey);
-    const visibleBounds = boardVisibleBounds[boardKey];
-    return position || visibleBounds ? { position, visibleBounds } : undefined;
+    return getBoardPastePlacement(boardKey, boardVisibleBounds[boardKey]);
   }, [boardKey]);
   const {
     createTextNote,
@@ -62,24 +60,18 @@ export function BoardUploadZone({
     if (!hasImageFile(event.dataTransfer)) return;
     event.preventDefault();
     setIsDraggingImage(false);
-    const position = boardKey
-      ? getBoardFlowPosition(boardKey, {
-          x: event.clientX,
-          y: event.clientY,
-        })
-      : undefined;
     const visibleBounds = boardKey
       ? useTransientStore.getState().boardVisibleBounds[boardKey]
       : undefined;
     void uploadFiles(
       Array.from(event.dataTransfer.files),
-      position
-        ? {
-            position: { x: Math.round(position.x), y: Math.round(position.y) },
-          }
-        : visibleBounds
-          ? { visibleBounds }
-          : {},
+      boardKey
+        ? getBoardDropPlacement(
+            boardKey,
+            { x: event.clientX, y: event.clientY },
+            visibleBounds,
+          )
+        : {},
     );
   }
 

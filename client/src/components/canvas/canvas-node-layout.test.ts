@@ -79,6 +79,39 @@ describe("infinite canvas node placement", () => {
     ).toEqual([{ x: 360, y: 340 }]);
   });
 
+  it("keeps an unanchored insertion at the viewport centre when the viewport is full", () => {
+    expect(
+      reserveNodePositions(
+        [{ ...note, position: { x: 0, y: 0 } }],
+        [{ ...note, id: "note-2" }],
+        { visibleBounds: { left: 0, top: 0, right: 280, bottom: 320 } },
+      ),
+    ).toEqual([{ x: 0, y: 0 }]);
+  });
+
+  it("finds a collision-free viewport position before falling back to its centre", () => {
+    const visibleBounds = { left: 0, top: 0, right: 1_000, bottom: 1_000 };
+    const [position] = reserveNodePositions(
+      [{ ...note, position: { x: 360, y: 340 } }],
+      [{ ...note, id: "note-2" }],
+      { visibleBounds },
+    );
+
+    expect(position).toMatchObject({});
+    expect(position!.x).toBeGreaterThanOrEqual(visibleBounds.left);
+    expect(position!.y).toBeGreaterThanOrEqual(visibleBounds.top);
+    expect(position!.x + BOARD_CARD_WIDTH).toBeLessThanOrEqual(
+      visibleBounds.right,
+    );
+    expect(position!.y + 320).toBeLessThanOrEqual(visibleBounds.bottom);
+    expect(
+      position!.x + BOARD_CARD_WIDTH + BOARD_ITEM_GAP <= 360 ||
+        360 + BOARD_CARD_WIDTH + BOARD_ITEM_GAP <= position!.x ||
+        position!.y + 320 + BOARD_ITEM_GAP <= 340 ||
+        340 + 320 + BOARD_ITEM_GAP <= position!.y,
+    ).toBe(true);
+  });
+
   it("uses a four-column grid from the visible insertion anchor", () => {
     expect(
       reserveNodePositions(

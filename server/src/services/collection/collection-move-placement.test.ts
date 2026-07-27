@@ -14,6 +14,15 @@ const movedNote: MovePlacementNode = {
   positionY: null,
 };
 
+const movedPortrait: MovePlacementNode = {
+  nodeType: "asset",
+  assetType: "image",
+  imageWidth: 280,
+  imageHeight: 560,
+  positionX: null,
+  positionY: null,
+};
+
 const folderAt = (x: number, y: number): MovePlacementNode => ({
   nodeType: "folder",
   assetType: null,
@@ -26,6 +35,21 @@ const folderAt = (x: number, y: number): MovePlacementNode => ({
 describe("folder move placement", () => {
   it("uses the entry point for an empty destination", () => {
     expect(getFolderMovePosition([], movedNote)).toEqual({ x: 48, y: 48 });
+  });
+
+  it("ignores legacy destination children that have no persisted position", () => {
+    expect(
+      getFolderMovePosition(
+        [
+          {
+            ...folderAt(0, 0),
+            positionX: null,
+            positionY: null,
+          },
+        ],
+        movedNote,
+      ),
+    ).toEqual({ x: 48, y: 48 });
   });
 
   it("uses a collision-free centre within the destination composition", () => {
@@ -47,5 +71,19 @@ describe("folder move placement", () => {
       x: 100,
       y: 80,
     });
+  });
+
+  it("uses the moved image's real footprint when finding the composition centre", () => {
+    expect(
+      getFolderMovePosition(
+        [
+          folderAt(0, 0),
+          folderAt(624, 0),
+          folderAt(0, 624),
+          folderAt(624, 624),
+        ],
+        movedPortrait,
+      ),
+    ).toEqual({ x: 312, y: 172 });
   });
 });

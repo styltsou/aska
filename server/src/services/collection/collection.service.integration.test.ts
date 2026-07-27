@@ -190,6 +190,68 @@ describe("CollectionService integration", () => {
     ).resolves.toMatchObject({ moved: false });
   });
 
+  it("places a moved asset in a collision-free destination composition slot", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Composition Move Test" },
+    );
+    const targetFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Archive" },
+    );
+    const destinationPositions = [
+      { x: 0, y: 0 },
+      { x: 624, y: 0 },
+      { x: 0, y: 624 },
+      { x: 624, y: 624 },
+    ];
+    for (const [index, position] of destinationPositions.entries()) {
+      await collectionService.createFolder(
+        fixture.organizationId,
+        fixture.userId,
+        collection.slug,
+        {
+          name: `Destination ${index + 1}`,
+          parentFolderPath: targetFolder.slug,
+          position,
+        },
+      );
+    }
+    const note = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "Move into the composition", position: { x: 40, y: 40 } },
+    );
+
+    await expect(
+      collectionService.moveNodeToFolder(
+        fixture.organizationId,
+        collection.slug,
+        note.id,
+        {
+          targetFolderNodeId: `folder-${targetFolder.id}`,
+          expectedParentFolderNodeId: null,
+        },
+      ),
+    ).resolves.toMatchObject({
+      position: { x: 312, y: 292 },
+      moved: true,
+    });
+
+    const destinationContents = await collectionService.getCollectionContents(
+      fixture.organizationId,
+      collection.slug,
+      targetFolder.slug,
+    );
+    expect(destinationContents.nodes).toContainEqual(
+      expect.objectContaining({ id: note.id, position: { x: 312, y: 292 } }),
+    );
+  });
+
   it("moves a folder subtree without unplacing its assets or corrupting its path", async () => {
     const collection = await collectionService.createCollection(
       fixture.organizationId,
