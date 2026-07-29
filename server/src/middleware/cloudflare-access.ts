@@ -49,7 +49,7 @@ export const cloudflareAccess = factory.createMiddleware(async (c, next) => {
 
 function getJwks(teamDomain: string): JWTVerifyGetKey {
   if (!jwks || jwksTeamDomain !== teamDomain) {
-    jwks = createRemoteJWKSet(new URL(`${teamDomain}/cdn-cgi/access/certs`));
+    jwks = createRemoteJWKSet(new URL("/cdn-cgi/access/certs", teamDomain));
     jwksTeamDomain = teamDomain;
   }
   return jwks;

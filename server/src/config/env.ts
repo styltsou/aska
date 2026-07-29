@@ -14,6 +14,20 @@ const NODE_ENV_VALUES = [
 
 const DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://localhost:5174";
 
+const CloudflareAccessTeamDomain = z
+  .string()
+  .trim()
+  .min(1)
+  // Cloudflare displays the team domain as a hostname, while some dashboard
+  // locations and our docs use its full HTTPS URL. Accept both forms and keep
+  // one canonical issuer/JWKS base URL internally.
+  .transform((value) => (value.includes("://") ? value : `https://${value}`))
+  .pipe(z.url())
+  .refine((value) => new URL(value).protocol === "https:", {
+    message: "CLOUDFLARE_ACCESS_TEAM_DOMAIN must use HTTPS",
+  })
+  .transform((value) => new URL(value).origin);
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(NODE_ENV_VALUES).default(NodeEnv.Development),
@@ -34,7 +48,7 @@ const envSchema = z
       .string()
       .min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
     BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL"),
-    CLOUDFLARE_ACCESS_TEAM_DOMAIN: z.url().optional(),
+    CLOUDFLARE_ACCESS_TEAM_DOMAIN: CloudflareAccessTeamDomain.optional(),
     CLOUDFLARE_ACCESS_AUD: z.string().min(1).optional(),
     RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
     S3_BUCKET: z.string().optional(),

@@ -1,6 +1,6 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 export default $config({
-  app() {
+  app(input) {
     return {
       name: "aska",
       home: "aws",
@@ -8,14 +8,24 @@ export default $config({
         aws: {
           region: "eu-central-1",
         },
-        cloudflare: { package: "@pulumi/cloudflare", version: "6.18.0" },
+        // The personal Live stage has no custom domains or Cloudflare
+        // resources. Do not initialise the provider there: it should require
+        // only the short-lived AWS credentials obtained by `aws login`.
+        ...(input.stage === "dev"
+          ? {
+              cloudflare: {
+                package: "@pulumi/cloudflare",
+                version: "6.18.0",
+              },
+            }
+          : {}),
       },
     };
   },
   async run() {
     const clientOrigins = {
       // Personal hybrid development: local Vite -> Live API Lambda -> AWS.
-      styltsoy: ["http://localhost:5173"],
+      hybrid: ["http://localhost:5173"],
       // Shared, fully deployed cloud environment. Do not add localhost here.
       dev: ["https://aska-app.styltsou.com"],
     };
