@@ -9,11 +9,11 @@ export function SmoothScroll() {
 		);
 		const lenis = new Lenis({
 			anchors: { offset: -anchorOffset },
-			lerp: 0.12,
+			lerp: 0.22,
 			smoothWheel: true,
-			wheelMultiplier: 1,
+			wheelMultiplier: 1.05,
 			syncTouch: true,
-			syncTouchLerp: 0.12,
+			syncTouchLerp: 0.2,
 			stopInertiaOnNavigate: true,
 		});
 
