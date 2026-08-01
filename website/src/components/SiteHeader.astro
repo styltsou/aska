@@ -13,7 +13,7 @@ const { loginHref, signupHref } = Astro.props;
 </header>
 
 <style is:global>
-	.site-header { position: fixed; inset: 10px 0 auto; z-index: 20; pointer-events: none; }
+	.site-header { position: fixed; inset: 10px 0 auto; z-index: 100; pointer-events: none; }
 	.site-header__inner { position: relative; width: min(calc(100% - 48px), 980px); min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-inline: auto; padding: 8px; pointer-events: auto; }
 	.site-header__chrome { position: absolute; inset: 0; z-index: 0; border: 1px solid var(--glass-line); border-radius: 8px; background: var(--glass-surface); box-shadow: 0 5px 14px rgb(21 21 21 / 5%); backdrop-filter: blur(22px) saturate(150%); pointer-events: none; }
 	.site-header__row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%; }

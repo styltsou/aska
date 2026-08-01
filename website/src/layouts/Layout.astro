@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { SmoothScroll } from '../components/SmoothScroll';
 
 interface Props {
 	title?: string;
@@ -47,5 +48,6 @@ const {
 	</head>
 	<body>
 		<slot />
+		<SmoothScroll client:load />
 	</body>
 </html>
