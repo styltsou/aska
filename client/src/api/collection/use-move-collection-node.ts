@@ -1,21 +1,22 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { moveCollectionNodeToFolder } from "./fetchers";
+import {
+  moveCollectionNodeToFolder,
+  moveCollectionNodesToFolder,
+} from "./fetchers";
 import {
   getAssetPreview,
   promoteCollectionPreview,
-  removeNodeFromContents,
-  transitionCachedContentsForMove,
+  transitionCachedContentsForMoves,
   type CollectionContentsCacheEntry,
 } from "./move-cache-transition";
 import { collectionQueryKeys } from "./query-keys";
 import type {
   CollectionContentsResponse,
   CollectionsData,
-  MoveCollectionNodeToFolderInput,
-  MoveCollectionNodeToFolderResponse,
-  FolderChildPreview,
+  MoveCollectionNodesToFolderInput,
+  MoveCollectionNodesToFolderResponse,
 } from "./types";
 
 type MoveContext =
@@ -26,28 +27,43 @@ type MoveContext =
       previousCollections: CollectionsData | undefined;
     };
 
-export function useMoveCollectionNodeToFolder(
+export function useMoveCollectionNodesToFolder(
   workspaceSlug: string,
   collectionSlug: string,
 ) {
   const queryClient = useQueryClient();
 
   return useMutation<
-    MoveCollectionNodeToFolderResponse,
+    MoveCollectionNodesToFolderResponse,
     Error,
-    MoveCollectionNodeToFolderInput,
+    MoveCollectionNodesToFolderInput,
     MoveContext
   >({
     scope: { id: `collection-node-move:${workspaceSlug}:${collectionSlug}` },
-    mutationFn: ({
-      nodeId,
+    mutationFn: async ({
+      nodeIds,
       targetFolderNodeId,
       expectedParentFolderNodeId,
-    }: MoveCollectionNodeToFolderInput) =>
-      moveCollectionNodeToFolder(workspaceSlug, collectionSlug, nodeId, {
+    }: MoveCollectionNodesToFolderInput) => {
+      if (nodeIds.length === 1) {
+        const move = await moveCollectionNodeToFolder(
+          workspaceSlug,
+          collectionSlug,
+          nodeIds[0]!,
+          {
+            targetFolderNodeId,
+            expectedParentFolderNodeId,
+          },
+        );
+        return { moves: [move] };
+      }
+
+      return moveCollectionNodesToFolder(workspaceSlug, collectionSlug, {
+        nodeIds,
         targetFolderNodeId,
         expectedParentFolderNodeId,
-      }),
+      });
+    },
     onMutate: async (variables) => {
       const contentsScope = collectionQueryKeys.contentScope(
         workspaceSlug,
@@ -68,7 +84,7 @@ export function useMoveCollectionNodeToFolder(
       const sourceEntry = findSourceEntry(
         previousContents,
         variables.folderPath,
-        variables.nodeId,
+        variables.nodeIds,
         variables.targetFolderNodeId,
       );
       const source = sourceEntry?.[1];
@@ -79,12 +95,14 @@ export function useMoveCollectionNodeToFolder(
         return { optimistic: false };
       }
 
-      const removal = removeNodeFromContents(source, variables.nodeId);
-      if (!removal.node) return { optimistic: false };
-
-      const movedNode = removal.node;
-      const preview: FolderChildPreview | undefined =
-        movedNode.type === "folder" ? undefined : getAssetPreview(movedNode);
+      const movedNodeIds = new Set(variables.nodeIds);
+      const movedNodes = variables.nodeIds.flatMap((nodeId) => {
+        const movedNode = source.nodes.find((node) => node.id === nodeId);
+        return movedNode ? [movedNode] : [];
+      });
+      if (movedNodes.length !== variables.nodeIds.length) {
+        return { optimistic: false };
+      }
       const targetFolderPath = joinFolderPath(
         variables.folderPath,
         targetFolder.slug,
@@ -95,35 +113,44 @@ export function useMoveCollectionNodeToFolder(
         ([key, contents]) =>
           isUnfilteredContentsKey(key) &&
           getFolderPathFromKey(key) === variables.folderPath &&
-          contents.nodes.some((node) => node.id === movedNode.id),
+          variables.nodeIds.every((nodeId) =>
+            contents.nodes.some((node) => node.id === nodeId),
+          ),
       );
-      const unfilteredRemoval = unfilteredSource
-        ? removeNodeFromContents(unfilteredSource[1], movedNode.id)
-        : undefined;
+      const remainingUnfilteredSourceNodes = unfilteredSource?.[1].nodes.filter(
+        (node) => !movedNodeIds.has(node.id),
+      );
 
-      const contentUpdates = transitionCachedContentsForMove(previousContents, {
-        sourceFolderPath: variables.folderPath,
-        targetFolderPath,
-        sourceParentFolderPath,
-        sourceFolderSlug,
-        targetFolderNodeId: variables.targetFolderNodeId,
-        movedNode,
-        preview,
-        remainingUnfilteredSourceNodes: unfilteredRemoval?.node
-          ? unfilteredRemoval.contents.nodes
-          : undefined,
-      });
+      const contentUpdates = transitionCachedContentsForMoves(
+        previousContents,
+        {
+          sourceFolderPath: variables.folderPath,
+          targetFolderPath,
+          sourceParentFolderPath,
+          sourceFolderSlug,
+          targetFolderNodeId: variables.targetFolderNodeId,
+          movedNodes,
+          remainingUnfilteredSourceNodes,
+        },
+      );
       for (const [key, contents] of contentUpdates) {
         queryClient.setQueryData<CollectionContentsResponse>(key, contents);
       }
 
       const previousCollections =
         queryClient.getQueryData<CollectionsData>(collectionsKey);
-      if (preview) {
+      const previews = movedNodes.flatMap((movedNode) =>
+        movedNode.type === "folder" ? [] : [getAssetPreview(movedNode)],
+      );
+      if (previews.length > 0) {
         queryClient.setQueryData<CollectionsData>(collectionsKey, (current) =>
-          current
-            ? promoteCollectionPreview(current, collectionSlug, preview)
-            : current,
+          previews.reduce(
+            (next, preview) =>
+              next
+                ? promoteCollectionPreview(next, collectionSlug, preview)
+                : next,
+            current,
+          ),
         );
       }
 
@@ -135,7 +162,7 @@ export function useMoveCollectionNodeToFolder(
     },
     onError: (_error, variables, context) => {
       if (!context || context.optimistic === false) {
-        toast.error(getMoveErrorMessage(variables.nodeId));
+        toast.error(getMoveErrorMessage(variables.nodeIds));
         return;
       }
 
@@ -146,7 +173,7 @@ export function useMoveCollectionNodeToFolder(
         collectionQueryKeys.collections(workspaceSlug),
         context.previousCollections,
       );
-      toast.error(getMoveErrorMessage(variables.nodeId));
+      toast.error(getMoveErrorMessage(variables.nodeIds));
     },
     onSettled: () => {
       void Promise.all([
@@ -167,14 +194,16 @@ export function useMoveCollectionNodeToFolder(
 function findSourceEntry(
   entries: CollectionContentsCacheEntry[],
   folderPath: string | undefined,
-  nodeId: string,
+  nodeIds: string[],
   targetFolderNodeId: string,
 ): CollectionContentsCacheEntry | undefined {
   return entries
     .filter(
       ([key, contents]) =>
         getFolderPathFromKey(key) === folderPath &&
-        contents.nodes.some((node) => node.id === nodeId) &&
+        nodeIds.every((nodeId) =>
+          contents.nodes.some((node) => node.id === nodeId),
+        ) &&
         contents.nodes.some((node) => node.id === targetFolderNodeId),
     )
     .sort(([leftKey], [rightKey]) => leftKey.length - rightKey.length)[0];
@@ -188,8 +217,12 @@ function isUnfilteredContentsKey(key: readonly unknown[]): boolean {
   return key.length === 4;
 }
 
-function getMoveErrorMessage(nodeId: string): string {
-  return nodeId.startsWith("folder-")
+function getMoveErrorMessage(nodeIds: string[]): string {
+  if (nodeIds.length > 1) {
+    return "Unable to move the selected items into that folder.";
+  }
+
+  return nodeIds[0]?.startsWith("folder-")
     ? "Unable to move the folder into that folder."
     : "Unable to move the asset into that folder.";
 }

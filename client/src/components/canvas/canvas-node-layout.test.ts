@@ -7,6 +7,8 @@ import {
   arrangeNodesInGrid,
   compactNodesInMasonry,
   getInitialNodePosition,
+  makeNodesInColumn,
+  makeNodesInRow,
   reserveNodePositions,
 } from "./canvas-node-layout";
 
@@ -268,6 +270,66 @@ describe("infinite canvas node placement", () => {
       { x: 412, y: 100 },
       { x: 412, y: 232 },
       { x: 412, y: 364 },
+    ]);
+  });
+
+  it("aligns rows to the selected bounds", () => {
+    const nodes = [
+      {
+        ...note,
+        id: "short",
+        position: { x: 100, y: 100 },
+        layoutHeight: 100,
+      },
+      {
+        ...note,
+        id: "tall",
+        position: { x: 500, y: 200 },
+        layoutHeight: 300,
+      },
+    ];
+
+    expect(makeNodesInRow(nodes, "start")).toEqual([
+      { x: 100, y: 100 },
+      { x: 412, y: 100 },
+    ]);
+    expect(makeNodesInRow(nodes, "center")).toEqual([
+      { x: 100, y: 250 },
+      { x: 412, y: 150 },
+    ]);
+    expect(makeNodesInRow(nodes, "end")).toEqual([
+      { x: 100, y: 400 },
+      { x: 412, y: 200 },
+    ]);
+  });
+
+  it("aligns columns to the selected bounds using measured widths", () => {
+    const nodes = [
+      {
+        ...note,
+        id: "narrow",
+        position: { x: 100, y: 100 },
+        layoutWidth: 100,
+      },
+      {
+        ...note,
+        id: "wide",
+        position: { x: 400, y: 500 },
+        layoutWidth: 300,
+      },
+    ];
+
+    expect(makeNodesInColumn(nodes, "start")).toEqual([
+      { x: 100, y: 100 },
+      { x: 100, y: 452 },
+    ]);
+    expect(makeNodesInColumn(nodes, "center")).toEqual([
+      { x: 350, y: 100 },
+      { x: 250, y: 452 },
+    ]);
+    expect(makeNodesInColumn(nodes, "end")).toEqual([
+      { x: 600, y: 100 },
+      { x: 400, y: 452 },
     ]);
   });
 });

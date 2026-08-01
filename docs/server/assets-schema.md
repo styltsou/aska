@@ -47,7 +47,7 @@ similarity.
 The implemented search endpoint, local scope rules, ranking algorithm,
 thresholds, and client behavior are documented in
 [Color Image Search](../color-image-search.md). The original
-[Color-Based Image Search Plan](../../COLOR_IMAGE_SEARCH_PLAN.md) records the
+[Color-Based Image Search Plan](../color-image-search-plan.md) records the
 delivery decisions and future evaluation work.
 
 See [Image Upload and Processing Pipeline](./image-upload-implementation-plan.md)
@@ -149,4 +149,6 @@ from its parent image asset.
 
 Folder moves are explicit service transactions. The database uses `ON DELETE
 CASCADE` for subtree deletion, but does not rely on `ON UPDATE CASCADE` for
-moving folders. Move services must update descendants and path caches together.
+moving folders. Batch move services may include assets and folders, and must
+update every moved folder's descendants and path caches together or roll back
+the whole move.

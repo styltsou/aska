@@ -11,7 +11,7 @@ result while a new palette is ranked, and provides a collection result
 navigator without altering canvas positions.
 
 Whole-workspace and recursive-folder scopes, saved searches, and cross-board
-navigation remain deferred. See [Color Image Search](./docs/color-image-search.md)
+navigation remain deferred. See [Color Image Search](./color-image-search.md)
 for the maintained implementation documentation.
 
 ## Recommended Decisions

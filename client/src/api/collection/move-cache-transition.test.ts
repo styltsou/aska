@@ -9,6 +9,7 @@ import {
   restoreNodeToContents,
   rollbackCollectionPreview,
   transitionCachedContentsForMove,
+  transitionCachedContentsForMoves,
   updateTargetFolderForMove,
 } from "./move-cache-transition";
 import type {
@@ -162,6 +163,50 @@ describe("move cache transition", () => {
       ]);
     }
     expect(updateMap.has(JSON.stringify(targetNoteFilterKey))).toBe(false);
+  });
+
+  it("moves mixed nodes through one cache transition and aggregates the target count", () => {
+    const root = makeContents([
+      movedNote,
+      movedFolder,
+      remainingNote,
+      targetFolder,
+    ]);
+    const destination = makeContents([]);
+    const rootKey = ["collectionContents", "personal", "reference", undefined];
+    const targetKey = [
+      "collectionContents",
+      "personal",
+      "reference",
+      "archive",
+    ];
+
+    const updates = transitionCachedContentsForMoves(
+      [
+        [rootKey, root],
+        [targetKey, destination],
+      ],
+      {
+        sourceFolderPath: undefined,
+        targetFolderPath: "archive",
+        targetFolderNodeId: targetFolder.id,
+        movedNodes: [movedNote, movedFolder],
+      },
+    );
+    const updateMap = new Map(updates);
+
+    expect(updateMap.get(rootKey)?.nodes).toEqual([
+      remainingNote,
+      {
+        ...targetFolder,
+        count: targetFolder.count + 1 + movedFolder.count,
+        previews: [getAssetPreview(movedNote), ...targetFolder.previews],
+      },
+    ]);
+    expect(updateMap.get(targetKey)?.nodes).toEqual([
+      { ...movedNote, position: null },
+      { ...movedFolder, position: null },
+    ]);
   });
 
   it("rebuilds source-folder previews from remaining children and rolls back by asset ID", () => {

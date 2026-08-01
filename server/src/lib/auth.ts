@@ -27,6 +27,17 @@ function createAuth() {
     },
     advanced: {
       useSecureCookies: true,
+      // This is enabled only by the stable cloud stage. Keep the hybrid stage
+      // unchanged, while allowing Chrome to retain a local-Vite cloud session.
+      ...(env.CROSS_SITE_AUTH_COOKIES
+        ? {
+            defaultCookieAttributes: {
+              sameSite: "none" as const,
+              secure: true,
+              partitioned: true,
+            },
+          }
+        : {}),
     },
     emailVerification: {
       sendVerificationEmail: async ({ user, url }) => {

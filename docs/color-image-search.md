@@ -103,5 +103,5 @@ also does not change canvas positions, collection membership, or Inbox order.
 Those features need explicit product and navigation behavior beyond local
 retrieval.
 
-The original [delivery plan](../COLOR_IMAGE_SEARCH_PLAN.md) records the
+The original [delivery plan](./color-image-search-plan.md) records the
 decision process, acceptance criteria, and future evaluation corpus.

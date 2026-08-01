@@ -38,10 +38,11 @@ into the folder.
 
 The move service reads the destination folder's positioned direct children in
 the same transaction that performs the move. Their card footprints define a
-composition bounding box. The moved card searches centre-outward for a
-collision-free position wholly inside that box. If the folder is empty, the
-card starts at `(48, 48)`. If no free position exists inside the composition,
-the card is persisted at the composition centre rather than placed at an
+composition bounding box. Each moved node searches centre-outward for a
+collision-free position wholly inside that box; earlier positions in a batch
+are included when placing later nodes. If the folder is empty, the first card
+starts at `(48, 48)`. If no free position exists inside the composition, a
+card is persisted at the composition centre rather than placed at an
 unrelated, distant coordinate.
 
 The destination folder row is locked by the existing move transaction, which

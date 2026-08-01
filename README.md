@@ -62,11 +62,19 @@ See [the engineering docs](./docs/README.md) for a codebase map, architecture,
 data model, backend conventions, operations, and contribution workflow.
 
 The real-AWS development, deployment, stage, secret, and React/Vite hosting
-workflow is documented in [SST_DEPLOYMENT.md](./SST_DEPLOYMENT.md).
+workflow is documented in [SST deployment](./docs/sst-deployment.md).
 
 ## Development
 
-Each package is independently installed and run with Bun:
+For end-to-end browser development, use one root command per mode:
+
+```sh
+bun run dev        # local Vite + personal hybrid SST Live backend
+bun run dev:cloud  # local Vite + stable deployed cloud backend
+```
+
+`bun run dev` stops both processes when you press Ctrl-C. Package commands are
+also available for isolated work:
 
 ```sh
 cd client && bun install && bun run dev
@@ -76,7 +84,7 @@ cd services/image-palette && bun install
 ```
 
 For normal end-to-end development, use real AWS S3 and SQS through SST instead
-of the isolated package commands; see [SST_DEPLOYMENT.md](./SST_DEPLOYMENT.md).
+of the isolated package commands; see [SST deployment](./docs/sst-deployment.md).
 
 Run the full package-local quality suite with `bun run lint`,
 `bun run typecheck`, `bun run format`, and `bun run test`. The same commands run

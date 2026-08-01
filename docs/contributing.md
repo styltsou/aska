@@ -10,7 +10,7 @@ than before.
    ownership boundaries.
 2. The feature document linked from [Documentation home](./README.md).
 3. The nearest code and its tests before changing an interface or behavior.
-4. [AWS workflow](../SST_DEPLOYMENT.md) before touching SST, Lambda
+4. [AWS workflow](./sst-deployment.md) before touching SST, Lambda
    configuration, deployment, or secrets.
 
 Treat root product documents as intent and `docs/` as the maintained guide to
@@ -32,12 +32,11 @@ cd ../image-palette && bun install
 
 Copy `server/.env.example` to `server/.env` for direct server development and
 set the required values. The normal end-to-end path uses real AWS development
-resources through the `styltsoy` SST Live stage:
-`SST_STAGE=styltsoy bun run dev:aws`. Do not attempt to emulate the full
-S3/SNS/SQS pipeline with a direct local server process. The shared `dev` stage
-is a stable cloud deployment that intentionally rejects local Vite, not a Live
-stage. See
-[AWS workflow](../SST_DEPLOYMENT.md).
+resources through the `hybrid` SST Live stage: `bun run dev`. Do not attempt to
+emulate the full S3/SNS/SQS pipeline with a direct local server process. For
+client-only work against the stable cloud deployment, use `bun run dev:cloud`.
+The shared `dev` stage is never a Live stage. See
+[AWS workflow](./sst-deployment.md).
 
 ## Choose the smallest correct change surface
 
@@ -46,7 +45,7 @@ stage. See
 | A browser screen or interaction | route, feature component, feature-local API hook | React Query cache transition, accessibility, visual state |
 | A public API operation | route, controller, DTO, service | OpenAPI, client feature module, error responses, tests |
 | Persistent data | Drizzle schema and migration | service queries, tenant constraints, schema docs, integration tests |
-| Collection/canvas behavior | collection service and canvas/board client code | placement/move invariants and [Collection Canvas](./collection-canvas.md) |
+| Collection/canvas behavior | collection service and canvas/board client code | placement/move invariants, [Collection Canvas](./collection-canvas.md), and [Canvas Placement Policy](./placement-policy.md) |
 | Image ingestion/enrichment | upload service, callback contract, a worker | idempotency, queue retries, signed callback, pipeline docs |
 | Infrastructure/configuration | `sst.config.ts` and environment schema | AWS workflow, secret handling, deployed client origins |
 | Logs/traces | logger, tracing middleware, meaningful service boundary | [Observability](./server/observability.md), PII/redaction, sampling |
@@ -93,7 +92,8 @@ the router/Vite tooling regenerate it when routes change.
   workspace boundary.
 - IDs are stable mutation identities; slugs are navigation/read identities.
 - Collection positions belong to `collection_nodes`, not assets or folders.
-- A folder move or rename must update descendant cached paths transactionally.
+- A folder move or rename must update descendant cached paths transactionally;
+  a mixed batch move must either commit every node or roll back every node.
 - Image workers expect at-least-once delivery. Make callbacks and writes
   idempotent, then let the shared SQS handler own retry policy.
 - Do not store signed S3 URLs. Persist object keys and sign on reads.

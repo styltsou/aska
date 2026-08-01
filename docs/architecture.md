@@ -44,11 +44,11 @@ private asset bucket, event notification, topic, queues, DLQs, worker Lambdas,
 and static client site. One SST stage is a complete isolated AWS environment.
 The shared `dev` stage is a stable cloud deployment that only accepts its
 deployed CloudFront client at `aska-app.styltsou.com`; its API is
-`aska-api.styltsou.com`. `styltsoy` is the personal stage for Live-Lambda
+`aska-api.styltsou.com`. `hybrid` is the personal stage for Live-Lambda
 hybrid work. The planned HTTPS tunnel variant for browser/image-upload work is
 documented in [Cloudflare Tunnel Hybrid Development](./cloudflare-tunnel-hybrid-development.md).
 Deployment details, stage policy, and secret handling are in
-[AWS workflow](../SST_DEPLOYMENT.md).
+[AWS workflow](./sst-deployment.md).
 
 ## Repository map
 

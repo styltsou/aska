@@ -48,6 +48,9 @@ area has no free slot, the anchor remains at its center so the new card is
 discoverable, even if it overlaps. A tracked pointer position is used only for
 paste, because the browser paste event has no coordinates.
 
+See the [Canvas Placement Policy](./placement-policy.md) for the full matrix,
+including folder-move placement and legacy behavior.
+
 Asset cards have a 280-pixel base width and retain their content-driven height.
 
 ## Drag State
@@ -86,19 +89,23 @@ separate same-collection move operation:
 
 ```txt
 PATCH /api/v1/workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId/parent
+PATCH /api/v1/workspace/:workspaceSlug/collections/:collectionSlug/nodes/parent
 ```
 
 The pointer must be within the folder bounds. The client uses XYFlow's measured
-geometry and highlights only the deterministic topmost candidate. A successful
-drop removes the source-canvas node and transactionally places it within the
-destination composition. The service uses the destination's positioned direct
-children as a virtual viewport, searching centre-outward for a collision-free
-slot; a full composition falls back to its centre and an empty destination
-starts at `(48, 48)`. Moving a folder preserves every descendant placement and
-authored descendant position while transactionally rewriting the subtree's
-cached folder paths. Optimistic notes, pending uploads, Inbox items, group
-drops, moves to the collection root, and cross-collection moves are not
-supported.
+geometry and highlights only the deterministic topmost candidate. While a group
+drag is over a valid folder, the card surfaces animate into a shallow stack
+behind the grabbed card; this is visual-only, preserves measured node geometry,
+and reverses when the pointer leaves the target. A successful drop removes the
+source-canvas nodes and transactionally places them within the destination
+composition. Mixed asset-and-folder selections move atomically.
+The service uses the destination's positioned direct children as a virtual
+viewport, searching centre-outward for a collision-free slot; a full
+composition falls back to its centre and an empty destination starts at
+`(48, 48)`. Moving a folder preserves every descendant placement and authored
+descendant position while transactionally rewriting the subtree's cached folder
+paths. Optimistic notes, pending uploads, Inbox items, moves to the collection
+root, and cross-collection moves are not supported.
 
 The client optimistically patches every cached source and destination type
 variant. Asset moves update the target's count and direct-child preview. Folder

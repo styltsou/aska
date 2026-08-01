@@ -25,7 +25,7 @@ import {
 import type { CollectionNode } from "@/api/collection";
 import {
   useBulkDelete,
-  useMoveCollectionNodeToFolder,
+  useMoveCollectionNodesToFolder,
   useUpdateCollectionNodePosition,
   useUpdateCollectionNodePositions,
 } from "@/api/collection";
@@ -52,6 +52,7 @@ import {
   BOARD_CARD_WIDTH,
   arrangeNodesInGrid,
   compactNodesInMasonry,
+  type LinearLayoutAlignment,
   makeNodesInColumn,
   makeNodesInRow,
   type CanvasLayoutNode,
@@ -59,6 +60,10 @@ import {
 } from "./canvas-node-layout";
 import { createLatestValueQueue } from "./latest-value-queue";
 import { CanvasControls } from "./canvas-controls";
+import {
+  makeCanvasDropStackStyles,
+  type CanvasDropStackStyle,
+} from "./canvas-drop-stack";
 import {
   CanvasCard,
   type CanvasNode,
@@ -102,7 +107,8 @@ type QueuedPositionSave = {
 };
 
 type PendingFolderDrop = {
-  assetId: string;
+  nodeIds: string[];
+  nodeIdsKey: string;
   targetFolderNodeId: string;
 };
 
@@ -169,7 +175,7 @@ function CanvasSurface({
     workspaceSlug,
     collectionSlug,
   );
-  const moveNodeToFolder = useMoveCollectionNodeToFolder(
+  const moveNodesToFolder = useMoveCollectionNodesToFolder(
     workspaceSlug,
     collectionSlug,
   );
@@ -187,6 +193,7 @@ function CanvasSurface({
   const suppressedClickIdsRef = useRef(new Set<string>());
   const dragSessionRef = useRef<CanvasDragSession | undefined>(undefined);
   const dropTargetNodeIdRef = useRef<string | undefined>(undefined);
+  const dropStackStylesRef = useRef(new Map<string, CanvasDropStackStyle>());
   const dragVersionRef = useRef(new Map<string, number>());
   const pendingNodePositionsRef = useRef(new Map<string, XYPosition>());
   const persistPositionRef = useRef<
@@ -380,11 +387,17 @@ function CanvasSurface({
     [applySelectedNodeLayout],
   );
   const handleMakeRow = useCallback(
-    () => applySelectedNodeLayout(makeNodesInRow),
+    (alignment: LinearLayoutAlignment) =>
+      applySelectedNodeLayout((selectedNodes) =>
+        makeNodesInRow(selectedNodes, alignment),
+      ),
     [applySelectedNodeLayout],
   );
   const handleMakeColumn = useCallback(
-    () => applySelectedNodeLayout(makeNodesInColumn),
+    (alignment: LinearLayoutAlignment) =>
+      applySelectedNodeLayout((selectedNodes) =>
+        makeNodesInColumn(selectedNodes, alignment),
+      ),
     [applySelectedNodeLayout],
   );
 
@@ -445,6 +458,7 @@ function CanvasSurface({
   );
   const clearDropTarget = useCallback(() => {
     dropTargetNodeIdRef.current = undefined;
+    dropStackStylesRef.current = new Map();
     setDropTargetNodeId((current) =>
       current === undefined ? current : undefined,
     );
@@ -487,10 +501,16 @@ function CanvasSurface({
           collectionNode.type === "folder" &&
           (isHoveredDropTarget || isPendingDropTarget),
         incomingDropAssetId: isPendingDropTarget
-          ? pendingFolderDrop.assetId
+          ? pendingFolderDrop.nodeIds[0]
           : isHoveredDropTarget
             ? dragSessionRef.current?.primaryNodeId
             : undefined,
+        incomingDropCount: isPendingDropTarget
+          ? pendingFolderDrop.nodeIds.length
+          : isHoveredDropTarget
+            ? dragSessionRef.current?.origins.size
+            : undefined,
+        dropStackStyle: dropStackStylesRef.current.get(collectionNode.id),
         onContextMenu: handleNodeContextMenu,
       };
     },
@@ -563,29 +583,6 @@ function CanvasSurface({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [boardKey, clearSelection, eligibleNodeIds, replaceSelection]);
-
-  useLayoutEffect(() => {
-    if (!pendingFolderDrop) return;
-
-    const target = flowNodes.find(
-      (node) => node.id === pendingFolderDrop.targetFolderNodeId,
-    )?.data.collectionNode;
-    if (
-      target?.type !== "folder" ||
-      !target.previews.some(
-        (preview) => preview.assetId === pendingFolderDrop.assetId,
-      )
-    ) {
-      return;
-    }
-
-    setPendingFolderDrop((current) =>
-      current?.assetId === pendingFolderDrop.assetId &&
-      current.targetFolderNodeId === pendingFolderDrop.targetFolderNodeId
-        ? undefined
-        : current,
-    );
-  }, [flowNodes, pendingFolderDrop]);
 
   persistPositionRef.current = (save) =>
     updatePosition
@@ -705,7 +702,7 @@ function CanvasSurface({
       )
         .filter(
           (candidate) =>
-            candidate.id !== node.id &&
+            !dragSessionRef.current?.origins.has(candidate.id) &&
             candidate.data.collectionNode.type === "folder",
         )
         .sort((left, right) => {
@@ -722,6 +719,14 @@ function CanvasSurface({
 
       if (dropTargetNodeIdRef.current === nextTargetId) return;
       dropTargetNodeIdRef.current = nextTargetId;
+      const dragSession = dragSessionRef.current;
+      dropStackStylesRef.current =
+        nextTargetId && dragSession?.isGroup
+          ? makeCanvasDropStackStyles(
+              dragSession.primaryNodeId,
+              dragSession.origins,
+            )
+          : new Map();
       setDropTargetNodeId(nextTargetId);
     },
     [clearDropTarget, getIntersectingNodes, getNodes, screenToFlowPosition],
@@ -825,7 +830,6 @@ function CanvasSurface({
           };
         }}
         onNodeDrag={(event, node) => {
-          if (dragSessionRef.current?.isGroup) return;
           updateDropTarget(event, node);
         }}
         onNodeDragStop={(_, node, movedNodes) => {
@@ -847,17 +851,21 @@ function CanvasSurface({
 
           if (!session || session.primaryNodeId !== node.id) return;
 
-          if (!session.isGroup && targetFolderNodeId && isDraggableNode(node)) {
-            const origin = session.origins.get(node.id);
-            if (!origin) return;
-            suppressClicks(node.id, targetFolderNodeId);
+          if (
+            targetFolderNodeId &&
+            dragNodes.every((dragNode) => isDraggableNode(dragNode))
+          ) {
+            const nodeIds = dragNodes.map((dragNode) => dragNode.id);
+            const nodeIdsKey = nodeIds.join(",");
+            suppressClicks(...nodeIds, targetFolderNodeId);
             setPendingFolderDrop({
-              assetId: node.id,
+              nodeIds,
+              nodeIdsKey,
               targetFolderNodeId,
             });
-            moveNodeToFolder.mutate(
+            moveNodesToFolder.mutate(
               {
-                nodeId: node.id,
+                nodeIds,
                 folderPath,
                 targetFolderNodeId,
                 expectedParentFolderNodeId,
@@ -865,18 +873,23 @@ function CanvasSurface({
               {
                 onError: () => {
                   setPendingFolderDrop((current) =>
-                    current?.assetId === node.id &&
+                    current?.nodeIdsKey === nodeIdsKey &&
                     current.targetFolderNodeId === targetFolderNodeId
                       ? undefined
                       : current,
                   );
                   setFlowNodes((current) =>
-                    updateLocalNodePosition(current, node.id, origin),
+                    nodeIds.reduce((next, nodeId) => {
+                      const origin = session.origins.get(nodeId);
+                      return origin
+                        ? updateLocalNodePosition(next, nodeId, origin)
+                        : next;
+                    }, current),
                   );
                 },
                 onSettled: () => {
                   setPendingFolderDrop((current) =>
-                    current?.assetId === node.id &&
+                    current?.nodeIdsKey === nodeIdsKey &&
                     current.targetFolderNodeId === targetFolderNodeId
                       ? undefined
                       : current,
@@ -1054,7 +1067,11 @@ function makeFlowNode(
     selectable: false,
     // Resting cards share one layer. This also clears any transient drag layer
     // when server data refreshes after a drag has completed.
-    zIndex: current?.dragging ? DRAGGING_NODE_Z_INDEX : 0,
+    zIndex: data.dropStackStyle
+      ? DRAGGING_NODE_Z_INDEX + data.dropStackStyle.stackOrder
+      : current?.dragging
+        ? DRAGGING_NODE_Z_INDEX
+        : 0,
     style: { width: BOARD_CARD_WIDTH },
   };
 }

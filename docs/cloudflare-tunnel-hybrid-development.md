@@ -1,12 +1,12 @@
 # Cloudflare Tunnel hybrid development
 
 This is the intended next step for browser-facing work in the personal
-`styltsoy` stage, especially image-upload UI work. It is deliberately separate
+`hybrid` stage, especially image-upload UI work. It is deliberately separate
 from the stable `dev` environment.
 
 ```text
-aska-styltsoy-app.styltsou.com  -> Cloudflare Tunnel -> local Vite :5173
-aska-styltsoy-api.styltsou.com  -> API Gateway -> personal styltsoy Lambda/API
+aska-hybrid-app.styltsou.com  -> Cloudflare Tunnel -> local Vite :5173
+aska-hybrid-api.styltsou.com  -> API Gateway -> personal hybrid Lambda/API
 ```
 
 Both hostnames are under `styltsou.com`, so browsers treat them as same-site.
@@ -30,14 +30,14 @@ never target `dev`.
 
 When this environment is needed, make these stage-specific changes together:
 
-1. Add `aska-styltsoy-app.styltsou.com` as a Cloudflare Tunnel public hostname
+1. Add `aska-hybrid-app.styltsou.com` as a Cloudflare Tunnel public hostname
    that forwards to `http://localhost:5173`. Run Vite normally on the laptop.
-2. Give the `styltsoy` API an API Gateway custom domain named
-   `aska-styltsoy-api.styltsou.com`, backed by the same Cloudflare zone. Its
+2. Give the `hybrid` API an API Gateway custom domain named
+   `aska-hybrid-api.styltsou.com`, backed by the same Cloudflare zone. Its
    API origin, API Gateway CORS, S3 CORS, Hono CORS, and Better Auth trusted
-   origins must all allow only `https://aska-styltsoy-app.styltsou.com`.
+   origins must all allow only `https://aska-hybrid-app.styltsou.com`.
 3. Build local Vite with
-   `VITE_SERVER_URL=https://aska-styltsoy-api.styltsou.com`; do not use a raw
+   `VITE_SERVER_URL=https://aska-hybrid-api.styltsou.com`; do not use a raw
    `execute-api` URL for browser authentication work.
 4. Put both hostnames in the same Cloudflare Access application or matching
    Access policy. Restrict it to the approved email identities and use the
@@ -53,7 +53,7 @@ Universal SSL covers without an Advanced Certificate Manager add-on.
 
 ## Operational rule
 
-Use `SST_STAGE=styltsoy bun run dev:aws` only for Live forwarding. It changes
+Use `SST_STAGE=hybrid bun run dev:aws` only for Live forwarding. It changes
 the personal stage's Lambda invocations into forwarding stubs, so its browser
 client and tunnel must be treated as unavailable when that terminal is stopped.
 The stable `dev` app and API remain fully deployed and do not depend on this

@@ -226,18 +226,21 @@ This keeps the denormalization useful without weakening isolation.
 
 ## Folder Moves Are Explicit Transactions
 
-Moving a folder subtree across collections is a rare write. Normal canvas reads
-are common. The schema therefore stores `collection_id` on every node and pays
-the update cost during moves.
+The schema is prepared for the rare case of moving a folder subtree across
+collections, although current canvas moves stay within one collection. Normal
+canvas reads are common. The schema therefore stores `collection_id` on every
+node and pays the update cost during a future cross-collection move.
 
 A move service should:
 
-1. Lock the moved folder node and its descendants.
-2. Validate the target collection and parent folder.
-3. Update `collection_id` for the subtree.
+1. Lock the target parent, then every moved node and any moved-folder
+   descendants.
+2. Validate every requested move before the transaction can commit.
+3. Update `collection_id` for moved subtrees only when cross-collection moves
+   are introduced.
 4. Recompute `path_folder_ids`, `path_folder_slugs`, `path_folder_names`, and
-   `depth`.
-5. Commit the transaction.
+   `depth` for each moved folder subtree.
+5. Commit all moves or roll back all of them.
 
 The parent-folder foreign key uses `ON DELETE CASCADE`, not `ON UPDATE CASCADE`,
 so subtree moves remain explicit service behavior.

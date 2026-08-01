@@ -8,6 +8,7 @@ import {
   getCollections,
   getWorkspaceWithCollections,
   moveCollectionNodeToFolder,
+  moveCollectionNodesToFolder,
   updateCollectionNodePosition,
   updateCollectionNodePositions,
 } from "@/controllers/collection.controller";
@@ -37,6 +38,10 @@ const collectionRoutes = factory
   .patch(
     "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId/position",
     ...updateCollectionNodePosition,
+  )
+  .patch(
+    "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/parent",
+    ...moveCollectionNodesToFolder,
   )
   .patch(
     "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId/parent",

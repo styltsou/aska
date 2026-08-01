@@ -26,8 +26,10 @@ export default $config({
     const clientOrigins = {
       // Personal hybrid development: local Vite -> Live API Lambda -> AWS.
       hybrid: ["http://localhost:5173"],
-      // Shared, fully deployed cloud environment. Do not add localhost here.
-      dev: ["https://aska-app.styltsou.com"],
+      // Shared, fully deployed cloud environment. Local Vite is intentionally
+      // allowed for client work against the deployed API; keep this to the
+      // exact local development origin.
+      dev: ["https://aska-app.styltsou.com", "http://localhost:5173"],
     };
     const allowedClientOrigins =
       clientOrigins[$app.stage as keyof typeof clientOrigins];
@@ -147,6 +149,9 @@ export default $config({
         BETTER_AUTH_SECRET: betterAuthSecret.value,
         BETTER_AUTH_URL: api.url,
         CORS_ORIGINS: allowedClientOrigins.join(","),
+        // Only the stable cloud API needs to serve a localhost client across
+        // sites. Hybrid retains its existing Better Auth cookie behavior.
+        CROSS_SITE_AUTH_COOKIES: stableCloudDomains ? "true" : "false",
         RESEND_API_KEY: resendApiKey.value,
         IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
         S3_BUCKET: assets.name,

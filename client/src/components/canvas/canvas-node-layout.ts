@@ -13,6 +13,8 @@ export type CanvasLayoutNode = CollectionNode & {
   layoutHeight?: number;
 };
 
+export type LinearLayoutAlignment = "start" | "center" | "end";
+
 const FALLBACK_COLUMNS = 5;
 const FALLBACK_ROW_HEIGHT = 400;
 const FALLBACK_ORIGIN = 48;
@@ -399,6 +401,7 @@ export function compactNodesInMasonry(
 
 export function makeNodesInRow(
   selectedNodes: CanvasLayoutNode[],
+  alignment: LinearLayoutAlignment = "start",
 ): BoardPosition[] {
   if (selectedNodes.length === 0) return [];
 
@@ -415,7 +418,17 @@ export function makeNodesInRow(
   let left = bounds.left;
 
   for (const { node, originalIndex } of getReadingOrder(positionedNodes)) {
-    result[originalIndex] = { x: Math.round(left), y: Math.round(bounds.top) };
+    result[originalIndex] = {
+      x: Math.round(left),
+      y: Math.round(
+        getAlignedPosition(
+          bounds.top,
+          bounds.bottom,
+          getNodeHeight(node),
+          alignment,
+        ),
+      ),
+    };
     left += getNodeWidth(node) + BOARD_ITEM_GAP;
   }
 
@@ -424,6 +437,7 @@ export function makeNodesInRow(
 
 export function makeNodesInColumn(
   selectedNodes: CanvasLayoutNode[],
+  alignment: LinearLayoutAlignment = "start",
 ): BoardPosition[] {
   if (selectedNodes.length === 0) return [];
 
@@ -440,7 +454,17 @@ export function makeNodesInColumn(
   let top = bounds.top;
 
   for (const { node, originalIndex } of getReadingOrder(positionedNodes)) {
-    result[originalIndex] = { x: Math.round(bounds.left), y: Math.round(top) };
+    result[originalIndex] = {
+      x: Math.round(
+        getAlignedPosition(
+          bounds.left,
+          bounds.right,
+          getNodeWidth(node),
+          alignment,
+        ),
+      ),
+      y: Math.round(top),
+    };
     top += getNodeHeight(node) + BOARD_ITEM_GAP;
   }
 
@@ -591,6 +615,17 @@ function getTrackOffsets(trackSizes: number[]): number[] {
   }
 
   return offsets;
+}
+
+function getAlignedPosition(
+  start: number,
+  end: number,
+  size: number,
+  alignment: LinearLayoutAlignment,
+): number {
+  if (alignment === "end") return end - size;
+  if (alignment === "center") return start + (end - start - size) / 2;
+  return start;
 }
 
 function getNodeWidth(node: CanvasLayoutNode): number {

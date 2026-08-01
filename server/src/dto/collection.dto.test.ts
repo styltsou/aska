@@ -11,6 +11,7 @@ import {
   UpdateNodePositionSchema,
   UpdateNodePositionsSchema,
   MoveCollectionNodeParentSchema,
+  MoveCollectionNodesParentSchema,
 } from "./collection.dto";
 
 describe("collection board position DTOs", () => {
@@ -108,6 +109,28 @@ describe("collection board position DTOs", () => {
         workspaceSlug: "design",
         collectionSlug: "references",
         nodeId: "folder-7",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts unique mixed-node batch moves and rejects duplicate or singleton batches", () => {
+    const move = {
+      nodeIds: ["image-1", "folder-2", "note-3"],
+      targetFolderNodeId: "folder-7",
+      expectedParentFolderNodeId: null,
+    };
+
+    expect(MoveCollectionNodesParentSchema.safeParse(move).success).toBe(true);
+    expect(
+      MoveCollectionNodesParentSchema.safeParse({
+        ...move,
+        nodeIds: ["image-1", "image-1"],
+      }).success,
+    ).toBe(false);
+    expect(
+      MoveCollectionNodesParentSchema.safeParse({
+        ...move,
+        nodeIds: ["image-1"],
       }).success,
     ).toBe(false);
   });

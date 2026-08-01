@@ -37,6 +37,8 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -53,8 +55,8 @@ type SelectionActionBarProps = {
   onDelete?: () => void;
   onArrange?: () => void;
   onCompact?: () => void;
-  onMakeRow?: () => void;
-  onMakeColumn?: () => void;
+  onMakeRow?: (alignment: "start" | "center" | "end") => void;
+  onMakeColumn?: (alignment: "start" | "center" | "end") => void;
   className?: string;
 };
 
@@ -151,7 +153,7 @@ export function SelectionActionBar({
                         animate={{ opacity: 1, width: "auto", marginLeft: 6 }}
                         exit={{ opacity: 0, width: 0, marginLeft: 0 }}
                         transition={{ duration: 0.1, ease: [0, 0, 0.2, 1] }}
-                        className="overflow-hidden"
+                        className="-m-1 overflow-hidden p-1"
                       >
                         <div className={BUTTON_GROUP_SURFACE_CLASS}>
                           <ButtonGroup>
@@ -293,11 +295,28 @@ function LayoutActionsMenu({
         className="w-48 border border-border/50 bg-background/70 shadow-xl"
       >
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={onMakeRow}>
-            Arrange in row
+          <DropdownMenuLabel>Arrange in column</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => onMakeColumn?.("start")}>
+            Align start
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onMakeColumn}>
-            Arrange in column
+          <DropdownMenuItem onClick={() => onMakeColumn?.("center")}>
+            Align center
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onMakeColumn?.("end")}>
+            Align end
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Arrange in row</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => onMakeRow?.("start")}>
+            Align start
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onMakeRow?.("center")}>
+            Align center
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onMakeRow?.("end")}>
+            Align end
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

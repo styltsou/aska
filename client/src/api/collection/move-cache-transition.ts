@@ -25,6 +25,10 @@ type CachedMoveInput = {
   remainingUnfilteredSourceNodes?: CollectionNode[];
 };
 
+type CachedMovesInput = Omit<CachedMoveInput, "movedNode" | "preview"> & {
+  movedNodes: CollectionNode[];
+};
+
 export function getAssetPreview(node: AssetNode): FolderChildPreview {
   if (node.type === "image") {
     return {
@@ -180,6 +184,31 @@ export function transitionCachedContentsForMove(
   }
 
   return updates;
+}
+
+export function transitionCachedContentsForMoves(
+  entries: CollectionContentsCacheEntry[],
+  input: CachedMovesInput,
+): CollectionContentsCacheEntry[] {
+  let currentEntries = entries;
+  const updatedKeys = new Set<readonly unknown[]>();
+
+  for (const movedNode of input.movedNodes) {
+    const updates = transitionCachedContentsForMove(currentEntries, {
+      ...input,
+      movedNode,
+      preview:
+        movedNode.type === "folder" ? undefined : getAssetPreview(movedNode),
+    });
+    const updatesByKey = new Map(updates);
+    updates.forEach(([key]) => updatedKeys.add(key));
+    currentEntries = currentEntries.map(([key, contents]) => [
+      key,
+      updatesByKey.get(key) ?? contents,
+    ]);
+  }
+
+  return currentEntries.filter(([key]) => updatedKeys.has(key));
 }
 
 export function recomputeFolderPreviews(

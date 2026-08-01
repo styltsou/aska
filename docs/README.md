@@ -10,7 +10,7 @@ it safely. Start here rather than reconstructing architecture from file names.
    ownership, request/data flows, and hard boundaries.
 2. [Contributing to Aska](./contributing.md) — setup, feature recipes,
    verification, and documentation expectations.
-3. [AWS workflow](../SST_DEPLOYMENT.md) — real AWS `dev` workflow, stages,
+3. [AWS workflow](./sst-deployment.md) — real AWS `dev` workflow, stages,
    secrets, hosting, and deployment.
 4. [Cloudflare Tunnel Hybrid Development](./cloudflare-tunnel-hybrid-development.md)
    — deferred personal HTTPS/Vite workflow for browser and image-upload work.
@@ -22,11 +22,15 @@ it safely. Start here rather than reconstructing architecture from file names.
 - [Board Product Specification](../BOARD_PRODUCT_SPEC.md) — product direction.
 - [Collection Canvas Architecture](./collection-canvas.md) — spatial canvas,
   placement, movement, and cache behavior.
+- [Canvas Placement Policy](./placement-policy.md) — insertion and folder-move
+  placement contexts, collision handling, and batch rules.
+- [Spring-Loaded Folder Navigation](./spring-loaded-folder-navigation.md) —
+  planned sidebar/breadcrumb drag navigation and its implementation boundaries.
 - [Color Image Search](./color-image-search.md) — shipped retrieval behavior
   and ranking boundaries.
 - [Premium Interaction Ideas](./premium-interaction-ideas.md) — intentionally
   deferred interaction work.
-- [Color-Based Image Search Plan](../COLOR_IMAGE_SEARCH_PLAN.md) — historical
+- [Color-Based Image Search Plan](./color-image-search-plan.md) — historical
   delivery and evaluation plan.
 
 ## Server, data, and operations

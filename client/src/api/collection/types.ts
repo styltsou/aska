@@ -245,6 +245,17 @@ export type MoveCollectionNodeToFolderResponse = {
   moved: boolean;
 };
 
+export type MoveCollectionNodesToFolderInput = {
+  nodeIds: string[];
+  folderPath?: string;
+  targetFolderNodeId: string;
+  expectedParentFolderNodeId: string | null;
+};
+
+export type MoveCollectionNodesToFolderResponse = {
+  moves: MoveCollectionNodeToFolderResponse[];
+};
+
 export type CollectionNode =
   | CollectionFolderNode
   | CollectionImageNode

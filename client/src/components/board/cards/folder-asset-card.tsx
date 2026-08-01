@@ -15,11 +15,13 @@ const previewTransition: Transition = {
 export function FolderAssetCard({
   asset,
   incomingAssetId,
+  incomingAssetCount = 1,
   isDropTarget = false,
   onOpen,
 }: {
   asset: FolderAsset;
   incomingAssetId?: string;
+  incomingAssetCount?: number;
   isDropTarget?: boolean;
   onOpen?: () => void;
 }) {
@@ -69,7 +71,13 @@ export function FolderAssetCard({
                     aria-hidden="true"
                     className="flex aspect-square items-center justify-center rounded-sm border border-dashed border-primary/50 bg-primary/8"
                   >
-                    <PlusIcon className="size-5 text-primary/70" />
+                    {incomingAssetCount > 1 ? (
+                      <span className="text-xs font-semibold text-primary/80">
+                        +{incomingAssetCount}
+                      </span>
+                    ) : (
+                      <PlusIcon className="size-5 text-primary/70" />
+                    )}
                   </motion.div>
                 );
               }

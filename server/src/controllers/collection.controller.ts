@@ -9,6 +9,7 @@ import {
   CreateNoteSchema,
   CollectionContentsQuerySchema,
   MoveCollectionNodeParentSchema,
+  MoveCollectionNodesParentSchema,
   WorkspaceParamSchema,
   UpdateNodePositionSchema,
   UpdateNodePositionsSchema,
@@ -236,6 +237,28 @@ export const moveCollectionNodeToFolder = factory.createHandlers(
       workspace.id,
       collectionSlug,
       nodeId,
+      data,
+    );
+
+    return c.json(success(result));
+  },
+);
+
+export const moveCollectionNodesToFolder = factory.createHandlers(
+  authMiddleware,
+  validate.param(CollectionPathParamSchema),
+  validate.body(MoveCollectionNodesParentSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const result = await collectionService.moveNodesToFolder(
+      workspace.id,
+      collectionSlug,
       data,
     );
 

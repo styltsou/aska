@@ -130,11 +130,12 @@ to the composition.
 - Contents of a folder appear only inside that sub-canvas; the parent canvas
   shows the folder card rather than duplicating its children.
 
-Folders may be nested through explicit creation and navigation flows. Persisted
-image, note, and folder cards can be dragged from the current canvas onto a
-visible child-folder card. The move places the node within the target folder's
-existing composition and preserves asset collection membership. Moving a folder
-preserves the subtree's hierarchy and every descendant's authored position.
+Folders may be nested through explicit creation and navigation flows. One or
+more persisted image, note, and folder cards can be dragged from the current
+canvas onto a visible child-folder card. The atomic move places the nodes within
+the target folder's existing composition and preserves asset collection
+membership. Moving a folder preserves the subtree's hierarchy and every
+descendant's authored position.
 
 ## Design Principles
 

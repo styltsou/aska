@@ -7,6 +7,7 @@ import type {
   CreateNoteInput,
   CreatedFolder,
   MoveCollectionNodeParentInput,
+  MoveCollectionNodesParentInput,
   LightCollection,
   UpdateNodePositionInput,
   UpdateNodePositionsInput,
@@ -14,6 +15,7 @@ import type {
 import {
   CollectionAssetMoveService,
   type MoveCollectionNodeParentResult,
+  type MoveCollectionNodesParentResult,
 } from "@/services/collection/collection-asset-move.service";
 import { CollectionDeleteService } from "@/services/collection/collection-delete.service";
 import { CollectionMutationService } from "@/services/collection/collection-mutation.service";
@@ -87,6 +89,11 @@ export interface ICollectionService {
     nodeId: string,
     data: MoveCollectionNodeParentInput,
   ): Promise<MoveCollectionNodeParentResult>;
+  moveNodesToFolder(
+    orgId: string,
+    collectionSlug: string,
+    data: MoveCollectionNodesParentInput,
+  ): Promise<MoveCollectionNodesParentResult>;
 }
 
 export class CollectionService implements ICollectionService {
@@ -208,5 +215,13 @@ export class CollectionService implements ICollectionService {
     data: MoveCollectionNodeParentInput,
   ): Promise<MoveCollectionNodeParentResult> {
     return this.moves.moveNodeToFolder(orgId, collectionSlug, nodeId, data);
+  }
+
+  moveNodesToFolder(
+    orgId: string,
+    collectionSlug: string,
+    data: MoveCollectionNodesParentInput,
+  ): Promise<MoveCollectionNodesParentResult> {
+    return this.moves.moveNodesToFolder(orgId, collectionSlug, data);
   }
 }

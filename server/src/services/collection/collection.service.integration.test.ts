@@ -252,6 +252,214 @@ describe("CollectionService integration", () => {
     );
   });
 
+  it("atomically moves a mixed asset-and-folder batch", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Mixed Batch Move Test" },
+    );
+    const targetFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Archive" },
+    );
+    const movedFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "References" },
+    );
+    const nestedNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        content: "Keep this nested",
+        parentFolderPath: movedFolder.slug,
+      },
+    );
+    const movedNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "Move beside the folder" },
+    );
+
+    await expect(
+      collectionService.moveNodesToFolder(
+        fixture.organizationId,
+        collection.slug,
+        {
+          nodeIds: [movedNote.id, `folder-${movedFolder.id}`],
+          targetFolderNodeId: `folder-${targetFolder.id}`,
+          expectedParentFolderNodeId: null,
+        },
+      ),
+    ).resolves.toMatchObject({
+      moves: [
+        { nodeId: movedNote.id, moved: true },
+        { nodeId: `folder-${movedFolder.id}`, moved: true },
+      ],
+    });
+
+    const targetContents = await collectionService.getCollectionContents(
+      fixture.organizationId,
+      collection.slug,
+      targetFolder.slug,
+    );
+    expect(targetContents.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: movedNote.id }),
+        expect.objectContaining({ id: `folder-${movedFolder.id}`, count: 1 }),
+      ]),
+    );
+    const targetPositions = targetContents.nodes.map((node) =>
+      JSON.stringify(node.position),
+    );
+    expect(new Set(targetPositions).size).toBe(targetPositions.length);
+    await expect(
+      collectionService.getCollectionContents(
+        fixture.organizationId,
+        collection.slug,
+        `${targetFolder.slug}/${movedFolder.slug}`,
+      ),
+    ).resolves.toMatchObject({
+      nodes: [expect.objectContaining({ id: nestedNote.id })],
+    });
+  });
+
+  it("rolls back earlier batch moves when a later node has a stale parent", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Batch Stale Parent Test" },
+    );
+    const sourceFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Source" },
+    );
+    const targetFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Target" },
+    );
+    const rootNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "This valid first move must roll back" },
+    );
+    const nestedNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        content: "This node has a different parent",
+        parentFolderPath: sourceFolder.slug,
+      },
+    );
+
+    await expect(
+      collectionService.moveNodesToFolder(
+        fixture.organizationId,
+        collection.slug,
+        {
+          nodeIds: [rootNote.id, nestedNote.id],
+          targetFolderNodeId: `folder-${targetFolder.id}`,
+          expectedParentFolderNodeId: null,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "conflict" });
+
+    const [rootContents, sourceContents, targetContents] = await Promise.all([
+      collectionService.getCollectionContents(
+        fixture.organizationId,
+        collection.slug,
+      ),
+      collectionService.getCollectionContents(
+        fixture.organizationId,
+        collection.slug,
+        sourceFolder.slug,
+      ),
+      collectionService.getCollectionContents(
+        fixture.organizationId,
+        collection.slug,
+        targetFolder.slug,
+      ),
+    ]);
+    expect(rootContents.nodes).toContainEqual(
+      expect.objectContaining({ id: rootNote.id }),
+    );
+    expect(sourceContents.nodes).toContainEqual(
+      expect.objectContaining({ id: nestedNote.id }),
+    );
+    expect(targetContents.nodes).toEqual([]);
+  });
+
+  it("rolls back earlier batch moves when a selected folder would create a cycle", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Batch Folder Cycle Test" },
+    );
+    const sourceFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Source" },
+    );
+    const descendantFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        name: "Descendant",
+        parentFolderPath: sourceFolder.slug,
+      },
+    );
+    const rootNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "This earlier move must roll back" },
+    );
+
+    await expect(
+      collectionService.moveNodesToFolder(
+        fixture.organizationId,
+        collection.slug,
+        {
+          nodeIds: [rootNote.id, `folder-${sourceFolder.id}`],
+          targetFolderNodeId: `folder-${descendantFolder.id}`,
+          expectedParentFolderNodeId: null,
+        },
+      ),
+    ).rejects.toMatchObject({ code: "validation_error" });
+
+    const [rootContents, descendantContents] = await Promise.all([
+      collectionService.getCollectionContents(
+        fixture.organizationId,
+        collection.slug,
+      ),
+      collectionService.getCollectionContents(
+        fixture.organizationId,
+        collection.slug,
+        `${sourceFolder.slug}/${descendantFolder.slug}`,
+      ),
+    ]);
+    expect(rootContents.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: rootNote.id }),
+        expect.objectContaining({ id: `folder-${sourceFolder.id}` }),
+      ]),
+    );
+    expect(descendantContents.nodes).toEqual([]);
+  });
+
   it("moves a folder subtree without unplacing its assets or corrupting its path", async () => {
     const collection = await collectionService.createCollection(
       fixture.organizationId,

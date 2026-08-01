@@ -155,7 +155,7 @@ so the tenant-first GiST index can bound color candidate retrieval before the
 asset join.
 The endpoint contract, collection scopes, multi-color matching, and relevance
 cutoffs are specified in the
-[Color-Based Image Search Plan](../../COLOR_IMAGE_SEARCH_PLAN.md).
+[Color-Based Image Search Plan](../color-image-search-plan.md).
 
 ## Failure, Retry, and Observability
 
@@ -200,7 +200,7 @@ creates the prefix-filtered S3-to-SQS route and the Lambda consumer. The pipelin
 rejects source objects above 20 MiB, so keep `MAX_DIRECT_UPLOAD_BYTES` at or
 below that value until the limit is made configurable.
 
-See [`SST_DEPLOYMENT.md`](../../SST_DEPLOYMENT.md) for deployment and local
+See [SST deployment](../sst-deployment.md) for deployment and local
 pipeline invocation.
 
 ## Browser-to-S3 CORS

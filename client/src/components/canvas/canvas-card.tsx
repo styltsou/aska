@@ -10,6 +10,8 @@ import { NoteAssetCard } from "@/components/board/cards/note-asset-card";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { cn } from "@/lib/utils";
 
+import type { CanvasDropStackStyle } from "./canvas-drop-stack";
+
 export type CanvasNodeData = {
   collectionNode: CollectionNode;
   deleteContext: {
@@ -26,6 +28,8 @@ export type CanvasNodeData = {
   isColorFocused: boolean;
   isDropTarget: boolean;
   incomingDropAssetId?: string;
+  incomingDropCount?: number;
+  dropStackStyle?: CanvasDropStackStyle;
   onContextMenu: (id: string, event: React.MouseEvent) => void;
 };
 
@@ -39,6 +43,7 @@ export const CanvasCard = memo(function CanvasCard({
   const node = data.collectionNode;
   const asset = collectionNodeToAsset(node);
   const isPending = isPendingCollectionNode(node);
+  const dropStackStyle = data.dropStackStyle;
 
   const card = (
     <div className="min-w-0">
@@ -58,6 +63,7 @@ export const CanvasCard = memo(function CanvasCard({
         <FolderAssetCard
           asset={asset}
           incomingAssetId={data.incomingDropAssetId}
+          incomingAssetCount={data.incomingDropCount}
           isDropTarget={data.isDropTarget}
           onOpen={() => data.onOpenFolder(node)}
         />
@@ -68,7 +74,7 @@ export const CanvasCard = memo(function CanvasCard({
   return (
     <div
       className={cn(
-        "relative w-full rounded-lg transition-[filter,opacity] duration-100",
+        "relative w-full rounded-lg transition-[transform,filter,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
         dragging && "drop-shadow-xl",
         selected && "ring-2 ring-ring ring-offset-2 ring-offset-background",
         data.isColorDimmed && "pointer-events-none opacity-30 saturate-50",
@@ -77,6 +83,16 @@ export const CanvasCard = memo(function CanvasCard({
           data.isDropTarget &&
           "bg-accent/45 ring-2 ring-primary ring-offset-2 ring-offset-background",
       )}
+      style={
+        dropStackStyle
+          ? {
+              transform: `translate3d(${dropStackStyle.translateX}px, ${dropStackStyle.translateY}px, 0) rotate(${dropStackStyle.rotation}deg) scale(${dropStackStyle.scale})`,
+              transformOrigin: "bottom center",
+              transitionDelay: `${dropStackStyle.delayMs}ms`,
+              willChange: "transform",
+            }
+          : undefined
+      }
       aria-busy={isPending || undefined}
       data-selection-node-id={
         !isPending && !data.isColorDimmed ? node.id : undefined

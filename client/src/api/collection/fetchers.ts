@@ -22,6 +22,8 @@ import type {
   PlaceAssetResponse,
   MoveCollectionNodeToFolderInput,
   MoveCollectionNodeToFolderResponse,
+  MoveCollectionNodesToFolderInput,
+  MoveCollectionNodesToFolderResponse,
   UpdateNodePositionInput,
   UpdateNodePositionResponse,
   UpdateNodePositionsInput,
@@ -230,6 +232,20 @@ export async function moveCollectionNodeToFolder(
 ): Promise<MoveCollectionNodeToFolderResponse> {
   return apiPatch<MoveCollectionNodeToFolderResponse>(
     `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/nodes/${encodeURIComponent(nodeId)}/parent`,
+    data,
+  );
+}
+
+export async function moveCollectionNodesToFolder(
+  workspaceSlug: string,
+  collectionSlug: string,
+  data: Pick<
+    MoveCollectionNodesToFolderInput,
+    "nodeIds" | "targetFolderNodeId" | "expectedParentFolderNodeId"
+  >,
+): Promise<MoveCollectionNodesToFolderResponse> {
+  return apiPatch<MoveCollectionNodesToFolderResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/nodes/parent`,
     data,
   );
 }

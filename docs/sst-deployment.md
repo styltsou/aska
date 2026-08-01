@@ -1,6 +1,6 @@
 # Aska AWS workflow
 
-SST defines and deploys the application in [`sst.config.ts`](sst.config.ts).
+SST defines and deploys the application in [`sst.config.ts`](../sst.config.ts).
 One stage creates one isolated AWS copy:
 
 ```text
@@ -18,8 +18,8 @@ SST has two distinct operating modes that must not share a stage:
 - **`dev` is the stable shared cloud environment.** CI and `bun run deploy
   --stage dev` deploy real Lambda code there. The deployed CloudFront client
   always points at this stable API.
-- **`styltsoy` is the personal hybrid stage for SST Live forwarding only.**
-  `SST_STAGE=styltsoy bun run dev:aws` creates a separate API, bucket, queues,
+- **`hybrid` is the personal hybrid stage for SST Live forwarding only.**
+  `SST_STAGE=hybrid bun run dev:aws` creates a separate API, bucket, queues,
   and Lambdas whose function invocations are forwarded to that terminal.
 - **A future public-production stage is intentionally not configured yet.** Add
   its real domain, secrets, and explicit origin only when it exists; SST fails
@@ -31,11 +31,14 @@ local process to execute and respond with `sst dev is not running`. The
 recovery for a stage accidentally used with Live mode is simply to deploy real
 code again: `bun run deploy --stage <stage>`.
 
+SST stage names are resource namespaces, not labels. Before the first `hybrid`
+run, set the four `hybrid` stage secrets listed below.
+
 ## What runs where
 
 | Mode                          | Code runs                      | AWS services                         | Use it for                                               |
 | ----------------------------- | ------------------------------ | ------------------------------------ | -------------------------------------------------------- |
-| `SST_STAGE=styltsoy bun run dev:aws` | Lambda handlers on your laptop | Real `styltsoy` S3, SQS, API Gateway, IAM | Fast backend iteration with Live forwarding |
+| `SST_STAGE=hybrid bun run dev:aws` | Lambda handlers on your laptop | Real `hybrid` S3, SQS, API Gateway, IAM | Fast backend iteration with Live forwarding |
 | `bun run deploy --stage dev`  | Lambdas + Vite client in AWS   | Real `dev` resources + CloudFront    | Fully cloud-based testing; preferred when laptop is slow |
 | Direct package commands       | Your laptop                    | No AWS event chain                   | Unit tests and isolated debugging only                   |
 
@@ -61,10 +64,16 @@ Run it again when the temporary session expires.
 The `deploy`, `dev:aws`, and `sst` scripts automatically translate the CLI's
 `aws login` session into the standard temporary AWS environment credentials SST
 expects. Do not run `aws configure` or create long-lived access keys for this.
-For an arbitrary SST subcommand, use `bun sst`, for example:
+
+`hybrid` does not initialise Cloudflare and therefore does **not** require
+`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_DEFAULT_ACCOUNT_ID`, or
+`CLOUDFLARE_ZONE_ID`. Those values are required only when deploying the stable
+`dev` stage with its Cloudflare-managed custom domains.
+
+For an arbitrary SST subcommand, use `bun run sst --`, for example:
 
 ```sh
-bun sst diff --stage dev
+bun run sst -- diff --stage dev
 ```
 
 ### 2. Cloudflare domain and Access setup
@@ -151,10 +160,10 @@ Set these once. SST encrypts and stores them in AWS for the `dev` stage; they
 are not local environment files and are never committed to Git.
 
 ```sh
-bun sst secret set DatabaseUrl 'your Neon connection URL' --stage dev
-bun sst secret set BetterAuthSecret 'your existing Better Auth secret' --stage dev
-bun sst secret set ResendApiKey 'your Resend API key' --stage dev
-bun sst secret set ImagePipelineCallbackSecret 'a random 32+ character secret' --stage dev
+bun run sst -- secret set DatabaseUrl 'your Neon connection URL' --stage dev
+bun run sst -- secret set BetterAuthSecret 'your existing Better Auth secret' --stage dev
+bun run sst -- secret set ResendApiKey 'your Resend API key' --stage dev
+bun run sst -- secret set ImagePipelineCallbackSecret 'a random 32+ character secret' --stage dev
 ```
 
 ### What each value configures
@@ -176,10 +185,10 @@ SST secrets are stage-scoped. Before starting a personal Live stage for the
 first time, set the same required secret names for that stage:
 
 ```sh
-bun sst secret set DatabaseUrl 'a disposable development database URL' --stage styltsoy
-bun sst secret set BetterAuthSecret 'a distinct random 32+ character secret' --stage styltsoy
-bun sst secret set ResendApiKey 'your development Resend key' --stage styltsoy
-bun sst secret set ImagePipelineCallbackSecret 'a distinct random 32+ character secret' --stage styltsoy
+bun run sst -- secret set DatabaseUrl 'a disposable development database URL' --stage hybrid
+bun run sst -- secret set BetterAuthSecret 'a distinct random 32+ character secret' --stage hybrid
+bun run sst -- secret set ResendApiKey 'your development Resend key' --stage hybrid
+bun run sst -- secret set ImagePipelineCallbackSecret 'a distinct random 32+ character secret' --stage hybrid
 ```
 
 Do not copy production credentials into a Live stage. A personal stage creates
@@ -209,16 +218,15 @@ defined once in `sst.config.ts`:
 
 ```ts
 const clientOrigins = {
-  styltsoy: ["http://localhost:5173"],
-  dev: ["https://aska-app.styltsou.com"],
+  hybrid: ["http://localhost:5173"],
+  dev: ["https://aska-app.styltsou.com", "http://localhost:5173"],
 };
 ```
 
-`styltsoy` accepts local Vite and nothing else. `dev` accepts only its deployed
-custom client domain. The deployed client can call the real `dev` API, upload
-to the `dev` S3 bucket, and use the `dev` SQS pipeline. Local Vite intentionally
-cannot call that API; use `styltsoy` for hybrid development. Do not use a broad
-wildcard: allow the exact domain you control.
+`hybrid` accepts local Vite and nothing else. `dev` accepts its deployed client
+domain plus the exact local Vite origin, so client work can use the fully
+deployed API, S3 bucket, and queues. Do not use a broad wildcard: allow the
+exact domain you control.
 
 That one value configures all three required allow-lists:
 
@@ -237,32 +245,40 @@ API Gateway URL automatically.
 The stable client and API share the `styltsou.com` parent domain. Browser
 requests to `aska-api.styltsou.com` are therefore same-site, which avoids the
 third-party-cookie behavior that breaks cross-domain authentication in Safari.
-Better Auth keeps host-only secure cookies and its default `SameSite=Lax`
-policy; do not broaden cookie scope to `styltsou.com` or relax CSRF/origin
-checks. The planned HTTPS version of personal development is documented in
-[Cloudflare Tunnel hybrid development](docs/cloudflare-tunnel-hybrid-development.md).
+Better Auth keeps host-only secure cookies. To support local Vite against the
+cloud API, the stable `dev` stage alone uses `Secure`, `SameSite=None`, and
+`Partitioned` session cookies; the `hybrid` stage retains its existing cookie
+configuration. CORS and Better Auth continue to allow only the exact origins
+above. Safari can still block its third-party cookies, so use the HTTPS tunnel described in
+[Cloudflare Tunnel hybrid development](./cloudflare-tunnel-hybrid-development.md)
+when Safari-compatible authentication is required.
+
+For client-only work against the deployed backend, leave the normal local
+configuration pointed at your `hybrid` API and start Vite in cloud mode instead:
+
+```sh
+cd client
+bun run dev:cloud
+```
+
+This changes only Vite's API target for that process; it does not start, stop,
+or modify the `hybrid` SST stage.
 
 ## Daily development: real end-to-end AWS flow
 
-1. Start SST in a **personal** stage and leave it running. The `dev:aws`
-   script refuses `dev` or an omitted stage so a shared deployed client cannot
-   accidentally be turned into a forwarding target:
+1. From the repository root, start the hybrid client and personal Live stage
+   together. The command stops both when you press Ctrl-C:
 
    ```sh
-   SST_STAGE=styltsoy bun run dev:aws
+   bun run dev
    ```
 
-   The first run provisions the personal resources. SST prints that stage's API
-   URL.
+   The first run provisions the personal resources. It uses the hybrid API URL
+   in `client/.env.local`. The underlying `dev:aws` script refuses `dev` or an
+   omitted stage so a shared deployed client cannot accidentally be turned into
+   a forwarding target.
 
-2. In a second terminal, start the client pointed at that URL:
-
-   ```sh
-   cd client
-   VITE_SERVER_URL=https://your-personal-api-url.execute-api.eu-central-1.amazonaws.com bun run dev
-   ```
-
-3. Upload an image in the browser. It follows this real path:
+2. Upload an image in the browser. It follows this real path:
 
    ```text
    browser -> API -> S3 ingest/ -> SNS -> variants SQS + palette SQS
@@ -293,7 +309,7 @@ laptop:
    the Vite build, so no client environment variable is needed.
 
 The shared `dev` API intentionally rejects local Vite requests. Use
-`https://aska-app.styltsou.com` for fully deployed testing, or use `styltsoy`
+`https://aska-app.styltsou.com` for fully deployed testing, or use `hybrid`
 for hybrid development.
 
 ## Continuous deployment
@@ -356,16 +372,16 @@ main development workflow.
 ## Reference commands
 
 ```sh
-bun sst diff --stage dev
+bun run sst -- diff --stage dev
 export CLOUDFLARE_API_TOKEN='...'
 export CLOUDFLARE_DEFAULT_ACCOUNT_ID='...'
 export CLOUDFLARE_ZONE_ID='...'
 export CLOUDFLARE_ACCESS_TEAM_DOMAIN='https://your-team.cloudflareaccess.com'
 export CLOUDFLARE_ACCESS_AUD='the-access-application-aud-tag'
 bun run deploy --stage dev
-SST_STAGE=styltsoy bun run dev:aws
-bun sst secret list --stage dev
-bun sst remove --stage dev
+SST_STAGE=hybrid bun run dev:aws
+bun run sst -- secret list --stage dev
+bun run sst -- remove --stage dev
 ```
 
 Use `remove` only for an environment you intend to delete. Keep a small AWS

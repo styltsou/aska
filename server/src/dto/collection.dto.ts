@@ -213,6 +213,22 @@ export type MoveCollectionNodeParentInput = z.infer<
   typeof MoveCollectionNodeParentSchema
 >;
 
+export const MoveCollectionNodesParentSchema =
+  MoveCollectionNodeParentSchema.extend({
+    nodeIds: z
+      .array(CollectionNodeIdSchema)
+      .min(2)
+      .max(100)
+      .refine(
+        (nodeIds) => new Set(nodeIds).size === nodeIds.length,
+        "Move must not contain duplicate node IDs",
+      ),
+  });
+
+export type MoveCollectionNodesParentInput = z.infer<
+  typeof MoveCollectionNodesParentSchema
+>;
+
 export const UpdateNodePositionSchema = z.object({
   position: BoardPositionSchema,
   expectedParentFolderNodeId: FolderNodeIdSchema.nullable(),

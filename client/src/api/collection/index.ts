@@ -20,7 +20,7 @@ export {
   collectionsQueryOptions,
   inboxContentsQueryOptions,
 } from "./hooks";
-export { useMoveCollectionNodeToFolder } from "./use-move-collection-node";
+export { useMoveCollectionNodesToFolder } from "./use-move-collection-node";
 export type {
   Breadcrumb,
   CollectionContentsResponse,
@@ -55,6 +55,8 @@ export type {
   BoardVisibleBounds,
   MoveCollectionNodeToFolderInput,
   MoveCollectionNodeToFolderResponse,
+  MoveCollectionNodesToFolderInput,
+  MoveCollectionNodesToFolderResponse,
   UpdateNodePositionInput,
   UpdateNodePositionResponse,
   UpdateNodePositionsInput,

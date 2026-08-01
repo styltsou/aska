@@ -2,7 +2,10 @@ import { and, arrayContains, eq, ne } from "drizzle-orm";
 
 import { db } from "@/db";
 import { assets, collectionNodes, imageAssets } from "@/db/schema";
-import type { MoveCollectionNodeParentInput } from "@/dto/collection.dto";
+import type {
+  MoveCollectionNodeParentInput,
+  MoveCollectionNodesParentInput,
+} from "@/dto/collection.dto";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import { first } from "@/lib/query";
@@ -19,7 +22,11 @@ export type MoveCollectionNodeParentResult = {
   moved: boolean;
 };
 
-/** Moves an asset or folder placement to a different parent folder. */
+export type MoveCollectionNodesParentResult = {
+  moves: MoveCollectionNodeParentResult[];
+};
+
+/** Moves asset and folder placements to a different parent folder. */
 export class CollectionAssetMoveService {
   async moveNodeToFolder(
     orgId: string,
@@ -27,8 +34,23 @@ export class CollectionAssetMoveService {
     nodeId: string,
     data: MoveCollectionNodeParentInput,
   ): Promise<MoveCollectionNodeParentResult> {
+    const result = await this.moveNodesToFolder(orgId, collectionSlug, {
+      ...data,
+      nodeIds: [nodeId],
+    });
+    return result.moves[0]!;
+  }
+
+  async moveNodesToFolder(
+    orgId: string,
+    collectionSlug: string,
+    data: MoveCollectionNodesParentInput,
+  ): Promise<MoveCollectionNodesParentResult> {
     const collection = await getCollectionBySlug(orgId, collectionSlug);
-    const source = parseCollectionNodeId(nodeId);
+    const sources = data.nodeIds.map((nodeId) => ({
+      nodeId,
+      source: parseCollectionNodeId(nodeId),
+    }));
     const target = parseCollectionNodeId(data.targetFolderNodeId);
     const expectedParent = data.expectedParentFolderNodeId
       ? parseCollectionNodeId(data.expectedParentFolderNodeId)
@@ -45,52 +67,7 @@ export class CollectionAssetMoveService {
     }
 
     return db.transaction(async (tx) => {
-      const sourceCondition =
-        source.nodeType === "folder"
-          ? and(
-              eq(collectionNodes.nodeType, "folder"),
-              eq(collectionNodes.folderId, source.entityId),
-            )
-          : and(
-              eq(collectionNodes.nodeType, "asset"),
-              eq(collectionNodes.assetId, source.entityId),
-            );
-
-      const sourceNode = first(
-        await tx
-          .select({
-            id: collectionNodes.id,
-            nodeType: collectionNodes.nodeType,
-            assetId: collectionNodes.assetId,
-            folderId: collectionNodes.folderId,
-            parentFolderId: collectionNodes.parentFolderId,
-            positionX: collectionNodes.positionX,
-            positionY: collectionNodes.positionY,
-            depth: collectionNodes.depth,
-            pathFolderIds: collectionNodes.pathFolderIds,
-            pathFolderSlugs: collectionNodes.pathFolderSlugs,
-            pathFolderNames: collectionNodes.pathFolderNames,
-            assetType: assets.type,
-            imageWidth: imageAssets.width,
-            imageHeight: imageAssets.height,
-          })
-          .from(collectionNodes)
-          .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
-          .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
-          .where(
-            and(
-              eq(collectionNodes.organizationId, orgId),
-              eq(collectionNodes.collectionId, collection.id),
-              sourceCondition,
-            ),
-          )
-          .limit(1)
-          .for("update"),
-      );
-      if (!sourceNode) {
-        throw new AppError(ErrorCode.NOT_FOUND, "Node not found in collection");
-      }
-
+      const moves: MoveCollectionNodeParentResult[] = [];
       const targetFolder = first(
         await tx
           .select({
@@ -115,183 +92,239 @@ export class CollectionAssetMoveService {
         throw new AppError(ErrorCode.NOT_FOUND, "Target folder not found");
       }
 
-      if (source.nodeType === "folder") {
-        if (targetFolder.folderId === source.entityId) {
-          throw new AppError(
-            ErrorCode.VALIDATION_ERROR,
-            "Cannot move a folder into itself",
-          );
-        }
-        if (targetFolder.pathFolderIds.includes(source.entityId)) {
-          throw new AppError(
-            ErrorCode.VALIDATION_ERROR,
-            "Cannot move a folder into one of its descendants",
-          );
-        }
-      }
+      for (const { nodeId, source } of sources) {
+        const sourceCondition =
+          source.nodeType === "folder"
+            ? and(
+                eq(collectionNodes.nodeType, "folder"),
+                eq(collectionNodes.folderId, source.entityId),
+              )
+            : and(
+                eq(collectionNodes.nodeType, "asset"),
+                eq(collectionNodes.assetId, source.entityId),
+              );
 
-      const sourceParentFolderNodeId = sourceNode.parentFolderId
-        ? `folder-${sourceNode.parentFolderId}`
-        : null;
-      const targetParentFolderNodeId = `folder-${targetFolder.folderId}`;
-      const result = {
-        nodeId,
-        sourceParentFolderNodeId,
-        sourceFolderPath: sourceNode.pathFolderSlugs.join("/"),
-        targetParentFolderNodeId,
-        targetFolderPath: targetFolder.pathFolderSlugs.join("/"),
-        position: null,
-      } as const;
-
-      if (sourceNode.parentFolderId === targetFolder.folderId) {
-        return { ...result, moved: false };
-      }
-
-      if (sourceNode.parentFolderId !== (expectedParent?.entityId ?? null)) {
-        throw new AppError(
-          ErrorCode.CONFLICT,
-          "Node moved before this drag completed",
-        );
-      }
-
-      const destinationNodes = await tx
-        .select({
-          nodeType: collectionNodes.nodeType,
-          assetType: assets.type,
-          imageWidth: imageAssets.width,
-          imageHeight: imageAssets.height,
-          positionX: collectionNodes.positionX,
-          positionY: collectionNodes.positionY,
-        })
-        .from(collectionNodes)
-        .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
-        .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
-        .where(
-          and(
-            eq(collectionNodes.organizationId, orgId),
-            eq(collectionNodes.collectionId, collection.id),
-            eq(collectionNodes.parentFolderId, targetFolder.folderId),
-          ),
-        );
-      const position = getFolderMovePosition(destinationNodes, sourceNode);
-
-      if (source.nodeType === "folder") {
-        const oldPrefix = sourceNode.pathFolderIds;
-        const ownSlug = sourceNode.pathFolderSlugs.at(-1);
-        const ownName = sourceNode.pathFolderNames.at(-1);
-        if (!ownSlug || !ownName || oldPrefix.at(-1) !== source.entityId) {
-          throw new AppError(
-            ErrorCode.INTERNAL_ERROR,
-            "Folder path cache is invalid",
-          );
-        }
-
-        const newPathFolderIds = [
-          ...targetFolder.pathFolderIds,
-          source.entityId,
-        ];
-        const newPathFolderSlugs = [...targetFolder.pathFolderSlugs, ownSlug];
-        const newPathFolderNames = [...targetFolder.pathFolderNames, ownName];
-        const newDepth = targetFolder.pathFolderSlugs.length;
-        const depthDelta = newDepth - sourceNode.depth;
-        const conflictingFolder = first(
+        const sourceNode = first(
           await tx
-            .select({ id: collectionNodes.id })
+            .select({
+              id: collectionNodes.id,
+              nodeType: collectionNodes.nodeType,
+              assetId: collectionNodes.assetId,
+              folderId: collectionNodes.folderId,
+              parentFolderId: collectionNodes.parentFolderId,
+              positionX: collectionNodes.positionX,
+              positionY: collectionNodes.positionY,
+              depth: collectionNodes.depth,
+              pathFolderIds: collectionNodes.pathFolderIds,
+              pathFolderSlugs: collectionNodes.pathFolderSlugs,
+              pathFolderNames: collectionNodes.pathFolderNames,
+              assetType: assets.type,
+              imageWidth: imageAssets.width,
+              imageHeight: imageAssets.height,
+            })
             .from(collectionNodes)
+            .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
+            .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
             .where(
               and(
                 eq(collectionNodes.organizationId, orgId),
                 eq(collectionNodes.collectionId, collection.id),
-                eq(collectionNodes.nodeType, "folder"),
-                eq(collectionNodes.pathFolderSlugs, newPathFolderSlugs),
-                ne(collectionNodes.id, sourceNode.id),
+                sourceCondition,
               ),
             )
             .limit(1)
             .for("update"),
         );
-        if (conflictingFolder) {
+        if (!sourceNode) {
           throw new AppError(
-            ErrorCode.CONFLICT,
-            "A folder with this name already exists in the target folder",
+            ErrorCode.NOT_FOUND,
+            "Node not found in collection",
           );
         }
 
-        const subtreeCandidates = await tx
+        if (source.nodeType === "folder") {
+          if (targetFolder.folderId === source.entityId) {
+            throw new AppError(
+              ErrorCode.VALIDATION_ERROR,
+              "Cannot move a folder into itself",
+            );
+          }
+          if (targetFolder.pathFolderIds.includes(source.entityId)) {
+            throw new AppError(
+              ErrorCode.VALIDATION_ERROR,
+              "Cannot move a folder into one of its descendants",
+            );
+          }
+        }
+
+        const sourceParentFolderNodeId = sourceNode.parentFolderId
+          ? `folder-${sourceNode.parentFolderId}`
+          : null;
+        const targetParentFolderNodeId = `folder-${targetFolder.folderId}`;
+        const result = {
+          nodeId,
+          sourceParentFolderNodeId,
+          sourceFolderPath: sourceNode.pathFolderSlugs.join("/"),
+          targetParentFolderNodeId,
+          targetFolderPath: targetFolder.pathFolderSlugs.join("/"),
+          position: null,
+        } as const;
+
+        if (sourceNode.parentFolderId === targetFolder.folderId) {
+          moves.push({ ...result, moved: false });
+          continue;
+        }
+
+        if (sourceNode.parentFolderId !== (expectedParent?.entityId ?? null)) {
+          throw new AppError(
+            ErrorCode.CONFLICT,
+            "Node moved before this drag completed",
+          );
+        }
+
+        const destinationNodes = await tx
           .select({
-            id: collectionNodes.id,
-            depth: collectionNodes.depth,
-            pathFolderIds: collectionNodes.pathFolderIds,
-            pathFolderSlugs: collectionNodes.pathFolderSlugs,
-            pathFolderNames: collectionNodes.pathFolderNames,
+            nodeType: collectionNodes.nodeType,
+            assetType: assets.type,
+            imageWidth: imageAssets.width,
+            imageHeight: imageAssets.height,
+            positionX: collectionNodes.positionX,
+            positionY: collectionNodes.positionY,
           })
           .from(collectionNodes)
+          .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
+          .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
           .where(
             and(
               eq(collectionNodes.organizationId, orgId),
               eq(collectionNodes.collectionId, collection.id),
-              arrayContains(collectionNodes.pathFolderIds, oldPrefix),
+              eq(collectionNodes.parentFolderId, targetFolder.folderId),
             ),
-          )
-          .for("update");
-        const subtree = subtreeCandidates.filter((node) =>
-          hasPathPrefix(node.pathFolderIds, oldPrefix),
-        );
-
-        await tx
-          .update(collectionNodes)
-          .set({
-            parentFolderId: targetFolder.folderId,
-            positionX: position.x,
-            positionY: position.y,
-            depth: newDepth,
-            pathFolderIds: newPathFolderIds,
-            pathFolderSlugs: newPathFolderSlugs,
-            pathFolderNames: newPathFolderNames,
-          })
-          .where(eq(collectionNodes.id, sourceNode.id));
-
-        for (const descendant of subtree) {
-          if (descendant.id === sourceNode.id) continue;
-
-          const remainderIds = descendant.pathFolderIds.slice(oldPrefix.length);
-          const remainderSlugs = descendant.pathFolderSlugs.slice(
-            oldPrefix.length,
           );
-          const remainderNames = descendant.pathFolderNames.slice(
-            oldPrefix.length,
+        const position = getFolderMovePosition(destinationNodes, sourceNode);
+
+        if (source.nodeType === "folder") {
+          const oldPrefix = sourceNode.pathFolderIds;
+          const ownSlug = sourceNode.pathFolderSlugs.at(-1);
+          const ownName = sourceNode.pathFolderNames.at(-1);
+          if (!ownSlug || !ownName || oldPrefix.at(-1) !== source.entityId) {
+            throw new AppError(
+              ErrorCode.INTERNAL_ERROR,
+              "Folder path cache is invalid",
+            );
+          }
+
+          const newPathFolderIds = [
+            ...targetFolder.pathFolderIds,
+            source.entityId,
+          ];
+          const newPathFolderSlugs = [...targetFolder.pathFolderSlugs, ownSlug];
+          const newPathFolderNames = [...targetFolder.pathFolderNames, ownName];
+          const newDepth = targetFolder.pathFolderSlugs.length;
+          const depthDelta = newDepth - sourceNode.depth;
+          const conflictingFolder = first(
+            await tx
+              .select({ id: collectionNodes.id })
+              .from(collectionNodes)
+              .where(
+                and(
+                  eq(collectionNodes.organizationId, orgId),
+                  eq(collectionNodes.collectionId, collection.id),
+                  eq(collectionNodes.nodeType, "folder"),
+                  eq(collectionNodes.pathFolderSlugs, newPathFolderSlugs),
+                  ne(collectionNodes.id, sourceNode.id),
+                ),
+              )
+              .limit(1)
+              .for("update"),
+          );
+          if (conflictingFolder) {
+            throw new AppError(
+              ErrorCode.CONFLICT,
+              "A folder with this name already exists in the target folder",
+            );
+          }
+
+          const subtreeCandidates = await tx
+            .select({
+              id: collectionNodes.id,
+              depth: collectionNodes.depth,
+              pathFolderIds: collectionNodes.pathFolderIds,
+              pathFolderSlugs: collectionNodes.pathFolderSlugs,
+              pathFolderNames: collectionNodes.pathFolderNames,
+            })
+            .from(collectionNodes)
+            .where(
+              and(
+                eq(collectionNodes.organizationId, orgId),
+                eq(collectionNodes.collectionId, collection.id),
+                arrayContains(collectionNodes.pathFolderIds, oldPrefix),
+              ),
+            )
+            .for("update");
+          const subtree = subtreeCandidates.filter((node) =>
+            hasPathPrefix(node.pathFolderIds, oldPrefix),
           );
 
           await tx
             .update(collectionNodes)
             .set({
-              pathFolderIds: [...newPathFolderIds, ...remainderIds],
-              pathFolderSlugs: [...newPathFolderSlugs, ...remainderSlugs],
-              pathFolderNames: [...newPathFolderNames, ...remainderNames],
-              depth: descendant.depth + depthDelta,
+              parentFolderId: targetFolder.folderId,
+              positionX: position.x,
+              positionY: position.y,
+              depth: newDepth,
+              pathFolderIds: newPathFolderIds,
+              pathFolderSlugs: newPathFolderSlugs,
+              pathFolderNames: newPathFolderNames,
             })
-            .where(eq(collectionNodes.id, descendant.id));
+            .where(eq(collectionNodes.id, sourceNode.id));
+
+          for (const descendant of subtree) {
+            if (descendant.id === sourceNode.id) continue;
+
+            const remainderIds = descendant.pathFolderIds.slice(
+              oldPrefix.length,
+            );
+            const remainderSlugs = descendant.pathFolderSlugs.slice(
+              oldPrefix.length,
+            );
+            const remainderNames = descendant.pathFolderNames.slice(
+              oldPrefix.length,
+            );
+
+            await tx
+              .update(collectionNodes)
+              .set({
+                pathFolderIds: [...newPathFolderIds, ...remainderIds],
+                pathFolderSlugs: [...newPathFolderSlugs, ...remainderSlugs],
+                pathFolderNames: [...newPathFolderNames, ...remainderNames],
+                depth: descendant.depth + depthDelta,
+              })
+              .where(eq(collectionNodes.id, descendant.id));
+          }
+        } else {
+          await tx
+            .delete(collectionNodes)
+            .where(eq(collectionNodes.id, sourceNode.id));
+          await tx.insert(collectionNodes).values({
+            organizationId: orgId,
+            collectionId: collection.id,
+            parentFolderId: targetFolder.folderId,
+            nodeType: "asset",
+            assetId: source.entityId,
+            positionX: position.x,
+            positionY: position.y,
+            depth: targetFolder.pathFolderSlugs.length,
+            pathFolderIds: targetFolder.pathFolderIds,
+            pathFolderSlugs: targetFolder.pathFolderSlugs,
+            pathFolderNames: targetFolder.pathFolderNames,
+          });
         }
-      } else {
-        await tx
-          .delete(collectionNodes)
-          .where(eq(collectionNodes.id, sourceNode.id));
-        await tx.insert(collectionNodes).values({
-          organizationId: orgId,
-          collectionId: collection.id,
-          parentFolderId: targetFolder.folderId,
-          nodeType: "asset",
-          assetId: source.entityId,
-          positionX: position.x,
-          positionY: position.y,
-          depth: targetFolder.pathFolderSlugs.length,
-          pathFolderIds: targetFolder.pathFolderIds,
-          pathFolderSlugs: targetFolder.pathFolderSlugs,
-          pathFolderNames: targetFolder.pathFolderNames,
-        });
+
+        moves.push({ ...result, position, moved: true });
       }
 
-      return { ...result, position, moved: true };
+      return { moves };
     });
   }
 }
