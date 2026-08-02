@@ -8,7 +8,8 @@ import {
 } from "@opentelemetry/api";
 import { W3CTraceContextPropagator } from "@opentelemetry/core";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
-import { resourceFromAttributes } from "@opentelemetry/resources";
+import { registerInstrumentations } from "@opentelemetry/instrumentation";
+import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import {
   BatchSpanProcessor,
   ParentBasedSampler,
@@ -18,7 +19,12 @@ import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
 import type { Context as HonoContext, Next } from "hono";
 
 import { env } from "@/config/env";
-import { APP_VERSION } from "@/constants";
+import {
+  buildOtelResource,
+  ensureContextManager,
+  parseOtlpHeaders,
+} from "@/observability/config";
+import { recordHttpRequestDuration } from "@/observability/metrics";
 import { LoggerService } from "@/services/logger.service";
 
 const tracer = trace.getTracer("aska.api");
@@ -30,9 +36,11 @@ let provider: NodeTracerProvider | undefined;
 propagation.setGlobalPropagator(new W3CTraceContextPropagator());
 
 export function initializeTracing(): void {
-  if (provider || !env.OTEL_ENABLED) return;
+  if (provider) return;
 
-  if (!env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT) {
+  ensureContextManager();
+
+  if (env.OTEL_ENABLED && !env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT) {
     console.warn(
       JSON.stringify({
         timestamp: new Date().toISOString(),
@@ -41,25 +49,38 @@ export function initializeTracing(): void {
         service_name: env.OTEL_SERVICE_NAME,
       }),
     );
-    return;
   }
 
-  const exporter = new OTLPTraceExporter({
-    url: env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
-    headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS),
-  });
+  const exporter =
+    env.OTEL_ENABLED && env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+      ? new OTLPTraceExporter({
+          url: env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+          headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS),
+        })
+      : undefined;
   provider = new NodeTracerProvider({
-    resource: resourceFromAttributes({
-      "service.name": env.OTEL_SERVICE_NAME,
-      "service.version": APP_VERSION,
-      "deployment.environment.name": env.NODE_ENV,
-    }),
-    sampler: new ParentBasedSampler({
-      root: new TraceIdRatioBasedSampler(env.OTEL_TRACES_SAMPLE_RATIO),
-    }),
-    spanProcessors: [new BatchSpanProcessor(exporter)],
+    resource: buildOtelResource(),
+    ...(env.OTEL_ENABLED
+      ? {
+          sampler: new ParentBasedSampler({
+            root: new TraceIdRatioBasedSampler(env.OTEL_TRACES_SAMPLE_RATIO),
+          }),
+        }
+      : {}),
+    ...(exporter ? { spanProcessors: [new BatchSpanProcessor(exporter)] } : {}),
   });
-  provider.register();
+  // ensureContextManager already installed the context manager and the module
+  // registered the W3C propagator, so skip both here.
+  provider.register({ contextManager: null, propagator: null });
+
+  // Auto-instrument Node's global fetch with diagnostics-channel hooks. This
+  // is bundling-safe (no require hooks) and adds a client span per outbound
+  // call, e.g. remote image downloads, Resend, and Better Auth.
+  if (env.OTEL_ENABLED) {
+    registerInstrumentations({
+      instrumentations: [new UndiciInstrumentation()],
+    });
+  }
 }
 
 /**
@@ -71,6 +92,7 @@ export async function traceRequest(
   next: Next,
   logger: LoggerService,
 ): Promise<void> {
+  const startedAt = performance.now();
   const parentContext = propagation.extract(
     context.active(),
     c.req.raw.headers,
@@ -116,6 +138,12 @@ export async function traceRequest(
     span.setAttribute("http.response.status_code", c.res.status);
     span.setAttribute("http.route", route);
     if (c.res.status >= 500) span.setStatus({ code: SpanStatusCode.ERROR });
+    recordHttpRequestDuration(
+      c.req.method,
+      route,
+      c.res.status,
+      performance.now() - startedAt,
+    );
     span.end();
   }
 }
@@ -136,20 +164,6 @@ export async function flushTracing(): Promise<void> {
       }),
     );
   }
-}
-
-function parseOtlpHeaders(value: string | undefined): Record<string, string> {
-  if (!value) return {};
-
-  return Object.fromEntries(
-    value.split(",").flatMap((entry) => {
-      const separator = entry.indexOf("=");
-      if (separator <= 0) return [];
-      return [
-        [entry.slice(0, separator).trim(), entry.slice(separator + 1).trim()],
-      ];
-    }),
-  );
 }
 
 function traceIdFromHeader(value: string | undefined): string | undefined {

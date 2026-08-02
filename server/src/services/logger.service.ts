@@ -1,5 +1,11 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
+import {
+  logs,
+  SeverityNumber,
+  type LogAttributes,
+} from "@opentelemetry/api-logs";
+
 const LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
 
 type LogLevel = (typeof LOG_LEVELS)[number];
@@ -7,6 +13,13 @@ type LogContext = {
   requestId?: string;
   traceId?: string;
   spanId?: string;
+};
+
+const SEVERITY: Record<LogLevel, SeverityNumber> = {
+  debug: SeverityNumber.DEBUG,
+  info: SeverityNumber.INFO,
+  warn: SeverityNumber.WARN,
+  error: SeverityNumber.ERROR,
 };
 
 const contextStorage = new AsyncLocalStorage<LogContext>();
@@ -50,24 +63,21 @@ export class LoggerService implements ILoggerService {
     if (!shouldLog(level)) return;
 
     const activeContext = contextStorage.getStore();
-    const record = {
-      timestamp: new Date().toISOString(),
-      severity_text: level.toUpperCase(),
+    const attributes: LogAttributes = {};
+    if (activeContext?.requestId)
+      attributes.request_id = activeContext.requestId;
+    if (meta && Object.keys(meta).length > 0) {
+      Object.assign(attributes, sanitize(meta) as LogAttributes);
+    }
+
+    // The trace context is attached by the SDK from the active span, which the
+    // request tracing middleware sets around every request.
+    logs.getLogger("aska.api").emit({
+      severityNumber: SEVERITY[level],
+      severityText: level.toUpperCase(),
       body: message,
-      service_name: process.env.OTEL_SERVICE_NAME ?? "aska-api",
-      deployment_environment: process.env.NODE_ENV ?? "development",
-      ...(activeContext?.requestId
-        ? { request_id: activeContext.requestId }
-        : {}),
-      ...(activeContext?.traceId ? { trace_id: activeContext.traceId } : {}),
-      ...(activeContext?.spanId ? { span_id: activeContext.spanId } : {}),
-      ...(meta ? { attributes: sanitize(meta) } : {}),
-    };
-    const output = JSON.stringify(record);
-    if (level === "error") console.error(output);
-    else if (level === "warn") console.warn(output);
-    else if (level === "info") console.info(output);
-    else console.debug(output);
+      attributes,
+    });
   }
 }
 

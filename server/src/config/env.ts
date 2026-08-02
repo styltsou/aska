@@ -44,6 +44,8 @@ const envSchema = z
       .transform((value) => value === "true"),
     OTEL_SERVICE_NAME: z.string().min(1).default("aska-api"),
     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: z.url().optional(),
+    OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: z.url().optional(),
+    OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: z.url().optional(),
     OTEL_EXPORTER_OTLP_HEADERS: z.string().optional(),
     OTEL_TRACES_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(1),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),

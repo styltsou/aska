@@ -5,6 +5,10 @@ import {
 } from "@aws-sdk/client-s3";
 
 import {
+  initializeObservability,
+  log,
+} from "../../image-shared/src/observability";
+import {
   sendCallback,
   storageIdFromOriginalKey,
 } from "../../image-shared/src/pipeline-callback";
@@ -13,6 +17,8 @@ import {
   createSqsHandler,
   type SourceImage,
 } from "../../image-shared/src/sqs-handler";
+
+initializeObservability("image-variants");
 
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 const client = new S3Client({});
@@ -62,13 +68,11 @@ async function processVariants(source: SourceImage) {
     blurDataURL: result.blurDataURL,
     variants,
   });
-  console.log(
-    JSON.stringify({
-      event: "image_variants.completed",
-      objectKey: source.objectKey,
-      variants: variants.length,
-    }),
-  );
+  log("info", "image variants completed", {
+    event: "image_variants.completed",
+    objectKey: source.objectKey,
+    variants: variants.length,
+  });
 }
 
 export const handler = createSqsHandler({

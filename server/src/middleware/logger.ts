@@ -20,7 +20,6 @@ export const requestLogger = factory.createMiddleware(async (c, next) => {
     const route = c.req.routePath || "unmatched";
     const metadata = {
       event_name: "http.server.request",
-      request_id: requestId,
       "http.request.method": c.req.method,
       "http.route": route,
       "http.response.status_code": status,

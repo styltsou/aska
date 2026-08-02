@@ -244,6 +244,7 @@ export default $config({
       },
     ];
     const imageWorkerEnvironment = {
+      NODE_ENV: stableCloudDomains ? "production" : "development",
       PIPELINE_API_BASE_URL: api.url,
       IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
     };
@@ -258,13 +259,16 @@ export default $config({
         // `nodejs.install` helper.
         esbuild: { external: ["sharp"] },
       },
-      environment: imageWorkerEnvironment,
     };
     imageVariantsQueue.subscribe(
       {
         handler: "services/image-variants/src/lambda.handler",
         ...imageWorkerDefaults,
         copyFiles: imageWorkerFiles("image-variants"),
+        environment: {
+          ...imageWorkerEnvironment,
+          ...getObservabilityEnvironment("image-variants"),
+        },
       },
       {
         batch: {
@@ -278,6 +282,10 @@ export default $config({
         handler: "services/image-palette/src/lambda.handler",
         ...imageWorkerDefaults,
         copyFiles: imageWorkerFiles("image-palette"),
+        environment: {
+          ...imageWorkerEnvironment,
+          ...getObservabilityEnvironment("image-palette"),
+        },
       },
       {
         batch: {
@@ -322,7 +330,9 @@ export default $config({
     };
   },
 });
-function getObservabilityEnvironment(): Record<string, string> {
+function getObservabilityEnvironment(
+  serviceName = "aska-api",
+): Record<string, string> {
   if (process.env.OTEL_ENABLED !== "true") return { OTEL_ENABLED: "false" };
   const endpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
   if (!endpoint) {
@@ -332,8 +342,20 @@ function getObservabilityEnvironment(): Record<string, string> {
   }
   return {
     OTEL_ENABLED: "true",
-    OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME ?? "aska-api",
+    OTEL_SERVICE_NAME: serviceName,
     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: endpoint,
+    ...(process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+      ? {
+          OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
+            process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,
+        }
+      : {}),
+    ...(process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+      ? {
+          OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:
+            process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
+        }
+      : {}),
     ...(process.env.OTEL_EXPORTER_OTLP_HEADERS
       ? { OTEL_EXPORTER_OTLP_HEADERS: process.env.OTEL_EXPORTER_OTLP_HEADERS }
       : {}),

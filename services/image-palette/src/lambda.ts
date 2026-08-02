@@ -1,11 +1,17 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
+import {
+  initializeObservability,
+  log,
+} from "../../image-shared/src/observability";
 import { sendCallback } from "../../image-shared/src/pipeline-callback";
 import {
   createSqsHandler,
   type SourceImage,
 } from "../../image-shared/src/sqs-handler";
 import { processImagePalette } from "./processor";
+
+initializeObservability("image-palette");
 
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 const client = new S3Client({});
@@ -27,13 +33,11 @@ async function processPalette(source: SourceImage) {
     originalEtag: source.originalEtag,
     ...palette,
   });
-  console.log(
-    JSON.stringify({
-      event: "image_palette.completed",
-      objectKey: source.objectKey,
-      colors: palette.palette.length,
-    }),
-  );
+  log("info", "image palette completed", {
+    event: "image_palette.completed",
+    objectKey: source.objectKey,
+    colors: palette.palette.length,
+  });
 }
 
 export const handler = createSqsHandler({

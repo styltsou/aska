@@ -1,4 +1,13 @@
 import type { SQSBatchResponse, SQSHandler, S3Event } from "aws-lambda";
+import type { Span } from "@opentelemetry/api";
+
+import {
+  flushObservability,
+  log,
+  markSpanError,
+  recordMessageDuration,
+  runWithSpan,
+} from "./observability";
 
 const MAX_PROCESSING_ATTEMPTS = 5;
 
@@ -57,76 +66,103 @@ export function createSqsHandler({
   process,
   reportTerminalFailure,
 }: HandlerOptions): SQSHandler {
-  return async (event): Promise<SQSBatchResponse> => {
+  const handle = async (event: {
+    Records: Array<{
+      messageId: string;
+      body: string;
+      attributes: { ApproximateReceiveCount?: string };
+    }>;
+  }): Promise<SQSBatchResponse> => {
     const batchItemFailures: SQSBatchResponse["batchItemFailures"] = [];
 
     for (const message of event.Records) {
       const attempts = Number(
         message.attributes.ApproximateReceiveCount ?? "1",
       );
-      if (attempts > MAX_PROCESSING_ATTEMPTS) {
-        try {
-          const s3Event = parseS3Event(message.body);
-          for (const source of sourcesFromS3Event(s3Event)) {
-            await reportTerminalFailure(
-              source,
-              "Image processing failed before its terminal callback could be delivered",
-            );
+      const startedAt = performance.now();
+      let outcome: "success" | "error" = "success";
+      await runWithSpan(
+        `image.${pipeline}.process`,
+        {
+          "messaging.system": "aws_sqs",
+          "messaging.message.id": message.messageId,
+          "messaging.destination.name": pipeline,
+          "aws.sqs.approximate_receive_count": attempts,
+        },
+        async (span) => {
+          if (attempts > MAX_PROCESSING_ATTEMPTS) {
+            try {
+              const s3Event = parseS3Event(message.body);
+              for (const source of sourcesFromS3Event(s3Event)) {
+                await reportTerminalFailure(
+                  source,
+                  "Image processing failed before its terminal callback could be delivered",
+                );
+              }
+            } catch (callbackError) {
+              log("error", "image terminal failure callback failed", {
+                event: `image_${pipeline}.failure_callback_failed`,
+                messageId: message.messageId,
+                attempts,
+                error: String(callbackError),
+              });
+              markSpanError(span, callbackError);
+              batchItemFailures.push({ itemIdentifier: message.messageId });
+            }
+            outcome = "error";
+            return;
           }
-        } catch (callbackError) {
-          console.error(
-            JSON.stringify({
-              event: `image_${pipeline}.failure_callback_failed`,
+
+          try {
+            const s3Event = parseS3Event(message.body);
+            for (const source of sourcesFromS3Event(s3Event))
+              await process(source);
+          } catch (error) {
+            const detail =
+              error instanceof Error
+                ? error.message
+                : "Unknown image processing error";
+            log("error", "image processing failed", {
+              event: `image_${pipeline}.failed`,
               messageId: message.messageId,
               attempts,
-              error: String(callbackError),
-            }),
-          );
-          batchItemFailures.push({ itemIdentifier: message.messageId });
-        }
-        continue;
-      }
+              error: detail,
+            });
+            markSpanError(span, error);
+            outcome = "error";
 
-      try {
-        const s3Event = parseS3Event(message.body);
-        for (const source of sourcesFromS3Event(s3Event)) await process(source);
-      } catch (error) {
-        const detail =
-          error instanceof Error
-            ? error.message
-            : "Unknown image processing error";
-        console.error(
-          JSON.stringify({
-            event: `image_${pipeline}.failed`,
-            messageId: message.messageId,
-            attempts,
-            error: detail,
-          }),
-        );
+            if (attempts < MAX_PROCESSING_ATTEMPTS) {
+              batchItemFailures.push({ itemIdentifier: message.messageId });
+              return;
+            }
 
-        if (attempts < MAX_PROCESSING_ATTEMPTS) {
-          batchItemFailures.push({ itemIdentifier: message.messageId });
-          continue;
-        }
-
-        try {
-          const s3Event = parseS3Event(message.body);
-          for (const source of sourcesFromS3Event(s3Event)) {
-            await reportTerminalFailure(source, detail.slice(0, 1000));
+            try {
+              const s3Event = parseS3Event(message.body);
+              for (const source of sourcesFromS3Event(s3Event)) {
+                await reportTerminalFailure(source, detail.slice(0, 1000));
+              }
+            } catch (callbackError) {
+              log("error", "image terminal failure callback failed", {
+                event: `image_${pipeline}.failure_callback_failed`,
+                messageId: message.messageId,
+                error: String(callbackError),
+              });
+              batchItemFailures.push({ itemIdentifier: message.messageId });
+            }
           }
-        } catch (callbackError) {
-          console.error(
-            JSON.stringify({
-              event: `image_${pipeline}.failure_callback_failed`,
-              messageId: message.messageId,
-              error: String(callbackError),
-            }),
-          );
-          batchItemFailures.push({ itemIdentifier: message.messageId });
-        }
-      }
+        },
+      );
+      recordMessageDuration(pipeline, outcome, performance.now() - startedAt);
     }
 
     return { batchItemFailures };
+  };
+
+  return async (event) => {
+    try {
+      return await handle(event);
+    } finally {
+      await flushObservability();
+    }
   };
 }
