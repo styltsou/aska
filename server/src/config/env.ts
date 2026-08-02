@@ -28,6 +28,10 @@ const CloudflareAccessTeamDomain = z
   })
   .transform((value) => new URL(value).origin);
 
+const MediaBaseUrl = z
+  .url("MEDIA_BASE_URL must be a valid URL")
+  .transform((value) => new URL(value).origin);
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(NODE_ENV_VALUES).default(NodeEnv.Development),
@@ -74,6 +78,25 @@ const envSchema = z
       .min(60)
       .max(3600)
       .default(900),
+    // These are set together only in the stable cloud stage. Without them,
+    // local and hybrid development deliberately retain S3 presigned reads.
+    MEDIA_BASE_URL: MediaBaseUrl.optional(),
+    CLOUDFRONT_KEY_PAIR_ID: z.string().min(1).optional(),
+    CLOUDFRONT_PRIVATE_KEY_BASE64: z.string().min(1).optional(),
+    CLOUDFRONT_COOKIE_DOMAIN: z
+      .string()
+      .trim()
+      .regex(/^\.[a-z0-9.-]+$/i, {
+        message:
+          "CLOUDFRONT_COOKIE_DOMAIN must be a parent domain such as .example.com",
+      })
+      .optional(),
+    CLOUDFRONT_SIGNED_COOKIE_EXPIRES_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(86_400)
+      .default(3600),
     MAX_DIRECT_UPLOAD_BYTES: z.coerce
       .number()
       .int()
@@ -100,6 +123,35 @@ const envSchema = z
       message:
         "CLOUDFLARE_ACCESS_TEAM_DOMAIN and CLOUDFLARE_ACCESS_AUD must be set together",
       path: ["CLOUDFLARE_ACCESS_AUD"],
+    },
+  )
+  .refine(
+    (value) => {
+      const mediaValues = [
+        value.MEDIA_BASE_URL,
+        value.CLOUDFRONT_KEY_PAIR_ID,
+        value.CLOUDFRONT_PRIVATE_KEY_BASE64,
+        value.CLOUDFRONT_COOKIE_DOMAIN,
+      ];
+      return mediaValues.every(Boolean) || mediaValues.every((item) => !item);
+    },
+    {
+      message:
+        "MEDIA_BASE_URL, CLOUDFRONT_KEY_PAIR_ID, CLOUDFRONT_PRIVATE_KEY_BASE64, and CLOUDFRONT_COOKIE_DOMAIN must be set together",
+      path: ["MEDIA_BASE_URL"],
+    },
+  )
+  .refine(
+    (value) =>
+      !value.MEDIA_BASE_URL ||
+      !value.CLOUDFRONT_COOKIE_DOMAIN ||
+      new URL(value.MEDIA_BASE_URL).hostname.endsWith(
+        value.CLOUDFRONT_COOKIE_DOMAIN.slice(1),
+      ),
+    {
+      message:
+        "CLOUDFRONT_COOKIE_DOMAIN must be a parent domain of MEDIA_BASE_URL",
+      path: ["CLOUDFRONT_COOKIE_DOMAIN"],
     },
   );
 

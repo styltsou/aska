@@ -15,9 +15,9 @@ stage dev
 
 SST has two distinct operating modes that must not share a stage:
 
-- **`dev` is the stable shared cloud environment.** CI and `bun run deploy
-  --stage dev` deploy real Lambda code there. The deployed CloudFront client
-  always points at this stable API.
+- **`dev` is the stable shared cloud environment.** GitHub Actions deploys
+  real Lambda code there after a passing push to `main`. The deployed
+  CloudFront client always points at this stable API.
 - **`hybrid` is the personal hybrid stage for SST Live forwarding only.**
   `SST_STAGE=hybrid bun run dev:aws` creates a separate API, bucket, queues,
   and Lambdas whose function invocations are forwarded to that terminal.
@@ -28,8 +28,8 @@ SST has two distinct operating modes that must not share a stage:
 This separation is required because `sst dev` replaces a stage's deployed
 Lambda code with forwarding stubs. If that terminal stops, the stubs have no
 local process to execute and respond with `sst dev is not running`. The
-recovery for a stage accidentally used with Live mode is simply to deploy real
-code again: `bun run deploy --stage <stage>`.
+recovery for a stage accidentally used with Live mode is to restore the code
+and trigger the GitHub Actions deployment workflow.
 
 SST stage names are resource namespaces, not labels. Before the first `hybrid`
 run, set the four `hybrid` stage secrets listed below.
@@ -39,13 +39,13 @@ run, set the four `hybrid` stage secrets listed below.
 | Mode                          | Code runs                      | AWS services                         | Use it for                                               |
 | ----------------------------- | ------------------------------ | ------------------------------------ | -------------------------------------------------------- |
 | `SST_STAGE=hybrid bun run dev:aws` | Lambda handlers on your laptop | Real `hybrid` S3, SQS, API Gateway, IAM | Fast backend iteration with Live forwarding |
-| `bun run deploy --stage dev`  | Lambdas + Vite client in AWS   | Real `dev` resources + CloudFront    | Fully cloud-based testing; preferred when laptop is slow |
+| GitHub Actions deployment     | Lambdas + Vite client in AWS   | Real `dev` resources + CloudFront    | Fully cloud-based testing                              |
 | Direct package commands       | Your laptop                    | No AWS event chain                   | Unit tests and isolated debugging only                   |
 
 Both SST modes are real end-to-end AWS flows. With live development, an image
 uploaded from the browser goes to the real S3 bucket, publishes one SNS event,
 and SNS creates one message in each image-processing queue for the variants and
-palette workers. With a normal deploy, those same workers run in AWS instead.
+palette workers. In the stable CI deployment, those same workers run in AWS.
 Both test the actual permissions, event shape, queue flow, and callback path.
 
 ## One-time stable `dev` setup
@@ -83,24 +83,53 @@ The stable `dev` deployment uses exactly these public hostnames:
 ```text
 aska-app.styltsou.com  -> Cloudflare (proxied) -> CloudFront client
 aska-api.styltsou.com  -> Cloudflare (proxied) -> API Gateway HTTP API
+images.styltsou.com    -> Cloudflare DNS-only -> private CloudFront media
 ```
 
-Before deploying, create a Cloudflare API token scoped only to the
-`styltsou.com` zone with **Zone / DNS / Edit** and **Zone / Zone / Read**. Find
-the Cloudflare zone ID in that zone's overview page, then expose both values
-only to the shell running SST:
+### 3. CloudFront media signing keys
+
+The stable media distribution requires an RSA key pair. Generate it locally,
+then add the base64-encoded values as GitHub Actions repository secrets. Keep
+the unencoded private PEM out of the repository:
 
 ```sh
-export CLOUDFLARE_API_TOKEN='...'
-export CLOUDFLARE_DEFAULT_ACCOUNT_ID='...'
-export CLOUDFLARE_ZONE_ID='...'
+openssl genrsa -out cloudfront-media-private.pem 2048
+openssl rsa -in cloudfront-media-private.pem -pubout -out cloudfront-media-public.pem
+openssl base64 -A -in cloudfront-media-public.pem
+openssl base64 -A -in cloudfront-media-private.pem
+```
+
+In **GitHub → Settings → Secrets and variables → Actions**, create these two
+repository secrets from those command outputs:
+
+```text
+CLOUDFRONT_MEDIA_PUBLIC_KEY_BASE64
+CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64
+```
+
+The `deploy-dev` workflow copies them into the stage-scoped SST secrets before
+deploying. SST then creates the CloudFront public key, trusted key group,
+origin access control, and `images.styltsou.com` distribution. The API receives
+only the private key secret and issues HTTP-only signed cookies for `/assets/*`
+after authenticated requests. Rotate by updating both GitHub secrets and
+merging a deployment-triggering change.
+
+Before the first CI deployment, create a Cloudflare API token scoped only to
+the `styltsou.com` zone with **Zone / DNS / Edit** and **Zone / Zone / Read**.
+Add the token, account ID, and zone ID as GitHub Actions repository secrets:
+
+```text
+CLOUDFLARE_API_TOKEN
+CLOUDFLARE_DEFAULT_ACCOUNT_ID
+CLOUDFLARE_ZONE_ID
 ```
 
 SST uses that token to create the DNS records and validate the AWS-managed ACM
 certificates. Do not hand-create the application CNAME records: SST owns them.
-The DNS records are proxied through Cloudflare because Cloudflare Access only
-enforces policy for proxied hostnames. Set the Cloudflare zone SSL/TLS mode to
-**Full (strict)**.
+The app and API DNS records are proxied through Cloudflare because Cloudflare
+Access only enforces policy for proxied hostnames. `images` is deliberately
+DNS-only so CloudFront remains the sole media edge and validates its signed
+cookies. Set the Cloudflare zone SSL/TLS mode to **Full (strict)**.
 
 Before the first deploy, create one Cloudflare Zero Trust **self-hosted Access
 application** containing both application domains above. Add an **Allow**
@@ -138,12 +167,12 @@ hostname itself.
 The API's generated `execute-api` hostname is disabled in this stage. This is
 important: otherwise it would be an unprotected route around the Access policy.
 The API also verifies Cloudflare's signed Access JWT on every request at the
-origin. Copy the Access application's **team domain** (including `https://`)
-and its **AUD tag** into the deployment environment:
+origin. Add the Access application's **team domain** (including `https://`)
+and **AUD tag** as these GitHub Actions repository secrets:
 
-```sh
-export CLOUDFLARE_ACCESS_TEAM_DOMAIN='https://your-team.cloudflareaccess.com'
-export CLOUDFLARE_ACCESS_AUD='the-access-application-aud-tag'
+```text
+CLOUDFLARE_ACCESS_TEAM_DOMAIN
+CLOUDFLARE_ACCESS_AUD
 ```
 
 This prevents a request that somehow reaches AWS without passing through
@@ -154,7 +183,7 @@ described above, plus CORS preflight.
 If Cloudflare Access is not configured yet, do that first and do not share the
 hostnames until it is in place.
 
-### 3. Stage secrets
+### 4. Stage secrets
 
 Set these once. SST encrypts and stores them in AWS for the `dev` stage; they
 are not local environment files and are never committed to Git.
@@ -202,8 +231,8 @@ SST's `Client` StaticSite builds `client/` with Bun, stores only the resulting
 build receives `VITE_SERVER_URL` automatically from the API Gateway URL; there
 is no client production `.env` file to create or maintain.
 
-`bun run deploy --stage dev` deploys **both** the backend and this client. The
-client is served as `https://aska-app.styltsou.com` and is built with
+The GitHub Actions deployment deploys **both** the backend and this client.
+The client is served as `https://aska-app.styltsou.com` and is built with
 `https://aska-api.styltsou.com` as `VITE_SERVER_URL`. CloudFront remains the
 client's origin and its S3 bucket remains private; Cloudflare is the public
 edge and Access gate.
@@ -288,11 +317,7 @@ or modify the `hybrid` SST stage.
 When you stop `sst dev`, only your personal stage's Lambda proxies lose their
 local handler. Its resources can remain until you no longer need that stage.
 If you ever accidentally run Live mode on a stable stage, restore normally
-deployed Lambda code with:
-
-```sh
-bun run deploy --stage dev
-```
+deployed Lambda code by triggering the GitHub Actions deployment workflow.
 
 For routine browser/auth/image-upload development, prefer the tunnel-based
 personal setup once it is enabled. It gives Vite a stable HTTPS client domain
@@ -303,9 +328,9 @@ and avoids treating the API as a cross-site third party.
 Use this when you want the browser, API, and image pipeline all off your
 laptop:
 
-1. Set the Cloudflare deployment environment variables described above.
-2. Run `bun run deploy --stage dev`.
-3. Open `https://aska-app.styltsou.com`. SST embedded the custom API URL into
+1. Merge the change to `main` and wait for the `Deploy AWS dev` GitHub Actions
+   job to succeed.
+2. Open `https://aska-app.styltsou.com`. SST embedded the custom API URL into
    the Vite build, so no client environment variable is needed.
 
 The shared `dev` API intentionally rejects local Vite requests. Use
@@ -319,8 +344,11 @@ for pull requests and pushes to `main`. After the checks pass for a push to
 `main`, the workflow deploys real Lambda code to the stable SST `dev` stage.
 
 The deployment job exchanges a GitHub OIDC token for short-lived AWS
-credentials. It does not use AWS access keys or copy SST secrets into GitHub.
-The AWS role trusts only the `styltsou/aska` repository's `main` branch.
+credentials and does not use AWS access keys. The CloudFront signing pair is
+the one exception to the existing SST-secret setup: GitHub Actions copies its
+two repository secrets into the stage-scoped SST secrets immediately before
+deployment. The AWS role trusts only the `styltsou/aska` repository's `main`
+branch.
 
 The job also requires these GitHub Actions repository secrets:
 
@@ -330,17 +358,13 @@ CLOUDFLARE_DEFAULT_ACCOUNT_ID
 CLOUDFLARE_ZONE_ID
 CLOUDFLARE_ACCESS_TEAM_DOMAIN
 CLOUDFLARE_ACCESS_AUD
+CLOUDFRONT_MEDIA_PUBLIC_KEY_BASE64
+CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64
 ```
 
 The token has the same narrowly scoped permissions listed in the Cloudflare
-setup section. It is used only by the deploy step to reconcile the two DNS
-records and certificate validation records.
-
-Manual deployment remains available when needed:
-
-```sh
-bun run deploy --stage dev
-```
+setup section. It is used only by the deploy step to reconcile application and
+media DNS records plus certificate validation records.
 
 Use the GitHub Actions run as the deployment record. Do not add a production
 deployment trigger until the production stage, custom domain, and separate
@@ -356,8 +380,8 @@ When the client has a public domain and you are ready to launch:
 2. Create its own SST secrets and use a separate database URL—not the `dev`
    database.
 3. Create a matching Cloudflare Access application before deployment.
-4. Deploy. SST embeds the custom production API URL in the Vite build
-   automatically.
+4. Deploy through the production CI workflow. SST embeds the custom production
+   API URL in the Vite build automatically.
 
 There is intentionally no staging environment yet. Add one only when you need
 a production-like rehearsal environment.
@@ -369,20 +393,6 @@ The pipeline fixture is retained for narrow, fast handler debugging. Neither
 can exercise browser uploads through S3 and SQS end-to-end, so neither is the
 main development workflow.
 
-## Reference commands
-
-```sh
-bun run sst -- diff --stage dev
-export CLOUDFLARE_API_TOKEN='...'
-export CLOUDFLARE_DEFAULT_ACCOUNT_ID='...'
-export CLOUDFLARE_ZONE_ID='...'
-export CLOUDFLARE_ACCESS_TEAM_DOMAIN='https://your-team.cloudflareaccess.com'
-export CLOUDFLARE_ACCESS_AUD='the-access-application-aud-tag'
-bun run deploy --stage dev
-SST_STAGE=hybrid bun run dev:aws
-bun run sst -- secret list --stage dev
-bun run sst -- remove --stage dev
-```
-
-Use `remove` only for an environment you intend to delete. Keep a small AWS
-Budget and a CloudWatch billing alarm enabled.
+For local Live development, use `SST_STAGE=hybrid bun run dev:aws`. Never run
+SST Live or a manual deployment against the CI-owned `dev` stage. Keep a small
+AWS Budget and a CloudWatch billing alarm enabled.

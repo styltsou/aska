@@ -47,8 +47,9 @@ it safely. Start here rather than reconstructing architecture from file names.
 - [Image Upload and Processing Pipeline](./server/image-upload-implementation-plan.md)
   and [Image Pipeline Reliability](./server/image-pipeline-reliability.md) —
   browser-to-S3 ingestion, asynchronous work, retries, and callbacks.
-- [Image Delivery Architecture](./image-delivery-architecture.md) — current
-  S3 presigned-read behavior and the planned CloudFront media design.
+- [Image Delivery Architecture](./image-delivery-architecture.md) — private
+  CloudFront delivery for generated renditions and the deliberate direct-S3
+  read exception.
 - [Observability](./server/observability.md) — structured logs, trace context,
   OTLP configuration, and logging policy.
 - [Scaffold Recipes](./server/scaffold-recipes.md) — repeatable backend work.

@@ -24,10 +24,11 @@ For the design rationale and tradeoffs, see
 }
 ```
 
-The database stores object keys, not public URLs. Read services generate
-short-lived presigned URLs for display and original variants when returning API
-responses. `image_assets.blur_data_url` stores the inline blurred WebP shown
-while those URLs decode.
+The database stores object keys, not public URLs. Read services return stable
+CloudFront URLs for generated display variants in the deployed media stage,
+and short-lived presigned S3 URLs for local/hybrid and original reads.
+`image_assets.blur_data_url` stores the inline blurred WebP shown while those
+URLs decode.
 
 ## Image Ingestion and Colors
 

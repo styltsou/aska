@@ -43,7 +43,10 @@ known.
 Image rendition metadata lives in `image_assets.variants` as JSONB because
 renditions are render-time metadata, not entities that need independent query
 patterns. Object storage keys are persisted there; public URLs are not stored.
-Read services generate short-lived presigned URLs for the requested variants.
+Read services build delivery URLs from those keys at response time. Generated
+`assets/` variants use stable CloudFront URLs in the deployed media stage;
+local/hybrid reads and deliberate original-file reads use short-lived S3
+presigned URLs. No delivery URL is stored in the database.
 
 ## Image Processing Is Asynchronous
 

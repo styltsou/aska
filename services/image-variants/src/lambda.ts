@@ -43,6 +43,9 @@ async function processVariants(source: SourceImage) {
           Key: objectKey,
           Body: variant.bytes,
           ContentType: variant.contentType,
+          // storageId is unique per upload, so rendition paths are immutable.
+          // CloudFront and browsers can safely retain them for a year.
+          CacheControl: "public, max-age=31536000, immutable",
         }),
       );
       return { ...variant, objectKey };

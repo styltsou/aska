@@ -51,7 +51,6 @@ export interface IObjectStorageService {
 
 export class ObjectStorageService implements IObjectStorageService {
   private client: S3Client | null = null;
-  private presignedReadUrls = new Map<string, PresignedGetUrl>();
 
   get bucket(): string {
     return this.getRequiredConfig().bucket;
@@ -88,12 +87,17 @@ export class ObjectStorageService implements IObjectStorageService {
     key: string,
     expiresInSeconds = env.S3_PRESIGNED_READ_EXPIRES_SECONDS,
   ): Promise<PresignedGetUrl> {
-    const cacheKey = `${expiresInSeconds}:${key}`;
-    const cached = this.presignedReadUrls.get(cacheKey);
-    if (cached && cached.expiresAt.getTime() > Date.now() + 30_000) {
-      this.presignedReadUrls.delete(cacheKey);
-      this.presignedReadUrls.set(cacheKey, cached);
-      return cached;
+    const mediaUrl = this.createMediaUrl(key);
+    if (mediaUrl) {
+      return {
+        key,
+        url: mediaUrl,
+        // The URL itself is immutable. Access is limited by the CloudFront
+        // signed cookie, whose lifetime is deliberately separate from a URL.
+        expiresAt: new Date(
+          Date.now() + env.CLOUDFRONT_SIGNED_COOKIE_EXPIRES_SECONDS * 1000,
+        ),
+      };
     }
 
     const { bucket } = this.getRequiredConfig();
@@ -106,13 +110,11 @@ export class ObjectStorageService implements IObjectStorageService {
       expiresIn: expiresInSeconds,
     });
 
-    const signed = {
+    return {
       key,
       url,
       expiresAt: new Date(Date.now() + expiresInSeconds * 1000),
     };
-    this.cachePresignedReadUrl(cacheKey, signed);
-    return signed;
   }
 
   async createPresignedGetUrls(
@@ -203,14 +205,13 @@ export class ObjectStorageService implements IObjectStorageService {
     return this.client;
   }
 
-  private cachePresignedReadUrl(cacheKey: string, signed: PresignedGetUrl) {
-    this.presignedReadUrls.set(cacheKey, signed);
+  private createMediaUrl(key: string): string | undefined {
+    // Only generated, immutable renditions belong on the media distribution.
+    // Originals remain in ingest/ and continue to require an intentional
+    // presigned S3 read for download/viewer flows.
+    if (!env.MEDIA_BASE_URL || !key.startsWith("assets/")) return undefined;
 
-    while (this.presignedReadUrls.size > 500) {
-      const oldestKey = this.presignedReadUrls.keys().next().value;
-      if (!oldestKey) return;
-      this.presignedReadUrls.delete(oldestKey);
-    }
+    return new URL(key, `${env.MEDIA_BASE_URL}/`).toString();
   }
 
   private getRequiredConfig(): {

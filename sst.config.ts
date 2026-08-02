@@ -50,6 +50,13 @@ export default $config({
               // Cloudflare Access only protects proxied hostnames.
               proxy: true,
             }),
+            // CloudFront itself is the media edge and validates the signed
+            // cookies, so this record must not introduce another proxy/cache
+            // layer in front of the distribution.
+            mediaDns: sst.cloudflare.dns({
+              zone: requireEnvironment("CLOUDFLARE_ZONE_ID"),
+              proxy: false,
+            }),
           }
         : undefined;
     const databaseUrl = new sst.Secret("DatabaseUrl");
@@ -58,6 +65,15 @@ export default $config({
     const imagePipelineCallbackSecret = new sst.Secret(
       "ImagePipelineCallbackSecret",
     );
+    // CloudFront verifies this public key at the edge; the matching private
+    // key is only ever passed to the API Lambda for issuing viewer cookies.
+    // Keep both values base64 encoded so PEM newlines survive SST secrets.
+    const cloudFrontPublicKey = stableCloudDomains
+      ? new sst.Secret("CloudFrontMediaPublicKeyBase64")
+      : undefined;
+    const cloudFrontPrivateKey = stableCloudDomains
+      ? new sst.Secret("CloudFrontMediaPrivateKeyBase64")
+      : undefined;
     const observabilityEnvironment = getObservabilityEnvironment();
     const cloudflareAccessEnvironment = stableCloudDomains
       ? getCloudflareAccessEnvironment()
@@ -89,6 +105,27 @@ export default $config({
     } = createImageQueue("ImagePaletteQueue", "ImagePaletteDeadLetterQueue");
     const imageUploadTopic = new sst.aws.SnsTopic("ImageUploadTopic");
     const assets = new sst.aws.Bucket("Assets", {
+      // SST owns the bucket policy. This permits only CloudFront distributions
+      // in this AWS account to read generated renditions; OAC signs the origin
+      // request and the distribution below restricts its own origin to assets/.
+      policy: stableCloudDomains
+        ? [
+            {
+              principals: [
+                { type: "service", identifiers: ["cloudfront.amazonaws.com"] },
+              ],
+              actions: ["s3:GetObject"],
+              paths: ["assets/*"],
+              conditions: [
+                {
+                  test: "StringEquals",
+                  variable: "aws:SourceAccount",
+                  values: [aws.getCallerIdentityOutput({}).accountId],
+                },
+              ],
+            },
+          ]
+        : [],
       cors: {
         allowHeaders: ["Content-Type"],
         allowMethods: ["GET", "PUT"],
@@ -96,6 +133,14 @@ export default $config({
         maxAge: "15 minutes",
       },
     });
+    const media = stableCloudDomains
+      ? createMediaDistribution({
+          assets,
+          domain: "images.styltsou.com",
+          dns: stableCloudDomains.mediaDns,
+          publicKeyBase64: cloudFrontPublicKey!.value,
+        })
+      : undefined;
     assets.notify({
       notifications: [
         {
@@ -158,6 +203,15 @@ export default $config({
         S3_REGION: "eu-central-1",
         S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: "900",
         S3_PRESIGNED_READ_EXPIRES_SECONDS: "900",
+        ...(media
+          ? {
+              MEDIA_BASE_URL: media.domainUrl,
+              CLOUDFRONT_KEY_PAIR_ID: media.publicKeyId,
+              CLOUDFRONT_PRIVATE_KEY_BASE64: cloudFrontPrivateKey!.value,
+              CLOUDFRONT_COOKIE_DOMAIN: ".styltsou.com",
+              CLOUDFRONT_SIGNED_COOKIE_EXPIRES_SECONDS: "3600",
+            }
+          : {}),
         MAX_DIRECT_UPLOAD_BYTES: "20971520",
         ...cloudflareAccessEnvironment,
         ...observabilityEnvironment,
@@ -260,6 +314,7 @@ export default $config({
       api: api.url,
       client: client.url,
       assetsBucket: assets.name,
+      media: media?.domainUrl,
       imageVariantsQueue: imageVariantsQueue.url,
       imageVariantsDeadLetterQueue: imageVariantsDeadLetterQueue.url,
       imagePaletteQueue: imagePaletteQueue.url,
@@ -283,6 +338,81 @@ function getObservabilityEnvironment(): Record<string, string> {
       ? { OTEL_EXPORTER_OTLP_HEADERS: process.env.OTEL_EXPORTER_OTLP_HEADERS }
       : {}),
     OTEL_TRACES_SAMPLE_RATIO: process.env.OTEL_TRACES_SAMPLE_RATIO ?? "1",
+  };
+}
+
+function createMediaDistribution(input: {
+  assets: sst.aws.Bucket;
+  domain: string;
+  dns: ReturnType<typeof sst.cloudflare.dns>;
+  publicKeyBase64: $util.Input<string>;
+}) {
+  const originAccessControl = new aws.cloudfront.OriginAccessControl(
+    "MediaOriginAccessControl",
+    {
+      name: `${$app.name}-${$app.stage}-media-s3`,
+      description: "Signs CloudFront requests to Aska's private media bucket",
+      originAccessControlOriginType: "s3",
+      signingBehavior: "always",
+      signingProtocol: "sigv4",
+    },
+  );
+  const publicKey = new aws.cloudfront.PublicKey("MediaViewerPublicKey", {
+    namePrefix: `${$app.name}-${$app.stage}-media-`,
+    comment: "Verifies signed cookies for private Aska media",
+    encodedKey: $output(input.publicKeyBase64).apply((value) =>
+      Buffer.from(value, "base64").toString("utf8"),
+    ),
+  });
+  const keyGroup = new aws.cloudfront.KeyGroup("MediaViewerKeyGroup", {
+    name: `${$app.name}-${$app.stage}-media-viewers`,
+    comment: "Trusted viewer signer for private Aska media",
+    items: [publicKey.id],
+  });
+  const cachePolicy = new aws.cloudfront.CachePolicy("MediaCachePolicy", {
+    name: `${$app.name}-${$app.stage}-immutable-media`,
+    comment: "Caches immutable media paths without viewer auth material",
+    defaultTtl: 31_536_000,
+    maxTtl: 31_536_000,
+    minTtl: 0,
+    parametersInCacheKeyAndForwardedToOrigin: {
+      cookiesConfig: { cookieBehavior: "none" },
+      headersConfig: { headerBehavior: "none" },
+      queryStringsConfig: { queryStringBehavior: "none" },
+      enableAcceptEncodingBrotli: true,
+      enableAcceptEncodingGzip: true,
+    },
+  });
+  const cdn = new sst.aws.Cdn("Media", {
+    comment: "Private immutable image renditions for Aska",
+    domain: {
+      name: input.domain,
+      dns: input.dns,
+    },
+    origins: [
+      {
+        originId: "assets",
+        domainName: input.assets.domain,
+        originAccessControlId: originAccessControl.id,
+      },
+    ],
+    defaultCacheBehavior: {
+      targetOriginId: "assets",
+      allowedMethods: ["GET", "HEAD"],
+      cachedMethods: ["GET", "HEAD"],
+      viewerProtocolPolicy: "redirect-to-https",
+      compress: true,
+      cachePolicyId: cachePolicy.id,
+      // This makes every distribution request private. The signed-cookie
+      // policy itself is limited to /assets/*, so ingest/ cannot be fetched
+      // through the media hostname.
+      trustedKeyGroups: [keyGroup.id],
+    },
+  });
+
+  return {
+    domainUrl: cdn.domainUrl,
+    publicKeyId: publicKey.id,
   };
 }
 

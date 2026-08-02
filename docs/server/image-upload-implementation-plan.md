@@ -120,8 +120,10 @@ The variants Lambda generates these non-upscaled WebP variants:
 
 `image_assets.variants` persists the original and both generated variants as
 object-key metadata. `blur_data_url` is a small inline WebP used while the
-display/preview resource decodes. The API signs object keys at read time; it
-never stores public or expired signed URLs in the database.
+display/preview resource decodes. The API builds delivery URLs from object
+keys at read time; it never stores public or expired signed URLs in the
+database. Generated `assets/` variants use stable CloudFront URLs in the
+deployed media stage, while originals retain deliberate presigned S3 reads.
 
 ## Palette Extraction and Search Data
 
@@ -184,6 +186,11 @@ S3_ACCESS_KEY_ID
 S3_SECRET_ACCESS_KEY
 S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS
 S3_PRESIGNED_READ_EXPIRES_SECONDS
+MEDIA_BASE_URL
+CLOUDFRONT_KEY_PAIR_ID
+CLOUDFRONT_PRIVATE_KEY_BASE64
+CLOUDFRONT_COOKIE_DOMAIN
+CLOUDFRONT_SIGNED_COOKIE_EXPIRES_SECONDS
 MAX_DIRECT_UPLOAD_BYTES
 IMAGE_PIPELINE_CALLBACK_SECRET
 ```

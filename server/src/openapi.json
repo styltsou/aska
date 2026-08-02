@@ -1368,7 +1368,7 @@
           },
           "url": {
             "type": "string",
-            "description": "Presigned thumbnail URL for image previews."
+            "description": "Stable CloudFront URL for generated image previews when media delivery is configured; otherwise a presigned S3 URL."
           },
           "blurDataURL": {
             "type": "string",
@@ -1697,7 +1697,7 @@
           "url": {
             "type": "string",
             "format": "uri",
-            "description": "Presigned URL for the display variant."
+            "description": "Stable CloudFront URL for the generated display variant when media delivery is configured; otherwise a presigned S3 URL."
           },
           "originalUrl": {
             "type": "string",
@@ -2388,7 +2388,7 @@
           "url": {
             "type": "string",
             "format": "uri",
-            "description": "Presigned preview URL."
+            "description": "Stable CloudFront URL for the generated preview when media delivery is configured; otherwise a presigned S3 URL."
           },
           "width": {
             "type": "integer"

@@ -31,7 +31,7 @@ React/Vite client (CloudFront-backed static site in a deployment)
                                                     Hono API Lambda
                                                      ├─ Better Auth
                                                      ├─ Drizzle ──> Neon/Postgres
-                                                     └─ signed URLs for S3 reads
+                                                     └─ stable CloudFront URLs for generated reads
 
 S3 ingest/ object-created event
   -> SNS topic
@@ -108,8 +108,8 @@ an endpoint. Every public API change must update `server/src/openapi.json`.
 ## Data and ownership model
 
 Postgres/Drizzle is authoritative for application state. S3 is authoritative
-for immutable image bytes. The API stores generated object keys and signs them
-at read time; it never stores public or expiring S3 URLs.
+for immutable image bytes. The API stores generated object keys and builds
+stable CloudFront URLs for `assets/` reads; it never stores delivery URLs.
 
 `assets` is the common record for archived content. `image_assets` and
 `note_assets` are concrete subtype tables. `folders` are separate organizational
@@ -140,8 +140,8 @@ asynchronous image work should get its own queue/worker unless it has the same
 retry and failure semantics as an existing worker. See
 [Image Upload and Processing Pipeline](./server/image-upload-implementation-plan.md)
 and [Image Pipeline Reliability](./server/image-pipeline-reliability.md).
-Current read delivery and the planned CloudFront media upgrade are documented
-in [Image Delivery Architecture](./image-delivery-architecture.md).
+Current image-delivery behavior is documented in
+[Image Delivery Architecture](./image-delivery-architecture.md).
 
 ## Observability and operations
 

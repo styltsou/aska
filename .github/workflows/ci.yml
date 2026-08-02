@@ -49,7 +49,10 @@ jobs:
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The first media deployment provisions an ACM certificate and a new
+    # CloudFront distribution, both of which can take longer than the normal
+    # application-only update.
+    timeout-minutes: 35
     concurrency:
       group: aska-dev-deploy
       cancel-in-progress: false
@@ -74,6 +77,13 @@ jobs:
           aws-region: eu-central-1
           role-to-assume: arn:aws:iam::089972278413:role/aska-github-actions-deploy
           role-session-name: aska-github-actions-deploy
+      - name: Sync CloudFront media signing keys to SST
+        run: |
+          bunx sst secret set CloudFrontMediaPublicKeyBase64 "$CLOUDFRONT_MEDIA_PUBLIC_KEY_BASE64" --stage dev
+          bunx sst secret set CloudFrontMediaPrivateKeyBase64 "$CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64" --stage dev
+        env:
+          CLOUDFRONT_MEDIA_PUBLIC_KEY_BASE64: ${{ secrets.CLOUDFRONT_MEDIA_PUBLIC_KEY_BASE64 }}
+          CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64: ${{ secrets.CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64 }}
       - name: Deploy SST dev stage
         run: bunx sst deploy --stage dev
         env:
