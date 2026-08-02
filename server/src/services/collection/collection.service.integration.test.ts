@@ -85,6 +85,143 @@ afterEach(async () => {
 });
 
 describe("CollectionService integration", () => {
+  it("flattens direct children beside the parent composition and preserves nested layouts", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Flatten Test" },
+    );
+    const existingNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "Existing parent item", position: { x: 100, y: 200 } },
+    );
+    const sourceFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Source", position: { x: 800, y: 500 } },
+    );
+    const directNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        content: "Move with the group",
+        parentFolderPath: sourceFolder.slug,
+        position: { x: 20, y: 30 },
+      },
+    );
+    const nestedFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        name: "Nested",
+        parentFolderPath: sourceFolder.slug,
+        position: { x: 360, y: 80 },
+      },
+    );
+    const nestedNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        content: "Stay inside the nested folder",
+        parentFolderPath: `${sourceFolder.slug}/${nestedFolder.slug}`,
+        position: { x: 70, y: 90 },
+      },
+    );
+
+    await expect(
+      collectionService.flattenFolder(
+        fixture.organizationId,
+        collection.slug,
+        `folder-${sourceFolder.id}`,
+      ),
+    ).resolves.toEqual({
+      folderNodeId: `folder-${sourceFolder.id}`,
+      parentFolderNodeId: null,
+      directChildCount: 2,
+      position: { x: 412, y: 200 },
+    });
+
+    const [rootContents, nestedContents, directPlacement, nestedPlacement] =
+      await Promise.all([
+        collectionService.getCollectionContents(
+          fixture.organizationId,
+          collection.slug,
+        ),
+        collectionService.getCollectionContents(
+          fixture.organizationId,
+          collection.slug,
+          nestedFolder.slug,
+        ),
+        db
+          .select({
+            parentFolderId: collectionNodes.parentFolderId,
+            positionX: collectionNodes.positionX,
+            positionY: collectionNodes.positionY,
+            pathFolderSlugs: collectionNodes.pathFolderSlugs,
+            depth: collectionNodes.depth,
+          })
+          .from(collectionNodes)
+          .where(eq(collectionNodes.assetId, Number(directNote.id.slice(5)))),
+        db
+          .select({
+            parentFolderId: collectionNodes.parentFolderId,
+            positionX: collectionNodes.positionX,
+            positionY: collectionNodes.positionY,
+            pathFolderSlugs: collectionNodes.pathFolderSlugs,
+            depth: collectionNodes.depth,
+          })
+          .from(collectionNodes)
+          .where(eq(collectionNodes.assetId, Number(nestedNote.id.slice(5)))),
+      ]);
+
+    expect(rootContents.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: existingNote.id }),
+        expect.objectContaining({
+          id: directNote.id,
+          position: { x: 412, y: 200 },
+        }),
+        expect.objectContaining({
+          id: `folder-${nestedFolder.id}`,
+          position: { x: 752, y: 250 },
+        }),
+      ]),
+    );
+    expect(rootContents.nodes).not.toContainEqual(
+      expect.objectContaining({ id: `folder-${sourceFolder.id}` }),
+    );
+    expect(nestedContents.nodes).toEqual([
+      expect.objectContaining({
+        id: nestedNote.id,
+        position: { x: 70, y: 90 },
+      }),
+    ]);
+    expect(directPlacement).toEqual([
+      {
+        parentFolderId: null,
+        positionX: 412,
+        positionY: 200,
+        pathFolderSlugs: [],
+        depth: 0,
+      },
+    ]);
+    expect(nestedPlacement).toEqual([
+      {
+        parentFolderId: nestedFolder.id,
+        positionX: 70,
+        positionY: 90,
+        pathFolderSlugs: [nestedFolder.slug],
+        depth: 1,
+      },
+    ]);
+  });
+
   it("moves a persisted asset into a child folder and rejects a stale position write", async () => {
     const collection = await collectionService.createCollection(
       fixture.organizationId,

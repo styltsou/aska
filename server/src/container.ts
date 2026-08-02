@@ -16,7 +16,10 @@ export const container = {
   loggerService,
   objectStorageService,
   assetService: new AssetService({ objectStorageService }),
-  collectionService: new CollectionService({ objectStorageService }),
+  collectionService: new CollectionService({
+    objectStorageService,
+    loggerService,
+  }),
   imageUploadService: new ImageUploadService(objectStorageService),
   colorSearchService: new ColorSearchService({
     objectStorageService,

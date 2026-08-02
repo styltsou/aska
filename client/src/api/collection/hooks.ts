@@ -22,6 +22,7 @@ import {
   deleteCollectionNode,
   fetchCollectionContents,
   fetchInboxContents,
+  flattenFolder,
   placeAsset,
   markInboxSeen,
   updateCollectionNodePosition,
@@ -2060,6 +2061,21 @@ export function useDeleteCollectionNode(
           queryKey: collectionQueryKeys.inbox(workspaceSlug),
         });
       }
+      reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
+    },
+  });
+}
+
+export function useFlattenFolder(
+  workspaceSlug: string,
+  collectionSlug: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (nodeId: string) =>
+      flattenFolder(workspaceSlug, collectionSlug, nodeId),
+    onSuccess: () => {
       reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
     },
   });

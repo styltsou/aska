@@ -199,6 +199,10 @@ export const CollectionNodePathParamSchema = CollectionPathParamSchema.extend({
   nodeId: CollectionNodeIdSchema,
 });
 
+export const FolderNodePathParamSchema = CollectionPathParamSchema.extend({
+  nodeId: FolderNodeIdSchema,
+});
+
 export const CollectionAssetNodePathParamSchema =
   CollectionPathParamSchema.extend({
     nodeId: AssetNodeIdSchema,

@@ -1,7 +1,7 @@
-import { and, arrayContains, eq, ne } from "drizzle-orm";
+import { and, arrayContains, eq, isNull, ne } from "drizzle-orm";
 
 import { db } from "@/db";
-import { assets, collectionNodes, imageAssets } from "@/db/schema";
+import { assets, collectionNodes, folders, imageAssets } from "@/db/schema";
 import type {
   MoveCollectionNodeParentInput,
   MoveCollectionNodesParentInput,
@@ -10,7 +10,10 @@ import { AppError, ErrorCode } from "@/lib/errors";
 import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import { first } from "@/lib/query";
 import { getCollectionBySlug } from "./collection-target-resolver";
-import { getFolderMovePosition } from "./collection-move-placement";
+import {
+  getFlattenGroupAnchor,
+  getFolderMovePosition,
+} from "./collection-move-placement";
 
 export type MoveCollectionNodeParentResult = {
   nodeId: string;
@@ -26,8 +29,204 @@ export type MoveCollectionNodesParentResult = {
   moves: MoveCollectionNodeParentResult[];
 };
 
-/** Moves asset and folder placements to a different parent folder. */
+export type FlattenFolderResult = {
+  folderNodeId: string;
+  parentFolderNodeId: string | null;
+  directChildCount: number;
+  position: { x: number; y: number } | null;
+};
+
+/** Handles transactional folder-parent and folder-flatten mutations. */
 export class CollectionAssetMoveService {
+  async flattenFolder(
+    orgId: string,
+    collectionSlug: string,
+    folderNodeId: string,
+  ): Promise<FlattenFolderResult> {
+    const collection = await getCollectionBySlug(orgId, collectionSlug);
+    const target = parseCollectionNodeId(folderNodeId);
+    if (target.nodeType !== "folder") {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        "Only folders can be flattened",
+      );
+    }
+
+    return db.transaction(async (tx) => {
+      const folderNode = first(
+        await tx
+          .select({
+            id: collectionNodes.id,
+            folderId: collectionNodes.folderId,
+            parentFolderId: collectionNodes.parentFolderId,
+            pathFolderIds: collectionNodes.pathFolderIds,
+            pathFolderSlugs: collectionNodes.pathFolderSlugs,
+            pathFolderNames: collectionNodes.pathFolderNames,
+          })
+          .from(collectionNodes)
+          .where(
+            and(
+              eq(collectionNodes.organizationId, orgId),
+              eq(collectionNodes.collectionId, collection.id),
+              eq(collectionNodes.nodeType, "folder"),
+              eq(collectionNodes.folderId, target.entityId),
+            ),
+          )
+          .limit(1)
+          .for("update"),
+      );
+      if (!folderNode?.folderId) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Folder not found");
+      }
+
+      const directChildren = await tx
+        .select({
+          id: collectionNodes.id,
+          nodeType: collectionNodes.nodeType,
+          assetType: assets.type,
+          imageWidth: imageAssets.width,
+          imageHeight: imageAssets.height,
+          positionX: collectionNodes.positionX,
+          positionY: collectionNodes.positionY,
+        })
+        .from(collectionNodes)
+        .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
+        .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+        .where(
+          and(
+            eq(collectionNodes.organizationId, orgId),
+            eq(collectionNodes.collectionId, collection.id),
+            eq(collectionNodes.parentFolderId, folderNode.folderId),
+          ),
+        )
+        .for("update");
+
+      if (
+        directChildren.some(
+          (child) => child.positionX === null || child.positionY === null,
+        )
+      ) {
+        throw new AppError(
+          ErrorCode.CONFLICT,
+          "Flattening requires every direct child to have a saved canvas position",
+        );
+      }
+
+      const parentNodes = await tx
+        .select({
+          nodeType: collectionNodes.nodeType,
+          assetType: assets.type,
+          imageWidth: imageAssets.width,
+          imageHeight: imageAssets.height,
+          positionX: collectionNodes.positionX,
+          positionY: collectionNodes.positionY,
+        })
+        .from(collectionNodes)
+        .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
+        .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+        .where(
+          and(
+            eq(collectionNodes.organizationId, orgId),
+            eq(collectionNodes.collectionId, collection.id),
+            folderNode.parentFolderId === null
+              ? isNull(collectionNodes.parentFolderId)
+              : eq(collectionNodes.parentFolderId, folderNode.parentFolderId),
+            ne(collectionNodes.id, folderNode.id),
+          ),
+        )
+        .for("update");
+      const anchor = getFlattenGroupAnchor(parentNodes);
+      const offset =
+        directChildren.length === 0
+          ? { x: 0, y: 0 }
+          : {
+              x:
+                anchor.x -
+                Math.min(...directChildren.map((child) => child.positionX!)),
+              y:
+                anchor.y -
+                Math.min(...directChildren.map((child) => child.positionY!)),
+            };
+
+      const oldPrefix = folderNode.pathFolderIds;
+      const subtreeCandidates = await tx
+        .select({
+          id: collectionNodes.id,
+          depth: collectionNodes.depth,
+          pathFolderIds: collectionNodes.pathFolderIds,
+          pathFolderSlugs: collectionNodes.pathFolderSlugs,
+          pathFolderNames: collectionNodes.pathFolderNames,
+        })
+        .from(collectionNodes)
+        .where(
+          and(
+            eq(collectionNodes.organizationId, orgId),
+            eq(collectionNodes.collectionId, collection.id),
+            arrayContains(collectionNodes.pathFolderIds, oldPrefix),
+          ),
+        )
+        .for("update");
+      const subtree = subtreeCandidates.filter(
+        (node) =>
+          node.id !== folderNode.id &&
+          hasPathPrefix(node.pathFolderIds, oldPrefix),
+      );
+      const parentPathIds = oldPrefix.slice(0, -1);
+      const parentPathSlugs = folderNode.pathFolderSlugs.slice(0, -1);
+      const parentPathNames = folderNode.pathFolderNames.slice(0, -1);
+
+      for (const child of directChildren) {
+        await tx
+          .update(collectionNodes)
+          .set({
+            parentFolderId: folderNode.parentFolderId,
+            positionX: child.positionX! + offset.x,
+            positionY: child.positionY! + offset.y,
+          })
+          .where(eq(collectionNodes.id, child.id));
+      }
+
+      for (const node of subtree) {
+        await tx
+          .update(collectionNodes)
+          .set({
+            depth: node.depth - 1,
+            pathFolderIds: [
+              ...parentPathIds,
+              ...node.pathFolderIds.slice(oldPrefix.length),
+            ],
+            pathFolderSlugs: [
+              ...parentPathSlugs,
+              ...node.pathFolderSlugs.slice(oldPrefix.length),
+            ],
+            pathFolderNames: [
+              ...parentPathNames,
+              ...node.pathFolderNames.slice(oldPrefix.length),
+            ],
+          })
+          .where(eq(collectionNodes.id, node.id));
+      }
+
+      await tx
+        .delete(folders)
+        .where(
+          and(
+            eq(folders.organizationId, orgId),
+            eq(folders.id, folderNode.folderId),
+          ),
+        );
+
+      return {
+        folderNodeId,
+        parentFolderNodeId: folderNode.parentFolderId
+          ? `folder-${folderNode.parentFolderId}`
+          : null,
+        directChildCount: directChildren.length,
+        position: directChildren.length > 0 ? anchor : null,
+      };
+    });
+  }
+
   async moveNodeToFolder(
     orgId: string,
     collectionSlug: string,

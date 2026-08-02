@@ -4,6 +4,7 @@ import {
   createFolder,
   createNote,
   deleteCollectionNode,
+  flattenFolder,
   getCollectionContents,
   getCollections,
   getWorkspaceWithCollections,
@@ -30,6 +31,10 @@ const collectionRoutes = factory
   .delete(
     "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId",
     ...deleteCollectionNode,
+  )
+  .post(
+    "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId/flatten",
+    ...flattenFolder,
   )
   .patch(
     "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/positions",

@@ -256,6 +256,13 @@ export type MoveCollectionNodesToFolderResponse = {
   moves: MoveCollectionNodeToFolderResponse[];
 };
 
+export type FlattenFolderResponse = {
+  folderNodeId: string;
+  parentFolderNodeId: string | null;
+  directChildCount: number;
+  position: BoardPosition | null;
+};
+
 export type CollectionNode =
   | CollectionFolderNode
   | CollectionImageNode

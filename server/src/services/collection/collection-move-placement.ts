@@ -75,6 +75,31 @@ export function getFolderMovePosition(
   return preferred;
 }
 
+/**
+ * Finds the anchor for a flattened folder's direct-child composition.
+ * The group is placed immediately to the right of the existing parent canvas;
+ * callers translate every child by the same delta to preserve its composition.
+ */
+export function getFlattenGroupAnchor(
+  existingNodes: MovePlacementNode[],
+): BoardPosition {
+  const positionedNodes = existingNodes.flatMap((node) => {
+    if (node.positionX === null || node.positionY === null) return [];
+
+    return [
+      {
+        position: { x: node.positionX, y: node.positionY },
+        footprint: getCardFootprint(node),
+      },
+    ];
+  });
+
+  if (positionedNodes.length === 0) return EMPTY_FOLDER_POSITION;
+
+  const bounds = getCompositionBounds(positionedNodes);
+  return { x: bounds.right + CANVAS_ITEM_GAP, y: bounds.top };
+}
+
 function getCardFootprint(node: MovePlacementNode): CardFootprint {
   if (
     node.nodeType === "asset" &&

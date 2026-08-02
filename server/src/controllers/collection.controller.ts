@@ -3,6 +3,7 @@ import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import {
   BulkDeleteBodySchema,
   CollectionNodePathParamSchema,
+  FolderNodePathParamSchema,
   CollectionPathParamSchema,
   CreateCollectionSchema,
   CreateFolderSchema,
@@ -262,6 +263,25 @@ export const moveCollectionNodesToFolder = factory.createHandlers(
       data,
     );
 
+    return c.json(success(result));
+  },
+);
+
+export const flattenFolder = factory.createHandlers(
+  authMiddleware,
+  validate.param(FolderNodePathParamSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug, nodeId } = c.req.valid("param");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const result = await collectionService.flattenFolder(
+      workspace.id,
+      collectionSlug,
+      nodeId,
+    );
     return c.json(success(result));
   },
 );

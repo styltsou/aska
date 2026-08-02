@@ -33,7 +33,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDeleteAsset, useDeleteCollectionNode } from "@/api/collection";
+import {
+  useDeleteAsset,
+  useDeleteCollectionNode,
+  useFlattenFolder,
+} from "@/api/collection";
 import type { Asset } from "@/types/asset";
 
 function imageActions() {
@@ -97,6 +101,10 @@ export function AssetContextMenu({
   const deleteAsset = useDeleteAsset(
     inboxContext?.workspaceSlug ?? deleteContext?.workspaceSlug ?? "",
   );
+  const flattenFolder = useFlattenFolder(
+    deleteContext?.workspaceSlug ?? "",
+    deleteContext?.collectionSlug ?? "",
+  );
 
   function handleDelete() {
     setDeleteDialogOpen(false);
@@ -119,19 +127,56 @@ export function AssetContextMenu({
     }
   }
 
+  function handleFlatten() {
+    flattenFolder.mutate(asset.id, {
+      onSuccess: (result) => {
+        toast.success(
+          result.directChildCount === 0
+            ? "Empty folder removed."
+            : `Flattened ${result.directChildCount} direct ${result.directChildCount === 1 ? "item" : "items"} to the right of this canvas.`,
+        );
+      },
+      onError: (err) => {
+        toast.error(
+          err instanceof Error ? err.message : "Unable to flatten folder.",
+        );
+      },
+    });
+  }
+
   return (
     <>
       <ContextMenu>
         <ContextMenuTrigger>{children}</ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem>
-            {isFavorite ? "Remove from favorites" : "Add to favorites"}
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => setMoveDialogOpen(true)}>
-            Move to...
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          {typeActions[asset.type]()}
+          {asset.type === "folder" ? (
+            <>
+              {folderActions()}
+              <ContextMenuItem>
+                {isFavorite ? "Remove from favorites" : "Add to favorites"}
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={() => setMoveDialogOpen(true)}>
+                Move to...
+              </ContextMenuItem>
+              {deleteContext ? (
+                <ContextMenuItem onClick={handleFlatten}>
+                  Flatten folder
+                </ContextMenuItem>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <ContextMenuItem>
+                {isFavorite ? "Remove from favorites" : "Add to favorites"}
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => setMoveDialogOpen(true)}>
+                Move to...
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              {typeActions[asset.type]()}
+            </>
+          )}
           <ContextMenuSeparator />
           <ContextMenuItem
             className="text-red-600! hover:bg-red-500/20! focus:bg-red-500/20! data-highlighted:bg-red-500/20! dark:text-red-400! dark:hover:bg-red-500/30! dark:focus:bg-red-500/30! dark:data-highlighted:bg-red-500/30!"

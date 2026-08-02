@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getFlattenGroupAnchor,
   getFolderMovePosition,
   type MovePlacementNode,
 } from "./collection-move-placement";
@@ -85,5 +86,20 @@ describe("folder move placement", () => {
         movedPortrait,
       ),
     ).toEqual({ x: 312, y: 172 });
+  });
+});
+
+describe("folder flatten placement", () => {
+  it("places the child composition beside the parent canvas bounds", () => {
+    expect(
+      getFlattenGroupAnchor([
+        folderAt(100, 200),
+        { ...movedPortrait, positionX: 500, positionY: 300 },
+      ]),
+    ).toEqual({ x: 812, y: 200 });
+  });
+
+  it("uses the stable empty-canvas anchor", () => {
+    expect(getFlattenGroupAnchor([])).toEqual({ x: 48, y: 48 });
   });
 });

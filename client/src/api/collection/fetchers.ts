@@ -15,6 +15,7 @@ import type {
   CreateRemoteImageInput,
   CreateRemoteImageResponse,
   DeleteCollectionNodeResponse,
+  FlattenFolderResponse,
   DeleteAssetResponse,
   InboxContentsResponse,
   ImageUploadStatusResponse,
@@ -247,6 +248,16 @@ export async function moveCollectionNodesToFolder(
   return apiPatch<MoveCollectionNodesToFolderResponse>(
     `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/nodes/parent`,
     data,
+  );
+}
+
+export async function flattenFolder(
+  workspaceSlug: string,
+  collectionSlug: string,
+  nodeId: string,
+): Promise<FlattenFolderResponse> {
+  return apiPost<FlattenFolderResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/nodes/${encodeURIComponent(nodeId)}/flatten`,
   );
 }
 

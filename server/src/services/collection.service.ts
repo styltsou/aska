@@ -16,6 +16,7 @@ import {
   CollectionAssetMoveService,
   type MoveCollectionNodeParentResult,
   type MoveCollectionNodesParentResult,
+  type FlattenFolderResult,
 } from "@/services/collection/collection-asset-move.service";
 import { CollectionDeleteService } from "@/services/collection/collection-delete.service";
 import { CollectionMutationService } from "@/services/collection/collection-mutation.service";
@@ -27,6 +28,7 @@ import type {
   WorkspaceInfo,
 } from "@/services/collection/collection.types";
 import type { IObjectStorageService } from "@/services/object-storage.service";
+import { LoggerService, type ILoggerService } from "@/services/logger.service";
 
 export type {
   CreatedCollectionRow,
@@ -94,6 +96,11 @@ export interface ICollectionService {
     collectionSlug: string,
     data: MoveCollectionNodesParentInput,
   ): Promise<MoveCollectionNodesParentResult>;
+  flattenFolder(
+    orgId: string,
+    collectionSlug: string,
+    folderNodeId: string,
+  ): Promise<FlattenFolderResult>;
 }
 
 export class CollectionService implements ICollectionService {
@@ -101,11 +108,14 @@ export class CollectionService implements ICollectionService {
   private readonly mutations = new CollectionMutationService();
   private readonly moves = new CollectionAssetMoveService();
   private readonly deletes: CollectionDeleteService;
+  private readonly logger: ILoggerService;
 
   constructor({
     objectStorageService,
+    loggerService = new LoggerService(),
   }: {
     objectStorageService: IObjectStorageService;
+    loggerService?: ILoggerService;
   }) {
     this.queries = new CollectionQueryService({
       objectStorageService,
@@ -113,6 +123,7 @@ export class CollectionService implements ICollectionService {
     this.deletes = new CollectionDeleteService({
       objectStorageService,
     });
+    this.logger = loggerService;
   }
 
   getWorkspaceBySlug(slug: string, userId: string): Promise<WorkspaceInfo> {
@@ -223,5 +234,26 @@ export class CollectionService implements ICollectionService {
     data: MoveCollectionNodesParentInput,
   ): Promise<MoveCollectionNodesParentResult> {
     return this.moves.moveNodesToFolder(orgId, collectionSlug, data);
+  }
+
+  async flattenFolder(
+    orgId: string,
+    collectionSlug: string,
+    folderNodeId: string,
+  ): Promise<FlattenFolderResult> {
+    const result = await this.moves.flattenFolder(
+      orgId,
+      collectionSlug,
+      folderNodeId,
+    );
+    this.logger.info("Folder flattened", {
+      event_name: "collection.folder.flattened",
+      collection_slug: collectionSlug,
+      folder_node_id: folderNodeId,
+      parent_folder_node_id: result.parentFolderNodeId,
+      direct_child_count: result.directChildCount,
+      destination_anchor: result.position,
+    });
+    return result;
   }
 }
