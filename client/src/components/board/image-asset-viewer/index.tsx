@@ -21,8 +21,8 @@ import {
   XIcon,
 } from "lucide-react";
 import type { ImageAsset } from "@/types/asset";
-import { useState, useCallback, useEffect, useRef } from "react";
-import { motion, useReducedMotion } from "motion/react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useReducedMotion } from "motion/react";
 import Cropper, { type Area, type Size } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import {
@@ -30,15 +30,14 @@ import {
   IMAGE_VIEWER_TRANSITION,
 } from "@/components/board/image-viewer-transition";
 import { ImageMetadata } from "./image-metadata";
-import { ASPECT_RATIOS, CropToolbar } from "./crop-toolbar";
+import { CropToolbar } from "./crop-toolbar";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
 
 const MIN_FREE_CROP_SIZE = 80;
 
 type CropFrameColors = {
   frame: string;
-  outline: string;
   className: string;
-  label: string;
 };
 
 type CropDimension = "width" | "height";
@@ -63,9 +62,7 @@ function getCropFrameColors(dominantColors?: string[]): CropFrameColors {
   if (colors.length === 0) {
     return {
       frame: "var(--sidebar-foreground)",
-      outline: "var(--sidebar)",
       className: "aska-crop-area aska-crop-area--theme",
-      label: "Theme fallback",
     };
   }
 
@@ -92,15 +89,11 @@ function getCropFrameColors(dominantColors?: string[]): CropFrameColors {
   return luminance > 0.42
     ? {
         frame: "rgb(0 0 0)",
-        outline: "rgb(255 255 255)",
         className: "aska-crop-area aska-crop-area--dark",
-        label: "Black",
       }
     : {
         frame: "rgb(255 255 255)",
-        outline: "rgb(0 0 0)",
         className: "aska-crop-area aska-crop-area--light",
-        label: "White",
       };
 }
 
@@ -168,11 +161,13 @@ const RESIZE_TARGETS: {
 function FreeCropResizeHandles({
   cropSize,
   maxCropSize,
+  aspect,
   frameColors,
   onResize,
 }: {
   cropSize: Size;
   maxCropSize: Size;
+  aspect?: number;
   frameColors: CropFrameColors;
   onResize: (size: Size) => void;
 }) {
@@ -213,6 +208,36 @@ function FreeCropResizeHandles({
         ? -deltaY * 2
         : 0;
 
+    if (aspect) {
+      const relativeWidth =
+        (start.size.width + widthDelta) / start.size.width;
+      const relativeHeight =
+        (start.size.height + heightDelta) / start.size.height;
+      const dominant =
+        Math.abs(relativeWidth - 1) >= Math.abs(relativeHeight - 1)
+          ? relativeWidth
+          : relativeHeight;
+      const scale = Math.min(
+        Math.min(
+          maxCropSize.width / start.size.width,
+          maxCropSize.height / start.size.height,
+        ),
+        Math.max(
+          Math.max(
+            MIN_FREE_CROP_SIZE / start.size.width,
+            MIN_FREE_CROP_SIZE / start.size.height,
+          ),
+          dominant,
+        ),
+      );
+
+      onResize({
+        width: Math.round(start.size.width * scale),
+        height: Math.round(start.size.height * scale),
+      });
+      return;
+    }
+
     onResize({
       width: Math.round(
         Math.min(
@@ -241,10 +266,11 @@ function FreeCropResizeHandles({
         width: cropSize.width,
         height: cropSize.height,
         borderColor: frameColors.frame,
-        boxShadow: `0 0 0 1px ${frameColors.outline}`,
       }}
     >
-      {RESIZE_TARGETS.map(({ direction, className, label }) => (
+      {RESIZE_TARGETS.filter(
+        ({ direction }) => !aspect || direction.includes("-"),
+      ).map(({ direction, className, label }) => (
         <button
           key={direction}
           type="button"
@@ -261,28 +287,60 @@ function FreeCropResizeHandles({
 }
 
 function formatDimensions(width: number, height: number) {
-  return `${width.toLocaleString()} x ${height.toLocaleString()}`;
+  return `${width} x ${height}`;
+}
+
+function fitCropSize(size: Size, aspect: number, maxSize: Size): Size {
+  let width = Math.max(MIN_FREE_CROP_SIZE, Math.min(size.width, maxSize.width));
+  let height = Math.max(
+    MIN_FREE_CROP_SIZE,
+    Math.min(size.height, maxSize.height),
+  );
+
+  if (width / aspect <= height) {
+    height = width / aspect;
+  } else {
+    width = height * aspect;
+  }
+
+  if (width > maxSize.width) {
+    width = maxSize.width;
+    height = width / aspect;
+  }
+  if (height > maxSize.height) {
+    height = maxSize.height;
+    width = height * aspect;
+  }
+
+  return { width: Math.round(width), height: Math.round(height) };
+}
+
+function fitCropMaxSize(size: Size, aspect: number): Size {
+  return {
+    width: Math.max(
+      MIN_FREE_CROP_SIZE,
+      Math.min(size.width, size.height * aspect),
+    ),
+    height: Math.max(
+      MIN_FREE_CROP_SIZE,
+      Math.min(size.height, size.width / aspect),
+    ),
+  };
 }
 
 function CropInspector({
   asset,
   croppedAreaPixels,
-  aspect,
-  frameColors,
   onOutputDimensionChange,
 }: {
   asset: ImageAsset;
   croppedAreaPixels: Area | null;
-  aspect: number;
-  frameColors: CropFrameColors;
   onOutputDimensionChange: (dimension: CropDimension, value: number) => void;
 }) {
   const originalWidth = asset.originalWidth ?? asset.width;
   const originalHeight = asset.originalHeight ?? asset.height;
   const outputWidth = Math.round(croppedAreaPixels?.width ?? originalWidth);
   const outputHeight = Math.round(croppedAreaPixels?.height ?? originalHeight);
-  const aspectLabel =
-    ASPECT_RATIOS.find((ratio) => ratio.value === aspect)?.label ?? "Custom";
 
   const handleIntegerInput = (event: React.FormEvent<HTMLInputElement>) => {
     event.currentTarget.value = event.currentTarget.value.replace(/\D/g, "");
@@ -345,21 +403,6 @@ function CropInspector({
             />
           </dd>
         </div>
-        <div className="flex items-center justify-between gap-4">
-          <dt className="text-xs font-medium text-muted-foreground">Aspect</dt>
-          <dd className="text-sm text-foreground/90">{aspectLabel}</dd>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <dt className="text-xs font-medium text-muted-foreground">Frame</dt>
-          <dd className="flex items-center gap-1.5 text-sm text-foreground/90">
-            <span
-              aria-hidden="true"
-              className="size-3 rounded-full border border-black/20 shadow-sm dark:border-white/20"
-              style={{ backgroundColor: frameColors.frame }}
-            />
-            {frameColors.label}
-          </dd>
-        </div>
       </dl>
     </section>
   );
@@ -397,10 +440,13 @@ export function ImageAssetViewer({
     null,
   );
   const [freeCropSize, setFreeCropSize] = useState<Size | null>(null);
+  const [aspectCropSize, setAspectCropSize] = useState<Size | null>(null);
   const [cropperCropSize, setCropperCropSize] = useState<Size | null>(null);
   const [cropperContainerSize, setCropperContainerSize] = useState<Size | null>(
     null,
   );
+  const [mediaSize, setMediaSize] = useState<Size | null>(null);
+  const [mediaLoaded, setMediaLoaded] = useState(false);
   const cropperContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -411,7 +457,9 @@ export function ImageAssetViewer({
       setCroppedAreaPixels(null);
       setCroppedPreviewUrl(null);
       setFreeCropSize(null);
+      setAspectCropSize(null);
       setCropperCropSize(null);
+      setMediaLoaded(false);
     }
   }, [open]);
 
@@ -422,7 +470,10 @@ export function ImageAssetViewer({
     setCroppedAreaPixels(null);
     setCroppedPreviewUrl(null);
     setFreeCropSize(null);
+    setAspectCropSize(null);
     setCropperCropSize(null);
+    setMediaSize(null);
+    setMediaLoaded(false);
   }, [asset?.id]);
 
   useEffect(() => {
@@ -442,17 +493,90 @@ export function ImageAssetViewer({
     return () => observer.disconnect();
   }, [cropMode]);
 
+  useEffect(() => {
+    if (!cropMode || aspect !== 0 || !mediaSize || freeCropSize) {
+      return;
+    }
+    if (mediaSize.width < 1 || mediaSize.height < 1) {
+      return;
+    }
+
+    setFreeCropSize({
+      width: Math.round(mediaSize.width),
+      height: Math.round(mediaSize.height),
+    });
+  }, [aspect, cropMode, freeCropSize, mediaSize]);
+
+  useEffect(() => {
+    if (!mediaSize || mediaSize.width < 1 || mediaSize.height < 1) return;
+
+    const maxWidth = mediaSize.width * zoom;
+    const maxHeight = mediaSize.height * zoom;
+
+    if (aspect === 0) {
+      if (!freeCropSize) return;
+
+      const width = Math.round(Math.min(freeCropSize.width, maxWidth));
+      const height = Math.round(Math.min(freeCropSize.height, maxHeight));
+
+      if (width !== freeCropSize.width || height !== freeCropSize.height) {
+        setFreeCropSize({ width, height });
+      }
+      return;
+    }
+
+    if (!aspectCropSize) return;
+
+    const scale = Math.min(
+      1,
+      maxWidth / aspectCropSize.width,
+      maxHeight / aspectCropSize.height,
+    );
+    if (scale < 1) {
+      setAspectCropSize({
+        width: Math.round(aspectCropSize.width * scale),
+        height: Math.round(aspectCropSize.height * scale),
+      });
+    }
+  }, [aspect, aspectCropSize, freeCropSize, mediaSize, zoom]);
+
   const handleCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels);
   }, []);
 
   const resolvedAspect = aspect === 0 ? originalAspect : aspect;
 
+  const cropMaxSize = useMemo(() => {
+    if (!cropperContainerSize) return null;
+
+    const bounds = mediaSize
+      ? {
+          width: mediaSize.width * zoom,
+          height: mediaSize.height * zoom,
+        }
+      : cropperContainerSize;
+
+    return {
+      width: Math.max(
+        MIN_FREE_CROP_SIZE,
+        Math.min(bounds.width, cropperContainerSize.width),
+      ),
+      height: Math.max(
+        MIN_FREE_CROP_SIZE,
+        Math.min(bounds.height, cropperContainerSize.height),
+      ),
+    };
+  }, [cropperContainerSize, mediaSize, zoom]);
+
   const handleCropSizeChange = useCallback(
     (size: Size) => {
-      setCropperCropSize(size);
+      if (size.width < 1 || size.height < 1) return;
+
       if (aspect === 0) {
         setFreeCropSize((currentSize) => currentSize ?? size);
+      } else {
+        setCropperCropSize(size);
+        setAspectCropSize((currentSize) => currentSize ?? size);
       }
     },
     [aspect],
@@ -461,14 +585,34 @@ export function ImageAssetViewer({
   const handleAspectChange = useCallback(
     (nextAspect: number) => {
       setAspect(nextAspect);
-      setFreeCropSize(nextAspect === 0 ? cropperCropSize : null);
+
+      if (nextAspect === 0) {
+        setAspectCropSize(null);
+        setFreeCropSize(
+          (currentSize) => currentSize ?? aspectCropSize ?? cropperCropSize,
+        );
+        return;
+      }
+
+      setFreeCropSize(null);
+      const base = freeCropSize ?? aspectCropSize ?? cropperCropSize;
+      if (base && cropMaxSize) {
+        setAspectCropSize(fitCropSize(base, nextAspect, cropMaxSize));
+      }
     },
-    [cropperCropSize],
+    [aspectCropSize, cropMaxSize, cropperCropSize, freeCropSize],
   );
 
-  const handleFreeCropResize = useCallback((size: Size) => {
-    setFreeCropSize(size);
-  }, []);
+  const handleCropBoxResize = useCallback(
+    (size: Size) => {
+      if (aspect === 0) {
+        setFreeCropSize(size);
+      } else {
+        setAspectCropSize(size);
+      }
+    },
+    [aspect],
+  );
 
   const handleOutputDimensionChange = useCallback(
     (dimension: CropDimension, value: number) => {
@@ -483,15 +627,9 @@ export function ImageAssetViewer({
       const targetHeight =
         dimension === "height" ? value : value / outputAspect;
 
-      if (aspect === 0 && freeCropSize && cropperContainerSize) {
-        const maxWidth = Math.max(
-          MIN_FREE_CROP_SIZE,
-          cropperContainerSize.width - 12,
-        );
-        const maxHeight = Math.max(
-          MIN_FREE_CROP_SIZE,
-          cropperContainerSize.height - 12,
-        );
+      if (aspect === 0 && freeCropSize && cropMaxSize) {
+        const maxWidth = cropMaxSize.width;
+        const maxHeight = cropMaxSize.height;
         setFreeCropSize({
           width: Math.round(
             Math.min(
@@ -519,7 +657,7 @@ export function ImageAssetViewer({
         Math.min(3, Math.max(1, currentZoom * (currentWidth / targetWidth))),
       );
     },
-    [asset, aspect, croppedAreaPixels, cropperContainerSize, freeCropSize],
+    [asset, aspect, croppedAreaPixels, cropMaxSize, freeCropSize],
   );
 
   const handleStartCrop = useCallback(() => {
@@ -529,7 +667,9 @@ export function ImageAssetViewer({
     setAspect(0);
     setCroppedAreaPixels(null);
     setFreeCropSize(null);
+    setAspectCropSize(null);
     setCropperCropSize(null);
+    setMediaLoaded(false);
   }, []);
 
   const handleCancelCrop = useCallback(() => {
@@ -538,6 +678,7 @@ export function ImageAssetViewer({
     setZoom(1);
     setCroppedAreaPixels(null);
     setFreeCropSize(null);
+    setAspectCropSize(null);
     setCropperCropSize(null);
   }, []);
 
@@ -577,7 +718,13 @@ export function ImageAssetViewer({
   }, []);
 
   const displayUrl = croppedPreviewUrl ?? asset?.url;
+  const blurPlaceholder = asset?.uploadStatus ? undefined : asset?.blurDataURL;
   const cropFrameColors = getCropFrameColors(asset?.dominantColors);
+  const cropBoxSize = aspect === 0 ? freeCropSize : aspectCropSize;
+  const cropBoxMaxSize =
+    aspect === 0 || !cropMaxSize
+      ? cropMaxSize
+      : fitCropMaxSize(cropMaxSize, aspect);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -596,37 +743,39 @@ export function ImageAssetViewer({
             {cropMode && asset ? (
               <div className="min-h-0 flex-1 p-3 sm:p-5">
                 <div ref={cropperContainerRef} className="relative size-full">
+                  {!mediaLoaded && blurPlaceholder ? (
+                    <div className="absolute inset-0 overflow-hidden">
+                      <img
+                        src={blurPlaceholder}
+                        alt=""
+                        aria-hidden="true"
+                        className="size-full object-contain blur-[5px] brightness-90 saturate-75"
+                      />
+                    </div>
+                  ) : null}
                   <Cropper
                     image={asset.originalUrl ?? asset.url}
                     crop={crop}
                     zoom={zoom}
                     aspect={resolvedAspect}
-                    cropSize={
-                      aspect === 0 ? (freeCropSize ?? undefined) : undefined
-                    }
+                    cropSize={cropBoxSize ?? undefined}
                     onCropChange={setCrop}
                     onZoomChange={setZoom}
                     onCropComplete={handleCropComplete}
                     onCropSizeChange={handleCropSizeChange}
+                    onMediaLoaded={() => setMediaLoaded(true)}
+                    setMediaSize={setMediaSize}
                     classes={{ cropAreaClassName: cropFrameColors.className }}
                     disableAutomaticStylesInjection
                     showGrid
                   />
-                  {aspect === 0 && freeCropSize && cropperContainerSize ? (
+                  {cropBoxSize && cropBoxMaxSize ? (
                     <FreeCropResizeHandles
-                      cropSize={freeCropSize}
+                      cropSize={cropBoxSize}
+                      aspect={aspect === 0 ? undefined : aspect}
                       frameColors={cropFrameColors}
-                      maxCropSize={{
-                        width: Math.max(
-                          MIN_FREE_CROP_SIZE,
-                          cropperContainerSize.width - 12,
-                        ),
-                        height: Math.max(
-                          MIN_FREE_CROP_SIZE,
-                          cropperContainerSize.height - 12,
-                        ),
-                      }}
-                      onResize={handleFreeCropResize}
+                      maxCropSize={cropBoxMaxSize}
+                      onResize={handleCropBoxResize}
                     />
                   ) : null}
                 </div>
@@ -634,11 +783,15 @@ export function ImageAssetViewer({
             ) : (
               <div className="flex min-h-0 flex-1 items-center justify-center p-3 sm:p-5">
                 {displayUrl ? (
-                  <motion.img
+                  <ProgressiveImage
                     src={displayUrl}
+                    fallbackSrc={
+                      croppedPreviewUrl ? undefined : asset?.localPreviewUrl
+                    }
+                    blurDataURL={
+                      croppedPreviewUrl ? undefined : blurPlaceholder
+                    }
                     alt={asset?.alt ?? ""}
-                    width={asset?.width}
-                    height={asset?.height}
                     draggable={false}
                     layoutId={
                       asset && !shouldReduceMotion && !croppedPreviewUrl
@@ -646,7 +799,8 @@ export function ImageAssetViewer({
                         : undefined
                     }
                     transition={IMAGE_VIEWER_TRANSITION}
-                    className="relative z-10 max-h-full max-w-full rounded-[6px] object-contain shadow-sm"
+                    loading="eager"
+                    className="relative z-10 max-h-full max-w-full rounded-[6px] object-contain"
                     style={{ borderRadius: 6 }}
                   />
                 ) : null}
@@ -690,8 +844,6 @@ export function ImageAssetViewer({
                   <CropInspector
                     asset={asset}
                     croppedAreaPixels={croppedAreaPixels}
-                    aspect={aspect}
-                    frameColors={cropFrameColors}
                     onOutputDimensionChange={handleOutputDimensionChange}
                   />
                 ) : asset ? (

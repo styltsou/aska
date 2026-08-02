@@ -721,7 +721,7 @@ function CanvasSurface({
       dropTargetNodeIdRef.current = nextTargetId;
       const dragSession = dragSessionRef.current;
       dropStackStylesRef.current =
-        nextTargetId && dragSession?.isGroup
+        nextTargetId && dragSession
           ? makeCanvasDropStackStyles(
               dragSession.primaryNodeId,
               dragSession.origins,

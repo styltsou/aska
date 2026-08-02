@@ -278,10 +278,12 @@ function SidebarTrigger({
       />
       <TooltipContent side="right" align="center">
         <span>Toggle Sidebar</span>
-        <KbdGroup>
-          <Kbd>{getPlatformModifier()}</Kbd>
+        <KbdGroup className="gap-0.5">
+          <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+            {getPlatformModifier()}
+          </Kbd>
           <span>+</span>
-          <Kbd>B</Kbd>
+          <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">B</Kbd>
         </KbdGroup>
       </TooltipContent>
     </Tooltip>

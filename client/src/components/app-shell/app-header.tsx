@@ -11,6 +11,9 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { FileTextIcon, PlusIcon, UploadIcon } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { getPlatformShift } from "@/lib/platform";
 import { CreateCollectionDialog } from "@/components/app-shell/create-collection-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
@@ -135,28 +138,60 @@ export function AppHeader() {
         ) : null}
         {isBoardView ? (
           <>
-            <CreateNoteDialog
-              workspaceSlug={workspaceSlug}
-              collectionPath={collectionPath}
-              restoreOpen
-              placement={placement}
-            >
-              <Button type="button" size="sm" variant="outline">
-                <FileTextIcon />
+            <Tooltip>
+              <CreateNoteDialog
+                workspaceSlug={workspaceSlug}
+                collectionPath={collectionPath}
+                restoreOpen
+                placement={placement}
+              >
+                <TooltipTrigger
+                  render={
+                    <Button type="button" size="sm" variant="outline">
+                      <FileTextIcon />
+                      <span>New note</span>
+                    </Button>
+                  }
+                />
+              </CreateNoteDialog>
+              <TooltipContent side="bottom" align="end">
                 <span>New note</span>
-              </Button>
-            </CreateNoteDialog>
-            <UploadImagesDialog
-              workspaceSlug={workspaceSlug}
-              collectionPath={collectionPath}
-              restoreOpen
-              placement={placement}
-            >
-              <Button type="button" size="sm">
-                <UploadIcon />
+                <KbdGroup className="gap-0.5">
+                  <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+                    {getPlatformShift()}
+                  </Kbd>
+                  <span>+</span>
+                  <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">N</Kbd>
+                </KbdGroup>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <UploadImagesDialog
+                workspaceSlug={workspaceSlug}
+                collectionPath={collectionPath}
+                restoreOpen
+                placement={placement}
+              >
+                <TooltipTrigger
+                  render={
+                    <Button type="button" size="sm">
+                      <UploadIcon />
+                      <span>Upload</span>
+                    </Button>
+                  }
+                />
+              </UploadImagesDialog>
+              <TooltipContent side="bottom" align="end">
                 <span>Upload</span>
-              </Button>
-            </UploadImagesDialog>
+                <KbdGroup className="gap-0.5">
+                  <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+                    {getPlatformShift()}
+                  </Kbd>
+                  <span>+</span>
+                  <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">U</Kbd>
+                </KbdGroup>
+              </TooltipContent>
+            </Tooltip>
           </>
         ) : null}
       </div>

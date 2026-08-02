@@ -72,7 +72,7 @@ function SignupPage() {
   }
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center bg-background px-4 py-8">
+    <main className="flex min-h-svh flex-col items-center justify-start bg-background px-4 pt-20 pb-8 md:pt-80">
       <BrandLogo className="mb-8" />
       <div className="w-full max-w-sm space-y-1">
         <h1 className="text-xl font-semibold">Create account</h1>

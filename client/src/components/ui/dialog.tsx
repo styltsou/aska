@@ -2,7 +2,7 @@ import * as React from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 
 import { cn } from "@/lib/utils";
-import { GLASS_FRAME_CLASS, GLASS_SURFACE_CLASS } from "@/lib/glass";
+import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
 
@@ -54,7 +54,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed top-[18vh] left-1/2 z-50 w-full max-w-sm -translate-x-1/2 translate-y-0 rounded-lg p-1.5 transition duration-100 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
+          "fixed top-[18vh] left-1/2 z-50 w-full max-w-sm -translate-x-1/2 translate-y-0 overflow-hidden rounded-lg transition duration-100 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
           GLASS_FRAME_CLASS,
           className,
         )}
@@ -86,8 +86,7 @@ function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-body"
       className={cn(
-        "relative z-10 rounded-md p-4 text-foreground",
-        GLASS_SURFACE_CLASS,
+        "relative z-10 rounded-b-lg border-b border-border bg-background p-4 text-foreground",
         className,
       )}
       {...props}
@@ -110,7 +109,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex flex-col-reverse gap-2 px-0 pt-2 pb-0.5 sm:flex-row sm:justify-between",
+        "relative z-0 flex flex-col-reverse gap-2 px-4 py-2.5 sm:flex-row sm:justify-between",
         className,
       )}
       {...props}

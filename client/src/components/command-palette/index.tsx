@@ -7,6 +7,7 @@ import {
   ImagePlusIcon,
   InboxIcon,
   MoonIcon,
+  NotebookPenIcon,
   PanelLeftIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
@@ -27,6 +28,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { DialogBody } from "@/components/ui/dialog";
+import { SCRATCHPAD_OPEN_EVENT } from "@/components/app-shell/global-scratchpad";
 import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
@@ -49,6 +51,7 @@ type CommandId =
   | "new-note"
   | "new-folder"
   | "upload-images"
+  | "open-scratchpad"
   | "open-inbox"
   | "browse-collections"
   | "toggle-filter-bar"
@@ -65,6 +68,12 @@ const COMMAND_GROUPS = [
         label: "New note",
         icon: FileTextIcon,
         shortcut: "⇧+N",
+      },
+      {
+        id: "open-scratchpad",
+        label: "Open scratchpad",
+        icon: NotebookPenIcon,
+        shortcut: "⇧+P",
       },
       {
         id: "new-folder",
@@ -258,6 +267,11 @@ export function CommandPalette() {
         setOpen(false);
         setUploadImagesOpen(true);
         return;
+      case "open-scratchpad":
+        if (!workspaceSlug) return;
+        setOpen(false);
+        window.dispatchEvent(new CustomEvent(SCRATCHPAD_OPEN_EVENT));
+        return;
       case "toggle-filter-bar":
         if (!filterScope) return;
         setOpen(false);
@@ -312,8 +326,7 @@ export function CommandPalette() {
         onOpenChange={setOpen}
         title="Command Palette"
         description="Search app commands and destinations."
-        overlayClassName="transition-none"
-        className="top-[18vh] max-w-lg transition-none"
+        className="top-[18vh] max-w-lg"
       >
         <DialogBody className="overflow-hidden p-1.5">
           <Command
@@ -324,53 +337,53 @@ export function CommandPalette() {
             <CommandInput placeholder="Type a command or search..." />
             <CommandList className="max-h-80">
               <CommandEmpty>No commands found.</CommandEmpty>
-              {COMMAND_GROUPS.map((group, index) => (
-                <div key={group.heading}>
-                  {index > 0 ? <CommandSeparator /> : null}
-                  <CommandGroup heading={group.heading}>
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      const label =
-                        item.id === "change-theme"
-                          ? theme === "dark"
-                            ? "Switch to light mode"
-                            : "Switch to dark mode"
-                          : item.label;
-                      const isDisabled =
-                        (item.id === "toggle-filter-bar" && !filterScope) ||
-                        (item.id === "new-note" && !canCreateNote) ||
-                        ((item.id === "new-folder" ||
-                          item.id === "upload-images") &&
-                          !canCreateFolder);
+              {COMMAND_GROUPS.map((group) => ({
+                heading: group.heading,
+                items: group.items.filter(
+                  (item) =>
+                    (item.id !== "toggle-filter-bar" || Boolean(filterScope)) &&
+                    (item.id !== "new-note" || canCreateNote) &&
+                    (item.id !== "new-folder" || canCreateFolder) &&
+                    (item.id !== "upload-images" || canCreateFolder),
+                ),
+              }))
+                .filter((group) => group.items.length > 0)
+                .map((group, index) => (
+                  <div key={group.heading}>
+                    {index > 0 ? <CommandSeparator /> : null}
+                    <CommandGroup heading={group.heading}>
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const label =
+                          item.id === "change-theme"
+                            ? theme === "dark"
+                              ? "Switch to light mode"
+                              : "Switch to dark mode"
+                            : item.label;
 
-                      return (
-                        <CommandItem
-                          key={item.id}
-                          value={item.label}
-                          disabled={isDisabled}
-                          onSelect={() => runCommand(item.id)}
-                        >
-                          <Icon className="size-4 text-muted-foreground" />
-                          <span>{label}</span>
-                          {item.shortcut ? (
-                            <CommandShortcut>
-                              {formatPlatformShortcut(item.shortcut)}
-                            </CommandShortcut>
-                          ) : null}
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </div>
-              ))}
+                        return (
+                          <CommandItem
+                            key={item.id}
+                            value={item.label}
+                            onSelect={() => runCommand(item.id)}
+                          >
+                            <Icon className="size-4 text-muted-foreground" />
+                            <span>{label}</span>
+                            {item.shortcut ? (
+                              <CommandShortcut>
+                                {formatPlatformShortcut(item.shortcut)}
+                              </CommandShortcut>
+                            ) : null}
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </div>
+                ))}
             </CommandList>
           </Command>
         </DialogBody>
-        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 px-0 pt-[7px] pr-[2px] pb-0.5 text-[10px] leading-4 text-muted-foreground">
-          <span className="mr-auto inline-flex items-center gap-1">
-            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
-            <span>Close</span>
-          </span>
+        <div className="relative z-0 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground sm:pr-[18px]">
           <span className="inline-flex items-center gap-1">
             <KbdGroup className="gap-0.5">
               <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">

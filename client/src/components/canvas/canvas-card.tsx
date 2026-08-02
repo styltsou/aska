@@ -1,5 +1,6 @@
 import { LoaderCircleIcon } from "lucide-react";
-import { memo } from "react";
+import { motion } from "motion/react";
+import { memo, useMemo } from "react";
 import type { Node, NodeProps } from "@xyflow/react";
 
 import type { CollectionNode } from "@/api/collection";
@@ -44,6 +45,18 @@ export const CanvasCard = memo(function CanvasCard({
   const asset = collectionNodeToAsset(node);
   const isPending = isPendingCollectionNode(node);
   const dropStackStyle = data.dropStackStyle;
+  const stackAnimation = useMemo(
+    () =>
+      dropStackStyle
+        ? {
+            x: dropStackStyle.translateX,
+            y: dropStackStyle.translateY,
+            rotate: dropStackStyle.rotation,
+            scale: dropStackStyle.scale,
+          }
+        : { x: 0, y: 0, rotate: 0, scale: 1 },
+    [dropStackStyle],
+  );
 
   const card = (
     <div className="min-w-0">
@@ -72,9 +85,9 @@ export const CanvasCard = memo(function CanvasCard({
   );
 
   return (
-    <div
+    <motion.div
       className={cn(
-        "relative w-full rounded-lg transition-[transform,filter,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+        "relative w-full rounded-lg transition-[filter,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
         dragging && "drop-shadow-xl",
         selected && "ring-2 ring-ring ring-offset-2 ring-offset-background",
         data.isColorDimmed && "pointer-events-none opacity-30 saturate-50",
@@ -83,16 +96,14 @@ export const CanvasCard = memo(function CanvasCard({
           data.isDropTarget &&
           "bg-accent/45 ring-2 ring-primary ring-offset-2 ring-offset-background",
       )}
-      style={
-        dropStackStyle
-          ? {
-              transform: `translate3d(${dropStackStyle.translateX}px, ${dropStackStyle.translateY}px, 0) rotate(${dropStackStyle.rotation}deg) scale(${dropStackStyle.scale})`,
-              transformOrigin: "bottom center",
-              transitionDelay: `${dropStackStyle.delayMs}ms`,
-              willChange: "transform",
-            }
-          : undefined
-      }
+      animate={stackAnimation}
+      transition={{
+        type: "tween",
+        duration: 0.12,
+        ease: [0.22, 1, 0.36, 1],
+        delay: dropStackStyle ? dropStackStyle.delayMs / 1000 : 0,
+      }}
+      style={{ transformOrigin: "bottom center" }}
       aria-busy={isPending || undefined}
       data-selection-node-id={
         !isPending && !data.isColorDimmed ? node.id : undefined
@@ -140,7 +151,7 @@ export const CanvasCard = memo(function CanvasCard({
           </div>
         </div>
       ) : null}
-    </div>
+    </motion.div>
   );
 });
 

@@ -98,10 +98,10 @@ function AnimatedFilterIsland({ children }: { children: ReactNode }) {
   return (
     <motion.div
       initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-      animate={{ opacity: 1, width: "auto", marginLeft: 6 }}
+      animate={{ opacity: 1, width: "auto", marginLeft: 2 }}
       exit={{ opacity: 0, width: 0, marginLeft: 0 }}
       transition={FILTER_ISLAND_TRANSITION}
-      className="overflow-hidden"
+      className="-m-1 overflow-hidden p-1"
     >
       <div className={FILTER_ISLAND_CLASS}>{children}</div>
     </motion.div>

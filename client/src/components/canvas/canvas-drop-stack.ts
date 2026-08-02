@@ -12,11 +12,13 @@ export type CanvasDropStackStyle = {
   delayMs: number;
 };
 
+const DROP_STACK_SCALE = 0.72;
+
 export function makeCanvasDropStackStyles(
   primaryNodeId: string,
   origins: ReadonlyMap<string, CanvasDropStackPoint>,
 ): Map<string, CanvasDropStackStyle> {
-  if (origins.size < 2) return new Map();
+  if (origins.size === 0) return new Map();
 
   const primaryOrigin = origins.get(primaryNodeId);
   if (!primaryOrigin) return new Map();
@@ -29,7 +31,7 @@ export function makeCanvasDropStackStyles(
     translateX: 0,
     translateY: 0,
     rotation: 0,
-    scale: 1,
+    scale: DROP_STACK_SCALE,
     stackOrder: origins.size + 1,
     delayMs: 0,
   });
@@ -39,16 +41,16 @@ export function makeCanvasDropStackStyles(
     if (!origin) return;
 
     const depth = index + 1;
+    const depthProgress = depth / trailingNodeIds.length;
     const direction = index % 2 === 0 ? -1 : 1;
-    const fanLevel = Math.floor(index / 2) + 1;
-    const fanX = direction * Math.min(3 + fanLevel * 2, 9);
-    const fanY = Math.min(depth * 3, 12);
+    const fanX = direction * (7 + depthProgress * 16);
+    const fanY = 10 + depthProgress * 72;
 
     styles.set(nodeId, {
       translateX: primaryOrigin.x - origin.x + fanX,
       translateY: primaryOrigin.y - origin.y + fanY,
-      rotation: direction * Math.min(2 + fanLevel * 0.75, 4),
-      scale: 1 - Math.min(depth, 5) * 0.006,
+      rotation: direction * (2 + depthProgress * 3),
+      scale: DROP_STACK_SCALE,
       stackOrder: origins.size - index,
       delayMs: Math.min(index * 8, 32),
     });

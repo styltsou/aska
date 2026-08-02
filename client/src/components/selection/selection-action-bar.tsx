@@ -1,5 +1,11 @@
 import { useState } from "react";
 import {
+  AlignCenterHorizontalIcon,
+  AlignCenterVerticalIcon,
+  AlignEndHorizontalIcon,
+  AlignEndVerticalIcon,
+  AlignStartHorizontalIcon,
+  AlignStartVerticalIcon,
   FolderInputIcon,
   HeartIcon,
   LayoutGridIcon,
@@ -150,7 +156,7 @@ export function SelectionActionBar({
                       <motion.div
                         key="layout-actions"
                         initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-                        animate={{ opacity: 1, width: "auto", marginLeft: 6 }}
+                        animate={{ opacity: 1, width: "auto", marginLeft: 2 }}
                         exit={{ opacity: 0, width: 0, marginLeft: 0 }}
                         transition={{ duration: 0.1, ease: [0, 0, 0.2, 1] }}
                         className="-m-1 overflow-hidden p-1"
@@ -278,17 +284,26 @@ function LayoutActionsMenu({
 }: Pick<SelectionActionBarProps, "onMakeRow" | "onMakeColumn">) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label="More layout actions"
-          >
-            <MoreHorizontalIcon />
-          </Button>
-        }
-      />
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  aria-label="More layout options"
+                >
+                  <MoreHorizontalIcon />
+                </Button>
+              }
+            />
+          }
+        >
+          More options
+        </TooltipTrigger>
+        <TooltipContent>More layout options</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent
         align="end"
         side="bottom"
@@ -297,26 +312,32 @@ function LayoutActionsMenu({
         <DropdownMenuGroup>
           <DropdownMenuLabel>Arrange in column</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => onMakeColumn?.("start")}>
-            Align start
+            <AlignStartVerticalIcon />
+            <span>Align start</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onMakeColumn?.("center")}>
-            Align center
+            <AlignCenterVerticalIcon />
+            <span>Align center</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onMakeColumn?.("end")}>
-            Align end
+            <AlignEndVerticalIcon />
+            <span>Align end</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuLabel>Arrange in row</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => onMakeRow?.("start")}>
-            Align start
+            <AlignStartHorizontalIcon />
+            <span>Align start</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onMakeRow?.("center")}>
-            Align center
+            <AlignCenterHorizontalIcon />
+            <span>Align center</span>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onMakeRow?.("end")}>
-            Align end
+            <AlignEndHorizontalIcon />
+            <span>Align end</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

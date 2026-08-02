@@ -1,11 +1,7 @@
-import { Fragment } from "react";
-import { toast } from "sonner";
+import { Fragment, useRef, useState } from "react";
+import { CheckIcon, CopyIcon } from "lucide-react";
 import type { ImageAsset } from "@/types/asset";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -19,6 +15,59 @@ function formatDate(iso: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+function ColorRow({ color }: { color: string }) {
+  const [isCopied, setIsCopied] = useState(false);
+  const [label, setLabel] = useState<"Copy" | "Copied">("Copy");
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoveredRef = useRef(false);
+
+  const copy = () => {
+    navigator.clipboard.writeText(color.toUpperCase());
+    setIsCopied(true);
+    setLabel("Copied");
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setIsCopied(false);
+      if (hoveredRef.current) setLabel("Copy");
+    }, 1500);
+  };
+
+  const Icon = isCopied ? CheckIcon : CopyIcon;
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      onMouseEnter={() => {
+        hoveredRef.current = true;
+        if (!isCopied) setLabel("Copy");
+      }}
+      onMouseLeave={() => {
+        hoveredRef.current = false;
+      }}
+      aria-label={`Copy ${color}`}
+      className="group flex w-full cursor-pointer items-center gap-3.5 px-1 py-0.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+    >
+      <span
+        className="size-7 shrink-0 rounded-sm border border-black/10 shadow-sm dark:border-white/15"
+        style={{ backgroundColor: color }}
+      />
+      <span className="font-mono text-sm tabular-nums text-foreground/80">
+        {color.toUpperCase()}
+      </span>
+      <span
+        className={cn(
+          "ml-auto flex items-center gap-1 text-xs font-medium text-muted-foreground opacity-0 transition-opacity duration-100 group-hover:opacity-100",
+          isCopied && "opacity-100",
+        )}
+      >
+        <Icon className="size-3.5" />
+        {label}
+      </span>
+    </button>
+  );
 }
 
 export function ImageMetadata({ asset }: { asset: ImageAsset }) {
@@ -62,30 +111,13 @@ export function ImageMetadata({ asset }: { asset: ImageAsset }) {
         ))}
       </dl>
       <div className="space-y-2">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="block text-xs font-medium text-muted-foreground">
           Colors
         </span>
         {dominantColors.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="space-y-1">
             {dominantColors.map((color) => (
-              <Tooltip key={color}>
-                <TooltipTrigger
-                  onClick={() => {
-                    navigator.clipboard.writeText(color.toUpperCase());
-                    toast.success(`Copied ${color.toUpperCase()}`);
-                  }}
-                  aria-label={`Dominant color ${color}`}
-                  className="cursor-pointer"
-                >
-                  <span
-                    className="size-6 rounded-sm border border-black/10 shadow-sm dark:border-white/15"
-                    style={{ backgroundColor: color }}
-                  />
-                </TooltipTrigger>
-                <TooltipContent side="top" align="center" sideOffset={6}>
-                  {color.toUpperCase()}
-                </TooltipContent>
-              </Tooltip>
+              <ColorRow key={color} color={color} />
             ))}
           </div>
         ) : (
