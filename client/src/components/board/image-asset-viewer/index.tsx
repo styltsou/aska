@@ -209,8 +209,7 @@ function FreeCropResizeHandles({
         : 0;
 
     if (aspect) {
-      const relativeWidth =
-        (start.size.width + widthDelta) / start.size.width;
+      const relativeWidth = (start.size.width + widthDelta) / start.size.width;
       const relativeHeight =
         (start.size.height + heightDelta) / start.size.height;
       const dominant =

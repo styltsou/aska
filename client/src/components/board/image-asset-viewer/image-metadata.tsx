@@ -54,7 +54,7 @@ function ColorRow({ color }: { color: string }) {
         className="size-7 shrink-0 rounded-sm border border-black/10 shadow-sm dark:border-white/15"
         style={{ backgroundColor: color }}
       />
-      <span className="font-mono text-sm tabular-nums text-foreground/80">
+      <span className="font-mono text-sm text-foreground/80 tabular-nums">
         {color.toUpperCase()}
       </span>
       <span
