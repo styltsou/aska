@@ -103,9 +103,10 @@ export default $config({
     } = createImageQueue("ImagePaletteQueue", "ImagePaletteDeadLetterQueue");
     const imageUploadTopic = new sst.aws.SnsTopic("ImageUploadTopic");
     const assets = new sst.aws.Bucket("Assets", {
-      // SST owns the bucket policy. This permits only CloudFront distributions
-      // in this AWS account to read private workspace media; OAC signs every
-      // origin request and the viewer policy limits each user to a workspace.
+      // SST owns the bucket policy. CloudFront OAC presents its distribution
+      // ARN as aws:SourceArn (not aws:SourceAccount), so limit reads to this
+      // account's distributions while the viewer policy limits each user to a
+      // workspace path.
       policy: stableCloudDomains
         ? [
             {
@@ -116,9 +117,16 @@ export default $config({
               paths: ["*"],
               conditions: [
                 {
-                  test: "StringEquals",
-                  variable: "aws:SourceAccount",
-                  values: [aws.getCallerIdentityOutput({}).accountId],
+                  test: "StringLike",
+                  variable: "AWS:SourceArn",
+                  values: [
+                    aws
+                      .getCallerIdentityOutput({})
+                      .accountId.apply(
+                        (accountId) =>
+                          `arn:aws:cloudfront::${accountId}:distribution/*`,
+                      ),
+                  ],
                 },
               ],
             },

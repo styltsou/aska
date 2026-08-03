@@ -4,6 +4,8 @@ export const CLOUDFRONT_SIGNED_COOKIE_NAMES = [
   "CloudFront-Policy",
   "CloudFront-Signature",
   "CloudFront-Key-Pair-Id",
+  // CloudFront does not use this marker. Keep it in the cleanup list so
+  // browsers shed cookies issued by the initial SHA-256 implementation.
   "CloudFront-Hash-Algorithm",
 ] as const;
 
@@ -21,8 +23,8 @@ export type CloudFrontSignedCookie = {
 };
 
 /**
- * Creates the three CloudFront viewer cookies plus an explicit SHA-256 marker.
- * A cookie grants access only to one workspace's immutable image namespace.
+ * Creates CloudFront's three required viewer cookies. A cookie grants access
+ * only to one workspace's immutable image namespace.
  */
 export function createCloudFrontSignedCookies(
   config: CloudFrontSignedCookieConfig,
@@ -40,7 +42,9 @@ export function createCloudFrontSignedCookies(
   const privateKey = Buffer.from(config.privateKeyBase64, "base64").toString(
     "utf8",
   );
-  const signer = createSign("RSA-SHA256");
+  // CloudFront signed cookies use RSA-SHA1. Do not add an algorithm cookie:
+  // it is not part of CloudFront's viewer-cookie contract.
+  const signer = createSign("RSA-SHA1");
   signer.update(policy);
   signer.end();
 
@@ -51,7 +55,6 @@ export function createCloudFrontSignedCookies(
       value: cloudFrontBase64(signer.sign(privateKey)),
     },
     { name: "CloudFront-Key-Pair-Id", value: config.publicKeyId },
-    { name: "CloudFront-Hash-Algorithm", value: "SHA256" },
   ];
 }
 

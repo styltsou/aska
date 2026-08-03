@@ -37,11 +37,11 @@ describe("createCloudFrontSignedCookies", () => {
       ],
     });
     expect(values.get("CloudFront-Key-Pair-Id")).toBe("KTEST123");
-    expect(values.get("CloudFront-Hash-Algorithm")).toBe("SHA256");
+    expect(values.has("CloudFront-Hash-Algorithm")).toBe(false);
     expect(values.get("CloudFront-Policy")).not.toMatch(/[+=/]/);
     expect(values.get("CloudFront-Signature")).not.toMatch(/[+=/]/);
 
-    const verifier = createVerify("RSA-SHA256");
+    const verifier = createVerify("RSA-SHA1");
     verifier.update(policy);
     verifier.end();
     expect(
