@@ -23,6 +23,8 @@ export default $config({
     };
   },
   async run() {
+    const { deriveCloudFrontPublicKey } =
+      await import("./infra/cloudfront-key");
     const clientOrigins = {
       // Personal hybrid development: local Vite -> Live API Lambda -> AWS.
       hybrid: ["http://localhost:5173"],
@@ -65,12 +67,9 @@ export default $config({
     const imagePipelineCallbackSecret = new sst.Secret(
       "ImagePipelineCallbackSecret",
     );
-    // CloudFront verifies this public key at the edge; the matching private
-    // key is only ever passed to the API Lambda for issuing viewer cookies.
-    // Keep both values base64 encoded so PEM newlines survive SST secrets.
-    const cloudFrontPublicKey = stableCloudDomains
-      ? new sst.Secret("CloudFrontMediaPublicKeyBase64")
-      : undefined;
+    // The private key is the single source of truth. Its public key is derived
+    // during deployment for CloudFront, eliminating mismatched key-pair
+    // secrets while keeping the private material in SST's secret output.
     const cloudFrontPrivateKey = stableCloudDomains
       ? new sst.Secret("CloudFrontMediaPrivateKeyBase64")
       : undefined;
@@ -106,8 +105,8 @@ export default $config({
     const imageUploadTopic = new sst.aws.SnsTopic("ImageUploadTopic");
     const assets = new sst.aws.Bucket("Assets", {
       // SST owns the bucket policy. This permits only CloudFront distributions
-      // in this AWS account to read generated renditions; OAC signs the origin
-      // request and the distribution below restricts its own origin to assets/.
+      // in this AWS account to read private workspace media; OAC signs every
+      // origin request and the viewer policy limits each user to a workspace.
       policy: stableCloudDomains
         ? [
             {
@@ -115,7 +114,7 @@ export default $config({
                 { type: "service", identifiers: ["cloudfront.amazonaws.com"] },
               ],
               actions: ["s3:GetObject"],
-              paths: ["assets/*"],
+              paths: ["*"],
               conditions: [
                 {
                   test: "StringEquals",
@@ -127,7 +126,7 @@ export default $config({
           ]
         : [],
       cors: {
-        allowHeaders: ["Content-Type"],
+        allowHeaders: ["Content-Type", "Cache-Control"],
         allowMethods: ["GET", "PUT"],
         allowOrigins: allowedClientOrigins,
         maxAge: "15 minutes",
@@ -138,16 +137,15 @@ export default $config({
           assets,
           domain: "images.styltsou.com",
           dns: stableCloudDomains.mediaDns,
-          publicKeyBase64: cloudFrontPublicKey!.value,
+          privateKeyBase64: cloudFrontPrivateKey!.value,
         })
       : undefined;
     assets.notify({
       notifications: [
         {
-          name: "FanOutIngestedImage",
+          name: "FanOutOriginalImage",
           topic: imageUploadTopic,
           events: ["s3:ObjectCreated:*"],
-          filterPrefix: "ingest/",
         },
       ],
     });
@@ -197,6 +195,7 @@ export default $config({
         // Only the stable cloud API needs to serve a localhost client across
         // sites. Hybrid retains its existing Better Auth cookie behavior.
         CROSS_SITE_AUTH_COOKIES: stableCloudDomains ? "true" : "false",
+        ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".styltsou.com" } : {}),
         RESEND_API_KEY: resendApiKey.value,
         IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
         S3_BUCKET: assets.name,
@@ -367,7 +366,7 @@ function createMediaDistribution(input: {
   assets: sst.aws.Bucket;
   domain: string;
   dns: ReturnType<typeof sst.cloudflare.dns>;
-  publicKeyBase64: $util.Input<string>;
+  privateKeyBase64: $util.Input<string>;
 }) {
   const originAccessControl = new aws.cloudfront.OriginAccessControl(
     "MediaOriginAccessControl",
@@ -382,8 +381,8 @@ function createMediaDistribution(input: {
   const publicKey = new aws.cloudfront.PublicKey("MediaViewerPublicKey", {
     namePrefix: `${$app.name}-${$app.stage}-media-`,
     comment: "Verifies signed cookies for private Aska media",
-    encodedKey: $output(input.publicKeyBase64).apply((value) =>
-      Buffer.from(value, "base64").toString("utf8"),
+    encodedKey: $output(input.privateKeyBase64).apply((value) =>
+      deriveCloudFrontPublicKey(value),
     ),
   });
   const keyGroup = new aws.cloudfront.KeyGroup("MediaViewerKeyGroup", {
@@ -406,7 +405,7 @@ function createMediaDistribution(input: {
     },
   });
   const cdn = new sst.aws.Cdn("Media", {
-    comment: "Private immutable image renditions for Aska",
+    comment: "Private immutable workspace images for Aska",
     domain: {
       name: input.domain,
       dns: input.dns,
@@ -426,8 +425,7 @@ function createMediaDistribution(input: {
       compress: true,
       cachePolicyId: cachePolicy.id,
       // This makes every distribution request private. The signed-cookie
-      // policy itself is limited to /assets/*, so ingest/ cannot be fetched
-      // through the media hostname.
+      // policy itself is limited to an authorized workspace path.
       trustedKeyGroups: [keyGroup.id],
     },
   });

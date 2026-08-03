@@ -26,7 +26,10 @@ export type PutObjectInput = {
   key: string;
   body: Uint8Array;
   contentType: string;
+  cacheControl?: string;
 };
+
+const IMMUTABLE_MEDIA_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 export interface IObjectStorageService {
   bucket: string;
@@ -68,6 +71,7 @@ export class ObjectStorageService implements IObjectStorageService {
       Bucket: bucket,
       Key: input.key,
       ContentType: input.contentType,
+      CacheControl: IMMUTABLE_MEDIA_CACHE_CONTROL,
     });
 
     const url = await getSignedUrl(this.getClient(), command, {
@@ -78,6 +82,7 @@ export class ObjectStorageService implements IObjectStorageService {
       url,
       headers: {
         "Content-Type": input.contentType,
+        "Cache-Control": IMMUTABLE_MEDIA_CACHE_CONTROL,
       },
       expiresAt: new Date(Date.now() + expiresInSeconds * 1000),
     };
@@ -139,6 +144,7 @@ export class ObjectStorageService implements IObjectStorageService {
         Key: input.key,
         Body: input.body,
         ContentType: input.contentType,
+        CacheControl: input.cacheControl ?? IMMUTABLE_MEDIA_CACHE_CONTROL,
       }),
     );
   }
@@ -206,10 +212,9 @@ export class ObjectStorageService implements IObjectStorageService {
   }
 
   private createMediaUrl(key: string): string | undefined {
-    // Only generated, immutable renditions belong on the media distribution.
-    // Originals remain in ingest/ and continue to require an intentional
-    // presigned S3 read for download/viewer flows.
-    if (!env.MEDIA_BASE_URL || !key.startsWith("assets/")) return undefined;
+    // Every image object lives under its immutable workspace/upload namespace.
+    // Originals and generated variants are both private CDN content.
+    if (!env.MEDIA_BASE_URL || !isMediaObjectKey(key)) return undefined;
 
     return new URL(key, `${env.MEDIA_BASE_URL}/`).toString();
   }
@@ -238,4 +243,10 @@ export class ObjectStorageService implements IObjectStorageService {
         : {}),
     };
   }
+}
+
+function isMediaObjectKey(key: string): boolean {
+  return /^[^/]+\/[^/]+\/(?:original\.[a-z0-9]+|display\.webp|preview\.webp)$/i.test(
+    key,
+  );
 }

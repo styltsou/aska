@@ -103,6 +103,71 @@
         }
       }
     },
+    "/api/v1/media/session/{workspaceSlug}": {
+      "post": {
+        "operationId": "issueMediaSession",
+        "tags": ["Session"],
+        "summary": "Issue CloudFront viewer cookies",
+        "description": "Creates a short-lived CloudFront cookie session for one authorized workspace. Cookies are scoped to that workspace's immutable image path and are issued only when private media delivery is configured.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceSlug"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The media session was issued, or media delivery is disabled for this environment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaSessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "revokeMediaSession",
+        "tags": ["Session"],
+        "summary": "Clear CloudFront viewer cookies",
+        "description": "Deletes the browser's CloudFront viewer cookies before the user signs out.",
+        "responses": {
+          "200": {
+            "description": "The browser's media cookies were cleared.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data"],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": ["revoked"],
+                      "properties": {
+                        "revoked": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}": {
       "get": {
         "operationId": "getWorkspaceWithCollections",
@@ -1309,6 +1374,27 @@
                 "type": "string",
                 "nullable": true,
                 "description": "The organisation ID the user is currently acting within."
+              }
+            }
+          }
+        }
+      },
+      "MediaSessionResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["enabled", "expiresAt"],
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether CloudFront private media delivery is enabled in this environment."
+              },
+              "expiresAt": {
+                "type": ["string", "null"],
+                "format": "date-time",
+                "description": "The CloudFront policy expiration, or null when media delivery is disabled."
               }
             }
           }

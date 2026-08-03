@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { signOut, type AuthUser } from "@/lib/auth-client";
 import { clearAuthStateCache } from "@/lib/auth-flow";
+import { clearMediaSession } from "@/lib/media-session";
 import { useRouter } from "@tanstack/react-router";
 
 export function NavUser({ user }: { user: AuthUser }) {
@@ -136,7 +137,11 @@ export function NavUser({ user }: { user: AuthUser }) {
             <AlertDialogAction
               variant="destructive"
               onClick={async () => {
-                await signOut();
+                try {
+                  await clearMediaSession();
+                } finally {
+                  await signOut();
+                }
                 clearAuthStateCache();
                 await router.invalidate();
                 void router.navigate({ to: "/login", replace: true });

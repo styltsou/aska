@@ -36,11 +36,11 @@ run, set the four `hybrid` stage secrets listed below.
 
 ## What runs where
 
-| Mode                          | Code runs                      | AWS services                         | Use it for                                               |
-| ----------------------------- | ------------------------------ | ------------------------------------ | -------------------------------------------------------- |
+| Mode                               | Code runs                      | AWS services                            | Use it for                                  |
+| ---------------------------------- | ------------------------------ | --------------------------------------- | ------------------------------------------- |
 | `SST_STAGE=hybrid bun run dev:aws` | Lambda handlers on your laptop | Real `hybrid` S3, SQS, API Gateway, IAM | Fast backend iteration with Live forwarding |
-| GitHub Actions deployment     | Lambdas + Vite client in AWS   | Real `dev` resources + CloudFront    | Fully cloud-based testing                              |
-| Direct package commands       | Your laptop                    | No AWS event chain                   | Unit tests and isolated debugging only                   |
+| GitHub Actions deployment          | Lambdas + Vite client in AWS   | Real `dev` resources + CloudFront       | Fully cloud-based testing                   |
+| Direct package commands            | Your laptop                    | No AWS event chain                      | Unit tests and isolated debugging only      |
 
 Both SST modes are real end-to-end AWS flows. With live development, an image
 uploaded from the browser goes to the real S3 bucket, publishes one SNS event,
@@ -88,31 +88,29 @@ images.styltsou.com    -> Cloudflare DNS-only -> private CloudFront media
 
 ### 3. CloudFront media signing keys
 
-The stable media distribution requires an RSA key pair. Generate it locally,
-then add the base64-encoded values as GitHub Actions repository secrets. Keep
-the unencoded private PEM out of the repository:
+The stable media distribution requires an RSA-2048 key pair. Generate the
+private key locally, then add its base64-encoded value as a GitHub Actions
+repository secret. Keep the unencoded private PEM out of the repository:
 
 ```sh
 openssl genrsa -out cloudfront-media-private.pem 2048
-openssl rsa -in cloudfront-media-private.pem -pubout -out cloudfront-media-public.pem
-openssl base64 -A -in cloudfront-media-public.pem
 openssl base64 -A -in cloudfront-media-private.pem
 ```
 
-In **GitHub → Settings → Secrets and variables → Actions**, create these two
-repository secrets from those command outputs:
+In **GitHub → Settings → Secrets and variables → Actions**, create this
+repository secret from that command output:
 
 ```text
-CLOUDFRONT_MEDIA_PUBLIC_KEY_BASE64
 CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64
 ```
 
-The `deploy-dev` workflow copies them into the stage-scoped SST secrets before
-deploying. SST then creates the CloudFront public key, trusted key group,
-origin access control, and `images.styltsou.com` distribution. The API receives
-only the private key secret and issues HTTP-only signed cookies for `/assets/*`
-after authenticated requests. Rotate by updating both GitHub secrets and
-merging a deployment-triggering change.
+The `deploy-dev` workflow validates the key before copying it into the
+stage-scoped SST secret. SST derives the matching public key, then creates the
+CloudFront trusted key group, origin access control, and
+`images.styltsou.com` distribution. The API receives the private key secret
+and issues HTTP-only signed cookies for one authorized workspace path through
+the dedicated media-session endpoint. Rotate by updating the private-key secret and merging a
+deployment-triggering change.
 
 Before the first CI deployment, create a Cloudflare API token scoped only to
 the `styltsou.com` zone with **Zone / DNS / Edit** and **Zone / Zone / Read**.
@@ -274,11 +272,13 @@ API Gateway URL automatically.
 The stable client and API share the `styltsou.com` parent domain. Browser
 requests to `aska-api.styltsou.com` are therefore same-site, which avoids the
 third-party-cookie behavior that breaks cross-domain authentication in Safari.
-Better Auth keeps host-only secure cookies. To support local Vite against the
-cloud API, the stable `dev` stage alone uses `Secure`, `SameSite=None`, and
-`Partitioned` session cookies; the `hybrid` stage retains its existing cookie
-configuration. CORS and Better Auth continue to allow only the exact origins
-above. Safari can still block its third-party cookies, so use the HTTPS tunnel described in
+The stable stage shares Better Auth cookies only across the `styltsou.com`
+parent domain and limits their path to `/api/`, keeping them off static app and
+media requests. To support local Vite against the cloud API, that stage uses
+`Secure`, `SameSite=None`, and `Partitioned` session cookies; the `hybrid`
+stage retains its existing cookie configuration. CORS and Better Auth continue
+to allow only the exact origins above. Safari can still block its third-party
+cookies, so use the HTTPS tunnel described in
 [Cloudflare Tunnel hybrid development](./cloudflare-tunnel-hybrid-development.md)
 when Safari-compatible authentication is required.
 
@@ -310,7 +310,7 @@ or modify the `hybrid` SST stage.
 2. Upload an image in the browser. It follows this real path:
 
    ```text
-   browser -> API -> S3 ingest/ -> SNS -> variants SQS + palette SQS
+   browser -> API -> S3 {workspaceId}/{storageId}/original.* -> SNS -> variants SQS + palette SQS
            -> local worker callbacks -> API
    ```
 
@@ -344,11 +344,12 @@ for pull requests and pushes to `main`. After the checks pass for a push to
 `main`, the workflow deploys real Lambda code to the stable SST `dev` stage.
 
 The deployment job exchanges a GitHub OIDC token for short-lived AWS
-credentials and does not use AWS access keys. The CloudFront signing pair is
-the one exception to the existing SST-secret setup: GitHub Actions copies its
-two repository secrets into the stage-scoped SST secrets immediately before
-deployment. The AWS role trusts only the `styltsou/aska` repository's `main`
-branch.
+credentials and does not use AWS access keys. The CloudFront private signing
+key is the one exception to the existing SST-secret setup: GitHub Actions
+validates and copies it into the stage-scoped SST secret immediately before
+deployment. SST derives the public half, so independently configured key-pair
+secrets cannot drift. The AWS role trusts only the `styltsou/aska` repository's
+`main` branch.
 
 The job also requires these GitHub Actions repository secrets:
 
@@ -358,7 +359,6 @@ CLOUDFLARE_DEFAULT_ACCOUNT_ID
 CLOUDFLARE_ZONE_ID
 CLOUDFLARE_ACCESS_TEAM_DOMAIN
 CLOUDFLARE_ACCESS_AUD
-CLOUDFRONT_MEDIA_PUBLIC_KEY_BASE64
 CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64
 ```
 

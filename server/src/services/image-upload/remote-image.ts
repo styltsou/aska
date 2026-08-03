@@ -16,11 +16,12 @@ const contentTypeExtensions: Record<
 
 /** Creates the immutable ingest key while retaining a useful image extension. */
 export function makeOriginalObjectKey(
+  workspaceId: string,
   storageId: string,
   fileName: string,
   contentType: string,
 ): string {
-  return `ingest/${storageId}/original${extensionForImage(fileName, contentType)}`;
+  return `${workspaceId}/${storageId}/original${extensionForImage(fileName, contentType)}`;
 }
 
 /** Restricts remote imports to network URLs accepted by the fetch workflow. */

@@ -42,11 +42,16 @@ describe("remote image helpers", () => {
   });
 
   it("derives an original-object extension from the filename or content type", () => {
-    expect(makeOriginalObjectKey("upload-1", "Photo.JPEG", "image/jpeg")).toBe(
-      "ingest/upload-1/original.jpg",
-    );
-    expect(makeOriginalObjectKey("upload-1", "untitled", "image/gif")).toBe(
-      "ingest/upload-1/original.gif",
-    );
+    expect(
+      makeOriginalObjectKey(
+        "workspace-1",
+        "upload-1",
+        "Photo.JPEG",
+        "image/jpeg",
+      ),
+    ).toBe("workspace-1/upload-1/original.jpg");
+    expect(
+      makeOriginalObjectKey("workspace-1", "upload-1", "untitled", "image/gif"),
+    ).toBe("workspace-1/upload-1/original.gif");
   });
 });

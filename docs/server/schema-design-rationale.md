@@ -44,9 +44,9 @@ Image rendition metadata lives in `image_assets.variants` as JSONB because
 renditions are render-time metadata, not entities that need independent query
 patterns. Object storage keys are persisted there; public URLs are not stored.
 Read services build delivery URLs from those keys at response time. Generated
-`assets/` variants use stable CloudFront URLs in the deployed media stage;
-local/hybrid reads and deliberate original-file reads use short-lived S3
-presigned URLs. No delivery URL is stored in the database.
+Originals and variants use stable CloudFront URLs in the deployed media stage;
+local/hybrid reads use short-lived S3 presigned URLs. No delivery URL is stored
+in the database.
 
 ## Image Processing Is Asynchronous
 
@@ -56,9 +56,10 @@ independent `variant_status` and `palette_status` enrichment states. Separate
 SQS consumers generate variants and palette data from the original upload;
 neither worker waits for the other.
 
-S3 originals and generated variants use separate namespaces (`ingest/` and
-`assets/`). S3 notification rules match only `ingest/`, preventing generated
-variants from recursively scheduling more work.
+S3 objects use a workspace-owned namespace:
+`{workspaceId}/{storageId}/original.{extension}`, `display.webp`, and
+`preview.webp`. Workers accept only `original.*` event keys, preventing
+generated variants from recursively scheduling more work.
 
 ## Image Colors Support More Than Display
 

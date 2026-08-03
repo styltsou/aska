@@ -74,8 +74,15 @@ export async function sendCallback(payload: PipelineCallback) {
     throw new Error(`Pipeline callback failed with status ${response.status}`);
 }
 
-export function storageIdFromOriginalKey(objectKey: string): string {
-  const match = /^ingest\/([^/]+)\/original(?:\.[a-z0-9]+)?$/i.exec(objectKey);
-  if (!match) throw new Error("Invalid ingest object key");
-  return match[1]!;
+export function imageIdentityFromOriginalKey(objectKey: string): {
+  workspaceId: string;
+  storageId: string;
+} {
+  const match = /^([^/]+)\/([^/]+)\/original\.[a-z0-9]+$/i.exec(objectKey);
+  if (!match) throw new Error("Invalid original image object key");
+  return { workspaceId: match[1]!, storageId: match[2]! };
+}
+
+export function isOriginalImageObjectKey(objectKey: string): boolean {
+  return /^([^/]+)\/([^/]+)\/original\.[a-z0-9]+$/i.test(objectKey);
 }

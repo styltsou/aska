@@ -8,6 +8,7 @@ type CompletedPipelineResult = Extract<
 >;
 
 type PipelineUploadMetadata = {
+  organizationId: string;
   storageId: string;
   originalObjectKey: string;
   contentType: string;
@@ -29,7 +30,12 @@ export function validateCompletedPipelineResult(
 
   for (const variant of input.variants) {
     if (
-      variant.objectKey !== makeVariantObjectKey(upload.storageId, variant.role)
+      variant.objectKey !==
+      makeVariantObjectKey(
+        upload.organizationId,
+        upload.storageId,
+        variant.role,
+      )
     ) {
       throw new AppError(
         ErrorCode.VALIDATION_ERROR,
@@ -63,8 +69,9 @@ export function toStoredImageVariants(
 
 /** Returns the deterministic object key reserved for a generated rendition. */
 export function makeVariantObjectKey(
+  workspaceId: string,
   storageId: string,
   role: "display" | "preview",
 ): string {
-  return `assets/${storageId}/${role}.webp`;
+  return `${workspaceId}/${storageId}/${role}.webp`;
 }

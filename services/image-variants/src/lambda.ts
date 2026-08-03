@@ -10,7 +10,7 @@ import {
 } from "../../image-shared/src/observability";
 import {
   sendCallback,
-  storageIdFromOriginalKey,
+  imageIdentityFromOriginalKey,
 } from "../../image-shared/src/pipeline-callback";
 import { processImageVariants } from "./processor";
 import {
@@ -39,10 +39,12 @@ async function processVariants(source: SourceImage) {
 
   const bytes = await original.Body.transformToByteArray();
   const result = await processImageVariants(bytes);
-  const storageId = storageIdFromOriginalKey(source.objectKey);
+  const { workspaceId, storageId } = imageIdentityFromOriginalKey(
+    source.objectKey,
+  );
   const variants = await Promise.all(
     result.variants.map(async (variant) => {
-      const objectKey = `assets/${storageId}/${variant.role}.webp`;
+      const objectKey = `${workspaceId}/${storageId}/${variant.role}.webp`;
       await client.send(
         new PutObjectCommand({
           Bucket: source.bucket,

@@ -31,7 +31,15 @@ function createAuth() {
       // unchanged, while allowing Chrome to retain a local-Vite cloud session.
       ...(env.CROSS_SITE_AUTH_COOKIES
         ? {
+            crossSubDomainCookies: {
+              enabled: true,
+              // `configureEnv` requires this whenever this branch is enabled.
+              domain: env.AUTH_COOKIE_DOMAIN!,
+            },
             defaultCookieAttributes: {
+              // Every authenticated API route lives below /api. This keeps
+              // the shared cookie away from sibling static/media paths.
+              path: "/api/",
               sameSite: "none" as const,
               secure: true,
               partitioned: true,

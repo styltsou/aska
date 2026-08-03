@@ -1,25 +1,28 @@
 import { createSign } from "node:crypto";
 
+export const CLOUDFRONT_SIGNED_COOKIE_NAMES = [
+  "CloudFront-Policy",
+  "CloudFront-Signature",
+  "CloudFront-Key-Pair-Id",
+  "CloudFront-Hash-Algorithm",
+] as const;
+
 export type CloudFrontSignedCookieConfig = {
   mediaBaseUrl: string;
+  workspaceId: string;
   publicKeyId: string;
   privateKeyBase64: string;
   expiresInSeconds: number;
 };
 
 export type CloudFrontSignedCookie = {
-  name:
-    | "CloudFront-Policy"
-    | "CloudFront-Signature"
-    | "CloudFront-Key-Pair-Id"
-    | "CloudFront-Hash-Algorithm";
+  name: (typeof CLOUDFRONT_SIGNED_COOKIE_NAMES)[number];
   value: string;
 };
 
 /**
  * Creates the three CloudFront viewer cookies plus an explicit SHA-256 marker.
- * The custom policy is intentionally limited to generated renditions: original
- * uploads under ingest/ stay outside the media distribution's read contract.
+ * A cookie grants access only to one workspace's immutable image namespace.
  */
 export function createCloudFrontSignedCookies(
   config: CloudFrontSignedCookieConfig,
@@ -29,7 +32,7 @@ export function createCloudFrontSignedCookies(
   const policy = JSON.stringify({
     Statement: [
       {
-        Resource: `${config.mediaBaseUrl}/assets/*`,
+        Resource: `${config.mediaBaseUrl}/${config.workspaceId}/*`,
         Condition: { DateLessThan: { "AWS:EpochTime": expiresAt } },
       },
     ],

@@ -8,6 +8,7 @@ import {
   recordMessageDuration,
   runWithSpan,
 } from "./observability";
+import { isOriginalImageObjectKey } from "./pipeline-callback";
 
 const MAX_PROCESSING_ATTEMPTS = 5;
 
@@ -47,7 +48,7 @@ function sourcesFromS3Event(event: S3Event): SourceImage[] {
       originalEtag: record.s3.object.eTag,
       size: record.s3.object.size,
     };
-    return source.objectKey.startsWith("ingest/") && source.originalEtag
+    return isOriginalImageObjectKey(source.objectKey) && source.originalEtag
       ? [source]
       : [];
   });

@@ -9,15 +9,16 @@ import {
 } from "./pipeline-result";
 
 const upload = {
+  organizationId: "workspace-1",
   storageId: "upload-1",
-  originalObjectKey: "ingest/upload-1/original.jpg",
+  originalObjectKey: "workspace-1/upload-1/original.jpg",
   contentType: "image/jpeg",
   sizeBytes: 2000,
 };
 
 const displayVariant = {
   role: "display" as const,
-  objectKey: "assets/upload-1/display.webp",
+  objectKey: "workspace-1/upload-1/display.webp",
   width: 1200,
   height: 800,
   contentType: "image/webp" as const,
@@ -26,7 +27,7 @@ const displayVariant = {
 
 const previewVariant = {
   role: "preview" as const,
-  objectKey: "assets/upload-1/preview.webp",
+  objectKey: "workspace-1/upload-1/preview.webp",
   width: 400,
   height: 267,
   contentType: "image/webp" as const,
@@ -68,7 +69,7 @@ describe("completed image pipeline result", () => {
       validateCompletedPipelineResult(upload, {
         ...completedResult,
         variants: [
-          { ...displayVariant, objectKey: "assets/other/display.webp" },
+          { ...displayVariant, objectKey: "workspace-1/other/display.webp" },
           previewVariant,
         ],
       }),
@@ -78,7 +79,7 @@ describe("completed image pipeline result", () => {
   it("stores original metadata with the pipeline variants", () => {
     expect(toStoredImageVariants(upload, completedResult)).toEqual({
       original: {
-        objectKey: "ingest/upload-1/original.jpg",
+        objectKey: "workspace-1/upload-1/original.jpg",
         width: 1200,
         height: 800,
         contentType: "image/jpeg",
@@ -90,8 +91,8 @@ describe("completed image pipeline result", () => {
   });
 
   it("builds deterministic variant object keys", () => {
-    expect(makeVariantObjectKey("upload-1", "display")).toBe(
-      "assets/upload-1/display.webp",
+    expect(makeVariantObjectKey("workspace-1", "upload-1", "display")).toBe(
+      "workspace-1/upload-1/display.webp",
     );
   });
 });

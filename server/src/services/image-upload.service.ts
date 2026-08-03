@@ -114,6 +114,7 @@ export class ImageUploadService implements IImageUploadService {
     );
     const storageId = crypto.randomUUID();
     const objectKey = makeOriginalObjectKey(
+      orgId,
       storageId,
       data.fileName,
       data.contentType,
@@ -301,7 +302,12 @@ export class ImageUploadService implements IImageUploadService {
 
     const storageId = crypto.randomUUID();
     const fileName = fileNameFromRemoteImageUrl(remoteUrl, contentType);
-    const objectKey = makeOriginalObjectKey(storageId, fileName, contentType);
+    const objectKey = makeOriginalObjectKey(
+      orgId,
+      storageId,
+      fileName,
+      contentType,
+    );
     const [upload] = await db
       .insert(uploads)
       .values({

@@ -4,7 +4,7 @@ import type { ImagePipelineCallbackInput } from "@/dto/upload.dto";
 
 import { resolvePipelineCallbackAction } from "./callback-state";
 
-const originalObjectKey = "ingest/upload-1/original.jpg";
+const originalObjectKey = "workspace-1/upload-1/original.jpg";
 
 const processingInput = {
   event: "image.processing.started",
@@ -28,7 +28,7 @@ const completedInput = {
   variants: [
     {
       role: "display" as const,
-      objectKey: "assets/upload-1/display.webp",
+      objectKey: "workspace-1/upload-1/display.webp",
       width: 1200,
       height: 800,
       contentType: "image/webp" as const,
@@ -36,7 +36,7 @@ const completedInput = {
     },
     {
       role: "preview" as const,
-      objectKey: "assets/upload-1/preview.webp",
+      objectKey: "workspace-1/upload-1/preview.webp",
       width: 400,
       height: 267,
       contentType: "image/webp" as const,
@@ -46,7 +46,7 @@ const completedInput = {
 } satisfies ImagePipelineCallbackInput;
 
 describe("pipeline callback state machine", () => {
-  it("ignores unknown uploads and non-ingest callbacks", () => {
+  it("ignores unknown uploads and non-original callbacks", () => {
     expect(resolvePipelineCallbackAction(undefined, processingInput)).toEqual({
       type: "ignore",
       ignored: true,
@@ -54,7 +54,7 @@ describe("pipeline callback state machine", () => {
     expect(
       resolvePipelineCallbackAction(undefined, {
         ...processingInput,
-        originalObjectKey: "assets/upload-1/display.webp",
+        originalObjectKey: "workspace-1/upload-1/display.webp",
       }),
     ).toEqual({ type: "ignore", ignored: true });
   });

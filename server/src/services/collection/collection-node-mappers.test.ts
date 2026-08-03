@@ -34,7 +34,7 @@ describe("collection node mappers", () => {
         7,
         {
           preview: {
-            objectKey: "assets/7/preview.webp",
+            objectKey: "workspace-1/7/preview.webp",
             width: 200,
             height: 100,
             contentType: "image/webp",

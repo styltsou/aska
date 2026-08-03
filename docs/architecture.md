@@ -33,9 +33,9 @@ React/Vite client (CloudFront-backed static site in a deployment)
                                                      ├─ Drizzle ──> Neon/Postgres
                                                      └─ stable CloudFront URLs for generated reads
 
-S3 ingest/ object-created event
+S3 original.* object-created event
   -> SNS topic
-     ├─ SQS -> image-variants Lambda -> S3 assets/ -> signed API callback
+     ├─ SQS -> image-variants Lambda -> S3 workspace image variants -> signed API callback
      └─ SQS -> image-palette Lambda -------------> signed API callback
 ```
 
@@ -109,7 +109,7 @@ an endpoint. Every public API change must update `server/src/openapi.json`.
 
 Postgres/Drizzle is authoritative for application state. S3 is authoritative
 for immutable image bytes. The API stores generated object keys and builds
-stable CloudFront URLs for `assets/` reads; it never stores delivery URLs.
+stable CloudFront URLs for workspace image reads; it never stores delivery URLs.
 
 `assets` is the common record for archived content. `image_assets` and
 `note_assets` are concrete subtype tables. `folders` are separate organizational
@@ -127,7 +127,7 @@ tenant-scoped relation. The detailed reasons and query implications are in
 
 ```text
 create upload session + image asset + upload record (transaction)
-  -> browser PUTs original to ingest/{storageId}/
+  -> browser PUTs original to {workspaceId}/{storageId}/original.{extension}
   -> S3/SNS fan-out to independent SQS workers
   -> variants worker writes display/preview files and callbacks API
   -> palette worker writes search colors and callbacks API
@@ -160,8 +160,8 @@ structured service logs; normal method entry/exit logs do not.
 - Preserve the API envelope and OpenAPI contract together.
 - Preserve workspace/organization scoping in every query and mutation.
 - Keep browser upload bytes out of the API Lambda; use presigned S3 URLs.
-- Never let generated `assets/` objects trigger image work; only `ingest/`
-  events are inputs.
+- Never let generated variants trigger image work; workers accept only
+  `{workspaceId}/{storageId}/original.*` events.
 - Keep worker callbacks authenticated on their raw payload and idempotent.
 - Treat React Query as server state and keep optimistic transitions scoped to
   the cache keys they affect.

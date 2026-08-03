@@ -5,13 +5,14 @@ import { describe, expect, it } from "vitest";
 import { createCloudFrontSignedCookies } from "./cloudfront-signed-cookies";
 
 describe("createCloudFrontSignedCookies", () => {
-  it("signs an assets-only policy with CloudFront's URL-safe base64 alphabet", () => {
+  it("signs a workspace-only policy with CloudFront's URL-safe base64 alphabet", () => {
     const { privateKey, publicKey } = generateKeyPairSync("rsa", {
       modulusLength: 2048,
     });
     const cookies = createCloudFrontSignedCookies(
       {
         mediaBaseUrl: "https://images.example.com",
+        workspaceId: "workspace-1",
         publicKeyId: "KTEST123",
         privateKeyBase64: Buffer.from(
           privateKey.export({ type: "pkcs8", format: "pem" }),
@@ -30,7 +31,7 @@ describe("createCloudFrontSignedCookies", () => {
     expect(JSON.parse(policy)).toEqual({
       Statement: [
         {
-          Resource: "https://images.example.com/assets/*",
+          Resource: "https://images.example.com/workspace-1/*",
           Condition: { DateLessThan: { "AWS:EpochTime": 1_700_003_600 } },
         },
       ],

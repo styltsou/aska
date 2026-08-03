@@ -38,7 +38,7 @@ describe("ColorSearchService", () => {
           dominantColors: ["#d94732"],
           variants: {
             preview: {
-              objectKey: "assets/17/preview.webp",
+              objectKey: "workspace-1/17/preview.webp",
               width: 400,
               height: 267,
               contentType: "image/webp",
@@ -57,9 +57,9 @@ describe("ColorSearchService", () => {
     const createPresignedGetUrls = vi.fn().mockResolvedValue(
       new Map([
         [
-          "assets/17/preview.webp",
+          "workspace-1/17/preview.webp",
           {
-            key: "assets/17/preview.webp",
+            key: "workspace-1/17/preview.webp",
             url: "https://signed.example/17",
             expiresAt: new Date(),
           },
@@ -105,7 +105,7 @@ describe("ColorSearchService", () => {
       [17],
     );
     expect(createPresignedGetUrls).toHaveBeenCalledWith([
-      "assets/17/preview.webp",
+      "workspace-1/17/preview.webp",
     ]);
     expect(response.results).toMatchObject([
       {

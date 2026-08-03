@@ -7,7 +7,7 @@ import {
 } from "./upload.dto";
 
 const pipelineBase = {
-  originalObjectKey: "ingest/upload-1/original.jpg",
+  originalObjectKey: "workspace-1/upload-1/original.jpg",
   originalEtag: "etag-1",
 };
 
@@ -33,7 +33,7 @@ const completedCallback = {
   variants: [
     {
       role: "display" as const,
-      objectKey: "assets/upload-1/display.webp",
+      objectKey: "workspace-1/upload-1/display.webp",
       width: 1200,
       height: 800,
       contentType: "image/webp" as const,
@@ -41,7 +41,7 @@ const completedCallback = {
     },
     {
       role: "preview" as const,
-      objectKey: "assets/upload-1/preview.webp",
+      objectKey: "workspace-1/upload-1/preview.webp",
       width: 400,
       height: 267,
       contentType: "image/webp" as const,

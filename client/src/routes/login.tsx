@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  createFileRoute,
-  Link,
-  useNavigate,
-  useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { EyeIcon, EyeOffIcon, LoaderCircleIcon, LogInIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
@@ -39,7 +34,6 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const router = useRouter();
   const search = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -64,14 +58,24 @@ function LoginPage() {
     }
 
     clearAuthStateCache();
-    await router.invalidate();
+
+    // Verify the browser accepted the session cookie before navigating. Route
+    // invalidation here used to trigger a second login loader concurrently and
+    // could cache a transient null session for 30 seconds.
+    const destination = await getSignedInDestination();
+    if (destination.to === "/login") {
+      setError(
+        "Sign-in succeeded, but the browser did not retain the session. Please allow cookies for this site and try again.",
+      );
+      setIsSubmitting(false);
+      return;
+    }
 
     if (search.redirect?.startsWith("/")) {
       void navigate({ href: search.redirect, replace: true });
       return;
     }
 
-    const destination = await getSignedInDestination();
     void navigate({ ...destination, replace: true });
   }
 

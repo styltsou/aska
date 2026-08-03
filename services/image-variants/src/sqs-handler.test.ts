@@ -9,7 +9,7 @@ const sourceEvent = {
       s3: {
         bucket: { name: "aska-dev" },
         object: {
-          key: "ingest%2Fupload-1%2Foriginal.jpg",
+          key: "workspace-1%2Fupload-1%2Foriginal.jpg",
           eTag: "etag-1",
           size: 1234,
         },
@@ -99,7 +99,9 @@ describe("SQS image processor retry contract", () => {
 
     expect(result).toEqual({ batchItemFailures: [] });
     expect(process).toHaveBeenCalledWith(
-      expect.objectContaining({ objectKey: "ingest/upload-1/original.jpg" }),
+      expect.objectContaining({
+        objectKey: "workspace-1/upload-1/original.jpg",
+      }),
     );
   });
 
@@ -117,7 +119,9 @@ describe("SQS image processor retry contract", () => {
 
     expect(result).toEqual({ batchItemFailures: [] });
     expect(reportTerminalFailure).toHaveBeenCalledWith(
-      expect.objectContaining({ objectKey: "ingest/upload-1/original.jpg" }),
+      expect.objectContaining({
+        objectKey: "workspace-1/upload-1/original.jpg",
+      }),
       "sharp failed",
     );
   });
@@ -134,7 +138,9 @@ describe("SQS image processor retry contract", () => {
     expect(result).toEqual({ batchItemFailures: [] });
     expect(process).not.toHaveBeenCalled();
     expect(reportTerminalFailure).toHaveBeenCalledWith(
-      expect.objectContaining({ objectKey: "ingest/upload-1/original.jpg" }),
+      expect.objectContaining({
+        objectKey: "workspace-1/upload-1/original.jpg",
+      }),
       "Image processing failed before its terminal callback could be delivered",
     );
   });

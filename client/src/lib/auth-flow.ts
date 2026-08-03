@@ -4,6 +4,7 @@ import {
   type AuthSession,
   type Workspace,
 } from "@/lib/auth-client";
+import { ensureMediaSession } from "@/lib/media-session";
 
 export type AuthState = {
   session: AuthSession;
@@ -191,6 +192,13 @@ export async function requireWorkspace(
   if (requestedWorkspace.id !== state.activeWorkspace?.id) {
     await setActiveWorkspace(requestedWorkspace);
   }
+
+  // Establish CloudFront access before image-backed child routes render.
+  // Media delivery is ancillary, so a signing outage must not block notes or
+  // the rest of the authenticated workspace UI.
+  await ensureMediaSession(requestedWorkspace.slug).catch((error) => {
+    console.error("Unable to establish the media session", error);
+  });
 
   return {
     ...state,

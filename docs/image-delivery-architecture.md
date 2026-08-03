@@ -1,12 +1,12 @@
 # Image Delivery Architecture
 
-Generated image renditions are private S3 objects delivered through a dedicated
-CloudFront distribution. The delivery hostname is `images.styltsou.com` in the
-stable `dev` stage.
+Image originals and generated renditions are private S3 objects delivered
+through a dedicated CloudFront distribution. The delivery hostname is
+`images.styltsou.com` in the stable `dev` stage.
 
 ```text
 Canvas query
-  -> API returns https://images.styltsou.com/assets/{storageId}/display.webp
+  -> API returns https://images.styltsou.com/{workspaceId}/{storageId}/display.webp
   -> browser sends CloudFront signed cookies
   -> CloudFront validates the cookies and checks its cache
       -> cache hit: return rendition
@@ -19,12 +19,12 @@ The database stores object keys, never delivery URLs. A unique storage ID makes
 each generated rendition immutable:
 
 ```text
-ingest/{storageId}/original.{extension}
-assets/{storageId}/display.webp
-assets/{storageId}/preview.webp
+{workspaceId}/{storageId}/original.{extension}
+{workspaceId}/{storageId}/display.webp
+{workspaceId}/{storageId}/preview.webp
 ```
 
-The variants worker writes generated files with:
+Every key is immutable, so browser uploads and worker-generated files use:
 
 ```text
 Cache-Control: public, max-age=31536000, immutable
@@ -40,12 +40,17 @@ caches correct without invalidations.
 `sst.config.ts` creates the `images` distribution, an S3 Origin Access Control
 (OAC), a CloudFront public key and trusted key group, plus a cache policy that
 excludes cookies, headers, and query strings from the cache key. The bucket is
-not public and CloudFront can read only the `assets/` prefix.
+not public and CloudFront can read private workspace media through OAC.
 
-Authenticated API responses set short-lived, HTTP-only CloudFront cookies for
-the parent domain. Their policy permits `https://images.styltsou.com/assets/*`.
-CloudFront validates the cookies before it serves an object; the cookies do not
-fragment cache entries.
+Before an image-backed workspace route renders, the client calls the dedicated
+authenticated `POST /api/v1/media/session/{workspaceSlug}` endpoint. It
+verifies workspace membership and issues short-lived HTTP-only CloudFront
+cookies for the parent domain, scoped to `/{workspaceId}/`. The client
+deduplicates issuance per workspace and refreshes the active session shortly
+before its policy expires. CloudFront validates the cookies before it serves an
+object; the cookies do not fragment cache entries. Logout clears every current
+workspace cookie through `DELETE /api/v1/media/session` before revoking the
+Better Auth session.
 
 The media distribution is a delivery boundary, not an application
 authorization substitute. API endpoints continue to enforce user and
@@ -53,10 +58,9 @@ organization access before returning asset metadata.
 
 ## Read paths
 
-- Generated display and preview renditions use stable CloudFront URLs.
-- Browser uploads use presigned S3 **PUT** URLs to `ingest/`.
-- Original-file reads use short-lived presigned S3 **GET** URLs when a feature
-  explicitly needs them. `ingest/` is not served by the media distribution.
+- Original, display, and preview files use stable CloudFront URLs in the
+  deployed media stage.
+- Browser uploads use presigned S3 **PUT** URLs in their workspace namespace.
 - Local and hybrid development also use uncached, short-lived presigned S3 GET
   URLs because they have separate storage resources.
 
@@ -66,14 +70,15 @@ stable `dev` environment instead of being hidden by a fallback cache.
 
 ## Signing-key operations
 
-The CI deployment workflow reads these GitHub Actions repository secrets and
-writes them to the stage-scoped SST secrets before deployment:
+The CI deployment workflow reads one GitHub Actions repository secret and
+writes it to the stage-scoped SST secret before deployment:
 
 ```text
-CLOUDFRONT_MEDIA_PUBLIC_KEY_BASE64
 CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64
 ```
 
-The public key is registered in CloudFront; the API receives the private key
-and signs viewer cookies. Rotate both values together, then merge a change to
-`main` so CI deploys the replacement.
+CI validates that the secret is a canonical base64-encoded RSA-2048 private
+key. SST derives the matching public key from that private key and registers it
+with CloudFront; a mismatched key pair therefore cannot be deployed. The API
+receives the private key and signs viewer cookies. Rotate the private value,
+then merge a deployment-triggering change to `main`.

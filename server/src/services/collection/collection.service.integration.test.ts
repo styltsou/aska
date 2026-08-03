@@ -1044,7 +1044,7 @@ describe("ImageUploadService integration", () => {
       { name: "Upload Target" },
     );
     const storageId = randomUUID();
-    const originalObjectKey = `ingest/${storageId}/original.jpg`;
+    const originalObjectKey = `${fixture.organizationId}/${storageId}/original.jpg`;
     const [upload] = await db
       .insert(uploads)
       .values({
@@ -1075,7 +1075,7 @@ describe("ImageUploadService integration", () => {
       variants: [
         {
           role: "display",
-          objectKey: `assets/${storageId}/display.webp`,
+          objectKey: `${fixture.organizationId}/${storageId}/display.webp`,
           width: 1200,
           height: 800,
           contentType: "image/webp",
@@ -1083,7 +1083,7 @@ describe("ImageUploadService integration", () => {
         },
         {
           role: "preview",
-          objectKey: `assets/${storageId}/preview.webp`,
+          objectKey: `${fixture.organizationId}/${storageId}/preview.webp`,
           width: 400,
           height: 267,
           contentType: "image/webp",
@@ -1120,7 +1120,7 @@ describe("ImageUploadService integration", () => {
     const node = nodeRows[0];
 
     expect(image?.variants.display?.objectKey).toBe(
-      `assets/${storageId}/display.webp`,
+      `${fixture.organizationId}/${storageId}/display.webp`,
     );
     expect(node).toEqual({
       assetId: finalizedUpload!.assetId,

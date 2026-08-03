@@ -32,16 +32,22 @@ const MediaBaseUrl = z
   .url("MEDIA_BASE_URL must be a valid URL")
   .transform((value) => new URL(value).origin);
 
+function hostnameMatchesCookieDomain(
+  hostname: string,
+  cookieDomain: string,
+): boolean {
+  const parent = cookieDomain.startsWith(".")
+    ? cookieDomain.slice(1)
+    : cookieDomain;
+  return hostname === parent || hostname.endsWith(`.${parent}`);
+}
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(NODE_ENV_VALUES).default(NodeEnv.Development),
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
     LOG_SLOW_REQUEST_MS: z.coerce.number().int().min(0).default(1000),
     LOG_SUCCESS_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(1),
-    OTEL_ENABLED: z
-      .enum(["true", "false"])
-      .default("false")
-      .transform((value) => value === "true"),
     OTEL_SERVICE_NAME: z.string().min(1).default("aska-api"),
     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: z.url().optional(),
     OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: z.url().optional(),
@@ -58,6 +64,14 @@ const envSchema = z
       .enum(["true", "false"])
       .default("false")
       .transform((value) => value === "true"),
+    AUTH_COOKIE_DOMAIN: z
+      .string()
+      .trim()
+      .regex(/^\.[a-z0-9.-]+$/i, {
+        message:
+          "AUTH_COOKIE_DOMAIN must be a parent domain such as .example.com",
+      })
+      .optional(),
     CLOUDFLARE_ACCESS_TEAM_DOMAIN: CloudflareAccessTeamDomain.optional(),
     CLOUDFLARE_ACCESS_AUD: z.string().min(1).optional(),
     RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
@@ -128,6 +142,27 @@ const envSchema = z
     },
   )
   .refine(
+    (value) =>
+      !value.CROSS_SITE_AUTH_COOKIES || Boolean(value.AUTH_COOKIE_DOMAIN),
+    {
+      message:
+        "AUTH_COOKIE_DOMAIN is required when CROSS_SITE_AUTH_COOKIES is enabled",
+      path: ["AUTH_COOKIE_DOMAIN"],
+    },
+  )
+  .refine(
+    (value) =>
+      !value.AUTH_COOKIE_DOMAIN ||
+      hostnameMatchesCookieDomain(
+        new URL(value.BETTER_AUTH_URL).hostname,
+        value.AUTH_COOKIE_DOMAIN,
+      ),
+    {
+      message: "AUTH_COOKIE_DOMAIN must be a parent domain of BETTER_AUTH_URL",
+      path: ["AUTH_COOKIE_DOMAIN"],
+    },
+  )
+  .refine(
     (value) => {
       const mediaValues = [
         value.MEDIA_BASE_URL,
@@ -147,8 +182,9 @@ const envSchema = z
     (value) =>
       !value.MEDIA_BASE_URL ||
       !value.CLOUDFRONT_COOKIE_DOMAIN ||
-      new URL(value.MEDIA_BASE_URL).hostname.endsWith(
-        value.CLOUDFRONT_COOKIE_DOMAIN.slice(1),
+      hostnameMatchesCookieDomain(
+        new URL(value.MEDIA_BASE_URL).hostname,
+        value.CLOUDFRONT_COOKIE_DOMAIN,
       ),
     {
       message:

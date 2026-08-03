@@ -5,6 +5,7 @@
     "prepare": "git config core.hooksPath .githooks",
     "sst": "eval \"$(aws configure export-credentials --profile default --format env)\" && sst",
     "deploy": "bun run sst -- deploy",
+    "test:infra": "bun test infra",
     "dev:aws": "if [ \"$SST_STAGE\" != \"hybrid\" ]; then echo \"Run Live forwarding only as: SST_STAGE=hybrid bun run dev:aws\"; exit 1; fi; bun run sst -- dev --stage \"$SST_STAGE\"",
     "dev": "concurrently --kill-others-on-fail --names sst,vite --prefix-colors blue,magenta \"SST_STAGE=hybrid bun run dev:aws\" \"bun run --cwd client dev\"",
     "dev:cloud": "bun run --cwd client dev:cloud"

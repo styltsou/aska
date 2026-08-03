@@ -16,7 +16,10 @@ export function resolvePipelineCallbackAction(
   upload: PipelineCallbackUploadState | undefined,
   input: ImagePipelineCallbackInput,
 ): PipelineCallbackAction {
-  if (!upload || !input.originalObjectKey.startsWith("ingest/")) {
+  if (
+    !upload ||
+    !/^[^/]+\/[^/]+\/original\.[a-z0-9]+$/i.test(input.originalObjectKey)
+  ) {
     return { type: "ignore", ignored: true };
   }
 
