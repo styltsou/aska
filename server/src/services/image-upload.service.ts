@@ -465,11 +465,11 @@ export class ImageUploadService implements IImageUploadService {
         if (upload.assetId)
           await tx
             .update(imageAssets)
-            .set({
-              ...(input.event === "image.variants.failed"
+            .set(
+              input.event === "image.variants.failed"
                 ? { variantStatus: "failed", variantError: input.error }
-                : { paletteStatus: "failed", paletteError: input.error }),
-            })
+                : { paletteStatus: "failed", paletteError: input.error },
+            )
             .where(eq(imageAssets.assetId, upload.assetId));
       });
       return { ignored: false };
