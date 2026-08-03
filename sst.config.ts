@@ -1,5 +1,7 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
+import { deriveCloudFrontPublicKey } from "./infra/cloudfront-key";
+
 export default $config({
   app(input) {
     return {
@@ -24,8 +26,6 @@ export default $config({
     };
   },
   async run() {
-    const { deriveCloudFrontPublicKey } =
-      await import("./infra/cloudfront-key");
     const clientOrigins = {
       // Personal hybrid development: local Vite -> Live API Lambda -> AWS.
       hybrid: ["http://localhost:5173"],
