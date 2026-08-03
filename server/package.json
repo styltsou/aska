@@ -9,7 +9,7 @@
     "format": "oxfmt --check",
     "format:fix": "oxfmt --write",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "node ./node_modules/vitest/vitest.mjs run",
     "test:integration": "RUN_INTEGRATION_TESTS=true vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "lambda:typecheck": "tsc --noEmit -p tsconfig.lambda.json"
