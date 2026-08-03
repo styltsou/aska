@@ -122,8 +122,10 @@ The variants Lambda generates these non-upscaled WebP variants:
 object-key metadata. `blur_data_url` is a small inline WebP used while the
 display/preview resource decodes. The API builds delivery URLs from object
 keys at read time; it never stores public or expired signed URLs in the
-database. Workspace image variants use stable CloudFront URLs in the
-deployed media stage, while originals retain deliberate presigned S3 reads.
+database. Workspace originals and image variants use stable CloudFront URLs in
+the deployed media stage. Local and hybrid flows continue to use presigned S3
+reads. Each key is rooted at the immutable workspace ID, so the CloudFront
+signed-cookie policy can grant a single workspace prefix without URL churn.
 
 ## Palette Extraction and Search Data
 
@@ -203,9 +205,12 @@ IMAGE_PIPELINE_CALLBACK_SECRET
 ```
 
 Set the same random callback secret in both environments. The SST configuration
-creates the prefix-filtered S3-to-SQS route and the Lambda consumer. The pipeline
-rejects source objects above 20 MiB, so keep `MAX_DIRECT_UPLOAD_BYTES` at or
-below that value until the limit is made configurable.
+forwards private media object-created events to the queue and creates the Lambda
+consumer. The workspace ID is the first key segment, so a single static source
+prefix cannot match every workspace's originals; the consumer accepts only
+original-role keys and ignores generated variants. The pipeline rejects source
+objects above 20 MiB, so keep `MAX_DIRECT_UPLOAD_BYTES` at or below that value
+until the limit is made configurable.
 
 See [SST deployment](../sst-deployment.md) for deployment and local
 pipeline invocation.

@@ -45,9 +45,14 @@ coding agents.
 
 1. Keep the request-facing API responsible for authorization and durable upload
    state; do not move collection writes into the Worker.
-2. Use distinct S3 prefixes for source objects and generated objects.
-3. Configure S3 event notifications with the source prefix only, and give
-   independent processors separate queues when their retry behavior differs.
+2. Root objects under the immutable workspace ID, then an immutable asset ID
+   and role filename, such as `{workspaceId}/{storageId}/original.jpg` and
+   `{workspaceId}/{storageId}/display.webp`. This aligns object ownership with
+   tenant authorization and preserves stable rendition URLs.
+3. When the workspace ID is the leading key segment, forward object-created
+   events and make workers strictly accept only the original-role filename;
+   ignore generated roles to prevent recursive processing. Give independent
+   processors separate queues when their retry behavior differs.
 4. Authenticate Worker callbacks over the raw payload and make the persistence
    transaction idempotent.
 5. Persist search-oriented extraction data independently from UI display caches.

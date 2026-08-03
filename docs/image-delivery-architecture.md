@@ -16,7 +16,7 @@ Canvas query
 ## Object contract
 
 The database stores object keys, never delivery URLs. A unique storage ID makes
-each generated rendition immutable:
+each media representation immutable:
 
 ```text
 {workspaceId}/{storageId}/original.{extension}
@@ -24,11 +24,25 @@ each generated rendition immutable:
 {workspaceId}/{storageId}/preview.webp
 ```
 
+`workspaceId` is the immutable organization ID, not a mutable workspace slug.
+Putting it first is deliberate: the storage namespace is the same tenant
+boundary used for authorization, so a member's CloudFront policy can grant
+exactly `/{workspaceId}/*`. `storageId` is a unique immutable upload ID, and
+the sibling files are representations of the same asset with the same access
+boundary. Together, those choices give every rendition a permanent URL that is
+safe to cache indefinitely.
+
+The S3 key is not a folder or collection path. Folders and collections are
+database placement only. Moving an asset between them must not rename S3
+objects; that would invalidate cached URLs and turn a metadata change into a
+multi-object storage operation. A future cross-workspace transfer must instead
+copy or re-key all representations into the destination workspace namespace.
+
 Every key is immutable, so browser uploads and worker-generated files use:
 
 ```text
 Cache-Control: public, max-age=31536000, immutable
-Content-Type: image/webp
+Content-Type: source type for original.*; image/webp for variants
 ```
 
 Do not overwrite an existing rendition key. An edit or regeneration must write
@@ -44,13 +58,25 @@ not public and CloudFront can read private workspace media through OAC.
 
 Before an image-backed workspace route renders, the client calls the dedicated
 authenticated `POST /api/v1/media/session/{workspaceSlug}` endpoint. It
-verifies workspace membership and issues short-lived HTTP-only CloudFront
-cookies for the parent domain, scoped to `/{workspaceId}/`. The client
-deduplicates issuance per workspace and refreshes the active session shortly
-before its policy expires. CloudFront validates the cookies before it serves an
-object; the cookies do not fragment cache entries. Logout clears every current
+verifies workspace membership and issues a CloudFront custom-policy cookie for
+only `https://images.styltsou.com/{workspaceId}/*`. CloudFront custom policies
+have one resource scope, so the application mints one policy per authorized
+workspace rather than a broad media-wide policy. Cookies are short-lived,
+HTTP-only, `Secure`, `SameSite=Lax`, and use the parent domain with a
+`/{workspaceId}/` path. The parent domain is necessary because the API and CDN
+are sibling subdomains; the narrow path lets one browser hold separate
+same-named cookies for multiple open workspaces without cross-workspace media
+access. The client deduplicates issuance per workspace and refreshes the active
+session shortly before expiry. CloudFront validates the cookies before serving
+an object; they do not fragment cache entries. Logout clears every current
 workspace cookie through `DELETE /api/v1/media/session` before revoking the
 Better Auth session.
+
+The image worker receives media object-created events. Because the workspace ID
+is the top-level key segment, there is no single static source prefix that
+matches originals for every workspace. Events are therefore forwarded and the
+worker strictly accepts only `original.*` keys, ignoring `display.webp` and
+`preview.webp` writes so generated output cannot recursively trigger processing.
 
 The media distribution is a delivery boundary, not an application
 authorization substitute. API endpoints continue to enforce user and

@@ -109,8 +109,11 @@ stage-scoped SST secret. SST derives the matching public key, then creates the
 CloudFront trusted key group, origin access control, and
 `images.styltsou.com` distribution. The API receives the private key secret
 and issues HTTP-only signed cookies for one authorized workspace path through
-the dedicated media-session endpoint. Rotate by updating the private-key secret and merging a
-deployment-triggering change.
+the dedicated media-session endpoint. Media keys begin with the immutable
+workspace ID (`{workspaceId}/{storageId}/...`), so each cookie policy can grant
+only that workspace's `/{workspaceId}/*` path while originals and generated
+variants retain stable canonical URLs. Rotate by updating the private-key
+secret and merging a deployment-triggering change.
 
 Before the first CI deployment, create a Cloudflare API token scoped only to
 the `styltsou.com` zone with **Zone / DNS / Edit** and **Zone / Zone / Read**.

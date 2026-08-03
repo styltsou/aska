@@ -24,9 +24,18 @@ For the design rationale and tradeoffs, see
 }
 ```
 
-The database stores object keys, not public URLs. Read services return stable
-CloudFront URLs for generated display variants in the deployed media stage,
-and short-lived presigned S3 URLs for local/hybrid and original reads.
+The database stores object keys, not public URLs. In a deployed stage, read
+services return stable CloudFront URLs for originals and generated variants;
+access is granted by a workspace-scoped signed-cookie session rather than by
+embedding authorization in each URL. Local and hybrid environments use
+short-lived presigned S3 URLs instead.
+
+Every media key is rooted at the immutable workspace ID:
+`{workspaceId}/{storageId}/original.{extension}`,
+`{workspaceId}/{storageId}/display.webp`, and
+`{workspaceId}/{storageId}/preview.webp`. The key expresses ownership and
+access scope, not folder or collection location. Folder and collection moves
+update database placement only and never rename media objects.
 `image_assets.blur_data_url` stores the inline blurred WebP shown while those
 URLs decode.
 

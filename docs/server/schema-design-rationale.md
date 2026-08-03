@@ -43,8 +43,8 @@ known.
 Image rendition metadata lives in `image_assets.variants` as JSONB because
 renditions are render-time metadata, not entities that need independent query
 patterns. Object storage keys are persisted there; public URLs are not stored.
-Read services build delivery URLs from those keys at response time. Generated
-Originals and variants use stable CloudFront URLs in the deployed media stage;
+Read services build delivery URLs from those keys at response time. Originals
+and variants use stable CloudFront URLs in the deployed media stage, while
 local/hybrid reads use short-lived S3 presigned URLs. No delivery URL is stored
 in the database.
 
@@ -58,8 +58,12 @@ neither worker waits for the other.
 
 S3 objects use a workspace-owned namespace:
 `{workspaceId}/{storageId}/original.{extension}`, `display.webp`, and
-`preview.webp`. Workers accept only `original.*` event keys, preventing
-generated variants from recursively scheduling more work.
+`preview.webp`. The immutable workspace ID is the top-level key so a
+CloudFront policy can grant only `/{workspaceId}/*`; the immutable storage ID
+and role filenames keep each representation stable and cacheable. Collection
+and folder placement is database metadata, so ordinary moves do not rename S3
+objects. Workers accept only `original.*` event keys, preventing generated
+variants from recursively scheduling more work.
 
 ## Image Colors Support More Than Display
 

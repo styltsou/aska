@@ -96,7 +96,9 @@ the router/Vite tooling regenerate it when routes change.
   a mixed batch move must either commit every node or roll back every node.
 - Image workers expect at-least-once delivery. Make callbacks and writes
   idempotent, then let the shared SQS handler own retry policy.
-- Do not store signed S3 URLs. Persist object keys and sign on reads.
+- Do not store presigned or signed delivery URLs. Persist workspace-rooted
+  object keys and resolve delivery URLs on reads; deployed stages authorize
+  CloudFront access with workspace-scoped signed cookies.
 
 ## Verification
 

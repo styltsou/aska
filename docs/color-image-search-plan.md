@@ -662,7 +662,8 @@ than from a few manual examples.
 - Results are sorted best-first and stop at the adaptive relevance cutoff.
 - No result crosses workspace or requested placement boundaries.
 - Search reads `image_colors` and uses a verified indexed query plan.
-- Response image metadata and signed URLs are loaded in batches.
+- Response image metadata and delivery URLs are resolved in batches; deployed
+  media authorization remains in the workspace-scoped CloudFront cookie.
 - Ranking, threshold, scope isolation, and stable ordering are tested.
 - The checked-in OpenAPI document describes the endpoint.
 
