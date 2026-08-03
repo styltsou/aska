@@ -43,7 +43,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - run: ${{ matrix.command }}
+      - if: matrix.name == 'Server'
+        run: bun run lint
+      - if: matrix.name == 'Server'
+        run: bun run typecheck
+      - if: matrix.name == 'Server'
+        run: bun run format
+      - if: matrix.name == 'Server'
+        run: bun run test
+      - if: matrix.name != 'Server'
+        run: ${{ matrix.command }}
       - if: matrix.name == 'Server'
         run: bun run db:generate && git diff --exit-code
 
