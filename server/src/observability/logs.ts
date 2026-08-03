@@ -23,21 +23,10 @@ export function initializeLogs(): void {
 
   ensureContextManager();
 
-  if (env.OTEL_ENABLED && !env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT) {
-    console.warn(
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        severity_text: "WARN",
-        body: "OpenTelemetry is enabled but no OTLP logs endpoint is configured; logs will stay on stdout",
-        service_name: env.OTEL_SERVICE_NAME,
-      }),
-    );
-  }
-
   loggerProvider = new LoggerProvider({
     resource: buildOtelResource(),
     processors: [
-      env.OTEL_ENABLED && env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+      env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
         ? new BatchLogRecordProcessor({
             exporter: new OTLPLogExporter({
               url: env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,

@@ -27,7 +27,6 @@ propagation and log records carry the same trace context, so Grafana can
 navigate between a request log and its trace.
 
 ```dotenv
-OTEL_ENABLED=true
 OTEL_SERVICE_NAME=aska-api
 OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://<collector>/v1/traces
 OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=https://<collector>/v1/metrics
@@ -36,14 +35,14 @@ OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic%20<base64-instance-id:token>
 OTEL_TRACES_SAMPLE_RATIO=0.1
 ```
 
-The root `.env` file is the single source of truth for these variables. `sst.config.ts`
-reads them from the environment it runs in (which includes the root `.env`)
-and forwards them to the API and both image-processing worker Lambdas
-(`image-variants` and `image-palette`), so the same values apply to `sst dev`
-and `sst deploy` without duplication. The header value must be percent-encoded
-(`%20` for the space in `Basic <token>`), per the OTel spec; the exporters
-decode it before sending. Never put the authorization value in a checked-in
-environment file.
+The root `.env` file is the single source of truth for these variables in local
+and hybrid development. `sst.config.ts` reads them from the environment it runs
+in (which includes the root `.env`) and forwards them to the API and both
+image-processing worker Lambdas (`image-variants` and `image-palette`). The CI
+deploy workflow passes the same values through GitHub Actions secrets. The
+header value must be percent-encoded (`%20` for the space in `Basic <token>`),
+per the OTel spec; the exporters decode it before sending. Never put the
+authorization value in a checked-in environment file.
 
 For Grafana Cloud, use the OTLP gateway URL and credentials shown in its stack's
 OpenTelemetry setup page. For self-hosted Grafana, point the API at Grafana
@@ -51,11 +50,11 @@ Alloy (or another OpenTelemetry Collector), then have that collector send traces
 to Tempo and logs to Loki. Keeping the collector outside the application makes
 the logging and tracing code portable.
 
-When `OTEL_ENABLED` is false, or when a logs endpoint is not configured, log
-records are still emitted through the OTel Logs SDK but written to stdout as
-single-line JSON. Local development runs this path by default.
-
-The Lambda wrapper flushes spans and log records before an invocation
+To enable export, configure at least one OTLP endpoint. When no endpoint is
+configured, log records are still emitted through the OTel Logs SDK but written
+to stdout as single-line JSON. Every recorded trace, log, and metric is exported
+whenever its corresponding endpoint is present, so there is no separate on/off
+flag to forget. The Lambda wrapper flushes spans and log records before an invocation
 completes. If the collector is unavailable, the request still succeeds and an
 error is written to stdout. Use a short network path—normally a collector or
 ADOT extension in the same AWS environment—for the exporter endpoint.
@@ -63,7 +62,7 @@ ADOT extension in the same AWS environment—for the exporter endpoint.
 ## Metrics
 
 Metrics are exported as OTLP/HTTP to the endpoint in
-`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` when `OTEL_ENABLED` is true. They are
+`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` whenever it is configured. They are
 flushed alongside spans and logs before a Lambda invocation completes, so
 records reach the collector even on short-lived requests. If that endpoint is
 absent, a meter provider is still registered so the automatic undici histogram
@@ -114,7 +113,7 @@ Logs SDK and carry the message's trace context.
 ## Automatic instrumentation
 
 Both the API and the image workers register `@opentelemetry/instrumentation-undici`
-when `OTEL_ENABLED` is true. It instruments Node's built-in global `fetch` through
+whenever an OTLP traces endpoint is configured. It instruments Node's built-in global `fetch` through
 `diagnostics_channel` subscriptions, so every outbound HTTP call made with
 `fetch` — remote image downloads, pipeline callbacks, Resend, Better Auth —
 becomes a client span under the request or consumer span. It is intentionally

@@ -19,24 +19,12 @@ export function initializeMetrics(): void {
 
   ensureContextManager();
 
-  if (env.OTEL_ENABLED && !env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT) {
-    console.warn(
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        severity_text: "WARN",
-        body: "OpenTelemetry is enabled but no OTLP metrics endpoint is configured; metrics will not be exported",
-        service_name: env.OTEL_SERVICE_NAME,
-      }),
-    );
-  }
-
-  const exporter =
-    env.OTEL_ENABLED && env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
-      ? new OTLPMetricExporter({
-          url: env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
-          headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS),
-        })
-      : undefined;
+  const exporter = env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+    ? new OTLPMetricExporter({
+        url: env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
+        headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS),
+      })
+    : undefined;
 
   // Register a provider even when disabled so the automatic undici client
   // histogram and any manually recorded metrics resolve to real instruments

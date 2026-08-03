@@ -68,13 +68,12 @@ export function initializeObservability(serviceName: string): void {
     "service.name": serviceName,
     "deployment.environment.name": process.env.NODE_ENV ?? "development",
   });
-  const enabled = process.env.OTEL_ENABLED === "true";
   const tracesEndpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
   const logsEndpoint = process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT;
 
   tracerProvider = new NodeTracerProvider({
     resource,
-    ...(enabled && tracesEndpoint
+    ...(tracesEndpoint
       ? {
           sampler: new ParentBasedSampler({
             root: new TraceIdRatioBasedSampler(sampleRatio()),
@@ -100,7 +99,7 @@ export function initializeObservability(serviceName: string): void {
   const metricsEndpoint = process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT;
   meterProvider = new MeterProvider({
     resource,
-    ...(enabled && metricsEndpoint
+    ...(metricsEndpoint
       ? {
           readers: [
             new PeriodicExportingMetricReader({
@@ -118,9 +117,9 @@ export function initializeObservability(serviceName: string): void {
   });
   metrics.setGlobalMeterProvider(meterProvider);
 
-  // Auto-instrument Node's global fetch (pipeline callbacks, any outbound
+  // Auto-instrument Node's built-in fetch (pipeline callbacks, any outbound
   // call) with diagnostics-channel hooks. Bundling-safe: no require hooks.
-  if (enabled) {
+  if (tracesEndpoint) {
     registerInstrumentations({
       instrumentations: [new UndiciInstrumentation()],
     });
@@ -129,7 +128,7 @@ export function initializeObservability(serviceName: string): void {
   loggerProvider = new LoggerProvider({
     resource,
     processors: [
-      enabled && logsEndpoint
+      logsEndpoint
         ? new BatchLogRecordProcessor({
             exporter: new OTLPLogExporter({
               url: logsEndpoint,

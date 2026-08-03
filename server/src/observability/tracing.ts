@@ -40,43 +40,31 @@ export function initializeTracing(): void {
 
   ensureContextManager();
 
-  if (env.OTEL_ENABLED && !env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT) {
-    console.warn(
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        severity_text: "WARN",
-        body: "OpenTelemetry tracing is enabled but no OTLP traces endpoint is configured",
-        service_name: env.OTEL_SERVICE_NAME,
-      }),
-    );
-  }
-
-  const exporter =
-    env.OTEL_ENABLED && env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
-      ? new OTLPTraceExporter({
-          url: env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
-          headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS),
-        })
-      : undefined;
+  const exporter = env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+    ? new OTLPTraceExporter({
+        url: env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+        headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS),
+      })
+    : undefined;
   provider = new NodeTracerProvider({
     resource: buildOtelResource(),
-    ...(env.OTEL_ENABLED
+    ...(exporter
       ? {
           sampler: new ParentBasedSampler({
             root: new TraceIdRatioBasedSampler(env.OTEL_TRACES_SAMPLE_RATIO),
           }),
+          spanProcessors: [new BatchSpanProcessor(exporter)],
         }
       : {}),
-    ...(exporter ? { spanProcessors: [new BatchSpanProcessor(exporter)] } : {}),
   });
   // ensureContextManager already installed the context manager and the module
   // registered the W3C propagator, so skip both here.
   provider.register({ contextManager: null, propagator: null });
 
-  // Auto-instrument Node's global fetch with diagnostics-channel hooks. This
+  // Auto-instrument Node's built-in fetch with diagnostics-channel hooks. This
   // is bundling-safe (no require hooks) and adds a client span per outbound
   // call, e.g. remote image downloads, Resend, and Better Auth.
-  if (env.OTEL_ENABLED) {
+  if (exporter) {
     registerInstrumentations({
       instrumentations: [new UndiciInstrumentation()],
     });

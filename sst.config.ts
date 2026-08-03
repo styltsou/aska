@@ -1,4 +1,5 @@
 /// <reference path="./.sst/platform/config.d.ts" />
+
 export default $config({
   app(input) {
     return {
@@ -332,17 +333,10 @@ export default $config({
 function getObservabilityEnvironment(
   serviceName = "aska-api",
 ): Record<string, string> {
-  if (process.env.OTEL_ENABLED !== "true") return { OTEL_ENABLED: "false" };
   const endpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
-  if (!endpoint) {
-    throw new Error(
-      "OTEL_ENABLED=true requires OTEL_EXPORTER_OTLP_TRACES_ENDPOINT during deployment",
-    );
-  }
   return {
-    OTEL_ENABLED: "true",
     OTEL_SERVICE_NAME: serviceName,
-    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: endpoint,
+    ...(endpoint ? { OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: endpoint } : {}),
     ...(process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
       ? {
           OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
