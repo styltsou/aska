@@ -8,11 +8,11 @@
     "lint:fix": "oxlint . --fix",
     "format": "oxfmt --check",
     "format:fix": "oxfmt --write",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ./node_modules/typescript/bin/tsc --noEmit",
     "test": "node ./node_modules/vitest/vitest.mjs run",
     "test:integration": "RUN_INTEGRATION_TESTS=true vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
-    "lambda:typecheck": "tsc --noEmit -p tsconfig.lambda.json"
+    "lambda:typecheck": "node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.lambda.json"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1081.0",
