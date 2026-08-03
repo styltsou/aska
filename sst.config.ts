@@ -1,7 +1,5 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
-import { deriveCloudFrontPublicKey } from "./infra/cloudfront-key";
-
 export default $config({
   app(input) {
     return {
@@ -134,7 +132,7 @@ export default $config({
       },
     });
     const media = stableCloudDomains
-      ? createMediaDistribution({
+      ? await createMediaDistribution({
           assets,
           domain: "images.styltsou.com",
           dns: stableCloudDomains.mediaDns,
@@ -356,12 +354,13 @@ function getObservabilityEnvironment(
   };
 }
 
-function createMediaDistribution(input: {
+async function createMediaDistribution(input: {
   assets: sst.aws.Bucket;
   domain: string;
   dns: ReturnType<typeof sst.cloudflare.dns>;
   privateKeyBase64: $util.Input<string>;
 }) {
+  const { deriveCloudFrontPublicKey } = await import("./infra/cloudfront-key");
   const originAccessControl = new aws.cloudfront.OriginAccessControl(
     "MediaOriginAccessControl",
     {
