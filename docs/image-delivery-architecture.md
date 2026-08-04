@@ -62,7 +62,7 @@ verifies workspace membership and issues a CloudFront custom-policy cookie for
 only `https://images.styltsou.com/{workspaceId}/*`. CloudFront custom policies
 have one resource scope, so the application mints one policy per authorized
 workspace rather than a broad media-wide policy. Cookies are short-lived,
-HTTP-only, `Secure`, `SameSite=Lax`, and use the parent domain with a
+HTTP-only, `Secure`, `SameSite=None`, and use the parent domain with a
 `/{workspaceId}/` path. The parent domain is necessary because the API and CDN
 are sibling subdomains; the narrow path lets one browser hold separate
 same-named cookies for multiple open workspaces without cross-workspace media
@@ -71,6 +71,11 @@ session shortly before expiry. CloudFront validates the cookies before serving
 an object; they do not fragment cache entries. Logout clears every current
 workspace cookie through `DELETE /api/v1/media/session` before revoking the
 Better Auth session.
+
+`SameSite=None` keeps the deployed application working as a normal same-site
+flow while allowing the supported `dev:cloud` localhost client to send media
+cookies to the CDN. Browsers that block all third-party cookies still need the
+same-site HTTPS tunnel workflow for local browser testing.
 
 The image worker receives media object-created events. Because the workspace ID
 is the top-level key segment, there is no single static source prefix that

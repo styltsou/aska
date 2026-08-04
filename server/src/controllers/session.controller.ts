@@ -79,7 +79,11 @@ export const issueMediaSession = factory.createHandlers(
         httpOnly: true,
         path: mediaCookiePath(workspace.id),
         secure: true,
-        sameSite: "lax",
+        // The stable app is same-site with the media host. `None` also lets
+        // the supported localhost dev:cloud client send these cookies to the
+        // CDN; browsers that block third-party cookies should use the HTTPS
+        // tunnel workflow instead.
+        sameSite: "none",
       });
     }
 
