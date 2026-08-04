@@ -339,22 +339,10 @@ export default $config({
 function getObservabilityEnvironment(
   serviceName = "aska-api",
 ): Record<string, string> {
-  const endpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
+  const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
   return {
     OTEL_SERVICE_NAME: serviceName,
-    ...(endpoint ? { OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: endpoint } : {}),
-    ...(process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
-      ? {
-          OTEL_EXPORTER_OTLP_LOGS_ENDPOINT:
-            process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,
-        }
-      : {}),
-    ...(process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
-      ? {
-          OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:
-            process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
-        }
-      : {}),
+    ...(endpoint ? { OTEL_EXPORTER_OTLP_ENDPOINT: endpoint } : {}),
     ...(process.env.OTEL_EXPORTER_OTLP_HEADERS
       ? { OTEL_EXPORTER_OTLP_HEADERS: process.env.OTEL_EXPORTER_OTLP_HEADERS }
       : {}),

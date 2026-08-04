@@ -11,6 +11,7 @@ import {
   ensureContextManager,
   parseOtlpHeaders,
 } from "@/observability/config";
+import { getOtlpSignalEndpoint } from "@/observability/otlp-endpoint";
 
 let meterProvider: MeterProvider | undefined;
 
@@ -19,9 +20,13 @@ export function initializeMetrics(): void {
 
   ensureContextManager();
 
-  const exporter = env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+  const endpoint = getOtlpSignalEndpoint(
+    env.OTEL_EXPORTER_OTLP_ENDPOINT,
+    "metrics",
+  );
+  const exporter = endpoint
     ? new OTLPMetricExporter({
-        url: env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
+        url: endpoint,
         headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS),
       })
     : undefined;

@@ -25,6 +25,7 @@ import {
   parseOtlpHeaders,
 } from "@/observability/config";
 import { recordHttpRequestDuration } from "@/observability/metrics";
+import { getOtlpSignalEndpoint } from "@/observability/otlp-endpoint";
 import { LoggerService } from "@/services/logger.service";
 
 const tracer = trace.getTracer("aska.api");
@@ -40,9 +41,13 @@ export function initializeTracing(): void {
 
   ensureContextManager();
 
-  const exporter = env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+  const endpoint = getOtlpSignalEndpoint(
+    env.OTEL_EXPORTER_OTLP_ENDPOINT,
+    "traces",
+  );
+  const exporter = endpoint
     ? new OTLPTraceExporter({
-        url: env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+        url: endpoint,
         headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS),
       })
     : undefined;

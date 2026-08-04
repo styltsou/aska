@@ -28,9 +28,7 @@ navigate between a request log and its trace.
 
 ```dotenv
 OTEL_SERVICE_NAME=aska-api
-OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://<collector>/v1/traces
-OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=https://<collector>/v1/metrics
-OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=https://<collector>/v1/logs
+OTEL_EXPORTER_OTLP_ENDPOINT=https://<collector>
 OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic%20<base64-instance-id:token>
 OTEL_TRACES_SAMPLE_RATIO=0.1
 ```
@@ -50,19 +48,19 @@ Alloy (or another OpenTelemetry Collector), then have that collector send traces
 to Tempo and logs to Loki. Keeping the collector outside the application makes
 the logging and tracing code portable.
 
-To enable export, configure at least one OTLP endpoint. When no endpoint is
+To enable export, configure the OTLP base endpoint. When no endpoint is
 configured, log records are still emitted through the OTel Logs SDK but written
 to stdout as single-line JSON. Every recorded trace, log, and metric is exported
-whenever its corresponding endpoint is present, so there is no separate on/off
-flag to forget. The Lambda wrapper flushes spans and log records before an invocation
+through the derived signal endpoint, so there is no separate on/off flag to
+forget. The Lambda wrapper flushes spans and log records before an invocation
 completes. If the collector is unavailable, the request still succeeds and an
 error is written to stdout. Use a short network path—normally a collector or
 ADOT extension in the same AWS environment—for the exporter endpoint.
 
 ## Metrics
 
-Metrics are exported as OTLP/HTTP to the endpoint in
-`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` whenever it is configured. They are
+Metrics are exported as OTLP/HTTP to the derived `/v1/metrics` endpoint
+whenever `OTEL_EXPORTER_OTLP_ENDPOINT` is configured. They are
 flushed alongside spans and logs before a Lambda invocation completes, so
 records reach the collector even on short-lived requests. If that endpoint is
 absent, a meter provider is still registered so the automatic undici histogram
@@ -113,7 +111,7 @@ Logs SDK and carry the message's trace context.
 ## Automatic instrumentation
 
 Both the API and the image workers register `@opentelemetry/instrumentation-undici`
-whenever an OTLP traces endpoint is configured. It instruments Node's built-in global `fetch` through
+whenever an OTLP base endpoint is configured. It instruments Node's built-in global `fetch` through
 `diagnostics_channel` subscriptions, so every outbound HTTP call made with
 `fetch` — remote image downloads, pipeline callbacks, Resend, Better Auth —
 becomes a client span under the request or consumer span. It is intentionally

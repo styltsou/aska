@@ -15,6 +15,7 @@ import {
   ensureContextManager,
   parseOtlpHeaders,
 } from "@/observability/config";
+import { getOtlpSignalEndpoint } from "@/observability/otlp-endpoint";
 
 let loggerProvider: LoggerProvider | undefined;
 
@@ -23,13 +24,18 @@ export function initializeLogs(): void {
 
   ensureContextManager();
 
+  const endpoint = getOtlpSignalEndpoint(
+    env.OTEL_EXPORTER_OTLP_ENDPOINT,
+    "logs",
+  );
+
   loggerProvider = new LoggerProvider({
     resource: buildOtelResource(),
     processors: [
-      env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+      endpoint
         ? new BatchLogRecordProcessor({
             exporter: new OTLPLogExporter({
-              url: env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,
+              url: endpoint,
               headers: parseOtlpHeaders(env.OTEL_EXPORTER_OTLP_HEADERS),
             }),
           })

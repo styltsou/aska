@@ -68,8 +68,8 @@ export function initializeObservability(serviceName: string): void {
     "service.name": serviceName,
     "deployment.environment.name": process.env.NODE_ENV ?? "development",
   });
-  const tracesEndpoint = process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT;
-  const logsEndpoint = process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT;
+  const tracesEndpoint = getOtlpSignalEndpoint("traces");
+  const logsEndpoint = getOtlpSignalEndpoint("logs");
 
   tracerProvider = new NodeTracerProvider({
     resource,
@@ -96,7 +96,7 @@ export function initializeObservability(serviceName: string): void {
   // Register the meter provider before auto-instrumentation so the undici
   // histogram binds to it. A provider is registered even when disabled; with
   // no reader configured instruments are simply discarded.
-  const metricsEndpoint = process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT;
+  const metricsEndpoint = getOtlpSignalEndpoint("metrics");
   meterProvider = new MeterProvider({
     resource,
     ...(metricsEndpoint
@@ -230,6 +230,17 @@ function sampleRatio(): number {
   return Number.isFinite(configured) && configured >= 0 && configured <= 1
     ? configured
     : 1;
+}
+
+function getOtlpSignalEndpoint(
+  signal: "traces" | "metrics" | "logs",
+): string | undefined {
+  const baseEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+  if (!baseEndpoint) return undefined;
+
+  const endpoint = new URL(baseEndpoint);
+  endpoint.pathname = `${endpoint.pathname.replace(/\/+$/, "")}/v1/${signal}`;
+  return endpoint.toString();
 }
 
 function parseOtlpHeaders(value: string | undefined): Record<string, string> {
