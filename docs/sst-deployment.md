@@ -89,31 +89,24 @@ images.styltsou.com    -> Cloudflare DNS-only -> private CloudFront media
 ### 3. CloudFront media signing keys
 
 The stable media distribution requires an RSA-2048 key pair. Generate the
-private key locally, then add its base64-encoded value as a GitHub Actions
-repository secret. Keep the unencoded private PEM out of the repository:
+private key locally and store its base64-encoded value as an SST secret for the
+`dev` stage. Keep the unencoded private PEM out of the repository:
 
 ```sh
 openssl genrsa -out cloudfront-media-private.pem 2048
 openssl base64 -A -in cloudfront-media-private.pem
 ```
 
-In **GitHub → Settings → Secrets and variables → Actions**, create this
-repository secret from that command output:
-
-```text
-CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64
-```
-
-The `deploy-dev` workflow validates the key before copying it into the
-stage-scoped SST secret. SST derives the matching public key, then creates the
-CloudFront trusted key group, origin access control, and
-`images.styltsou.com` distribution. The API receives the private key secret
-and issues HTTP-only signed cookies for one authorized workspace path through
-the dedicated media-session endpoint. Media keys begin with the immutable
-workspace ID (`{workspaceId}/{storageId}/...`), so each cookie policy can grant
-only that workspace's `/{workspaceId}/*` path while originals and generated
-variants retain stable canonical URLs. Rotate by updating the private-key
-secret and merging a deployment-triggering change.
+Set `CloudFrontMediaPrivateKeyBase64` from that command output before the first
+deployment. SST derives the matching public key, then creates the CloudFront
+trusted key group, origin access control, and `images.styltsou.com`
+distribution. The API receives the private key secret and issues HTTP-only
+signed cookies for one authorized workspace path through the dedicated
+media-session endpoint. Media keys begin with the immutable workspace ID
+(`{workspaceId}/{storageId}/...`), so each cookie policy can grant only that
+workspace's `/{workspaceId}/*` path while originals and generated variants
+retain stable canonical URLs. Rotate by updating the SST secret, then merging a
+deployment-triggering change.
 
 Before the first CI deployment, create a Cloudflare API token scoped only to
 the `styltsou.com` zone with **Zone / DNS / Edit** and **Zone / Zone / Read**.
@@ -194,6 +187,8 @@ bun run sst -- secret set DatabaseUrl 'your Neon connection URL' --stage dev
 bun run sst -- secret set BetterAuthSecret 'your existing Better Auth secret' --stage dev
 bun run sst -- secret set ResendApiKey 'your Resend API key' --stage dev
 bun run sst -- secret set ImagePipelineCallbackSecret 'a random 32+ character secret' --stage dev
+bun run sst -- secret set CloudFrontMediaPrivateKeyBase64 'base64-encoded RSA-2048 private key' --stage dev
+bun run sst -- secret set GrafanaOtlpHeaders 'Authorization=Basic%20<base64-instance-id:token>' --stage dev
 ```
 
 ### What each value configures
@@ -204,6 +199,8 @@ bun run sst -- secret set ImagePipelineCallbackSecret 'a random 32+ character se
 | `BetterAuthSecret`            | `BETTER_AUTH_SECRET` in the API                  | Signs/encrypts Better Auth data                      |
 | `ResendApiKey`                | `RESEND_API_KEY` in the API                      | Sends transactional email                            |
 | `ImagePipelineCallbackSecret` | `IMAGE_PIPELINE_CALLBACK_SECRET` in both Lambdas | The pipeline signs its callback; the API verifies it |
+| `CloudFrontMediaPrivateKeyBase64` | `CLOUDFRONT_PRIVATE_KEY_BASE64` in the API    | Signs CloudFront viewer cookies                      |
+| `GrafanaOtlpHeaders`          | `OTEL_EXPORTER_OTLP_HEADERS` in all Lambdas      | Authenticates telemetry export to Grafana Cloud      |
 
 There is only one image-pipeline callback secret. The same SST secret is passed
 to both functions under the same `IMAGE_PIPELINE_CALLBACK_SECRET` name. Do not
@@ -347,12 +344,10 @@ for pull requests and pushes to `main`. After the checks pass for a push to
 `main`, the workflow deploys real Lambda code to the stable SST `dev` stage.
 
 The deployment job exchanges a GitHub OIDC token for short-lived AWS
-credentials and does not use AWS access keys. The CloudFront private signing
-key is the one exception to the existing SST-secret setup: GitHub Actions
-validates and copies it into the stage-scoped SST secret immediately before
-deployment. SST derives the public half, so independently configured key-pair
-secrets cannot drift. The AWS role trusts only the `styltsou/aska` repository's
-`main` branch.
+credentials and does not use AWS access keys. Runtime secrets, including the
+CloudFront private key and Grafana authorization header, are stage-scoped SST
+secrets set separately from CI. The AWS role trusts only the
+`styltsou/aska` repository's `main` branch.
 
 The job also requires these GitHub Actions repository secrets:
 
@@ -362,7 +357,6 @@ CLOUDFLARE_DEFAULT_ACCOUNT_ID
 CLOUDFLARE_ZONE_ID
 CLOUDFLARE_ACCESS_TEAM_DOMAIN
 CLOUDFLARE_ACCESS_AUD
-CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64
 ```
 
 The token has the same narrowly scoped permissions listed in the Cloudflare

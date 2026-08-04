@@ -1,5 +1,8 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
+const GRAFANA_CLOUD_OTLP_ENDPOINT =
+  "https://otlp-gateway-prod-eu-north-0.grafana.net/otlp";
+
 export default $config({
   app(input) {
     return {
@@ -72,7 +75,13 @@ export default $config({
     const cloudFrontPrivateKey = stableCloudDomains
       ? new sst.Secret("CloudFrontMediaPrivateKeyBase64")
       : undefined;
-    const observabilityEnvironment = getObservabilityEnvironment();
+    const grafanaOtlpHeaders = stableCloudDomains
+      ? new sst.Secret("GrafanaOtlpHeaders")
+      : undefined;
+    const observabilityEnvironment = getObservabilityEnvironment(
+      "aska-api",
+      grafanaOtlpHeaders?.value,
+    );
     const cloudflareAccessEnvironment = stableCloudDomains
       ? getCloudflareAccessEnvironment()
       : {};
@@ -273,7 +282,10 @@ export default $config({
         copyFiles: imageWorkerFiles("image-variants"),
         environment: {
           ...imageWorkerEnvironment,
-          ...getObservabilityEnvironment("image-variants"),
+          ...getObservabilityEnvironment(
+            "image-variants",
+            grafanaOtlpHeaders?.value,
+          ),
         },
       },
       {
@@ -290,7 +302,10 @@ export default $config({
         copyFiles: imageWorkerFiles("image-palette"),
         environment: {
           ...imageWorkerEnvironment,
-          ...getObservabilityEnvironment("image-palette"),
+          ...getObservabilityEnvironment(
+            "image-palette",
+            grafanaOtlpHeaders?.value,
+          ),
         },
       },
       {
@@ -338,15 +353,17 @@ export default $config({
 });
 function getObservabilityEnvironment(
   serviceName = "aska-api",
-): Record<string, string> {
-  const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+  headers?: $util.Input<string>,
+): Record<string, $util.Input<string>> {
   return {
     OTEL_SERVICE_NAME: serviceName,
-    ...(endpoint ? { OTEL_EXPORTER_OTLP_ENDPOINT: endpoint } : {}),
-    ...(process.env.OTEL_EXPORTER_OTLP_HEADERS
-      ? { OTEL_EXPORTER_OTLP_HEADERS: process.env.OTEL_EXPORTER_OTLP_HEADERS }
+    ...(headers
+      ? {
+          OTEL_EXPORTER_OTLP_ENDPOINT: GRAFANA_CLOUD_OTLP_ENDPOINT,
+          OTEL_EXPORTER_OTLP_HEADERS: headers,
+        }
       : {}),
-    OTEL_TRACES_SAMPLE_RATIO: process.env.OTEL_TRACES_SAMPLE_RATIO ?? "1",
+    OTEL_TRACES_SAMPLE_RATIO: "1",
   };
 }
 

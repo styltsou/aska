@@ -89,19 +89,6 @@ jobs:
           aws-region: eu-central-1
           role-to-assume: arn:aws:iam::089972278413:role/aska-github-actions-deploy
           role-session-name: aska-github-actions-deploy
-      - name: Validate CloudFront media signing key
-        run: bun infra/validate-cloudfront-private-key.ts
-        env:
-          CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64: ${{ secrets.CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64 }}
-      - name: Sync CloudFront media signing key to SST
-        run: bunx sst secret set CloudFrontMediaPrivateKeyBase64 "$CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64" --stage dev
-        env:
-          CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64: ${{ secrets.CLOUDFRONT_MEDIA_PRIVATE_KEY_BASE64 }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
-          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
-          CLOUDFLARE_ACCESS_TEAM_DOMAIN: ${{ secrets.CLOUDFLARE_ACCESS_TEAM_DOMAIN }}
-          CLOUDFLARE_ACCESS_AUD: ${{ secrets.CLOUDFLARE_ACCESS_AUD }}
       - name: Deploy SST dev stage
         run: bunx sst deploy --stage dev
         env:
@@ -110,6 +97,3 @@ jobs:
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
           CLOUDFLARE_ACCESS_TEAM_DOMAIN: ${{ secrets.CLOUDFLARE_ACCESS_TEAM_DOMAIN }}
           CLOUDFLARE_ACCESS_AUD: ${{ secrets.CLOUDFLARE_ACCESS_AUD }}
-          OTEL_SERVICE_NAME: ${{ secrets.OTEL_SERVICE_NAME }}
-          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}

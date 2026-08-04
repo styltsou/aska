@@ -33,14 +33,14 @@ OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic%20<base64-instance-id:token>
 OTEL_TRACES_SAMPLE_RATIO=0.1
 ```
 
-The root `.env` file is the single source of truth for these variables in local
-and hybrid development. `sst.config.ts` reads them from the environment it runs
-in (which includes the root `.env`) and forwards them to the API and both
-image-processing worker Lambdas (`image-variants` and `image-palette`). The CI
-deploy workflow passes the same values through GitHub Actions secrets. The
-header value must be percent-encoded (`%20` for the space in `Basic <token>`),
-per the OTel spec; the exporters decode it before sending. Never put the
-authorization value in a checked-in environment file.
+`server/.env` configures local API development. The deployed `dev` stage uses
+the Grafana endpoint declared in `sst.config.ts` and the stage-scoped
+`GrafanaOtlpHeaders` SST secret, which is injected into the API and both
+image-processing worker Lambdas (`image-variants` and `image-palette`). CI
+never receives those runtime values. The header value must be percent-encoded
+(`%20` for the space in `Basic <token>`), per the OTel spec; the exporters
+decode it before sending. Never put the authorization value in a checked-in
+environment file.
 
 For Grafana Cloud, use the OTLP gateway URL and credentials shown in its stack's
 OpenTelemetry setup page. For self-hosted Grafana, point the API at Grafana
