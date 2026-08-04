@@ -81,7 +81,7 @@ describe("collection node mappers", () => {
     });
   });
 
-  it("falls back from preview to display and then the original image", () => {
+  it("falls back from preview to the original image", () => {
     const imageVariants = new Map([
       [
         7,
