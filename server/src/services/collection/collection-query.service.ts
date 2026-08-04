@@ -171,7 +171,10 @@ export class CollectionQueryService {
 
       if (row.assetType === "image") {
         const variants = imageVariants.get(row.assetId);
-        const url = variants?.preview?.url;
+        const url =
+          variants?.preview?.url ??
+          variants?.display?.url ??
+          variants?.original?.url;
         if (url)
           preview = {
             assetId: `image-${row.assetId}`,

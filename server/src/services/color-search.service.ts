@@ -78,7 +78,10 @@ export class ColorSearchService implements IColorSearchService {
     );
     const resultVariants = selected.flatMap((result) => {
       const image = metadataByAssetId.get(result.assetId);
-      const variant = image?.variants.preview ?? image?.variants.display;
+      const variant =
+        image?.variants.preview ??
+        image?.variants.display ??
+        image?.variants.original;
       return variant ? [variant] : [];
     });
     const signedUrls = await this.objectStorageService.createPresignedGetUrls(
@@ -88,7 +91,10 @@ export class ColorSearchService implements IColorSearchService {
     const results = selected.flatMap((result) => {
       const image = metadataByAssetId.get(result.assetId);
       const scopedImage = scopeByAssetId.get(result.assetId);
-      const variant = image?.variants.preview ?? image?.variants.display;
+      const variant =
+        image?.variants.preview ??
+        image?.variants.display ??
+        image?.variants.original;
       const signed = variant ? signedUrls.get(variant.objectKey) : undefined;
       if (!image || !scopedImage || !variant || !signed) return [];
 

@@ -431,11 +431,12 @@ export class AssetService implements IAssetService {
 
     for (const row of rows) {
       if (row.assetType === "image") {
-        const display = row.imageVariants?.display;
-        if (!display?.objectKey) continue;
+        const rendition =
+          row.imageVariants?.display ?? row.imageVariants?.original;
+        if (!rendition?.objectKey) continue;
 
         const [signed, originalSigned] = await Promise.all([
-          this.objectStorageService.createPresignedGetUrl(display.objectKey),
+          this.objectStorageService.createPresignedGetUrl(rendition.objectKey),
           row.imageVariants?.original?.objectKey
             ? this.objectStorageService.createPresignedGetUrl(
                 row.imageVariants.original.objectKey,
@@ -449,8 +450,8 @@ export class AssetService implements IAssetService {
           originalUrl: originalSigned?.url,
           originalWidth: row.imageVariants?.original?.width,
           originalHeight: row.imageVariants?.original?.height,
-          width: display.width,
-          height: display.height,
+          width: rendition.width,
+          height: rendition.height,
           title: row.title,
           alt: row.imageAlt,
           sourceLabel: row.sourceLabel,
@@ -458,7 +459,7 @@ export class AssetService implements IAssetService {
           isFavorite: row.isFavorite,
           blurDataURL: row.imageBlurDataURL,
           dominantColors: row.imageDominantColors ?? undefined,
-          sizeBytes: display.sizeBytes,
+          sizeBytes: rendition.sizeBytes,
           createdAt: row.createdAt.toISOString(),
           position: null,
         } satisfies CollectionImageNode);

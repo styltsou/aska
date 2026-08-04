@@ -33,7 +33,8 @@ export function toFolderPreview(
   imageVariants: ImageVariantLookup,
 ): FolderChildPreview {
   const variants = row.assetId ? imageVariants.get(row.assetId) : undefined;
-  const previewUrl = variants?.preview?.url ?? variants?.original?.url;
+  const previewUrl =
+    variants?.preview?.url ?? variants?.display?.url ?? variants?.original?.url;
   if (row.assetType === "image" && previewUrl) {
     return {
       assetId: `image-${row.assetId}`,

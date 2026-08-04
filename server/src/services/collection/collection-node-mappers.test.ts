@@ -81,6 +81,40 @@ describe("collection node mappers", () => {
     });
   });
 
+  it("falls back from preview to display and then the original image", () => {
+    const imageVariants = new Map([
+      [
+        7,
+        {
+          original: {
+            objectKey: "workspace-1/7/original.jpg",
+            width: 1200,
+            height: 800,
+            contentType: "image/jpeg",
+            sizeBytes: 1_000,
+            url: "https://example.test/original.jpg",
+          },
+        },
+      ],
+    ]);
+
+    expect(
+      toFolderPreview(
+        {
+          folderId: 1,
+          assetType: "image",
+          assetId: 7,
+          color: null,
+          content: null,
+        },
+        imageVariants,
+      ),
+    ).toMatchObject({
+      type: "image",
+      url: "https://example.test/original.jpg",
+    });
+  });
+
   it("normalizes and bounds note snippets", () => {
     expect(makeSnippet("  One\n two  ")).toBe("One two");
     expect(makeSnippet("abcdef", 4)).toBe("abcd…");
