@@ -48,7 +48,7 @@ The shared `dev` stage is never a Live stage. See
 | Collection/canvas behavior | collection service and canvas/board client code | placement/move invariants, [Collection Canvas](./collection-canvas.md), and [Canvas Placement Policy](./placement-policy.md) |
 | Image ingestion/enrichment | upload service, callback contract, a worker | idempotency, queue retries, signed callback, pipeline docs |
 | Infrastructure/configuration | `sst.config.ts` and environment schema | AWS workflow, secret handling, deployed client origins |
-| Logs/traces | logger, tracing middleware, meaningful service boundary | [Observability](./server/observability.md), PII/redaction, sampling |
+| Errors/logs/traces | Sentry integration, logger, meaningful service boundary | [Observability](./server/observability.md), PII/redaction, sampling |
 
 Avoid broad refactors while delivering a feature unless the refactor is needed
 to preserve an invariant or safely implement the feature. Keep unrelated

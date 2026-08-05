@@ -50,8 +50,8 @@ it safely. Start here rather than reconstructing architecture from file names.
 - [Image Delivery Architecture](./image-delivery-architecture.md) — private,
   workspace-scoped CloudFront delivery for originals and generated renditions
   with stable URLs backed by immutable S3 keys.
-- [Observability](./server/observability.md) — structured logs, trace context,
-  OTLP configuration, and logging policy.
+- [Observability](./server/observability.md) — Sentry errors, traces, logs,
+  metrics, replay, source maps, and privacy policy.
 - [Scaffold Recipes](./server/scaffold-recipes.md) — repeatable backend work.
 
 ## Documentation standard

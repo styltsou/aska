@@ -1,8 +1,8 @@
 import type { SQSBatchResponse, SQSHandler, S3Event } from "aws-lambda";
-import type { Span } from "@opentelemetry/api";
+import * as Sentry from "@sentry/aws-serverless";
 
 import {
-  flushObservability,
+  captureException,
   log,
   markSpanError,
   recordMessageDuration,
@@ -108,6 +108,11 @@ export function createSqsHandler({
                 error: String(callbackError),
               });
               markSpanError(span, callbackError);
+              captureException(callbackError, {
+                pipeline,
+                messageId: message.messageId,
+                attempts,
+              });
               batchItemFailures.push({ itemIdentifier: message.messageId });
             }
             outcome = "error";
@@ -130,6 +135,11 @@ export function createSqsHandler({
               error: detail,
             });
             markSpanError(span, error);
+            captureException(error, {
+              pipeline,
+              messageId: message.messageId,
+              attempts,
+            });
             outcome = "error";
 
             if (attempts < MAX_PROCESSING_ATTEMPTS) {
@@ -148,6 +158,12 @@ export function createSqsHandler({
                 messageId: message.messageId,
                 error: String(callbackError),
               });
+              markSpanError(span, callbackError);
+              captureException(callbackError, {
+                pipeline,
+                messageId: message.messageId,
+                attempts,
+              });
               batchItemFailures.push({ itemIdentifier: message.messageId });
             }
           }
@@ -159,11 +175,5 @@ export function createSqsHandler({
     return { batchItemFailures };
   };
 
-  return async (event) => {
-    try {
-      return await handle(event);
-    } finally {
-      await flushObservability();
-    }
-  };
+  return Sentry.wrapHandler(handle, { flushTimeout: 2_000 });
 }

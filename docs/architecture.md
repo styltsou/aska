@@ -147,10 +147,10 @@ Current image-delivery behavior is documented in
 ## Observability and operations
 
 The API emits one structured JSON record for a completed request, with
-`request_id`, W3C trace IDs, route template, status, duration, and severity.
+`request_id`, Sentry trace IDs, route template, status, duration, and severity.
 It does not log bodies, query strings, raw paths, headers, or secrets. Tracing
-is opt-in OTLP/HTTP and is backend-neutral: use Grafana Alloy/Tempo/Loki,
-another collector, or only CloudWatch JSON logs.
+and error monitoring use Sentry across the browser, API, and image workers;
+CloudWatch retains the same structured server and worker logs as a fallback.
 
 Read [Observability](./server/observability.md) before adding logs or changing
 deployment telemetry. Important domain outcomes and external failures deserve

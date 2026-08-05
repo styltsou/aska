@@ -1,25 +1,11 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-
-import {
-  logs,
-  SeverityNumber,
-  type LogAttributes,
-} from "@opentelemetry/api-logs";
+import * as Sentry from "@sentry/hono/node";
 
 const LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
 
 type LogLevel = (typeof LOG_LEVELS)[number];
 type LogContext = {
   requestId?: string;
-  traceId?: string;
-  spanId?: string;
-};
-
-const SEVERITY: Record<LogLevel, SeverityNumber> = {
-  debug: SeverityNumber.DEBUG,
-  info: SeverityNumber.INFO,
-  warn: SeverityNumber.WARN,
-  error: SeverityNumber.ERROR,
 };
 
 const contextStorage = new AsyncLocalStorage<LogContext>();
@@ -63,22 +49,47 @@ export class LoggerService implements ILoggerService {
     if (!shouldLog(level)) return;
 
     const activeContext = contextStorage.getStore();
-    const attributes: LogAttributes = {};
+    const attributes: Record<string, unknown> = {};
     if (activeContext?.requestId)
       attributes.request_id = activeContext.requestId;
     if (meta && Object.keys(meta).length > 0) {
-      Object.assign(attributes, sanitize(meta) as LogAttributes);
+      Object.assign(attributes, sanitize(meta) as Record<string, unknown>);
     }
 
-    // The trace context is attached by the SDK from the active span, which the
-    // request tracing middleware sets around every request.
-    logs.getLogger("aska.api").emit({
-      severityNumber: SEVERITY[level],
-      severityText: level.toUpperCase(),
-      body: message,
-      attributes,
-    });
+    Sentry.logger[level](message, attributes);
+
+    const spanContext = Sentry.getActiveSpan()?.spanContext();
+    write(
+      level,
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        severity_text: level.toUpperCase(),
+        body: message,
+        service_name: process.env.SENTRY_SERVICE ?? "aska-api",
+        deployment_environment:
+          process.env.SENTRY_ENVIRONMENT ??
+          process.env.NODE_ENV ??
+          "development",
+        ...(activeContext?.requestId
+          ? { request_id: activeContext.requestId }
+          : {}),
+        ...(spanContext
+          ? {
+              trace_id: spanContext.traceId,
+              span_id: spanContext.spanId,
+            }
+          : {}),
+        ...(Object.keys(attributes).length > 0 ? { attributes } : {}),
+      }),
+    );
   }
+}
+
+function write(level: LogLevel, output: string): void {
+  if (level === "error") console.error(output);
+  else if (level === "warn") console.warn(output);
+  else if (level === "debug") console.debug(output);
+  else console.info(output);
 }
 
 function shouldLog(level: LogLevel): boolean {

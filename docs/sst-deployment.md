@@ -191,7 +191,7 @@ bun run sst -- secret set ResendApiKey 'your Resend API key' --stage dev
 bun run sst -- secret set ImagePipelineCallbackSecret 'a random 32+ character secret' --stage dev
 bun run sst -- secret set CloudFrontMediaPrivateKeyBase64 'base64-encoded RSA-2048 private key' --stage dev
 bun run sst -- secret set CloudFrontMediaPublicKey 'SPKI PEM public key matching the private key' --stage dev
-bun run sst -- secret set GrafanaOtlpHeaders 'Authorization=Basic%20<base64-instance-id:token>' --stage dev
+bun run sst -- secret set SentryDsn 'https://public-key@o0.ingest.sentry.io/project-id' --stage dev
 ```
 
 ### What each value configures
@@ -204,7 +204,7 @@ bun run sst -- secret set GrafanaOtlpHeaders 'Authorization=Basic%20<base64-inst
 | `ImagePipelineCallbackSecret` | `IMAGE_PIPELINE_CALLBACK_SECRET` in both Lambdas | The pipeline signs its callback; the API verifies it |
 | `CloudFrontMediaPrivateKeyBase64` | `CLOUDFRONT_PRIVATE_KEY_BASE64` in the API    | Signs CloudFront viewer cookies                      |
 | `CloudFrontMediaPublicKey`    | CloudFront `PublicKey` resource                    | Verifies signed cookies at the edge; generated once with the private key |
-| `GrafanaOtlpHeaders`          | `OTEL_EXPORTER_OTLP_HEADERS` in all Lambdas      | Authenticates telemetry export to Grafana Cloud      |
+| `SentryDsn`                  | Sentry DSN in the client, API, and workers       | Routes application telemetry to the Sentry project  |
 
 There is only one image-pipeline callback secret. The same SST secret is passed
 to both functions under the same `IMAGE_PIPELINE_CALLBACK_SECRET` name. Do not
@@ -220,6 +220,7 @@ bun run sst -- secret set DatabaseUrl 'a disposable development database URL' --
 bun run sst -- secret set BetterAuthSecret 'a distinct random 32+ character secret' --stage hybrid
 bun run sst -- secret set ResendApiKey 'your development Resend key' --stage hybrid
 bun run sst -- secret set ImagePipelineCallbackSecret 'a distinct random 32+ character secret' --stage hybrid
+bun run sst -- secret set SentryDsn 'your Sentry project DSN' --stage hybrid
 ```
 
 Do not copy production credentials into a Live stage. A personal stage creates
@@ -349,8 +350,8 @@ for pull requests and pushes to `main`. After the checks pass for a push to
 
 The deployment job exchanges a GitHub OIDC token for short-lived AWS
 credentials and does not use AWS access keys. Runtime secrets, including the
-CloudFront private key and Grafana authorization header, are stage-scoped SST
-secrets set separately from CI. The AWS role trusts only the
+CloudFront private key and Sentry DSN, are stage-scoped SST secrets set
+separately from CI. The AWS role trusts only the
 `styltsou/aska` repository's `main` branch.
 
 The job also requires these GitHub Actions repository secrets:
@@ -361,7 +362,14 @@ CLOUDFLARE_DEFAULT_ACCOUNT_ID
 CLOUDFLARE_ZONE_ID
 CLOUDFLARE_ACCESS_TEAM_DOMAIN
 CLOUDFLARE_ACCESS_AUD
+SENTRY_AUTH_TOKEN
+SENTRY_ORG
+SENTRY_PROJECT
 ```
+
+The Sentry auth token is build-only and uploads browser source maps. The
+workflow sets `SENTRY_RELEASE` from the deployed Git commit so the client, API,
+workers, and uploaded artifacts share one release identifier.
 
 The token has the same narrowly scoped permissions listed in the Cloudflare
 setup section. It is used only by the deploy step to reconcile application and

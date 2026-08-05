@@ -4,10 +4,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 
-import {
-  initializeObservability,
-  log,
-} from "../../image-shared/src/observability";
+import { initializeSentry, log } from "../../image-shared/src/observability";
 import {
   sendCallback,
   imageIdentityFromOriginalKey,
@@ -18,7 +15,7 @@ import {
   type SourceImage,
 } from "../../image-shared/src/sqs-handler";
 
-initializeObservability("image-variants");
+initializeSentry("image-variants");
 
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 const client = new S3Client({});

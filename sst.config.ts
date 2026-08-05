@@ -1,8 +1,5 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
-const GRAFANA_CLOUD_OTLP_ENDPOINT =
-  "https://otlp-gateway-prod-eu-north-0.grafana.net/otlp";
-
 export default $config({
   app(input) {
     return {
@@ -69,6 +66,7 @@ export default $config({
     const imagePipelineCallbackSecret = new sst.Secret(
       "ImagePipelineCallbackSecret",
     );
+    const sentryDsn = new sst.Secret("SentryDsn");
     // The private key signs CloudFront cookies at runtime; the public key
     // verifies them at the edge. They are generated together once and stored
     // as two secrets, so deployment never needs to re-derive one from the
@@ -79,12 +77,9 @@ export default $config({
     const cloudFrontPublicKey = stableCloudDomains
       ? new sst.Secret("CloudFrontMediaPublicKey")
       : undefined;
-    const grafanaOtlpHeaders = stableCloudDomains
-      ? new sst.Secret("GrafanaOtlpHeaders")
-      : undefined;
-    const observabilityEnvironment = getObservabilityEnvironment(
+    const sentryEnvironment = getSentryEnvironment(
       "aska-api",
-      grafanaOtlpHeaders?.value,
+      sentryDsn.value,
     );
     const cloudflareAccessEnvironment = stableCloudDomains
       ? getCloudflareAccessEnvironment()
@@ -192,7 +187,12 @@ export default $config({
         : {}),
       cors: {
         allowCredentials: true,
-        allowHeaders: ["Content-Type", "Authorization"],
+        allowHeaders: [
+          "Content-Type",
+          "Authorization",
+          "Baggage",
+          "Sentry-Trace",
+        ],
         allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allowOrigins: allowedClientOrigins,
       },
@@ -203,7 +203,9 @@ export default $config({
       memory: "1024 MB",
       timeout: "29 seconds",
       link: [assets],
+      nodejs: { sourcemap: true },
       environment: {
+        NODE_OPTIONS: "--enable-source-maps",
         NODE_ENV: stableCloudDomains ? "production" : "development",
         LOG_LEVEL: process.env.LOG_LEVEL ?? "info",
         LOG_SLOW_REQUEST_MS: process.env.LOG_SLOW_REQUEST_MS ?? "1000",
@@ -233,7 +235,7 @@ export default $config({
           : {}),
         MAX_DIRECT_UPLOAD_BYTES: "20971520",
         ...cloudflareAccessEnvironment,
-        ...observabilityEnvironment,
+        ...sentryEnvironment,
       },
     });
     const imageWorkerFiles = (service: "image-variants" | "image-palette") => [
@@ -263,6 +265,7 @@ export default $config({
       },
     ];
     const imageWorkerEnvironment = {
+      NODE_OPTIONS: "--enable-source-maps",
       NODE_ENV: stableCloudDomains ? "production" : "development",
       PIPELINE_API_BASE_URL: api.url,
       IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
@@ -273,6 +276,7 @@ export default $config({
       timeout: "120 seconds" as const,
       link: [assets],
       nodejs: {
+        sourcemap: true,
         // Sharp is native code. Keep it external to esbuild and package the
         // Linux runtime installed by Bun, rather than SST's npm-based
         // `nodejs.install` helper.
@@ -286,10 +290,7 @@ export default $config({
         copyFiles: imageWorkerFiles("image-variants"),
         environment: {
           ...imageWorkerEnvironment,
-          ...getObservabilityEnvironment(
-            "image-variants",
-            grafanaOtlpHeaders?.value,
-          ),
+          ...getSentryEnvironment("image-variants", sentryDsn.value),
         },
       },
       {
@@ -306,10 +307,7 @@ export default $config({
         copyFiles: imageWorkerFiles("image-palette"),
         environment: {
           ...imageWorkerEnvironment,
-          ...getObservabilityEnvironment(
-            "image-palette",
-            grafanaOtlpHeaders?.value,
-          ),
+          ...getSentryEnvironment("image-palette", sentryDsn.value),
         },
       },
       {
@@ -341,6 +339,13 @@ export default $config({
         : {}),
       environment: {
         VITE_SERVER_URL: api.url,
+        VITE_SENTRY_DSN: sentryDsn.value,
+        VITE_SENTRY_ENVIRONMENT: $app.stage,
+        VITE_SENTRY_TRACES_SAMPLE_RATE:
+          process.env.SENTRY_TRACES_SAMPLE_RATE ?? "0.2",
+        ...(process.env.SENTRY_RELEASE
+          ? { VITE_SENTRY_RELEASE: process.env.SENTRY_RELEASE }
+          : {}),
       },
     });
     return {
@@ -355,19 +360,19 @@ export default $config({
     };
   },
 });
-function getObservabilityEnvironment(
-  serviceName = "aska-api",
-  headers?: $util.Input<string>,
+function getSentryEnvironment(
+  serviceName: string,
+  dsn: $util.Input<string>,
 ): Record<string, $util.Input<string>> {
   return {
-    OTEL_SERVICE_NAME: serviceName,
-    ...(headers
-      ? {
-          OTEL_EXPORTER_OTLP_ENDPOINT: GRAFANA_CLOUD_OTLP_ENDPOINT,
-          OTEL_EXPORTER_OTLP_HEADERS: headers,
-        }
+    SENTRY_DSN: dsn,
+    SENTRY_SERVICE: serviceName,
+    SENTRY_ENVIRONMENT: $app.stage,
+    SENTRY_TRACES_SAMPLE_RATE:
+      process.env.SENTRY_TRACES_SAMPLE_RATE ?? "0.2",
+    ...(process.env.SENTRY_RELEASE
+      ? { SENTRY_RELEASE: process.env.SENTRY_RELEASE }
       : {}),
-    OTEL_TRACES_SAMPLE_RATIO: "1",
   };
 }
 

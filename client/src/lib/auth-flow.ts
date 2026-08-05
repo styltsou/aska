@@ -1,4 +1,5 @@
 import { redirect, type ParsedLocation } from "@tanstack/react-router";
+import * as Sentry from "@sentry/react";
 import {
   authClient,
   type AuthSession,
@@ -128,8 +129,11 @@ async function readAuthState() {
   // or a concurrent session cleanup). Treat an incomplete response exactly
   // like a signed-out state instead of allowing consumers to dereference it.
   if (!session?.session || !session.user) {
+    Sentry.setUser(null);
     return null;
   }
+
+  Sentry.setUser({ id: session.user.id });
 
   let workspaces: Workspace[];
   try {

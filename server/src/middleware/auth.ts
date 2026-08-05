@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/hono/node";
+
 import { auth } from "@/lib/auth";
 import { AppError, ErrorCode } from "@/lib/errors";
 
@@ -19,6 +21,7 @@ export const authMiddleware = factory.createMiddleware(async (c, next) => {
   c.set("user", session.user);
   c.set("userId", session.user.id);
   c.set("activeOrganizationId", session.session.activeOrganizationId ?? null);
+  Sentry.setUser({ id: session.user.id });
 
   await next();
 });

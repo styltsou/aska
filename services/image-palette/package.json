@@ -9,15 +9,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1081.0",
-    "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/api-logs": "^0.221.0",
-    "@opentelemetry/core": "^2.10.0",
-    "@opentelemetry/exporter-logs-otlp-http": "^0.221.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.221.0",
-    "@opentelemetry/resources": "^2.10.0",
-    "@opentelemetry/sdk-logs": "^0.221.0",
-    "@opentelemetry/sdk-trace-base": "^2.10.0",
-    "@opentelemetry/sdk-trace-node": "^2.10.0",
+    "@sentry/aws-serverless": "^10.69.0",
     "sharp": "^0.35.3"
   },
   "devDependencies": {

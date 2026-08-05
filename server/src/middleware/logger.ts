@@ -10,7 +10,7 @@ export const requestLogger = factory.createMiddleware(async (c, next) => {
 
   let thrown: unknown;
   try {
-    await next();
+    await loggerService.runWithContext({ requestId }, next);
   } catch (error) {
     thrown = error;
     throw error;

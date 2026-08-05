@@ -1,4 +1,5 @@
 import { Scalar } from "@scalar/hono-api-reference";
+import { sentry } from "@sentry/hono/node";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { requestId } from "hono/request-id";
@@ -10,26 +11,23 @@ import { factory } from "@/factory";
 import { auth } from "@/lib/auth";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { errorResponse } from "@/lib/response";
-import {
-  cloudflareAccess,
-  requestLogger,
-  requestTracing,
-  securityHeaders,
-} from "@/middleware";
+import { cloudflareAccess, requestLogger, securityHeaders } from "@/middleware";
 import { getOpenApiSpec } from "@/openapi";
 import { apiRoutes } from "@/routes";
 
 const baseApp = factory.createApp();
 const { healthService, loggerService } = container;
 
+baseApp.use(sentry(baseApp));
+
 baseApp.use(
   "*",
   cors({
     origin: (origin) =>
       env.CORS_ORIGINS.includes(origin) ? origin : undefined,
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "Baggage", "Sentry-Trace"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    exposeHeaders: ["Content-Length", "X-Request-Id", "Traceparent"],
+    exposeHeaders: ["Content-Length", "X-Request-Id"],
     maxAge: 600,
     credentials: true,
   }),
@@ -37,7 +35,6 @@ baseApp.use(
 
 baseApp.use("*", securityHeaders);
 baseApp.use("*", requestId());
-baseApp.use("*", requestTracing);
 baseApp.use("*", requestLogger);
 baseApp.use("*", cloudflareAccess);
 

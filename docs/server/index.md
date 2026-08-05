@@ -16,7 +16,7 @@ OpenAPI documentation, and Scalar API docs.
 - `server/src/dto`: Zod request schemas and inferred request types.
 - `server/src/db/schema`: Drizzle schema and inferred database row types.
 - `server/src/lib`: shared backend primitives and reusable feature libraries.
-- `server/src/observability`: OTLP tracer setup and trace lifecycle.
+- `server/src/instrument.ts`: Sentry initialization and privacy defaults.
 - `server/src/openapi.json`: source-controlled OpenAPI document.
 
 ## Core Conventions
@@ -95,10 +95,11 @@ IMAGE_PIPELINE_CALLBACK_SECRET
 LOG_LEVEL
 LOG_SLOW_REQUEST_MS
 LOG_SUCCESS_SAMPLE_RATIO
-OTEL_SERVICE_NAME
-OTEL_EXPORTER_OTLP_ENDPOINT
-OTEL_EXPORTER_OTLP_HEADERS
-OTEL_TRACES_SAMPLE_RATIO
+SENTRY_DSN
+SENTRY_SERVICE
+SENTRY_ENVIRONMENT
+SENTRY_RELEASE
+SENTRY_TRACES_SAMPLE_RATE
 TEST_DATABASE_URL
 ```
 
@@ -126,10 +127,10 @@ GET /docs
 
 ```txt
 Request
+  -> Sentry request scope + trace
   -> CORS
   -> Security headers
   -> Request ID
-  -> W3C request trace + trace context
   -> Request logger
   -> Better Auth routes or API routes
   -> Zod validation
