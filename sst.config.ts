@@ -1,4 +1,4 @@
-import "./.sst/platform/config.d.ts";
+/// <reference path="./.sst/platform/config.d.ts" />
 
 const GRAFANA_CLOUD_OTLP_ENDPOINT =
   "https://otlp-gateway-prod-eu-north-0.grafana.net/otlp";
