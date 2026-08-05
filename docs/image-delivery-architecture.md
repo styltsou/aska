@@ -101,9 +101,10 @@ stable `dev` environment instead of being hidden by a fallback cache.
 
 ## Signing-key operations
 
-`CloudFrontMediaPrivateKeyBase64` is an SST secret, set directly for each
-stage before the first deployment. SST derives and registers the matching
-public key from that private key, so a mismatched key pair cannot be deployed.
-The API receives the private key and signs viewer cookies. Rotate the SST
-secret, then merge a deployment-triggering change to `main`; GitHub Actions
-does not store or copy this runtime key.
+`CloudFrontMediaPrivateKeyBase64` and `CloudFrontMediaPublicKey` are SST
+secrets, set directly for each stage before the first deployment. The public
+key is registered with CloudFront and verifies at the edge; the private key is
+never uploaded to CloudFront. The API receives the private key and signs viewer
+cookies. Rotate both secrets together (the public key must match the private
+key), then merge a deployment-triggering change to `main`; GitHub Actions does
+not store or copy this runtime key.

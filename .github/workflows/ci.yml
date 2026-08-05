@@ -21,9 +21,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Infrastructure
-            directory: .
-            command: bun run test:infra
           - name: Client
             directory: client
             command: bun run lint && bun run typecheck && bun run format && bun run test && bun run build

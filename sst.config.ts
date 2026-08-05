@@ -1,4 +1,4 @@
-/// <reference path="./.sst/platform/config.d.ts" />
+import "./.sst/platform/config.d.ts";
 
 const GRAFANA_CLOUD_OTLP_ENDPOINT =
   "https://otlp-gateway-prod-eu-north-0.grafana.net/otlp";
@@ -69,11 +69,15 @@ export default $config({
     const imagePipelineCallbackSecret = new sst.Secret(
       "ImagePipelineCallbackSecret",
     );
-    // The private key is the single source of truth. Its public key is derived
-    // during deployment for CloudFront, eliminating mismatched key-pair
-    // secrets while keeping the private material in SST's secret output.
+    // The private key signs CloudFront cookies at runtime; the public key
+    // verifies them at the edge. They are generated together once and stored
+    // as two secrets, so deployment never needs to re-derive one from the
+    // other.
     const cloudFrontPrivateKey = stableCloudDomains
       ? new sst.Secret("CloudFrontMediaPrivateKeyBase64")
+      : undefined;
+    const cloudFrontPublicKey = stableCloudDomains
+      ? new sst.Secret("CloudFrontMediaPublicKey")
       : undefined;
     const grafanaOtlpHeaders = stableCloudDomains
       ? new sst.Secret("GrafanaOtlpHeaders")
@@ -149,11 +153,11 @@ export default $config({
       },
     });
     const media = stableCloudDomains
-      ? await createMediaDistribution({
+      ? createMediaDistribution({
           assets,
           domain: "images.styltsou.com",
           dns: stableCloudDomains.mediaDns,
-          privateKeyBase64: cloudFrontPrivateKey!.value,
+          publicKey: cloudFrontPublicKey!.value,
         })
       : undefined;
     assets.notify({
@@ -264,9 +268,9 @@ export default $config({
       IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
     };
     const imageWorkerDefaults = {
-      runtime: "nodejs22.x",
-      memory: "2048 MB",
-      timeout: "120 seconds",
+      runtime: "nodejs22.x" as const,
+      memory: "2048 MB" as const,
+      timeout: "120 seconds" as const,
       link: [assets],
       nodejs: {
         // Sharp is native code. Keep it external to esbuild and package the
@@ -367,13 +371,12 @@ function getObservabilityEnvironment(
   };
 }
 
-async function createMediaDistribution(input: {
+function createMediaDistribution(input: {
   assets: sst.aws.Bucket;
   domain: string;
   dns: ReturnType<typeof sst.cloudflare.dns>;
-  privateKeyBase64: $util.Input<string>;
+  publicKey: $util.Input<string>;
 }) {
-  const { deriveCloudFrontPublicKey } = await import("./infra/cloudfront-key");
   const originAccessControl = new aws.cloudfront.OriginAccessControl(
     "MediaOriginAccessControl",
     {
@@ -387,9 +390,7 @@ async function createMediaDistribution(input: {
   const publicKey = new aws.cloudfront.PublicKey("MediaViewerPublicKey", {
     namePrefix: `${$app.name}-${$app.stage}-media-`,
     comment: "Verifies signed cookies for private Aska media",
-    encodedKey: $output(input.privateKeyBase64).apply((value) =>
-      deriveCloudFrontPublicKey(value),
-    ),
+    encodedKey: input.publicKey,
   });
   const keyGroup = new aws.cloudfront.KeyGroup("MediaViewerKeyGroup", {
     name: `${$app.name}-${$app.stage}-media-viewers`,
@@ -437,7 +438,9 @@ async function createMediaDistribution(input: {
   });
 
   return {
-    domainUrl: cdn.domainUrl,
+    // A custom domain is always configured for the media distribution, so the
+    // resulting URL is never undefined once resolved.
+    domainUrl: cdn.domainUrl.apply((url) => url!),
     publicKeyId: publicKey.id,
   };
 }

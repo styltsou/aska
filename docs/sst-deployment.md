@@ -89,24 +89,26 @@ images.styltsou.com    -> Cloudflare DNS-only -> private CloudFront media
 ### 3. CloudFront media signing keys
 
 The stable media distribution requires an RSA-2048 key pair. Generate the
-private key locally and store its base64-encoded value as an SST secret for the
-`dev` stage. Keep the unencoded private PEM out of the repository:
+private key locally, derive its public key, and store **both** base64-encoded
+values as SST secrets for the `dev` stage. Keep the unencoded private PEM out
+of the repository:
 
 ```sh
 openssl genrsa -out cloudfront-media-private.pem 2048
 openssl base64 -A -in cloudfront-media-private.pem
+openssl rsa -in cloudfront-media-private.pem -pubout | openssl base64 -A
 ```
 
-Set `CloudFrontMediaPrivateKeyBase64` from that command output before the first
-deployment. SST derives the matching public key, then creates the CloudFront
-trusted key group, origin access control, and `images.styltsou.com`
-distribution. The API receives the private key secret and issues HTTP-only
-signed cookies for one authorized workspace path through the dedicated
-media-session endpoint. Media keys begin with the immutable workspace ID
-(`{workspaceId}/{storageId}/...`), so each cookie policy can grant only that
+The second command's output is `CloudFrontMediaPrivateKeyBase64`; the third is
+`CloudFrontMediaPublicKey`. Set both before the first deployment. SST then
+creates the CloudFront trusted key group, origin access control, and
+`images.styltsou.com` distribution. The API receives the private key secret and
+issues HTTP-only signed cookies for one authorized workspace path through the
+dedicated media-session endpoint. Media keys begin with the immutable workspace
+ID (`{workspaceId}/{storageId}/...`), so each cookie policy can grant only that
 workspace's `/{workspaceId}/*` path while originals and generated variants
-retain stable canonical URLs. Rotate by updating the SST secret, then merging a
-deployment-triggering change.
+retain stable canonical URLs. Rotate by updating **both** SST secrets, then
+merging a deployment-triggering change.
 
 Before the first CI deployment, create a Cloudflare API token scoped only to
 the `styltsou.com` zone with **Zone / DNS / Edit** and **Zone / Zone / Read**.
@@ -188,6 +190,7 @@ bun run sst -- secret set BetterAuthSecret 'your existing Better Auth secret' --
 bun run sst -- secret set ResendApiKey 'your Resend API key' --stage dev
 bun run sst -- secret set ImagePipelineCallbackSecret 'a random 32+ character secret' --stage dev
 bun run sst -- secret set CloudFrontMediaPrivateKeyBase64 'base64-encoded RSA-2048 private key' --stage dev
+bun run sst -- secret set CloudFrontMediaPublicKey 'SPKI PEM public key matching the private key' --stage dev
 bun run sst -- secret set GrafanaOtlpHeaders 'Authorization=Basic%20<base64-instance-id:token>' --stage dev
 ```
 
@@ -200,6 +203,7 @@ bun run sst -- secret set GrafanaOtlpHeaders 'Authorization=Basic%20<base64-inst
 | `ResendApiKey`                | `RESEND_API_KEY` in the API                      | Sends transactional email                            |
 | `ImagePipelineCallbackSecret` | `IMAGE_PIPELINE_CALLBACK_SECRET` in both Lambdas | The pipeline signs its callback; the API verifies it |
 | `CloudFrontMediaPrivateKeyBase64` | `CLOUDFRONT_PRIVATE_KEY_BASE64` in the API    | Signs CloudFront viewer cookies                      |
+| `CloudFrontMediaPublicKey`    | CloudFront `PublicKey` resource                    | Verifies signed cookies at the edge; generated once with the private key |
 | `GrafanaOtlpHeaders`          | `OTEL_EXPORTER_OTLP_HEADERS` in all Lambdas      | Authenticates telemetry export to Grafana Cloud      |
 
 There is only one image-pipeline callback secret. The same SST secret is passed
