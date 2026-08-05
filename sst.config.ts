@@ -390,7 +390,12 @@ function createMediaDistribution(input: {
   const publicKey = new aws.cloudfront.PublicKey("MediaViewerPublicKey", {
     namePrefix: `${$app.name}-${$app.stage}-media-`,
     comment: "Verifies signed cookies for private Aska media",
-    encodedKey: input.publicKey,
+    // The secret holds the SPKI public key base64-encoded (same convention as
+    // the private key). CloudFront's PublicKey resource expects the PEM form,
+    // so decode before registering it.
+    encodedKey: $output(input.publicKey).apply((value) =>
+      Buffer.from(value, "base64").toString("utf8"),
+    ),
   });
   const keyGroup = new aws.cloudfront.KeyGroup("MediaViewerKeyGroup", {
     name: `${$app.name}-${$app.stage}-media-viewers`,
