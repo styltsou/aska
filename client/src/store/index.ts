@@ -15,14 +15,22 @@ import {
   createSelectionSlice,
   type SelectionSlice,
 } from "@/store/slices/selection-slice";
+import {
+  createScratchpadSlice,
+  type ScratchpadSlice,
+} from "@/store/slices/scratchpad-slice";
 
 export type PersistedStore = FilterBarSlice & PersistedBoardSlice;
-export type TransientStore = AssetSlice & SelectionSlice & TransientBoardSlice;
+export type TransientStore = AssetSlice &
+  SelectionSlice &
+  TransientBoardSlice &
+  ScratchpadSlice;
 
 export const useTransientStore = create<TransientStore>()((...a) => ({
   ...createAssetSlice(...a),
   ...createSelectionSlice(...a),
   ...createTransientBoardSlice(...a),
+  ...createScratchpadSlice(...a),
 }));
 
 export const usePersistedStore = create<PersistedStore>()(

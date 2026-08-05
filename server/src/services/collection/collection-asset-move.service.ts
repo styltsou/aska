@@ -99,7 +99,7 @@ export class CollectionAssetMoveService {
             eq(collectionNodes.parentFolderId, folderNode.folderId),
           ),
         )
-        .for("update");
+        .for("update", { of: collectionNodes });
 
       if (
         directChildren.some(
@@ -134,7 +134,7 @@ export class CollectionAssetMoveService {
             ne(collectionNodes.id, folderNode.id),
           ),
         )
-        .for("update");
+        .for("update", { of: collectionNodes });
       const anchor = getFlattenGroupAnchor(parentNodes);
       const offset =
         directChildren.length === 0
@@ -332,7 +332,7 @@ export class CollectionAssetMoveService {
               ),
             )
             .limit(1)
-            .for("update"),
+            .for("update", { of: collectionNodes }),
         );
         if (!sourceNode) {
           throw new AppError(

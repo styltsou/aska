@@ -7,6 +7,7 @@ import {
   ImagePlusIcon,
   InboxIcon,
   MoonIcon,
+  CornerDownLeftIcon,
   NotebookPenIcon,
   PanelLeftIcon,
   SettingsIcon,
@@ -28,7 +29,6 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { DialogBody } from "@/components/ui/dialog";
-import { SCRATCHPAD_OPEN_EVENT } from "@/components/app-shell/global-scratchpad";
 import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
@@ -44,7 +44,7 @@ import { useEventListener } from "@/hooks/use-event-listener";
 import { KEYBINDINGS } from "@/lib/keybindings";
 import { formatPlatformShortcut } from "@/lib/platform";
 import { openSettings } from "@/lib/settings-dialog";
-import { usePersistedStore } from "@/store";
+import { usePersistedStore, useTransientStore } from "@/store";
 import { useBoardInsertionPlacement } from "@/components/canvas";
 
 type CommandId =
@@ -166,6 +166,7 @@ export function CommandPalette() {
   const { theme, setTheme } = useTheme();
   const { toggleSidebar } = useSidebar();
   const toggleFilterBar = usePersistedStore((state) => state.toggleFilterBar);
+  const openScratchpad = useTransientStore((state) => state.openScratchpad);
   const [workspaceSlug, view, ...viewPath] = pathname
     .split("/")
     .filter(Boolean);
@@ -270,7 +271,7 @@ export function CommandPalette() {
       case "open-scratchpad":
         if (!workspaceSlug) return;
         setOpen(false);
-        window.dispatchEvent(new CustomEvent(SCRATCHPAD_OPEN_EVENT));
+        openScratchpad();
         return;
       case "toggle-filter-bar":
         if (!filterScope) return;
@@ -393,11 +394,13 @@ export function CommandPalette() {
                 <ArrowDownIcon />
               </Kbd>
             </KbdGroup>
-            <span>Navigate</span>
+            <span>to navigate</span>
           </span>
           <span className="ml-3 inline-flex items-center gap-1">
-            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Enter</Kbd>
-            <span>Select</span>
+            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+              <CornerDownLeftIcon />
+            </Kbd>
+            <span>to select</span>
           </span>
         </div>
       </CommandDialog>
