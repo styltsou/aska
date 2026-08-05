@@ -174,7 +174,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        {authState?.session.user ? (
+        {authState?.session?.user ? (
           <NavUser user={authState.session.user} />
         ) : (
           <SidebarUserSkeleton />

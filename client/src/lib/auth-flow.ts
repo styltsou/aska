@@ -33,10 +33,26 @@ async function getSession() {
   const { data, error } = await authClient.getSession();
 
   if (error) {
+    // A refresh can race with session cleanup on the server. This is still a
+    // signed-out state, not an application failure that should reach the
+    // router error boundary.
+    if (isUnauthorizedError(error)) {
+      return null;
+    }
+
     throw error;
   }
 
   return data;
+}
+
+function isUnauthorizedError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "status" in error &&
+    error.status === 401
+  );
 }
 
 export async function getWorkspaces() {
@@ -107,11 +123,26 @@ export async function getAuthState() {
 async function readAuthState() {
   const session = await getSession();
 
-  if (!session) {
+  // A session may disappear between the browser sending its cookie and the
+  // server reading it (for example after expiration, logout in another tab,
+  // or a concurrent session cleanup). Treat an incomplete response exactly
+  // like a signed-out state instead of allowing consumers to dereference it.
+  if (!session?.session || !session.user) {
     return null;
   }
 
-  const workspaces = await getWorkspaces();
+  let workspaces: Workspace[];
+  try {
+    workspaces = await getWorkspaces();
+  } catch (error) {
+    // The session can be revoked after getSession succeeds but before this
+    // follow-up request. Redirecting to sign-in is the correct recovery.
+    if (isUnauthorizedError(error)) {
+      return null;
+    }
+
+    throw error;
+  }
   const activeWorkspace =
     workspaces.find(
       (workspace) => workspace.id === session.session.activeOrganizationId,

@@ -8,7 +8,10 @@ export const authMiddleware = factory.createMiddleware(async (c, next) => {
     headers: c.req.raw.headers,
   });
 
-  if (!session) {
+  // Better Auth normally returns null for an expired or invalid cookie. Guard
+  // the nested values as well so a race with session/user cleanup becomes a
+  // normal 401 rather than an unhandled TypeError.
+  if (!session?.session || !session.user) {
     throw new AppError(ErrorCode.UNAUTHORIZED, "Unauthorized");
   }
 
