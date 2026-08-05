@@ -12,8 +12,7 @@ import { useEventListener } from "@/hooks/use-event-listener";
 import { KEYBINDINGS } from "@/lib/keybindings";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
-
-export const SCRATCHPAD_OPEN_EVENT = "aska:scratchpad-open";
+import { useTransientStore } from "@/store";
 
 const SCRATCHPAD_TRANSITION = {
   duration: 0.1,
@@ -28,7 +27,11 @@ export function GlobalScratchpad() {
   const createInboxNote = useCreateInboxNote(workspaceSlug);
   const hasActiveModalLayer = useActiveModalLayer();
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [open, setOpen] = useState(false);
+  const open = useTransientStore((state) => state.scratchpadOpen);
+  const openScratchpad = useTransientStore((state) => state.openScratchpad);
+  const closeScratchpadState = useTransientStore(
+    (state) => state.closeScratchpad,
+  );
   const [content, setContent] = useState("");
   const trimmedContent = content.trim();
   const canSave = trimmedContent.length > 0 && !createInboxNote.isPending;
@@ -61,21 +64,13 @@ export function GlobalScratchpad() {
     }
 
     event.preventDefault();
-    setOpen(true);
-  });
-
-  useEventListener(SCRATCHPAD_OPEN_EVENT, () => {
-    if (open || !workspaceSlug) {
-      return;
-    }
-
-    setOpen(true);
+    openScratchpad();
   });
 
   function closeScratchpad({
     resetMutation = true,
   }: { resetMutation?: boolean } = {}) {
-    setOpen(false);
+    closeScratchpadState();
     setContent("");
     if (resetMutation) {
       createInboxNote.reset();
@@ -161,7 +156,7 @@ export function GlobalScratchpad() {
               <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5 px-3 py-2 text-[10px] leading-4 text-muted-foreground">
                 <span className="mr-auto inline-flex items-center gap-1">
                   <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
-                  <span>Close</span>
+                  <span>to close</span>
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <KbdGroup className="gap-0.5">
@@ -169,11 +164,11 @@ export function GlobalScratchpad() {
                     <span className="text-muted-foreground/50">+</span>
                     <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Enter</Kbd>
                   </KbdGroup>
-                  <span>New line</span>
+                  <span>for new line</span>
                 </span>
                 <span className="ml-2 inline-flex items-center gap-1">
                   <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Enter</Kbd>
-                  <span>Save</span>
+                  <span>to save</span>
                 </span>
               </div>
             </motion.div>
