@@ -6,6 +6,16 @@ structured logs, custom metrics, release context, and error-triggered browser
 session replay. CloudWatch still receives single-line JSON logs from the server
 and workers as a deployment-level fallback.
 
+## Why Sentry
+
+This project intentionally uses Sentry instead of operating a separate
+OpenTelemetry collector and Grafana stack. For a small product, Sentry combines
+actionable error grouping, browser replay, traces, logs, metrics, alerts, and
+release context in one workflow, with no telemetry backend to provision or
+tune. OpenTelemetry remains a good choice when vendor-neutral telemetry,
+multiple backends, or organization-wide collector policies are requirements;
+they are not requirements for this application today.
+
 ## Runtime coverage
 
 - The React client uses `@sentry/react`, React 19 error hooks, and the TanStack
