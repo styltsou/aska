@@ -1,3 +1,4 @@
+// oxlint-disable-next-line typescript/triple-slash-reference
 /// <reference path="./.sst/platform/config.d.ts" />
 
 export default $config({
