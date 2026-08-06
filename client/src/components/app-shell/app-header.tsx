@@ -10,7 +10,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { FileTextIcon, PlusIcon, UploadIcon } from "lucide-react";
+import { FileTextIcon, ImageIcon, PlusIcon, UploadIcon } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -25,6 +25,7 @@ import { useWorkspace } from "@/api/workspace";
 import { useCollectionContents } from "@/api/collection";
 import { useBoardInsertionPlacement } from "@/components/canvas";
 import { titleFromSlug } from "@/lib/slug";
+import { useTransientStore } from "@/store";
 
 function AppBreadcrumbs() {
   const pathname = useRouterState({
@@ -126,6 +127,9 @@ export function AppHeader() {
     collectionsSegment === "collections" && pathSegments.length > 0;
   const collectionPath = pathSegments.join("/");
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
+  const openPexelsBrowser = useTransientStore(
+    (state) => state.setPexelsBrowserOpen,
+  );
 
   return (
     <header className="sticky top-0 z-20 flex h-14 min-w-0 shrink-0 items-center gap-2 bg-sidebar transition-[height] duration-120 ease-linear group-has-data-[state=collapsed]/sidebar-wrapper:h-12">
@@ -142,6 +146,24 @@ export function AppHeader() {
         ) : null}
         {isBoardView ? (
           <>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openPexelsBrowser(true)}
+                  >
+                    <ImageIcon />
+                    <span>Photos</span>
+                  </Button>
+                }
+              />
+              <TooltipContent side="bottom" align="end">
+                Browse Pexels photos
+              </TooltipContent>
+            </Tooltip>
             <Tooltip>
               <CreateNoteDialog
                 workspaceSlug={workspaceSlug}

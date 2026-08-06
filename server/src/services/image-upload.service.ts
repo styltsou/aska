@@ -442,7 +442,14 @@ export class ImageUploadService implements IImageUploadService {
       provider: "pexels",
       url: data.provenance.url,
       downloadUrl,
-      attribution: data.provenance.attribution,
+      attribution: {
+        photoId: data.provenance.attribution.photoId,
+        name: data.provenance.attribution.name,
+        profileUrl: data.provenance.attribution.profileUrl,
+        ...(data.provenance.attribution.username
+          ? { username: data.provenance.attribution.username }
+          : {}),
+      },
     };
   }
 

@@ -87,7 +87,7 @@ const PexelsProvenanceSchema = z.object({
   attribution: z.object({
     photoId: z.string().min(1),
     name: z.string().min(1).max(255),
-    username: z.string().min(1).max(255),
+    username: z.string().min(1).max(255).optional(),
     profileUrl: z.url(),
   }),
 });

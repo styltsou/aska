@@ -69,7 +69,7 @@ export type ImageProvenance = {
   attribution?: {
     photoId: string;
     name: string;
-    username: string;
+    username?: string;
     profileUrl: string;
   };
 };

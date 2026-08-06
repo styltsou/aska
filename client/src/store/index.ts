@@ -19,18 +19,24 @@ import {
   createScratchpadSlice,
   type ScratchpadSlice,
 } from "@/store/slices/scratchpad-slice";
+import {
+  createPexelsBrowserSlice,
+  type PexelsBrowserSlice,
+} from "@/store/slices/pexels-browser-slice";
 
 export type PersistedStore = FilterBarSlice & PersistedBoardSlice;
 export type TransientStore = AssetSlice &
   SelectionSlice &
   TransientBoardSlice &
-  ScratchpadSlice;
+  ScratchpadSlice &
+  PexelsBrowserSlice;
 
 export const useTransientStore = create<TransientStore>()((...a) => ({
   ...createAssetSlice(...a),
   ...createSelectionSlice(...a),
   ...createTransientBoardSlice(...a),
   ...createScratchpadSlice(...a),
+  ...createPexelsBrowserSlice(...a),
 }));
 
 export const usePersistedStore = create<PersistedStore>()(

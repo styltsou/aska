@@ -174,6 +174,17 @@ export type CreateRemoteImageInput = {
   alt?: string;
   parentFolderPath?: string;
   position?: BoardPosition;
+  provenance?: {
+    provider: "pexels";
+    url: string;
+    downloadUrl: string;
+    attribution: {
+      photoId: string;
+      name: string;
+      username?: string;
+      profileUrl: string;
+    };
+  };
 };
 
 export type CreateRemoteImageResponse = {

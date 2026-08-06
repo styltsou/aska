@@ -15,8 +15,9 @@ import { FilterBar } from "@/components/filter-bar";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import type { ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
+import { PexelsBrowserPanel } from "@/components/board/pexels-browser-panel";
 import { makeBoardKey, Canvas, CanvasLoading } from "@/components/canvas";
-import { usePersistedStore } from "@/store";
+import { usePersistedStore, useTransientStore } from "@/store";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 
 const EMPTY_COLOR_RESULTS: readonly [] = [];
@@ -48,6 +49,16 @@ function CollectionPage() {
   const filterScope = `collection:${workspaceSlug}/${collectionPath}`;
   const filterBar = usePersistedStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
+  );
+  const pexelsBrowserOpen = useTransientStore(
+    (state) => state.pexelsBrowserOpen,
+  );
+  const setPexelsBrowserOpen = useTransientStore(
+    (state) => state.setPexelsBrowserOpen,
+  );
+  useEffect(
+    () => setPexelsBrowserOpen(false),
+    [collectionPath, setPexelsBrowserOpen],
   );
   const selectedAssetTypes =
     filterBar.filterType === "Type" ? (filterBar.selectedAssetTypes ?? []) : [];
@@ -212,49 +223,58 @@ function CollectionPage() {
           collectionPath={collectionPath}
           boardKey={boardKey}
         >
-          <Canvas
-            key={boardKey}
-            workspaceSlug={workspaceSlug}
-            collectionSlug={collectionSlug}
-            folderPath={parentFolderPath}
-            expectedParentFolderNodeId={
-              activeFolder ? `folder-${activeFolder.id}` : null
-            }
-            nodes={nodes}
-            isColorFilterActive={hasResolvedColorSearch}
-            colorMatchNodeIds={colorMatchNodeIds}
-            focusedNodeId={focusedColorNodeId}
-            emptyTitle={
-              isTypeFilterActive
-                ? "No matching assets"
-                : folderPath
-                  ? "Folder is empty"
-                  : "Collection is empty"
-            }
-            emptyDescription={
-              isTypeFilterActive
-                ? "Try a different asset type."
-                : folderPath
-                  ? "Add images, notes, or folders to start arranging this board."
-                  : "Add images, notes, or folders to start arranging this collection."
-            }
-            onOpenNote={handleOpenNote}
-            onOpenImage={(image) => {
-              void navigate({
-                search: (prev) => ({ ...prev, image: image.id }),
-              });
-            }}
-            onOpenFolder={(folder) => {
-              void navigate({
-                to: "/$workspaceSlug/collections/$",
-                params: {
-                  workspaceSlug,
-                  _splat: `${collectionPath}/${folder.slug}`,
-                },
-                search: { note: undefined, image: undefined },
-              });
-            }}
-          />
+          <div className="flex h-full min-w-0 flex-1">
+            <Canvas
+              key={boardKey}
+              workspaceSlug={workspaceSlug}
+              collectionSlug={collectionSlug}
+              folderPath={parentFolderPath}
+              expectedParentFolderNodeId={
+                activeFolder ? `folder-${activeFolder.id}` : null
+              }
+              nodes={nodes}
+              isColorFilterActive={hasResolvedColorSearch}
+              colorMatchNodeIds={colorMatchNodeIds}
+              focusedNodeId={focusedColorNodeId}
+              emptyTitle={
+                isTypeFilterActive
+                  ? "No matching assets"
+                  : folderPath
+                    ? "Folder is empty"
+                    : "Collection is empty"
+              }
+              emptyDescription={
+                isTypeFilterActive
+                  ? "Try a different asset type."
+                  : folderPath
+                    ? "Add images, notes, or folders to start arranging this board."
+                    : "Add images, notes, or folders to start arranging this collection."
+              }
+              onOpenNote={handleOpenNote}
+              onOpenImage={(image) => {
+                void navigate({
+                  search: (prev) => ({ ...prev, image: image.id }),
+                });
+              }}
+              onOpenFolder={(folder) => {
+                void navigate({
+                  to: "/$workspaceSlug/collections/$",
+                  params: {
+                    workspaceSlug,
+                    _splat: `${collectionPath}/${folder.slug}`,
+                  },
+                  search: { note: undefined, image: undefined },
+                });
+              }}
+            />
+            {pexelsBrowserOpen ? (
+              <PexelsBrowserPanel
+                workspaceSlug={workspaceSlug}
+                collectionSlug={collectionSlug}
+                parentFolderPath={folderPath || undefined}
+              />
+            ) : null}
+          </div>
         </BoardUploadZone>
       </BoardContextMenu>
       <NoteDetailDrawer
