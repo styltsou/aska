@@ -80,15 +80,46 @@ export type ImagePipelineCallbackInput = z.infer<
   typeof ImagePipelineCallbackSchema
 >;
 
+const PexelsProvenanceSchema = z.object({
+  provider: z.literal("pexels"),
+  url: z.url(),
+  downloadUrl: z.url(),
+  attribution: z.object({
+    photoId: z.string().min(1),
+    name: z.string().min(1).max(255),
+    username: z.string().min(1).max(255).optional(),
+    profileUrl: z.url(),
+  }),
+});
+
+const UrlProvenanceSchema = z.object({
+  provider: z.literal("url"),
+  url: z.url(),
+});
+
 export const CreateRemoteImageSchema = z.object({
   url: z.url(),
   title: z.string().min(1).max(255).optional(),
   alt: z.string().max(1000).optional(),
   parentFolderPath: z.string().optional(),
   position: BoardPositionSchema.optional(),
+  provenance: z
+    .discriminatedUnion("provider", [
+      PexelsProvenanceSchema,
+      UrlProvenanceSchema,
+    ])
+    .optional(),
 });
 
 export type CreateRemoteImageInput = z.infer<typeof CreateRemoteImageSchema>;
+
+export const PexelsSearchQuerySchema = z.object({
+  query: z.string().trim().min(1).max(200),
+  page: z.coerce.number().int().positive().default(1),
+  perPage: z.coerce.number().int().min(1).max(30).default(20),
+});
+
+export type PexelsSearchQuery = z.infer<typeof PexelsSearchQuerySchema>;
 
 export const UploadPathParamSchema = z.object({
   workspaceSlug: z.string(),

@@ -62,6 +62,18 @@ export type ImageAssetVariants = {
   preview?: StoredImageObjectVariant;
 };
 
+export type ImageProvenance = {
+  provider: "pexels" | "url";
+  url: string;
+  downloadUrl?: string;
+  attribution?: {
+    photoId: string;
+    name: string;
+    username?: string;
+    profileUrl: string;
+  };
+};
+
 export const collectionsTable = pgTable(
   "collections",
   {
@@ -146,6 +158,7 @@ export const imageAssets = pgTable(
     alt: text(),
     sourceLabel: varchar("source_label", { length: 120 }),
     sourceUrl: text("source_url"),
+    provenance: jsonb().$type<ImageProvenance>(),
     variants: jsonb()
       .$type<ImageAssetVariants>()
       .notNull()
@@ -247,6 +260,7 @@ export const uploads = pgTable(
     alt: text(),
     sourceLabel: varchar("source_label", { length: 120 }),
     sourceUrl: text("source_url"),
+    provenance: jsonb().$type<ImageProvenance>(),
     contentType: varchar("content_type", { length: 255 }).notNull(),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
     uploadUrlExpiresAt: timestamp("upload_url_expires_at"),

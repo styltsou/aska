@@ -5,9 +5,12 @@ import { AppHeader } from "@/components/app-shell/app-header";
 import { GlobalScratchpad } from "@/components/app-shell/global-scratchpad";
 import { CommandPalette } from "@/components/command-palette";
 import { SettingsDialog } from "@/components/settings-dialog";
+import { PexelsBrowserPanel } from "@/components/board/pexels-browser-panel";
 import { useRouterState } from "@tanstack/react-router";
 import { pruneExpiredUploadImagesDrafts } from "@/lib/upload-images-draft";
 import { cn } from "@/lib/utils";
+import { getSidebarCollectionLocation } from "./sidebar-collection-navigation";
+import { useTransientStore } from "@/store";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isBoardView = useRouterState({
@@ -16,6 +19,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return segments[1] === "collections" && segments.length >= 3;
     },
   });
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const { workspaceSlug, collectionSlug, folderPath } =
+    getSidebarCollectionLocation(pathname);
+  const pexelsBrowserOpen = useTransientStore(
+    (state) => state.pexelsBrowserOpen,
+  );
 
   useEffect(() => {
     void pruneExpiredUploadImagesDrafts().catch(() => undefined);
@@ -29,8 +40,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <CommandPalette />
       <SidebarInset
         className={cn(
-          "min-h-0 md:mr-2 md:mb-2",
+          "min-h-0 md:mb-2",
           isBoardView && "h-[calc(100svh-0.5rem)] overflow-hidden",
+          isBoardView && pexelsBrowserOpen ? "md:mr-0" : "md:mr-2",
         )}
       >
         <AppHeader />
@@ -45,6 +57,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </SidebarInset>
+      {collectionSlug ? (
+        <PexelsBrowserPanel
+          open={pexelsBrowserOpen}
+          workspaceSlug={workspaceSlug}
+          collectionSlug={collectionSlug}
+          parentFolderPath={folderPath}
+        />
+      ) : null}
     </SidebarProvider>
   );
 }

@@ -6,9 +6,11 @@ import { HealthService } from "@/services/health.service";
 import { ImageUploadService } from "@/services/image-upload.service";
 import { LoggerService } from "@/services/logger.service";
 import { ObjectStorageService } from "@/services/object-storage.service";
+import { PexelsService } from "@/services/pexels.service";
 
 const loggerService = new LoggerService();
 const objectStorageService = new ObjectStorageService();
+const pexelsService = new PexelsService();
 
 export const container = {
   db,
@@ -20,7 +22,11 @@ export const container = {
     objectStorageService,
     loggerService,
   }),
-  imageUploadService: new ImageUploadService(objectStorageService),
+  pexelsService,
+  imageUploadService: new ImageUploadService(
+    objectStorageService,
+    pexelsService,
+  ),
   colorSearchService: new ColorSearchService({
     objectStorageService,
     loggerService,

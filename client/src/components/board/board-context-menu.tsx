@@ -50,6 +50,9 @@ export function BoardContextMenu({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const hasActiveModalLayer = useActiveModalLayer();
+  const openPexelsBrowser = useTransientStore(
+    (state) => state.setPexelsBrowserOpen,
+  );
 
   async function handlePasteAsset() {
     try {
@@ -78,6 +81,11 @@ export function BoardContextMenu({
           <ContextMenuItem onClick={() => setUploadDialogOpen(true)}>
             Upload images
           </ContextMenuItem>
+          {target === "collection" ? (
+            <ContextMenuItem onClick={() => openPexelsBrowser(true)}>
+              Add photos from Pexels
+            </ContextMenuItem>
+          ) : null}
           <ContextMenuItem onClick={() => setNoteDialogOpen(true)}>
             New note
           </ContextMenuItem>
