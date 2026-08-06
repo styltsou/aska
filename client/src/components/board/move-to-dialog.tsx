@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   CheckIcon,
@@ -6,17 +6,20 @@ import {
   ChevronRightIcon,
   FolderIcon,
   LoaderCircleIcon,
+  PlusIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
   collectionContentsQueryOptions,
   type Breadcrumb,
+  type CollectionContentsResponse,
   type CollectionFolderNode,
   type ContentTypeFilter,
   type FolderChildPreview,
   useCollectionContents,
   useCollections,
+  useCreateFolder,
   useMoveCollectionNodesToFolder,
 } from "@/api/collection";
 import { Button } from "@/components/ui/button";
@@ -35,8 +38,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getFolderChildPosition } from "@/components/canvas/canvas-node-layout";
 
 const FOLDER_TYPES = ["folder"] as const satisfies readonly ContentTypeFilter[];
 const MAX_MOVE_BATCH_SIZE = 100;
@@ -114,6 +119,11 @@ function CollectionMoveDialog({
     source.workspaceSlug,
     targetCollectionSlug,
   );
+  const createFolder = useCreateFolder(
+    source.workspaceSlug,
+    targetCollectionSlug,
+  );
+  const queryClient = useQueryClient();
   const destination = useFolderDestination(
     source.workspaceSlug,
     targetCollectionSlug,
@@ -205,6 +215,66 @@ function CollectionMoveDialog({
       count={source.nodeIds.length}
       isPending={moveNodes.isPending}
       error={error}
+      canCreateFolder
+      onCreateFolder={async (name) => {
+        const result = await createFolder.mutateAsync({
+          name,
+          parentFolderPath: destinationPath,
+          placement: {
+            position: getFolderChildPosition(destination.folders),
+          },
+        });
+        const slug = result.folder.slug;
+        const newFolderPath = joinPath(destinationPath, slug);
+        const newFolderNode: CollectionFolderNode = {
+          id: `folder-${result.folder.id}`,
+          type: "folder",
+          name: result.folder.name,
+          slug,
+          count: 0,
+          folderCount: 0,
+          previews: result.folder.previews,
+          position: result.folder.position,
+        };
+        queryClient.setQueryData<CollectionContentsResponse>(
+          collectionContentsQueryOptions(
+            source.workspaceSlug,
+            targetCollectionSlug,
+            newFolderPath,
+            FOLDER_TYPES,
+          ).queryKey,
+          {
+            collection: {
+              id: targetCollection?.id ?? result.folder.id,
+              name: destination.collectionName,
+              slug: targetCollectionSlug,
+            },
+            breadcrumbs: [
+              ...destination.breadcrumbs,
+              { id: result.folder.id, name: result.folder.name, slug },
+            ],
+            nodes: [],
+          },
+        );
+        queryClient.setQueryData<CollectionContentsResponse>(
+          collectionContentsQueryOptions(
+            source.workspaceSlug,
+            targetCollectionSlug,
+            destinationPath,
+            FOLDER_TYPES,
+          ).queryKey,
+          (current) => {
+            if (
+              !current ||
+              current.nodes.some((node) => node.id === newFolderNode.id)
+            ) {
+              return current;
+            }
+            return { ...current, nodes: [...current.nodes, newFolderNode] };
+          },
+        );
+        return slug;
+      }}
       onMove={() => void handleMove()}
     />
   );
@@ -239,6 +309,7 @@ function InboxMoveDialog({
     source.workspaceSlug,
     collectionSlug,
   );
+  const createFolder = useCreateFolder(source.workspaceSlug, collectionSlug);
   const destination = useFolderDestination(
     source.workspaceSlug,
     collectionSlug,
@@ -323,6 +394,16 @@ function InboxMoveDialog({
       count={source.assetIds.length}
       isPending={moveAssets.isPending}
       error={error}
+      canCreateFolder={
+        collectionSlug.length > 0 && !collectionsLoading && !collectionsError
+      }
+      onCreateFolder={async (name) => {
+        const result = await createFolder.mutateAsync({
+          name,
+          parentFolderPath: destinationPath,
+        });
+        return result.folder.slug;
+      }}
       onMove={() => void handleMove()}
     />
   );
@@ -353,7 +434,7 @@ function CollectionPicker({
             {...triggerProps}
             type="button"
             aria-label="Destination collection"
-            className="flex h-8 w-full cursor-pointer items-center justify-between gap-1.5 rounded-lg border border-input px-2.5 text-sm transition-colors duration-75 outline-none select-none hover:bg-foreground/5 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-popup-open:bg-foreground/5"
+            className="flex h-8 w-full cursor-pointer items-center justify-between gap-1.5 rounded-lg border border-input px-2.5 text-sm transition-colors duration-100 outline-none select-none hover:bg-foreground/5 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-popup-open:bg-foreground/5"
             disabled={disabled}
           >
             <span
@@ -464,6 +545,8 @@ function DestinationDialog({
   count,
   isPending,
   error,
+  canCreateFolder,
+  onCreateFolder,
   onMove,
 }: {
   open: boolean;
@@ -480,9 +563,16 @@ function DestinationDialog({
   count: number;
   isPending: boolean;
   error?: string;
+  canCreateFolder?: boolean;
+  onCreateFolder?: (name: string) => Promise<string>;
   onMove: () => void;
 }) {
   const [optimisticCrumbs, setOptimisticCrumbs] = useState<Crumb[]>([]);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderError, setNewFolderError] = useState<string>();
+  const [creatingFolder, setCreatingFolder] = useState(false);
+  const suppressComposerFocusRef = useRef(false);
   const serverCrumbs: Crumb[] = destination.breadcrumbs.map((breadcrumb) => ({
     id: breadcrumb.id,
     name: breadcrumb.name,
@@ -530,6 +620,31 @@ function DestinationDialog({
     setOptimisticCrumbs(crumbs);
   };
 
+  const canCreate = Boolean(onCreateFolder && canCreateFolder);
+
+  async function handleCreateFolder() {
+    const name = newFolderName.trim();
+    if (!name || !canCreate) return;
+    setNewFolderError(undefined);
+    setCreatingFolder(true);
+    try {
+      const slug = await onCreateFolder!(name);
+      suppressComposerFocusRef.current = true;
+      setComposerOpen(false);
+      setNewFolderName("");
+      navigateTo(joinPath(destinationPath, slug), [
+        ...displayedCrumbs,
+        { id: `folder-${slug}`, name, slug },
+      ]);
+    } catch (err) {
+      setNewFolderError(
+        err instanceof Error ? err.message : "Unable to create folder.",
+      );
+    } finally {
+      setCreatingFolder(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
@@ -556,7 +671,7 @@ function DestinationDialog({
                       ) : (
                         <button
                           type="button"
-                          className="max-w-36 truncate px-1.5 py-1 text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none"
+                          className="max-w-36 truncate px-1.5 py-1 text-muted-foreground transition-colors duration-100 hover:text-foreground disabled:pointer-events-none"
                           disabled={destination.isStale || isPending}
                           onClick={() =>
                             navigateTo(
@@ -600,58 +715,67 @@ function DestinationDialog({
                 <p className="flex h-full items-center justify-center px-6 text-center text-sm text-destructive">
                   Unable to load this folder. Go back and try again.
                 </p>
-              ) : destination.folders.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-muted-foreground">
-                  <FolderIcon className="size-8 opacity-25" />
-                  <p className="text-sm">No folders here</p>
-                </div>
               ) : (
-                destination.folders.map((folder) => {
-                  const folderPath = joinPath(destinationPath, folder.slug);
-                  const isDisabled = disabledFolderIds.has(folder.id);
-                  return (
-                    <button
-                      key={folder.id}
-                      type="button"
-                      className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45"
-                      disabled={isDisabled || isPending}
-                      title={
-                        isDisabled
-                          ? "A folder cannot be moved into itself."
-                          : undefined
-                      }
-                      onPointerEnter={() => {
-                        if (!isDisabled) destination.prefetch(folderPath);
-                      }}
-                      onFocus={() => {
-                        if (!isDisabled) destination.prefetch(folderPath);
-                      }}
-                      onClick={() =>
-                        navigateTo(folderPath, [
-                          ...displayedCrumbs,
-                          {
-                            id: folder.id,
-                            name: folder.name,
-                            slug: folder.slug,
-                          },
-                        ])
-                      }
-                    >
-                      <FolderPreviewRow previews={folder.previews} />
-                      <span className="min-w-0 flex-1 truncate font-medium">
-                        {folder.name}
-                      </span>
-                      {folder.folderCount > 0 ? (
-                        <span className="shrink-0 text-xs text-muted-foreground">
-                          {folder.folderCount === 1
-                            ? "1 folder"
-                            : `${folder.folderCount} folders`}
+                <>
+                  {destination.folders.map((folder) => {
+                    const folderPath = joinPath(destinationPath, folder.slug);
+                    const isDisabled = disabledFolderIds.has(folder.id);
+                    return (
+                      <button
+                        key={folder.id}
+                        type="button"
+                        className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm transition-colors duration-100 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45"
+                        disabled={isDisabled || isPending}
+                        title={
+                          isDisabled
+                            ? "A folder cannot be moved into itself."
+                            : undefined
+                        }
+                        onPointerEnter={() => {
+                          if (!isDisabled) destination.prefetch(folderPath);
+                        }}
+                        onFocus={() => {
+                          if (!isDisabled) destination.prefetch(folderPath);
+                        }}
+                        onClick={() =>
+                          navigateTo(folderPath, [
+                            ...displayedCrumbs,
+                            {
+                              id: folder.id,
+                              name: folder.name,
+                              slug: folder.slug,
+                            },
+                          ])
+                        }
+                      >
+                        <FolderPreviewRow previews={folder.previews} />
+                        <span className="min-w-0 flex-1 truncate font-medium">
+                          {folder.name}
                         </span>
-                      ) : null}
-                      <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground/60" />
-                    </button>
-                  );
-                })
+                        {folder.folderCount > 0 ? (
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {folder.folderCount === 1
+                              ? "1 folder"
+                              : `${folder.folderCount} folders`}
+                          </span>
+                        ) : null}
+                        <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground/60" />
+                      </button>
+                    );
+                  })}
+                  <FolderComposer
+                    open={composerOpen}
+                    onOpenChange={setComposerOpen}
+                    name={newFolderName}
+                    onNameChange={setNewFolderName}
+                    pending={creatingFolder}
+                    error={newFolderError}
+                    canCreate={canCreate}
+                    busy={isPending || creatingFolder}
+                    onCreate={() => void handleCreateFolder()}
+                    suppressFocusRef={suppressComposerFocusRef}
+                  />
+                </>
               )}
             </div>
           </div>
@@ -688,6 +812,124 @@ function DestinationDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function FolderComposer({
+  open,
+  onOpenChange,
+  name,
+  onNameChange,
+  pending,
+  error,
+  canCreate,
+  busy,
+  onCreate,
+  suppressFocusRef,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  name: string;
+  onNameChange: (name: string) => void;
+  pending: boolean;
+  error?: string;
+  canCreate: boolean;
+  busy: boolean;
+  onCreate: () => void;
+  suppressFocusRef: React.MutableRefObject<boolean>;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(open);
+
+  useEffect(() => {
+    if (wasOpen.current && !open && buttonRef.current) {
+      if (!suppressFocusRef.current) {
+        buttonRef.current.focus({ preventScroll: true });
+      }
+      suppressFocusRef.current = false;
+    }
+    wasOpen.current = open;
+  }, [open, suppressFocusRef]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        onOpenChange(false);
+        onNameChange("");
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open, onOpenChange, onNameChange]);
+
+  if (!canCreate) return null;
+
+  if (!open) {
+    return (
+      <button
+        ref={buttonRef}
+        type="button"
+        className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors duration-100 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+        disabled={busy}
+        onClick={() => onOpenChange(true)}
+      >
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-dashed bg-foreground/[0.02]">
+          <PlusIcon className="size-4" />
+        </div>
+        <span className="font-medium">New folder</span>
+      </button>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="rounded-md px-2.5 py-2">
+      <div className="flex items-center gap-2">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-foreground/[0.04]">
+          {pending ? (
+            <LoaderCircleIcon className="size-4 animate-spin text-muted-foreground" />
+          ) : (
+            <FolderIcon className="size-4 text-muted-foreground" />
+          )}
+        </div>
+        <div className="relative flex-1">
+          <Input
+            autoFocus
+            aria-label="New folder name"
+            autoComplete="off"
+            disabled={busy}
+            placeholder="Folder name"
+            value={name}
+            onChange={(event) => onNameChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onCreate();
+              } else if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopPropagation();
+                onOpenChange(false);
+                onNameChange("");
+              }
+            }}
+            className="h-8 w-full pr-24"
+          />
+          <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center gap-1 text-[11px] text-muted-foreground/70">
+            <kbd className="rounded border border-border/70 bg-muted px-1 font-sans text-[10px] leading-4 text-muted-foreground">
+              Enter
+            </kbd>
+            to create
+          </span>
+        </div>
+      </div>
+      {error ? (
+        <p className="mt-1.5 px-0.5 text-xs text-destructive">{error}</p>
+      ) : null}
+    </div>
   );
 }
 

@@ -33,6 +33,92 @@ export function getInitialNodePosition(
   return getFallbackPosition(index);
 }
 
+/**
+ * Finds a position for a new folder created inside a destination folder. The
+ * existing children's footprints define a composition bounding box; the new
+ * folder is placed centre-outward inside that box when there is room, and just
+ * to the right of the box when it is full.
+ */
+export function getFolderChildPosition(
+  existingNodes: CollectionNode[],
+): BoardPosition {
+  const positionedNodes = existingNodes.filter(
+    (node) => node.position !== null,
+  );
+
+  if (positionedNodes.length === 0) return getFallbackPosition(0);
+
+  const occupied = positionedNodes.map((node) =>
+    getNodeBounds(node, node.position!),
+  );
+  const compositionBounds = getCompositionBounds(occupied);
+  const preferred = {
+    x: Math.round(
+      (compositionBounds.left + compositionBounds.right - BOARD_CARD_WIDTH) / 2,
+    ),
+    y: Math.round(
+      (compositionBounds.top + compositionBounds.bottom - BOARD_CARD_WIDTH) / 2,
+    ),
+  };
+
+  if (isSlotAvailable(preferred, occupied, compositionBounds)) {
+    return preferred;
+  }
+
+  for (let radius = 1; radius <= COLLISION_SEARCH_LIMIT; radius += 1) {
+    for (const offset of squarePerimeterOffsets(radius)) {
+      const position = {
+        x: preferred.x + offset.x * COLLISION_SEARCH_STEP,
+        y: preferred.y + offset.y * COLLISION_SEARCH_STEP,
+      };
+
+      if (isSlotAvailable(position, occupied, compositionBounds)) {
+        return position;
+      }
+    }
+  }
+
+  return {
+    x: compositionBounds.right + BOARD_ITEM_GAP,
+    y: compositionBounds.top,
+  };
+}
+
+function getCompositionBounds(nodes: NodeBounds[]): NodeBounds {
+  return nodes.reduce<NodeBounds>(
+    (bounds, node) => ({
+      left: Math.min(bounds.left, node.left),
+      top: Math.min(bounds.top, node.top),
+      right: Math.max(bounds.right, node.right),
+      bottom: Math.max(bounds.bottom, node.bottom),
+    }),
+    { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity },
+  );
+}
+
+function isSlotAvailable(
+  position: BoardPosition,
+  occupied: NodeBounds[],
+  bounds: NodeBounds,
+): boolean {
+  const inset = BOARD_ITEM_GAP / 2;
+  return (
+    position.x >= bounds.left &&
+    position.y >= bounds.top &&
+    position.x + BOARD_CARD_WIDTH <= bounds.right &&
+    position.y + BOARD_CARD_WIDTH <= bounds.bottom &&
+    !hasCollision(
+      {
+        left: position.x - inset,
+        top: position.y - inset,
+        right: position.x + BOARD_CARD_WIDTH + inset,
+        bottom: position.y + BOARD_CARD_WIDTH + inset,
+      },
+      occupied,
+    )
+  );
+}
+
 export function reserveNodePositions(
   existingNodes: CollectionNode[],
   newNodes: CollectionNode[],

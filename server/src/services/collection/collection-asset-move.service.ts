@@ -56,6 +56,8 @@ export class CollectionAssetMoveService {
             id: collectionNodes.id,
             folderId: collectionNodes.folderId,
             parentFolderId: collectionNodes.parentFolderId,
+            positionX: collectionNodes.positionX,
+            positionY: collectionNodes.positionY,
             pathFolderIds: collectionNodes.pathFolderIds,
             pathFolderSlugs: collectionNodes.pathFolderSlugs,
             pathFolderNames: collectionNodes.pathFolderNames,
@@ -133,15 +135,23 @@ export class CollectionAssetMoveService {
         )
         .for("update", { of: collectionNodes });
       const anchor = getFlattenGroupAnchor(parentNodes);
+      const singleChild =
+        directChildren.length === 1 ? directChildren[0] : null;
+      const anchorForPosition = singleChild
+        ? {
+            x: folderNode.positionX ?? anchor.x,
+            y: folderNode.positionY ?? anchor.y,
+          }
+        : anchor;
       const offset =
         directChildren.length === 0
           ? { x: 0, y: 0 }
           : {
               x:
-                anchor.x -
+                anchorForPosition.x -
                 Math.min(...directChildren.map((child) => child.positionX!)),
               y:
-                anchor.y -
+                anchorForPosition.y -
                 Math.min(...directChildren.map((child) => child.positionY!)),
             };
 
@@ -219,7 +229,7 @@ export class CollectionAssetMoveService {
           ? `folder-${folderNode.parentFolderId}`
           : null,
         directChildCount: directChildren.length,
-        position: directChildren.length > 0 ? anchor : null,
+        position: directChildren.length > 0 ? anchorForPosition : null,
       };
     });
   }
