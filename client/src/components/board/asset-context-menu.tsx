@@ -98,7 +98,6 @@ export function AssetContextMenu({
         workspaceSlug: deleteContext.workspaceSlug,
         collectionSlug: deleteContext.collectionSlug,
         folderPath: deleteContext.folderPath,
-        expectedParentFolderNodeId: deleteContext.expectedParentFolderNodeId,
         nodeIds: [asset.id],
       }
     : inboxContext

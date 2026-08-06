@@ -183,13 +183,6 @@ export const AssetPathParamSchema = z.object({
   assetId: AssetNodeIdSchema,
 });
 
-export const PlaceAssetSchema = z.object({
-  collectionSlug: z.string().min(1),
-  parentFolderPath: z.string().optional(),
-});
-
-export type PlaceAssetInput = z.infer<typeof PlaceAssetSchema>;
-
 export const CollectionPathParamSchema = z.object({
   workspaceSlug: z.string(),
   collectionSlug: z.string(),
@@ -208,26 +201,17 @@ export const CollectionAssetNodePathParamSchema =
     nodeId: AssetNodeIdSchema,
   });
 
-export const MoveCollectionNodeParentSchema = z.object({
-  targetFolderNodeId: FolderNodeIdSchema,
-  expectedParentFolderNodeId: FolderNodeIdSchema.nullable(),
+export const MoveCollectionNodesParentSchema = z.object({
+  nodeIds: z
+    .array(CollectionNodeIdSchema)
+    .min(1)
+    .max(100)
+    .refine(
+      (nodeIds) => new Set(nodeIds).size === nodeIds.length,
+      "Move must not contain duplicate node IDs",
+    ),
+  targetFolderNodeId: FolderNodeIdSchema.nullable(),
 });
-
-export type MoveCollectionNodeParentInput = z.infer<
-  typeof MoveCollectionNodeParentSchema
->;
-
-export const MoveCollectionNodesParentSchema =
-  MoveCollectionNodeParentSchema.extend({
-    nodeIds: z
-      .array(CollectionNodeIdSchema)
-      .min(2)
-      .max(100)
-      .refine(
-        (nodeIds) => new Set(nodeIds).size === nodeIds.length,
-        "Move must not contain duplicate node IDs",
-      ),
-  });
 
 export type MoveCollectionNodesParentInput = z.infer<
   typeof MoveCollectionNodesParentSchema

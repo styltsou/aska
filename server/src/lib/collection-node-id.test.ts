@@ -10,10 +10,12 @@ describe("collection node identifiers", () => {
     });
     expect(parseCollectionNodeId("image-42")).toEqual({
       nodeType: "asset",
+      assetType: "image",
       entityId: 42,
     });
     expect(parseCollectionNodeId("note-5")).toEqual({
       nodeType: "asset",
+      assetType: "note",
       entityId: 5,
     });
   });

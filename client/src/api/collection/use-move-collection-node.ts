@@ -1,10 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import {
-  moveCollectionNodeToFolder,
-  moveCollectionNodesToFolder,
-} from "./fetchers";
+import { moveCollectionNodesToFolder } from "./fetchers";
 import {
   getAssetPreview,
   promoteCollectionPreview,
@@ -40,31 +37,15 @@ export function useMoveCollectionNodesToFolder(
     MoveContext
   >({
     scope: { id: `collection-node-move:${workspaceSlug}:${collectionSlug}` },
-    mutationFn: async ({
-      nodeIds,
-      targetFolderNodeId,
-      expectedParentFolderNodeId,
-    }: MoveCollectionNodesToFolderInput) => {
-      if (nodeIds.length === 1) {
-        const move = await moveCollectionNodeToFolder(
-          workspaceSlug,
-          collectionSlug,
-          nodeIds[0]!,
-          {
-            targetFolderNodeId,
-            expectedParentFolderNodeId,
-          },
-        );
-        return { moves: [move] };
-      }
-
-      return moveCollectionNodesToFolder(workspaceSlug, collectionSlug, {
+    mutationFn: async ({ nodeIds, targetFolderNodeId }) =>
+      moveCollectionNodesToFolder(workspaceSlug, collectionSlug, {
         nodeIds,
         targetFolderNodeId,
-        expectedParentFolderNodeId,
-      });
-    },
+      }),
     onMutate: async (variables) => {
+      if (!variables.targetFolderNodeId) {
+        return { optimistic: false };
+      }
       const contentsScope = collectionQueryKeys.contentScope(
         workspaceSlug,
         collectionSlug,
@@ -175,8 +156,8 @@ export function useMoveCollectionNodesToFolder(
       );
       toast.error(getMoveErrorMessage(variables.nodeIds));
     },
-    onSettled: () => {
-      void Promise.all([
+    onSettled: (_data, _error, variables) => {
+      const invalidations = [
         queryClient.invalidateQueries({
           queryKey: collectionQueryKeys.contentScope(
             workspaceSlug,
@@ -186,7 +167,24 @@ export function useMoveCollectionNodesToFolder(
         queryClient.invalidateQueries({
           queryKey: collectionQueryKeys.collections(workspaceSlug),
         }),
-      ]);
+        queryClient.invalidateQueries({
+          queryKey: collectionQueryKeys.inbox(workspaceSlug),
+        }),
+      ];
+      if (
+        variables.sourceCollectionSlug &&
+        variables.sourceCollectionSlug !== collectionSlug
+      ) {
+        invalidations.push(
+          queryClient.invalidateQueries({
+            queryKey: collectionQueryKeys.contentScope(
+              workspaceSlug,
+              variables.sourceCollectionSlug,
+            ),
+          }),
+        );
+      }
+      void Promise.all(invalidations);
     },
   });
 }

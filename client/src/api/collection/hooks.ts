@@ -23,7 +23,6 @@ import {
   fetchCollectionContents,
   fetchInboxContents,
   flattenFolder,
-  placeAsset,
   markInboxSeen,
   updateCollectionNodePosition,
   updateCollectionNodePositions,
@@ -43,7 +42,6 @@ import type {
   FolderChildPreview,
   ImageUploadStatus,
   InboxContentsResponse,
-  PlaceAssetInput,
   UpdateNodePositionInput,
   UpdateNodePositionsInput,
 } from "./types";
@@ -1642,186 +1640,6 @@ export function useUpdateCollectionNodePositions(
       queryClient.setQueryData<CollectionContentsResponse>(
         context.contentsKey,
         (current) => (current ? { ...current, nodes: previousNodes } : current),
-      );
-    },
-  });
-}
-
-export function usePlaceAsset(workspaceSlug: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ assetId, ...data }: PlaceAssetInput & { assetId: string }) =>
-      placeAsset(workspaceSlug, assetId, data),
-    onMutate: async (variables) => {
-      const inboxKey = collectionQueryKeys.inbox(workspaceSlug);
-      const collectionsKey = collectionQueryKeys.collections(workspaceSlug);
-      const workspaceKey = ["workspace", workspaceSlug] as const;
-      const parentKey = collectionQueryKeys.contents(
-        workspaceSlug,
-        variables.collectionSlug,
-        variables.parentFolderPath,
-      );
-      await queryClient.cancelQueries({ queryKey: inboxKey });
-
-      const previousInbox =
-        queryClient.getQueryData<InboxContentsResponse>(inboxKey);
-      const previousCollections =
-        queryClient.getQueryData<CollectionsData>(collectionsKey);
-      const previousWorkspace =
-        queryClient.getQueryData<WorkspaceData>(workspaceKey);
-      const previousParent =
-        queryClient.getQueryData<CollectionContentsResponse>(parentKey);
-      const node = previousInbox?.nodes.find(
-        (item) => item.id === variables.assetId,
-      );
-
-      if (!node || node.type === "folder") {
-        return {
-          inboxKey,
-          collectionsKey,
-          workspaceKey,
-          parentKey,
-          previousInbox,
-          previousCollections,
-          previousWorkspace,
-          previousParent,
-          optimistic: false,
-        };
-      }
-
-      const preview: FolderChildPreview =
-        node.type === "image"
-          ? {
-              assetId: node.id,
-              type: "image",
-              url: node.url,
-              blurDataURL: node.blurDataURL,
-            }
-          : {
-              assetId: node.id,
-              type: "note",
-              color: node.color ?? undefined,
-              snippet: node.content.slice(0, 100),
-            };
-
-      queryClient.setQueryData<InboxContentsResponse>(inboxKey, (current) =>
-        current
-          ? {
-              ...current,
-              nodes: current.nodes.filter(
-                (item) => item.id !== variables.assetId,
-              ),
-            }
-          : current,
-      );
-      updateCollectionAssetCount(
-        queryClient,
-        workspaceSlug,
-        variables.collectionSlug,
-        1,
-      );
-      addPreviewToCollection(
-        queryClient,
-        workspaceSlug,
-        variables.collectionSlug,
-        preview,
-      );
-      addPreviewToParentFolder(
-        queryClient,
-        workspaceSlug,
-        variables.collectionSlug,
-        variables.parentFolderPath,
-        preview,
-      );
-
-      return {
-        inboxKey,
-        collectionsKey,
-        workspaceKey,
-        parentKey,
-        previousInbox,
-        previousCollections,
-        previousWorkspace,
-        previousParent,
-        optimistic: true,
-      };
-    },
-    onError: (_error, _variables, context) => {
-      if (!context) return;
-      queryClient.setQueryData(context.inboxKey, context.previousInbox);
-      queryClient.setQueryData(
-        context.collectionsKey,
-        context.previousCollections,
-      );
-      queryClient.setQueryData(context.workspaceKey, context.previousWorkspace);
-      queryClient.setQueryData(context.parentKey, context.previousParent);
-    },
-    onSuccess: (data, variables, context) => {
-      if (context?.optimistic) {
-        reconcileCollectionCaches(
-          queryClient,
-          workspaceSlug,
-          variables.collectionSlug,
-        );
-        return;
-      }
-      queryClient.setQueryData<InboxContentsResponse>(
-        collectionQueryKeys.inbox(workspaceSlug),
-        (current) => {
-          if (!current) return current;
-
-          return {
-            ...current,
-            nodes: current.nodes.filter(
-              (node) => node.id !== variables.assetId,
-            ),
-          };
-        },
-      );
-      updateCollectionAssetCount(
-        queryClient,
-        workspaceSlug,
-        variables.collectionSlug,
-        1,
-      );
-
-      const preview =
-        data.node.type === "image"
-          ? ({
-              assetId: data.node.id,
-              type: "image",
-              url: data.node.url,
-              blurDataURL: data.node.blurDataURL,
-            } as FolderChildPreview)
-          : data.node.type === "note"
-            ? ({
-                assetId: data.node.id,
-                type: "note",
-                color: data.node.color ?? undefined,
-                snippet: data.node.content.slice(0, 100),
-              } as FolderChildPreview)
-            : null;
-      if (preview) {
-        addPreviewToCollection(
-          queryClient,
-          workspaceSlug,
-          variables.collectionSlug,
-          preview,
-        );
-        addPreviewToParentFolder(
-          queryClient,
-          workspaceSlug,
-          variables.collectionSlug,
-          variables.parentFolderPath,
-          preview,
-        );
-      }
-
-      reconcileCollectionCaches(
-        queryClient,
-        workspaceSlug,
-        variables.collectionSlug,
       );
     },
   });

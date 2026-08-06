@@ -6,7 +6,6 @@ import {
   gt,
   inArray,
   isNotNull,
-  isNull,
   notExists,
 } from "drizzle-orm";
 
@@ -14,7 +13,6 @@ import { db } from "@/db";
 import {
   assets,
   collectionNodes,
-  collectionsTable,
   imageAssets,
   member,
   noteAssets,
@@ -28,7 +26,6 @@ import type {
   ContentTypeFilter,
   CreateNoteInput,
   InboxContentsResponse,
-  PlaceAssetInput,
 } from "@/dto/collection.dto";
 import type { BulkDeleteResult } from "@/services/collection/collection.types";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -39,13 +36,6 @@ import type { IObjectStorageService } from "@/services/object-storage.service";
 
 type Deps = {
   objectStorageService: IObjectStorageService;
-};
-
-type ParentPath = {
-  folderId: number | null;
-  folderIds: number[];
-  slugs: string[];
-  names: string[];
 };
 
 export interface IAssetService {
@@ -63,11 +53,6 @@ export interface IAssetService {
     userId: string,
     data: CreateNoteInput,
   ): Promise<CollectionNoteNode>;
-  placeAsset(
-    orgId: string,
-    assetNodeId: string,
-    data: PlaceAssetInput,
-  ): Promise<CollectionNode>;
   deleteAsset(
     orgId: string,
     assetNodeId: string,
@@ -260,47 +245,6 @@ export class AssetService implements IAssetService {
     };
   }
 
-  async placeAsset(
-    orgId: string,
-    assetNodeId: string,
-    data: PlaceAssetInput,
-  ): Promise<CollectionNode> {
-    const target = parseAssetNodeId(assetNodeId);
-    const asset = await this.getAssetRow(orgId, target.entityId);
-
-    const collection = await getCollection(orgId, data.collectionSlug);
-    const parentPath = await resolveParentPath(
-      collection.id,
-      data.parentFolderPath,
-    );
-
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(collectionNodes)
-        .where(
-          and(
-            eq(collectionNodes.organizationId, orgId),
-            eq(collectionNodes.nodeType, "asset"),
-            eq(collectionNodes.assetId, asset.id),
-          ),
-        );
-
-      await tx.insert(collectionNodes).values({
-        organizationId: orgId,
-        collectionId: collection.id,
-        parentFolderId: parentPath.folderId,
-        nodeType: "asset",
-        assetId: asset.id,
-        depth: parentPath.slugs.length,
-        pathFolderIds: parentPath.folderIds,
-        pathFolderSlugs: parentPath.slugs,
-        pathFolderNames: parentPath.names,
-      });
-    });
-
-    return this.getAssetNode(orgId, asset.id);
-  }
-
   async deleteAsset(
     orgId: string,
     assetNodeId: string,
@@ -354,60 +298,6 @@ export class AssetService implements IAssetService {
       deletedCount: parsed.length,
       deletedAssetCount: parsed.length,
     };
-  }
-
-  private async getAssetNode(
-    orgId: string,
-    assetId: number,
-  ): Promise<CollectionNode> {
-    const row = first(
-      await db
-        .select({
-          assetId: assets.id,
-          assetType: assets.type,
-          title: assets.title,
-          isFavorite: assets.isFavorite,
-          createdAt: assets.createdAt,
-          imageAlt: imageAssets.alt,
-          sourceLabel: imageAssets.sourceLabel,
-          sourceUrl: imageAssets.sourceUrl,
-          imageVariants: imageAssets.variants,
-          imageBlurDataURL: imageAssets.blurDataURL,
-          imageDominantColors: imageAssets.dominantColors,
-          noteContent: noteAssets.markdown,
-          noteColor: noteAssets.color,
-        })
-        .from(assets)
-        .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
-        .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
-        .where(and(eq(assets.organizationId, orgId), eq(assets.id, assetId)))
-        .limit(1),
-    );
-
-    if (!row) {
-      throw new AppError(ErrorCode.NOT_FOUND, "Asset not found");
-    }
-
-    return (await this.rowsToAssetNodes([row]))[0]!;
-  }
-
-  private async getAssetRow(orgId: string, assetId: number) {
-    const asset = first(
-      await db
-        .select({
-          id: assets.id,
-          type: assets.type,
-        })
-        .from(assets)
-        .where(and(eq(assets.organizationId, orgId), eq(assets.id, assetId)))
-        .limit(1),
-    );
-
-    if (!asset) {
-      throw new AppError(ErrorCode.NOT_FOUND, "Asset not found");
-    }
-
-    return asset;
   }
 
   private async rowsToAssetNodes(
@@ -523,77 +413,4 @@ export async function collectAssetObjectKeys(
   }
 
   return [...keys];
-}
-
-async function getCollection(orgId: string, collectionSlug: string) {
-  const collection = first(
-    await db
-      .select({
-        id: collectionsTable.id,
-        name: collectionsTable.name,
-        slug: collectionsTable.slug,
-      })
-      .from(collectionsTable)
-      .where(
-        and(
-          eq(collectionsTable.organizationId, orgId),
-          eq(collectionsTable.slug, collectionSlug),
-        ),
-      )
-      .limit(1),
-  );
-
-  if (!collection) {
-    throw new AppError(ErrorCode.NOT_FOUND, "Collection not found");
-  }
-
-  return collection;
-}
-
-async function resolveParentPath(
-  collectionId: number,
-  parentFolderPath?: string,
-): Promise<ParentPath> {
-  const slugs = parentFolderPath?.split("/").filter(Boolean) ?? [];
-  if (slugs.length === 0) {
-    return {
-      folderId: null,
-      folderIds: [],
-      slugs,
-      names: [],
-    };
-  }
-
-  const parentFolder = first(
-    await db
-      .select({
-        folderId: collectionNodes.folderId,
-        pathFolderIds: collectionNodes.pathFolderIds,
-        pathFolderNames: collectionNodes.pathFolderNames,
-      })
-      .from(collectionNodes)
-      .where(
-        and(
-          eq(collectionNodes.collectionId, collectionId),
-          eq(collectionNodes.pathFolderSlugs, slugs),
-          eq(collectionNodes.nodeType, "folder"),
-          isNull(collectionNodes.assetId),
-        ),
-      )
-      .limit(1),
-  );
-
-  if (!parentFolder?.folderId) {
-    throw new AppError(
-      ErrorCode.NOT_FOUND,
-      "Parent folder not found in collection",
-    );
-  }
-
-  return {
-    folderId: parentFolder.folderId,
-    folderIds: parentFolder.pathFolderIds,
-    slugs,
-    names: parentFolder.pathFolderNames,
-  };
 }

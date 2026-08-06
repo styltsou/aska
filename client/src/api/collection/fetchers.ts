@@ -19,10 +19,6 @@ import type {
   DeleteAssetResponse,
   InboxContentsResponse,
   ImageUploadStatusResponse,
-  PlaceAssetInput,
-  PlaceAssetResponse,
-  MoveCollectionNodeToFolderInput,
-  MoveCollectionNodeToFolderResponse,
   MoveCollectionNodesToFolderInput,
   MoveCollectionNodesToFolderResponse,
   UpdateNodePositionInput,
@@ -152,17 +148,6 @@ export async function fetchInboxImageUploadStatus(
   );
 }
 
-export async function placeAsset(
-  workspaceSlug: string,
-  assetId: string,
-  data: PlaceAssetInput,
-): Promise<PlaceAssetResponse> {
-  return apiPost<PlaceAssetResponse>(
-    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/placements`,
-    data,
-  );
-}
-
 export async function deleteAsset(
   workspaceSlug: string,
   assetId: string,
@@ -222,27 +207,12 @@ export async function updateCollectionNodePositions(
   );
 }
 
-export async function moveCollectionNodeToFolder(
-  workspaceSlug: string,
-  collectionSlug: string,
-  nodeId: string,
-  data: Pick<
-    MoveCollectionNodeToFolderInput,
-    "targetFolderNodeId" | "expectedParentFolderNodeId"
-  >,
-): Promise<MoveCollectionNodeToFolderResponse> {
-  return apiPatch<MoveCollectionNodeToFolderResponse>(
-    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/nodes/${encodeURIComponent(nodeId)}/parent`,
-    data,
-  );
-}
-
 export async function moveCollectionNodesToFolder(
   workspaceSlug: string,
   collectionSlug: string,
   data: Pick<
     MoveCollectionNodesToFolderInput,
-    "nodeIds" | "targetFolderNodeId" | "expectedParentFolderNodeId"
+    "nodeIds" | "targetFolderNodeId"
   >,
 ): Promise<MoveCollectionNodesToFolderResponse> {
   return apiPatch<MoveCollectionNodesToFolderResponse>(

@@ -2,10 +2,7 @@ import { and, arrayContains, eq, isNull, ne } from "drizzle-orm";
 
 import { db } from "@/db";
 import { assets, collectionNodes, folders, imageAssets } from "@/db/schema";
-import type {
-  MoveCollectionNodeParentInput,
-  MoveCollectionNodesParentInput,
-} from "@/dto/collection.dto";
+import type { MoveCollectionNodesParentInput } from "@/dto/collection.dto";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import { first } from "@/lib/query";
@@ -19,7 +16,7 @@ export type MoveCollectionNodeParentResult = {
   nodeId: string;
   sourceParentFolderNodeId: string | null;
   sourceFolderPath: string;
-  targetParentFolderNodeId: string;
+  targetParentFolderNodeId: string | null;
   targetFolderPath: string;
   position: { x: number; y: number } | null;
   moved: boolean;
@@ -227,19 +224,6 @@ export class CollectionAssetMoveService {
     });
   }
 
-  async moveNodeToFolder(
-    orgId: string,
-    collectionSlug: string,
-    nodeId: string,
-    data: MoveCollectionNodeParentInput,
-  ): Promise<MoveCollectionNodeParentResult> {
-    const result = await this.moveNodesToFolder(orgId, collectionSlug, {
-      ...data,
-      nodeIds: [nodeId],
-    });
-    return result.moves[0]!;
-  }
-
   async moveNodesToFolder(
     orgId: string,
     collectionSlug: string,
@@ -250,98 +234,66 @@ export class CollectionAssetMoveService {
       nodeId,
       source: parseCollectionNodeId(nodeId),
     }));
-    const target = parseCollectionNodeId(data.targetFolderNodeId);
-    const expectedParent = data.expectedParentFolderNodeId
-      ? parseCollectionNodeId(data.expectedParentFolderNodeId)
+    const sourcesInLockOrder = [...sources].sort((left, right) =>
+      left.source.nodeType === right.source.nodeType
+        ? left.source.entityId - right.source.entityId
+        : left.source.nodeType.localeCompare(right.source.nodeType),
+    );
+    const target = data.targetFolderNodeId
+      ? parseCollectionNodeId(data.targetFolderNodeId)
       : null;
 
-    if (target.nodeType !== "folder") {
+    if (target && target.nodeType !== "folder") {
       throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid move target");
-    }
-    if (expectedParent && expectedParent.nodeType !== "folder") {
-      throw new AppError(
-        ErrorCode.VALIDATION_ERROR,
-        "Expected parent must be a folder node",
-      );
     }
 
     return db.transaction(async (tx) => {
-      const moves: MoveCollectionNodeParentResult[] = [];
-      const targetFolder = first(
-        await tx
-          .select({
-            folderId: collectionNodes.folderId,
-            pathFolderIds: collectionNodes.pathFolderIds,
-            pathFolderSlugs: collectionNodes.pathFolderSlugs,
-            pathFolderNames: collectionNodes.pathFolderNames,
-          })
-          .from(collectionNodes)
-          .where(
-            and(
-              eq(collectionNodes.organizationId, orgId),
-              eq(collectionNodes.collectionId, collection.id),
-              eq(collectionNodes.nodeType, "folder"),
-              eq(collectionNodes.folderId, target.entityId),
-            ),
+      const movesByNodeId = new Map<string, MoveCollectionNodeParentResult>();
+      const targetFolder = target
+        ? first(
+            await tx
+              .select({
+                folderId: collectionNodes.folderId,
+                pathFolderIds: collectionNodes.pathFolderIds,
+                pathFolderSlugs: collectionNodes.pathFolderSlugs,
+                pathFolderNames: collectionNodes.pathFolderNames,
+              })
+              .from(collectionNodes)
+              .where(
+                and(
+                  eq(collectionNodes.organizationId, orgId),
+                  eq(collectionNodes.collectionId, collection.id),
+                  eq(collectionNodes.nodeType, "folder"),
+                  eq(collectionNodes.folderId, target.entityId),
+                ),
+              )
+              .limit(1)
+              .for("update"),
           )
-          .limit(1)
-          .for("update"),
-      );
-      if (!targetFolder?.folderId) {
+        : {
+            folderId: null,
+            pathFolderIds: [],
+            pathFolderSlugs: [],
+            pathFolderNames: [],
+          };
+      if (!targetFolder) {
         throw new AppError(ErrorCode.NOT_FOUND, "Target folder not found");
       }
 
-      for (const { nodeId, source } of sources) {
-        const sourceCondition =
-          source.nodeType === "folder"
-            ? and(
-                eq(collectionNodes.nodeType, "folder"),
-                eq(collectionNodes.folderId, source.entityId),
-              )
-            : and(
-                eq(collectionNodes.nodeType, "asset"),
-                eq(collectionNodes.assetId, source.entityId),
-              );
-
-        const sourceNode = first(
-          await tx
-            .select({
-              id: collectionNodes.id,
-              nodeType: collectionNodes.nodeType,
-              assetId: collectionNodes.assetId,
-              folderId: collectionNodes.folderId,
-              parentFolderId: collectionNodes.parentFolderId,
-              positionX: collectionNodes.positionX,
-              positionY: collectionNodes.positionY,
-              depth: collectionNodes.depth,
-              pathFolderIds: collectionNodes.pathFolderIds,
-              pathFolderSlugs: collectionNodes.pathFolderSlugs,
-              pathFolderNames: collectionNodes.pathFolderNames,
-              assetType: assets.type,
-              imageWidth: imageAssets.width,
-              imageHeight: imageAssets.height,
-            })
-            .from(collectionNodes)
-            .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
-            .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
-            .where(
-              and(
-                eq(collectionNodes.organizationId, orgId),
-                eq(collectionNodes.collectionId, collection.id),
-                sourceCondition,
-              ),
-            )
-            .limit(1)
-            .for("update", { of: collectionNodes }),
-        );
-        if (!sourceNode) {
-          throw new AppError(
-            ErrorCode.NOT_FOUND,
-            "Node not found in collection",
-          );
-        }
+      for (const { nodeId, source } of sourcesInLockOrder) {
+        const sourceNode = await getMoveSourceNode(tx, orgId, source);
+        const sourceNodeId = sourceNode.id;
 
         if (source.nodeType === "folder") {
+          if (
+            sourceNodeId === null ||
+            sourceNode.collectionId !== collection.id
+          ) {
+            throw new AppError(
+              ErrorCode.VALIDATION_ERROR,
+              "Folders can only be moved within their collection",
+            );
+          }
           if (targetFolder.folderId === source.entityId) {
             throw new AppError(
               ErrorCode.VALIDATION_ERROR,
@@ -359,7 +311,9 @@ export class CollectionAssetMoveService {
         const sourceParentFolderNodeId = sourceNode.parentFolderId
           ? `folder-${sourceNode.parentFolderId}`
           : null;
-        const targetParentFolderNodeId = `folder-${targetFolder.folderId}`;
+        const targetParentFolderNodeId = targetFolder.folderId
+          ? `folder-${targetFolder.folderId}`
+          : null;
         const result = {
           nodeId,
           sourceParentFolderNodeId,
@@ -369,16 +323,12 @@ export class CollectionAssetMoveService {
           position: null,
         } as const;
 
-        if (sourceNode.parentFolderId === targetFolder.folderId) {
-          moves.push({ ...result, moved: false });
+        if (
+          sourceNode.collectionId === collection.id &&
+          sourceNode.parentFolderId === targetFolder.folderId
+        ) {
+          movesByNodeId.set(nodeId, { ...result, moved: false });
           continue;
-        }
-
-        if (sourceNode.parentFolderId !== (expectedParent?.entityId ?? null)) {
-          throw new AppError(
-            ErrorCode.CONFLICT,
-            "Node moved before this drag completed",
-          );
         }
 
         const destinationNodes = await tx
@@ -397,12 +347,22 @@ export class CollectionAssetMoveService {
             and(
               eq(collectionNodes.organizationId, orgId),
               eq(collectionNodes.collectionId, collection.id),
-              eq(collectionNodes.parentFolderId, targetFolder.folderId),
+              targetFolder.folderId === null
+                ? isNull(collectionNodes.parentFolderId)
+                : eq(collectionNodes.parentFolderId, targetFolder.folderId),
             ),
-          );
+          )
+          .for("update", { of: collectionNodes });
         const position = getFolderMovePosition(destinationNodes, sourceNode);
 
         if (source.nodeType === "folder") {
+          if (sourceNodeId === null) {
+            throw new AppError(
+              ErrorCode.INTERNAL_ERROR,
+              "Folder node is invalid",
+            );
+          }
+          const folderNodeId = sourceNodeId;
           const oldPrefix = sourceNode.pathFolderIds;
           const ownSlug = sourceNode.pathFolderSlugs.at(-1);
           const ownName = sourceNode.pathFolderNames.at(-1);
@@ -431,7 +391,7 @@ export class CollectionAssetMoveService {
                   eq(collectionNodes.collectionId, collection.id),
                   eq(collectionNodes.nodeType, "folder"),
                   eq(collectionNodes.pathFolderSlugs, newPathFolderSlugs),
-                  ne(collectionNodes.id, sourceNode.id),
+                  ne(collectionNodes.id, folderNodeId),
                 ),
               )
               .limit(1)
@@ -476,10 +436,10 @@ export class CollectionAssetMoveService {
               pathFolderSlugs: newPathFolderSlugs,
               pathFolderNames: newPathFolderNames,
             })
-            .where(eq(collectionNodes.id, sourceNode.id));
+            .where(eq(collectionNodes.id, folderNodeId));
 
           for (const descendant of subtree) {
-            if (descendant.id === sourceNode.id) continue;
+            if (descendant.id === folderNodeId) continue;
 
             const remainderIds = descendant.pathFolderIds.slice(
               oldPrefix.length,
@@ -502,9 +462,11 @@ export class CollectionAssetMoveService {
               .where(eq(collectionNodes.id, descendant.id));
           }
         } else {
-          await tx
-            .delete(collectionNodes)
-            .where(eq(collectionNodes.id, sourceNode.id));
+          if (sourceNode.id !== null) {
+            await tx
+              .delete(collectionNodes)
+              .where(eq(collectionNodes.id, sourceNode.id));
+          }
           await tx.insert(collectionNodes).values({
             organizationId: orgId,
             collectionId: collection.id,
@@ -520,12 +482,143 @@ export class CollectionAssetMoveService {
           });
         }
 
-        moves.push({ ...result, position, moved: true });
+        movesByNodeId.set(nodeId, { ...result, position, moved: true });
       }
 
-      return { moves };
+      return {
+        moves: sources.map(({ nodeId }) => movesByNodeId.get(nodeId)!),
+      };
     });
   }
+}
+
+type DatabaseTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type MoveSourceNode = {
+  id: number | null;
+  collectionId: number | null;
+  nodeType: "asset" | "folder";
+  assetId: number | null;
+  folderId: number | null;
+  parentFolderId: number | null;
+  positionX: number | null;
+  positionY: number | null;
+  depth: number;
+  pathFolderIds: number[];
+  pathFolderSlugs: string[];
+  pathFolderNames: string[];
+  assetType: "image" | "note" | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+};
+
+async function getMoveSourceNode(
+  tx: DatabaseTransaction,
+  orgId: string,
+  source: ReturnType<typeof parseCollectionNodeId>,
+): Promise<MoveSourceNode> {
+  if (source.nodeType === "folder") {
+    const folderNode = first(
+      await tx
+        .select({
+          id: collectionNodes.id,
+          collectionId: collectionNodes.collectionId,
+          folderId: collectionNodes.folderId,
+          parentFolderId: collectionNodes.parentFolderId,
+          positionX: collectionNodes.positionX,
+          positionY: collectionNodes.positionY,
+          depth: collectionNodes.depth,
+          pathFolderIds: collectionNodes.pathFolderIds,
+          pathFolderSlugs: collectionNodes.pathFolderSlugs,
+          pathFolderNames: collectionNodes.pathFolderNames,
+        })
+        .from(collectionNodes)
+        .where(
+          and(
+            eq(collectionNodes.organizationId, orgId),
+            eq(collectionNodes.nodeType, "folder"),
+            eq(collectionNodes.folderId, source.entityId),
+          ),
+        )
+        .limit(1)
+        .for("update"),
+    );
+    if (!folderNode) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Folder not found");
+    }
+
+    return {
+      ...folderNode,
+      nodeType: "folder",
+      assetId: null,
+      assetType: null,
+      imageWidth: null,
+      imageHeight: null,
+    };
+  }
+
+  const asset = first(
+    await tx
+      .select({
+        id: assets.id,
+        type: assets.type,
+        imageWidth: imageAssets.width,
+        imageHeight: imageAssets.height,
+      })
+      .from(assets)
+      .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+      .where(
+        and(eq(assets.organizationId, orgId), eq(assets.id, source.entityId)),
+      )
+      .limit(1)
+      .for("update", { of: assets }),
+  );
+  if (!asset || asset.type !== source.assetType) {
+    throw new AppError(ErrorCode.NOT_FOUND, "Asset not found");
+  }
+
+  const placement = first(
+    await tx
+      .select({
+        id: collectionNodes.id,
+        collectionId: collectionNodes.collectionId,
+        parentFolderId: collectionNodes.parentFolderId,
+        positionX: collectionNodes.positionX,
+        positionY: collectionNodes.positionY,
+        depth: collectionNodes.depth,
+        pathFolderIds: collectionNodes.pathFolderIds,
+        pathFolderSlugs: collectionNodes.pathFolderSlugs,
+        pathFolderNames: collectionNodes.pathFolderNames,
+      })
+      .from(collectionNodes)
+      .where(
+        and(
+          eq(collectionNodes.organizationId, orgId),
+          eq(collectionNodes.nodeType, "asset"),
+          eq(collectionNodes.assetId, asset.id),
+        ),
+      )
+      .limit(1)
+      .for("update"),
+  );
+
+  return {
+    id: placement?.id ?? null,
+    collectionId: placement?.collectionId ?? null,
+    nodeType: "asset",
+    assetId: asset.id,
+    folderId: null,
+    parentFolderId: placement?.parentFolderId ?? null,
+    positionX: placement?.positionX ?? null,
+    positionY: placement?.positionY ?? null,
+    depth: placement?.depth ?? 0,
+    pathFolderIds: placement?.pathFolderIds ?? [],
+    pathFolderSlugs: placement?.pathFolderSlugs ?? [],
+    pathFolderNames: placement?.pathFolderNames ?? [],
+    assetType: asset.type,
+    imageWidth: asset.imageWidth,
+    imageHeight: asset.imageHeight,
+  };
 }
 
 function hasPathPrefix(path: number[], prefix: number[]): boolean {

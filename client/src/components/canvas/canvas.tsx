@@ -879,7 +879,7 @@ function CanvasSurface({
                 nodeIds,
                 folderPath,
                 targetFolderNodeId,
-                expectedParentFolderNodeId,
+                sourceCollectionSlug: collectionSlug,
               },
               {
                 onError: () => {
@@ -1067,7 +1067,6 @@ function CanvasSurface({
             workspaceSlug,
             collectionSlug,
             folderPath,
-            expectedParentFolderNodeId,
             nodeIds: selectedIds,
           }}
           onMoved={() => clearSelection(boardKey)}

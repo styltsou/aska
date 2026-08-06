@@ -183,15 +183,6 @@ export type ImageUploadStatusResponse = {
   upload: ImageUploadStatus;
 };
 
-export type PlaceAssetInput = {
-  collectionSlug: string;
-  parentFolderPath?: string;
-};
-
-export type PlaceAssetResponse = {
-  node: CollectionNode;
-};
-
 export type DeleteAssetResponse = {
   deletedAssetId: string;
 };
@@ -228,18 +219,11 @@ export type UpdateNodePositionsResponse = {
   nodeIds: string[];
 };
 
-export type MoveCollectionNodeToFolderInput = {
-  nodeId: string;
-  folderPath?: string;
-  targetFolderNodeId: string;
-  expectedParentFolderNodeId: string | null;
-};
-
 export type MoveCollectionNodeToFolderResponse = {
   nodeId: string;
   sourceParentFolderNodeId: string | null;
   sourceFolderPath: string;
-  targetParentFolderNodeId: string;
+  targetParentFolderNodeId: string | null;
   targetFolderPath: string;
   position: BoardPosition | null;
   moved: boolean;
@@ -248,8 +232,8 @@ export type MoveCollectionNodeToFolderResponse = {
 export type MoveCollectionNodesToFolderInput = {
   nodeIds: string[];
   folderPath?: string;
-  targetFolderNodeId: string;
-  expectedParentFolderNodeId: string | null;
+  targetFolderNodeId: string | null;
+  sourceCollectionSlug?: string;
 };
 
 export type MoveCollectionNodesToFolderResponse = {

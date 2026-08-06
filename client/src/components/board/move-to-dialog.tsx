@@ -17,7 +17,6 @@ import {
   useCollectionContents,
   useCollections,
   useMoveCollectionNodesToFolder,
-  usePlaceAssets,
 } from "@/api/collection";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +39,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const FOLDER_TYPES = ["folder"] as const satisfies readonly ContentTypeFilter[];
-const MAX_COLLECTION_MOVE_SIZE = 100;
+const MAX_MOVE_BATCH_SIZE = 100;
 
 export type MoveToDialogSource =
   | {
@@ -48,7 +47,6 @@ export type MoveToDialogSource =
       workspaceSlug: string;
       collectionSlug: string;
       folderPath?: string;
-      expectedParentFolderNodeId: string | null;
       nodeIds: string[];
     }
   | {
@@ -97,39 +95,53 @@ function CollectionMoveDialog({
   onMoved?: (nodeIds: readonly string[]) => void;
 }) {
   const [destinationPath, setDestinationPath] = useState<string>();
+  const [selectedCollectionSlug, setSelectedCollectionSlug] =
+    useState<string>();
   const [error, setError] = useState<string>();
+  const includesFolder = source.nodeIds.some((id) => id.startsWith("folder-"));
+  const {
+    data: collectionsData,
+    isLoading: collectionsLoading,
+    isError: collectionsError,
+  } = useCollections(source.workspaceSlug);
+  const targetCollectionSlug = includesFolder
+    ? source.collectionSlug
+    : (selectedCollectionSlug ?? source.collectionSlug);
+  const targetCollection = collectionsData?.collections.find(
+    (collection) => collection.slug === targetCollectionSlug,
+  );
   const moveNodes = useMoveCollectionNodesToFolder(
     source.workspaceSlug,
-    source.collectionSlug,
+    targetCollectionSlug,
   );
   const destination = useFolderDestination(
     source.workspaceSlug,
-    source.collectionSlug,
+    targetCollectionSlug,
     destinationPath,
     open,
+    targetCollection?.name,
   );
   const destinationFolder = destination.breadcrumbs.at(-1);
   const targetFolderNodeId = destinationFolder
     ? `folder-${destinationFolder.id}`
-    : undefined;
-  const isSameParent =
-    targetFolderNodeId !== undefined &&
-    targetFolderNodeId === source.expectedParentFolderNodeId;
-  const exceedsBatchLimit = source.nodeIds.length > MAX_COLLECTION_MOVE_SIZE;
+    : null;
+  const exceedsBatchLimit = source.nodeIds.length > MAX_MOVE_BATCH_SIZE;
   const canMove =
-    targetFolderNodeId !== undefined &&
-    !isSameParent &&
     !exceedsBatchLimit &&
+    targetCollectionSlug.length > 0 &&
     !destination.isLoading &&
     !destination.isStale &&
     !destination.isError;
   const selectedFolderIds = useMemo(
-    () => new Set(source.nodeIds.filter((id) => id.startsWith("folder-"))),
-    [source.nodeIds],
+    () =>
+      targetCollectionSlug === source.collectionSlug
+        ? new Set(source.nodeIds.filter((id) => id.startsWith("folder-")))
+        : EMPTY_IDS,
+    [source.collectionSlug, source.nodeIds, targetCollectionSlug],
   );
 
   async function handleMove() {
-    if (!canMove || !targetFolderNodeId) return;
+    if (!canMove) return;
     setError(undefined);
 
     try {
@@ -137,7 +149,7 @@ function CollectionMoveDialog({
         nodeIds: source.nodeIds,
         folderPath: source.folderPath,
         targetFolderNodeId,
-        expectedParentFolderNodeId: source.expectedParentFolderNodeId,
+        sourceCollectionSlug: source.collectionSlug,
       });
       onMoved?.(source.nodeIds);
       toast.success(moveSuccessMessage(source.nodeIds.length));
@@ -152,12 +164,33 @@ function CollectionMoveDialog({
   }
 
   const disabledReason = exceedsBatchLimit
-    ? `Move up to ${MAX_COLLECTION_MOVE_SIZE} items at a time.`
-    : !targetFolderNodeId
-      ? "Open a destination folder to continue."
-      : isSameParent
-        ? "These items are already in this folder."
-        : undefined;
+    ? `Move up to ${MAX_MOVE_BATCH_SIZE} items at a time.`
+    : collectionsError
+      ? "Unable to load collections. Close this dialog and try again."
+      : undefined;
+
+  const collectionPicker = includesFolder ? undefined : (
+    <Select
+      value={targetCollectionSlug}
+      disabled={collectionsLoading || moveNodes.isPending}
+      onValueChange={(nextCollectionSlug) => {
+        setSelectedCollectionSlug(nextCollectionSlug ?? undefined);
+        setDestinationPath(undefined);
+        setError(undefined);
+      }}
+    >
+      <SelectTrigger className="w-full" aria-label="Destination collection">
+        <SelectValue placeholder="Select collection" />
+      </SelectTrigger>
+      <SelectContent>
+        {(collectionsData?.collections ?? []).map((collection) => (
+          <SelectItem key={collection.id} value={collection.slug}>
+            {collection.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
   return (
     <DestinationDialog
@@ -166,7 +199,12 @@ function CollectionMoveDialog({
         if (!moveNodes.isPending) onOpenChange(nextOpen);
       }}
       title="Move to..."
-      description="Open a folder, then move the selected items into it."
+      description={
+        includesFolder
+          ? "Browse to a folder or use this collection's root as the destination."
+          : "Choose a collection, then browse to a folder or use its root."
+      }
+      controls={collectionPicker}
       destination={destination}
       destinationPath={destinationPath}
       disabledFolderIds={selectedFolderIds}
@@ -205,9 +243,11 @@ function InboxMoveDialog({
     (collection) => collection.slug === collectionSlug,
   );
   const [destinationPath, setDestinationPath] = useState<string>();
-  const [remainingAssetIds, setRemainingAssetIds] = useState(source.assetIds);
   const [error, setError] = useState<string>();
-  const placeAssets = usePlaceAssets(source.workspaceSlug);
+  const moveAssets = useMoveCollectionNodesToFolder(
+    source.workspaceSlug,
+    collectionSlug,
+  );
   const destination = useFolderDestination(
     source.workspaceSlug,
     collectionSlug,
@@ -215,9 +255,11 @@ function InboxMoveDialog({
     open && collectionSlug.length > 0,
     selectedCollection?.name,
   );
+  const exceedsBatchLimit = source.assetIds.length > MAX_MOVE_BATCH_SIZE;
   const canMove =
     collectionSlug.length > 0 &&
-    remainingAssetIds.length > 0 &&
+    source.assetIds.length > 0 &&
+    !exceedsBatchLimit &&
     !destination.isLoading &&
     !destination.isStale &&
     !destination.isError;
@@ -227,28 +269,18 @@ function InboxMoveDialog({
     setError(undefined);
 
     try {
-      const result = await placeAssets.mutateAsync({
-        assetIds: remainingAssetIds,
-        collectionSlug,
-        parentFolderPath: destinationPath,
+      const result = await moveAssets.mutateAsync({
+        nodeIds: source.assetIds,
+        targetFolderNodeId: destination.breadcrumbs.at(-1)
+          ? `folder-${destination.breadcrumbs.at(-1)!.id}`
+          : null,
       });
-      if (result.placedAssetIds.length > 0) {
-        onMoved?.(result.placedAssetIds);
-      }
-
-      if (result.failed.length === 0) {
-        toast.success(moveSuccessMessage(result.placedAssetIds.length));
-        onOpenChange(false);
-        return;
-      }
-
-      setRemainingAssetIds(result.failed.map(({ assetId }) => assetId));
-      setError(
-        result.placedAssetIds.length > 0
-          ? `${result.placedAssetIds.length} moved, but ${result.failed.length} could not be moved. You can retry the remaining items.`
-          : (result.failed[0]?.error.message ??
-              "Unable to move the selected items."),
-      );
+      const movedNodeIds = result.moves
+        .filter((move) => move.moved)
+        .map((move) => move.nodeId);
+      onMoved?.(movedNodeIds);
+      toast.success(moveSuccessMessage(movedNodeIds.length));
+      onOpenChange(false);
     } catch (moveError) {
       setError(
         moveError instanceof Error
@@ -261,7 +293,7 @@ function InboxMoveDialog({
   const collectionPicker = (
     <Select
       value={collectionSlug}
-      disabled={collectionsLoading || placeAssets.isPending}
+      disabled={collectionsLoading || moveAssets.isPending}
       onValueChange={(nextCollectionSlug) => {
         setSelectedCollectionSlug(nextCollectionSlug ?? undefined);
         setDestinationPath(undefined);
@@ -289,7 +321,7 @@ function InboxMoveDialog({
     <DestinationDialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!placeAssets.isPending) onOpenChange(nextOpen);
+        if (!moveAssets.isPending) onOpenChange(nextOpen);
       }}
       title="Move to..."
       description="Choose a collection, then open the destination folder."
@@ -300,14 +332,16 @@ function InboxMoveDialog({
       onDestinationPathChange={setDestinationPath}
       canMove={canMove}
       disabledReason={
-        collectionsError
-          ? "Unable to load collections. Close this dialog and try again."
-          : collections.length === 0 && !collectionsLoading
-            ? "Create a collection before moving items from Inbox."
-            : undefined
+        exceedsBatchLimit
+          ? `Move up to ${MAX_MOVE_BATCH_SIZE} items at a time.`
+          : collectionsError
+            ? "Unable to load collections. Close this dialog and try again."
+            : collections.length === 0 && !collectionsLoading
+              ? "Create a collection before moving items from Inbox."
+              : undefined
       }
-      count={remainingAssetIds.length}
-      isPending={placeAssets.isPending}
+      count={source.assetIds.length}
+      isPending={moveAssets.isPending}
       error={error}
       onMove={() => void handleMove()}
     />

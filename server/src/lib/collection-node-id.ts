@@ -7,7 +7,7 @@ export type AssetNodeIdentifier = {
 
 export type CollectionNodeIdentifier =
   | { nodeType: "folder"; entityId: number }
-  | { nodeType: "asset"; entityId: number };
+  | { nodeType: "asset"; assetType: "image" | "note"; entityId: number };
 
 const collectionNodeIdPattern = /^(folder|image|note)-(\d+)$/;
 const assetNodeIdPattern = /^(image|note)-(\d+)$/;
@@ -22,8 +22,13 @@ export function parseCollectionNodeId(
     throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid node id");
   }
 
+  if (match[1] === "folder") {
+    return { nodeType: "folder", entityId };
+  }
+
   return {
-    nodeType: match[1] === "folder" ? "folder" : "asset",
+    nodeType: "asset",
+    assetType: match[1] as AssetNodeIdentifier["assetType"],
     entityId,
   };
 }

@@ -162,3 +162,18 @@ CASCADE` for subtree deletion, but does not rely on `ON UPDATE CASCADE` for
 moving folders. Batch move services may include assets and folders, and must
 update every moved folder's descendants and path caches together or roll back
 the whole move.
+
+## Move and Position Semantics
+
+These mutations intentionally use separate contracts:
+
+- Collection node `position` endpoints only update canvas coordinates. They
+  require the expected parent to reject delayed writes after a move, but never
+  change a node's parent or cached folder path.
+- The collection node `parent` endpoint is the single move contract. Its path
+  selects the destination collection; its body carries one to 100 node IDs and
+  a destination folder node ID (or `null` for that collection's root). It
+  infers Inbox assets from their missing placement and performs the complete
+  batch atomically. Assets may cross collections; folders are restricted to
+  moves within their existing collection so their subtree invariants remain
+  intact.

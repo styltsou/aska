@@ -13,7 +13,6 @@ export {
   useCollectionContents,
   useInboxContents,
   useMarkInboxSeen,
-  usePlaceAsset,
   useUploadInboxImages,
   useUploadLocalImages,
   useUpdateCollectionNodePosition,
@@ -23,11 +22,6 @@ export {
   inboxContentsQueryOptions,
 } from "./hooks";
 export { useMoveCollectionNodesToFolder } from "./use-move-collection-node";
-export {
-  usePlaceAssets,
-  type PlaceAssetsInput,
-  type PlaceAssetsResult,
-} from "./use-place-assets";
 export type {
   Breadcrumb,
   CollectionContentsResponse,
@@ -57,12 +51,9 @@ export type {
   FlattenFolderResponse,
   FolderChildPreview,
   InboxContentsResponse,
-  PlaceAssetInput,
-  PlaceAssetResponse,
   BoardInsertionPlacement,
   BoardPosition,
   BoardVisibleBounds,
-  MoveCollectionNodeToFolderInput,
   MoveCollectionNodeToFolderResponse,
   MoveCollectionNodesToFolderInput,
   MoveCollectionNodesToFolderResponse,

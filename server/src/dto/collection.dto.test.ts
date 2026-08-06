@@ -10,7 +10,6 @@ import {
   CollectionContentsQuerySchema,
   UpdateNodePositionSchema,
   UpdateNodePositionsSchema,
-  MoveCollectionNodeParentSchema,
   MoveCollectionNodesParentSchema,
 } from "./collection.dto";
 
@@ -80,15 +79,15 @@ describe("collection board position DTOs", () => {
     ).toBe(false);
   });
 
-  it("requires an expected parent and a folder move target", () => {
+  it("accepts a folder or collection-root move target", () => {
     expect(
       UpdateNodePositionSchema.safeParse({ position: { x: 48, y: 24 } })
         .success,
     ).toBe(false);
     expect(
-      MoveCollectionNodeParentSchema.safeParse({
+      MoveCollectionNodesParentSchema.safeParse({
+        nodeIds: ["image-1"],
         targetFolderNodeId: "folder-7",
-        expectedParentFolderNodeId: null,
       }).success,
     ).toBe(true);
     expect(
@@ -99,9 +98,9 @@ describe("collection board position DTOs", () => {
       }).success,
     ).toBe(true);
     expect(
-      MoveCollectionNodeParentSchema.safeParse({
+      MoveCollectionNodesParentSchema.safeParse({
+        nodeIds: ["image-1"],
         targetFolderNodeId: "note-7",
-        expectedParentFolderNodeId: "folder-3",
       }).success,
     ).toBe(false);
     expect(
@@ -113,11 +112,10 @@ describe("collection board position DTOs", () => {
     ).toBe(false);
   });
 
-  it("accepts unique mixed-node batch moves and rejects duplicate or singleton batches", () => {
+  it("accepts unique mixed-node batch moves and rejects duplicates", () => {
     const move = {
       nodeIds: ["image-1", "folder-2", "note-3"],
       targetFolderNodeId: "folder-7",
-      expectedParentFolderNodeId: null,
     };
 
     expect(MoveCollectionNodesParentSchema.safeParse(move).success).toBe(true);
@@ -129,10 +127,10 @@ describe("collection board position DTOs", () => {
     ).toBe(false);
     expect(
       MoveCollectionNodesParentSchema.safeParse({
-        ...move,
         nodeIds: ["image-1"],
+        targetFolderNodeId: null,
       }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("validates asset and collection node identifier formats", () => {

@@ -6,7 +6,6 @@ import type {
   CreateFolderInput,
   CreateNoteInput,
   CreatedFolder,
-  MoveCollectionNodeParentInput,
   MoveCollectionNodesParentInput,
   LightCollection,
   UpdateNodePositionInput,
@@ -14,7 +13,6 @@ import type {
 } from "@/dto/collection.dto";
 import {
   CollectionAssetMoveService,
-  type MoveCollectionNodeParentResult,
   type MoveCollectionNodesParentResult,
   type FlattenFolderResult,
 } from "@/services/collection/collection-asset-move.service";
@@ -85,12 +83,6 @@ export interface ICollectionService {
     collectionSlug: string,
     data: UpdateNodePositionsInput,
   ): Promise<{ nodeIds: string[] }>;
-  moveNodeToFolder(
-    orgId: string,
-    collectionSlug: string,
-    nodeId: string,
-    data: MoveCollectionNodeParentInput,
-  ): Promise<MoveCollectionNodeParentResult>;
   moveNodesToFolder(
     orgId: string,
     collectionSlug: string,
@@ -219,21 +211,29 @@ export class CollectionService implements ICollectionService {
     return this.mutations.updateNodePositions(orgId, collectionSlug, data);
   }
 
-  moveNodeToFolder(
-    orgId: string,
-    collectionSlug: string,
-    nodeId: string,
-    data: MoveCollectionNodeParentInput,
-  ): Promise<MoveCollectionNodeParentResult> {
-    return this.moves.moveNodeToFolder(orgId, collectionSlug, nodeId, data);
-  }
-
   moveNodesToFolder(
     orgId: string,
     collectionSlug: string,
     data: MoveCollectionNodesParentInput,
   ): Promise<MoveCollectionNodesParentResult> {
     return this.moves.moveNodesToFolder(orgId, collectionSlug, data);
+  }
+
+  /** @internal Convenience for existing service callers; HTTP clients use the batch method. */
+  async moveNodeToFolder(
+    orgId: string,
+    collectionSlug: string,
+    nodeId: string,
+    data: {
+      targetFolderNodeId: string | null;
+      expectedParentFolderNodeId?: string | null;
+    },
+  ) {
+    const result = await this.moveNodesToFolder(orgId, collectionSlug, {
+      nodeIds: [nodeId],
+      targetFolderNodeId: data.targetFolderNodeId,
+    });
+    return result.moves[0]!;
   }
 
   async flattenFolder(

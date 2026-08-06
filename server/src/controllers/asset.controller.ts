@@ -2,7 +2,6 @@ import {
   AssetPathParamSchema,
   ContentTypeQuerySchema,
   CreateNoteSchema,
-  PlaceAssetSchema,
   WorkspaceParamSchema,
 } from "@/dto/collection.dto";
 import { factory } from "@/factory";
@@ -68,25 +67,6 @@ export const markInboxSeen = factory.createHandlers(
     const inbox = await assetService.markInboxSeen(workspace.id, userId);
 
     return c.json(success(inbox));
-  },
-);
-
-export const placeAsset = factory.createHandlers(
-  authMiddleware,
-  validate.param(AssetPathParamSchema),
-  validate.body(PlaceAssetSchema),
-  async (c) => {
-    const { workspaceSlug, assetId } = c.req.valid("param");
-    const data = c.req.valid("json");
-    const userId = c.get("userId");
-
-    const workspace = await collectionService.getWorkspaceBySlug(
-      workspaceSlug,
-      userId,
-    );
-    const node = await assetService.placeAsset(workspace.id, assetId, data);
-
-    return c.json(success({ node }), 201);
   },
 );
 
