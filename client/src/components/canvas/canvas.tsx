@@ -30,6 +30,7 @@ import {
   useUpdateCollectionNodePositions,
 } from "@/api/collection";
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
+import { MoveToDialog } from "@/components/board/move-to-dialog";
 import { useTheme } from "@/components/theme-provider";
 import { useMarqueeSelection } from "@/components/board/use-marquee-selection";
 import {
@@ -207,6 +208,7 @@ function CanvasSurface({
   const [dropTargetNodeId, setDropTargetNodeId] = useState<string>();
   const [pendingFolderDrop, setPendingFolderDrop] =
     useState<PendingFolderDrop>();
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const actionRefs = useRef<ActionRefs>({
     onOpenFolder,
     onOpenImage,
@@ -486,7 +488,12 @@ function CanvasSurface({
         collectionNode.id === pendingFolderDrop?.targetFolderNodeId;
       return {
         collectionNode,
-        deleteContext: { workspaceSlug, collectionSlug, folderPath },
+        deleteContext: {
+          workspaceSlug,
+          collectionSlug,
+          folderPath,
+          expectedParentFolderNodeId,
+        },
         onOpenFolder: openFolder,
         onOpenImage: openImage,
         onOpenNote: openNote,
@@ -518,6 +525,7 @@ function CanvasSurface({
       collectionSlug,
       colorMatchNodeIds,
       dropTargetNodeId,
+      expectedParentFolderNodeId,
       folderPath,
       focusedNodeId,
       isColorFilterActive,
@@ -1005,6 +1013,7 @@ function CanvasSurface({
             count={selectedIds.length}
             surface="canvas"
             onClear={() => clearSelection(boardKey)}
+            onMove={() => setMoveDialogOpen(true)}
             onDelete={handleBulkDelete}
             onArrange={handleArrange}
             onCompact={handleCompact}
@@ -1047,6 +1056,21 @@ function CanvasSurface({
             width: marquee.marquee.right - marquee.marquee.left,
             height: marquee.marquee.bottom - marquee.marquee.top,
           }}
+        />
+      ) : null}
+      {moveDialogOpen && selectedIds.length > 0 ? (
+        <MoveToDialog
+          open={moveDialogOpen}
+          onOpenChange={setMoveDialogOpen}
+          source={{
+            kind: "collection",
+            workspaceSlug,
+            collectionSlug,
+            folderPath,
+            expectedParentFolderNodeId,
+            nodeIds: selectedIds,
+          }}
+          onMoved={() => clearSelection(boardKey)}
         />
       ) : null}
     </div>

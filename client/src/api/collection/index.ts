@@ -18,10 +18,16 @@ export {
   useUploadLocalImages,
   useUpdateCollectionNodePosition,
   useUpdateCollectionNodePositions,
+  collectionContentsQueryOptions,
   collectionsQueryOptions,
   inboxContentsQueryOptions,
 } from "./hooks";
 export { useMoveCollectionNodesToFolder } from "./use-move-collection-node";
+export {
+  usePlaceAssets,
+  type PlaceAssetsInput,
+  type PlaceAssetsResult,
+} from "./use-place-assets";
 export type {
   Breadcrumb,
   CollectionContentsResponse,
@@ -29,6 +35,7 @@ export type {
   CollectionImageNode,
   CollectionNode,
   CollectionNoteNode,
+  ContentTypeFilter,
   DetailedCollection,
   CollectionsData,
   CreateCollectionInput,

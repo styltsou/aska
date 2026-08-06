@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 
 import { MasonryEmptyState } from "@/components/masonry-empty-state";
@@ -14,11 +14,13 @@ import {
 } from "@/lib/selection";
 import { useTransientStore } from "@/store";
 import { useBulkDelete } from "@/api/collection";
+import { MoveToDialog } from "./move-to-dialog";
 
 type CollectionDeleteContext = {
   workspaceSlug: string;
   collectionSlug: string;
   folderPath?: string;
+  expectedParentFolderNodeId: string | null;
 };
 
 type InboxContext = {
@@ -61,6 +63,7 @@ export function AssetBoard({
   );
   const clearSelection = useTransientStore((state) => state.clearSelection);
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const eligibleIds = useMemo(
     () =>
       new Set(
@@ -178,6 +181,7 @@ export function AssetBoard({
             count={selectedIds.length}
             surface="inbox"
             onClear={() => clearSelection(scopeKey)}
+            onMove={() => setMoveDialogOpen(true)}
             onDelete={handleBulkDelete}
           />
         </div>
@@ -216,6 +220,25 @@ export function AssetBoard({
             top: marquee.marquee.top,
             width: marquee.marquee.right - marquee.marquee.left,
             height: marquee.marquee.bottom - marquee.marquee.top,
+          }}
+        />
+      ) : null}
+      {moveDialogOpen && inboxContext && selectedIds.length > 0 ? (
+        <MoveToDialog
+          open={moveDialogOpen}
+          onOpenChange={setMoveDialogOpen}
+          source={{
+            kind: "inbox",
+            workspaceSlug: inboxContext.workspaceSlug,
+            assetIds: selectedIds,
+          }}
+          onMoved={(movedIds) => {
+            if (!scopeKey) return;
+            const movedIdSet = new Set(movedIds);
+            replaceSelection(
+              scopeKey,
+              selectedIds.filter((id) => !movedIdSet.has(id)),
+            );
           }}
         />
       ) : null}

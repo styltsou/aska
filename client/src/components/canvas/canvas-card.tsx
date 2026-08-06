@@ -19,6 +19,7 @@ export type CanvasNodeData = {
     workspaceSlug: string;
     collectionSlug: string;
     folderPath?: string;
+    expectedParentFolderNodeId: string | null;
   };
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;

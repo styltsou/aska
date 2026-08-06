@@ -100,6 +100,32 @@ export function inboxContentsQueryOptions(
   };
 }
 
+export function collectionContentsQueryOptions(
+  workspaceSlug: string,
+  collectionSlug: string,
+  folderPath?: string,
+  types?: readonly ContentTypeFilter[],
+) {
+  const normalizedTypes = types ? [...types].sort() : undefined;
+  const typeSignature = normalizedTypes?.join(",");
+  return {
+    queryKey: collectionQueryKeys.contents(
+      workspaceSlug,
+      collectionSlug,
+      folderPath,
+      typeSignature,
+    ),
+    queryFn: () =>
+      fetchCollectionContents(
+        workspaceSlug,
+        collectionSlug,
+        folderPath,
+        normalizedTypes,
+      ),
+    staleTime: COLLECTION_CONTENTS_STALE_TIME,
+  };
+}
+
 async function waitForProcessedImage(
   fetchStatus: () => Promise<{ upload: ImageUploadStatus }>,
   initialUpload?: ImageUploadStatus,
@@ -2101,18 +2127,14 @@ export function useCollectionContents(
   },
 ) {
   const types = options?.types ? [...options.types].sort() : undefined;
-  const typeSignature = types?.join(",");
   return useQuery<CollectionContentsResponse>({
-    queryKey: collectionQueryKeys.contents(
+    ...collectionContentsQueryOptions(
       workspaceSlug,
       collectionSlug,
       folderPath,
-      typeSignature,
+      types,
     ),
-    queryFn: () =>
-      fetchCollectionContents(workspaceSlug, collectionSlug, folderPath, types),
     enabled: (options?.enabled ?? true) && !!workspaceSlug && !!collectionSlug,
-    staleTime: COLLECTION_CONTENTS_STALE_TIME,
     placeholderData: keepPreviousData,
   });
 }

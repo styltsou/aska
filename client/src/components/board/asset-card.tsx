@@ -30,6 +30,7 @@ export const AssetCard = memo(function AssetCard({
     workspaceSlug: string;
     collectionSlug: string;
     folderPath?: string;
+    expectedParentFolderNodeId: string | null;
   };
   inboxContext?: {
     workspaceSlug: string;

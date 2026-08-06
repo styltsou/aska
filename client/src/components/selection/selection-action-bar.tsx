@@ -58,6 +58,7 @@ type SelectionActionBarProps = {
   count: number;
   surface: "inbox" | "canvas";
   onClear: () => void;
+  onMove?: () => void;
   onDelete?: () => void;
   onArrange?: () => void;
   onCompact?: () => void;
@@ -75,6 +76,7 @@ export function SelectionActionBar({
   count,
   surface,
   onClear,
+  onMove,
   onDelete,
   onArrange,
   onCompact,
@@ -116,13 +118,39 @@ export function SelectionActionBar({
                 <div className="flex items-center">
                   <div className={BUTTON_GROUP_SURFACE_CLASS}>
                     <ButtonGroup>
-                      <PlaceholderAction
-                        label={
-                          surface === "inbox" ? "Move to collection" : "Move"
-                        }
-                      >
-                        <FolderInputIcon />
-                      </PlaceholderAction>
+                      {onMove ? (
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                aria-label={
+                                  surface === "inbox"
+                                    ? "Move to collection"
+                                    : "Move selected"
+                                }
+                                onClick={onMove}
+                              />
+                            }
+                          >
+                            <FolderInputIcon />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {surface === "inbox"
+                              ? "Move to collection"
+                              : "Move selected"}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <PlaceholderAction
+                          label={
+                            surface === "inbox" ? "Move to collection" : "Move"
+                          }
+                        >
+                          <FolderInputIcon />
+                        </PlaceholderAction>
+                      )}
                       <ButtonGroupSeparator className="bg-border/70" />
                       <PlaceholderAction label="Favorite">
                         <HeartIcon />
