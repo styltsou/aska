@@ -158,8 +158,7 @@ The palette callback writes the upload's organization ID into every palette row
 so the tenant-first GiST index can bound color candidate retrieval before the
 asset join.
 The endpoint contract, collection scopes, multi-color matching, and relevance
-cutoffs are specified in the
-[Color-Based Image Search Plan](../color-image-search-plan.md).
+cutoffs are specified in the color-based image search plan.
 
 ## Failure, Retry, and Observability
 

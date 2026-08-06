@@ -24,14 +24,14 @@ it safely. Start here rather than reconstructing architecture from file names.
   placement, movement, and cache behavior.
 - [Canvas Placement Policy](./placement-policy.md) — insertion and folder-move
   placement contexts, collision handling, and batch rules.
-- [Spring-Loaded Folder Navigation](./spring-loaded-folder-navigation.md) —
-  planned sidebar/breadcrumb drag navigation and its implementation boundaries.
 - [Color Image Search](./color-image-search.md) — shipped retrieval behavior
   and ranking boundaries.
-- [Premium Interaction Ideas](./premium-interaction-ideas.md) — intentionally
-  deferred interaction work.
-- [Color-Based Image Search Plan](./color-image-search-plan.md) — historical
-  delivery and evaluation plan.
+
+Unbuilt or partially built specs and plans (previously here: spring-loaded
+folder navigation, premium interaction ideas, color-based image search plan)
+live in `../specs/` — a git-ignored directory for near-future work. Linking is
+one-directional: specs may reference these docs, but the maintained docs never
+link back out to `specs/`.
 
 ## Server, data, and operations
 

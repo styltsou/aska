@@ -56,8 +56,8 @@ similarity.
 
 The implemented search endpoint, local scope rules, ranking algorithm,
 thresholds, and client behavior are documented in
-[Color Image Search](../color-image-search.md). The original
-[Color-Based Image Search Plan](../color-image-search-plan.md) records the
+[Color Image Search](../color-image-search.md). The original color-based image
+search delivery plan records the
 delivery decisions and future evaluation work.
 
 See [Image Upload and Processing Pipeline](./image-upload-implementation-plan.md)
