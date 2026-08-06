@@ -109,10 +109,11 @@ root, and cross-collection moves are not supported.
 
 The client optimistically patches every cached source and destination type
 variant. Asset moves update the target's count and direct-child preview. Folder
-moves update the target's recursive asset count by the moved folder's count but
-do not add a preview, because folder previews represent direct asset children.
-All collection-content queries are invalidated after settlement so cached
-subtree routes reconcile against the server.
+moves update the target's recursive asset count by the moved folder's count and
+bump the target's sub-folder count (`folderCount`) by one, but do not add a
+preview, because folder previews represent direct asset children. All
+collection-content queries are invalidated after settlement so cached subtree
+routes reconcile against the server.
 
 Optimistic notes and image uploads remain draggable before their server node is
 ready. Their local position is keyed by a client identity and transferred to
