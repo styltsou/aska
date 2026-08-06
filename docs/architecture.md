@@ -34,12 +34,13 @@ React/Vite client (CloudFront-backed static site in a deployment)
                                                      └─ stable CloudFront URLs for original and rendition reads
 
 S3 original.* object-created event
-  ├─ SQS -> image-variants Lambda -> S3 workspace image variants -> signed API callback
-  └─ SQS -> image-palette Lambda -------------> signed API callback
+  -> SNS topic
+     ├─ SQS -> image-variants Lambda -> S3 workspace image variants -> signed API callback
+     └─ SQS -> image-palette Lambda -------------> signed API callback
 ```
 
 `sst.config.ts` is the infrastructure source of truth. SST creates the API,
-private asset bucket, event notifications, queues, DLQs, worker Lambdas,
+private asset bucket, event notification, topic, queues, DLQs, worker Lambdas,
 and static client site. One SST stage is a complete isolated AWS environment.
 The shared `dev` stage is a stable cloud deployment that only accepts its
 deployed CloudFront client at `aska-app.styltsou.com`; its API is
@@ -128,7 +129,7 @@ tenant-scoped relation. The detailed reasons and query implications are in
 ```text
 create upload session + image asset + upload record (transaction)
   -> browser PUTs original to {workspaceId}/{storageId}/original.{extension}
-  -> S3 fan-out to independent SQS workers
+  -> S3/SNS fan-out to independent SQS workers
   -> variants worker writes display/preview files and callbacks API
   -> palette worker writes search colors and callbacks API
   -> client polls upload status while processing

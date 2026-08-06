@@ -109,6 +109,7 @@ export default $config({
       queue: imagePaletteQueue,
       deadLetterQueue: imagePaletteDeadLetterQueue,
     } = createImageQueue("ImagePaletteQueue", "ImagePaletteDeadLetterQueue");
+    const imageUploadTopic = new sst.aws.SnsTopic("ImageUploadTopic");
     const assets = new sst.aws.Bucket("Assets", {
       // SST owns the bucket policy. CloudFront OAC presents its distribution
       // ARN as aws:SourceArn (not aws:SourceAccount), so limit reads to this
@@ -154,20 +155,48 @@ export default $config({
           publicKey: cloudFrontPublicKey!.value,
         })
       : undefined;
+    // S3 must be explicitly allowed to publish object-created events to the
+    // topic. Keep this policy separate from the queue subscriptions so a
+    // missing SNS permission cannot silently prevent both processors from
+    // receiving uploads.
+    new aws.sns.TopicPolicy("ImageUploadTopicPublishPolicy", {
+      arn: imageUploadTopic.arn,
+      policy: aws.iam
+        .getPolicyDocumentOutput({
+          statements: [
+            {
+              sid: "AllowS3ObjectCreatedNotifications",
+              actions: ["sns:Publish"],
+              resources: [imageUploadTopic.arn],
+              principals: [
+                { type: "Service", identifiers: ["s3.amazonaws.com"] },
+              ],
+              conditions: [
+                {
+                  test: "ArnEquals",
+                  variable: "aws:SourceArn",
+                  values: [assets.arn],
+                },
+              ],
+            },
+          ],
+        })
+        .json,
+    });
     assets.notify({
       notifications: [
         {
-          name: "GenerateImageVariants",
-          queue: imageVariantsQueue,
-          events: ["s3:ObjectCreated:*"],
-        },
-        {
-          name: "ExtractImagePalette",
-          queue: imagePaletteQueue,
+          name: "FanOutOriginalImage",
+          topic: imageUploadTopic,
           events: ["s3:ObjectCreated:*"],
         },
       ],
     });
+    imageUploadTopic.subscribeQueue(
+      "GenerateImageVariants",
+      imageVariantsQueue,
+    );
+    imageUploadTopic.subscribeQueue("ExtractImagePalette", imagePaletteQueue);
     const api = new sst.aws.ApiGatewayV2("Api", {
       ...(stableCloudDomains
         ? {

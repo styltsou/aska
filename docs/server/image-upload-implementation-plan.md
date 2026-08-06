@@ -15,7 +15,7 @@ finishes.
 Browser or remote URL
   -> Hono creates upload + image asset rows
   -> original written to S3 {workspaceId}/{storageId}/original.*
-  -> S3 original object-created event -> variants SQS + palette SQS
+  -> S3 original object-created event -> SNS -> variants SQS + palette SQS
   -> variants Lambda -> workspace S3 variants + signed Hono callback
   -> palette Lambda -> image_colors + signed Hono callback
   -> client observes independent enrichment states

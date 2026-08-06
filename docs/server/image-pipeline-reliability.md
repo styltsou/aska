@@ -6,15 +6,17 @@ S3, so neither processor depends on the other completing first.
 
 ```txt
 browser or remote import -> S3 {workspaceId}/{storageId}/original.* event
-                               ├-> ImageVariantsQueue -> variants Lambda
-                               └-> ImagePaletteQueue  -> palette Lambda
+                               -> ImageUploadTopic (SNS)
+                                   ├-> ImageVariantsQueue -> variants Lambda
+                                   └-> ImagePaletteQueue  -> palette Lambda
 ```
 
-S3 delivers each object-created event directly to both queues. Workers strictly
-accept only the `original.*` object in a `{workspaceId}/{storageId}/` namespace.
-Generated variants are therefore acknowledged and ignored, preventing recursive
-processing. The workers read the same immutable original object identity (object
-key plus ETag) but own separate effects:
+The single S3-to-SNS notification forwards object-created events. SNS fans
+them out to both queues, while workers strictly accept only the `original.*`
+object in a `{workspaceId}/{storageId}/` namespace. Generated variants are
+therefore acknowledged and ignored, preventing recursive processing. The
+workers read the same immutable original object identity (object key plus ETag)
+but own separate effects:
 
 - The variants worker writes deterministic display and preview WebP objects,
   then marks `image_assets.variant_status` complete.
@@ -48,5 +50,6 @@ a palette incident must not delay rendering or create extra resize work.
 
 ## Extending the pipeline
 
-New work that only needs the original upload can receive its own S3-to-SQS
-notification and run in parallel, just as palette extraction does.
+New work that only needs the original upload can receive its own SNS-to-SQS
+subscription and run in parallel, just as palette extraction does. The S3
+producer remains unchanged; SNS is already the event fan-out boundary.
