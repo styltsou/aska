@@ -248,6 +248,24 @@ export function getCollectionPreviewIndex(
   );
 }
 
+export function adjustCollectionAssetCount(
+  collections: CollectionsData,
+  collectionSlug: string,
+  delta: number,
+): CollectionsData {
+  if (delta === 0) return collections;
+  return {
+    collections: collections.collections.map((collection) =>
+      collection.slug === collectionSlug
+        ? {
+            ...collection,
+            assetCount: Math.max(0, collection.assetCount + delta),
+          }
+        : collection,
+    ),
+  };
+}
+
 export function promoteCollectionPreview(
   collections: CollectionsData,
   collectionSlug: string,

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 
 import { moveCollectionNodesToFolder } from "./fetchers";
 import {
+  adjustCollectionAssetCount,
   getAssetPreview,
   promoteCollectionPreview,
   transitionCachedContentsForMoves,
@@ -46,93 +47,175 @@ export function useMoveCollectionNodesToFolder(
       if (!variables.targetFolderNodeId) {
         return { optimistic: false };
       }
-      const contentsScope = collectionQueryKeys.contentScope(
+      const targetScope = collectionQueryKeys.contentScope(
         workspaceSlug,
         collectionSlug,
       );
+      const hasSourceCollection = variables.sourceCollectionSlug !== undefined;
+      const targetSlug = collectionSlug;
+      const sourceSlug = hasSourceCollection
+        ? variables.sourceCollectionSlug!
+        : collectionSlug;
+      // Counts change whenever assets enter this collection from outside it:
+      // from another collection, or from Inbox.
+      const changeCollectionCount =
+        !hasSourceCollection || sourceSlug !== targetSlug;
+      // Content transitions only apply when moving within the same collection.
+      const sameCollectionMove =
+        hasSourceCollection && sourceSlug === targetSlug;
+      const crossCollectionMove =
+        hasSourceCollection && sourceSlug !== targetSlug;
+      const sourceScope = collectionQueryKeys.contentScope(
+        workspaceSlug,
+        sourceSlug,
+      );
       const collectionsKey = collectionQueryKeys.collections(workspaceSlug);
+
       await Promise.all([
-        queryClient.cancelQueries({ queryKey: contentsScope }),
+        queryClient.cancelQueries({ queryKey: targetScope }),
         queryClient.cancelQueries({ queryKey: collectionsKey }),
+        ...(crossCollectionMove
+          ? [queryClient.cancelQueries({ queryKey: sourceScope })]
+          : []),
       ]);
 
-      const previousContents = queryClient
-        .getQueriesData<CollectionContentsResponse>({ queryKey: contentsScope })
-        .filter(
-          (entry): entry is CollectionContentsCacheEntry =>
-            entry[1] !== undefined,
-        );
-      const sourceEntry = findSourceEntry(
-        previousContents,
-        variables.folderPath,
-        variables.nodeIds,
-        variables.targetFolderNodeId,
-      );
-      const source = sourceEntry?.[1];
-      const targetFolder = source?.nodes.find(
-        (node) => node.id === variables.targetFolderNodeId,
-      );
-      if (!source || !targetFolder || targetFolder.type !== "folder") {
-        return { optimistic: false };
-      }
+      const collectEntries = (scope: readonly unknown[]) =>
+        queryClient
+          .getQueriesData<CollectionContentsResponse>({ queryKey: scope })
+          .filter(
+            (entry): entry is CollectionContentsCacheEntry =>
+              entry[1] !== undefined,
+          );
+      const previousContents = collectEntries(targetScope);
+      const sourceEntries = crossCollectionMove
+        ? collectEntries(sourceScope)
+        : [];
+      const allEntries = [...previousContents, ...sourceEntries];
 
-      const movedNodeIds = new Set(variables.nodeIds);
       const movedNodes = variables.nodeIds.flatMap((nodeId) => {
-        const movedNode = source.nodes.find((node) => node.id === nodeId);
-        return movedNode ? [movedNode] : [];
+        const node = allEntries
+          .flatMap(([, contents]) => contents.nodes)
+          .find((node) => node.id === nodeId);
+        return node ? [node] : [];
       });
-      if (movedNodes.length !== variables.nodeIds.length) {
-        return { optimistic: false };
-      }
-      const targetFolderPath = joinFolderPath(
-        variables.folderPath,
-        targetFolder.slug,
-      );
-      const sourceParentFolderPath = getParentFolderPath(variables.folderPath);
-      const sourceFolderSlug = getCurrentFolderSlug(variables.folderPath);
-      const unfilteredSource = previousContents.find(
-        ([key, contents]) =>
-          isUnfilteredContentsKey(key) &&
-          getFolderPathFromKey(key) === variables.folderPath &&
-          variables.nodeIds.every((nodeId) =>
-            contents.nodes.some((node) => node.id === nodeId),
-          ),
-      );
-      const remainingUnfilteredSourceNodes = unfilteredSource?.[1].nodes.filter(
-        (node) => !movedNodeIds.has(node.id),
-      );
-
-      const contentUpdates = transitionCachedContentsForMoves(
-        previousContents,
-        {
-          sourceFolderPath: variables.folderPath,
-          targetFolderPath,
-          sourceParentFolderPath,
-          sourceFolderSlug,
-          targetFolderNodeId: variables.targetFolderNodeId,
-          movedNodes,
-          remainingUnfilteredSourceNodes,
-        },
-      );
-      for (const [key, contents] of contentUpdates) {
-        queryClient.setQueryData<CollectionContentsResponse>(key, contents);
-      }
-
       const previousCollections =
         queryClient.getQueryData<CollectionsData>(collectionsKey);
-      const previews = movedNodes.flatMap((movedNode) =>
-        movedNode.type === "folder" ? [] : [getAssetPreview(movedNode)],
-      );
-      if (previews.length > 0) {
-        queryClient.setQueryData<CollectionsData>(collectionsKey, (current) =>
-          previews.reduce(
-            (next, preview) =>
-              next
-                ? promoteCollectionPreview(next, collectionSlug, preview)
-                : next,
-            current,
-          ),
+      let appliedContent = false;
+      let appliedCounts = false;
+
+      if (
+        sameCollectionMove &&
+        movedNodes.length === variables.nodeIds.length
+      ) {
+        const sourceEntry = findSourceEntry(
+          previousContents,
+          variables.folderPath,
+          variables.nodeIds,
+          variables.targetFolderNodeId,
         );
+        const source = sourceEntry?.[1];
+        const targetFolder = source?.nodes.find(
+          (node) => node.id === variables.targetFolderNodeId,
+        );
+        if (source && targetFolder && targetFolder.type === "folder") {
+          const movedNodeIds = new Set(variables.nodeIds);
+          const targetFolderPath = joinFolderPath(
+            variables.folderPath,
+            targetFolder.slug,
+          );
+          const sourceParentFolderPath = getParentFolderPath(
+            variables.folderPath,
+          );
+          const sourceFolderSlug = getCurrentFolderSlug(variables.folderPath);
+          const unfilteredSource = previousContents.find(
+            ([key, contents]) =>
+              isUnfilteredContentsKey(key) &&
+              getFolderPathFromKey(key) === variables.folderPath &&
+              variables.nodeIds.every((nodeId) =>
+                contents.nodes.some((node) => node.id === nodeId),
+              ),
+          );
+          const remainingUnfilteredSourceNodes =
+            unfilteredSource?.[1].nodes.filter(
+              (node) => !movedNodeIds.has(node.id),
+            );
+
+          const contentUpdates = transitionCachedContentsForMoves(
+            previousContents,
+            {
+              sourceFolderPath: variables.folderPath,
+              targetFolderPath,
+              sourceParentFolderPath,
+              sourceFolderSlug,
+              targetFolderNodeId: variables.targetFolderNodeId,
+              movedNodes,
+              remainingUnfilteredSourceNodes,
+            },
+          );
+          for (const [key, contents] of contentUpdates) {
+            queryClient.setQueryData<CollectionContentsResponse>(key, contents);
+          }
+          appliedContent = true;
+
+          const previews = movedNodes.flatMap((node) =>
+            node.type === "folder" ? [] : [getAssetPreview(node)],
+          );
+          if (previews.length > 0) {
+            queryClient.setQueryData<CollectionsData>(
+              collectionsKey,
+              (current) =>
+                previews.reduce(
+                  (next, preview) =>
+                    next
+                      ? promoteCollectionPreview(next, collectionSlug, preview)
+                      : next,
+                  current,
+                ),
+            );
+          }
+        }
+      }
+
+      if (changeCollectionCount) {
+        const nodesResolved = movedNodes.length === variables.nodeIds.length;
+        // Cross-collection moves always involve assets only (folders cannot
+        // leave their collection), so the asset-count delta is nodeIds.length.
+        const movedAssetCount = movedNodes.reduce(
+          (sum, node) => sum + (node.type === "folder" ? node.count : 1),
+          0,
+        );
+        const delta = nodesResolved
+          ? movedAssetCount
+          : variables.nodeIds.length;
+        if (delta > 0 && previousCollections) {
+          const previews = nodesResolved
+            ? movedNodes.flatMap((node) =>
+                node.type === "folder" ? [] : [getAssetPreview(node)],
+              )
+            : [];
+          queryClient.setQueryData<CollectionsData>(
+            collectionsKey,
+            (current) => {
+              if (!current) return current;
+              // Inbox has no source collection to decrement.
+              const decrementSource = crossCollectionMove;
+              let next = decrementSource
+                ? adjustCollectionAssetCount(current, sourceSlug, -delta)
+                : current;
+              next = adjustCollectionAssetCount(next, collectionSlug, delta);
+              return previews.reduce(
+                (acc, preview) =>
+                  promoteCollectionPreview(acc, collectionSlug, preview),
+                next,
+              );
+            },
+          );
+          appliedCounts = true;
+        }
+      }
+
+      if (!appliedContent && !appliedCounts) {
+        return { optimistic: false };
       }
 
       return {

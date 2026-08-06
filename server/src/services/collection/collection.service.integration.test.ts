@@ -224,6 +224,57 @@ describe("CollectionService integration", () => {
     ]);
   });
 
+  it("places the single direct child where the folder used to be when flattening", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Single Flatten Test" },
+    );
+    const sourceFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Source", position: { x: 800, y: 500 } },
+    );
+    const directNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        content: "The only child",
+        parentFolderPath: sourceFolder.slug,
+        position: { x: 20, y: 30 },
+      },
+    );
+
+    await expect(
+      collectionService.flattenFolder(
+        fixture.organizationId,
+        collection.slug,
+        `folder-${sourceFolder.id}`,
+      ),
+    ).resolves.toEqual({
+      folderNodeId: `folder-${sourceFolder.id}`,
+      parentFolderNodeId: null,
+      directChildCount: 1,
+      position: { x: 800, y: 500 },
+    });
+
+    const rootContents = await collectionService.getCollectionContents(
+      fixture.organizationId,
+      collection.slug,
+    );
+    expect(rootContents.nodes).toEqual([
+      expect.objectContaining({
+        id: directNote.id,
+        position: { x: 800, y: 500 },
+      }),
+    ]);
+    expect(rootContents.nodes).not.toContainEqual(
+      expect.objectContaining({ id: `folder-${sourceFolder.id}` }),
+    );
+  });
+
   it("moves a persisted asset into a child folder and rejects a stale position write", async () => {
     const collection = await collectionService.createCollection(
       fixture.organizationId,

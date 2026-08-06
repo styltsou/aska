@@ -30,7 +30,7 @@ import {
   useUpdateCollectionNodePositions,
 } from "@/api/collection";
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
-import { MoveToDialog } from "@/components/board/move-to-dialog";
+import { MoveToDialog } from "@/components/move-to-dialog";
 import { useTheme } from "@/components/theme-provider";
 import { useMarqueeSelection } from "@/components/board/use-marquee-selection";
 import {
@@ -1063,10 +1063,9 @@ function CanvasSurface({
           open={moveDialogOpen}
           onOpenChange={setMoveDialogOpen}
           source={{
-            kind: "collection",
             workspaceSlug,
-            collectionSlug,
-            folderPath,
+            sourceCollectionSlug: collectionSlug,
+            sourceFolderPath: folderPath,
             nodeIds: selectedIds,
           }}
           onMoved={() => clearSelection(boardKey)}

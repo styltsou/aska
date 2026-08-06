@@ -309,7 +309,7 @@ export class CollectionQueryService {
 
       const folderCountRows = await db
         .select({
-          folderId: sql<number>`unnest(${collectionNodes.pathFolderIds})`,
+          folderId: collectionNodes.parentFolderId,
           folderCount: sql<number>`COUNT(*)`,
         })
         .from(collectionNodes)
@@ -317,10 +317,10 @@ export class CollectionQueryService {
           and(
             eq(collectionNodes.collectionId, collection.id),
             eq(collectionNodes.nodeType, "folder"),
-            arrayOverlaps(collectionNodes.pathFolderIds, folderChildIds),
+            inArray(collectionNodes.parentFolderId, folderChildIds),
           ),
         )
-        .groupBy(sql`unnest(${collectionNodes.pathFolderIds})`);
+        .groupBy(collectionNodes.parentFolderId);
 
       for (const row of folderCountRows) {
         folderCountMap.set(row.folderId!, Number(row.folderCount));
