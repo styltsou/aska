@@ -188,6 +188,7 @@ are not local environment files and are never committed to Git.
 bun run sst -- secret set DatabaseUrl 'your Neon connection URL' --stage dev
 bun run sst -- secret set BetterAuthSecret 'your existing Better Auth secret' --stage dev
 bun run sst -- secret set ResendApiKey 'your Resend API key' --stage dev
+bun run sst -- secret set UnsplashAccessKey 'your Unsplash access key' --stage dev
 bun run sst -- secret set ImagePipelineCallbackSecret 'a random 32+ character secret' --stage dev
 bun run sst -- secret set CloudFrontMediaPrivateKeyBase64 'base64-encoded RSA-2048 private key' --stage dev
 bun run sst -- secret set CloudFrontMediaPublicKey 'SPKI PEM public key matching the private key' --stage dev
@@ -201,6 +202,7 @@ bun run sst -- secret set SentryDsn 'https://public-key@o0.ingest.sentry.io/proj
 | `DatabaseUrl`                 | `DATABASE_URL` in the API                        | Connects the API to Neon                             |
 | `BetterAuthSecret`            | `BETTER_AUTH_SECRET` in the API                  | Signs/encrypts Better Auth data                      |
 | `ResendApiKey`                | `RESEND_API_KEY` in the API                      | Sends transactional email                            |
+| `UnsplashAccessKey`            | `UNSPLASH_ACCESS_KEY` in the API                  | Enables server-side Unsplash search and imports      |
 | `ImagePipelineCallbackSecret` | `IMAGE_PIPELINE_CALLBACK_SECRET` in both Lambdas | The pipeline signs its callback; the API verifies it |
 | `CloudFrontMediaPrivateKeyBase64` | `CLOUDFRONT_PRIVATE_KEY_BASE64` in the API    | Signs CloudFront viewer cookies                      |
 | `CloudFrontMediaPublicKey`    | CloudFront `PublicKey` resource                    | Verifies signed cookies at the edge; generated once with the private key |

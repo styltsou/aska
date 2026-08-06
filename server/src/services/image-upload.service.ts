@@ -8,6 +8,7 @@ import {
   imageAssets,
   imageColors,
   uploads,
+  type ImageProvenance,
 } from "@/db/schema";
 import type { CollectionImageNode } from "@/dto/collection.dto";
 import {
@@ -36,6 +37,10 @@ import {
   type UploadStatus,
 } from "@/services/image-upload/upload-repository";
 import type { IObjectStorageService } from "@/services/object-storage.service";
+import {
+  type IUnsplashService,
+  UnsplashService,
+} from "@/services/unsplash.service";
 
 export type ImageUploadStatus = {
   id: number;
@@ -82,7 +87,10 @@ export interface IImageUploadService {
 }
 
 export class ImageUploadService implements IImageUploadService {
-  constructor(private objectStorageService: IObjectStorageService) {}
+  constructor(
+    private objectStorageService: IObjectStorageService,
+    private unsplashService: IUnsplashService = new UnsplashService(),
+  ) {}
 
   async createDirectImageUpload(
     orgId: string,
@@ -266,7 +274,8 @@ export class ImageUploadService implements IImageUploadService {
       collectionSlug,
       data.parentFolderPath,
     );
-    const remoteUrl = parseRemoteImageUrl(data.url);
+    const provenance = await this.resolveProvenance(data);
+    const remoteUrl = parseRemoteImageUrl(provenance?.downloadUrl ?? data.url);
     const response = await fetch(remoteUrl, {
       redirect: "follow",
       signal: AbortSignal.timeout(15_000),
@@ -323,8 +332,9 @@ export class ImageUploadService implements IImageUploadService {
         fileName,
         title: data.title,
         alt: data.alt,
-        sourceLabel: remoteUrl.hostname,
-        sourceUrl: remoteUrl.toString(),
+        sourceLabel: new URL(provenance?.url ?? remoteUrl).hostname,
+        sourceUrl: provenance?.url ?? remoteUrl.toString(),
+        provenance,
         contentType,
         sizeBytes: bytes.byteLength,
         createdByUserId: userId,
@@ -361,8 +371,9 @@ export class ImageUploadService implements IImageUploadService {
         width: 1,
         height: 1,
         alt: data.alt,
-        sourceLabel: remoteUrl.hostname,
-        sourceUrl: remoteUrl.toString(),
+        sourceLabel: new URL(provenance?.url ?? remoteUrl).hostname,
+        sourceUrl: provenance?.url ?? remoteUrl.toString(),
+        provenance,
         variants: {
           original: {
             objectKey,
@@ -418,6 +429,24 @@ export class ImageUploadService implements IImageUploadService {
     }
 
     return this.getUploadStatusById(upload.id);
+  }
+
+  private async resolveProvenance(
+    data: CreateRemoteImageInput,
+  ): Promise<ImageProvenance | undefined> {
+    if (!data.provenance) return undefined;
+    if (data.provenance.provider === "url") {
+      return data.provenance;
+    }
+    const downloadUrl = await this.unsplashService.resolveDownloadUrl(
+      data.provenance.downloadLocation,
+    );
+    return {
+      provider: "unsplash",
+      url: data.provenance.url,
+      downloadUrl,
+      attribution: data.provenance.attribution,
+    };
   }
 
   async handlePipelineCallback(
