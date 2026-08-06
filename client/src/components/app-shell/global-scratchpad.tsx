@@ -153,21 +153,43 @@ export function GlobalScratchpad() {
                   }}
                 />
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5 px-3 py-2 text-[10px] leading-4 text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5 px-2.5 py-2 text-[10px] leading-4 text-muted-foreground">
                 <span className="mr-auto inline-flex items-center gap-1">
-                  <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
+                  <Kbd
+                    variant="solid"
+                    className="h-4 min-w-4 px-0.5 text-[10px]"
+                  >
+                    Esc
+                  </Kbd>
                   <span>to close</span>
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <KbdGroup className="gap-0.5">
-                    <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Shift</Kbd>
-                    <span className="text-muted-foreground/50">+</span>
-                    <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Enter</Kbd>
+                    <Kbd
+                      variant="solid"
+                      className="h-4 min-w-4 px-0.5 text-[10px]"
+                    >
+                      Shift
+                    </Kbd>
+                    <span className="inline-flex h-4 translate-y-px items-center leading-none text-muted-foreground">
+                      +
+                    </span>
+                    <Kbd
+                      variant="solid"
+                      className="h-4 min-w-4 px-0.5 text-[10px]"
+                    >
+                      Enter
+                    </Kbd>
                   </KbdGroup>
                   <span>for new line</span>
                 </span>
                 <span className="ml-2 inline-flex items-center gap-1">
-                  <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Enter</Kbd>
+                  <Kbd
+                    variant="solid"
+                    className="h-4 min-w-4 px-0.5 text-[10px]"
+                  >
+                    Enter
+                  </Kbd>
                   <span>to save</span>
                 </span>
               </div>

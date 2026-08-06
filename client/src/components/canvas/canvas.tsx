@@ -823,7 +823,10 @@ function CanvasSurface({
             origins: new Map(
               dragNodes.map((dragNode) => [
                 dragNode.id,
-                roundPosition(dragNode.position),
+                {
+                  ...roundPosition(dragNode.position),
+                  height: getCanvasCardHeight(dragNode),
+                },
               ]),
             ),
             isGroup: dragNodes.length > 1,
@@ -1074,6 +1077,20 @@ function makeFlowNode(
         : 0,
     style: { width: BOARD_CARD_WIDTH },
   };
+}
+
+function getCanvasCardHeight(node: CanvasNode): number {
+  const measuredHeight = node.measured?.height;
+  if (measuredHeight && Number.isFinite(measuredHeight)) {
+    return measuredHeight;
+  }
+
+  const collectionNode = node.data.collectionNode;
+  if (collectionNode.type === "image") {
+    return (BOARD_CARD_WIDTH * collectionNode.height) / collectionNode.width;
+  }
+
+  return BOARD_CARD_WIDTH;
 }
 
 function updateLocalNodePosition(

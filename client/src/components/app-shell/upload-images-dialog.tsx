@@ -515,7 +515,7 @@ export function UploadImagesDialog({
       >
         <form onSubmit={handleSubmit}>
           <AnimatedDialogPanel>
-            <DialogBody className="flex flex-col gap-4 shadow-sm">
+            <DialogBody className="flex flex-col gap-4">
               <DialogHeader>
                 <DialogTitle>Upload images</DialogTitle>
                 <DialogDescription>

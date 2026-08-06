@@ -81,6 +81,32 @@ describe("canvas drop stack", () => {
     });
   });
 
+  it("keeps portrait and landscape cards aligned regardless of the drag handle", () => {
+    const portraitHeight = 480;
+    const landscapeHeight = 180;
+    const landscapePrimary = makeCanvasDropStackStyles(
+      "landscape",
+      new Map([
+        ["landscape", { x: 100, y: 100, height: landscapeHeight }],
+        ["portrait", { x: 20, y: 40, height: portraitHeight }],
+      ]),
+    );
+    const portraitPrimary = makeCanvasDropStackStyles(
+      "portrait",
+      new Map([
+        ["landscape", { x: 20, y: 40, height: landscapeHeight }],
+        ["portrait", { x: 100, y: 100, height: portraitHeight }],
+      ]),
+    );
+
+    expect(visibleTop("landscape", 100, landscapePrimary)).toBeCloseTo(
+      visibleTop("portrait", 40, landscapePrimary) - 82,
+    );
+    expect(visibleTop("portrait", 100, portraitPrimary)).toBeCloseTo(
+      visibleTop("landscape", 40, portraitPrimary) - 82,
+    );
+  });
+
   it("returns no stack for a missing grabbed card", () => {
     expect(
       makeCanvasDropStackStyles(
@@ -93,3 +119,13 @@ describe("canvas drop stack", () => {
     ).toEqual(new Map());
   });
 });
+
+function visibleTop(
+  nodeId: string,
+  originY: number,
+  styles: ReturnType<typeof makeCanvasDropStackStyles>,
+) {
+  const style = styles.get(nodeId)!;
+  const height = nodeId === "portrait" ? 480 : 180;
+  return originY + style.translateY + height * (1 - style.scale);
+}

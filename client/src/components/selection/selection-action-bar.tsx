@@ -235,8 +235,13 @@ export function SelectionActionBar({
                 </div>
                 <div className="flex items-center justify-between px-0 pt-1.5 pr-[3px] pb-0.5 text-[10px] leading-4 text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
-                    <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
-                    <span>Close</span>
+                    <Kbd
+                      variant="solid"
+                      className="h-4 min-w-4 px-0.5 text-[10px]"
+                    >
+                      Esc
+                    </Kbd>
+                    <span>to close</span>
                   </span>
                   <span>{count} selected</span>
                 </div>

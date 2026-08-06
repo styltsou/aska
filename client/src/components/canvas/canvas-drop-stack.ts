@@ -1,6 +1,8 @@
 export type CanvasDropStackPoint = {
   x: number;
   y: number;
+  /** Measured card height, used to keep scaled cards' visible tops aligned. */
+  height?: number;
 };
 
 export type CanvasDropStackStyle = {
@@ -45,10 +47,15 @@ export function makeCanvasDropStackStyles(
     const direction = index % 2 === 0 ? -1 : 1;
     const fanX = direction * (7 + depthProgress * 16);
     const fanY = 10 + depthProgress * 72;
+    const scaleHeightCompensation =
+      ((primaryOrigin.height ?? 0) - (origin.height ?? 0)) *
+      (1 - DROP_STACK_SCALE);
 
     styles.set(nodeId, {
       translateX: primaryOrigin.x - origin.x + fanX,
-      translateY: primaryOrigin.y - origin.y + fanY,
+      // Cards scale from bottom center. Without this compensation, taller
+      // portrait cards' top edges settle lower than landscape cards in the fan.
+      translateY: primaryOrigin.y - origin.y + fanY + scaleHeightCompensation,
       rotation: direction * (2 + depthProgress * 3),
       scale: DROP_STACK_SCALE,
       stackOrder: origins.size - index,

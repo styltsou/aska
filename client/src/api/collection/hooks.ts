@@ -49,6 +49,7 @@ import type {
 } from "./types";
 import type { WorkspaceData } from "@/api/workspace";
 import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
+import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
 
 export { collectionQueryKeys } from "./query-keys";
@@ -412,29 +413,6 @@ function appendNodeToInboxContents(
       };
     },
   );
-}
-
-async function readImageDimensions(file: File): Promise<{
-  width: number;
-  height: number;
-}> {
-  if ("createImageBitmap" in window) {
-    const bitmap = await createImageBitmap(file);
-    const dimensions = { width: bitmap.width, height: bitmap.height };
-    bitmap.close();
-    return dimensions;
-  }
-
-  const objectUrl = URL.createObjectURL(file);
-
-  try {
-    const image = new Image();
-    image.src = objectUrl;
-    await image.decode();
-    return { width: image.naturalWidth, height: image.naturalHeight };
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
 }
 
 const UNKNOWN_IMAGE_DIMENSIONS = { width: 3, height: 4 };
@@ -1029,7 +1007,7 @@ export function useUploadLocalImages(
       const imageDimensions = await Promise.all(
         files.map(async (file) => {
           try {
-            return await readImageDimensions(file);
+            return await readUploadImageDimensions(file);
           } catch {
             return UNKNOWN_IMAGE_DIMENSIONS;
           }
@@ -1163,7 +1141,11 @@ export function useUploadLocalImages(
           );
         }
 
-        reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
+        // Keep the local Blob preview in the active contents cache until the
+        // remote image has decoded in ProgressiveImage. Refetching here would
+        // replace it with server data that cannot carry a browser-only URL.
+        // Metadata can still refresh without disturbing the visual handoff.
+        reconcileCollectionMetadata(queryClient, workspaceSlug);
         toast.success(`${label} uploaded`, { id: toastId });
         return { images, parentFolderPath };
       } catch (error) {
@@ -1227,7 +1209,7 @@ export function useUploadInboxImages(workspaceSlug: string) {
       const imageDimensions = await Promise.all(
         files.map(async (file) => {
           try {
-            return await readImageDimensions(file);
+            return await readUploadImageDimensions(file);
           } catch {
             return { width: 1, height: 1 };
           }

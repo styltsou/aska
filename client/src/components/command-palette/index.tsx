@@ -387,17 +387,17 @@ export function CommandPalette() {
         <div className="relative z-0 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground sm:pr-[18px]">
           <span className="inline-flex items-center gap-1">
             <KbdGroup className="gap-0.5">
-              <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
                 <ArrowUpIcon />
               </Kbd>
-              <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
                 <ArrowDownIcon />
               </Kbd>
             </KbdGroup>
             <span>to navigate</span>
           </span>
           <span className="ml-3 inline-flex items-center gap-1">
-            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
               <CornerDownLeftIcon />
             </Kbd>
             <span>to select</span>
