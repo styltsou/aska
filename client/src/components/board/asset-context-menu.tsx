@@ -24,7 +24,10 @@ import {
   useFlattenFolder,
 } from "@/api/collection";
 import type { Asset } from "@/types/asset";
-import { MoveToDialog, type MoveToDialogSource } from "./move-to-dialog";
+import {
+  MoveToDialog,
+  type MoveToDialogSource,
+} from "@/components/move-to-dialog";
 
 function imageActions() {
   return (
@@ -94,17 +97,15 @@ export function AssetContextMenu({
   );
   const moveSource: MoveToDialogSource | undefined = deleteContext
     ? {
-        kind: "collection",
         workspaceSlug: deleteContext.workspaceSlug,
-        collectionSlug: deleteContext.collectionSlug,
-        folderPath: deleteContext.folderPath,
+        sourceCollectionSlug: deleteContext.collectionSlug,
+        sourceFolderPath: deleteContext.folderPath,
         nodeIds: [asset.id],
       }
     : inboxContext
       ? {
-          kind: "inbox",
           workspaceSlug: inboxContext.workspaceSlug,
-          assetIds: [asset.id],
+          nodeIds: [asset.id],
         }
       : undefined;
 

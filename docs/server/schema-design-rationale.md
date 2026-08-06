@@ -250,6 +250,13 @@ A move service should:
    `depth` for each moved folder subtree.
 5. Commit all moves or roll back all of them.
 
+Until cross-collection folder moves are implemented, the move surface mirrors
+this limitation on the client: the collection destination is locked to the
+source collection whenever the move includes a folder (the move dialog's
+`lockedToSource` flag), because the server cannot yet re-target a folder
+subtree across collections. Assets alone may still be moved across collections.
+See [Cross-Collection Folder Moves](../../specs/cross-collection-folder-moves.md).
+
 The parent-folder foreign key uses `ON DELETE CASCADE`, not `ON UPDATE CASCADE`,
 so subtree moves remain explicit service behavior.
 

@@ -14,7 +14,7 @@ import {
 } from "@/lib/selection";
 import { useTransientStore } from "@/store";
 import { useBulkDelete } from "@/api/collection";
-import { MoveToDialog } from "./move-to-dialog";
+import { MoveToDialog } from "@/components/move-to-dialog";
 
 type CollectionDeleteContext = {
   workspaceSlug: string;
@@ -228,9 +228,8 @@ export function AssetBoard({
           open={moveDialogOpen}
           onOpenChange={setMoveDialogOpen}
           source={{
-            kind: "inbox",
             workspaceSlug: inboxContext.workspaceSlug,
-            assetIds: selectedIds,
+            nodeIds: selectedIds,
           }}
           onMoved={(movedIds) => {
             if (!scopeKey) return;
