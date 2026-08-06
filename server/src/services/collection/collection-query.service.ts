@@ -283,6 +283,7 @@ export class CollectionQueryService {
       .map((c) => c.folderId!);
 
     const countMap = new Map<number, number>();
+    const folderCountMap = new Map<number, number>();
     const previewMap = new Map<number, FolderChildPreview[]>();
     let folderPreviewRows: FolderPreviewRow[] = [];
 
@@ -304,6 +305,25 @@ export class CollectionQueryService {
 
       for (const row of countRows) {
         countMap.set(row.folderId!, Number(row.count));
+      }
+
+      const folderCountRows = await db
+        .select({
+          folderId: sql<number>`unnest(${collectionNodes.pathFolderIds})`,
+          folderCount: sql<number>`COUNT(*)`,
+        })
+        .from(collectionNodes)
+        .where(
+          and(
+            eq(collectionNodes.collectionId, collection.id),
+            eq(collectionNodes.nodeType, "folder"),
+            arrayOverlaps(collectionNodes.pathFolderIds, folderChildIds),
+          ),
+        )
+        .groupBy(sql`unnest(${collectionNodes.pathFolderIds})`);
+
+      for (const row of folderCountRows) {
+        folderCountMap.set(row.folderId!, Number(row.folderCount));
       }
 
       const previewRows = await db
@@ -367,6 +387,7 @@ export class CollectionQueryService {
           name: child.folderName!,
           slug: child.folderSlug!,
           count: countMap.get(fid) ?? 0,
+          folderCount: folderCountMap.get(fid) ?? 0,
           previews: previewMap.get(fid) ?? [],
           position,
         };

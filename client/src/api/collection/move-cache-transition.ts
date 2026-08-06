@@ -107,6 +107,7 @@ export function updateTargetFolderForMove(
   targetFolderNodeId: string,
   preview: FolderChildPreview | undefined,
   countDelta: number,
+  folderCountDelta = 0,
 ): CollectionContentsResponse {
   return {
     ...contents,
@@ -115,6 +116,7 @@ export function updateTargetFolderForMove(
         ? {
             ...node,
             count: Math.max(0, node.count + countDelta),
+            folderCount: Math.max(0, node.folderCount + folderCountDelta),
             previews: preview
               ? countDelta > 0
                 ? [
@@ -139,6 +141,7 @@ export function transitionCachedContentsForMove(
 ): CollectionContentsCacheEntry[] {
   const movedAssetCount =
     input.movedNode.type === "folder" ? input.movedNode.count : 1;
+  const movedFolderDelta = input.movedNode.type === "folder" ? 1 : 0;
   const updates: CollectionContentsCacheEntry[] = [];
 
   for (const [key, current] of entries) {
@@ -153,6 +156,7 @@ export function transitionCachedContentsForMove(
           input.targetFolderNodeId,
           input.preview,
           movedAssetCount,
+          movedFolderDelta,
         ),
       ]);
       continue;

@@ -84,6 +84,7 @@ export const CollectionFolderNodeSchema = z.object({
   name: z.string(),
   slug: z.string(),
   count: z.number(),
+  folderCount: z.number(),
   previews: z.array(FolderChildPreviewSchema),
   position: BoardPositionSchema.nullable(),
 });

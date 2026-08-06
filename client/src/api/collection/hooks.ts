@@ -655,6 +655,7 @@ export function useCreateFolder(workspaceSlug: string, collectionSlug: string) {
         name: data.name,
         slug: "pending",
         count: 0,
+        folderCount: 0,
         previews: [],
         position: null,
       };
@@ -693,6 +694,7 @@ export function useCreateFolder(workspaceSlug: string, collectionSlug: string) {
                 name: data.folder.name,
                 slug: data.folder.slug,
                 count: data.folder.count,
+                folderCount: 0,
                 previews: data.folder.previews,
                 position: data.folder.position,
               },

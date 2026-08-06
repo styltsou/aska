@@ -67,6 +67,7 @@ export type CollectionFolderNode = {
   name: string;
   slug: string;
   count: number;
+  folderCount: number;
   previews: FolderChildPreview[];
   position: BoardPosition | null;
 };

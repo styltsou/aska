@@ -42,6 +42,7 @@ const targetFolder: Extract<CollectionNode, { type: "folder" }> = {
   name: "Archive",
   slug: "archive",
   count: 2,
+  folderCount: 1,
   previews: [{ assetId: "note-7", type: "note", snippet: "Older" }],
   position: { x: 720, y: 48 },
 };
@@ -52,6 +53,7 @@ const movedFolder: Extract<CollectionNode, { type: "folder" }> = {
   name: "New",
   slug: "new",
   count: 3,
+  folderCount: 0,
   previews: [{ assetId: "note-8", type: "note", snippet: "Inside New" }],
   position: { x: 240, y: 48 },
 };
@@ -155,6 +157,7 @@ describe("move cache transition", () => {
       expect(contents?.nodes).toContainEqual({
         ...targetFolder,
         count: targetFolder.count + movedFolder.count,
+        folderCount: targetFolder.folderCount + 1,
       });
     }
     for (const destinationKey of [targetKey, targetFolderFilterKey]) {
@@ -200,6 +203,7 @@ describe("move cache transition", () => {
       {
         ...targetFolder,
         count: targetFolder.count + 1 + movedFolder.count,
+        folderCount: targetFolder.folderCount + 1,
         previews: [getAssetPreview(movedNote), ...targetFolder.previews],
       },
     ]);
@@ -217,6 +221,7 @@ describe("move cache transition", () => {
         name: "Source",
         slug: "source",
         count: 2,
+        folderCount: 1,
         previews: [getAssetPreview(movedNote)],
         position: null,
       },

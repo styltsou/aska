@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeftIcon,
+  CheckIcon,
+  ChevronDownIcon,
   ChevronRightIcon,
   FolderIcon,
   LoaderCircleIcon,
@@ -28,15 +29,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ProgressiveImage } from "@/components/ui/progressive-image";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const FOLDER_TYPES = ["folder"] as const satisfies readonly ContentTypeFilter[];
 const MAX_MOVE_BATCH_SIZE = 100;
@@ -170,26 +170,17 @@ function CollectionMoveDialog({
       : undefined;
 
   const collectionPicker = includesFolder ? undefined : (
-    <Select
+    <CollectionPicker
+      collections={collectionsData?.collections ?? []}
       value={targetCollectionSlug}
       disabled={collectionsLoading || moveNodes.isPending}
-      onValueChange={(nextCollectionSlug) => {
-        setSelectedCollectionSlug(nextCollectionSlug ?? undefined);
+      placeholder="Select collection"
+      onChange={(nextCollectionSlug) => {
+        setSelectedCollectionSlug(nextCollectionSlug);
         setDestinationPath(undefined);
         setError(undefined);
       }}
-    >
-      <SelectTrigger className="w-full" aria-label="Destination collection">
-        <SelectValue placeholder="Select collection" />
-      </SelectTrigger>
-      <SelectContent>
-        {(collectionsData?.collections ?? []).map((collection) => (
-          <SelectItem key={collection.id} value={collection.slug}>
-            {collection.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    />
   );
 
   return (
@@ -291,30 +282,19 @@ function InboxMoveDialog({
   }
 
   const collectionPicker = (
-    <Select
+    <CollectionPicker
+      collections={collections}
       value={collectionSlug}
       disabled={collectionsLoading || moveAssets.isPending}
-      onValueChange={(nextCollectionSlug) => {
-        setSelectedCollectionSlug(nextCollectionSlug ?? undefined);
+      placeholder={
+        collectionsLoading ? "Loading collections..." : "Select collection"
+      }
+      onChange={(nextCollectionSlug) => {
+        setSelectedCollectionSlug(nextCollectionSlug);
         setDestinationPath(undefined);
         setError(undefined);
       }}
-    >
-      <SelectTrigger className="w-full" aria-label="Destination collection">
-        <SelectValue
-          placeholder={
-            collectionsLoading ? "Loading collections..." : "Select collection"
-          }
-        />
-      </SelectTrigger>
-      <SelectContent>
-        {collections.map((collection) => (
-          <SelectItem key={collection.id} value={collection.slug}>
-            {collection.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    />
   );
 
   return (
@@ -350,6 +330,59 @@ function InboxMoveDialog({
 
 const EMPTY_IDS = new Set<string>();
 
+function CollectionPicker({
+  collections,
+  value,
+  onChange,
+  disabled,
+  placeholder,
+}: {
+  collections: readonly { name: string; slug: string }[];
+  value: string;
+  onChange: (slug: string) => void;
+  disabled?: boolean;
+  placeholder: string;
+}) {
+  const selected = collections.find((collection) => collection.slug === value);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={(triggerProps) => (
+          <button
+            {...triggerProps}
+            type="button"
+            aria-label="Destination collection"
+            className="flex h-8 w-full cursor-pointer items-center justify-between gap-1.5 rounded-lg border border-input px-2.5 text-sm transition-colors duration-75 outline-none select-none hover:bg-foreground/5 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 data-popup-open:bg-foreground/5"
+            disabled={disabled}
+          >
+            <span
+              className={
+                selected ? "truncate" : "truncate text-muted-foreground"
+              }
+            >
+              {selected?.name ?? placeholder}
+            </span>
+            <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+          </button>
+        )}
+      />
+      <DropdownMenuContent className="min-w-36" align="start" sideOffset={4}>
+        {collections.map((collection) => (
+          <DropdownMenuItem
+            key={collection.slug}
+            className="cursor-pointer"
+            onClick={() => onChange(collection.slug)}
+          >
+            <span className="min-w-0 flex-1 truncate">{collection.name}</span>
+            {collection.slug === value && <CheckIcon className="size-4" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 type FolderDestination = {
   collectionName: string;
   breadcrumbs: Breadcrumb[];
@@ -358,6 +391,12 @@ type FolderDestination = {
   isError: boolean;
   isStale: boolean;
   prefetch: (folderPath: string) => void;
+};
+
+type Crumb = {
+  id: string | number;
+  name: string;
+  slug: string;
 };
 
 function useFolderDestination(
@@ -443,16 +482,57 @@ function DestinationDialog({
   error?: string;
   onMove: () => void;
 }) {
-  const currentName =
-    destination.breadcrumbs.at(-1)?.name ?? destination.collectionName;
-  const parentPath = pathThroughBreadcrumbs(
-    destination.breadcrumbs,
-    destination.breadcrumbs.length - 2,
-  );
+  const [optimisticCrumbs, setOptimisticCrumbs] = useState<Crumb[]>([]);
+  const serverCrumbs: Crumb[] = destination.breadcrumbs.map((breadcrumb) => ({
+    id: breadcrumb.id,
+    name: breadcrumb.name,
+    slug: breadcrumb.slug,
+  }));
+  const displayedCrumbs =
+    optimisticCrumbs.length > 0 ? optimisticCrumbs : serverCrumbs;
+
+  useEffect(() => {
+    const serverPath = serverCrumbs.map((crumb) => crumb.slug).join("/");
+    const optimisticPath = optimisticCrumbs
+      .map((crumb) => crumb.slug)
+      .join("/");
+    if (
+      optimisticCrumbs.length > 0 &&
+      serverCrumbs.length > 0 &&
+      serverPath === optimisticPath
+    ) {
+      setOptimisticCrumbs([]);
+    }
+  }, [optimisticCrumbs, serverCrumbs]);
+
+  const segments = useMemo(() => {
+    const crumbs: {
+      id: string | number;
+      label: string;
+      path: string | undefined;
+    }[] = [
+      {
+        id: "collection",
+        label: destination.collectionName,
+        path: undefined,
+      },
+      ...displayedCrumbs.map((crumb, index) => ({
+        id: crumb.id,
+        label: crumb.name,
+        path: crumbPathThrough(displayedCrumbs, index),
+      })),
+    ];
+    return crumbs;
+  }, [destination.collectionName, displayedCrumbs]);
+
+  const navigateTo = (path: string | undefined, crumbs: Crumb[]) => {
+    onDestinationPathChange(path);
+    setOptimisticCrumbs(crumbs);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogBody className="flex flex-col gap-4 pb-3">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
@@ -461,60 +541,60 @@ function DestinationDialog({
           {controls}
           <div className="overflow-hidden rounded-lg border bg-muted/20">
             <div className="flex h-10 items-center gap-1 border-b bg-background/70 px-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Go to parent folder"
-                disabled={!destinationPath || destination.isStale || isPending}
-                onClick={() => onDestinationPathChange(parentPath)}
-              >
-                <ArrowLeftIcon />
-              </Button>
               <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto text-sm whitespace-nowrap">
-                <button
-                  type="button"
-                  className="rounded px-1.5 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none"
-                  disabled={destination.isStale || isPending}
-                  onClick={() => onDestinationPathChange(undefined)}
-                >
-                  {destination.collectionName}
-                </button>
-                {destination.breadcrumbs.map((breadcrumb, index) => (
-                  <span
-                    key={breadcrumb.id}
-                    className="flex min-w-0 items-center gap-0.5"
-                  >
-                    <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground/60" />
-                    <button
-                      type="button"
-                      className={cn(
-                        "max-w-36 truncate rounded px-1.5 py-1 transition-colors hover:bg-muted",
-                        index === destination.breadcrumbs.length - 1
-                          ? "font-medium text-foreground"
-                          : "text-muted-foreground hover:text-foreground",
+                {segments.map((segment, index) => {
+                  const isCurrent = index === segments.length - 1;
+                  return (
+                    <Fragment key={segment.id}>
+                      {index > 0 && (
+                        <span className="relative flex size-3.5 shrink-0 items-center justify-center before:absolute before:h-3 before:w-px before:[transform:rotate(20deg)] before:bg-current before:text-muted-foreground/60" />
                       )}
-                      disabled={destination.isStale || isPending}
-                      onClick={() =>
-                        onDestinationPathChange(
-                          pathThroughBreadcrumbs(
-                            destination.breadcrumbs,
-                            index,
-                          ),
-                        )
-                      }
-                    >
-                      {breadcrumb.name}
-                    </button>
-                  </span>
-                ))}
+                      {isCurrent ? (
+                        <span className="max-w-36 truncate px-1.5 py-1 font-medium text-foreground">
+                          {segment.label}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="max-w-36 truncate px-1.5 py-1 text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none"
+                          disabled={destination.isStale || isPending}
+                          onClick={() =>
+                            navigateTo(
+                              segment.path,
+                              index === 0
+                                ? []
+                                : displayedCrumbs.slice(0, index),
+                            )
+                          }
+                        >
+                          {segment.label}
+                        </button>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </div>
             </div>
             <div className="h-72 overflow-y-auto p-1.5">
               {destination.isLoading ? (
-                <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <LoaderCircleIcon className="size-4 animate-spin" />
-                  Loading folders
+                <div className="p-1.5">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="flex w-full items-center gap-3 rounded-md px-2.5 py-2"
+                    >
+                      <div className="flex shrink-0 gap-0.5">
+                        <Skeleton className="size-8 rounded-[3px]" />
+                        <Skeleton className="size-8 rounded-[3px]" />
+                        <Skeleton className="size-8 rounded-[3px]" />
+                      </div>
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-26" />
+                      </div>
+                      <Skeleton className="h-4 w-18 shrink-0" />
+                      <Skeleton className="size-5 shrink-0" />
+                    </div>
+                  ))}
                 </div>
               ) : destination.isError ? (
                 <p className="flex h-full items-center justify-center px-6 text-center text-sm text-destructive">
@@ -546,15 +626,28 @@ function DestinationDialog({
                       onFocus={() => {
                         if (!isDisabled) destination.prefetch(folderPath);
                       }}
-                      onClick={() => onDestinationPathChange(folderPath)}
+                      onClick={() =>
+                        navigateTo(folderPath, [
+                          ...displayedCrumbs,
+                          {
+                            id: folder.id,
+                            name: folder.name,
+                            slug: folder.slug,
+                          },
+                        ])
+                      }
                     >
                       <FolderPreviewRow previews={folder.previews} />
                       <span className="min-w-0 flex-1 truncate font-medium">
                         {folder.name}
                       </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {folder.count}
-                      </span>
+                      {folder.folderCount > 0 ? (
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {folder.folderCount === 1
+                            ? "1 folder"
+                            : `${folder.folderCount} folders`}
+                        </span>
+                      ) : null}
                       <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground/60" />
                     </button>
                   );
@@ -565,38 +658,33 @@ function DestinationDialog({
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </DialogBody>
         <DialogFooter className="items-center">
-          <div className="min-w-0 text-xs text-muted-foreground">
-            {disabledReason ?? (
-              <span className="block truncate">
-                Destination:{" "}
-                <strong className="font-medium">{currentName}</strong>
-              </span>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          {disabledReason ? (
+            <div className="max-w-40 min-w-0 flex-1 truncate text-xs text-muted-foreground">
+              {disabledReason}
+            </div>
+          ) : null}
+          <Button
+            type="button"
+            disabled={!canMove || isPending}
+            onClick={onMove}
+          >
+            {isPending ? (
+              <>
+                <LoaderCircleIcon className="size-4 animate-spin" />
+                Moving
+              </>
+            ) : (
+              `Move ${count === 1 ? "item" : `${count} items`}`
             )}
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isPending}
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={!canMove || isPending}
-              onClick={onMove}
-            >
-              {isPending ? (
-                <>
-                  <LoaderCircleIcon className="size-4 animate-spin" />
-                  Moving
-                </>
-              ) : (
-                `Move ${count === 1 ? "item" : `${count} items`} here`
-              )}
-            </Button>
-          </div>
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -615,12 +703,12 @@ function FolderPreviewRow({ previews }: { previews: FolderChildPreview[] }) {
   }
 
   return (
-    <div className="flex w-20 shrink-0 gap-0.5">
+    <div className="flex shrink-0 gap-0.5">
       {visible.map((preview) =>
         preview.type === "image" && preview.url ? (
           <div
             key={preview.assetId}
-            className="size-8 overflow-hidden rounded-[3px] bg-muted"
+            className="size-8 shrink-0 overflow-hidden rounded-[3px] bg-muted"
           >
             <ProgressiveImage
               src={preview.url}
@@ -633,7 +721,7 @@ function FolderPreviewRow({ previews }: { previews: FolderChildPreview[] }) {
         ) : (
           <div
             key={preview.assetId}
-            className="size-8 overflow-hidden rounded-[3px] border p-1 text-[5px] leading-tight text-foreground/45"
+            className="size-8 shrink-0 overflow-hidden rounded-[3px] border p-1 text-[5px] leading-tight text-foreground/45"
             style={
               preview.color ? { backgroundColor: preview.color } : undefined
             }
@@ -646,14 +734,14 @@ function FolderPreviewRow({ previews }: { previews: FolderChildPreview[] }) {
   );
 }
 
-function pathThroughBreadcrumbs(
-  breadcrumbs: readonly Breadcrumb[],
+function crumbPathThrough(
+  crumbs: readonly { slug: string }[],
   endIndex: number,
 ): string | undefined {
   if (endIndex < 0) return undefined;
-  return breadcrumbs
+  return crumbs
     .slice(0, endIndex + 1)
-    .map((breadcrumb) => breadcrumb.slug)
+    .map((crumb) => crumb.slug)
     .join("/");
 }
 
