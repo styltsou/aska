@@ -8,13 +8,16 @@ import {
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import type { ImageAsset } from "@/types/asset";
 import { hasSelectionModifier } from "@/lib/selection";
+import { cn } from "@/lib/utils";
 
 export function ImageAssetCard({
   asset,
   onOpen,
+  isContextMenuOpen = false,
 }: {
   asset: ImageAsset;
   onOpen?: () => void;
+  isContextMenuOpen?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const shouldReduceMotion = useReducedMotion();
@@ -28,7 +31,10 @@ export function ImageAssetCard({
     <div
       role={onOpen ? "button" : undefined}
       tabIndex={onOpen ? 0 : undefined}
-      className="group relative cursor-pointer overflow-hidden rounded-lg border border-transparent transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20"
+      className={cn(
+        "group relative cursor-pointer overflow-hidden rounded-lg border border-transparent transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20",
+        isContextMenuOpen && "border-sidebar-foreground/20",
+      )}
       style={{ aspectRatio: `${asset.width} / ${asset.height}` }}
       onClick={(event) => {
         if (!hasSelectionModifier(event)) onOpen?.();

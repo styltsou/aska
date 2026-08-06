@@ -59,18 +59,20 @@ export const CanvasCard = memo(function CanvasCard({
     [dropStackStyle],
   );
 
-  const card = (
+  const card = (isContextMenuOpen = false) => (
     <div className="min-w-0">
       {node.type === "image" && asset.type === "image" ? (
         <ImageAssetCard
           asset={asset}
           onOpen={isPending ? undefined : () => data.onOpenImage(node)}
+          isContextMenuOpen={isContextMenuOpen}
         />
       ) : null}
       {node.type === "note" && asset.type === "note" ? (
         <NoteAssetCard
           asset={asset}
           onOpen={isPending ? undefined : () => data.onOpenNote(node)}
+          isContextMenuOpen={isContextMenuOpen}
         />
       ) : null}
       {node.type === "folder" && asset.type === "folder" ? (
@@ -80,6 +82,7 @@ export const CanvasCard = memo(function CanvasCard({
           incomingAssetCount={data.incomingDropCount}
           isDropTarget={data.isDropTarget}
           onOpen={() => data.onOpenFolder(node)}
+          isContextMenuOpen={isContextMenuOpen}
         />
       ) : null}
     </div>
@@ -138,7 +141,7 @@ export const CanvasCard = memo(function CanvasCard({
       onContextMenuCapture={(event) => data.onContextMenu(node.id, event)}
     >
       {isPending ? (
-        card
+        card()
       ) : (
         <AssetContextMenu asset={asset} deleteContext={data.deleteContext}>
           {card}

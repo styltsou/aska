@@ -144,9 +144,11 @@ export function NoteMarkdown({
 export function NoteAssetCard({
   asset,
   onOpen,
+  isContextMenuOpen = false,
 }: {
   asset: NoteAsset;
   onOpen?: () => void;
+  isContextMenuOpen?: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -202,6 +204,7 @@ export function NoteAssetCard({
       className={cn(
         "group bg-sidebar hover:border-sidebar-foreground/20 relative max-h-80 min-w-0 overflow-hidden rounded-lg border p-4 text-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
         effectiveOnOpen && "cursor-pointer",
+        isContextMenuOpen && "border-sidebar-foreground/20",
       )}
       role={effectiveOnOpen ? "button" : undefined}
       tabIndex={effectiveOnOpen ? 0 : undefined}

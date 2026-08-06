@@ -18,12 +18,14 @@ export function FolderAssetCard({
   incomingAssetCount = 1,
   isDropTarget = false,
   onOpen,
+  isContextMenuOpen = false,
 }: {
   asset: FolderAsset;
   incomingAssetId?: string;
   incomingAssetCount?: number;
   isDropTarget?: boolean;
   onOpen?: () => void;
+  isContextMenuOpen?: boolean;
 }) {
   const previews = asset.previews ?? [];
   const hasPreviews = previews.length > 0;
@@ -39,7 +41,10 @@ export function FolderAssetCard({
 
   return (
     <div
-      className="group relative cursor-pointer overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+      className={cn(
+        "group relative cursor-pointer overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+        isContextMenuOpen && "border-sidebar-foreground/20",
+      )}
       role={onOpen ? "link" : undefined}
       tabIndex={onOpen ? 0 : undefined}
       onClick={(event) => {

@@ -69,7 +69,7 @@ export function AssetContextMenu({
   inboxContext,
 }: {
   asset: Asset;
-  children: React.ReactNode;
+  children: (isContextMenuOpen: boolean) => React.ReactNode;
   deleteContext?: {
     workspaceSlug: string;
     collectionSlug: string;
@@ -150,7 +150,11 @@ export function AssetContextMenu({
   return (
     <>
       <ContextMenu>
-        <ContextMenuTrigger>{children}</ContextMenuTrigger>
+        <ContextMenuTrigger
+          render={(triggerProps, state) => (
+            <div {...triggerProps}>{children(state.open)}</div>
+          )}
+        />
         <ContextMenuContent>
           {asset.type === "folder" ? (
             <>

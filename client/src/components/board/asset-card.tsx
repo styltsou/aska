@@ -68,23 +68,30 @@ export const AssetCard = memo(function AssetCard({
         deleteContext={deleteContext}
         inboxContext={inboxContext}
       >
-        {asset.type === "image" && (
-          <ImageAssetCard
-            asset={asset}
-            onOpen={onOpenImage ? () => onOpenImage(asset) : undefined}
-          />
-        )}
-        {asset.type === "note" && (
-          <NoteAssetCard
-            asset={asset}
-            onOpen={onOpenNote ? () => onOpenNote(asset) : undefined}
-          />
-        )}
-        {asset.type === "folder" && (
-          <FolderAssetCard
-            asset={asset}
-            onOpen={onOpenFolder ? () => onOpenFolder(asset) : undefined}
-          />
+        {(isContextMenuOpen) => (
+          <>
+            {asset.type === "image" && (
+              <ImageAssetCard
+                asset={asset}
+                onOpen={onOpenImage ? () => onOpenImage(asset) : undefined}
+                isContextMenuOpen={isContextMenuOpen}
+              />
+            )}
+            {asset.type === "note" && (
+              <NoteAssetCard
+                asset={asset}
+                onOpen={onOpenNote ? () => onOpenNote(asset) : undefined}
+                isContextMenuOpen={isContextMenuOpen}
+              />
+            )}
+            {asset.type === "folder" && (
+              <FolderAssetCard
+                asset={asset}
+                onOpen={onOpenFolder ? () => onOpenFolder(asset) : undefined}
+                isContextMenuOpen={isContextMenuOpen}
+              />
+            )}
+          </>
         )}
       </AssetContextMenu>
     </div>

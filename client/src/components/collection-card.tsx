@@ -54,7 +54,7 @@ export function CollectionCard({
               to="/$workspaceSlug/collections/$"
               search={{ note: undefined, image: undefined }}
               params={{ workspaceSlug, _splat: collection.slug }}
-              className="relative cursor-pointer overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20"
+              className="relative cursor-pointer overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 data-popup-open:border-sidebar-foreground/20"
               onMouseEnter={() => setHovered(true)}
               onMouseLeave={() => setHovered(false)}
             >
@@ -224,16 +224,6 @@ export function CollectionCard({
           )}
         />
         <ContextMenuContent>
-          <ContextMenuItem
-            onClick={() => {
-              navigator.clipboard.writeText(
-                `${window.location.origin}/${workspaceSlug}/collections/${collection.slug}`,
-              );
-            }}
-          >
-            Copy link to collection
-          </ContextMenuItem>
-          <ContextMenuSeparator />
           <ContextMenuItem>Rename</ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
