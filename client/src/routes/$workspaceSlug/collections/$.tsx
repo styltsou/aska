@@ -15,7 +15,6 @@ import { FilterBar } from "@/components/filter-bar";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import type { ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
-import { PexelsBrowserPanel } from "@/components/board/pexels-browser-panel";
 import { makeBoardKey, Canvas, CanvasLoading } from "@/components/canvas";
 import { usePersistedStore, useTransientStore } from "@/store";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
@@ -49,9 +48,6 @@ function CollectionPage() {
   const filterScope = `collection:${workspaceSlug}/${collectionPath}`;
   const filterBar = usePersistedStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
-  );
-  const pexelsBrowserOpen = useTransientStore(
-    (state) => state.pexelsBrowserOpen,
   );
   const setPexelsBrowserOpen = useTransientStore(
     (state) => state.setPexelsBrowserOpen,
@@ -267,13 +263,6 @@ function CollectionPage() {
                 });
               }}
             />
-            {pexelsBrowserOpen ? (
-              <PexelsBrowserPanel
-                workspaceSlug={workspaceSlug}
-                collectionSlug={collectionSlug}
-                parentFolderPath={folderPath || undefined}
-              />
-            ) : null}
           </div>
         </BoardUploadZone>
       </BoardContextMenu>
