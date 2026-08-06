@@ -80,10 +80,10 @@ export type ImagePipelineCallbackInput = z.infer<
   typeof ImagePipelineCallbackSchema
 >;
 
-const UnsplashProvenanceSchema = z.object({
-  provider: z.literal("unsplash"),
+const PexelsProvenanceSchema = z.object({
+  provider: z.literal("pexels"),
   url: z.url(),
-  downloadLocation: z.url(),
+  downloadUrl: z.url(),
   attribution: z.object({
     photoId: z.string().min(1),
     name: z.string().min(1).max(255),
@@ -105,7 +105,7 @@ export const CreateRemoteImageSchema = z.object({
   position: BoardPositionSchema.optional(),
   provenance: z
     .discriminatedUnion("provider", [
-      UnsplashProvenanceSchema,
+      PexelsProvenanceSchema,
       UrlProvenanceSchema,
     ])
     .optional(),
@@ -113,13 +113,13 @@ export const CreateRemoteImageSchema = z.object({
 
 export type CreateRemoteImageInput = z.infer<typeof CreateRemoteImageSchema>;
 
-export const UnsplashSearchQuerySchema = z.object({
+export const PexelsSearchQuerySchema = z.object({
   query: z.string().trim().min(1).max(200),
   page: z.coerce.number().int().positive().default(1),
   perPage: z.coerce.number().int().min(1).max(30).default(20),
 });
 
-export type UnsplashSearchQuery = z.infer<typeof UnsplashSearchQuerySchema>;
+export type PexelsSearchQuery = z.infer<typeof PexelsSearchQuerySchema>;
 
 export const UploadPathParamSchema = z.object({
   workspaceSlug: z.string(),

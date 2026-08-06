@@ -63,7 +63,7 @@ export type ImageAssetVariants = {
 };
 
 export type ImageProvenance = {
-  provider: "unsplash" | "url";
+  provider: "pexels" | "url";
   url: string;
   downloadUrl?: string;
   attribution?: {

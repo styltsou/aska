@@ -6,7 +6,7 @@ import imageUploadRoutes from "./image-upload.routes";
 import assetRoutes from "./asset.routes";
 import imagePipelineRoutes from "./image-pipeline.routes";
 import colorSearchRoutes from "./color-search.routes";
-import unsplashRoutes from "./unsplash.routes";
+import pexelsRoutes from "./pexels.routes";
 
 export const apiRoutes = factory
   .createApp()
@@ -15,5 +15,5 @@ export const apiRoutes = factory
   .route("/", assetRoutes)
   .route("/", colorSearchRoutes)
   .route("/", imageUploadRoutes)
-  .route("/", unsplashRoutes)
+  .route("/", pexelsRoutes)
   .route("/", imagePipelineRoutes);

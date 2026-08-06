@@ -75,7 +75,7 @@ const envSchema = z
     CLOUDFLARE_ACCESS_AUD: z.string().min(1).optional(),
     RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
     // Optional so local development and CI do not require a provider key.
-    UNSPLASH_ACCESS_KEY: z.string().min(1).optional(),
+    PEXELS_API_KEY: z.string().min(1).optional(),
     S3_BUCKET: z.string().optional(),
     S3_REGION: z.string().default("eu-central-1"),
     // Optional only for local S3-compatible emulators such as LocalStack.

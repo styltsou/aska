@@ -37,10 +37,7 @@ import {
   type UploadStatus,
 } from "@/services/image-upload/upload-repository";
 import type { IObjectStorageService } from "@/services/object-storage.service";
-import {
-  type IUnsplashService,
-  UnsplashService,
-} from "@/services/unsplash.service";
+import { type IPexelsService, PexelsService } from "@/services/pexels.service";
 
 export type ImageUploadStatus = {
   id: number;
@@ -89,7 +86,7 @@ export interface IImageUploadService {
 export class ImageUploadService implements IImageUploadService {
   constructor(
     private objectStorageService: IObjectStorageService,
-    private unsplashService: IUnsplashService = new UnsplashService(),
+    private pexelsService: IPexelsService = new PexelsService(),
   ) {}
 
   async createDirectImageUpload(
@@ -438,11 +435,11 @@ export class ImageUploadService implements IImageUploadService {
     if (data.provenance.provider === "url") {
       return data.provenance;
     }
-    const downloadUrl = await this.unsplashService.resolveDownloadUrl(
-      data.provenance.downloadLocation,
+    const downloadUrl = this.pexelsService.validateDownloadUrl(
+      data.provenance.downloadUrl,
     );
     return {
-      provider: "unsplash",
+      provider: "pexels",
       url: data.provenance.url,
       downloadUrl,
       attribution: data.provenance.attribution,

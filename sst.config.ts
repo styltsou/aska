@@ -64,7 +64,7 @@ export default $config({
     const databaseUrl = new sst.Secret("DatabaseUrl");
     const betterAuthSecret = new sst.Secret("BetterAuthSecret");
     const resendApiKey = new sst.Secret("ResendApiKey");
-    const unsplashAccessKey = new sst.Secret("UnsplashAccessKey");
+    const pexelsApiKey = new sst.Secret("PexelsApiKey");
     const imagePipelineCallbackSecret = new sst.Secret(
       "ImagePipelineCallbackSecret",
     );
@@ -249,7 +249,7 @@ export default $config({
         CROSS_SITE_AUTH_COOKIES: stableCloudDomains ? "true" : "false",
         ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".styltsou.com" } : {}),
         RESEND_API_KEY: resendApiKey.value,
-        UNSPLASH_ACCESS_KEY: unsplashAccessKey.value,
+        PEXELS_API_KEY: pexelsApiKey.value,
         IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
         S3_BUCKET: assets.name,
         S3_REGION: "eu-central-1",
