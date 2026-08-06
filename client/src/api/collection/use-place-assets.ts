@@ -92,7 +92,7 @@ async function mapWithConcurrency<T, R>(
   concurrency: number,
   mapper: (value: T) => Promise<R>,
 ): Promise<R[]> {
-  const results = new Array<R>(values.length);
+  const results = Array.from({ length: values.length }, () => undefined as R);
   let nextIndex = 0;
 
   async function worker() {
