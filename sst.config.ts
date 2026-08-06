@@ -109,7 +109,6 @@ export default $config({
       queue: imagePaletteQueue,
       deadLetterQueue: imagePaletteDeadLetterQueue,
     } = createImageQueue("ImagePaletteQueue", "ImagePaletteDeadLetterQueue");
-    const imageUploadTopic = new sst.aws.SnsTopic("ImageUploadTopic");
     const assets = new sst.aws.Bucket("Assets", {
       // SST owns the bucket policy. CloudFront OAC presents its distribution
       // ARN as aws:SourceArn (not aws:SourceAccount), so limit reads to this
@@ -158,17 +157,17 @@ export default $config({
     assets.notify({
       notifications: [
         {
-          name: "FanOutOriginalImage",
-          topic: imageUploadTopic,
+          name: "GenerateImageVariants",
+          queue: imageVariantsQueue,
+          events: ["s3:ObjectCreated:*"],
+        },
+        {
+          name: "ExtractImagePalette",
+          queue: imagePaletteQueue,
           events: ["s3:ObjectCreated:*"],
         },
       ],
     });
-    imageUploadTopic.subscribeQueue(
-      "GenerateImageVariants",
-      imageVariantsQueue,
-    );
-    imageUploadTopic.subscribeQueue("ExtractImagePalette", imagePaletteQueue);
     const api = new sst.aws.ApiGatewayV2("Api", {
       ...(stableCloudDomains
         ? {

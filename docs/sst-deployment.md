@@ -6,7 +6,7 @@ One stage creates one isolated AWS copy:
 ```text
 stage dev
   API Gateway -> Hono Lambda
-  private S3 assets bucket -> SNS -> two SQS queues -> variants and palette Lambdas
+  private S3 assets bucket -> two SQS queues -> variants and palette Lambdas
   private S3 client bucket -> CloudFront -> React/Vite client
   dead-letter queue, IAM permissions, and stage-specific SST secrets
 ```
@@ -43,9 +43,9 @@ run, set the four `hybrid` stage secrets listed below.
 | Direct package commands            | Your laptop                    | No AWS event chain                      | Unit tests and isolated debugging only      |
 
 Both SST modes are real end-to-end AWS flows. With live development, an image
-uploaded from the browser goes to the real S3 bucket, publishes one SNS event,
-and SNS creates one message in each image-processing queue for the variants and
-palette workers. In the stable CI deployment, those same workers run in AWS.
+uploaded from the browser goes to the real S3 bucket, which sends one message
+to each image-processing queue for the variants and palette workers. In the
+stable CI deployment, those same workers run in AWS.
 Both test the actual permissions, event shape, queue flow, and callback path.
 
 ## One-time stable `dev` setup
@@ -315,7 +315,7 @@ or modify the `hybrid` SST stage.
 2. Upload an image in the browser. It follows this real path:
 
    ```text
-   browser -> API -> S3 {workspaceId}/{storageId}/original.* -> SNS -> variants SQS + palette SQS
+   browser -> API -> S3 {workspaceId}/{storageId}/original.* -> variants SQS + palette SQS
            -> local worker callbacks -> API
    ```
 

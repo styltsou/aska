@@ -17,7 +17,7 @@ uploads a real HTTPS client origin for S3 CORS and presigned PUT testing.
 ## What this is for
 
 - Editing frontend upload, progress, retry, and error-state behavior against
-  the real personal S3/SNS/SQS image pipeline.
+  the real personal S3/SQS image pipeline.
 - Testing browser authentication, CORS, and cookies in the same HTTPS shape as
   cloud deployment.
 - Sharing a narrowly protected personal preview with a collaborator when
