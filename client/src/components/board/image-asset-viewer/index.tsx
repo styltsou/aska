@@ -411,10 +411,12 @@ export function ImageAssetViewer({
   asset: selectedAsset,
   open,
   onOpenChange,
+  workspaceSlug,
 }: {
   asset?: ImageAsset;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  workspaceSlug: string;
 }) {
   const retainedAssetRef = useRef(selectedAsset);
   useEffect(() => {
@@ -716,6 +718,17 @@ export function ImageAssetViewer({
     setCroppedPreviewUrl(null);
   }, []);
 
+  const handleDownload = useCallback(() => {
+    if (!asset) return;
+    const link = document.createElement("a");
+    link.href = `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(
+      asset.id,
+    )}/download`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }, [asset, workspaceSlug]);
+
   const displayUrl = croppedPreviewUrl ?? asset?.url;
   const blurPlaceholder = asset?.uploadStatus ? undefined : asset?.blurDataURL;
   const cropFrameColors = getCropFrameColors(asset?.dominantColors);
@@ -865,17 +878,14 @@ export function ImageAssetViewer({
                     <Tooltip>
                       <TooltipTrigger
                         render={
-                          <a
-                            href={asset.url}
-                            download={asset.title || "image-asset"}
-                            className={buttonVariants({
-                              variant: "ghost",
-                              size: "icon-sm",
-                            })}
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={handleDownload}
                           >
                             <DownloadIcon />
                             <span className="sr-only">Download</span>
-                          </a>
+                          </Button>
                         }
                       />
                       <TooltipContent>Download</TooltipContent>
@@ -884,7 +894,7 @@ export function ImageAssetViewer({
                       <TooltipTrigger
                         render={
                           <a
-                            href={asset.sourceUrl ?? asset.url}
+                            href={asset.originalUrl ?? asset.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className={buttonVariants({

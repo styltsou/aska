@@ -278,6 +278,7 @@ function CollectionPage() {
       <ImageAssetViewer
         asset={selectedImage}
         open={selectedImage !== undefined}
+        workspaceSlug={workspaceSlug}
         onOpenChange={(open) => {
           if (!open) handleCloseImage();
         }}

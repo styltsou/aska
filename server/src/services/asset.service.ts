@@ -38,6 +38,18 @@ type Deps = {
   objectStorageService: IObjectStorageService;
 };
 
+export type AssetDownload = {
+  bytes: Uint8Array;
+  contentType: string;
+  filename: string;
+};
+
+function sanitizeFilename(name: string): string {
+  const trimmed = name.trim().replace(/["\r\n;]/g, "");
+  const safe = trimmed.replace(/[^\p{L}\p{N}._ -]/gu, "_").slice(0, 100);
+  return safe.length > 0 ? safe : "image";
+}
+
 export interface IAssetService {
   getInboxContents(
     orgId: string,
@@ -57,6 +69,7 @@ export interface IAssetService {
     orgId: string,
     assetNodeId: string,
   ): Promise<{ deletedAssetId: string }>;
+  downloadAsset(orgId: string, assetNodeId: string): Promise<AssetDownload>;
   bulkDeleteAssets(orgId: string, nodeIds: string[]): Promise<BulkDeleteResult>;
 }
 
@@ -264,6 +277,50 @@ export class AssetService implements IAssetService {
       .where(and(eq(assets.organizationId, orgId), eq(assets.id, assetId)));
 
     return { deletedAssetId: assetNodeId };
+  }
+
+  async downloadAsset(
+    orgId: string,
+    assetNodeId: string,
+  ): Promise<AssetDownload> {
+    const target = parseAssetNodeId(assetNodeId);
+    if (target.assetType !== "image") {
+      throw new AppError(ErrorCode.NOT_FOUND, "Asset not found");
+    }
+
+    const row = first(
+      await db
+        .select({
+          title: assets.title,
+          variants: imageAssets.variants,
+        })
+        .from(assets)
+        .innerJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+        .where(
+          and(
+            eq(assets.organizationId, orgId),
+            eq(assets.id, target.entityId),
+            eq(assets.type, "image"),
+          ),
+        )
+        .limit(1),
+    );
+
+    if (!row) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Asset not found");
+    }
+
+    const original = row.variants?.original ?? row.variants?.display;
+    if (!original?.objectKey) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Image object not found");
+    }
+
+    const bytes = await this.objectStorageService.getObjectBytes(
+      original.objectKey,
+    );
+    const filename = row.title?.trim() ? sanitizeFilename(row.title) : "image";
+
+    return { bytes, contentType: original.contentType, filename };
   }
 
   async bulkDeleteAssets(

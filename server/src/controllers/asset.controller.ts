@@ -86,3 +86,28 @@ export const deleteAsset = factory.createHandlers(
     return c.json(success(result));
   },
 );
+
+export const downloadAsset = factory.createHandlers(
+  authMiddleware,
+  validate.param(AssetPathParamSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const userId = c.get("userId");
+
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const { bytes, contentType, filename } = await assetService.downloadAsset(
+      workspace.id,
+      assetId,
+    );
+
+    return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {
+      "Content-Type": contentType,
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Length": String(bytes.byteLength),
+      "Cache-Control": "private, no-store",
+    });
+  },
+);
