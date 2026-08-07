@@ -70,6 +70,8 @@ export type CollectionFolderNode = {
   folderCount: number;
   previews: FolderChildPreview[];
   position: BoardPosition | null;
+  /** Browser-only marker while a flatten mutation for this folder is in flight. */
+  flattenStatus?: "pending";
 };
 
 export type CreatedFolder = {

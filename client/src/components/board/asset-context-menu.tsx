@@ -225,13 +225,11 @@ export function AssetContextMenu({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {moveDialogOpen && moveSource ? (
-        <MoveToDialog
-          open={moveDialogOpen}
-          onOpenChange={setMoveDialogOpen}
-          source={moveSource}
-        />
-      ) : null}
+      <MoveToDialog
+        open={moveDialogOpen && moveSource !== undefined}
+        onOpenChange={setMoveDialogOpen}
+        source={moveSource ?? { workspaceSlug: "", nodeIds: [] }}
+      />
     </>
   );
 }

@@ -1058,19 +1058,17 @@ function CanvasSurface({
           }}
         />
       ) : null}
-      {moveDialogOpen && selectedIds.length > 0 ? (
-        <MoveToDialog
-          open={moveDialogOpen}
-          onOpenChange={setMoveDialogOpen}
-          source={{
-            workspaceSlug,
-            sourceCollectionSlug: collectionSlug,
-            sourceFolderPath: folderPath,
-            nodeIds: selectedIds,
-          }}
-          onMoved={() => clearSelection(boardKey)}
-        />
-      ) : null}
+      <MoveToDialog
+        open={moveDialogOpen && selectedIds.length > 0}
+        onOpenChange={setMoveDialogOpen}
+        source={{
+          workspaceSlug,
+          sourceCollectionSlug: collectionSlug,
+          sourceFolderPath: folderPath,
+          nodeIds: selectedIds,
+        }}
+        onMoved={() => clearSelection(boardKey)}
+      />
     </div>
   );
 }
@@ -1136,7 +1134,8 @@ function positionsEqual(a: XYPosition, b: XYPosition): boolean {
 function isPendingCollectionNode(node: CollectionNode): boolean {
   return (
     (node.type === "image" && node.uploadStatus !== undefined) ||
-    (node.type === "note" && node.id.startsWith("note-optimistic-"))
+    (node.type === "note" && node.id.startsWith("note-optimistic-")) ||
+    (node.type === "folder" && node.flattenStatus === "pending")
   );
 }
 

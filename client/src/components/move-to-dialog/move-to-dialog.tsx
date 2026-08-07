@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -34,7 +34,23 @@ export function MoveToDialog({
 }) {
   const { workspaceSlug, nodeIds, sourceCollectionSlug, sourceFolderPath } =
     source;
-  const [destinationPath, setDestinationPath] = useState<string>();
+  // Start the browse at the items' current location when the source collection
+  // is selected; switching collections below resets to the root.
+  const [destinationPath, setDestinationPath] = useState<string | undefined>(
+    sourceCollectionSlug ? sourceFolderPath : undefined,
+  );
+  const wasOpenRef = useRef(open);
+  // The dialog stays mounted so its enter/exit animation plays; reset its
+  // state each time it opens so a fresh move starts at the source location.
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      setSelectedCollectionSlug(undefined);
+      setDestinationPath(sourceCollectionSlug ? sourceFolderPath : undefined);
+      setError(undefined);
+    }
+    wasOpenRef.current = open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
   const [selectedCollectionSlug, setSelectedCollectionSlug] =
     useState<string>();
   const [error, setError] = useState<string>();
@@ -76,8 +92,17 @@ export function MoveToDialog({
     ? `folder-${destinationFolder.id}`
     : null;
   const exceedsBatchLimit = nodeIds.length > MAX_MOVE_BATCH_SIZE;
+  // Moving to the exact current location is a no-op: only the collection
+  // picker can change collections, so this can only happen for a within-
+  // collection move back to the folder the item is already in.
+  const isSameLocation =
+    targetCollectionSlug.length > 0 &&
+    sourceCollectionSlug !== undefined &&
+    targetCollectionSlug === sourceCollectionSlug &&
+    destinationPath === sourceFolderPath;
   const canMove =
     !exceedsBatchLimit &&
+    !isSameLocation &&
     targetCollectionSlug.length > 0 &&
     !destination.isLoading &&
     !destination.isStale &&
@@ -90,30 +115,29 @@ export function MoveToDialog({
     [sourceCollectionSlug, nodeIds, targetCollectionSlug],
   );
 
-  async function handleMove() {
+  function handleMove() {
     if (!canMove) return;
     setError(undefined);
-
-    try {
-      const result = await moveNodes.mutateAsync({
+    // Apply the optimistic cache update first so the board shows the items
+    // leave, then close the dialog. Failures surface via rollback + toast.
+    moveNodes.mutate(
+      {
         nodeIds,
         folderPath: sourceFolderPath,
         targetFolderNodeId,
         sourceCollectionSlug,
-      });
-      const movedNodeIds = result.moves
-        .filter((move) => move.moved)
-        .map((move) => move.nodeId);
-      onMoved?.(movedNodeIds);
-      toast.success(moveSuccessMessage(movedNodeIds.length));
-      onOpenChange(false);
-    } catch (moveError) {
-      setError(
-        moveError instanceof Error
-          ? moveError.message
-          : "Unable to move the selected items.",
-      );
-    }
+      },
+      {
+        onSuccess: (result) => {
+          const movedNodeIds = result.moves
+            .filter((move) => move.moved)
+            .map((move) => move.nodeId);
+          onMoved?.(movedNodeIds);
+          toast.success(moveSuccessMessage(movedNodeIds.length));
+        },
+      },
+    );
+    onOpenChange(false);
   }
 
   const disabledReason = exceedsBatchLimit
@@ -158,9 +182,7 @@ export function MoveToDialog({
   return (
     <DestinationDialog
       open={open}
-      onOpenChange={(nextOpen) => {
-        if (!moveNodes.isPending) onOpenChange(nextOpen);
-      }}
+      onOpenChange={onOpenChange}
       title="Move to..."
       description={description}
       controls={collectionPicker}
@@ -243,6 +265,7 @@ export function MoveToDialog({
         return result.folder.slug;
       }}
       onMove={() => void handleMove()}
+      refocusKey={targetCollectionSlug}
     />
   );
 }

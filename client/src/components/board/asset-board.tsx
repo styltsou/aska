@@ -223,9 +223,9 @@ export function AssetBoard({
           }}
         />
       ) : null}
-      {moveDialogOpen && inboxContext && selectedIds.length > 0 ? (
+      {inboxContext ? (
         <MoveToDialog
-          open={moveDialogOpen}
+          open={moveDialogOpen && selectedIds.length > 0}
           onOpenChange={setMoveDialogOpen}
           source={{
             workspaceSlug: inboxContext.workspaceSlug,

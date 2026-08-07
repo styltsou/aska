@@ -1944,11 +1944,39 @@ export function useFlattenFolder(
 ) {
   const queryClient = useQueryClient();
 
+  const setFlattenStatus = (nodeId: string, status: "pending" | undefined) => {
+    queryClient.setQueriesData<CollectionContentsResponse>(
+      {
+        queryKey: collectionQueryKeys.contentScope(
+          workspaceSlug,
+          collectionSlug,
+        ),
+      },
+      (current) => {
+        if (!current || !current.nodes.some((node) => node.id === nodeId)) {
+          return current;
+        }
+        return {
+          ...current,
+          nodes: current.nodes.map((node) =>
+            node.id === nodeId ? { ...node, flattenStatus: status } : node,
+          ),
+        };
+      },
+    );
+  };
+
   return useMutation({
     mutationFn: (nodeId: string) =>
       flattenFolder(workspaceSlug, collectionSlug, nodeId),
+    onMutate: (nodeId) => setFlattenStatus(nodeId, "pending"),
     onSuccess: () => {
       reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
+    },
+    onSettled: (_data, error, nodeId) => {
+      // On success the reconcile refetch already removed/rewrote the folder;
+      // on error clear the marker so the folder renders normally again.
+      if (error) setFlattenStatus(nodeId, undefined);
     },
   });
 }

@@ -12,10 +12,32 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { FolderComposer } from "./folder-composer";
 import { FolderPreviewRow } from "./folder-preview-row";
 import type { Crumb, FolderDestination } from "../lib/types";
 import { crumbPathThrough, joinPath } from "../lib/utils";
+
+type CrumbSegment = {
+  id: string | number;
+  label: string;
+  path: string | undefined;
+  crumbIndex: number;
+  hidden?: CrumbSegment[];
+};
+
+const MAX_BREADCRUMB_SEGMENTS = 5;
+const MAX_BREADCRUMB_TAIL = 3;
 
 export function DestinationDialog({
   open,
@@ -35,6 +57,7 @@ export function DestinationDialog({
   canCreateFolder,
   onCreateFolder,
   onMove,
+  refocusKey,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -53,6 +76,7 @@ export function DestinationDialog({
   canCreateFolder?: boolean;
   onCreateFolder?: (name: string) => Promise<string>;
   onMove: () => void;
+  refocusKey?: string;
 }) {
   const [optimisticCrumbs, setOptimisticCrumbs] = useState<Crumb[]>([]);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -60,6 +84,7 @@ export function DestinationDialog({
   const [newFolderError, setNewFolderError] = useState<string>();
   const [creatingFolder, setCreatingFolder] = useState(false);
   const suppressComposerFocusRef = useRef(false);
+  const submitRef = useRef<HTMLButtonElement>(null);
   const serverCrumbs: Crumb[] = destination.breadcrumbs.map((breadcrumb) => ({
     id: breadcrumb.id,
     name: breadcrumb.name,
@@ -82,24 +107,40 @@ export function DestinationDialog({
     }
   }, [optimisticCrumbs, serverCrumbs]);
 
-  const segments = useMemo(() => {
-    const crumbs: {
-      id: string | number;
-      label: string;
-      path: string | undefined;
-    }[] = [
+  const segments = useMemo<CrumbSegment[]>(() => {
+    const crumbs: CrumbSegment[] = [
       {
         id: "collection",
         label: destination.collectionName,
         path: undefined,
+        crumbIndex: -1,
       },
       ...displayedCrumbs.map((crumb, index) => ({
         id: crumb.id,
         label: crumb.name,
         path: crumbPathThrough(displayedCrumbs, index),
+        crumbIndex: index,
       })),
     ];
-    return crumbs;
+    // Keep the collection and the last few segments visible and fold the
+    // middle into an ellipsis once the path gets long.
+    if (crumbs.length <= MAX_BREADCRUMB_SEGMENTS) {
+      return crumbs;
+    }
+    const head = crumbs.slice(0, 1);
+    const tail = crumbs.slice(-MAX_BREADCRUMB_TAIL);
+    const hidden = crumbs.slice(1, -MAX_BREADCRUMB_TAIL);
+    return [
+      ...head,
+      {
+        id: "ellipsis",
+        label: "…",
+        path: undefined,
+        crumbIndex: -2,
+        hidden,
+      },
+      ...tail,
+    ];
   }, [destination.collectionName, displayedCrumbs]);
 
   const navigateTo = (path: string | undefined, crumbs: Crumb[]) => {
@@ -108,6 +149,35 @@ export function DestinationDialog({
   };
 
   const canCreate = Boolean(onCreateFolder && canCreateFolder);
+
+  // Focus lands on the primary action whenever the destination changes, so
+  // pressing Enter always confirms the currently rendered destination. Focused
+  // buttons already activate on Enter (Move submits, a folder row navigates),
+  // so this also prevents Enter from re-opening a popover on the trigger.
+  useEffect(() => {
+    if (open) {
+      submitRef.current?.focus();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, refocusKey, destinationPath]);
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    // Let inputs and focused buttons use their own Enter behavior (create a
+    // folder, navigate a folder row, open the picker) instead of submitting.
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLButtonElement ||
+      target.closest("[data-slot='dropdown-menu-content']")
+    ) {
+      return;
+    }
+    if (!canMove || isPending) return;
+    event.preventDefault();
+    onMove();
+  }
 
   async function handleCreateFolder() {
     const name = newFolderName.trim();
@@ -134,7 +204,7 @@ export function DestinationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" onKeyDown={handleKeyDown}>
         <DialogBody className="flex flex-col gap-4 pb-3">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
@@ -145,33 +215,83 @@ export function DestinationDialog({
             <div className="flex h-10 items-center gap-1 border-b bg-background/70 px-2">
               <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto text-sm whitespace-nowrap">
                 {segments.map((segment, index) => {
-                  const isCurrent = index === segments.length - 1;
+                  const isCurrent =
+                    segment.crumbIndex === displayedCrumbs.length - 1;
                   return (
                     <Fragment key={segment.id}>
                       {index > 0 && (
                         <span className="relative flex size-3.5 shrink-0 items-center justify-center before:absolute before:h-3 before:w-px before:[transform:rotate(20deg)] before:bg-current before:text-muted-foreground/60" />
                       )}
-                      {isCurrent ? (
-                        segment.id === "collection" && destination.isLoading ? (
+                      {segment.id === "ellipsis" ? (
+                        <DropdownMenu>
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={(tooltipProps) => (
+                                <DropdownMenuTrigger
+                                  render={(triggerProps) => (
+                                    <button
+                                      {...tooltipProps}
+                                      {...triggerProps}
+                                      type="button"
+                                      aria-label="Show intermediate folders"
+                                      className="cursor-pointer rounded-md px-2 py-1 text-muted-foreground transition-colors duration-75 outline-none select-none hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none data-popup-open:bg-accent data-popup-open:text-accent-foreground"
+                                      disabled={
+                                        destination.isStale || isPending
+                                      }
+                                    >
+                                      …
+                                    </button>
+                                  )}
+                                />
+                              )}
+                            />
+                            <TooltipContent side="bottom">
+                              More folders
+                            </TooltipContent>
+                          </Tooltip>
+                          <DropdownMenuContent align="start">
+                            {segment.hidden?.map((hidden) => (
+                              <DropdownMenuItem
+                                key={hidden.id}
+                                className="cursor-pointer"
+                                onClick={() =>
+                                  navigateTo(
+                                    hidden.path,
+                                    hidden.crumbIndex < 0
+                                      ? []
+                                      : displayedCrumbs.slice(
+                                          0,
+                                          hidden.crumbIndex,
+                                        ),
+                                  )
+                                }
+                              >
+                                {hidden.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : isCurrent ? (
+                        segment.crumbIndex === -1 && destination.isLoading ? (
                           <span className="px-1.5 py-1">
                             <Skeleton className="h-4 w-24" />
                           </span>
                         ) : (
-                          <span className="max-w-36 truncate px-1.5 py-1 font-medium text-foreground">
+                          <span className="max-w-36 truncate rounded-md px-2 py-1 text-foreground">
                             {segment.label}
                           </span>
                         )
                       ) : (
                         <button
                           type="button"
-                          className="max-w-36 truncate px-1.5 py-1 text-muted-foreground transition-colors duration-100 hover:text-foreground disabled:pointer-events-none"
+                          className="max-w-36 truncate rounded-md px-2 py-1 text-muted-foreground transition-colors duration-75 hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none"
                           disabled={destination.isStale || isPending}
                           onClick={() =>
                             navigateTo(
                               segment.path,
-                              index === 0
+                              segment.crumbIndex < 0
                                 ? []
-                                : displayedCrumbs.slice(0, index),
+                                : displayedCrumbs.slice(0, segment.crumbIndex),
                             )
                           }
                         >
@@ -217,7 +337,7 @@ export function DestinationDialog({
                       <button
                         key={folder.id}
                         type="button"
-                        className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm transition-colors duration-100 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45"
+                        className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm transition-colors duration-75 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45"
                         disabled={isDisabled || isPending}
                         title={
                           isDisabled
@@ -289,6 +409,7 @@ export function DestinationDialog({
             </div>
           ) : null}
           <Button
+            ref={submitRef}
             type="button"
             disabled={!canMove || isPending}
             onClick={onMove}

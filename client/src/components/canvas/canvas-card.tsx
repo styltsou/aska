@@ -154,6 +154,13 @@ export const CanvasCard = memo(function CanvasCard({
             <span>Saving</span>
           </div>
         </div>
+      ) : node.type === "folder" && node.flattenStatus === "pending" ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5">
+          <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
+            <LoaderCircleIcon className="size-3 animate-spin" />
+            <span>Flattening…</span>
+          </div>
+        </div>
       ) : null}
     </motion.div>
   );
@@ -162,6 +169,7 @@ export const CanvasCard = memo(function CanvasCard({
 function isPendingCollectionNode(node: CollectionNode): boolean {
   return (
     (node.type === "image" && node.uploadStatus !== undefined) ||
-    (node.type === "note" && node.id.startsWith("note-optimistic-"))
+    (node.type === "note" && node.id.startsWith("note-optimistic-")) ||
+    (node.type === "folder" && node.flattenStatus === "pending")
   );
 }
