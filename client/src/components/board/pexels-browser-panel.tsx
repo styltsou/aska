@@ -168,18 +168,18 @@ export function PexelsBrowserPanel({
     <aside
       ref={panelRef}
       aria-hidden={!open}
-      className="group text-sidebar-foreground"
+      className="group/panel text-sidebar-foreground"
       data-state={open ? "expanded" : "collapsed"}
       inert={!open || undefined}
       style={{ "--pexels-browser-width": `${width}px` } as CSSProperties}
     >
       <div
         className={cn(
-          "relative hidden w-(--pexels-browser-width) transition-[width] ease-linear group-data-[state=collapsed]:w-0 md:block",
+          "relative hidden w-(--pexels-browser-width) transition-[width] ease-linear group-data-[state=collapsed]/panel:w-0 md:block",
           isResizing ? "duration-0" : "duration-120",
         )}
       />
-      <div className="fixed inset-y-0 right-0 z-10 flex h-svh w-[min(var(--pexels-browser-width),100vw)] flex-col pr-2 transition-[right] duration-120 ease-linear group-data-[state=collapsed]:-right-[min(var(--pexels-browser-width),100vw)] md:w-(--pexels-browser-width) md:group-data-[state=collapsed]:-right-(--pexels-browser-width)">
+      <div className="fixed inset-y-0 right-0 z-10 flex h-svh w-[min(var(--pexels-browser-width),100vw)] flex-col pr-2 transition-[right] duration-120 ease-linear group-data-[state=collapsed]/panel:-right-[min(var(--pexels-browser-width),100vw)] md:w-(--pexels-browser-width) md:group-data-[state=collapsed]/panel:-right-(--pexels-browser-width)">
         <div className="relative flex size-full flex-col overflow-hidden bg-sidebar">
           <div
             aria-label="Resize Pexels browser"
@@ -215,11 +215,11 @@ export function PexelsBrowserPanel({
                   Search Pexels to start collecting.
                 </p>
               ) : search.isLoading ? (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="columns-2 gap-2">
                   {Array.from({ length: 4 }, (_, index) => (
                     <div
                       key={index}
-                      className="aspect-[4/5] animate-pulse rounded-lg bg-muted"
+                      className="mb-2 aspect-[4/5] animate-pulse rounded-lg bg-muted"
                     />
                   ))}
                 </div>
@@ -234,7 +234,7 @@ export function PexelsBrowserPanel({
                   No photos found for “{query}”.
                 </p>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="columns-2 gap-2">
                   {search.data?.results.map((photo) => {
                     const isSelected = selected.some(
                       (item) => item.id === photo.id,
@@ -246,7 +246,7 @@ export function PexelsBrowserPanel({
                         aria-pressed={isSelected}
                         onClick={() => togglePhoto(photo)}
                         className={cn(
-                          "group relative overflow-hidden rounded-lg border text-left focus-visible:ring-2 focus-visible:ring-ring",
+                          "group/tile relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-lg border text-left focus-visible:ring-2 focus-visible:ring-ring",
                           isSelected
                             ? "border-primary ring-2 ring-primary"
                             : "border-transparent",
@@ -255,7 +255,10 @@ export function PexelsBrowserPanel({
                         <img
                           src={photo.urls.small}
                           alt={photo.alt ?? "Pexels photo"}
-                          className="aspect-[4/5] w-full object-cover transition-transform duration-200 group-hover:scale-[1.025]"
+                          style={{
+                            aspectRatio: `${photo.width} / ${photo.height}`,
+                          }}
+                          className="block w-full object-cover transition-transform duration-200 group-hover/tile:scale-[1.025]"
                           loading="lazy"
                         />
                         <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2 pt-7 pb-1.5 text-[10px] text-white">
