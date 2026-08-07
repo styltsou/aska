@@ -16,6 +16,7 @@ import type {
   MoveCollectionNodesToFolderInput,
   MoveCollectionNodesToFolderResponse,
 } from "./types";
+import type { WorkspaceData } from "@/api/workspace";
 
 type MoveContext =
   | { optimistic: false }
@@ -23,6 +24,7 @@ type MoveContext =
       optimistic: true;
       previousContents: CollectionContentsCacheEntry[];
       previousCollections: CollectionsData | undefined;
+      previousWorkspace: WorkspaceData | undefined;
     };
 
 export function useMoveCollectionNodesToFolder(
@@ -100,6 +102,10 @@ export function useMoveCollectionNodesToFolder(
       });
       const previousCollections =
         queryClient.getQueryData<CollectionsData>(collectionsKey);
+      const previousWorkspace = queryClient.getQueryData<WorkspaceData>([
+        "workspace",
+        workspaceSlug,
+      ]);
       let appliedContent = false;
       let appliedCounts = false;
 
@@ -210,6 +216,37 @@ export function useMoveCollectionNodesToFolder(
               );
             },
           );
+          queryClient.setQueryData<WorkspaceData>(
+            ["workspace", workspaceSlug],
+            (current) => {
+              if (
+                !current ||
+                !current.collections.some(
+                  (collection) => collection.slug === collectionSlug,
+                )
+              ) {
+                return current;
+              }
+              return {
+                ...current,
+                collections: current.collections.map((collection) => {
+                  if (crossCollectionMove && collection.slug === sourceSlug) {
+                    return {
+                      ...collection,
+                      assetCount: Math.max(0, collection.assetCount - delta),
+                    };
+                  }
+                  if (collection.slug === collectionSlug) {
+                    return {
+                      ...collection,
+                      assetCount: Math.max(0, collection.assetCount + delta),
+                    };
+                  }
+                  return collection;
+                }),
+              };
+            },
+          );
           appliedCounts = true;
         }
       }
@@ -222,6 +259,7 @@ export function useMoveCollectionNodesToFolder(
         optimistic: true,
         previousContents,
         previousCollections,
+        previousWorkspace,
       };
     },
     onError: (_error, variables, context) => {
@@ -236,6 +274,10 @@ export function useMoveCollectionNodesToFolder(
       queryClient.setQueryData<CollectionsData>(
         collectionQueryKeys.collections(workspaceSlug),
         context.previousCollections,
+      );
+      queryClient.setQueryData<WorkspaceData>(
+        ["workspace", workspaceSlug],
+        context.previousWorkspace,
       );
       toast.error(getMoveErrorMessage(variables.nodeIds));
     },
@@ -252,6 +294,9 @@ export function useMoveCollectionNodesToFolder(
         }),
         queryClient.invalidateQueries({
           queryKey: collectionQueryKeys.inbox(workspaceSlug),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["workspace", workspaceSlug],
         }),
       ];
       if (
