@@ -204,6 +204,11 @@ export type DeleteCollectionNodeResponse = {
   deletedAssetCount: number;
 };
 
+export type DeleteCollectionResponse = {
+  deletedCollectionSlug: string;
+  deletedAssetCount: number;
+};
+
 export type BulkDeleteResponse = {
   deletedCount: number;
   deletedAssetCount: number;

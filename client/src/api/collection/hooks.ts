@@ -19,6 +19,7 @@ import {
   fetchImageUploadStatus,
   fetchInboxImageUploadStatus,
   deleteAsset,
+  deleteCollection,
   deleteCollectionNode,
   fetchCollectionContents,
   fetchInboxContents,
@@ -1890,6 +1891,49 @@ export function useDeleteCollectionNode(
         });
       }
       reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
+    },
+  });
+}
+
+export function useDeleteCollection(workspaceSlug: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (collectionSlug: string) =>
+      deleteCollection(workspaceSlug, collectionSlug),
+    onError: () => {
+      toast.error("Failed to delete collection");
+    },
+    onSuccess: (data, collectionSlug) => {
+      queryClient.setQueryData<CollectionsData>(
+        collectionQueryKeys.collections(workspaceSlug),
+        (current) =>
+          current
+            ? {
+                collections: current.collections.filter(
+                  (collection) => collection.slug !== collectionSlug,
+                ),
+              }
+            : current,
+      );
+      queryClient.setQueryData<WorkspaceData>(
+        ["workspace", workspaceSlug],
+        (current) =>
+          current
+            ? {
+                ...current,
+                collections: current.collections.filter(
+                  (collection) => collection.slug !== collectionSlug,
+                ),
+              }
+            : current,
+      );
+      queryClient.removeQueries({
+        queryKey: collectionQueryKeys.contents(
+          workspaceSlug,
+          data.deletedCollectionSlug,
+        ),
+      });
     },
   });
 }

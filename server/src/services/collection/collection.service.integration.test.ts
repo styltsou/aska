@@ -7,6 +7,7 @@ import { db } from "@/db";
 import {
   assets,
   collectionNodes,
+  collectionsTable,
   folders,
   imageAssets,
   organization,
@@ -1141,6 +1142,65 @@ describe("CollectionService integration", () => {
     expect(remainingNodes).toEqual([]);
     expect(remainingAssets).toEqual([]);
     expect(remainingFolders).toEqual([]);
+  });
+
+  it("deletes a collection, its folders, and all descendant assets", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Whole Collection Delete" },
+    );
+    const rootFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Temporary" },
+    );
+    await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "Remove this note.", parentFolderPath: rootFolder.slug },
+    );
+
+    await expect(
+      collectionService.deleteCollection(
+        fixture.organizationId,
+        collection.slug,
+      ),
+    ).resolves.toEqual({
+      deletedCollectionSlug: collection.slug,
+      deletedAssetCount: 1,
+    });
+
+    const [
+      remainingNodes,
+      remainingAssets,
+      remainingFolders,
+      remainingCollections,
+    ] = await Promise.all([
+      db
+        .select({ id: collectionNodes.id })
+        .from(collectionNodes)
+        .where(eq(collectionNodes.collectionId, collection.id)),
+      db
+        .select({ id: assets.id })
+        .from(assets)
+        .where(eq(assets.organizationId, fixture.organizationId)),
+      db
+        .select({ id: folders.id })
+        .from(folders)
+        .where(eq(folders.organizationId, fixture.organizationId)),
+      db
+        .select({ id: collectionsTable.id })
+        .from(collectionsTable)
+        .where(eq(collectionsTable.id, collection.id)),
+    ]);
+
+    expect(remainingNodes).toEqual([]);
+    expect(remainingAssets).toEqual([]);
+    expect(remainingFolders).toEqual([]);
+    expect(remainingCollections).toEqual([]);
   });
 });
 

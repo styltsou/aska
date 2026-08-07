@@ -46,6 +46,98 @@ export class CollectionDeleteService {
     return { deletedNodeId: nodeId, deletedAssetCount };
   }
 
+  async deleteCollection(
+    orgId: string,
+    collectionSlug: string,
+  ): Promise<{ deletedCollectionSlug: string; deletedAssetCount: number }> {
+    const collectionId = await getCollectionIdBySlug(orgId, collectionSlug);
+
+    const assetIds = await db
+      .select({ assetId: collectionNodes.assetId })
+      .from(collectionNodes)
+      .where(
+        and(
+          eq(collectionNodes.organizationId, orgId),
+          eq(collectionNodes.collectionId, collectionId),
+          eq(collectionNodes.nodeType, "asset"),
+        ),
+      );
+
+    const folderIds = await db
+      .select({ folderId: collectionNodes.folderId })
+      .from(collectionNodes)
+      .where(
+        and(
+          eq(collectionNodes.organizationId, orgId),
+          eq(collectionNodes.collectionId, collectionId),
+          eq(collectionNodes.nodeType, "folder"),
+        ),
+      );
+
+    const imageAssetIds = assetIds
+      .map((row) => row.assetId)
+      .filter((assetId): assetId is number => assetId !== null);
+
+    const collectionFolderIds = folderIds
+      .map((row) => row.folderId)
+      .filter((folderId): folderId is number => folderId !== null);
+
+    if (imageAssetIds.length > 0) {
+      const keys = await collectAssetObjectKeys(orgId, imageAssetIds);
+      if (keys.length > 0) {
+        // TODO: if this becomes slow, move S3 deletion to a background job
+        await this.objectStorageService.deleteObjects(keys);
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(collectionNodes)
+        .where(
+          and(
+            eq(collectionNodes.organizationId, orgId),
+            eq(collectionNodes.collectionId, collectionId),
+          ),
+        );
+
+      if (imageAssetIds.length > 0) {
+        await tx
+          .delete(assets)
+          .where(
+            and(
+              eq(assets.organizationId, orgId),
+              inArray(assets.id, imageAssetIds),
+            ),
+          );
+      }
+
+      if (collectionFolderIds.length > 0) {
+        await tx
+          .delete(folders)
+          .where(
+            and(
+              eq(folders.organizationId, orgId),
+              inArray(folders.id, collectionFolderIds),
+            ),
+          );
+      }
+
+      await tx
+        .delete(collectionsTable)
+        .where(
+          and(
+            eq(collectionsTable.organizationId, orgId),
+            eq(collectionsTable.id, collectionId),
+          ),
+        );
+    });
+
+    return {
+      deletedCollectionSlug: collectionSlug,
+      deletedAssetCount: imageAssetIds.length,
+    };
+  }
+
   async deleteFolders(
     orgId: string,
     collectionSlug: string,

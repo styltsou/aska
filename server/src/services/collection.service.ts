@@ -22,6 +22,7 @@ import { CollectionQueryService } from "@/services/collection/collection-query.s
 import type {
   CreatedCollectionRow,
   DeleteCollectionNodeResult,
+  DeleteCollectionResult,
   DetailedCollectionRow,
   WorkspaceInfo,
 } from "@/services/collection/collection.types";
@@ -31,6 +32,7 @@ import { LoggerService, type ILoggerService } from "@/services/logger.service";
 export type {
   CreatedCollectionRow,
   DeleteCollectionNodeResult,
+  DeleteCollectionResult,
   DetailedCollectionRow,
   WorkspaceInfo,
 } from "@/services/collection/collection.types";
@@ -61,6 +63,10 @@ export interface ICollectionService {
     collectionSlug: string,
     nodeId: string,
   ): Promise<DeleteCollectionNodeResult>;
+  deleteCollection(
+    orgId: string,
+    collectionSlug: string,
+  ): Promise<DeleteCollectionResult>;
   deleteFolders(
     orgId: string,
     collectionSlug: string,
@@ -162,6 +168,13 @@ export class CollectionService implements ICollectionService {
     nodeId: string,
   ): Promise<DeleteCollectionNodeResult> {
     return this.deletes.deleteNode(orgId, collectionSlug, nodeId);
+  }
+
+  deleteCollection(
+    orgId: string,
+    collectionSlug: string,
+  ): Promise<DeleteCollectionResult> {
+    return this.deletes.deleteCollection(orgId, collectionSlug);
   }
 
   deleteFolders(

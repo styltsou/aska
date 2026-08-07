@@ -176,6 +176,26 @@ export const deleteCollectionNode = factory.createHandlers(
   },
 );
 
+export const deleteCollection = factory.createHandlers(
+  authMiddleware,
+  validate.param(CollectionPathParamSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug } = c.req.valid("param");
+    const userId = c.get("userId");
+
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const result = await collectionService.deleteCollection(
+      workspace.id,
+      collectionSlug,
+    );
+
+    return c.json(success(result));
+  },
+);
+
 export const updateCollectionNodePosition = factory.createHandlers(
   authMiddleware,
   validate.param(CollectionNodePathParamSchema),

@@ -15,6 +15,7 @@ import type {
   CreateRemoteImageInput,
   CreateRemoteImageResponse,
   DeleteCollectionNodeResponse,
+  DeleteCollectionResponse,
   FlattenFolderResponse,
   DeleteAssetResponse,
   InboxContentsResponse,
@@ -164,6 +165,15 @@ export async function deleteCollectionNode(
 ): Promise<DeleteCollectionNodeResponse> {
   return apiDelete<DeleteCollectionNodeResponse>(
     `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/nodes/${encodeURIComponent(nodeId)}`,
+  );
+}
+
+export async function deleteCollection(
+  workspaceSlug: string,
+  collectionSlug: string,
+): Promise<DeleteCollectionResponse> {
+  return apiDelete<DeleteCollectionResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${encodeURIComponent(collectionSlug)}`,
   );
 }
 

@@ -4,6 +4,7 @@ import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { cn } from "@/lib/utils";
 
 import { NoteMarkdown } from "./board/cards/note-asset-card";
+import { useDeleteCollection } from "@/api/collection";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -43,6 +44,7 @@ export function CollectionCard({
 }: CollectionCardProps) {
   const [hovered, setHovered] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const deleteCollection = useDeleteCollection(workspaceSlug);
 
   return (
     <>
@@ -248,7 +250,17 @@ export function CollectionCard({
           </AlertDialogBody>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive">Delete</AlertDialogAction>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteCollection.isPending}
+              onClick={() => {
+                deleteCollection.mutate(collection.slug, {
+                  onSettled: () => setDeleteDialogOpen(false),
+                });
+              }}
+            >
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
