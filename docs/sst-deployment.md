@@ -346,9 +346,41 @@ for hybrid development.
 
 ## Continuous deployment
 
-GitHub Actions runs the full client, server, and image-pipeline quality checks
-for pull requests and pushes to `main`. After the checks pass for a push to
-`main`, the workflow deploys real Lambda code to the stable SST `dev` stage.
+GitHub Actions runs the client, server, and image-pipeline quality checks for
+pull requests and pushes to `main`. After the checks pass for a push to `main`,
+the workflow deploys real Lambda code to the stable SST `dev` stage.
+
+### Path-based job filtering
+
+The workflow gates both the quality jobs and the deployment on which files
+actually changed (`dorny/paths-filter` in a `changes` job). Only the affected
+parts run, so a client-only change does not rebuild the server or the image
+workers:
+
+| Change                         | Quality jobs run                          | Deploys `dev` |
+| ------------------------------ | ----------------------------------------- | ------------- |
+| `client/**`                    | Client                                    | Yes           |
+| `server/**`                    | Server                                    | Yes           |
+| `services/image-variants/**`   | Image variants                            | Yes           |
+| `services/image-palette/**`    | Image palette                             | Yes           |
+| `services/image-shared/**`     | Image variants **and** image palette      | Yes           |
+| SST config / root deps / CI    | Server (plus jobs matching other paths)   | Yes           |
+| Docs / Markdown only           | None                                      | No            |
+
+`services/image-shared` is a dependency, not a deployment target: changes to it
+re-run both worker services because they each `bun install` it. A change to the
+SST config, the root `package.json`/`bun.lock`, or `.github/workflows/**`
+forces the Server job (and the deployment), since those are the closest signal
+that the wired-up stack still compiles. `sst.config.ts` changes always deploy
+because SST reconciles the whole stack in one run.
+
+**When you add a new worker service**, register its directory in two places in
+`.github/workflows/ci.yml`: add a filter entry (and a matching `image-shared`
+dependency if it consumes the shared package) and add its path to the `deploy`
+filter. Forgetting either silently disables that service's checks or its
+deployment.
+
+The deployment job exchanges a GitHub OIDC token for short-lived AWS
 
 The deployment job exchanges a GitHub OIDC token for short-lived AWS
 credentials and does not use AWS access keys. Runtime secrets, including the

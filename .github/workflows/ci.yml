@@ -9,8 +9,61 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      client: ${{ steps.filter.outputs.client }}
+      server: ${{ steps.filter.outputs.server }}
+      image-variants: ${{ steps.filter.outputs.image-variants }}
+      image-palette: ${{ steps.filter.outputs.image-palette }}
+      image-shared: ${{ steps.filter.outputs.image-shared }}
+      infra: ${{ steps.filter.outputs.infra }}
+      deploy: ${{ steps.filter.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          list-files: "none"
+          filters: |
+            client:
+              - 'client/**'
+              - '.github/workflows/ci.yml'
+            server:
+              - 'server/**'
+              - '.github/workflows/ci.yml'
+            image-variants:
+              - 'services/image-variants/**'
+              - '.github/workflows/ci.yml'
+            image-palette:
+              - 'services/image-palette/**'
+              - '.github/workflows/ci.yml'
+            image-shared:
+              - 'services/image-shared/**'
+            infra:
+              - 'sst.config.ts'
+              - 'sst-env.d.ts'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/**'
+            # Deploy on a push to main iff something that can affect the running
+            # app changed. Docs/MD-only PRs are skipped.
+            deploy:
+              - 'client/**'
+              - 'server/**'
+              - 'services/**'
+              - 'sst.config.ts'
+              - 'sst-env.d.ts'
+              - 'package.json'
+              - 'bun.lock'
+              - '.github/workflows/**'
+
   quality:
     name: ${{ matrix.name }}
+    needs: changes
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aska
@@ -24,15 +77,21 @@ jobs:
           - name: Client
             directory: client
             command: bun run lint && bun run typecheck && bun run format && bun run test && bun run build
+            changed: ${{ needs.changes.outputs.client }}
           - name: Server
             directory: server
             command: bun run lint && bun run typecheck && bun run format && bun run test
+            # Server also runs when the SST/infra config or shared deps change.
+            changed: ${{ needs.changes.outputs.server || needs.changes.outputs.infra }}
           - name: Image variants
             directory: services/image-variants
             command: bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.image-variants || needs.changes.outputs.image-shared }}
           - name: Image palette
             directory: services/image-palette
             command: bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.image-palette || needs.changes.outputs.image-shared }}
+    if: fromJSON(matrix.changed)
     defaults:
       run:
         working-directory: ${{ matrix.directory }}
@@ -55,8 +114,8 @@ jobs:
 
   deploy-dev:
     name: Deploy AWS dev
-    needs: quality
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quality, changes]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     # The first media deployment provisions an ACM certificate and a new
     # CloudFront distribution, both of which can take longer than the normal
