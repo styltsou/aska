@@ -98,7 +98,7 @@ export class CollectionQueryService {
       )
       .where(eq(collectionsTable.organizationId, orgId))
       .groupBy(collectionsTable.id)
-      .orderBy(collectionsTable.name);
+      .orderBy(desc(collectionsTable.createdAt));
 
     return rows.map((r) => ({
       ...r,
@@ -129,7 +129,7 @@ export class CollectionQueryService {
       )
       .where(eq(collectionsTable.organizationId, orgId))
       .groupBy(collectionsTable.id)
-      .orderBy(collectionsTable.name);
+      .orderBy(desc(collectionsTable.createdAt));
 
     if (rows.length === 0) return [];
 

@@ -1047,6 +1047,30 @@ describe("CollectionService integration", () => {
     ]);
   });
 
+  it("orders collections by most recently created first", async () => {
+    const oldest = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Oldest" },
+    );
+    const newest = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Newest" },
+    );
+
+    const [lightCollections, detailedCollections] = await Promise.all([
+      collectionService.getLightCollections(fixture.organizationId),
+      collectionService.getDetailedCollections(fixture.organizationId),
+    ]);
+
+    expect(lightCollections.map((c) => c.id)).toEqual([newest.id, oldest.id]);
+    expect(detailedCollections.map((c) => c.id)).toEqual([
+      newest.id,
+      oldest.id,
+    ]);
+  });
+
   it("filters direct collection contents by node type", async () => {
     const collection = await collectionService.createCollection(
       fixture.organizationId,
