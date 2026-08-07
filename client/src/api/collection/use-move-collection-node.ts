@@ -46,9 +46,6 @@ export function useMoveCollectionNodesToFolder(
         targetFolderNodeId,
       }),
     onMutate: async (variables) => {
-      if (!variables.targetFolderNodeId) {
-        return { optimistic: false };
-      }
       const targetScope = collectionQueryKeys.contentScope(
         workspaceSlug,
         collectionSlug,
@@ -110,6 +107,7 @@ export function useMoveCollectionNodesToFolder(
       let appliedCounts = false;
 
       if (
+        variables.targetFolderNodeId &&
         sameCollectionMove &&
         movedNodes.length === variables.nodeIds.length
       ) {
