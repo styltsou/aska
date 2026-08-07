@@ -588,13 +588,13 @@ export function useCreateCollection(workspaceSlug: string) {
 
           return {
             collections: [
-              ...current.collections,
               {
                 ...data.collection,
                 assetCount: 0,
                 previews: [],
               },
-            ].sort((a, b) => a.name.localeCompare(b.name)),
+              ...current.collections,
+            ],
           };
         },
       );
@@ -611,14 +611,14 @@ export function useCreateCollection(workspaceSlug: string) {
           return {
             ...current,
             collections: [
-              ...current.collections,
               {
                 id: data.collection.id,
                 name: data.collection.name,
                 slug: data.collection.slug,
                 assetCount: 0,
               },
-            ].sort((a, b) => a.name.localeCompare(b.name)),
+              ...current.collections,
+            ],
           };
         },
       );
