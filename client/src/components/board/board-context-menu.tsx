@@ -8,6 +8,7 @@ import { readClipboardAssetPayload } from "@/lib/clipboard";
 import { useBoardAssetActions } from "./use-board-asset-actions";
 import { useTransientStore } from "@/store";
 import { cn } from "@/lib/utils";
+import { formatPlatformShortcut } from "@/lib/platform";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -80,19 +81,28 @@ export function BoardContextMenu({
         <ContextMenuContent>
           <ContextMenuItem onClick={() => setUploadDialogOpen(true)}>
             Upload images
+            <ContextMenuShortcut>
+              {formatPlatformShortcut("⇧+U")}
+            </ContextMenuShortcut>
           </ContextMenuItem>
           {target === "collection" ? (
             <ContextMenuItem onClick={() => openPexelsBrowser(true)}>
-              Add photos from Pexels
+              Browse Pexels
             </ContextMenuItem>
           ) : null}
           <ContextMenuItem onClick={() => setNoteDialogOpen(true)}>
             New note
+            <ContextMenuShortcut>
+              {formatPlatformShortcut("⇧+N")}
+            </ContextMenuShortcut>
           </ContextMenuItem>
           {target === "collection" ? (
             <>
               <ContextMenuItem onClick={() => setFolderDialogOpen(true)}>
                 New folder
+                <ContextMenuShortcut>
+                  {formatPlatformShortcut("⇧+D")}
+                </ContextMenuShortcut>
               </ContextMenuItem>
               <ContextMenuSeparator />
             </>
@@ -104,7 +114,9 @@ export function BoardContextMenu({
             onClick={() => void handlePasteAsset()}
           >
             Paste
-            <ContextMenuShortcut>Ctrl+V</ContextMenuShortcut>
+            <ContextMenuShortcut>
+              {formatPlatformShortcut("⌘+V")}
+            </ContextMenuShortcut>
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
