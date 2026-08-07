@@ -12,6 +12,7 @@ import {
   SearchIcon,
   XIcon,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { usePexelsSearch, type PexelsPhoto } from "@/api/pexels";
 import { useCreateRemoteImage } from "@/api/collection";
@@ -41,6 +42,63 @@ function getStoredBrowserWidth(): number {
   } catch {}
 
   return DEFAULT_PEXELS_BROWSER_WIDTH;
+}
+
+function PexelsPhotoTile({
+  photo,
+  isSelected,
+  onToggle,
+}: {
+  photo: PexelsPhoto;
+  isSelected: boolean;
+  onToggle: (photo: PexelsPhoto) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const credit = photo.alt ?? photo.photographer.name;
+
+  return (
+    <button
+      type="button"
+      aria-pressed={isSelected}
+      onClick={() => onToggle(photo)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={cn(
+        "group/tile relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-lg border text-left focus-visible:ring-2 focus-visible:ring-ring",
+        isSelected
+          ? "border-primary ring-2 ring-primary"
+          : "border-transparent",
+      )}
+    >
+      <img
+        src={photo.urls.small}
+        alt={photo.alt ?? "Pexels photo"}
+        style={{ aspectRatio: `${photo.width} / ${photo.height}` }}
+        className="block w-full object-cover transition-transform duration-200 group-hover/tile:scale-[1.025]"
+        loading="lazy"
+      />
+      <AnimatePresence>
+        {hovered && (
+          <motion.div
+            initial={{ y: 6, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 6, opacity: 0 }}
+            transition={{ duration: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
+          >
+            <span className="inline-flex max-w-full min-w-0 items-center rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm">
+              <span className="truncate">{credit}</span>
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {isSelected ? (
+        <span className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <CheckIcon className="size-3" />
+        </span>
+      ) : null}
+    </button>
+  );
 }
 
 export function PexelsBrowserPanel({
@@ -235,43 +293,14 @@ export function PexelsBrowserPanel({
                 </p>
               ) : (
                 <div className="columns-2 gap-2">
-                  {search.data?.results.map((photo) => {
-                    const isSelected = selected.some(
-                      (item) => item.id === photo.id,
-                    );
-                    return (
-                      <button
-                        key={photo.id}
-                        type="button"
-                        aria-pressed={isSelected}
-                        onClick={() => togglePhoto(photo)}
-                        className={cn(
-                          "group/tile relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-lg border text-left focus-visible:ring-2 focus-visible:ring-ring",
-                          isSelected
-                            ? "border-primary ring-2 ring-primary"
-                            : "border-transparent",
-                        )}
-                      >
-                        <img
-                          src={photo.urls.small}
-                          alt={photo.alt ?? "Pexels photo"}
-                          style={{
-                            aspectRatio: `${photo.width} / ${photo.height}`,
-                          }}
-                          className="block w-full object-cover transition-transform duration-200 group-hover/tile:scale-[1.025]"
-                          loading="lazy"
-                        />
-                        <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-2 pt-7 pb-1.5 text-[10px] text-white">
-                          {photo.photographer.name}
-                        </span>
-                        {isSelected ? (
-                          <span className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                            <CheckIcon className="size-3" />
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
+                  {search.data?.results.map((photo) => (
+                    <PexelsPhotoTile
+                      key={photo.id}
+                      photo={photo}
+                      isSelected={selected.some((item) => item.id === photo.id)}
+                      onToggle={togglePhoto}
+                    />
+                  ))}
                 </div>
               )}
             </div>
