@@ -1,4 +1,4 @@
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { searchPexels } from "./fetchers";
 
 export function usePexelsSearch(workspaceSlug: string, query: string) {
@@ -12,7 +12,6 @@ export function usePexelsSearch(workspaceSlug: string, query: string) {
       return loaded < lastPage.totalResults ? lastPage.page + 1 : undefined;
     },
     enabled: query.trim().length > 0,
-    placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
 }

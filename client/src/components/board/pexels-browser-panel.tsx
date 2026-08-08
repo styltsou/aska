@@ -569,7 +569,7 @@ export function PexelsBrowserPanel({
               className="size-full rounded-t-xl [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-4 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-2 [&_[data-slot=scroll-area-thumb]]:bg-sidebar-foreground/55 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
               viewportRef={viewportRef}
             >
-              <div className="flex min-h-full flex-col pr-0 pb-24">
+              <div className="pexels-results-container flex min-h-full flex-col pr-0 pb-24">
                 {query.length === 0 ? (
                   <PexelsBrowserEmptyState
                     icon={ImagesIcon}
@@ -577,7 +577,7 @@ export function PexelsBrowserPanel({
                     description="Search the Pexels library to start collecting photos for your board."
                   />
                 ) : search.isLoading ? (
-                  <div className="columns-2 gap-2">
+                  <div className="pexels-results-grid columns-2 gap-2">
                     {Array.from({ length: 6 }, (_, index) => (
                       <div
                         key={index}
@@ -589,7 +589,7 @@ export function PexelsBrowserPanel({
                   <>
                     <div
                       className={cn(
-                        "columns-2 gap-2",
+                        "pexels-results-grid columns-2 gap-2",
                         search.isPlaceholderData &&
                           "pointer-events-none opacity-50 transition-opacity",
                       )}
