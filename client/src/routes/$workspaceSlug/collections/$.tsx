@@ -16,7 +16,7 @@ import { collectionNodeToAsset } from "@/lib/asset-transform";
 import type { ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
 import { makeBoardKey, Canvas, CanvasLoading } from "@/components/canvas";
-import { usePersistedStore, useTransientStore } from "@/store";
+import { usePersistedStore } from "@/store";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 
 const EMPTY_COLOR_RESULTS: readonly [] = [];
@@ -48,13 +48,6 @@ function CollectionPage() {
   const filterScope = `collection:${workspaceSlug}/${collectionPath}`;
   const filterBar = usePersistedStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
-  );
-  const setPexelsBrowserOpen = useTransientStore(
-    (state) => state.setPexelsBrowserOpen,
-  );
-  useEffect(
-    () => setPexelsBrowserOpen(false),
-    [collectionPath, setPexelsBrowserOpen],
   );
   const selectedAssetTypes =
     filterBar.filterType === "Type" ? (filterBar.selectedAssetTypes ?? []) : [];

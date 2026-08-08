@@ -27,7 +27,7 @@ function ScrollArea({
       <ScrollAreaPrimitive.Scrollbar
         data-slot="scroll-area-scrollbar"
         orientation="vertical"
-        className="flex touch-none p-0.5 opacity-0 transition-opacity duration-150 select-none data-hovering:opacity-100 data-scrolling:opacity-100"
+        className="absolute inset-y-0 right-0 z-10 flex w-2.5 touch-none justify-center p-0.5 opacity-0 transition-opacity duration-150 select-none data-hovering:opacity-100 data-scrolling:opacity-100"
       >
         <ScrollAreaPrimitive.Thumb
           data-slot="scroll-area-thumb"

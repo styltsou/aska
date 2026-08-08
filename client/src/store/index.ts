@@ -1,5 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { APP_STORE_STORAGE_KEY } from "@/store/storage";
+import {
+  createSidebarSlice,
+  createTransientSidebarSlice,
+  type SidebarSlice,
+  type TransientSidebarSlice,
+} from "@/store/slices/sidebar-slice";
 import { createAssetSlice, type AssetSlice } from "@/store/slices/asset-slice";
 import {
   createFilterBarSlice,
@@ -19,24 +26,22 @@ import {
   createScratchpadSlice,
   type ScratchpadSlice,
 } from "@/store/slices/scratchpad-slice";
-import {
-  createPexelsBrowserSlice,
-  type PexelsBrowserSlice,
-} from "@/store/slices/pexels-browser-slice";
 
-export type PersistedStore = FilterBarSlice & PersistedBoardSlice;
+export type PersistedStore = FilterBarSlice &
+  PersistedBoardSlice &
+  SidebarSlice;
 export type TransientStore = AssetSlice &
   SelectionSlice &
   TransientBoardSlice &
   ScratchpadSlice &
-  PexelsBrowserSlice;
+  TransientSidebarSlice;
 
 export const useTransientStore = create<TransientStore>()((...a) => ({
   ...createAssetSlice(...a),
   ...createSelectionSlice(...a),
   ...createTransientBoardSlice(...a),
   ...createScratchpadSlice(...a),
-  ...createPexelsBrowserSlice(...a),
+  ...createTransientSidebarSlice(...a),
 }));
 
 export const usePersistedStore = create<PersistedStore>()(
@@ -44,9 +49,10 @@ export const usePersistedStore = create<PersistedStore>()(
     (...a) => ({
       ...createFilterBarSlice(...a),
       ...createPersistedBoardSlice(...a),
+      ...createSidebarSlice(...a),
     }),
     {
-      name: "app-store",
+      name: APP_STORE_STORAGE_KEY,
       storage: {
         getItem: (name) => {
           const raw = localStorage.getItem(name);
