@@ -1,6 +1,7 @@
 import {
   type CSSProperties,
   type ComponentType,
+  type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
@@ -29,6 +30,8 @@ import { useCreateRemoteImage } from "@/api/collection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
+import { setPexelsPhotoDragData } from "@/lib/pexels-photo-drag";
 import { cn } from "@/lib/utils";
 import { usePexelsBrowserStore } from "@/store/pexels-browser-store";
 
@@ -66,10 +69,15 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
   photo,
   isSelected,
   onToggle,
+  onDragStart,
 }: {
   photo: PexelsPhoto;
   isSelected: boolean;
   onToggle: (photo: PexelsPhoto) => void;
+  onDragStart: (
+    event: ReactDragEvent<HTMLButtonElement>,
+    photo: PexelsPhoto,
+  ) => void;
 }) {
   const [loaded, setLoaded] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -78,12 +86,14 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
   return (
     <button
       type="button"
+      draggable
       aria-pressed={isSelected}
       onClick={() => onToggle(photo)}
+      onDragStart={(event) => onDragStart(event, photo)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={cn(
-        "group/tile relative mb-2 block w-full break-inside-avoid overflow-hidden rounded-lg border bg-muted text-left focus-visible:ring-2 focus-visible:ring-ring",
+        "group/tile relative mb-2 block w-full cursor-grab break-inside-avoid overflow-hidden rounded-lg border bg-muted text-left active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring",
         isSelected ? "border-primary" : "border-transparent",
       )}
     >
@@ -460,25 +470,24 @@ export function PexelsBrowserPanel({
     );
   }, []);
 
+  const startPhotoDrag = useCallback(
+    (event: ReactDragEvent<HTMLButtonElement>, photo: PexelsPhoto) => {
+      const photosToDrag = selected.some((item) => item.id === photo.id)
+        ? selected
+        : [photo];
+      event.dataTransfer.effectAllowed = "copy";
+      setPexelsPhotoDragData(event.dataTransfer, photosToDrag);
+    },
+    [selected],
+  );
+
   async function addSelected() {
     if (selected.length === 0) return;
     try {
       for (const photo of selected) {
         await createImage.mutateAsync({
-          url: photo.urls.original,
-          title: photo.alt ?? undefined,
-          alt: photo.alt ?? undefined,
+          ...toPexelsRemoteImageInput(photo),
           parentFolderPath,
-          provenance: {
-            provider: "pexels",
-            url: photo.url,
-            downloadUrl: photo.urls.original,
-            attribution: {
-              photoId: photo.id,
-              name: photo.photographer.name,
-              profileUrl: photo.photographer.profileUrl,
-            },
-          },
         });
       }
       toast.success(
@@ -600,6 +609,7 @@ export function PexelsBrowserPanel({
                           photo={photo}
                           isSelected={selectedPhotoIds.has(photo.id)}
                           onToggle={togglePhoto}
+                          onDragStart={startPhotoDrag}
                         />
                       ))}
                     </div>

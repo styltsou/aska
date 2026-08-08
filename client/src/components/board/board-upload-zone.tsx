@@ -6,6 +6,10 @@ import {
   getBoardPastePlacement,
 } from "@/components/canvas/board-pointer-position";
 import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
+import {
+  getPexelsPhotoDragData,
+  hasPexelsPhotoDrag,
+} from "@/lib/pexels-photo-drag";
 import { useTransientStore } from "@/store";
 import { cn, parseHttpUrl } from "@/lib/utils";
 import { useBoardAssetActions } from "./use-board-asset-actions";
@@ -31,6 +35,7 @@ export function BoardUploadZone({
   }, [boardKey]);
   const {
     createTextNote,
+    importPexelsPhotos,
     importRemoteUrl,
     isPending,
     statusText,
@@ -44,7 +49,11 @@ export function BoardUploadZone({
   const [isDraggingImage, setIsDraggingImage] = useState(false);
 
   function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
-    if (!hasImageFile(event.dataTransfer)) return;
+    if (
+      !hasImageFile(event.dataTransfer) &&
+      !hasPexelsPhotoDrag(event.dataTransfer)
+    )
+      return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
     setIsDraggingImage(true);
@@ -57,22 +66,27 @@ export function BoardUploadZone({
   }
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
-    if (!hasImageFile(event.dataTransfer)) return;
+    const pexelsPhotos = hasPexelsPhotoDrag(event.dataTransfer)
+      ? getPexelsPhotoDragData(event.dataTransfer)
+      : [];
+    if (pexelsPhotos.length === 0 && !hasImageFile(event.dataTransfer)) return;
     event.preventDefault();
     setIsDraggingImage(false);
     const visibleBounds = boardKey
       ? useTransientStore.getState().boardVisibleBounds[boardKey]
       : undefined;
-    void uploadFiles(
-      Array.from(event.dataTransfer.files),
-      boardKey
-        ? getBoardDropPlacement(
-            boardKey,
-            { x: event.clientX, y: event.clientY },
-            visibleBounds,
-          )
-        : {},
-    );
+    const placement = boardKey
+      ? getBoardDropPlacement(
+          boardKey,
+          { x: event.clientX, y: event.clientY },
+          visibleBounds,
+        )
+      : {};
+    if (pexelsPhotos.length > 0) {
+      void importPexelsPhotos(pexelsPhotos, placement);
+      return;
+    }
+    void uploadFiles(Array.from(event.dataTransfer.files), placement);
   }
 
   function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
@@ -123,7 +137,7 @@ export function BoardUploadZone({
       >
         <div className="flex items-center gap-2 rounded-lg bg-popover px-3 py-2 text-sm font-medium shadow-sm ring-1 ring-border">
           <ImagePlusIcon className="size-4" />
-          <span>Drop images to upload</span>
+          <span>Drop images to add</span>
         </div>
       </div>
       {isPending ? (
