@@ -91,25 +91,29 @@ jobs:
             directory: services/image-palette
             command: bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
             changed: ${{ needs.changes.outputs.image-palette || needs.changes.outputs.image-shared }}
-    if: fromJSON(matrix.changed)
     defaults:
       run:
         working-directory: ${{ matrix.directory }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install --frozen-lockfile
-      - if: matrix.name == 'Server'
+      # A job-level `if` is evaluated before matrix expansion, so guard every
+      # step instead. This leaves unchanged matrix entries as successful no-ops.
+      - if: fromJSON(matrix.changed)
+        uses: actions/checkout@v4
+      - if: fromJSON(matrix.changed)
+        uses: oven-sh/setup-bun@v2
+      - if: fromJSON(matrix.changed)
+        run: bun install --frozen-lockfile
+      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run lint
-      - if: matrix.name == 'Server'
+      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run typecheck
-      - if: matrix.name == 'Server'
+      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run format
-      - if: matrix.name == 'Server'
+      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run test
-      - if: matrix.name != 'Server'
+      - if: fromJSON(matrix.changed) && matrix.name != 'Server'
         run: ${{ matrix.command }}
-      - if: matrix.name == 'Server'
+      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run db:generate && git diff --exit-code
 
   deploy-dev:
