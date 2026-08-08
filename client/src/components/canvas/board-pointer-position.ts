@@ -11,6 +11,7 @@ const flowPositionConverters = new Map<
   string,
   (clientPosition: BoardPosition) => BoardPosition
 >();
+const viewportZoomReaders = new Map<string, () => number>();
 
 export function setBoardPointerPosition(
   boardKey: string,
@@ -41,6 +42,23 @@ export function getBoardFlowPosition(
   clientPosition: BoardPosition,
 ) {
   return flowPositionConverters.get(boardKey)?.(clientPosition);
+}
+
+export function setBoardViewportZoomReader(
+  boardKey: string,
+  readZoom: () => number,
+) {
+  viewportZoomReaders.set(boardKey, readZoom);
+
+  return () => {
+    if (viewportZoomReaders.get(boardKey) === readZoom) {
+      viewportZoomReaders.delete(boardKey);
+    }
+  };
+}
+
+export function getBoardViewportZoom(boardKey: string) {
+  return viewportZoomReaders.get(boardKey)?.() ?? 1;
 }
 
 export function getBoardDropPlacement(

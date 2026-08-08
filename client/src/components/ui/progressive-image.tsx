@@ -7,7 +7,7 @@ type ProgressiveImageProps = Omit<
   "src" | "style"
 > & {
   src: string;
-  /** A local Blob preview to keep visible while `src` finishes decoding. */
+  /** A browser preview to keep visible while `src` finishes decoding. */
   fallbackSrc?: string;
   blurDataURL?: string | null;
   placeholderClassName?: string;

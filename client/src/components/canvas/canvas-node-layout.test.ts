@@ -147,6 +147,26 @@ describe("infinite canvas node placement", () => {
     ).toEqual([{ x: 984, y: 340 }]);
   });
 
+  it("uses the complete image geometry for sequential remote batch rows", () => {
+    expect(
+      reserveNodePositions([], [portraitImage], {
+        position: { x: 100, y: 200 },
+        allowOverlap: true,
+        batch: {
+          index: 4,
+          size: 5,
+          imageDimensions: [
+            { width: 560, height: 280 },
+            { width: 280, height: 560 },
+            { width: 560, height: 280 },
+            { width: 560, height: 280 },
+            { width: 560, height: 280 },
+          ],
+        },
+      }),
+    ).toEqual([{ x: 100, y: 792 }]);
+  });
+
   it("keeps a context-menu insertion at the requested canvas coordinate", () => {
     expect(
       reserveNodePositions([], [note], {
@@ -154,6 +174,15 @@ describe("infinite canvas node placement", () => {
         visibleBounds: { left: 0, top: 0, right: 1_000, bottom: 1_000 },
       }),
     ).toEqual([{ x: 900, y: 900 }]);
+  });
+
+  it("keeps a direct-manipulation drop at its exact coordinate when occupied", () => {
+    expect(
+      reserveNodePositions([note], [{ ...note, id: "note-2" }], {
+        position: { x: 0, y: 0 },
+        allowOverlap: true,
+      }),
+    ).toEqual([{ x: 0, y: 0 }]);
   });
 
   it("uses the tallest card in each insertion row to preserve the shared gutter", () => {

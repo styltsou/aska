@@ -49,6 +49,7 @@ import type {
 import type { WorkspaceData } from "@/api/workspace";
 import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
 import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
+import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
 
 export { collectionQueryKeys } from "./query-keys";
@@ -69,6 +70,13 @@ type CreateNoteMutationInput = CreateNoteInput & {
 
 type CreateRemoteImageMutationInput = CreateRemoteImageInput & {
   placement?: BoardInsertionPlacement;
+  preview?: {
+    url: string;
+    /** A browser-cached source to keep visible while `url` is decoded. */
+    fallbackUrl?: string;
+    width: number;
+    height: number;
+  };
 };
 
 type UploadLocalImagesMutationInput = {
@@ -1326,6 +1334,7 @@ export function useCreateRemoteImage(
   return useMutation({
     mutationFn: async ({
       placement,
+      preview,
       ...data
     }: CreateRemoteImageMutationInput) => {
       const contentsKey = collectionQueryKeys.contents(
@@ -1346,12 +1355,11 @@ export function useCreateRemoteImage(
       const optimisticImage: Extract<CollectionNode, { type: "image" }> = {
         id: optimisticId,
         type: "image",
-        // The source URL gives the board an immediate preview while the server imports it.
-        url: data.url,
-        // A remote image's dimensions are not available yet. Reserve a
-        // portrait-sized card so batch rows do not start as provisional squares.
-        width: UNKNOWN_IMAGE_DIMENSIONS.width,
-        height: UNKNOWN_IMAGE_DIMENSIONS.height,
+        // Render the provider/browser URL immediately while the server imports it.
+        url: preview?.url ?? data.url,
+        localPreviewUrl: preview?.fallbackUrl ?? preview?.url,
+        width: preview?.width ?? UNKNOWN_IMAGE_DIMENSIONS.width,
+        height: preview?.height ?? UNKNOWN_IMAGE_DIMENSIONS.height,
         title: data.title ?? null,
         alt: data.alt ?? null,
         sourceLabel: null,
@@ -1391,6 +1399,21 @@ export function useCreateRemoteImage(
         1,
       );
 
+      if (!preview) {
+        void readRemoteImageDimensions(data.url)
+          .then((dimensions) => {
+            updateOptimisticImage(
+              queryClient,
+              workspaceSlug,
+              collectionSlug,
+              data.parentFolderPath,
+              optimisticImage.id,
+              dimensions,
+            );
+          })
+          .catch(() => undefined);
+      }
+
       try {
         const created = await createRemoteImage(workspaceSlug, collectionSlug, {
           ...data,
@@ -1425,6 +1448,10 @@ export function useCreateRemoteImage(
           ...image,
           clientId: optimisticImage.clientId,
           position,
+          // Preserve the already-visible provider preview until the processed
+          // image has decoded. This also covers a ReactFlow node remount when
+          // the optimistic id is replaced by the persisted image id.
+          localPreviewUrl: optimisticImage.localPreviewUrl,
         };
         queryClient.setQueryData<CollectionContentsResponse>(
           contentsKey,
@@ -1501,7 +1528,10 @@ export function useCreateInboxRemoteImage(workspaceSlug: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateRemoteImageInput) => {
+    mutationFn: async ({
+      preview: _preview,
+      ...data
+    }: CreateRemoteImageMutationInput) => {
       const created = await createInboxRemoteImage(workspaceSlug, data);
       return waitForProcessedImage(
         () => fetchInboxImageUploadStatus(workspaceSlug, created.upload.id),

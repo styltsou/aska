@@ -144,6 +144,10 @@ export function reserveNodePositions(
         getFallbackPosition(existingNodes.length + index),
       );
 
+  if (requested && placement && !("x" in placement) && placement.allowOverlap) {
+    return preferredPositions;
+  }
+
   return newNodes.map((node, index) => {
     if (index === 0 && viewportAnchor && !viewportAnchor.isAvailable) {
       // The current view is full. Keep the card discoverable instead of
@@ -259,6 +263,20 @@ function getPlacementNodes(
     newNodes.length !== 1
   ) {
     return newNodes;
+  }
+
+  const firstNode = newNodes[0]!;
+  const imageDimensions = placement.batch.imageDimensions;
+  if (
+    firstNode.type === "image" &&
+    imageDimensions?.length === placement.batch.size
+  ) {
+    return imageDimensions.map((dimensions, index) => ({
+      ...firstNode,
+      id: `${firstNode.id}-batch-layout-${index}`,
+      width: dimensions.width,
+      height: dimensions.height,
+    }));
   }
 
   return Array.from({ length: placement.batch.size }, () => newNodes[0]!);

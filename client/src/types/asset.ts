@@ -2,7 +2,7 @@ export interface ImageAsset {
   id: string;
   type: "image";
   url: string;
-  /** Browser-only preview retained while the uploaded original is decoded. */
+  /** Browser-only preview retained while the final image is decoded. */
   localPreviewUrl?: string;
   originalUrl?: string;
   originalWidth?: number;

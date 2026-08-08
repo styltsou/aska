@@ -1,7 +1,6 @@
 import {
   type CSSProperties,
   type ComponentType,
-  type DragEvent as ReactDragEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
@@ -12,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useDraggable } from "@dnd-kit/react";
 import {
   CheckIcon,
   ImagesIcon,
@@ -30,8 +30,11 @@ import { useCreateRemoteImage } from "@/api/collection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  PEXELS_PHOTO_DRAG_TYPE,
+  type PexelsPhotoDragData,
+} from "@/lib/pexels-dnd";
 import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
-import { setPexelsPhotoDragData } from "@/lib/pexels-photo-drag";
 import { cn } from "@/lib/utils";
 import { usePexelsBrowserStore } from "@/store/pexels-browser-store";
 
@@ -68,33 +71,50 @@ function getStoredBrowserWidth(): number {
 const PexelsPhotoTile = memo(function PexelsPhotoTile({
   photo,
   isSelected,
+  selectedPhotos,
   onToggle,
-  onDragStart,
 }: {
   photo: PexelsPhoto;
   isSelected: boolean;
+  selectedPhotos: readonly PexelsPhoto[];
   onToggle: (photo: PexelsPhoto) => void;
-  onDragStart: (
-    event: ReactDragEvent<HTMLButtonElement>,
-    photo: PexelsPhoto,
-  ) => void;
 }) {
   const [loaded, setLoaded] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const photosToDrag = useMemo(
+    () =>
+      isSelected
+        ? [photo, ...selectedPhotos.filter((item) => item.id !== photo.id)]
+        : [photo],
+    [isSelected, photo, selectedPhotos],
+  );
+  const dragData = useMemo<PexelsPhotoDragData>(
+    () => ({ photos: photosToDrag }),
+    [photosToDrag],
+  );
+  const { ref: draggableRef, isDragging } = useDraggable<PexelsPhotoDragData>({
+    id: `pexels-photo:${photo.id}`,
+    type: PEXELS_PHOTO_DRAG_TYPE,
+    data: dragData,
+  });
   const credit = photo.alt ?? photo.photographer.name;
 
   return (
     <button
+      ref={draggableRef}
       type="button"
-      draggable
       aria-pressed={isSelected}
-      onClick={() => onToggle(photo)}
-      onDragStart={(event) => onDragStart(event, photo)}
+      aria-grabbed={isDragging}
+      onClick={(event) => {
+        if (event.defaultPrevented) return;
+        onToggle(photo);
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={cn(
         "group/tile relative mb-2 block w-full cursor-grab break-inside-avoid overflow-hidden rounded-lg border bg-muted text-left active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring",
         isSelected ? "border-primary" : "border-transparent",
+        isDragging && "cursor-grabbing",
       )}
     >
       <span
@@ -107,6 +127,7 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
       <img
         src={photo.urls.small}
         alt={photo.alt ?? "Pexels photo"}
+        draggable={false}
         style={{ aspectRatio: `${photo.width} / ${photo.height}` }}
         className={cn(
           "relative block w-full object-cover transition-all duration-300 ease-out group-hover/tile:scale-[1.025]",
@@ -138,6 +159,13 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
           </span>
         </>
       ) : null}
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute inset-0 z-20 rounded-lg bg-sidebar/55 opacity-0 backdrop-blur-[1px] transition-opacity duration-100",
+          isDragging && "opacity-100",
+        )}
+      />
     </button>
   );
 });
@@ -470,17 +498,6 @@ export function PexelsBrowserPanel({
     );
   }, []);
 
-  const startPhotoDrag = useCallback(
-    (event: ReactDragEvent<HTMLButtonElement>, photo: PexelsPhoto) => {
-      const photosToDrag = selected.some((item) => item.id === photo.id)
-        ? selected
-        : [photo];
-      event.dataTransfer.effectAllowed = "copy";
-      setPexelsPhotoDragData(event.dataTransfer, photosToDrag);
-    },
-    [selected],
-  );
-
   async function addSelected() {
     if (selected.length === 0) return;
     try {
@@ -608,8 +625,8 @@ export function PexelsBrowserPanel({
                           key={photo.id}
                           photo={photo}
                           isSelected={selectedPhotoIds.has(photo.id)}
+                          selectedPhotos={selected}
                           onToggle={togglePhoto}
-                          onDragStart={startPhotoDrag}
                         />
                       ))}
                     </div>

@@ -20,7 +20,25 @@ describe("readUploadImageDimensions", () => {
       height: 2400,
     });
   });
+
+  it("reads PNG header dimensions", async () => {
+    const image = pngFile({ width: 1200, height: 800 });
+
+    await expect(readUploadImageDimensions(image)).resolves.toEqual({
+      width: 1200,
+      height: 800,
+    });
+  });
 });
+
+function pngFile({ width, height }: { width: number; height: number }) {
+  const bytes = new Uint8Array(24);
+  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  bytes.set([0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52], 8);
+  new DataView(bytes.buffer).setUint32(16, width);
+  new DataView(bytes.buffer).setUint32(20, height);
+  return new File([bytes], "photo.png", { type: "image/png" });
+}
 
 function jpegFile({
   width,

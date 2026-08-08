@@ -149,29 +149,33 @@ export function useBoardAssetActions({
       try {
         const insertionPlacement =
           actionPlacement ?? getPlacement?.() ?? placement;
+        const imageDimensions = photos.map(({ width, height }) => ({
+          width,
+          height,
+        }));
         if (target === "inbox") {
-          await Promise.all(
-            photos.map((photo) =>
-              createInboxRemoteImage.mutateAsync(
-                toPexelsRemoteImageInput(photo),
-              ),
-            ),
-          );
+          for (const photo of photos) {
+            await createInboxRemoteImage.mutateAsync(
+              toPexelsRemoteImageInput(photo),
+            );
+          }
         } else {
-          await Promise.all(
-            photos.map((photo, index) =>
-              createRemoteImage.mutateAsync({
-                ...toPexelsRemoteImageInput(photo),
-                parentFolderPath,
-                placement: insertionPlacement
-                  ? {
-                      ...insertionPlacement,
-                      batch: { index, size: photos.length },
-                    }
-                  : undefined,
-              }),
-            ),
-          );
+          for (const [index, photo] of photos.entries()) {
+            await createRemoteImage.mutateAsync({
+              ...toPexelsRemoteImageInput(photo),
+              parentFolderPath,
+              placement: insertionPlacement
+                ? {
+                    ...insertionPlacement,
+                    batch: {
+                      index,
+                      size: photos.length,
+                      imageDimensions,
+                    },
+                  }
+                : undefined,
+            });
+          }
         }
         toast.success(
           `${photos.length} Pexels photo${photos.length === 1 ? "" : "s"} imported`,
