@@ -4,7 +4,10 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  memo,
+  useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -59,7 +62,7 @@ function getStoredBrowserWidth(): number {
   return DEFAULT_PEXELS_BROWSER_WIDTH;
 }
 
-function PexelsPhotoTile({
+const PexelsPhotoTile = memo(function PexelsPhotoTile({
   photo,
   isSelected,
   onToggle,
@@ -127,7 +130,7 @@ function PexelsPhotoTile({
       ) : null}
     </button>
   );
-}
+});
 
 function PexelsBrowserEmptyState({
   icon: Icon,
@@ -449,13 +452,13 @@ export function PexelsBrowserPanel({
     window.addEventListener("pointerup", handlePointerUp, { once: true });
   }
 
-  function togglePhoto(photo: PexelsPhoto) {
+  const togglePhoto = useCallback((photo: PexelsPhoto) => {
     setSelected((current) =>
       current.some((item) => item.id === photo.id)
         ? current.filter((item) => item.id !== photo.id)
         : [...current, photo],
     );
-  }
+  }, []);
 
   async function addSelected() {
     if (selected.length === 0) return;
@@ -490,6 +493,10 @@ export function PexelsBrowserPanel({
   }
 
   const photos = search.data?.pages.flatMap((page) => page.results);
+  const selectedPhotoIds = useMemo(
+    () => new Set(selected.map((photo) => photo.id)),
+    [selected],
+  );
 
   return (
     <aside
@@ -591,9 +598,7 @@ export function PexelsBrowserPanel({
                         <PexelsPhotoTile
                           key={photo.id}
                           photo={photo}
-                          isSelected={selected.some(
-                            (item) => item.id === photo.id,
-                          )}
+                          isSelected={selectedPhotoIds.has(photo.id)}
                           onToggle={togglePhoto}
                         />
                       ))}
