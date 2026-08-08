@@ -6,6 +6,7 @@ import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog"
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { readClipboardAssetPayload } from "@/lib/clipboard";
 import { useBoardAssetActions } from "./use-board-asset-actions";
+import { usePexelsBrowserStore } from "@/store/pexels-browser-store";
 import { useTransientStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { formatPlatformShortcut } from "@/lib/platform";
@@ -51,7 +52,7 @@ export function BoardContextMenu({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const hasActiveModalLayer = useActiveModalLayer();
-  const openPexelsBrowser = useTransientStore(
+  const openPexelsBrowser = usePexelsBrowserStore(
     (state) => state.setPexelsBrowserOpen,
   );
 

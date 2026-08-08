@@ -27,15 +27,16 @@ import { PanelLeftIcon } from "lucide-react";
 
 import { getPlatformModifier } from "@/lib/platform";
 
-const SIDEBAR_COOKIE_NAME = "sidebar_state";
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 import { KEYBINDINGS } from "@/lib/keybindings";
+import { usePersistedStore, useTransientStore } from "@/store";
+
+type SidebarState = "expanded" | "collapsed";
 
 type SidebarContextProps = {
-  state: "expanded" | "collapsed";
+  state: SidebarState;
   open: boolean;
   setOpen: (open: boolean) => void;
   openMobile: boolean;
@@ -44,58 +45,43 @@ type SidebarContextProps = {
   toggleSidebar: () => void;
 };
 
-const SidebarContext = React.createContext<SidebarContextProps | null>(null);
+function useSidebar(): SidebarContextProps {
+  const isMobile = useIsMobile();
+  const open = usePersistedStore((state) => state.open);
+  const setOpen = usePersistedStore((state) => state.setOpen);
+  const openMobile = useTransientStore((state) => state.openMobile);
+  const setOpenMobile = useTransientStore((state) => state.setOpenMobile);
 
-function useSidebar() {
-  const context = React.useContext(SidebarContext);
-  if (!context) {
-    throw new Error("useSidebar must be used within a SidebarProvider.");
-  }
+  // Helper to toggle the sidebar.
+  const toggleSidebar = React.useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(!openMobile);
+    } else {
+      setOpen((current) => !current);
+    }
+  }, [isMobile, openMobile, setOpen, setOpenMobile]);
 
-  return context;
+  const state: SidebarState = open ? "expanded" : "collapsed";
+
+  return {
+    state,
+    open,
+    setOpen,
+    isMobile,
+    openMobile,
+    setOpenMobile,
+    toggleSidebar,
+  };
 }
 
 function SidebarProvider({
-  defaultOpen = true,
-  open: openProp,
-  onOpenChange: setOpenProp,
   className,
   style,
   children,
   ...props
-}: React.ComponentProps<"div"> & {
-  defaultOpen?: boolean;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}) {
-  const isMobile = useIsMobile();
-  const [openMobile, setOpenMobile] = React.useState(false);
-
-  // This is the internal state of the sidebar.
-  // We use openProp and setOpenProp for control from outside the component.
-  const [_open, _setOpen] = React.useState(defaultOpen);
-  const open = openProp ?? _open;
-  const setOpen = React.useCallback(
-    (value: boolean | ((value: boolean) => boolean)) => {
-      const openState = typeof value === "function" ? value(open) : value;
-      if (setOpenProp) {
-        setOpenProp(openState);
-      } else {
-        _setOpen(openState);
-      }
-
-      // This sets the cookie to keep the sidebar state.
-      document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
-    },
-    [setOpenProp, open],
-  );
-
-  // Helper to toggle the sidebar.
-  const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-  }, [isMobile, setOpen, setOpenMobile]);
-
+}: React.ComponentProps<"div">) {
   // Adds a keyboard shortcut to toggle the sidebar.
+  const { toggleSidebar } = useSidebar();
   useEventListener("keydown", (event) => {
     if (
       event.key === KEYBINDINGS.SIDEBAR_TOGGLE.key &&
@@ -106,43 +92,24 @@ function SidebarProvider({
     }
   });
 
-  // We add a state so that we can do data-state="expanded" or "collapsed".
-  // This makes it easier to style the sidebar with Tailwind classes.
-  const state = open ? "expanded" : "collapsed";
-
-  const contextValue = React.useMemo<SidebarContextProps>(
-    () => ({
-      state,
-      open,
-      setOpen,
-      isMobile,
-      openMobile,
-      setOpenMobile,
-      toggleSidebar,
-    }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
-  );
-
   return (
-    <SidebarContext.Provider value={contextValue}>
-      <div
-        data-slot="sidebar-wrapper"
-        style={
-          {
-            "--sidebar-width": SIDEBAR_WIDTH,
-            "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-            ...style,
-          } as React.CSSProperties
-        }
-        className={cn(
-          "group/sidebar-wrapper has-data-[variant=inset]:bg-background flex min-h-svh w-full",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-      </div>
-    </SidebarContext.Provider>
+    <div
+      data-slot="sidebar-wrapper"
+      style={
+        {
+          "--sidebar-width": SIDEBAR_WIDTH,
+          "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+          ...style,
+        } as React.CSSProperties
+      }
+      className={cn(
+        "group/sidebar-wrapper has-data-[variant=inset]:bg-background flex min-h-svh w-full",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </div>
   );
 }
 

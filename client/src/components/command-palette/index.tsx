@@ -5,6 +5,7 @@ import {
   FolderPlusIcon,
   FolderOpenIcon,
   ImagePlusIcon,
+  ImageIcon,
   InboxIcon,
   MoonIcon,
   CornerDownLeftIcon,
@@ -45,6 +46,7 @@ import { KEYBINDINGS } from "@/lib/keybindings";
 import { formatPlatformShortcut } from "@/lib/platform";
 import { openSettings } from "@/lib/settings-dialog";
 import { usePersistedStore, useTransientStore } from "@/store";
+import { usePexelsBrowserStore } from "@/store/pexels-browser-store";
 import { useBoardInsertionPlacement } from "@/components/canvas";
 
 type CommandId =
@@ -54,6 +56,7 @@ type CommandId =
   | "open-scratchpad"
   | "open-inbox"
   | "browse-collections"
+  | "open-pexels-browser"
   | "toggle-filter-bar"
   | "toggle-sidebar"
   | "open-settings"
@@ -103,6 +106,12 @@ const COMMAND_GROUPS = [
         label: "Browse collections",
         icon: FolderOpenIcon,
         shortcut: "⇧+C",
+      },
+      {
+        id: "open-pexels-browser",
+        label: "Browse Pexels photos",
+        icon: ImageIcon,
+        shortcut: undefined,
       },
       {
         id: "open-settings",
@@ -167,6 +176,9 @@ export function CommandPalette() {
   const { toggleSidebar } = useSidebar();
   const toggleFilterBar = usePersistedStore((state) => state.toggleFilterBar);
   const openScratchpad = useTransientStore((state) => state.openScratchpad);
+  const openPexelsBrowser = usePexelsBrowserStore(
+    (state) => state.setPexelsBrowserOpen,
+  );
   const [workspaceSlug, view, ...viewPath] = pathname
     .split("/")
     .filter(Boolean);
@@ -315,6 +327,11 @@ export function CommandPalette() {
           params: { workspaceSlug },
         });
         return;
+      case "open-pexels-browser":
+        if (!canCreateFolder) return;
+        setOpen(false);
+        openPexelsBrowser(true);
+        return;
       default:
         return;
     }
@@ -345,7 +362,8 @@ export function CommandPalette() {
                     (item.id !== "toggle-filter-bar" || Boolean(filterScope)) &&
                     (item.id !== "new-note" || canCreateNote) &&
                     (item.id !== "new-folder" || canCreateFolder) &&
-                    (item.id !== "upload-images" || canCreateFolder),
+                    (item.id !== "upload-images" || canCreateFolder) &&
+                    (item.id !== "open-pexels-browser" || canCreateFolder),
                 ),
               }))
                 .filter((group) => group.items.length > 0)

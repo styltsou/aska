@@ -25,7 +25,7 @@ import { useWorkspace } from "@/api/workspace";
 import { useCollectionContents } from "@/api/collection";
 import { useBoardInsertionPlacement } from "@/components/canvas";
 import { titleFromSlug } from "@/lib/slug";
-import { useTransientStore } from "@/store";
+import { usePexelsBrowserStore } from "@/store/pexels-browser-store";
 
 function AppBreadcrumbs() {
   const pathname = useRouterState({
@@ -127,7 +127,7 @@ export function AppHeader() {
     collectionsSegment === "collections" && pathSegments.length > 0;
   const collectionPath = pathSegments.join("/");
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
-  const openPexelsBrowser = useTransientStore(
+  const openPexelsBrowser = usePexelsBrowserStore(
     (state) => state.setPexelsBrowserOpen,
   );
 
