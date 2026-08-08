@@ -164,7 +164,6 @@ function SelectedPhotosDock({
   const viewportRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const [hoverEdge, setHoverEdge] = useState<"left" | "right" | null>(null);
-  const [canScroll, setCanScroll] = useState({ left: false, right: false });
 
   const prevCountRef = useRef(selected.length);
   const scrollAnimRef = useRef<number | null>(null);
@@ -174,17 +173,16 @@ function SelectedPhotosDock({
     prevCountRef.current = selected.length;
     const viewport = viewportRef.current;
     if (!viewport || selected.length <= prevCount) return;
-    if (viewport.scrollWidth <= viewport.clientWidth) return;
-
-    const target = viewport.scrollWidth - viewport.clientWidth;
     const timeout = window.setTimeout(() => {
       if (scrollAnimRef.current !== null) {
         cancelAnimationFrame(scrollAnimRef.current);
       }
+      const target = viewport.scrollWidth - viewport.clientWidth;
+      if (target <= 0) return;
       const start = viewport.scrollLeft;
       const delta = target - start;
       if (Math.abs(delta) < 1) return;
-      const duration = 100;
+      const duration = 50;
       const startTime = performance.now();
       const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
       const step = (now: number) => {
@@ -194,38 +192,19 @@ function SelectedPhotosDock({
           scrollAnimRef.current = requestAnimationFrame(step);
         } else {
           scrollAnimRef.current = null;
+          requestAnimationFrame(() => {
+            viewport.scrollLeft = viewport.scrollWidth;
+          });
         }
       };
       scrollAnimRef.current = requestAnimationFrame(step);
-    }, 160);
+    }, 220);
     return () => {
       window.clearTimeout(timeout);
       if (scrollAnimRef.current !== null) {
         cancelAnimationFrame(scrollAnimRef.current);
         scrollAnimRef.current = null;
       }
-    };
-  }, [selected.length]);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    const updateScrollability = () => {
-      const maxLeft = viewport.scrollWidth - viewport.clientWidth;
-      setCanScroll({
-        left: viewport.scrollLeft > 0,
-        right: viewport.scrollLeft < maxLeft,
-      });
-    };
-
-    updateScrollability();
-    viewport.addEventListener("scroll", updateScrollability, { passive: true });
-    const observer = new ResizeObserver(updateScrollability);
-    observer.observe(viewport);
-    return () => {
-      viewport.removeEventListener("scroll", updateScrollability);
-      observer.disconnect();
     };
   }, [selected.length]);
 
@@ -257,7 +236,7 @@ function SelectedPhotosDock({
   return (
     <div
       ref={trackRef}
-      className="relative shrink-0"
+      className="relative w-max max-w-full"
       onMouseEnter={() => setHoverEdge(null)}
       onMouseLeave={() => setHoverEdge(null)}
       onMouseMove={handleMouseMove}
@@ -317,26 +296,6 @@ function SelectedPhotosDock({
           </AnimatePresence>
         </div>
       </div>
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-y-0 left-0 z-10 w-4 bg-gradient-to-l from-black/20 to-transparent transition-opacity duration-150",
-          canScroll.left
-            ? hoverEdge === "left"
-              ? "opacity-100"
-              : "opacity-60"
-            : "opacity-0",
-        )}
-      />
-      <div
-        className={cn(
-          "pointer-events-none absolute inset-y-0 right-0 z-10 w-4 bg-gradient-to-r from-black/20 to-transparent transition-opacity duration-150",
-          canScroll.right
-            ? hoverEdge === "right"
-              ? "opacity-100"
-              : "opacity-60"
-            : "opacity-0",
-        )}
-      />
     </div>
   );
 }
@@ -370,6 +329,7 @@ export function PexelsBrowserPanel({
   const [selected, setSelected] = useState<PexelsPhoto[]>(savedSelected);
   const [width, setWidth] = useState(getStoredBrowserWidth);
   const [isResizing, setIsResizing] = useState(false);
+  const [dockLayoutRevision, setDockLayoutRevision] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -431,6 +391,25 @@ export function PexelsBrowserPanel({
     if (!open) return;
     searchInputRef.current?.focus();
   }, [open]);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    let animationFrame: number | undefined;
+    const observer = new ResizeObserver(() => {
+      if (animationFrame !== undefined) return;
+      animationFrame = requestAnimationFrame(() => {
+        animationFrame = undefined;
+        setDockLayoutRevision((revision) => revision + 1);
+      });
+    });
+    observer.observe(panel);
+    return () => {
+      observer.disconnect();
+      if (animationFrame !== undefined) cancelAnimationFrame(animationFrame);
+    };
+  }, []);
 
   function handleResizeStart(event: ReactPointerEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -677,22 +656,23 @@ export function PexelsBrowserPanel({
                 )}
               </div>
             </ScrollArea>
-            <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-10 flex justify-center pb-2">
+            <div className="pointer-events-none absolute right-0 bottom-0 left-3 z-10 flex justify-center pb-2">
               <AnimatePresence>
                 {selected.length > 0 ? (
                   <motion.div
                     key="pexels-dock-cluster"
                     layout="size"
-                    initial={{ opacity: 0, scale: 0.98, y: -4 }}
+                    layoutDependency={dockLayoutRevision}
+                    initial={{ opacity: 0, scale: 0.98, y: 4 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{
                       opacity: 0,
                       scale: 0.98,
-                      y: -4,
+                      y: 4,
                       transition: {
-                        opacity: { duration: 0.18, ease: [0.32, 0, 0.67, 0] },
-                        scale: { duration: 0.18, ease: [0.32, 0, 0.67, 0] },
-                        y: { duration: 0.18, ease: [0.32, 0, 0.67, 0] },
+                        opacity: { duration: 0.1, ease: [0.8, 0, 1, 1] },
+                        scale: { duration: 0.1, ease: [0.8, 0, 1, 1] },
+                        y: { duration: 0.1, ease: [0.8, 0, 1, 1] },
                       },
                     }}
                     transition={{
@@ -721,7 +701,10 @@ export function PexelsBrowserPanel({
                           Clear
                         </Button>
                         <span className="text-xs font-medium whitespace-nowrap text-sidebar-foreground">
-                          {selected.length} selected
+                          <span className="font-mono tabular-nums">
+                            {selected.length}
+                          </span>{" "}
+                          selected
                         </span>
                       </div>
                       <Button
