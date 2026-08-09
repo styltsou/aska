@@ -233,7 +233,20 @@ export default $config({
       memory: "1024 MB",
       timeout: "29 seconds",
       link: [assets],
-      nodejs: { sourcemap: true },
+      nodejs: {
+        sourcemap: true,
+        // Crop rendering runs inline in the API and needs Sharp's native
+        // Linux package rather than an esbuild bundle.
+        esbuild: { external: ["sharp"] },
+      },
+      copyFiles: [
+        { from: "server/node_modules/sharp", to: "node_modules/sharp" },
+        { from: "server/node_modules/@img/colour", to: "node_modules/@img/colour" },
+        { from: "server/node_modules/detect-libc", to: "node_modules/detect-libc" },
+        { from: "server/node_modules/semver", to: "node_modules/semver" },
+        { from: "server/node_modules/@img/sharp-linux-x64", to: "node_modules/@img/sharp-linux-x64" },
+        { from: "server/node_modules/@img/sharp-libvips-linux-x64", to: "node_modules/@img/sharp-libvips-linux-x64" },
+      ],
       environment: {
         NODE_OPTIONS: "--enable-source-maps",
         NODE_ENV: stableCloudDomains ? "production" : "development",

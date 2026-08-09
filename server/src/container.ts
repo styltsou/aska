@@ -4,6 +4,7 @@ import { CollectionService } from "@/services/collection.service";
 import { ColorSearchService } from "@/services/color-search.service";
 import { HealthService } from "@/services/health.service";
 import { ImageUploadService } from "@/services/image-upload.service";
+import { ImageCropService } from "@/services/image-crop.service";
 import { LoggerService } from "@/services/logger.service";
 import { ObjectStorageService } from "@/services/object-storage.service";
 import { PexelsService } from "@/services/pexels.service";
@@ -27,6 +28,7 @@ export const container = {
     objectStorageService,
     pexelsService,
   ),
+  imageCropService: new ImageCropService(objectStorageService),
   colorSearchService: new ColorSearchService({
     objectStorageService,
     loggerService,

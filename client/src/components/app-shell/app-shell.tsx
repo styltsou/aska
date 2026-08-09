@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { DragDropProvider } from "@dnd-kit/react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { AppHeader } from "@/components/app-shell/app-header";
@@ -33,38 +34,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <GlobalScratchpad />
-      <SettingsDialog />
-      <CommandPalette />
-      <SidebarInset
-        className={cn(
-          "min-h-0 md:mb-2",
-          isBoardView && "h-[calc(100svh-0.5rem)] overflow-hidden",
-          isBoardView && pexelsBrowserOpen ? "md:mr-0" : "md:mr-2",
-        )}
-      >
-        <AppHeader />
-        <div
+    <DragDropProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <GlobalScratchpad />
+        <SettingsDialog />
+        <CommandPalette />
+        <SidebarInset
           className={cn(
-            "flex min-w-0 flex-1 flex-col",
-            isBoardView
-              ? "min-h-0 overflow-hidden rounded-xl bg-card"
-              : "gap-4 rounded-xl bg-card p-3 shadow-sm",
+            "min-h-0 md:mb-2",
+            isBoardView && "h-[calc(100svh-0.5rem)] overflow-hidden",
+            isBoardView && pexelsBrowserOpen ? "md:mr-0" : "md:mr-2",
           )}
         >
-          {children}
-        </div>
-      </SidebarInset>
-      {collectionSlug ? (
-        <PexelsBrowserPanel
-          open={pexelsBrowserOpen}
-          workspaceSlug={workspaceSlug}
-          collectionSlug={collectionSlug}
-          parentFolderPath={folderPath}
-        />
-      ) : null}
-    </SidebarProvider>
+          <AppHeader />
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 flex-col",
+              isBoardView
+                ? "min-h-0 overflow-hidden rounded-xl bg-card"
+                : "gap-4 rounded-xl bg-card p-3 shadow-sm",
+            )}
+          >
+            {children}
+          </div>
+        </SidebarInset>
+        {collectionSlug ? (
+          <PexelsBrowserPanel
+            open={pexelsBrowserOpen}
+            workspaceSlug={workspaceSlug}
+            collectionSlug={collectionSlug}
+            parentFolderPath={folderPath}
+          />
+        ) : null}
+      </SidebarProvider>
+    </DragDropProvider>
   );
 }

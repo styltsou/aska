@@ -26,6 +26,11 @@ four-column grid. The horizontal and vertical gutter is the canvas-wide
 portrait images never overlap the next row. Batch state is not remembered
 between actions.
 
+When an import creates batch items sequentially, its placement context still
+carries the dimensions of the complete batch. Every item therefore resolves
+against the same grid and the same tallest-card row heights as a direct
+multi-file drop.
+
 An explicit anchor may produce cards beyond the current viewport. For a
 viewport-based action, only the anchor must be visible; the rest of a large
 batch may extend beyond it.

@@ -20,7 +20,13 @@ export type BoardVisibleBounds = {
 export type BoardInsertionPlacement = {
   position?: BoardPosition;
   visibleBounds?: BoardVisibleBounds;
-  batch?: { index: number; size: number };
+  batch?: {
+    index: number;
+    size: number;
+    /** Complete image geometry for batches whose items are created one at a time. */
+    imageDimensions?: readonly { width: number; height: number }[];
+  };
+  allowOverlap?: boolean;
 };
 
 export type DetailedCollection = {
@@ -99,7 +105,7 @@ export type CollectionImageNode = {
   id: string;
   type: "image";
   url: string;
-  /** Browser-only preview retained while the uploaded original is decoded. */
+  /** Browser-only preview retained while the final image is decoded. */
   localPreviewUrl?: string;
   originalUrl?: string;
   originalWidth?: number;

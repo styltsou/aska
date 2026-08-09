@@ -48,6 +48,7 @@ import { makeBoardKey } from "./canvas-key";
 import {
   setBoardFlowPositionConverter,
   setBoardPointerPosition,
+  setBoardViewportZoomReader,
 } from "./board-pointer-position";
 import {
   BOARD_CARD_WIDTH,
@@ -418,6 +419,11 @@ function CanvasSurface({
   useEffect(
     () => setBoardFlowPositionConverter(boardKey, screenToFlowPosition),
     [boardKey, screenToFlowPosition],
+  );
+
+  useEffect(
+    () => setBoardViewportZoomReader(boardKey, () => getViewport().zoom),
+    [boardKey, getViewport],
   );
 
   const openFolder = useCallback(

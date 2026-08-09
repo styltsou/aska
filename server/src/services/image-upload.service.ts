@@ -582,12 +582,11 @@ export class ImageUploadService implements IImageUploadService {
         ErrorCode.NOT_FOUND,
         "Image display variant not found",
       );
+    const master = row?.variants.master ?? row?.variants.original;
     const [display, original] = await Promise.all([
       this.objectStorageService.createPresignedGetUrl(preferred.objectKey),
-      row.variants.original?.objectKey
-        ? this.objectStorageService.createPresignedGetUrl(
-            row.variants.original.objectKey,
-          )
+      master?.objectKey
+        ? this.objectStorageService.createPresignedGetUrl(master.objectKey)
         : undefined,
     ]);
     return {
@@ -595,8 +594,8 @@ export class ImageUploadService implements IImageUploadService {
       type: "image",
       url: display.url,
       originalUrl: original?.url,
-      originalWidth: row.variants.original?.width,
-      originalHeight: row.variants.original?.height,
+      originalWidth: master?.width,
+      originalHeight: master?.height,
       width: preferred.width,
       height: preferred.height,
       title: row.title,

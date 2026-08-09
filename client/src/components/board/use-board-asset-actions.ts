@@ -10,8 +10,10 @@ import {
   useUploadLocalImages,
 } from "@/api/collection";
 import type { BoardInsertionPlacement } from "@/api/collection";
+import type { PexelsPhoto } from "@/api/pexels";
 import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
 import type { ClipboardAssetPayload } from "@/lib/clipboard";
+import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
 import { parseHttpUrl } from "@/lib/utils";
 
 export type BoardAssetTarget = "collection" | "inbox";
@@ -137,6 +139,65 @@ export function useBoardAssetActions({
     ],
   );
 
+  const importPexelsPhotos = useCallback(
+    async (
+      photos: readonly PexelsPhoto[],
+      actionPlacement?: BoardInsertionPlacement,
+    ) => {
+      if (photos.length === 0) return;
+
+      try {
+        const insertionPlacement =
+          actionPlacement ?? getPlacement?.() ?? placement;
+        const imageDimensions = photos.map(({ width, height }) => ({
+          width,
+          height,
+        }));
+        if (target === "inbox") {
+          for (const photo of photos) {
+            await createInboxRemoteImage.mutateAsync(
+              toPexelsRemoteImageInput(photo),
+            );
+          }
+        } else {
+          for (const [index, photo] of photos.entries()) {
+            await createRemoteImage.mutateAsync({
+              ...toPexelsRemoteImageInput(photo),
+              parentFolderPath,
+              placement: insertionPlacement
+                ? {
+                    ...insertionPlacement,
+                    batch: {
+                      index,
+                      size: photos.length,
+                      imageDimensions,
+                    },
+                  }
+                : undefined,
+            });
+          }
+        }
+        toast.success(
+          `${photos.length} Pexels photo${photos.length === 1 ? "" : "s"} imported`,
+        );
+      } catch (err) {
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "Unable to import Pexels photos.",
+        );
+      }
+    },
+    [
+      createInboxRemoteImage,
+      createRemoteImage,
+      getPlacement,
+      parentFolderPath,
+      placement,
+      target,
+    ],
+  );
+
   const createTextNote = useCallback(
     async (content: string) => {
       if (!content.trim()) return;
@@ -197,6 +258,7 @@ export function useBoardAssetActions({
   return {
     addClipboardAsset,
     createTextNote,
+    importPexelsPhotos,
     importRemoteUrl,
     isPending,
     statusText,
