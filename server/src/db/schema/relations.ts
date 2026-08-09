@@ -60,6 +60,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.organization.id,
       to: r.uploads.organizationId,
     }),
+    mediaCleanupJobs: r.many.mediaCleanupJobs({
+      from: r.organization.id,
+      to: r.mediaCleanupJobs.organizationId,
+    }),
   },
 
   collectionsTable: {
@@ -93,6 +97,10 @@ export const relations = defineRelations(schema, (r) => ({
     nodes: r.many.collectionNodes({
       from: r.assets.id,
       to: r.collectionNodes.assetId,
+    }),
+    mediaCleanupJobs: r.many.mediaCleanupJobs({
+      from: r.assets.id,
+      to: r.mediaCleanupJobs.assetId,
     }),
   },
 
@@ -170,6 +178,17 @@ export const relations = defineRelations(schema, (r) => ({
     }),
     asset: r.one.assets({
       from: r.uploads.assetId,
+      to: r.assets.id,
+    }),
+  },
+
+  mediaCleanupJobs: {
+    organization: r.one.organization({
+      from: r.mediaCleanupJobs.organizationId,
+      to: r.organization.id,
+    }),
+    asset: r.one.assets({
+      from: r.mediaCleanupJobs.assetId,
       to: r.assets.id,
     }),
   },

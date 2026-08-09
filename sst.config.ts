@@ -282,6 +282,40 @@ export default $config({
         ...sentryEnvironment,
       },
     });
+    new sst.aws.CronV2("MediaCleanup", {
+      schedule: "rate(5 minutes)",
+      function: {
+        handler: "server/src/media-cleanup-lambda.handler",
+        runtime: "nodejs22.x",
+        memory: "512 MB",
+        timeout: "30 seconds",
+        link: [assets],
+        nodejs: { sourcemap: true },
+        environment: {
+          NODE_OPTIONS: "--enable-source-maps",
+          NODE_ENV: stableCloudDomains ? "production" : "development",
+          LOG_LEVEL: process.env.LOG_LEVEL ?? "info",
+          DATABASE_URL: databaseUrl.value,
+          BETTER_AUTH_SECRET: betterAuthSecret.value,
+          BETTER_AUTH_URL: api.url,
+          RESEND_API_KEY: resendApiKey.value,
+          S3_BUCKET: assets.name,
+          S3_REGION: "eu-central-1",
+          S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: "900",
+          S3_PRESIGNED_READ_EXPIRES_SECONDS: "900",
+          ...(media
+            ? {
+                MEDIA_BASE_URL: media.domainUrl,
+                CLOUDFRONT_KEY_PAIR_ID: media.publicKeyId,
+                CLOUDFRONT_PRIVATE_KEY_BASE64: cloudFrontPrivateKey!.value,
+                CLOUDFRONT_COOKIE_DOMAIN: ".styltsou.com",
+                CLOUDFRONT_SIGNED_COOKIE_EXPIRES_SECONDS: "3600",
+              }
+            : {}),
+          ...getSentryEnvironment("media-cleanup", sentryDsn.value),
+        },
+      },
+    });
     const imageWorkerFiles = (service: "image-variants" | "image-palette") => [
       {
         from: `services/${service}/node_modules/sharp`,

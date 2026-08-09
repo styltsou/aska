@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import { env } from "@/config";
 import { db } from "@/db";
@@ -7,6 +7,7 @@ import {
   collectionNodes,
   imageAssets,
   imageColors,
+  mediaCleanupJobs,
   uploads,
   type ImageProvenance,
 } from "@/db/schema";
@@ -20,6 +21,7 @@ import {
 } from "@/dto/upload.dto";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { first } from "@/lib/query";
+import { isOriginalImageObjectKey } from "../../../services/image-shared/src/pipeline-callback";
 import { resolveCollectionTargetBySlug } from "@/services/collection/collection-target-resolver";
 import { resolvePipelineCallbackAction } from "@/services/image-upload/callback-state";
 import { finalizeImageUpload } from "@/services/image-upload/image-upload-finalizer";
@@ -457,6 +459,24 @@ export class ImageUploadService implements IImageUploadService {
     input: ImagePipelineCallbackInput,
   ): Promise<{ ignored: boolean }> {
     const upload = await getUploadByOriginalObjectKey(input.originalObjectKey);
+    if (!upload && isOriginalImageObjectKey(input.originalObjectKey)) {
+      const displaced = first(
+        await db
+          .select({ id: mediaCleanupJobs.id })
+          .from(mediaCleanupJobs)
+          .where(
+            sql`${input.originalObjectKey} = any(${mediaCleanupJobs.objectKeys})`,
+          )
+          .limit(1),
+      );
+      if (displaced) return { ignored: true };
+      // A crop writes its immutable source just before its short DB switch.
+      // Let the worker retry this callback instead of dropping that event.
+      throw new AppError(
+        ErrorCode.INTERNAL_ERROR,
+        "Image source registration is still pending",
+      );
+    }
     const action = resolvePipelineCallbackAction(upload, input);
     if (action.type === "ignore") return { ignored: action.ignored };
     if (!upload) {
@@ -582,11 +602,12 @@ export class ImageUploadService implements IImageUploadService {
         ErrorCode.NOT_FOUND,
         "Image display variant not found",
       );
-    const master = row?.variants.master ?? row?.variants.original;
     const [display, original] = await Promise.all([
       this.objectStorageService.createPresignedGetUrl(preferred.objectKey),
-      master?.objectKey
-        ? this.objectStorageService.createPresignedGetUrl(master.objectKey)
+      row?.variants.original?.objectKey
+        ? this.objectStorageService.createPresignedGetUrl(
+            row.variants.original.objectKey,
+          )
         : undefined,
     ]);
     return {
@@ -594,8 +615,8 @@ export class ImageUploadService implements IImageUploadService {
       type: "image",
       url: display.url,
       originalUrl: original?.url,
-      originalWidth: master?.width,
-      originalHeight: master?.height,
+      originalWidth: row.variants.original?.width,
+      originalHeight: row.variants.original?.height,
       width: preferred.width,
       height: preferred.height,
       title: row.title,

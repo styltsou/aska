@@ -1,7 +1,6 @@
 import {
   AssetPathParamSchema,
   CropInputSchema,
-  CropOperationPathParamSchema,
   ContentTypeQuerySchema,
   CreateNoteSchema,
   ImageCropPathParamSchema,
@@ -98,25 +97,6 @@ export const cropImage = factory.createHandlers(
     );
   },
 );
-
-const cropOperation = (operation: "undo" | "redo") =>
-  factory.createHandlers(
-    authMiddleware,
-    validate.param(CropOperationPathParamSchema),
-    async (c) => {
-      const { workspaceSlug, operationId } = c.req.valid("param");
-      const workspace = await collectionService.getWorkspaceBySlug(
-        workspaceSlug,
-        c.get("userId"),
-      );
-      return c.json(
-        success(await imageCropService[operation](workspace.id, operationId)),
-      );
-    },
-  );
-
-export const undoCropOperation = cropOperation("undo");
-export const redoCropOperation = cropOperation("redo");
 
 export const deleteAsset = factory.createHandlers(
   authMiddleware,
