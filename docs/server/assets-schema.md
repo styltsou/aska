@@ -10,6 +10,7 @@ For the design rationale and tradeoffs, see
 
 - `assets`: shared row for archived content.
 - `image_assets`: image-specific fields keyed by `asset_id`.
+- `media_cleanup_jobs`: retryable deletion work for replaced media objects.
 - `note_assets`: markdown note fields keyed by `asset_id`.
 - `folders`: folder identity, display name, and slug.
 - `collection_nodes`: collection placement, nesting, and path cache.
@@ -38,6 +39,14 @@ access scope, not folder or collection location. Folder and collection moves
 update database placement only and never rename media objects.
 `image_assets.blur_data_url` stores the inline blurred WebP shown while those
 URLs decode.
+
+An in-place crop rotates the active `storage_id` on the associated `uploads`
+workflow record. It immediately stores only the new cropped original in
+`image_assets.variants`; the normal workers later fill display and preview.
+There is no image edit, revision, or original-master table. The old namespace's
+exact keys are placed in `media_cleanup_jobs` and deleted by the scheduled
+cleanup Lambda. A cleanup job can outlive an asset row because deleting the
+asset must not leak a previously displaced namespace.
 
 ## Image Ingestion and Colors
 

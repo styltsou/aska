@@ -45,9 +45,16 @@ Cache-Control: public, max-age=31536000, immutable
 Content-Type: source type for original.*; image/webp for variants
 ```
 
-Do not overwrite an existing rendition key. An edit or regeneration must write
-a new versioned key and update the stored metadata. This keeps browser and CDN
+Do not overwrite an existing rendition key. A replacement creates a fresh
+`storageId`, writes the normal original/display/preview sibling keys there, and
+updates the stored metadata to that generation. This keeps browser and CDN
 caches correct without invalidations.
+
+For an in-place crop, the API writes the cropped original under the fresh
+namespace and immediately makes it current. The existing image workers then
+write its normal display and preview siblings. The displaced namespace is
+deleted asynchronously through a retryable cleanup job; it is not retained as
+media history.
 
 ## Distribution and authorization
 

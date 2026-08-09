@@ -47,6 +47,8 @@ link back out to `specs/`.
 - [Image Upload and Processing Pipeline](./server/image-upload-implementation-plan.md)
   and [Image Pipeline Reliability](./server/image-pipeline-reliability.md) —
   browser-to-S3 ingestion, asynchronous work, retries, and callbacks.
+- [Image Cropping](./server/image-cropping.md) — in-place source replacement,
+  normal pipeline reuse, and cleanup outbox behavior.
 - [Image Delivery Architecture](./image-delivery-architecture.md) — private,
   workspace-scoped CloudFront delivery for originals and generated renditions
   with stable URLs backed by immutable S3 keys.

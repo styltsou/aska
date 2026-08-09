@@ -21,9 +21,12 @@ Browser or remote URL
   -> client observes independent enrichment states
 ```
 
-The main server must not decode images, generate variants, or extract colors.
-Those responsibilities live in `services/image-variants` and
-`services/image-palette`, with delivery code in `services/image-shared`.
+The main server does not process normal uploads: variant generation and palette
+extraction live in `services/image-variants` and `services/image-palette`, with
+delivery code in `services/image-shared`. The one intentional exception is an
+interactive crop: the API decodes the current original only to produce a new
+cropped original, then hands that source back to these same workers for all
+derived processing.
 
 ## Object Namespaces
 

@@ -7,6 +7,7 @@ One stage creates one isolated AWS copy:
 stage dev
   API Gateway -> Hono Lambda
   private S3 assets bucket -> SNS -> two SQS queues -> variants and palette Lambdas
+  EventBridge Scheduler -> media-cleanup Lambda -> displaced S3 object cleanup
   private S3 client bucket -> CloudFront -> React/Vite client
   dead-letter queue, IAM permissions, and stage-specific SST secrets
 ```
