@@ -200,11 +200,6 @@ export const CropInputSchema = z.object({
 
 export type CropInput = z.infer<typeof CropInputSchema>;
 
-export const CropOperationPathParamSchema = z.object({
-  workspaceSlug: z.string(),
-  operationId: z.coerce.number().int().positive(),
-});
-
 export const CollectionPathParamSchema = z.object({
   workspaceSlug: z.string(),
   collectionSlug: z.string(),

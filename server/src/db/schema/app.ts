@@ -39,6 +39,10 @@ export const imageEnrichmentStatusEnum = pgEnum("image_enrichment_status", [
   "completed",
   "failed",
 ]);
+export const mediaCleanupJobStatusEnum = pgEnum("media_cleanup_job_status", [
+  "pending",
+  "processing",
+]);
 
 export type StoredImageObjectVariant = {
   objectKey: string;
@@ -57,8 +61,6 @@ export type StoredImageDataVariant = {
 };
 
 export type ImageAssetVariants = {
-  /** Immutable uploaded source; set when the first in-place edit is applied. */
-  master?: StoredImageObjectVariant;
   original?: StoredImageObjectVariant;
   display?: StoredImageObjectVariant;
   preview?: StoredImageObjectVariant;
@@ -185,35 +187,6 @@ export const imageAssets = pgTable(
   ],
 );
 
-/** Immutable edit parameters used to derive an image's current rendered form. */
-export const imageEditActions = pgTable(
-  "image_edit_actions",
-  {
-    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    organizationId: text("organization_id")
-      .notNull()
-      .references(() => organization.id, { onDelete: "cascade" }),
-    assetId: integer("asset_id")
-      .notNull()
-      .references(() => imageAssets.assetId, { onDelete: "cascade" }),
-    actionType: varchar("action_type", { length: 32 }).notNull(),
-    params: jsonb().notNull(),
-    resultWidth: integer("result_width"),
-    resultHeight: integer("result_height"),
-    createdByUserId: text("created_by_user_id").references(() => user.id, {
-      onDelete: "set null",
-    }),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    undoneAt: timestamp("undone_at"),
-  },
-  (table) => [
-    index("image_edit_actions_assetId_createdAt_idx").on(
-      table.assetId,
-      table.createdAt,
-    ),
-  ],
-);
-
 export const imageColors = pgTable(
   "image_colors",
   {
@@ -318,6 +291,43 @@ export const uploads = pgTable(
       "uploads_position_pair_chk",
       sql`(${table.positionX} is null and ${table.positionY} is null) or (${table.positionX} is not null and ${table.positionY} is not null)`,
     ),
+  ],
+);
+
+/**
+ * Durable, retryable deletion work for media objects that have been replaced.
+ *
+ * This intentionally survives asset deletion: its only job is to remove
+ * already-displaced S3 objects, not to retain any user-visible image history.
+ */
+export const mediaCleanupJobs = pgTable(
+  "media_cleanup_jobs",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    assetId: integer("asset_id").references(() => assets.id, {
+      onDelete: "set null",
+    }),
+    objectKeys: text("object_keys").array().notNull(),
+    status: mediaCleanupJobStatusEnum("status").notNull().default("pending"),
+    attempts: integer().notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at").defaultNow().notNull(),
+    processingStartedAt: timestamp("processing_started_at"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("media_cleanup_jobs_status_nextAttemptAt_idx").on(
+      table.status,
+      table.nextAttemptAt,
+    ),
+    index("media_cleanup_jobs_assetId_idx").on(table.assetId),
   ],
 );
 

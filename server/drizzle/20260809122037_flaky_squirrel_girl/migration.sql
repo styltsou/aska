@@ -1,0 +1,1 @@
+ALTER TABLE "media_cleanup_jobs" ADD COLUMN "processing_started_at" timestamp;

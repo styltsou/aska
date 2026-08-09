@@ -4,6 +4,11 @@ Image uploads use two independent, at-least-once SQS workflows. The API creates
 the `assets`, `image_assets`, and `uploads` rows before the original reaches
 S3, so neither processor depends on the other completing first.
 
+An in-place crop reuses this exact workflow. It writes a cropped original to a
+fresh storage namespace, immediately switches the asset and its `uploads` row
+to that source, and lets the same S3 event fan-out regenerate variants and
+palette. It is not a separate crop-processing pipeline.
+
 ```txt
 browser or remote import -> S3 {workspaceId}/{storageId}/original.* event
                                -> ImageUploadTopic (SNS)
@@ -37,6 +42,11 @@ This is at-least-once delivery. Duplicate S3 events, SQS deliveries, object
 writes, and callbacks are expected. The system is safe because variant keys
 are deterministic, palette writes replace the asset's existing colors, and API
 callbacks are keyed by original object key and ETag.
+
+During a crop, a callback can arrive just before the short database switch that
+registers the new source. The API returns a retriable error in that window;
+once the switch commits, the worker retry resolves against the active upload.
+Callbacks for a source already listed in cleanup work are ignored.
 
 ## Operational model
 
