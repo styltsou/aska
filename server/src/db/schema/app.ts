@@ -57,6 +57,8 @@ export type StoredImageDataVariant = {
 };
 
 export type ImageAssetVariants = {
+  /** Immutable uploaded source; set when the first in-place edit is applied. */
+  master?: StoredImageObjectVariant;
   original?: StoredImageObjectVariant;
   display?: StoredImageObjectVariant;
   preview?: StoredImageObjectVariant;
@@ -180,6 +182,35 @@ export const imageAssets = pgTable(
   (table) => [
     check("image_assets_width_positive_chk", sql`${table.width} > 0`),
     check("image_assets_height_positive_chk", sql`${table.height} > 0`),
+  ],
+);
+
+/** Immutable edit parameters used to derive an image's current rendered form. */
+export const imageEditActions = pgTable(
+  "image_edit_actions",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    assetId: integer("asset_id")
+      .notNull()
+      .references(() => imageAssets.assetId, { onDelete: "cascade" }),
+    actionType: varchar("action_type", { length: 32 }).notNull(),
+    params: jsonb().notNull(),
+    resultWidth: integer("result_width"),
+    resultHeight: integer("result_height"),
+    createdByUserId: text("created_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    undoneAt: timestamp("undone_at"),
+  },
+  (table) => [
+    index("image_edit_actions_assetId_createdAt_idx").on(
+      table.assetId,
+      table.createdAt,
+    ),
   ],
 );
 

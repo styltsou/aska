@@ -495,6 +495,7 @@ export class CollectionQueryService {
           row.variants.display?.objectKey,
           row.variants.preview?.objectKey,
           row.variants.original?.objectKey,
+          row.variants.master?.objectKey,
         ])
         .filter((key): key is string => key !== undefined),
     );
@@ -503,7 +504,7 @@ export class CollectionQueryService {
     for (const row of variants) {
       const display = row.variants.display;
       const preview = row.variants.preview;
-      const original = row.variants.original;
+      const original = row.variants.master ?? row.variants.original;
       const displayUrl = display
         ? signed.get(display.objectKey)?.url
         : undefined;

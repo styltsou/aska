@@ -184,6 +184,27 @@ export const AssetPathParamSchema = z.object({
   assetId: AssetNodeIdSchema,
 });
 
+export const ImageCropPathParamSchema = z.object({
+  workspaceSlug: z.string(),
+  assetId: z.string().regex(/^image-\d+$/),
+});
+
+export const CropInputSchema = z.object({
+  crop: z.object({
+    x: z.number().finite().int().min(0),
+    y: z.number().finite().int().min(0),
+    width: z.number().finite().int().positive(),
+    height: z.number().finite().int().positive(),
+  }),
+});
+
+export type CropInput = z.infer<typeof CropInputSchema>;
+
+export const CropOperationPathParamSchema = z.object({
+  workspaceSlug: z.string(),
+  operationId: z.coerce.number().int().positive(),
+});
+
 export const CollectionPathParamSchema = z.object({
   workspaceSlug: z.string(),
   collectionSlug: z.string(),

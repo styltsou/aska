@@ -382,12 +382,11 @@ export class AssetService implements IAssetService {
           row.imageVariants?.display ?? row.imageVariants?.original;
         if (!rendition?.objectKey) continue;
 
+        const master = row.imageVariants?.master ?? row.imageVariants?.original;
         const [signed, originalSigned] = await Promise.all([
           this.objectStorageService.createPresignedGetUrl(rendition.objectKey),
-          row.imageVariants?.original?.objectKey
-            ? this.objectStorageService.createPresignedGetUrl(
-                row.imageVariants.original.objectKey,
-              )
+          master?.objectKey
+            ? this.objectStorageService.createPresignedGetUrl(master.objectKey)
             : undefined,
         ]);
         nodes.push({
@@ -395,8 +394,8 @@ export class AssetService implements IAssetService {
           type: "image",
           url: signed.url,
           originalUrl: originalSigned?.url,
-          originalWidth: row.imageVariants?.original?.width,
-          originalHeight: row.imageVariants?.original?.height,
+          originalWidth: master?.width,
+          originalHeight: master?.height,
           width: rendition.width,
           height: rendition.height,
           title: row.title,

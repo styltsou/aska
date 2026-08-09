@@ -1,7 +1,10 @@
 import {
   AssetPathParamSchema,
+  CropInputSchema,
+  CropOperationPathParamSchema,
   ContentTypeQuerySchema,
   CreateNoteSchema,
+  ImageCropPathParamSchema,
   WorkspaceParamSchema,
 } from "@/dto/collection.dto";
 import { factory } from "@/factory";
@@ -11,10 +14,12 @@ import { validate } from "@/middleware/validate";
 
 import { container } from "@/container";
 import type { IAssetService } from "@/services/asset.service";
+import type { IImageCropService } from "@/services/image-crop.service";
 import type { ICollectionService } from "@/services/collection.service";
 
 const assetService: IAssetService = container.assetService;
 const collectionService: ICollectionService = container.collectionService;
+const imageCropService: IImageCropService = container.imageCropService;
 
 export const getInboxContents = factory.createHandlers(
   authMiddleware,
@@ -69,6 +74,49 @@ export const markInboxSeen = factory.createHandlers(
     return c.json(success(inbox));
   },
 );
+
+export const cropImage = factory.createHandlers(
+  authMiddleware,
+  validate.param(ImageCropPathParamSchema),
+  validate.body(CropInputSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const { crop } = c.req.valid("json");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      c.get("userId"),
+    );
+    return c.json(
+      success(
+        await imageCropService.crop(
+          workspace.id,
+          c.get("userId"),
+          assetId,
+          crop,
+        ),
+      ),
+    );
+  },
+);
+
+const cropOperation = (operation: "undo" | "redo") =>
+  factory.createHandlers(
+    authMiddleware,
+    validate.param(CropOperationPathParamSchema),
+    async (c) => {
+      const { workspaceSlug, operationId } = c.req.valid("param");
+      const workspace = await collectionService.getWorkspaceBySlug(
+        workspaceSlug,
+        c.get("userId"),
+      );
+      return c.json(
+        success(await imageCropService[operation](workspace.id, operationId)),
+      );
+    },
+  );
+
+export const undoCropOperation = cropOperation("undo");
+export const redoCropOperation = cropOperation("redo");
 
 export const deleteAsset = factory.createHandlers(
   authMiddleware,

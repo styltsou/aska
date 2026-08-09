@@ -15,7 +15,6 @@ import {
 import {
   CropIcon,
   CheckIcon,
-  RotateCcwIcon,
   DownloadIcon,
   ExternalLinkIcon,
   XIcon,
@@ -32,6 +31,10 @@ import {
 import { ImageMetadata } from "./image-metadata";
 import { CropToolbar } from "./crop-toolbar";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
+import { apiPost } from "@/lib/api";
+import { collectionQueryKeys } from "@/api/collection/query-keys";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const MIN_FREE_CROP_SIZE = 80;
 
@@ -41,6 +44,24 @@ type CropFrameColors = {
 };
 
 type CropDimension = "width" | "height";
+
+type CropResponse = {
+  image: Pick<
+    ImageAsset,
+    | "id"
+    | "type"
+    | "url"
+    | "originalUrl"
+    | "originalWidth"
+    | "originalHeight"
+    | "width"
+    | "height"
+    | "title"
+    | "alt"
+  >;
+  operationId: number;
+  undoableUntil: string;
+};
 
 function getCropFrameColors(dominantColors?: string[]): CropFrameColors {
   const colors = (dominantColors ?? [])
@@ -419,11 +440,13 @@ export function ImageAssetViewer({
   workspaceSlug: string;
 }) {
   const retainedAssetRef = useRef(selectedAsset);
+  const queryClient = useQueryClient();
+  const [editedAsset, setEditedAsset] = useState<ImageAsset | null>(null);
   useEffect(() => {
     if (selectedAsset) retainedAssetRef.current = selectedAsset;
   }, [selectedAsset]);
 
-  const asset = selectedAsset ?? retainedAssetRef.current;
+  const asset = editedAsset ?? selectedAsset ?? retainedAssetRef.current;
   const shouldReduceMotion = useReducedMotion();
   const title = asset?.title || asset?.sourceLabel || "Image preview";
 
@@ -437,9 +460,6 @@ export function ImageAssetViewer({
   const [zoom, setZoom] = useState(1);
   const [aspect, setAspect] = useState<number>(0);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
-  const [croppedPreviewUrl, setCroppedPreviewUrl] = useState<string | null>(
-    null,
-  );
   const [freeCropSize, setFreeCropSize] = useState<Size | null>(null);
   const [aspectCropSize, setAspectCropSize] = useState<Size | null>(null);
   const [cropperCropSize, setCropperCropSize] = useState<Size | null>(null);
@@ -448,15 +468,16 @@ export function ImageAssetViewer({
   );
   const [mediaSize, setMediaSize] = useState<Size | null>(null);
   const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [isSavingCrop, setIsSavingCrop] = useState(false);
   const cropperContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setEditedAsset(null);
     if (!open) {
       setCropMode(false);
       setCrop({ x: 0, y: 0 });
       setZoom(1);
       setCroppedAreaPixels(null);
-      setCroppedPreviewUrl(null);
       setFreeCropSize(null);
       setAspectCropSize(null);
       setCropperCropSize(null);
@@ -469,7 +490,6 @@ export function ImageAssetViewer({
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setCroppedAreaPixels(null);
-    setCroppedPreviewUrl(null);
     setFreeCropSize(null);
     setAspectCropSize(null);
     setCropperCropSize(null);
@@ -685,38 +705,107 @@ export function ImageAssetViewer({
 
   const handleApplyCrop = useCallback(async () => {
     if (!asset || !croppedAreaPixels) return;
+    setIsSavingCrop(true);
     try {
-      const response = await fetch(asset.originalUrl ?? asset.url);
-      const blob = await response.blob();
-      const bitmap = await createImageBitmap(blob);
-
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(croppedAreaPixels.width);
-      canvas.height = Math.round(croppedAreaPixels.height);
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(
-        bitmap,
-        croppedAreaPixels.x,
-        croppedAreaPixels.y,
-        croppedAreaPixels.width,
-        croppedAreaPixels.height,
-        0,
-        0,
-        canvas.width,
-        canvas.height,
+      const response = await apiPost<CropResponse>(
+        `/api/v1/workspace/${workspaceSlug}/images/${encodeURIComponent(asset.id)}/crop`,
+        {
+          crop: {
+            x: Math.round(croppedAreaPixels.x),
+            y: Math.round(croppedAreaPixels.y),
+            width: Math.round(croppedAreaPixels.width),
+            height: Math.round(croppedAreaPixels.height),
+          },
+        },
       );
-
-      bitmap.close();
-      setCroppedPreviewUrl(canvas.toDataURL("image/webp", 0.92));
+      const nextAsset = {
+        ...asset,
+        ...response.image,
+        localPreviewUrl: undefined,
+      };
+      setEditedAsset(nextAsset);
       setCropMode(false);
-    } catch {
-      setCropMode(false);
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["collectionContents", workspaceSlug],
+          exact: false,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: collectionQueryKeys.inbox(workspaceSlug),
+          exact: false,
+        }),
+      ]);
+      toast("Crop applied", {
+        duration: Math.max(
+          1_000,
+          new Date(response.undoableUntil).getTime() - Date.now(),
+        ),
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              const undone = await apiPost<{ image: CropResponse["image"] }>(
+                `/api/v1/workspace/${workspaceSlug}/crop-operations/${response.operationId}/undo`,
+              );
+              setEditedAsset((current) =>
+                current ? { ...current, ...undone.image } : current,
+              );
+              void queryClient.invalidateQueries({
+                queryKey: ["collectionContents", workspaceSlug],
+                exact: false,
+              });
+              void queryClient.invalidateQueries({
+                queryKey: collectionQueryKeys.inbox(workspaceSlug),
+                exact: false,
+              });
+              toast("Crop undone", {
+                action: {
+                  label: "Redo",
+                  onClick: async () => {
+                    try {
+                      const redone = await apiPost<{
+                        image: CropResponse["image"];
+                      }>(
+                        `/api/v1/workspace/${workspaceSlug}/crop-operations/${response.operationId}/redo`,
+                      );
+                      setEditedAsset((current) =>
+                        current ? { ...current, ...redone.image } : current,
+                      );
+                      void queryClient.invalidateQueries({
+                        queryKey: ["collectionContents", workspaceSlug],
+                        exact: false,
+                      });
+                      void queryClient.invalidateQueries({
+                        queryKey: collectionQueryKeys.inbox(workspaceSlug),
+                        exact: false,
+                      });
+                      toast("Crop restored");
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Could not redo crop",
+                      );
+                    }
+                  },
+                },
+              });
+            } catch (error) {
+              toast.error(
+                error instanceof Error ? error.message : "Could not undo crop",
+              );
+            }
+          },
+        },
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not apply crop",
+      );
+    } finally {
+      setIsSavingCrop(false);
     }
-  }, [asset, croppedAreaPixels]);
-
-  const handleResetCrop = useCallback(() => {
-    setCroppedPreviewUrl(null);
-  }, []);
+  }, [asset, croppedAreaPixels, queryClient, workspaceSlug]);
 
   const handleDownload = useCallback(() => {
     if (!asset) return;
@@ -729,7 +818,7 @@ export function ImageAssetViewer({
     link.remove();
   }, [asset, workspaceSlug]);
 
-  const displayUrl = croppedPreviewUrl ?? asset?.url;
+  const displayUrl = asset?.url;
   const blurPlaceholder = asset?.uploadStatus ? undefined : asset?.blurDataURL;
   const cropFrameColors = getCropFrameColors(asset?.dominantColors);
   const cropBoxSize = aspect === 0 ? freeCropSize : aspectCropSize;
@@ -797,16 +886,12 @@ export function ImageAssetViewer({
                 {displayUrl ? (
                   <ProgressiveImage
                     src={displayUrl}
-                    fallbackSrc={
-                      croppedPreviewUrl ? undefined : asset?.localPreviewUrl
-                    }
-                    blurDataURL={
-                      croppedPreviewUrl ? undefined : blurPlaceholder
-                    }
+                    fallbackSrc={asset?.localPreviewUrl}
+                    blurDataURL={blurPlaceholder}
                     alt={asset?.alt ?? ""}
                     draggable={false}
                     layoutId={
-                      asset && !shouldReduceMotion && !croppedPreviewUrl
+                      asset && !shouldReduceMotion
                         ? getImageViewerLayoutId(asset.id)
                         : undefined
                     }
@@ -864,12 +949,22 @@ export function ImageAssetViewer({
               </div>
               {cropMode ? (
                 <div className="flex shrink-0 justify-end gap-2 p-3">
-                  <Button variant="ghost" size="sm" onClick={handleCancelCrop}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCancelCrop}
+                    disabled={isSavingCrop}
+                  >
                     Cancel
                   </Button>
-                  <Button variant="default" size="sm" onClick={handleApplyCrop}>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleApplyCrop}
+                    disabled={isSavingCrop}
+                  >
                     <CheckIcon className="size-3.5" />
-                    Apply
+                    {isSavingCrop ? "Saving…" : "Apply"}
                   </Button>
                 </div>
               ) : asset ? (
@@ -910,27 +1005,15 @@ export function ImageAssetViewer({
                       <TooltipContent>Open</TooltipContent>
                     </Tooltip>
                   </div>
-                  {croppedPreviewUrl ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={handleResetCrop}
-                    >
-                      <RotateCcwIcon className="size-3.5" />
-                      Reset crop
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={handleStartCrop}
-                    >
-                      <CropIcon className="size-3.5" />
-                      Crop
-                    </Button>
-                  )}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={handleStartCrop}
+                  >
+                    <CropIcon className="size-3.5" />
+                    Crop
+                  </Button>
                 </div>
               ) : null}
             </div>
