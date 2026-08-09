@@ -138,10 +138,12 @@ the collection overview. The XYFlow renderer remains transparent. Route and
 query loading states preserve this surface and show spatial card placeholders
 rather than the Inbox's masonry skeleton.
 
-Viewport and lock state are stored in local browser storage and scoped to each
+Viewport and lock state are stored in `localStorage` and scoped to each
 collection or folder. They are not part of the persisted collection model.
-Filter-bar state follows the same scope, keeping collection focus filters
-separate from Inbox retrieval filters.
+Filter-bar state is stored separately in tab-scoped `sessionStorage`, with
+distinct state for the Inbox, each collection, and each folder. The Pexels
+browser uses the same tab-scoped model, keyed by workspace and collection, for
+its open state, query, and selected photos.
 
 When a collection filter is active, XYFlow retains every node in local state so
 the authored composition and node positions remain intact. Non-matching images
@@ -150,6 +152,12 @@ navigation. Matching nodes remain fully visible. A ranked color-result
 navigator can focus a chosen match, but filters never reorder, clone, or move
 canvas nodes. See [Color Image Search](./color-image-search.md) for the request
 lifecycle and ranking boundaries.
+
+If a collection or folder disappears after a route has been opened, the client
+recognizes the API's `404`/`not_found` response and renders an in-canvas missing
+state instead of a generic query error. Collection states link back to the
+workspace; folder states link back to their collection when that destination is
+known.
 
 Edges, handles, connection behavior, and delete-key node removal are disabled.
 The canvas is a moodboard, not a diagram editor.

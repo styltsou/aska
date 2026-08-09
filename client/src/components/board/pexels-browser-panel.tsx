@@ -16,7 +16,6 @@ import {
   CheckIcon,
   ImagesIcon,
   ImportIcon,
-  PanelRightCloseIcon,
   RefreshCwIcon,
   SearchIcon,
   SearchXIcon,
@@ -36,7 +35,7 @@ import {
 } from "@/lib/pexels-dnd";
 import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
 import { cn } from "@/lib/utils";
-import { usePexelsBrowserStore } from "@/store/pexels-browser-store";
+import { useSessionStore, getPexelsBrowserScope } from "@/store";
 
 const PEXELS_BROWSER_WIDTH_KEY = "pexels-browser-width";
 const PEXELS_BROWSER_MIN_WIDTH = 420;
@@ -352,17 +351,14 @@ export function PexelsBrowserPanel({
   collectionSlug: string;
   parentFolderPath?: string;
 }) {
-  const close = usePexelsBrowserStore((state) => state.setPexelsBrowserOpen);
-  const scope = `${workspaceSlug}/${collectionSlug}`;
-  const persistedState = usePexelsBrowserStore(
+  const scope = getPexelsBrowserScope(workspaceSlug, collectionSlug);
+  const persistedState = useSessionStore(
     (state) => state.pexelsBrowserByScope[scope],
   );
   const savedQuery = persistedState?.query ?? "";
   const savedSelected = persistedState?.selected ?? [];
-  const setSavedQuery = usePexelsBrowserStore(
-    (state) => state.setPexelsBrowserQuery,
-  );
-  const setSavedSelected = usePexelsBrowserStore(
+  const setSavedQuery = useSessionStore((state) => state.setPexelsBrowserQuery);
+  const setSavedSelected = useSessionStore(
     (state) => state.setPexelsBrowserSelected,
   );
   const [input, setInput] = useState(savedQuery);
@@ -548,7 +544,7 @@ export function PexelsBrowserPanel({
             role="separator"
             onPointerDown={handleResizeStart}
           />
-          <div className="flex h-14 shrink-0 items-center gap-2 pr-0 pl-2 transition-[height] duration-120 ease-linear group-has-data-[state=collapsed]/sidebar-wrapper:h-12">
+          <div className="flex h-14 shrink-0 items-center gap-2 pr-0 pl-2 transition-[height] duration-120 ease-linear group-has-[[data-slot=sidebar][data-state=collapsed]]/sidebar-wrapper:h-12">
             <div className="relative min-w-0 flex-1">
               {search.isFetching && !search.isFetchingNextPage ? (
                 <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground">
@@ -581,14 +577,6 @@ export function PexelsBrowserPanel({
                 </Button>
               ) : null}
             </div>
-            <Button
-              aria-label="Close Pexels browser"
-              size="icon"
-              variant="ghost"
-              onClick={() => close(false)}
-            >
-              <PanelRightCloseIcon />
-            </Button>
           </div>
           <div className="relative min-h-0 flex-1 pl-3">
             <ScrollArea

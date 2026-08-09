@@ -62,6 +62,10 @@ media history.
 (OAC), a CloudFront public key and trusted key group, plus a cache policy that
 excludes cookies, headers, and query strings from the cache key. The bucket is
 not public and CloudFront can read private workspace media through OAC.
+The stable distribution also sends `Timing-Allow-Origin: https://aska-app.styltsou.com`
+so the deployed client can observe cross-origin media resource timing for
+delivery telemetry. This header does not grant media access; signed cookies and
+the private origin policy remain the authorization boundary.
 
 Before an image-backed workspace route renders, the client calls the dedicated
 authenticated `POST /api/v1/media/session/{workspaceSlug}` endpoint. It

@@ -26,6 +26,8 @@ it safely. Start here rather than reconstructing architecture from file names.
   placement contexts, collision handling, and batch rules.
 - [Color Image Search](./color-image-search.md) — shipped retrieval behavior
   and ranking boundaries.
+- [Ambient Interface Spec](./ambient-interface-spec.md) — the implemented
+  auth canvas treatment and remaining ambient-surface direction.
 
 Unbuilt or partially built specs and plans (previously here: spring-loaded
 folder navigation, premium interaction ideas, color-based image search plan)

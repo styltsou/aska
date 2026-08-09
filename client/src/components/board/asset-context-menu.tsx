@@ -23,16 +23,24 @@ import {
   useDeleteCollectionNode,
   useFlattenFolder,
 } from "@/api/collection";
-import type { Asset } from "@/types/asset";
+import type { Asset, ImageAsset } from "@/types/asset";
 import {
   MoveToDialog,
   type MoveToDialogSource,
 } from "@/components/move-to-dialog";
 
-function imageActions() {
+function imageActions(asset: ImageAsset) {
   return (
     <>
-      <ContextMenuItem>Open original</ContextMenuItem>
+      {asset.sourceUrl ? (
+        <ContextMenuItem
+          onClick={() =>
+            window.open(asset.sourceUrl, "_blank", "noopener,noreferrer")
+          }
+        >
+          Open original
+        </ContextMenuItem>
+      ) : null}
       <ContextMenuItem>Copy image</ContextMenuItem>
     </>
   );
@@ -56,8 +64,8 @@ function folderActions() {
   );
 }
 
-const typeActions: Record<Asset["type"], () => React.ReactNode> = {
-  image: imageActions,
+const typeActions: Record<Asset["type"], (asset: Asset) => React.ReactNode> = {
+  image: (asset) => imageActions(asset as ImageAsset),
   note: noteActions,
   folder: folderActions,
 };
@@ -185,7 +193,7 @@ export function AssetContextMenu({
                 </ContextMenuItem>
               ) : null}
               <ContextMenuSeparator />
-              {typeActions[asset.type]()}
+              {typeActions[asset.type](asset)}
             </>
           )}
           <ContextMenuSeparator />

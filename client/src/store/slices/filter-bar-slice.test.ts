@@ -1,14 +1,18 @@
 import { createStore } from "zustand/vanilla";
+import { immer } from "zustand/middleware/immer";
 import { describe, expect, it } from "vitest";
 
-import {
-  createFilterBarSlice,
-  MAX_COLOR_FILTERS,
-  type FilterBarSlice,
-} from "./filter-bar-slice";
+import { createFilterBarSlice, MAX_COLOR_FILTERS } from "./filter-bar-slice";
+import { createPexelsBrowserScopeSlice } from "./pexels-browser-slice";
+import type { SessionStore } from "@/store";
 
 function createTestStore() {
-  return createStore<FilterBarSlice>()(createFilterBarSlice);
+  return createStore<SessionStore>()(
+    immer((...a) => ({
+      ...createFilterBarSlice(...a),
+      ...createPexelsBrowserScopeSlice(...a),
+    })),
+  );
 }
 
 describe("color filter selection", () => {

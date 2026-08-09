@@ -1,5 +1,17 @@
 const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? "http://localhost:3000";
 
+export class ApiError extends Error {
+  readonly status: number;
+  readonly code?: string;
+
+  constructor(status: number, message: string, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${SERVER_URL}${path}`, {
     credentials: "include",
@@ -9,7 +21,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body?.error?.message ?? `Request failed: ${res.status}`);
+    throw new ApiError(
+      res.status,
+      body?.error?.message ?? `Request failed: ${res.status}`,
+      body?.error?.code,
+    );
   }
 
   const json = await res.json();

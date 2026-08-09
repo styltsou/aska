@@ -75,9 +75,16 @@ is deliberately isolated under `components/canvas/`, while Inbox/masonry code
 lives under `components/board/`.
 
 React Query is the source of truth for API data. Zustand is only for browser
-interaction state that is not server state: selection, transient board state,
-and persisted UI preferences such as filters and viewport state. Do not put a
-server response into Zustand just to make it easier to access.
+interaction state that is not server state, split by lifetime:
+
+- `usePersistedStore` stores cross-session app preferences such as sidebar,
+  viewport, and canvas-lock state in `localStorage`.
+- `useSessionStore` stores tab-scoped filters and Pexels browser state in
+  `sessionStorage`, keyed by the relevant Inbox, collection, or folder scope.
+- `useTransientStore` stores in-memory interaction state such as selection,
+  pending assets, scratchpad state, and temporary board state.
+
+Do not put a server response into Zustand just to make it easier to access.
 
 The API client in `client/src/lib/api.ts` sends cookie-authenticated requests
 to `VITE_SERVER_URL` and unwraps the server's `{ data }` envelope. New API

@@ -18,14 +18,21 @@ export const Route = createRootRoute({
   errorComponent: RootError,
 });
 
+const SHELLLESS_ROUTE_IDS = new Set(["/login", "/signup", "/onboarding"]);
+
 function RootLayout() {
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
+  // Base the shell decision on the *committed* match tree rather than the
+  // optimistic `pathname`. The pathname updates to the destination URL the
+  // moment navigation starts, but the Outlet keeps rendering the previous
+  // committed route until the new one resolves. Reading the committed matches
+  // avoids flashing a full auth page (e.g. the AuthPageLayout) inside the app
+  // shell while a signed-in workspace route loads.
+  const isShelllessRoute = useRouterState({
+    select: (state) => {
+      const topLevel = state.matches[1];
+      return topLevel ? SHELLLESS_ROUTE_IDS.has(topLevel.routeId) : true;
+    },
   });
-  const isShelllessRoute =
-    pathname === "/login" ||
-    pathname === "/signup" ||
-    pathname === "/onboarding";
 
   return (
     <ThemeProvider>

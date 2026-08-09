@@ -14,7 +14,7 @@ import { BoardContextMenu, BoardUploadZone } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
 import { MasonryGridSkeleton } from "@/components/masonry-grid-skeleton";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
-import { usePersistedStore } from "@/store";
+import { useSessionStore } from "@/store";
 import type { ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
 
@@ -37,7 +37,7 @@ function InboxPage() {
   const selectedImageId = search.image;
   const navigate = useNavigate({ from: Route.fullPath });
   const filterScope = `inbox:${workspaceSlug}`;
-  const filterBar = usePersistedStore(
+  const filterBar = useSessionStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
   );
   const selectedAssetTypes =

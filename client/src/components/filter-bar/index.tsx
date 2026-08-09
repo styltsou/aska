@@ -41,7 +41,7 @@ import {
 } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
-import { usePersistedStore } from "@/store";
+import { useSessionStore } from "@/store";
 import {
   DEFAULT_FILTER_BAR_STATE,
   FILTER_TYPES,
@@ -138,19 +138,19 @@ export function FilterBar({
   scope: string;
   searchStatus?: FilterSearchStatus;
 }) {
-  const filterBar = usePersistedStore(
+  const filterBar = useSessionStore(
     (state) => state.filterBars[scope] ?? DEFAULT_FILTER_BAR_STATE,
   );
   const { open, selectedColors, selectedAssetTypes = [] } = filterBar;
   const filterType = FILTER_TYPES.includes(filterBar.filterType)
     ? filterBar.filterType
     : "Color";
-  const toggle = usePersistedStore((s) => s.toggleFilterBar);
-  const toggleColor = usePersistedStore((s) => s.toggleColor);
-  const clearColors = usePersistedStore((s) => s.clearColors);
-  const toggleAssetType = usePersistedStore((s) => s.toggleAssetType);
-  const clearAssetTypes = usePersistedStore((s) => s.clearAssetTypes);
-  const setFilterType = usePersistedStore((s) => s.setFilterType);
+  const toggle = useSessionStore((s) => s.toggleFilterBar);
+  const toggleColor = useSessionStore((s) => s.toggleColor);
+  const clearColors = useSessionStore((s) => s.clearColors);
+  const toggleAssetType = useSessionStore((s) => s.toggleAssetType);
+  const clearAssetTypes = useSessionStore((s) => s.clearAssetTypes);
+  const setFilterType = useSessionStore((s) => s.setFilterType);
   const hasActiveModal = useActiveModalLayer();
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const canAddColor = selectedColors.length < MAX_COLOR_FILTERS;

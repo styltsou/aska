@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { getPlatformShift } from "@/lib/platform";
+import { cn } from "@/lib/utils";
 import { CreateCollectionDialog } from "@/components/app-shell/create-collection-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
@@ -25,7 +26,7 @@ import { useWorkspace } from "@/api/workspace";
 import { useCollectionContents } from "@/api/collection";
 import { useBoardInsertionPlacement } from "@/components/canvas";
 import { titleFromSlug } from "@/lib/slug";
-import { usePexelsBrowserStore } from "@/store/pexels-browser-store";
+import { getPexelsBrowserScope, useSessionStore } from "@/store";
 
 function AppBreadcrumbs() {
   const pathname = useRouterState({
@@ -127,12 +128,16 @@ export function AppHeader() {
     collectionsSegment === "collections" && pathSegments.length > 0;
   const collectionPath = pathSegments.join("/");
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
-  const openPexelsBrowser = usePexelsBrowserStore(
+  const openPexelsBrowser = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
+  );
+  const pexelsScope = getPexelsBrowserScope(workspaceSlug, pathSegments[0]);
+  const pexelsBrowserOpen = useSessionStore(
+    (state) => state.pexelsBrowserByScope[pexelsScope]?.open ?? false,
   );
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 min-w-0 shrink-0 items-center gap-2 bg-sidebar transition-[height] duration-120 ease-linear group-has-data-[state=collapsed]/sidebar-wrapper:h-12">
+    <header className="sticky top-0 z-20 flex h-14 min-w-0 shrink-0 items-center gap-2 bg-sidebar transition-[height] duration-120 ease-linear group-has-[[data-slot=sidebar][data-state=collapsed]]/sidebar-wrapper:h-12">
       <SidebarTrigger />
       <AppBreadcrumbs />
       <div className="ml-auto flex items-center gap-2">
@@ -153,7 +158,16 @@ export function AppHeader() {
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => openPexelsBrowser(true)}
+                    aria-expanded={pexelsBrowserOpen}
+                    aria-pressed={pexelsBrowserOpen}
+                    data-active={pexelsBrowserOpen || undefined}
+                    className={cn(
+                      pexelsBrowserOpen &&
+                        "bg-sidebar-active text-sidebar-accent-foreground",
+                    )}
+                    onClick={() =>
+                      openPexelsBrowser(pexelsScope, !pexelsBrowserOpen)
+                    }
                   >
                     <ImageIcon />
                     <span>Photos</span>
@@ -161,7 +175,9 @@ export function AppHeader() {
                 }
               />
               <TooltipContent side="bottom" align="end">
-                Browse Pexels photos
+                {pexelsBrowserOpen
+                  ? "Close Pexels photos"
+                  : "Browse Pexels photos"}
               </TooltipContent>
             </Tooltip>
             <Tooltip>

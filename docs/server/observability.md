@@ -119,3 +119,19 @@ The workers publish `sqs.message.duration` as a Sentry distribution metric with
 `queue` and `outcome` attributes. Prefer trace-derived performance metrics for
 HTTP operations. Add a custom metric only when it represents a durable product
 or operational signal that cannot be answered from spans or logs.
+
+The browser also records low-cardinality image-delivery metrics from
+`ProgressiveImage` when Sentry is enabled:
+
+- `image.delivery.decoded` and `image.delivery.failed` count decode successes
+  and load failures.
+- `image.delivery.decode_duration`, `image.delivery.resource_duration`, and
+  `image.delivery.transfer_bytes` measure decode and resource timing.
+- `image.delivery.intrinsic_to_rendered_width` measures the delivered image's
+  intrinsic width relative to its rendered width.
+
+These metrics use only delivery host, rendition, loading mode, cache warmth,
+and resource-timing state as attributes. They do not attach the image URL or
+image contents. Cross-origin media resource timing is available only when the
+media distribution exposes the deployed client origin through
+`Timing-Allow-Origin`; see [Image Delivery Architecture](../image-delivery-architecture.md).

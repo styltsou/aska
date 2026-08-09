@@ -15,8 +15,15 @@ import { FilterBar } from "@/components/filter-bar";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import type { ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
-import { makeBoardKey, Canvas, CanvasLoading } from "@/components/canvas";
-import { usePersistedStore } from "@/store";
+import {
+  makeBoardKey,
+  Canvas,
+  CanvasLoading,
+  CollectionNotFound,
+  FolderNotFound,
+} from "@/components/canvas";
+import { ApiError } from "@/lib/api";
+import { useSessionStore } from "@/store";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 
 const EMPTY_COLOR_RESULTS: readonly [] = [];
@@ -46,7 +53,7 @@ function CollectionPage() {
   const folderPath = folderSegments.join("/");
   const queryClient = useQueryClient();
   const filterScope = `collection:${workspaceSlug}/${collectionPath}`;
-  const filterBar = usePersistedStore(
+  const filterBar = useSessionStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
   );
   const selectedAssetTypes =
@@ -170,6 +177,31 @@ function CollectionPage() {
     selectedNote,
     selectedNoteId,
   );
+
+  const isNotFound =
+    error instanceof ApiError &&
+    error.status === 404 &&
+    error.code === "not_found";
+
+  if (isNotFound) {
+    const isFolderMissing = error.message.toLowerCase().includes("folder");
+    return (
+      <div className="flex h-full w-full min-w-0 flex-1">
+        {isFolderMissing ? (
+          <FolderNotFound
+            workspaceSlug={workspaceSlug}
+            collectionSlug={collectionSlug}
+            collectionName={cachedCollectionName}
+          />
+        ) : (
+          <CollectionNotFound
+            workspaceSlug={workspaceSlug}
+            collectionName={cachedCollectionName}
+          />
+        )}
+      </div>
+    );
+  }
 
   if (isError && (!data || hasStaleRoutePlaceholder)) {
     return (

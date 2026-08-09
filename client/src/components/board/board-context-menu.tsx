@@ -6,8 +6,11 @@ import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog"
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { readClipboardAssetPayload } from "@/lib/clipboard";
 import { useBoardAssetActions } from "./use-board-asset-actions";
-import { usePexelsBrowserStore } from "@/store/pexels-browser-store";
-import { useTransientStore } from "@/store";
+import {
+  useTransientStore,
+  useSessionStore,
+  getPexelsBrowserScope,
+} from "@/store";
 import { cn } from "@/lib/utils";
 import { formatPlatformShortcut } from "@/lib/platform";
 import {
@@ -52,8 +55,12 @@ export function BoardContextMenu({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const hasActiveModalLayer = useActiveModalLayer();
-  const openPexelsBrowser = usePexelsBrowserStore(
+  const openPexelsBrowser = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
+  );
+  const pexelsScope = getPexelsBrowserScope(
+    workspaceSlug,
+    collectionPath.split("/")[0],
   );
 
   async function handlePasteAsset() {
@@ -87,7 +94,9 @@ export function BoardContextMenu({
             </ContextMenuShortcut>
           </ContextMenuItem>
           {target === "collection" ? (
-            <ContextMenuItem onClick={() => openPexelsBrowser(true)}>
+            <ContextMenuItem
+              onClick={() => openPexelsBrowser(pexelsScope, true)}
+            >
               Browse Pexels
             </ContextMenuItem>
           ) : null}

@@ -45,8 +45,11 @@ import { useEventListener } from "@/hooks/use-event-listener";
 import { KEYBINDINGS } from "@/lib/keybindings";
 import { formatPlatformShortcut } from "@/lib/platform";
 import { openSettings } from "@/lib/settings-dialog";
-import { usePersistedStore, useTransientStore } from "@/store";
-import { usePexelsBrowserStore } from "@/store/pexels-browser-store";
+import {
+  useSessionStore,
+  useTransientStore,
+  getPexelsBrowserScope,
+} from "@/store";
 import { useBoardInsertionPlacement } from "@/components/canvas";
 
 type CommandId =
@@ -174,15 +177,19 @@ export function CommandPalette() {
   });
   const { theme, setTheme } = useTheme();
   const { toggleSidebar } = useSidebar();
-  const toggleFilterBar = usePersistedStore((state) => state.toggleFilterBar);
+  const toggleFilterBar = useSessionStore((state) => state.toggleFilterBar);
   const openScratchpad = useTransientStore((state) => state.openScratchpad);
-  const openPexelsBrowser = usePexelsBrowserStore(
+  const openPexelsBrowser = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
   );
   const [workspaceSlug, view, ...viewPath] = pathname
     .split("/")
     .filter(Boolean);
   const collectionPath = view === "collections" ? viewPath.join("/") : "";
+  const pexelsScope =
+    view === "collections" && viewPath.length > 0
+      ? getPexelsBrowserScope(workspaceSlug, viewPath[0])
+      : undefined;
   const filterScope =
     view === "inbox"
       ? `inbox:${workspaceSlug}`
@@ -328,9 +335,9 @@ export function CommandPalette() {
         });
         return;
       case "open-pexels-browser":
-        if (!canCreateFolder) return;
+        if (!canCreateFolder || !pexelsScope) return;
         setOpen(false);
-        openPexelsBrowser(true);
+        openPexelsBrowser(pexelsScope, true);
         return;
       default:
         return;

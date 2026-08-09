@@ -33,6 +33,7 @@ import {
   SparklesIcon,
   BadgeCheckIcon,
   CreditCardIcon,
+  LoaderCircleIcon,
   LogOutIcon,
 } from "lucide-react";
 import { signOut, type AuthUser } from "@/lib/auth-client";
@@ -47,6 +48,7 @@ export function NavUser({ user }: { user: AuthUser }) {
   const fallback =
     user.name?.charAt(0).toUpperCase() ?? user.email.charAt(0).toUpperCase();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   return (
     <>
@@ -116,7 +118,7 @@ export function NavUser({ user }: { user: AuthUser }) {
                 onClick={() => setShowLogoutConfirm(true)}
               >
                 <LogOutIcon />
-                Log out
+                Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -128,26 +130,42 @@ export function NavUser({ user }: { user: AuthUser }) {
             <AlertDialogHeader>
               <AlertDialogTitle>Sign out</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to sign out?
+                {isSigningOut
+                  ? "Signing you out\u2026"
+                  : "Are you sure you want to sign out?"}
               </AlertDialogDescription>
             </AlertDialogHeader>
           </AlertDialogBody>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isSigningOut}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
+              disabled={isSigningOut}
               onClick={async () => {
+                if (isSigningOut) return;
+                setIsSigningOut(true);
                 try {
-                  await clearMediaSession();
+                  try {
+                    await clearMediaSession();
+                  } finally {
+                    await signOut();
+                  }
+                  clearAuthStateCache();
+                  await router.invalidate();
+                  await router.navigate({ to: "/login", replace: true });
                 } finally {
-                  await signOut();
+                  setIsSigningOut(false);
                 }
-                clearAuthStateCache();
-                await router.invalidate();
-                void router.navigate({ to: "/login", replace: true });
               }}
             >
-              Sign out
+              {isSigningOut ? (
+                <LoaderCircleIcon className="animate-spin" />
+              ) : (
+                <LogOutIcon />
+              )}
+              <span>{isSigningOut ? "Signing out" : "Sign out"}</span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

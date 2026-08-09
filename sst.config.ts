@@ -499,6 +499,22 @@ function createMediaDistribution(input: {
       enableAcceptEncodingGzip: true,
     },
   });
+  const responseHeadersPolicy = new aws.cloudfront.ResponseHeadersPolicy(
+    "MediaPerformanceHeaders",
+    {
+      name: `${$app.name}-${$app.stage}-media-performance`,
+      comment: "Exposes private media timing to the deployed Aska client",
+      customHeadersConfig: {
+        items: [
+          {
+            header: "Timing-Allow-Origin",
+            value: "https://aska-app.styltsou.com",
+            override: true,
+          },
+        ],
+      },
+    },
+  );
   const cdn = new sst.aws.Cdn("Media", {
     comment: "Private immutable workspace images for Aska",
     domain: {
@@ -519,6 +535,7 @@ function createMediaDistribution(input: {
       viewerProtocolPolicy: "redirect-to-https",
       compress: true,
       cachePolicyId: cachePolicy.id,
+      responseHeadersPolicyId: responseHeadersPolicy.id,
       // This makes every distribution request private. The signed-cookie
       // policy itself is limited to an authorized workspace path.
       trustedKeyGroups: [keyGroup.id],

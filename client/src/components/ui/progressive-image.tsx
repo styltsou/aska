@@ -1,6 +1,23 @@
 import { useCallback, useEffect, useState, type ComponentProps } from "react";
 import { motion, type MotionStyle } from "motion/react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  reportImageDecoded,
+  reportImageFailed,
+} from "@/lib/image-delivery-metrics";
 import { cn } from "@/lib/utils";
+
+const MAX_DECODED_IMAGE_SOURCES = 300;
+const decodedImageSources = new Set<string>();
+
+function rememberDecodedSource(src: string) {
+  decodedImageSources.add(src);
+
+  if (decodedImageSources.size > MAX_DECODED_IMAGE_SOURCES) {
+    const oldestSource = decodedImageSources.values().next().value;
+    if (oldestSource) decodedImageSources.delete(oldestSource);
+  }
+}
 
 type ProgressiveImageProps = Omit<
   ComponentProps<typeof motion.img>,
@@ -28,10 +45,13 @@ export function ProgressiveImage({
   ...props
 }: ProgressiveImageProps) {
   const [decodedSrc, setDecodedSrc] = useState<string | null>(null);
-  const isDecoded = decodedSrc === src;
+  const reusedDecodedSource = decodedImageSources.has(src);
+  const isDecoded = decodedSrc === src || reusedDecodedSource;
   const previousDecodedSrc =
     decodedSrc && decodedSrc !== src ? decodedSrc : null;
   const showFallback = Boolean(fallbackSrc) && !isDecoded;
+  const showSkeleton =
+    !fallbackSrc && !blurDataURL && !isDecoded && !previousDecodedSrc;
 
   useEffect(() => {
     if (!isDecoded || !fallbackSrc?.startsWith("blob:")) return;
@@ -45,19 +65,30 @@ export function ProgressiveImage({
     (event) => {
       onLoad?.(event);
 
-      const markDecoded = () => {
+      const markDecoded = (decodeDurationMs = 0) => {
+        rememberDecodedSource(src);
         setDecodedSrc(src);
+        reportImageDecoded({
+          src,
+          image,
+          loading,
+          decodeDurationMs,
+          reusedDecodedSource,
+        });
       };
 
       const image = event.currentTarget;
       if (typeof image.decode === "function") {
-        void image.decode().then(markDecoded).catch(markDecoded);
+        const decodeStartedAt = performance.now();
+        const markImageDecoded = () =>
+          markDecoded(performance.now() - decodeStartedAt);
+        void image.decode().then(markImageDecoded).catch(markImageDecoded);
         return;
       }
 
       markDecoded();
     },
-    [onLoad, src],
+    [loading, onLoad, reusedDecodedSource, src],
   );
 
   const handleError = useCallback<
@@ -65,9 +96,17 @@ export function ProgressiveImage({
   >(
     (event) => {
       onError?.(event);
+      reportImageFailed({ src, loading, reusedDecodedSource });
       if (!fallbackSrc && !previousDecodedSrc) setDecodedSrc(src);
     },
-    [fallbackSrc, onError, previousDecodedSrc, src],
+    [
+      fallbackSrc,
+      loading,
+      onError,
+      previousDecodedSrc,
+      reusedDecodedSource,
+      src,
+    ],
   );
 
   return (
@@ -96,6 +135,15 @@ export function ProgressiveImage({
           />
         </>
       ) : null}
+      {showSkeleton ? (
+        <motion.div
+          aria-hidden="true"
+          className={cn(className, "pointer-events-none")}
+          style={style}
+        >
+          <Skeleton className={cn("size-full", placeholderClassName)} />
+        </motion.div>
+      ) : null}
       {fallbackSrc ? (
         <motion.img
           src={fallbackSrc}
@@ -122,7 +170,11 @@ export function ProgressiveImage({
         style={{
           ...style,
           opacity:
-            isDecoded || (!blurDataURL && !fallbackSrc && !previousDecodedSrc)
+            isDecoded ||
+            (!showSkeleton &&
+              !blurDataURL &&
+              !fallbackSrc &&
+              !previousDecodedSrc)
               ? 1
               : 0,
         }}

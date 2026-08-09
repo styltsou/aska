@@ -1,4 +1,5 @@
 import type { StateCreator } from "zustand";
+import type { SessionStore } from "@/store";
 
 export type FilterColor = string;
 export const FILTER_TYPES = ["Color", "Tags", "Type"] as const;
@@ -33,87 +34,70 @@ export const DEFAULT_FILTER_BAR_STATE: FilterBarState = {
   filterType: "Color",
 };
 
-export const createFilterBarSlice: StateCreator<FilterBarSlice> = (set) => ({
+function createFilterBarState(): FilterBarState {
+  return {
+    open: false,
+    selectedColors: [],
+    selectedTags: [],
+    selectedAssetTypes: [],
+    filterType: "Color",
+  };
+}
+
+export const createFilterBarSlice: StateCreator<
+  SessionStore,
+  [["zustand/immer", never]],
+  [],
+  FilterBarSlice
+> = (set) => ({
   filterBars: {},
   setFilterBarOpen: (scope, open) =>
-    set((state) => ({
-      filterBars: {
-        ...state.filterBars,
-        [scope]: { ...getFilterBarState(state, scope), open },
-      },
-    })),
+    set((state) => {
+      state.filterBars[scope] ??= createFilterBarState();
+      state.filterBars[scope].open = open;
+    }),
   toggleFilterBar: (scope) =>
-    set((state) => ({
-      filterBars: {
-        ...state.filterBars,
-        [scope]: {
-          ...getFilterBarState(state, scope),
-          open: !getFilterBarState(state, scope).open,
-        },
-      },
-    })),
+    set((state) => {
+      state.filterBars[scope] ??= createFilterBarState();
+      state.filterBars[scope].open = !state.filterBars[scope].open;
+    }),
   toggleColor: (scope, color) =>
     set((state) => {
-      const filterBar = getFilterBarState(state, scope);
-
-      return {
-        filterBars: {
-          ...state.filterBars,
-          [scope]: {
-            ...filterBar,
-            selectedColors: filterBar.selectedColors.includes(color)
-              ? filterBar.selectedColors.filter((current) => current !== color)
-              : filterBar.selectedColors.length >= MAX_COLOR_FILTERS
-                ? filterBar.selectedColors
-                : [...filterBar.selectedColors, color],
-          },
-        },
-      };
+      const filterBar = (state.filterBars[scope] ??= createFilterBarState());
+      if (filterBar.selectedColors.includes(color)) {
+        filterBar.selectedColors = filterBar.selectedColors.filter(
+          (current) => current !== color,
+        );
+        return;
+      }
+      if (filterBar.selectedColors.length < MAX_COLOR_FILTERS) {
+        filterBar.selectedColors.push(color);
+      }
     }),
   clearColors: (scope) =>
-    set((state) => ({
-      filterBars: {
-        ...state.filterBars,
-        [scope]: { ...getFilterBarState(state, scope), selectedColors: [] },
-      },
-    })),
+    set((state) => {
+      state.filterBars[scope] ??= createFilterBarState();
+      state.filterBars[scope].selectedColors = [];
+    }),
   toggleAssetType: (scope, type) =>
     set((state) => {
-      const filterBar = getFilterBarState(state, scope);
-
-      return {
-        filterBars: {
-          ...state.filterBars,
-          [scope]: {
-            ...filterBar,
-            selectedAssetTypes: filterBar.selectedAssetTypes.includes(type)
-              ? filterBar.selectedAssetTypes.filter(
-                  (current) => current !== type,
-                )
-              : [...filterBar.selectedAssetTypes, type],
-          },
-        },
-      };
+      const filterBar = (state.filterBars[scope] ??= createFilterBarState());
+      if (filterBar.selectedAssetTypes.includes(type)) {
+        filterBar.selectedAssetTypes = filterBar.selectedAssetTypes.filter(
+          (current) => current !== type,
+        );
+        return;
+      }
+      filterBar.selectedAssetTypes.push(type);
     }),
   clearAssetTypes: (scope) =>
-    set((state) => ({
-      filterBars: {
-        ...state.filterBars,
-        [scope]: { ...getFilterBarState(state, scope), selectedAssetTypes: [] },
-      },
-    })),
+    set((state) => {
+      state.filterBars[scope] ??= createFilterBarState();
+      state.filterBars[scope].selectedAssetTypes = [];
+    }),
   setFilterType: (scope, filterType) =>
-    set((state) => ({
-      filterBars: {
-        ...state.filterBars,
-        [scope]: { ...getFilterBarState(state, scope), filterType },
-      },
-    })),
+    set((state) => {
+      state.filterBars[scope] ??= createFilterBarState();
+      state.filterBars[scope].filterType = filterType;
+    }),
 });
-
-function getFilterBarState(
-  state: Pick<FilterBarSlice, "filterBars">,
-  scope: string,
-): FilterBarState {
-  return { ...DEFAULT_FILTER_BAR_STATE, ...state.filterBars[scope] };
-}

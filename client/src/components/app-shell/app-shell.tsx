@@ -11,7 +11,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { pruneExpiredUploadImagesDrafts } from "@/lib/upload-images-draft";
 import { cn } from "@/lib/utils";
 import { getSidebarCollectionLocation } from "./sidebar-collection-navigation";
-import { usePexelsBrowserStore } from "@/store/pexels-browser-store";
+import { getPexelsBrowserScope, useSessionStore } from "@/store";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const isBoardView = useRouterState({
@@ -25,8 +25,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   });
   const { workspaceSlug, collectionSlug, folderPath } =
     getSidebarCollectionLocation(pathname);
-  const pexelsBrowserOpen = usePexelsBrowserStore(
-    (state) => state.pexelsBrowserOpen,
+  const pexelsBrowserOpen = useSessionStore((state) =>
+    collectionSlug
+      ? (state.pexelsBrowserByScope[
+          getPexelsBrowserScope(workspaceSlug, collectionSlug)
+        ]?.open ?? false)
+      : false,
   );
 
   useEffect(() => {
