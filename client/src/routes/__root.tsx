@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppShell } from "@/components/app-shell";
+import { NotFoundPage } from "@/components/not-found-page";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createRootRoute({
@@ -16,11 +17,16 @@ export const Route = createRootRoute({
   component: RootLayout,
   pendingComponent: RootPending,
   errorComponent: RootError,
+  notFoundComponent: RootNotFound,
 });
 
 const SHELLLESS_ROUTE_IDS = new Set(["/login", "/signup", "/onboarding"]);
 
 function RootLayout() {
+  const isGlobalNotFound = useRouterState({
+    select: (state) => state.matches[0]?.globalNotFound ?? false,
+  });
+
   // Base the shell decision on the *committed* match tree rather than the
   // optimistic `pathname`. The pathname updates to the destination URL the
   // moment navigation starts, but the Outlet keeps rendering the previous
@@ -33,6 +39,14 @@ function RootLayout() {
       return topLevel ? SHELLLESS_ROUTE_IDS.has(topLevel.routeId) : true;
     },
   });
+
+  if (isGlobalNotFound) {
+    return (
+      <ThemeProvider>
+        <NotFoundPage />
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider>
@@ -81,6 +95,14 @@ function RootError({ reset }: ErrorComponentProps) {
           </button>
         </div>
       </div>
+    </ThemeProvider>
+  );
+}
+
+function RootNotFound() {
+  return (
+    <ThemeProvider>
+      <NotFoundPage />
     </ThemeProvider>
   );
 }

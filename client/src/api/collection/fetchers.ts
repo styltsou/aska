@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api";
+import { apiDelete, apiGet, apiGetBlob, apiPatch, apiPost } from "@/lib/api";
 import type {
   BulkDeleteResponse,
   CollectionContentsResponse,
@@ -155,6 +155,17 @@ export async function deleteAsset(
 ): Promise<DeleteAssetResponse> {
   return apiDelete<DeleteAssetResponse>(
     `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}`,
+  );
+}
+
+export async function fetchAssetImageBlob(
+  workspaceSlug: string,
+  assetId: string,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  return apiGetBlob(
+    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/download`,
+    signal,
   );
 }
 

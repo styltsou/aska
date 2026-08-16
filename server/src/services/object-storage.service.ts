@@ -47,7 +47,7 @@ export interface IObjectStorageService {
     expiresInSeconds?: number,
   ): Promise<Map<string, PresignedGetUrl>>;
   putObject(input: PutObjectInput): Promise<void>;
-  getObjectBytes(key: string): Promise<Uint8Array>;
+  getObjectBytes(key: string, signal?: AbortSignal): Promise<Uint8Array>;
   deleteObject(key: string): Promise<void>;
   deleteObjects(keys: string[]): Promise<void>;
 }
@@ -149,14 +149,15 @@ export class ObjectStorageService implements IObjectStorageService {
     );
   }
 
-  async getObjectBytes(key: string): Promise<Uint8Array> {
+  async getObjectBytes(key: string, signal?: AbortSignal): Promise<Uint8Array> {
     const { bucket } = this.getRequiredConfig();
-    const response = await this.getClient().send(
-      new GetObjectCommand({
-        Bucket: bucket,
-        Key: key,
-      }),
-    );
+    const command = new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    });
+    const response = await (signal
+      ? this.getClient().send(command, { abortSignal: signal })
+      : this.getClient().send(command));
 
     const body = response.Body;
     if (!body) {

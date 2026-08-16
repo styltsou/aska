@@ -87,6 +87,7 @@ type CanvasProps = {
   isColorFilterActive?: boolean;
   colorMatchNodeIds?: ReadonlySet<string>;
   focusedNodeId?: string;
+  loadError?: React.ReactNode;
   emptyTitle: string;
   emptyDescription: string;
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
@@ -137,6 +138,7 @@ function CanvasSurface({
   isColorFilterActive = false,
   colorMatchNodeIds,
   focusedNodeId,
+  loadError,
   emptyTitle,
   emptyDescription,
   onOpenFolder,
@@ -1029,7 +1031,9 @@ function CanvasSurface({
         </Panel>
       </ReactFlow>
 
-      {nodes.length === 0 ? (
+      {loadError ? (
+        <div className="absolute inset-0 z-10">{loadError}</div>
+      ) : nodes.length === 0 ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center">
           <div className="max-w-sm space-y-1.5">
             <h2 className="text-sm font-medium">{emptyTitle}</h2>

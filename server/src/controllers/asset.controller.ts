@@ -129,6 +129,7 @@ export const downloadAsset = factory.createHandlers(
     const { bytes, contentType, filename } = await assetService.downloadAsset(
       workspace.id,
       assetId,
+      c.req.raw.signal,
     );
 
     return c.body(bytes as Uint8Array<ArrayBuffer>, 200, {

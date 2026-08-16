@@ -31,6 +31,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
       isFavorite: node.isFavorite,
       blurDataURL: node.blurDataURL ?? undefined,
       dominantColors: node.dominantColors,
+      paletteStatus: node.paletteStatus,
       uploadStatus: node.uploadStatus,
       uploadProgress: node.uploadProgress,
       clientId: node.clientId,

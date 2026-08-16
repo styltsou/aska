@@ -69,7 +69,11 @@ export interface IAssetService {
     orgId: string,
     assetNodeId: string,
   ): Promise<{ deletedAssetId: string }>;
-  downloadAsset(orgId: string, assetNodeId: string): Promise<AssetDownload>;
+  downloadAsset(
+    orgId: string,
+    assetNodeId: string,
+    signal?: AbortSignal,
+  ): Promise<AssetDownload>;
   bulkDeleteAssets(orgId: string, nodeIds: string[]): Promise<BulkDeleteResult>;
 }
 
@@ -282,6 +286,7 @@ export class AssetService implements IAssetService {
   async downloadAsset(
     orgId: string,
     assetNodeId: string,
+    signal?: AbortSignal,
   ): Promise<AssetDownload> {
     const target = parseAssetNodeId(assetNodeId);
     if (target.assetType !== "image") {
@@ -317,6 +322,7 @@ export class AssetService implements IAssetService {
 
     const bytes = await this.objectStorageService.getObjectBytes(
       original.objectKey,
+      signal,
     );
     const filename = row.title?.trim() ? sanitizeFilename(row.title) : "image";
 

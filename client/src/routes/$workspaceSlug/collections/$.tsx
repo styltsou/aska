@@ -1,6 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { LayoutGroup } from "motion/react";
+import { ActiveImageViewerContext } from "@/components/board/image-viewer-transition";
 
 import { collectionQueryKeys } from "@/api/collection/query-keys";
 import {
@@ -15,6 +23,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import type { ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
+import { useImmediateImageViewer } from "@/components/board/use-immediate-image-viewer";
 import {
   makeBoardKey,
   Canvas,
@@ -25,6 +34,7 @@ import {
 import { ApiError } from "@/lib/api";
 import { useSessionStore } from "@/store";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
+import { ResourceLoadError } from "@/components/resource-load-error";
 
 const EMPTY_COLOR_RESULTS: readonly [] = [];
 
@@ -58,15 +68,22 @@ function CollectionPage() {
   );
   const selectedAssetTypes =
     filterBar.filterType === "Type" ? (filterBar.selectedAssetTypes ?? []) : [];
-  const { data, isLoading, isFetching, isError, isPlaceholderData, error } =
-    useCollectionContents(
-      workspaceSlug,
-      collectionSlug,
-      folderPath || undefined,
-      {
-        types: selectedAssetTypes,
-      },
-    );
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isError,
+    isPlaceholderData,
+    error,
+    refetch,
+  } = useCollectionContents(
+    workspaceSlug,
+    collectionSlug,
+    folderPath || undefined,
+    {
+      types: selectedAssetTypes,
+    },
+  );
 
   const cachedCollectionName = queryClient
     .getQueryData<{ collections: Array<{ slug: string; name: string }> }>(
@@ -177,6 +194,10 @@ function CollectionPage() {
     selectedNote,
     selectedNoteId,
   );
+  const { viewerImage, openViewer, closeViewer } = useImmediateImageViewer(
+    selectedImage,
+    selectedImageId,
+  );
 
   const isNotFound =
     error instanceof ApiError &&
@@ -203,17 +224,9 @@ function CollectionPage() {
     );
   }
 
-  if (isError && (!data || hasStaleRoutePlaceholder)) {
-    return (
-      <div className="flex min-h-80 items-center justify-center rounded-lg border border-dashed">
-        <p className="text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : "Unable to load collection"}
-        </p>
-      </div>
-    );
+  if (isLoading || (hasStaleRoutePlaceholder && !isError)) {
+    return <CanvasLoading />;
   }
-
-  if (isLoading || hasStaleRoutePlaceholder) return <CanvasLoading />;
 
   const handleOpenNote = (note: CollectionNoteNode) => {
     const asset = collectionNodeToAsset(note);
@@ -229,108 +242,128 @@ function CollectionPage() {
   };
 
   const handleCloseImage = () => {
-    void navigate({ search: (prev) => ({ ...prev, image: undefined }) });
+    closeViewer();
+    startTransition(() => {
+      void navigate({ search: (prev) => ({ ...prev, image: undefined }) });
+    });
   };
 
+  const loadError =
+    isError && (!data || hasStaleRoutePlaceholder) ? (
+      <ResourceLoadError
+        className="min-h-0"
+        isRetrying={isFetching}
+        resourceName={folderPath ? "folder" : "collection"}
+        onRetry={() => void refetch()}
+      />
+    ) : undefined;
+
   return (
-    <>
-      <BoardContextMenu
-        workspaceSlug={workspaceSlug}
-        collectionPath={collectionPath}
-        boardKey={boardKey}
-      >
-        <BoardUploadZone
+    <ActiveImageViewerContext.Provider value={viewerImage?.id}>
+      <LayoutGroup id="image-viewer">
+        <BoardContextMenu
           workspaceSlug={workspaceSlug}
           collectionPath={collectionPath}
           boardKey={boardKey}
         >
-          <div className="flex h-full min-w-0 flex-1">
-            <Canvas
-              key={boardKey}
-              workspaceSlug={workspaceSlug}
-              collectionSlug={collectionSlug}
-              folderPath={parentFolderPath}
-              expectedParentFolderNodeId={
-                activeFolder ? `folder-${activeFolder.id}` : null
-              }
-              nodes={nodes}
-              isColorFilterActive={hasResolvedColorSearch}
-              colorMatchNodeIds={colorMatchNodeIds}
-              focusedNodeId={focusedColorNodeId}
-              emptyTitle={
-                isTypeFilterActive
-                  ? "No matching assets"
-                  : folderPath
-                    ? "Folder is empty"
-                    : "Collection is empty"
-              }
-              emptyDescription={
-                isTypeFilterActive
-                  ? "Try a different asset type."
-                  : folderPath
-                    ? "Add images, notes, or folders to start arranging this board."
-                    : "Add images, notes, or folders to start arranging this collection."
-              }
-              onOpenNote={handleOpenNote}
-              onOpenImage={(image) => {
-                void navigate({
-                  search: (prev) => ({ ...prev, image: image.id }),
-                });
-              }}
-              onOpenFolder={(folder) => {
-                void navigate({
-                  to: "/$workspaceSlug/collections/$",
-                  params: {
-                    workspaceSlug,
-                    _splat: `${collectionPath}/${folder.slug}`,
-                  },
-                  search: { note: undefined, image: undefined },
-                });
-              }}
-            />
-          </div>
-        </BoardUploadZone>
-      </BoardContextMenu>
-      <NoteDetailDrawer
-        note={drawerNote}
-        noteExtractionTarget={{
-          workspaceSlug,
-          collectionSlug,
-          parentFolderPath,
-        }}
-        onClose={handleCloseNote}
-      />
-      <ImageAssetViewer
-        asset={selectedImage}
-        open={selectedImage !== undefined}
-        workspaceSlug={workspaceSlug}
-        onOpenChange={(open) => {
-          if (!open) handleCloseImage();
-        }}
-      />
-      {(assets.length > 0 || selectedAssetTypes.length > 0) && (
-        <FilterBar
-          scope={filterScope}
-          searchStatus={{
-            resultCount: hasResolvedColorSearch
-              ? colorResults.length
-              : isTypeFilterActive && !isFetching
-                ? nodes.length
-                : undefined,
-            isSearching:
-              colorSearch.isSearching || (isTypeFilterActive && isFetching),
-            focusedResultIndex: hasResolvedColorSearch
-              ? focusedColorResultIndex
-              : undefined,
-            onPrevious: hasResolvedColorSearch
-              ? () => focusRelativeColorResult(-1)
-              : undefined,
-            onNext: hasResolvedColorSearch
-              ? () => focusRelativeColorResult(1)
-              : undefined,
+          <BoardUploadZone
+            workspaceSlug={workspaceSlug}
+            collectionPath={collectionPath}
+            boardKey={boardKey}
+          >
+            <div className="flex h-full min-w-0 flex-1">
+              <Canvas
+                key={boardKey}
+                workspaceSlug={workspaceSlug}
+                collectionSlug={collectionSlug}
+                folderPath={parentFolderPath}
+                expectedParentFolderNodeId={
+                  activeFolder ? `folder-${activeFolder.id}` : null
+                }
+                nodes={nodes}
+                isColorFilterActive={hasResolvedColorSearch}
+                colorMatchNodeIds={colorMatchNodeIds}
+                focusedNodeId={focusedColorNodeId}
+                loadError={loadError}
+                emptyTitle={
+                  isTypeFilterActive
+                    ? "No matching assets"
+                    : folderPath
+                      ? "Folder is empty"
+                      : "Collection is empty"
+                }
+                emptyDescription={
+                  isTypeFilterActive
+                    ? "Try a different asset type."
+                    : folderPath
+                      ? "Add images, notes, or folders to start arranging this board."
+                      : "Add images, notes, or folders to start arranging this collection."
+                }
+                onOpenNote={handleOpenNote}
+                onOpenImage={(image) => {
+                  const asset = collectionNodeToAsset(image);
+                  if (asset.type === "image") openViewer(asset);
+                  startTransition(() => {
+                    void navigate({
+                      search: (prev) => ({ ...prev, image: image.id }),
+                    });
+                  });
+                }}
+                onOpenFolder={(folder) => {
+                  void navigate({
+                    to: "/$workspaceSlug/collections/$",
+                    params: {
+                      workspaceSlug,
+                      _splat: `${collectionPath}/${folder.slug}`,
+                    },
+                    search: { note: undefined, image: undefined },
+                  });
+                }}
+              />
+            </div>
+          </BoardUploadZone>
+        </BoardContextMenu>
+        <NoteDetailDrawer
+          note={drawerNote}
+          noteExtractionTarget={{
+            workspaceSlug,
+            collectionSlug,
+            parentFolderPath,
+          }}
+          onClose={handleCloseNote}
+        />
+        <ImageAssetViewer
+          asset={viewerImage}
+          open={viewerImage !== undefined}
+          workspaceSlug={workspaceSlug}
+          onOpenChange={(open) => {
+            if (!open) handleCloseImage();
           }}
         />
-      )}
-    </>
+        {(assets.length > 0 || selectedAssetTypes.length > 0) && (
+          <FilterBar
+            scope={filterScope}
+            searchStatus={{
+              resultCount: hasResolvedColorSearch
+                ? colorResults.length
+                : isTypeFilterActive && !isFetching
+                  ? nodes.length
+                  : undefined,
+              isSearching:
+                colorSearch.isSearching || (isTypeFilterActive && isFetching),
+              focusedResultIndex: hasResolvedColorSearch
+                ? focusedColorResultIndex
+                : undefined,
+              onPrevious: hasResolvedColorSearch
+                ? () => focusRelativeColorResult(-1)
+                : undefined,
+              onNext: hasResolvedColorSearch
+                ? () => focusRelativeColorResult(1)
+                : undefined,
+            }}
+          />
+        )}
+      </LayoutGroup>
+    </ActiveImageViewerContext.Provider>
   );
 }

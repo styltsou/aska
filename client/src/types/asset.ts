@@ -18,6 +18,7 @@ export interface ImageAsset {
   dominantColors?: string[];
   uploadStatus?: "uploading" | "processing";
   uploadProgress?: number;
+  paletteStatus?: "processing" | "completed" | "failed";
   clientId?: string;
   sizeBytes?: number;
   createdAt?: string;

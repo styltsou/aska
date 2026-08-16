@@ -143,7 +143,13 @@ export const CanvasCard = memo(function CanvasCard({
       {isPending ? (
         card()
       ) : (
-        <AssetContextMenu asset={asset} deleteContext={data.deleteContext}>
+        <AssetContextMenu
+          asset={asset}
+          deleteContext={data.deleteContext}
+          onOpenImage={
+            node.type === "image" ? () => data.onOpenImage(node) : undefined
+          }
+        >
           {card}
         </AssetContextMenu>
       )}

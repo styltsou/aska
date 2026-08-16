@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { ExternalLink, LoaderCircleIcon } from "lucide-react";
 import {
   getImageViewerLayoutId,
   IMAGE_VIEWER_TRANSITION,
+  useActiveImageViewer,
 } from "@/components/board/image-viewer-transition";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import type { ImageAsset } from "@/types/asset";
@@ -19,13 +19,10 @@ export function ImageAssetCard({
   onOpen?: () => void;
   isContextMenuOpen?: boolean;
 }) {
-  const [hovered, setHovered] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+  const activeViewerAssetId = useActiveImageViewer();
+  const imageIsInViewer = activeViewerAssetId === asset.id;
   const hasBar = asset.sourceLabel;
-  const uploadLabel =
-    asset.uploadStatus === "processing"
-      ? "Processing"
-      : `Uploading ${asset.uploadProgress ?? 0}%`;
 
   return (
     <div
@@ -36,8 +33,10 @@ export function ImageAssetCard({
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}
       style={{ aspectRatio: `${asset.width} / ${asset.height}` }}
-      onClick={(event) => {
-        if (!hasSelectionModifier(event)) onOpen?.();
+      onDoubleClick={(event) => {
+        if (!hasSelectionModifier(event)) {
+          onOpen?.();
+        }
       }}
       onKeyDown={(event) => {
         if (!onOpen || (event.key !== "Enter" && event.key !== " ")) {
@@ -47,56 +46,60 @@ export function ImageAssetCard({
         event.preventDefault();
         onOpen();
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
-      <ProgressiveImage
-        src={asset.url}
-        fallbackSrc={asset.localPreviewUrl}
-        blurDataURL={asset.uploadStatus ? undefined : asset.blurDataURL}
-        alt={asset.alt ?? ""}
-        className="absolute inset-0 h-full w-full rounded-[6px] object-cover"
-        layoutId={
-          onOpen && !shouldReduceMotion
-            ? getImageViewerLayoutId(asset.id)
-            : undefined
-        }
-        whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
-        transition={IMAGE_VIEWER_TRANSITION}
-        loading="lazy"
-      />
+      {!imageIsInViewer ? (
+        <motion.div
+          layoutId={
+            onOpen && !shouldReduceMotion
+              ? getImageViewerLayoutId(asset.id)
+              : undefined
+          }
+          transition={IMAGE_VIEWER_TRANSITION}
+          className="absolute inset-0 overflow-hidden rounded-[6px]"
+        >
+          <ProgressiveImage
+            src={asset.url}
+            fallbackSrc={asset.localPreviewUrl}
+            blurDataURL={asset.uploadStatus ? undefined : asset.blurDataURL}
+            alt={asset.alt ?? ""}
+            className="absolute inset-0 h-full w-full rounded-[inherit] object-cover"
+            loading="lazy"
+          />
+        </motion.div>
+      ) : null}
       {asset.uploadStatus ? (
         <div className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5">
           <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
             <LoaderCircleIcon className="size-3 animate-spin" />
-            <span>{uploadLabel}</span>
+            {asset.uploadStatus === "processing" ? (
+              <span>Importing</span>
+            ) : (
+              <span>
+                Uploading{" "}
+                <span className="font-mono tabular-nums">
+                  {asset.uploadProgress ?? 0}%
+                </span>
+              </span>
+            )}
           </div>
         </div>
       ) : null}
-      <AnimatePresence>
-        {hovered && hasBar && !asset.uploadStatus && (
-          <motion.div
-            initial={{ y: 6, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 6, opacity: 0 }}
-            transition={{ duration: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
-          >
-            <div className="group/pill inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground ring-1 ring-sidebar-foreground/10 backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-sidebar-foreground/25">
-              <a
-                href={asset.sourceUrl ?? asset.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(event) => event.stopPropagation()}
-                className="inline-flex min-w-0 items-center gap-1"
-              >
-                <ExternalLink className="size-3 shrink-0" />
-                <span className="truncate">{asset.sourceLabel}</span>
-              </a>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {hasBar && !asset.uploadStatus ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-full justify-center px-2.5 pb-2.5 opacity-0 transition-[translate,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 motion-reduce:transition-none">
+          <div className="group/pill inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-sidebar-foreground/25">
+            <a
+              href={asset.sourceUrl ?? asset.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => event.stopPropagation()}
+              className="inline-flex min-w-0 items-center gap-1"
+            >
+              <ExternalLink className="size-3 shrink-0" />
+              <span className="truncate">{asset.sourceLabel}</span>
+            </a>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

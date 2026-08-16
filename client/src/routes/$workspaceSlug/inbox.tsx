@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { startTransition, useEffect } from "react";
+import { LayoutGroup } from "motion/react";
+import { ActiveImageViewerContext } from "@/components/board/image-viewer-transition";
 
 import { useInboxContents, useMarkInboxSeen } from "@/api/collection";
 import {
@@ -17,6 +19,8 @@ import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { useSessionStore } from "@/store";
 import type { ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
+import { useImmediateImageViewer } from "@/components/board/use-immediate-image-viewer";
+import { ResourceLoadError } from "@/components/resource-load-error";
 
 export const Route = createFileRoute("/$workspaceSlug/inbox")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -42,7 +46,7 @@ function InboxPage() {
   );
   const selectedAssetTypes =
     filterBar.filterType === "Type" ? (filterBar.selectedAssetTypes ?? []) : [];
-  const { data, isLoading, isFetching, isError, error } = useInboxContents(
+  const { data, isLoading, isFetching, isError, refetch } = useInboxContents(
     workspaceSlug,
     selectedAssetTypes,
   );
@@ -80,16 +84,20 @@ function InboxPage() {
     selectedNote,
     selectedNoteId,
   );
+  const { viewerImage, openViewer, closeViewer } = useImmediateImageViewer(
+    selectedImage,
+    selectedImageId,
+  );
 
   if (isLoading) return <MasonryGridSkeleton />;
 
   if (isError && !data) {
     return (
-      <div className="flex min-h-80 items-center justify-center rounded-lg border border-dashed">
-        <p className="text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : "Unable to load Inbox"}
-        </p>
-      </div>
+      <ResourceLoadError
+        isRetrying={isFetching}
+        resourceName="inbox"
+        onRetry={() => void refetch()}
+      />
     );
   }
 
@@ -104,67 +112,77 @@ function InboxPage() {
   };
 
   const handleOpenImage = (image: ImageAsset) => {
-    void navigate({ search: (prev) => ({ ...prev, image: image.id }) });
+    openViewer(image);
+    startTransition(() => {
+      void navigate({ search: (prev) => ({ ...prev, image: image.id }) });
+    });
   };
 
   const handleCloseImage = () => {
-    void navigate({ search: (prev) => ({ ...prev, image: undefined }) });
+    closeViewer();
+    startTransition(() => {
+      void navigate({ search: (prev) => ({ ...prev, image: undefined }) });
+    });
   };
 
   return (
-    <BoardContextMenu
-      workspaceSlug={workspaceSlug}
-      collectionPath=""
-      target="inbox"
-    >
-      <BoardUploadZone
-        workspaceSlug={workspaceSlug}
-        collectionPath=""
-        target="inbox"
-      >
-        <AssetBoard
-          assets={displayAssets}
-          inboxContext={{ workspaceSlug }}
-          onOpenNote={handleOpenNote}
-          onOpenImage={handleOpenImage}
-          emptyTitle={
-            hasResolvedColorSearch || isTypeFilterActive
-              ? "No matching assets"
-              : "Inbox is empty"
-          }
-          emptyDescription={
-            hasResolvedColorSearch
-              ? "Try a different color combination."
-              : isTypeFilterActive
-                ? "Try a different asset type."
-                : "Quick captures and imports that are not in a collection yet will appear here."
-          }
-        />
-      </BoardUploadZone>
-      <NoteDetailDrawer note={drawerNote} onClose={handleCloseNote} />
-      <ImageAssetViewer
-        asset={selectedImage}
-        open={selectedImage !== undefined}
-        workspaceSlug={workspaceSlug}
-        onOpenChange={(open) => {
-          if (!open) handleCloseImage();
-        }}
-      />
-      {(assets.length > 0 || selectedAssetTypes.length > 0) && (
-        <FilterBar
-          scope={filterScope}
-          searchStatus={{
-            resultCount: hasResolvedColorSearch
-              ? colorSearch.data.results.length
-              : isTypeFilterActive && !isFetching
-                ? assets.length
-                : undefined,
-            isSearching:
-              colorSearch.isSearching || (isTypeFilterActive && isFetching),
-          }}
-        />
-      )}
-    </BoardContextMenu>
+    <ActiveImageViewerContext.Provider value={viewerImage?.id}>
+      <LayoutGroup id="image-viewer">
+        <BoardContextMenu
+          workspaceSlug={workspaceSlug}
+          collectionPath=""
+          target="inbox"
+        >
+          <BoardUploadZone
+            workspaceSlug={workspaceSlug}
+            collectionPath=""
+            target="inbox"
+          >
+            <AssetBoard
+              assets={displayAssets}
+              inboxContext={{ workspaceSlug }}
+              onOpenNote={handleOpenNote}
+              onOpenImage={handleOpenImage}
+              emptyTitle={
+                hasResolvedColorSearch || isTypeFilterActive
+                  ? "No matching assets"
+                  : "Inbox is empty"
+              }
+              emptyDescription={
+                hasResolvedColorSearch
+                  ? "Try a different color combination."
+                  : isTypeFilterActive
+                    ? "Try a different asset type."
+                    : "Quick captures and imports that are not in a collection yet will appear here."
+              }
+            />
+          </BoardUploadZone>
+          <NoteDetailDrawer note={drawerNote} onClose={handleCloseNote} />
+          <ImageAssetViewer
+            asset={viewerImage}
+            open={viewerImage !== undefined}
+            workspaceSlug={workspaceSlug}
+            onOpenChange={(open) => {
+              if (!open) handleCloseImage();
+            }}
+          />
+          {(assets.length > 0 || selectedAssetTypes.length > 0) && (
+            <FilterBar
+              scope={filterScope}
+              searchStatus={{
+                resultCount: hasResolvedColorSearch
+                  ? colorSearch.data.results.length
+                  : isTypeFilterActive && !isFetching
+                    ? assets.length
+                    : undefined,
+                isSearching:
+                  colorSearch.isSearching || (isTypeFilterActive && isFetching),
+              }}
+            />
+          )}
+        </BoardContextMenu>
+      </LayoutGroup>
+    </ActiveImageViewerContext.Provider>
   );
 }
 

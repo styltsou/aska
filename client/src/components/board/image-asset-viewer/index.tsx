@@ -6,30 +6,72 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import {
+  ButtonGroup,
+  ButtonGroupSeparator,
+} from "@/components/ui/button-group";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  CropIcon,
   CheckIcon,
+  CopyIcon,
   DownloadIcon,
   ExternalLinkIcon,
+  PipetteIcon,
   XIcon,
 } from "lucide-react";
 import type { ImageAsset } from "@/types/asset";
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  type SyntheticEvent,
+  type Ref,
+  type MouseEvent,
+  type PointerEvent,
+  useState,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from "react";
 import Cropper, { type Area, type Size } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
-import { ImageMetadata } from "./image-metadata";
+import { ImageColorPalette, ImageMetadataDetails } from "./image-metadata";
 import { CropToolbar } from "./crop-toolbar";
 import { apiPost } from "@/lib/api";
+import { fetchAssetImageBlob } from "@/api/collection/fetchers";
 import { collectionQueryKeys } from "@/api/collection/query-keys";
 import { useQueryClient } from "@tanstack/react-query";
+import { copyImageToClipboard } from "@/lib/clipboard";
+import { GLASS_FRAME_CLASS, GLASS_SURFACE_CLASS } from "@/lib/glass";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { motion, useReducedMotion } from "motion/react";
+import {
+  getImageViewerLayoutId,
+  IMAGE_VIEWER_TRANSITION,
+} from "@/components/board/image-viewer-transition";
 
 const MIN_FREE_CROP_SIZE = 80;
+const COLOR_PREVIEW_GAP = 14;
+const COLOR_PREVIEW_INSET = 8;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+const FLOATING_ISLAND_SURFACE_CLASS = cn(
+  "relative z-10 rounded-md",
+  GLASS_SURFACE_CLASS,
+);
+
+const COLOR_PICKER_SURFACE_CLASS = cn(
+  "flex items-center gap-2 rounded-md border border-border/80 p-1.5",
+  GLASS_FRAME_CLASS,
+);
 
 type CropFrameColors = {
   frame: string;
@@ -53,6 +95,17 @@ type CropResponse = {
     | "alt"
   >;
 };
+
+function getSourceLabel(asset: ImageAsset): string | undefined {
+  if (!asset.sourceUrl) return undefined;
+  if (asset.sourceLabel) return asset.sourceLabel;
+
+  try {
+    return new URL(asset.sourceUrl).hostname.replace(/^www\./, "");
+  } catch {
+    return asset.sourceUrl;
+  }
+}
 
 async function makeCroppedPreview(url: string, crop: Area): Promise<string> {
   const response = await fetch(url);
@@ -443,6 +496,330 @@ function CropInspector({
   );
 }
 
+function ProgressiveViewerImage({
+  displayUrl,
+  originalUrl,
+  alt,
+  aspectRatio,
+  layoutId,
+  onLayoutAnimationStart,
+  onLayoutAnimationComplete,
+  imageRef,
+  pickMode,
+  onPick,
+  loadSamplingCanvas,
+}: {
+  displayUrl: string;
+  originalUrl?: string;
+  alt: string;
+  aspectRatio: number;
+  layoutId?: string;
+  onLayoutAnimationStart?: () => void;
+  onLayoutAnimationComplete?: () => void;
+  imageRef?: Ref<HTMLImageElement>;
+  pickMode?: boolean;
+  onPick?: (hex: string) => void;
+  loadSamplingCanvas?: () => Promise<HTMLCanvasElement | null>;
+}) {
+  const [shouldLoadOriginal, setShouldLoadOriginal] = useState(false);
+  const [isOriginalReady, setIsOriginalReady] = useState(false);
+  const [hover, setHover] = useState<{
+    x: number;
+    y: number;
+    hex: string;
+  } | null>(null);
+  const samplerRef = useRef<HTMLCanvasElement | null>(null);
+  const samplerContextRef = useRef<CanvasRenderingContext2D | null>(null);
+  const colorPreviewRef = useRef<HTMLDivElement>(null);
+  const colorPreviewSwatchRef = useRef<HTMLSpanElement>(null);
+  const colorPreviewHexRef = useRef<HTMLParagraphElement>(null);
+  const previewIsVisibleRef = useRef(false);
+  const pendingSampleRef = useRef<{
+    image: HTMLElement;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
+  const lastPointerRef = useRef<{
+    image: HTMLElement;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
+  const samplingFrameRef = useRef<number | null>(null);
+  const pickModeRef = useRef(pickMode);
+  const hasSeparateOriginal =
+    Boolean(originalUrl) && originalUrl !== displayUrl;
+
+  pickModeRef.current = pickMode;
+
+  useEffect(() => {
+    if (!hasSeparateOriginal) return;
+
+    const frame = requestAnimationFrame(() => setShouldLoadOriginal(true));
+    return () => cancelAnimationFrame(frame);
+  }, [hasSeparateOriginal]);
+
+  const handleOriginalLoad = useCallback(
+    (event: SyntheticEvent<HTMLImageElement>) => {
+      const image = event.currentTarget;
+      void image
+        .decode()
+        .catch(() => undefined)
+        .finally(() => setIsOriginalReady(true));
+    },
+    [],
+  );
+
+  const samplePixel = useCallback(
+    (image: HTMLElement, clientX: number, clientY: number) => {
+      const canvas = samplerRef.current;
+      const context = samplerContextRef.current;
+      if (!canvas || !context) return null;
+      const rect = image.getBoundingClientRect();
+      const x = Math.min(
+        canvas.width - 1,
+        Math.max(
+          0,
+          Math.round(((clientX - rect.left) / rect.width) * canvas.width),
+        ),
+      );
+      const y = Math.min(
+        canvas.height - 1,
+        Math.max(
+          0,
+          Math.round(((clientY - rect.top) / rect.height) * canvas.height),
+        ),
+      );
+      const pixel = context.getImageData(x, y, 1, 1).data;
+      return `#${[pixel[0], pixel[1], pixel[2]]
+        .map((v) => v.toString(16).padStart(2, "0"))
+        .join("")}`;
+    },
+    [],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    samplerRef.current = null;
+    samplerContextRef.current = null;
+
+    void loadSamplingCanvas?.().then((canvas) => {
+      if (cancelled || !canvas) return;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      if (!context) return;
+
+      samplerRef.current = canvas;
+      samplerContextRef.current = context;
+
+      const pointer = lastPointerRef.current;
+      if (!pickModeRef.current || !pointer) return;
+      const hex = samplePixel(pointer.image, pointer.clientX, pointer.clientY);
+      if (!hex) return;
+      const rect = pointer.image.getBoundingClientRect();
+      previewIsVisibleRef.current = true;
+      setHover({
+        x: pointer.clientX - rect.left,
+        y: pointer.clientY - rect.top,
+        hex,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadSamplingCanvas, samplePixel]);
+
+  useEffect(() => {
+    setHover(null);
+    previewIsVisibleRef.current = false;
+    pendingSampleRef.current = null;
+    lastPointerRef.current = null;
+    if (samplingFrameRef.current !== null) {
+      cancelAnimationFrame(samplingFrameRef.current);
+      samplingFrameRef.current = null;
+    }
+  }, [pickMode]);
+
+  const updatePreviewPosition = useCallback(
+    (image: HTMLElement, clientX: number, clientY: number) => {
+      const rect = image.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const preview = colorPreviewRef.current;
+      if (preview) {
+        const previewRect = preview.getBoundingClientRect();
+        const maxLeft = Math.max(0, rect.width - previewRect.width);
+        const horizontalInset = Math.min(COLOR_PREVIEW_INSET, maxLeft / 2);
+        const left = clamp(
+          x - previewRect.width / 2,
+          horizontalInset,
+          maxLeft - horizontalInset,
+        );
+        const maxTop = Math.max(0, rect.height - previewRect.height);
+        const verticalInset = Math.min(COLOR_PREVIEW_INSET, maxTop / 2);
+        const preferredTop = y - previewRect.height - COLOR_PREVIEW_GAP;
+        const top = clamp(
+          preferredTop >= verticalInset ? preferredTop : y + COLOR_PREVIEW_GAP,
+          verticalInset,
+          maxTop - verticalInset,
+        );
+
+        preview.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+      }
+      return { x, y };
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    const pointer = lastPointerRef.current;
+    if (!hover || !pointer) return;
+    updatePreviewPosition(pointer.image, pointer.clientX, pointer.clientY);
+  }, [hover, updatePreviewPosition]);
+
+  const updatePreviewColor = useCallback((hex: string) => {
+    if (colorPreviewSwatchRef.current) {
+      colorPreviewSwatchRef.current.style.backgroundColor = hex;
+    }
+    if (colorPreviewHexRef.current) {
+      colorPreviewHexRef.current.textContent = hex;
+    }
+  }, []);
+
+  const handlePointerMove = useCallback(
+    (event: PointerEvent<HTMLDivElement>) => {
+      const image = event.currentTarget;
+      lastPointerRef.current = {
+        image,
+        clientX: event.clientX,
+        clientY: event.clientY,
+      };
+      if (!pickMode || !samplerRef.current) return;
+      const position = updatePreviewPosition(
+        image,
+        event.clientX,
+        event.clientY,
+      );
+
+      if (!previewIsVisibleRef.current) {
+        const hex = samplePixel(image, event.clientX, event.clientY);
+        if (!hex) return;
+        previewIsVisibleRef.current = true;
+        setHover({ ...position, hex });
+        return;
+      }
+
+      pendingSampleRef.current = {
+        image,
+        clientX: event.clientX,
+        clientY: event.clientY,
+      };
+      if (samplingFrameRef.current !== null) return;
+
+      samplingFrameRef.current = requestAnimationFrame(() => {
+        samplingFrameRef.current = null;
+        const pendingSample = pendingSampleRef.current;
+        if (!pendingSample) return;
+        const hex = samplePixel(
+          pendingSample.image,
+          pendingSample.clientX,
+          pendingSample.clientY,
+        );
+        if (hex) updatePreviewColor(hex);
+      });
+    },
+    [pickMode, samplePixel, updatePreviewColor, updatePreviewPosition],
+  );
+
+  const handleClick = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (!pickMode || !samplerRef.current) return;
+      const image = event.currentTarget;
+      const hex = samplePixel(image, event.clientX, event.clientY);
+      if (hex) onPick?.(hex);
+    },
+    [pickMode, samplePixel, onPick],
+  );
+
+  const handlePointerLeave = useCallback(() => {
+    previewIsVisibleRef.current = false;
+    pendingSampleRef.current = null;
+    lastPointerRef.current = null;
+    if (samplingFrameRef.current !== null) {
+      cancelAnimationFrame(samplingFrameRef.current);
+      samplingFrameRef.current = null;
+    }
+    setHover(null);
+  }, []);
+
+  return (
+    <motion.div
+      layoutId={layoutId}
+      transition={IMAGE_VIEWER_TRANSITION}
+      onLayoutAnimationStart={onLayoutAnimationStart}
+      onLayoutAnimationComplete={onLayoutAnimationComplete}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      onClick={handleClick}
+      className={cn(
+        "relative overflow-hidden rounded-lg",
+        pickMode && "cursor-crosshair",
+      )}
+      style={{
+        width: `min(100cqw, calc(100cqh * ${aspectRatio}))`,
+        height: `min(100cqh, calc(100cqw / ${aspectRatio}))`,
+      }}
+    >
+      <img
+        ref={imageRef}
+        src={displayUrl}
+        alt={alt}
+        draggable={false}
+        loading="eager"
+        className="size-full rounded-[inherit] object-cover"
+      />
+      {hasSeparateOriginal && shouldLoadOriginal && originalUrl ? (
+        <img
+          src={originalUrl}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          loading="eager"
+          onLoad={handleOriginalLoad}
+          className={cn(
+            "absolute inset-0 size-full rounded-[inherit] object-cover transition-opacity duration-150 motion-reduce:transition-none",
+            isOriginalReady ? "opacity-100" : "opacity-0",
+          )}
+        />
+      ) : null}
+      {pickMode && hover ? (
+        <div
+          ref={colorPreviewRef}
+          className="pointer-events-none absolute z-10"
+          style={{
+            left: 0,
+            top: 0,
+            transform: `translate3d(${hover.x}px, ${hover.y}px, 0)`,
+          }}
+        >
+          <div className={COLOR_PICKER_SURFACE_CLASS}>
+            <span
+              ref={colorPreviewSwatchRef}
+              className="size-9 shrink-0 rounded-[calc(var(--radius-md)-3px)] ring-1 ring-black/15 ring-inset"
+              style={{ backgroundColor: hover.hex }}
+            />
+            <p
+              ref={colorPreviewHexRef}
+              className="min-w-0 pr-1 font-mono text-sm leading-5 font-semibold text-foreground uppercase"
+            >
+              {hover.hex}
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </motion.div>
+  );
+}
+
 export function ImageAssetViewer({
   asset: selectedAsset,
   open,
@@ -455,14 +832,32 @@ export function ImageAssetViewer({
   workspaceSlug: string;
 }) {
   const retainedAssetRef = useRef(selectedAsset);
+  const shouldReduceMotion = useReducedMotion();
   const queryClient = useQueryClient();
   const [editedAsset, setEditedAsset] = useState<ImageAsset | null>(null);
+  const [showBackdrop, setShowBackdrop] = useState(false);
+  const [showChrome, setShowChrome] = useState(false);
   const [optimisticCropPreviewUrl, setOptimisticCropPreviewUrl] = useState<
     string | null
   >(null);
   useEffect(() => {
     if (selectedAsset) retainedAssetRef.current = selectedAsset;
   }, [selectedAsset]);
+
+  useEffect(() => {
+    if (!open) {
+      setShowBackdrop(false);
+      setShowChrome(false);
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => setShowBackdrop(true));
+    const fallback = window.setTimeout(() => setShowChrome(true), 200);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(fallback);
+    };
+  }, [open]);
 
   const asset = editedAsset ?? selectedAsset ?? retainedAssetRef.current;
   const title = asset?.title || asset?.sourceLabel || "Image preview";
@@ -487,7 +882,17 @@ export function ImageAssetViewer({
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const [isSavingCrop, setIsSavingCrop] = useState(false);
   const [cropError, setCropError] = useState<string | null>(null);
+  const [hasCopiedImage, setHasCopiedImage] = useState(false);
+  const [hasCopiedColor, setHasCopiedColor] = useState(false);
+  const [isEyeDropping, setIsEyeDropping] = useState(false);
   const cropperContainerRef = useRef<HTMLDivElement>(null);
+  const viewerImageRef = useRef<HTMLImageElement>(null);
+  const copiedImageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const copiedColorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   useEffect(() => {
     setEditedAsset(null);
@@ -501,6 +906,7 @@ export function ImageAssetViewer({
       setAspectCropSize(null);
       setCropperCropSize(null);
       setMediaLoaded(false);
+      setIsEyeDropping(false);
     }
   }, [open]);
 
@@ -515,7 +921,35 @@ export function ImageAssetViewer({
     setMediaSize(null);
     setMediaLoaded(false);
     setCropError(null);
+    setHasCopiedImage(false);
+    setHasCopiedColor(false);
+    setIsEyeDropping(false);
   }, [asset?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (copiedImageTimeoutRef.current) {
+        clearTimeout(copiedImageTimeoutRef.current);
+      }
+      if (copiedColorTimeoutRef.current) {
+        clearTimeout(copiedColorTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isEyeDropping) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      setIsEyeDropping(false);
+    };
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+  }, [isEyeDropping]);
 
   useEffect(() => {
     const container = cropperContainerRef.current;
@@ -788,8 +1222,112 @@ export function ImageAssetViewer({
     link.remove();
   }, [asset, workspaceSlug]);
 
+  const handleCopyImage = useCallback(async () => {
+    if (!asset) return;
+
+    try {
+      await copyImageToClipboard(async () => {
+        if (!asset.uploadStatus) {
+          return fetchAssetImageBlob(workspaceSlug, asset.id);
+        }
+
+        const response = await fetch(
+          asset.localPreviewUrl ?? asset.originalUrl ?? asset.url,
+        );
+        if (!response.ok) throw new Error("Unable to copy image.");
+        return response.blob();
+      });
+      setHasCopiedImage(true);
+      if (copiedImageTimeoutRef.current) {
+        clearTimeout(copiedImageTimeoutRef.current);
+      }
+      copiedImageTimeoutRef.current = setTimeout(() => {
+        setHasCopiedImage(false);
+      }, 1500);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Unable to copy image.",
+      );
+    }
+  }, [asset, workspaceSlug]);
+
+  const flashCopiedColor = useCallback(() => {
+    setHasCopiedColor(true);
+    if (copiedColorTimeoutRef.current) {
+      clearTimeout(copiedColorTimeoutRef.current);
+    }
+    copiedColorTimeoutRef.current = setTimeout(() => {
+      setHasCopiedColor(false);
+    }, 1500);
+  }, []);
+
+  const copyColor = useCallback(
+    async (hex: string) => {
+      try {
+        await navigator.clipboard.writeText(hex.toUpperCase());
+        flashCopiedColor();
+      } catch {
+        toast.error("Unable to copy color.");
+      }
+    },
+    [flashCopiedColor],
+  );
+
+  const loadSamplingCanvas =
+    useCallback(async (): Promise<HTMLCanvasElement | null> => {
+      try {
+        const url = asset?.uploadStatus
+          ? (asset.localPreviewUrl ?? asset.originalUrl ?? asset.url)
+          : undefined;
+        let blob: Blob;
+        if (url) {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error("Unable to load image.");
+          blob = await response.blob();
+        } else if (asset) {
+          blob = await fetchAssetImageBlob(workspaceSlug, asset.id);
+        } else {
+          return null;
+        }
+        const bitmap = await createImageBitmap(blob);
+        const canvas = document.createElement("canvas");
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) {
+          bitmap.close();
+          return null;
+        }
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        return canvas;
+      } catch {
+        toast.error("Unable to read image colors.");
+        return null;
+      }
+    }, [asset, workspaceSlug]);
+
+  const handlePickColorResult = useCallback(
+    (hex: string) => {
+      setIsEyeDropping(false);
+      void copyColor(hex);
+    },
+    [copyColor],
+  );
+
+  const handlePickColor = useCallback(() => {
+    setIsEyeDropping((prev) => !prev);
+  }, []);
+
   const displayUrl = optimisticCropPreviewUrl ?? asset?.url;
+  const viewerImageUrl =
+    optimisticCropPreviewUrl ?? asset?.originalUrl ?? asset?.url;
+  const viewerAspectRatio = asset
+    ? (asset.originalWidth ?? asset.width) /
+      (asset.originalHeight ?? asset.height)
+    : 1;
   const blurPlaceholder = asset?.uploadStatus ? undefined : asset?.blurDataURL;
+  const sourceLabel = asset ? getSourceLabel(asset) : undefined;
   const cropFrameColors = getCropFrameColors(asset?.dominantColors);
   const cropBoxSize = aspect === 0 ? freeCropSize : aspectCropSize;
   const cropBoxMaxSize =
@@ -801,18 +1339,201 @@ export function ImageAssetViewer({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        overlayClassName="bg-black/20 duration-150"
-        className="top-1/2 h-[min(90vh,58rem)] w-[min(94vw,80rem)] max-w-none -translate-y-1/2 transition-none data-ending-style:scale-100 data-ending-style:opacity-100 data-starting-style:scale-100 data-starting-style:opacity-100 sm:h-[min(88vh,56rem)]"
+        initialFocus={false}
+        overlayClassName="bg-transparent duration-0"
+        className="top-1/2 h-[100svh] w-screen max-w-none -translate-y-1/2 rounded-none bg-transparent shadow-none ring-0 duration-100 data-ending-style:scale-100! data-ending-style:opacity-100! data-starting-style:scale-100! data-starting-style:opacity-100!"
       >
-        <DialogBody className="grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-visible rounded-md bg-background p-0 text-foreground lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-1">
+        <DialogBody className="relative isolate h-full min-h-0 w-full overflow-hidden rounded-none border-0 bg-transparent p-0 text-foreground">
+          {displayUrl ? (
+            <div
+              className={cn(
+                "pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[inherit] bg-neutral-950 opacity-0 transition-opacity duration-150 ease-out will-change-opacity motion-reduce:transition-none",
+                showBackdrop && "opacity-100",
+              )}
+              aria-hidden="true"
+            >
+              <img
+                src={displayUrl}
+                alt=""
+                className="absolute top-1/2 left-1/2 h-1/2 w-1/2 -translate-x-1/2 -translate-y-1/2 scale-[2.2] transform-gpu object-cover blur-2xl saturate-150 [@media(prefers-reduced-transparency:reduce)]:hidden"
+              />
+              <div className="absolute inset-0 bg-neutral-950/45" />
+              <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-black/25" />
+            </div>
+          ) : null}
           <DialogTitle className="sr-only">{title}</DialogTitle>
           <DialogDescription className="sr-only">
             Larger preview and details for the selected image asset.
           </DialogDescription>
 
-          <div className="relative flex min-h-0 flex-col rounded-t-md bg-muted/35 lg:order-1 lg:rounded-l-md lg:rounded-tr-none">
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-x-3 top-3 z-30 flex justify-end opacity-0 transition-opacity duration-100 ease-out motion-reduce:transition-none sm:inset-x-4 sm:top-4",
+              showChrome && "opacity-100",
+            )}
+          >
+            <div
+              className={cn(
+                "pointer-events-auto flex min-w-0 items-center gap-1 [&_[data-slot=button]]:duration-75",
+                !cropMode && asset?.sourceUrl ? "lg:w-80" : "ml-auto",
+              )}
+            >
+              {!cropMode && asset?.sourceUrl ? (
+                <a
+                  href={asset.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={asset.sourceUrl}
+                  className="hidden min-w-0 lg:block lg:flex-1"
+                >
+                  <div
+                    className={cn(
+                      FLOATING_ISLAND_SURFACE_CLASS,
+                      "flex h-[34px] min-w-0 items-center gap-1.5 px-2.5 text-sm font-medium text-primary transition-colors duration-75 hover:bg-muted hover:text-primary",
+                    )}
+                  >
+                    <ExternalLinkIcon className="size-4 shrink-0" />
+                    <span className="truncate">{sourceLabel}</span>
+                  </div>
+                </a>
+              ) : null}
+
+              <div className={FLOATING_ISLAND_SURFACE_CLASS}>
+                <ButtonGroup>
+                  {cropMode ? (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCancelCrop}
+                        disabled={isSavingCrop}
+                      >
+                        Discard
+                      </Button>
+                      <ButtonGroupSeparator className="bg-border/70" />
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleApplyCrop}
+                        disabled={isSavingCrop}
+                      >
+                        <CheckIcon className="size-3.5" />
+                        {isSavingCrop ? "Saving…" : "Apply crop"}
+                      </Button>
+                    </>
+                  ) : asset ? (
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={handleCopyImage}
+                            />
+                          }
+                        >
+                          {hasCopiedImage ? <CheckIcon /> : <CopyIcon />}
+                          <span className="sr-only">
+                            {hasCopiedImage ? "Copied image" : "Copy image"}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {hasCopiedImage ? "Copied image" : "Copy image"}
+                        </TooltipContent>
+                      </Tooltip>
+                      <ButtonGroupSeparator className="bg-border/70" />
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={handleDownload}
+                            />
+                          }
+                        >
+                          <DownloadIcon />
+                          <span className="sr-only">Download</span>
+                        </TooltipTrigger>
+                        <TooltipContent>Download</TooltipContent>
+                      </Tooltip>
+                      <ButtonGroupSeparator className="bg-border/70" />
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={handlePickColor}
+                              className={cn(
+                                "transition-all duration-100 hover:bg-foreground/5",
+                                isEyeDropping && "bg-foreground/8",
+                              )}
+                              aria-pressed={isEyeDropping}
+                            />
+                          }
+                        >
+                          {hasCopiedColor ? <CheckIcon /> : <PipetteIcon />}
+                          <span className="sr-only">
+                            {isEyeDropping
+                              ? "Click the image to copy a color. Press Escape to cancel."
+                              : hasCopiedColor
+                                ? "Copied color"
+                                : "Pick color"}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isEyeDropping
+                            ? "Click the image to copy · Escape to cancel"
+                            : hasCopiedColor
+                              ? "Copied color"
+                              : "Pick color"}
+                        </TooltipContent>
+                      </Tooltip>
+                      <ButtonGroupSeparator className="bg-border/70" />
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={handleStartCrop}
+                            />
+                          }
+                        >
+                          Edit
+                        </TooltipTrigger>
+                        <TooltipContent>Edit image</TooltipContent>
+                      </Tooltip>
+                    </>
+                  ) : null}
+                </ButtonGroup>
+              </div>
+
+              <div className={FLOATING_ISLAND_SURFACE_CLASS}>
+                <ButtonGroup>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <DialogClose
+                          render={<Button variant="ghost" size="icon" />}
+                        />
+                      }
+                    >
+                      <XIcon />
+                      <span className="sr-only">Close</span>
+                    </TooltipTrigger>
+                    <TooltipContent>Close</TooltipContent>
+                  </Tooltip>
+                </ButtonGroup>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative z-10 flex h-full min-h-0 flex-col">
             {cropMode && asset ? (
-              <div className="min-h-0 flex-1 p-3 sm:p-5">
+              <div className="relative z-10 min-h-0 flex-1 p-6 sm:p-8 lg:pr-[23rem]">
                 <div ref={cropperContainerRef} className="relative size-full">
                   {!mediaLoaded && blurPlaceholder ? (
                     <div className="absolute inset-0 overflow-hidden">
@@ -852,141 +1573,97 @@ export function ImageAssetViewer({
                 </div>
               </div>
             ) : (
-              <div className="flex min-h-0 flex-1 items-center justify-center p-3 sm:p-5">
-                {displayUrl ? (
-                  <img
-                    src={displayUrl}
+              <div className="[container-type:size] flex min-h-0 flex-1 items-center justify-center p-6 sm:p-8 lg:pr-[23rem]">
+                {open && displayUrl ? (
+                  <ProgressiveViewerImage
+                    key={viewerImageUrl}
+                    displayUrl={displayUrl}
+                    originalUrl={viewerImageUrl}
                     alt={asset?.alt ?? ""}
-                    draggable={false}
-                    loading="eager"
-                    className="relative z-10 max-h-full max-w-full rounded-[6px] object-contain"
-                    style={{ borderRadius: 6 }}
+                    aspectRatio={viewerAspectRatio}
+                    layoutId={
+                      asset && !shouldReduceMotion
+                        ? getImageViewerLayoutId(asset.id)
+                        : undefined
+                    }
+                    onLayoutAnimationStart={() => setShowChrome(false)}
+                    onLayoutAnimationComplete={() => setShowChrome(true)}
+                    imageRef={viewerImageRef}
+                    pickMode={isEyeDropping}
+                    onPick={handlePickColorResult}
+                    loadSamplingCanvas={loadSamplingCanvas}
                   />
                 ) : null}
               </div>
             )}
-            {cropMode && asset ? (
-              <CropToolbar
-                aspect={aspect}
-                zoom={zoom}
-                onAspectChange={handleAspectChange}
-                onZoomChange={setZoom}
-              />
-            ) : null}
           </div>
 
-          <aside className="flex min-h-0 flex-col rounded-b-md border-t bg-background lg:order-2 lg:rounded-r-md lg:rounded-bl-none lg:border-t-0 lg:border-l">
-            <div className="flex h-12 shrink-0 items-center justify-between border-b px-3">
-              <span className="truncate text-sm font-medium">{title}</span>
-              <DialogClose render={<Button variant="ghost" size="icon-sm" />}>
-                <XIcon />
-                <span className="sr-only">Close</span>
-              </DialogClose>
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 overflow-y-auto p-4">
-                {asset?.sourceUrl ? (
-                  <div className="mb-4 flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                    <ExternalLinkIcon className="size-3 shrink-0" />
-                    <a
-                      href={asset.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="truncate transition-colors hover:text-foreground"
-                    >
-                      {asset.sourceLabel ?? "Source"}
-                    </a>
-                  </div>
-                ) : null}
+          <aside
+            className={cn(
+              "pointer-events-none absolute right-3 z-20 flex max-h-[calc(100%-6rem)] w-[min(20rem,calc(100%-1.5rem))] min-h-0 flex-col gap-1 opacity-0 transition-opacity duration-100 ease-out motion-reduce:transition-none sm:right-4 sm:w-80",
+              cropMode ? "bottom-14" : "bottom-3 sm:bottom-4",
+              showChrome && "pointer-events-auto opacity-100",
+            )}
+          >
+            {!cropMode && asset ? (
+              <div
+                className={cn(FLOATING_ISLAND_SURFACE_CLASS, "shrink-0 p-3")}
+              >
+                <p className="truncate text-sm leading-5 font-medium">
+                  {title}
+                </p>
+              </div>
+            ) : null}
+            <div
+              className={cn(
+                FLOATING_ISLAND_SURFACE_CLASS,
+                "min-h-0 flex-1 overflow-y-auto p-4",
+              )}
+            >
+              {!cropMode && asset?.sourceUrl ? (
+                <div className="mb-4 flex items-center gap-1 text-xs font-medium text-muted-foreground lg:hidden">
+                  <ExternalLinkIcon className="size-3 shrink-0" />
+                  <a
+                    href={asset.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate transition-colors hover:text-foreground"
+                  >
+                    {asset.sourceLabel ?? "Source"}
+                  </a>
+                </div>
+              ) : null}
 
-                {cropMode && asset ? (
+              {cropMode && asset ? (
+                <div className="space-y-5">
+                  <CropToolbar
+                    aspect={aspect}
+                    zoom={zoom}
+                    onAspectChange={handleAspectChange}
+                    onZoomChange={setZoom}
+                  />
                   <CropInspector
                     asset={asset}
                     croppedAreaPixels={croppedAreaPixels}
                     onOutputDimensionChange={handleOutputDimensionChange}
                   />
-                ) : asset ? (
-                  <ImageMetadata asset={asset} />
-                ) : null}
-              </div>
-              {cropMode ? (
-                <div className="flex shrink-0 justify-end gap-2 p-3">
-                  {cropError ? (
-                    <p
-                      className="mr-auto self-center text-xs text-destructive"
-                      role="alert"
-                    >
-                      {cropError}
-                    </p>
-                  ) : null}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCancelCrop}
-                    disabled={isSavingCrop}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleApplyCrop}
-                    disabled={isSavingCrop}
-                  >
-                    <CheckIcon className="size-3.5" />
-                    {isSavingCrop ? "Saving…" : "Apply"}
-                  </Button>
                 </div>
               ) : asset ? (
-                <div className="flex shrink-0 items-center justify-between gap-3 p-3">
-                  <div className="flex items-center gap-1">
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={handleDownload}
-                          >
-                            <DownloadIcon />
-                            <span className="sr-only">Download</span>
-                          </Button>
-                        }
-                      />
-                      <TooltipContent>Download</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <a
-                            href={asset.originalUrl ?? asset.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={buttonVariants({
-                              variant: "ghost",
-                              size: "icon-sm",
-                            })}
-                          >
-                            <ExternalLinkIcon />
-                            <span className="sr-only">Open</span>
-                          </a>
-                        }
-                      />
-                      <TooltipContent>Open</TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={handleStartCrop}
-                  >
-                    <CropIcon className="size-3.5" />
-                    Crop
-                  </Button>
-                </div>
+                <ImageMetadataDetails asset={asset} />
+              ) : null}
+              {cropError ? (
+                <p className="mt-4 text-xs text-destructive" role="alert">
+                  {cropError}
+                </p>
               ) : null}
             </div>
+            {!cropMode && asset ? (
+              <div
+                className={cn(FLOATING_ISLAND_SURFACE_CLASS, "shrink-0 p-3")}
+              >
+                <ImageColorPalette asset={asset} />
+              </div>
+            ) : null}
           </aside>
         </DialogBody>
       </DialogContent>

@@ -5,7 +5,7 @@ import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect"
 export const MASONRY_GAP = 10;
 
 /** Minimum comfortable width for a single card before dropping a column. */
-const MIN_COLUMN_WIDTH = 180;
+const MIN_COLUMN_WIDTH = 260;
 
 function columnCountFor(width: number): number {
   const raw = Math.floor(

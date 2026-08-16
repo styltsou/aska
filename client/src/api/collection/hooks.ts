@@ -1,3 +1,4 @@
+import React from "react";
 import { toast } from "sonner";
 import {
   keepPreviousData,
@@ -1121,7 +1122,18 @@ export function useUploadLocalImages(
             uploadData.upload,
             (progress) => {
               toast.loading(
-                `${file.name} — ${progress}%${multiple ? ` (${index + 1} of ${files.length})` : ""}`,
+                React.createElement(
+                  React.Fragment,
+                  null,
+                  file.name,
+                  " — ",
+                  React.createElement(
+                    "span",
+                    { className: "font-mono tabular-nums" },
+                    `${progress}%`,
+                  ),
+                  multiple ? ` (${index + 1} of ${files.length})` : "",
+                ),
                 { id: toastId },
               );
               updateOptimisticImage(
@@ -1283,7 +1295,18 @@ export function useUploadInboxImages(workspaceSlug: string) {
             uploadData.upload,
             (progress) => {
               toast.loading(
-                `${file.name} — ${progress}%${multiple ? ` (${index + 1} of ${files.length})` : ""}`,
+                React.createElement(
+                  React.Fragment,
+                  null,
+                  file.name,
+                  " — ",
+                  React.createElement(
+                    "span",
+                    { className: "font-mono tabular-nums" },
+                    `${progress}%`,
+                  ),
+                  multiple ? ` (${index + 1} of ${files.length})` : "",
+                ),
                 { id: toastId },
               );
               updateOptimisticInboxImage(

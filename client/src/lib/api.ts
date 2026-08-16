@@ -36,6 +36,27 @@ export async function apiGet<T>(path: string): Promise<T> {
   return request<T>(path);
 }
 
+export async function apiGetBlob(
+  path: string,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  const response = await fetch(`${SERVER_URL}${path}`, {
+    credentials: "include",
+    signal,
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new ApiError(
+      response.status,
+      body?.error?.message ?? `Request failed: ${response.status}`,
+      body?.error?.code,
+    );
+  }
+
+  return response.blob();
+}
+
 export async function apiPost<T>(
   path: string,
   body?: unknown,

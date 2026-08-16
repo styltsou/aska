@@ -18,6 +18,61 @@ export type ClipboardAssetPayload =
       kind: "empty";
     };
 
+export async function copyImageToClipboard(
+  loadImageBlob: () => Promise<Blob>,
+): Promise<void> {
+  if (
+    typeof ClipboardItem === "undefined" ||
+    typeof navigator.clipboard?.write !== "function"
+  ) {
+    throw new Error("Your browser does not support copying images.");
+  }
+
+  // Start the clipboard write during the user gesture. Safari can reject writes
+  // if the image is fetched before navigator.clipboard.write is called.
+  const imageBlob = loadImageBlob().then(toClipboardPng);
+  await navigator.clipboard.write([
+    new ClipboardItem({ "image/png": imageBlob }),
+  ]);
+}
+
+async function toClipboardPng(blob: Blob): Promise<Blob> {
+  if (!blob.type.startsWith("image/")) {
+    throw new Error("The original asset is not a valid image.");
+  }
+
+  if (blob.type === "image/png") {
+    return blob;
+  }
+
+  const image = await createImageBitmap(blob);
+
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Unable to prepare the image for copying.");
+    }
+
+    context.drawImage(image, 0, 0);
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((pngBlob) => {
+        if (pngBlob) {
+          resolve(pngBlob);
+        } else {
+          reject(new Error("Unable to prepare the image for copying."));
+        }
+      }, "image/png");
+    });
+  } finally {
+    image.close();
+  }
+}
+
 export async function readClipboardAssetPayload(): Promise<ClipboardAssetPayload> {
   const clipboardItem = await readFirstClipboardItem();
 

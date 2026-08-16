@@ -4,14 +4,14 @@ const collectionSkeletons = Array.from({ length: 8 }, (_, i) => i);
 
 export function CollectionGridSkeleton() {
   return (
-    <div className="relative">
-      <div className="grid grid-cols-4 gap-3 max-md:grid-cols-3 max-sm:grid-cols-2">
+    <div className="@container relative">
+      <div className="grid grid-cols-1 gap-3 @min-[25rem]:grid-cols-2 @min-[38rem]:grid-cols-3 @min-[50rem]:grid-cols-4">
         {collectionSkeletons.map((item) => (
           <div
             key={item}
-            className="overflow-hidden rounded-lg border bg-sidebar"
+            className="grid aspect-square grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-lg border bg-sidebar"
           >
-            <div className="relative flex aspect-3/2 items-center justify-center overflow-hidden bg-sidebar">
+            <div className="relative flex min-h-0 items-center justify-center overflow-hidden bg-sidebar">
               <Skeleton className="absolute h-3/5 w-3/5 translate-x-1 translate-y-2 rotate-2 rounded-xl" />
               <Skeleton className="absolute h-3/5 w-3/5 -translate-x-1 -translate-y-1 -rotate-2 rounded-xl" />
             </div>

@@ -1,5 +1,5 @@
 export const GLASS_FRAME_CLASS =
-  "bg-popover/80 shadow-lg ring-1 ring-foreground/10 before:pointer-events-none before:absolute before:inset-0 before:-z-1 before:rounded-[inherit] before:backdrop-blur-2xl before:backdrop-saturate-150";
+  "bg-popover/80 shadow-lg ring-1 ring-foreground/10 backdrop-blur-2xl backdrop-saturate-150";
 
 export const GLASS_SURFACE_CLASS =
   "border border-border bg-background shadow-sm shadow-foreground/5";

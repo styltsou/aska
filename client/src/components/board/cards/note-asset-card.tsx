@@ -230,8 +230,8 @@ export function NoteAssetCard({
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-b from-sidebar/0 via-sidebar/85 to-sidebar transition-opacity duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-60" />
       ) : null}
       {hasOverflow ? (
-        <div className="invisible absolute inset-x-0 bottom-0 flex translate-y-2 justify-center px-2.5 pb-2.5 transition-transform duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:visible group-hover:translate-y-0">
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-full justify-center px-2.5 pb-2.5 transition-transform duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:pointer-events-auto group-hover:translate-y-0">
+          <div className="inline-flex items-center gap-1.5 rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-sidebar-foreground/25">
             <span>Expand</span>
           </div>
         </div>

@@ -1,6 +1,17 @@
 import { cn } from "@/lib/utils";
+import { CropIcon, FlipHorizontal2Icon, RotateCcwIcon } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import {
+  ButtonGroup,
+  ButtonGroupSeparator,
+} from "@/components/ui/button-group";
 import { Slider } from "@/components/ui/slider";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export const ASPECT_RATIOS: { label: string; value: number }[] = [
   { label: "Free", value: 0 },
@@ -22,38 +33,97 @@ export function CropToolbar({
   onZoomChange: (zoom: number) => void;
 }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-3 border-t bg-background px-3 py-2">
-      <div className="flex items-center gap-1">
-        <span className="mr-1.5 text-xs font-medium text-muted-foreground">
-          Aspect:
+    <section className="space-y-5" aria-label="Edit image">
+      <div className="space-y-2">
+        <span className="block text-xs font-medium text-muted-foreground">
+          Tools
         </span>
-        {ASPECT_RATIOS.map((r) => (
-          <button
-            key={r.label}
+        <ButtonGroup className="w-full">
+          <Button
             type="button"
-            onClick={() => onAspectChange(r.value)}
-            className={cn(
-              "rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
-              aspect === r.value
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            aria-pressed="true"
           >
-            {r.label}
-          </button>
-        ))}
+            <CropIcon />
+            Crop
+          </Button>
+          <ButtonGroupSeparator className="bg-border/70" />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1"
+                  disabled
+                />
+              }
+            >
+              <RotateCcwIcon />
+              Rotate
+            </TooltipTrigger>
+            <TooltipContent>Coming soon</TooltipContent>
+          </Tooltip>
+          <ButtonGroupSeparator className="bg-border/70" />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1"
+                  disabled
+                />
+              }
+            >
+              <FlipHorizontal2Icon />
+              Mirror
+            </TooltipTrigger>
+            <TooltipContent>Coming soon</TooltipContent>
+          </Tooltip>
+        </ButtonGroup>
       </div>
-      <div className="ml-auto flex items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground">Zoom:</span>
+
+      <div className="space-y-2">
+        <span className="block text-xs font-medium text-muted-foreground">
+          Aspect ratio
+        </span>
+        <div className="flex flex-wrap gap-1">
+          {ASPECT_RATIOS.map((ratio) => (
+            <button
+              key={ratio.label}
+              type="button"
+              onClick={() => onAspectChange(ratio.value)}
+              className={cn(
+                "rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                aspect === ratio.value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              {ratio.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+          <span>Zoom</span>
+          <span>{Math.round(zoom * 100)}%</span>
+        </div>
         <Slider
           value={[zoom]}
           onValueChange={(v) => onZoomChange(Array.isArray(v) ? v[0] : v)}
           min={1}
           max={3}
           step={0.01}
-          className="w-24"
         />
       </div>
-    </div>
+    </section>
   );
 }

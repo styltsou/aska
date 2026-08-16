@@ -136,19 +136,19 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
         onLoad={() => setLoaded(true)}
       />
       <AnimatePresence>
-        {hovered && (
+        {hovered ? (
           <motion.div
-            initial={{ y: 6, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 6, opacity: 0 }}
-            transition={{ duration: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
           >
-            <span className="inline-flex max-w-full min-w-0 items-center rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm">
+            <span className="inline-flex max-w-full min-w-0 items-center rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground">
               <span className="truncate">{credit}</span>
             </span>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
       {isSelected ? (
         <>

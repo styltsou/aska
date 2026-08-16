@@ -5,6 +5,7 @@ import { CreateCollectionDialog } from "@/components/app-shell/create-collection
 import { useCollections } from "@/api/collection";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ResourceLoadError } from "@/components/resource-load-error";
 
 export const Route = createFileRoute("/$workspaceSlug/")({
   head: () => ({
@@ -16,7 +17,8 @@ export const Route = createFileRoute("/$workspaceSlug/")({
 
 function WorkspacePage() {
   const { workspaceSlug } = Route.useParams();
-  const { data, isLoading, isError } = useCollections(workspaceSlug);
+  const { data, isLoading, isError, isFetching, refetch } =
+    useCollections(workspaceSlug);
 
   if (isLoading) {
     return <CollectionGridSkeleton />;
@@ -24,9 +26,11 @@ function WorkspacePage() {
 
   if (isError || !data) {
     return (
-      <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-        Failed to load collections
-      </div>
+      <ResourceLoadError
+        isRetrying={isFetching}
+        resourceName="collections"
+        onRetry={() => void refetch()}
+      />
     );
   }
 
@@ -49,14 +53,16 @@ function WorkspacePage() {
   }
 
   return (
-    <div className="grid grid-cols-4 gap-3 max-md:grid-cols-3 max-sm:grid-cols-2">
-      {collections.map((collection) => (
-        <CollectionCard
-          key={collection.slug}
-          collection={collection}
-          workspaceSlug={workspaceSlug}
-        />
-      ))}
+    <div className="@container">
+      <div className="grid grid-cols-1 gap-3 @min-[25rem]:grid-cols-2 @min-[38rem]:grid-cols-3 @min-[50rem]:grid-cols-4">
+        {collections.map((collection) => (
+          <CollectionCard
+            key={collection.slug}
+            collection={collection}
+            workspaceSlug={workspaceSlug}
+          />
+        ))}
+      </div>
     </div>
   );
 }

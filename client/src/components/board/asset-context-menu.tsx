@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -23,13 +23,40 @@ import {
   useDeleteCollectionNode,
   useFlattenFolder,
 } from "@/api/collection";
-import type { Asset, ImageAsset } from "@/types/asset";
+import { fetchAssetImageBlob } from "@/api/collection/fetchers";
+import type { Asset, ImageAsset, NoteAsset } from "@/types/asset";
 import {
   MoveToDialog,
   type MoveToDialogSource,
 } from "@/components/move-to-dialog";
+import { copyImageToClipboard } from "@/lib/clipboard";
 
-function imageActions(asset: ImageAsset) {
+type ImagePrefetch = {
+  controller: AbortController;
+  claimedByCopy: boolean;
+  result: Promise<{ blob: Blob } | { error: unknown }>;
+};
+
+async function fetchImageFromUrl(imageUrl: string): Promise<Blob> {
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error("Unable to download the original image.");
+  }
+  return response.blob();
+}
+
+async function copyImage(loadImageBlob: () => Promise<Blob>) {
+  try {
+    await copyImageToClipboard(loadImageBlob);
+    toast.success("Copied image.");
+  } catch (error) {
+    toast.error(
+      error instanceof Error ? error.message : "Unable to copy image.",
+    );
+  }
+}
+
+function imageActions(asset: ImageAsset, onCopy: () => void) {
   return (
     <>
       {asset.sourceUrl ? (
@@ -41,15 +68,22 @@ function imageActions(asset: ImageAsset) {
           Open original
         </ContextMenuItem>
       ) : null}
-      <ContextMenuItem>Copy image</ContextMenuItem>
+      <ContextMenuItem onClick={onCopy}>Copy image</ContextMenuItem>
     </>
   );
 }
 
-function noteActions() {
+async function copyText(asset: NoteAsset) {
+  await navigator.clipboard.writeText(asset.content);
+  toast.success("Copied note text.");
+}
+
+function noteActions(asset: NoteAsset) {
   return (
     <>
-      <ContextMenuItem>Copy text</ContextMenuItem>
+      <ContextMenuItem onClick={() => void copyText(asset)}>
+        Copy text
+      </ContextMenuItem>
       <ContextMenuItem>Edit note</ContextMenuItem>
     </>
   );
@@ -64,17 +98,12 @@ function folderActions() {
   );
 }
 
-const typeActions: Record<Asset["type"], (asset: Asset) => React.ReactNode> = {
-  image: (asset) => imageActions(asset as ImageAsset),
-  note: noteActions,
-  folder: folderActions,
-};
-
 export function AssetContextMenu({
   asset,
   children,
   deleteContext,
   inboxContext,
+  onOpenImage,
 }: {
   asset: Asset;
   children: (isContextMenuOpen: boolean) => React.ReactNode;
@@ -87,9 +116,13 @@ export function AssetContextMenu({
   inboxContext?: {
     workspaceSlug: string;
   };
+  onOpenImage?: () => void;
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const imagePrefetchRef = useRef<ImagePrefetch | undefined>(undefined);
+  const workspaceSlug =
+    inboxContext?.workspaceSlug ?? deleteContext?.workspaceSlug;
   const isFavorite = asset.isFavorite ?? false;
   const removeNode = useDeleteCollectionNode(
     deleteContext?.workspaceSlug ?? "",
@@ -116,6 +149,76 @@ export function AssetContextMenu({
           nodeIds: [asset.id],
         }
       : undefined;
+
+  useEffect(() => {
+    return () => {
+      imagePrefetchRef.current?.controller.abort();
+      imagePrefetchRef.current = undefined;
+    };
+  }, [asset.id, workspaceSlug]);
+
+  function cancelImagePrefetch() {
+    const prefetch = imagePrefetchRef.current;
+    if (!prefetch || prefetch.claimedByCopy) return;
+
+    prefetch.controller.abort();
+    imagePrefetchRef.current = undefined;
+  }
+
+  function startImagePrefetch() {
+    cancelImagePrefetch();
+    if (asset.type !== "image" || asset.uploadStatus || !workspaceSlug) return;
+
+    const controller = new AbortController();
+    imagePrefetchRef.current = {
+      controller,
+      claimedByCopy: false,
+      // Resolve errors into data so an aborted, unused prefetch never creates
+      // an unhandled promise rejection.
+      result: fetchAssetImageBlob(
+        workspaceSlug,
+        asset.id,
+        controller.signal,
+      ).then(
+        (blob) => ({ blob }),
+        (error: unknown) => ({ error }),
+      ),
+    };
+  }
+
+  function handleContextMenuOpenChange(open: boolean) {
+    if (open) {
+      startImagePrefetch();
+    } else {
+      cancelImagePrefetch();
+    }
+  }
+
+  function handleCopyImage() {
+    if (asset.type !== "image") return;
+
+    const prefetch = imagePrefetchRef.current;
+    if (prefetch) prefetch.claimedByCopy = true;
+
+    const loadImageBlob = prefetch
+      ? async () => {
+          const result = await prefetch.result;
+          if ("blob" in result) return result.blob;
+          throw result.error;
+        }
+      : workspaceSlug && !asset.uploadStatus
+        ? () => fetchAssetImageBlob(workspaceSlug, asset.id)
+        : () =>
+            fetchImageFromUrl(
+              asset.localPreviewUrl ?? asset.originalUrl ?? asset.url,
+            );
+
+    void copyImage(loadImageBlob).finally(() => {
+      if (imagePrefetchRef.current === prefetch) {
+        imagePrefetchRef.current = undefined;
+      }
+    });
+  }
 
   function handleDelete() {
     setDeleteDialogOpen(false);
@@ -157,7 +260,7 @@ export function AssetContextMenu({
 
   return (
     <>
-      <ContextMenu>
+      <ContextMenu onOpenChange={handleContextMenuOpenChange}>
         <ContextMenuTrigger
           render={(triggerProps, state) => (
             <div {...triggerProps}>{children(state.open)}</div>
@@ -184,6 +287,9 @@ export function AssetContextMenu({
             </>
           ) : (
             <>
+              {asset.type === "image" && onOpenImage ? (
+                <ContextMenuItem onClick={onOpenImage}>Open</ContextMenuItem>
+              ) : null}
               <ContextMenuItem>
                 {isFavorite ? "Remove from favorites" : "Add to favorites"}
               </ContextMenuItem>
@@ -193,7 +299,9 @@ export function AssetContextMenu({
                 </ContextMenuItem>
               ) : null}
               <ContextMenuSeparator />
-              {typeActions[asset.type](asset)}
+              {asset.type === "image"
+                ? imageActions(asset, handleCopyImage)
+                : noteActions(asset)}
             </>
           )}
           <ContextMenuSeparator />

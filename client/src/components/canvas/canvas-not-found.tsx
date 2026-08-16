@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeftIcon, ArrowUpIcon, FolderIcon } from "lucide-react";
+import { ArrowLeftIcon, FolderXIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,25 @@ type NotFoundProps = {
   collectionName?: string;
 };
 
+function MissingResourceMark() {
+  return (
+    <div
+      aria-hidden="true"
+      className="relative mx-auto h-10 w-16 text-muted-foreground"
+    >
+      <FolderXIcon
+        className="absolute top-0 left-1/2 size-10 -translate-x-1/2"
+        strokeWidth={1.25}
+      />
+    </div>
+  );
+}
+
 function NotFoundShell({
-  icon,
   title,
   description,
   actions,
 }: {
-  icon: ReactNode;
   title: string;
   description: string;
   actions?: ReactNode;
@@ -26,13 +38,11 @@ function NotFoundShell({
       className="relative h-full min-h-0 w-full overflow-hidden"
       role="alert"
     >
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center">
+      <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
         <div className="max-w-sm space-y-3">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-lg border bg-background text-muted-foreground">
-            {icon}
-          </div>
+          <MissingResourceMark />
           <div className="space-y-1.5">
-            <h2 className="text-sm font-medium">{title}</h2>
+            <h2 className="text-xl font-semibold">{title}</h2>
             <p className="text-sm text-muted-foreground">{description}</p>
           </div>
           {actions ? (
@@ -53,7 +63,6 @@ export function CollectionNotFound({
   const navigate = useNavigate();
   return (
     <NotFoundShell
-      icon={<FolderIcon />}
       title="Collection not found"
       description={
         collectionName
@@ -62,8 +71,7 @@ export function CollectionNotFound({
       }
       actions={
         <Button
-          variant="outline"
-          size="sm"
+          size="lg"
           onClick={() =>
             void navigate({ to: "/$workspaceSlug", params: { workspaceSlug } })
           }
@@ -84,7 +92,6 @@ export function FolderNotFound({
   const navigate = useNavigate();
   return (
     <NotFoundShell
-      icon={<FolderIcon />}
       title="Folder not found"
       description={
         collectionName
@@ -94,8 +101,7 @@ export function FolderNotFound({
       actions={
         collectionSlug ? (
           <Button
-            variant="outline"
-            size="sm"
+            size="lg"
             onClick={() =>
               void navigate({
                 to: "/$workspaceSlug/collections/$",
@@ -104,7 +110,7 @@ export function FolderNotFound({
               })
             }
           >
-            <ArrowUpIcon />
+            <ArrowLeftIcon />
             <span>Back to collection</span>
           </Button>
         ) : undefined

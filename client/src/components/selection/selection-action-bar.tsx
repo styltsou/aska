@@ -184,7 +184,7 @@ export function SelectionActionBar({
                       <motion.div
                         key="layout-actions"
                         initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-                        animate={{ opacity: 1, width: "auto", marginLeft: 2 }}
+                        animate={{ opacity: 1, width: "auto", marginLeft: 0 }}
                         exit={{ opacity: 0, width: 0, marginLeft: 0 }}
                         transition={{ duration: 0.1, ease: [0, 0, 0.2, 1] }}
                         className="-m-1 overflow-hidden p-1"
@@ -240,7 +240,7 @@ export function SelectionActionBar({
                       </motion.div>
                     ) : null}
                   </AnimatePresence>
-                  <div className={cn(BUTTON_GROUP_SURFACE_CLASS, "ml-1.5")}>
+                  <div className={cn(BUTTON_GROUP_SURFACE_CLASS, "ml-1")}>
                     <ButtonGroup>
                       <Tooltip>
                         <TooltipTrigger

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouterState } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
@@ -19,6 +19,35 @@ const SCRATCHPAD_TRANSITION = {
   ease: [0, 0, 0.2, 1] as const,
 };
 
+const MORPH_TRANSITION = {
+  duration: 0.16,
+  ease: [0.33, 1, 0.68, 1] as const,
+};
+
+const PILL_EXIT_TRANSITION = {
+  duration: 0.1,
+  ease: [0.4, 0, 0.6, 1] as const,
+};
+
+function CheckIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-4 text-primary"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
 export function GlobalScratchpad() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -33,11 +62,33 @@ export function GlobalScratchpad() {
     (state) => state.closeScratchpad,
   );
   const [content, setContent] = useState("");
+  const [phase, setPhase] = useState<"open" | "pill" | "leaving">("open");
   const trimmedContent = content.trim();
   const canSave = trimmedContent.length > 0 && !createInboxNote.isPending;
 
+  const closeRef = useRef(closeScratchpad);
+  closeRef.current = closeScratchpad;
+
+  useEffect(() => {
+    if (open) {
+      setPhase("open");
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (phase === "pill") {
+      const timer = setTimeout(() => setPhase("leaving"), 450);
+      return () => clearTimeout(timer);
+    }
+
+    if (phase === "leaving") {
+      const timer = setTimeout(() => closeRef.current(), 120);
+      return () => clearTimeout(timer);
+    }
+  }, [phase]);
+
   useLayoutEffect(() => {
-    if (!open) {
+    if (!open || phase !== "open") {
       return;
     }
 
@@ -49,7 +100,7 @@ export function GlobalScratchpad() {
     input.focus();
     input.style.height = "0px";
     input.style.height = `${input.scrollHeight}px`;
-  }, [content, open]);
+  }, [content, open, phase]);
 
   useEventListener("keydown", (event) => {
     if (event.repeat || hasActiveModalLayer || open || !workspaceSlug) {
@@ -83,8 +134,7 @@ export function GlobalScratchpad() {
     }
 
     const noteContent = trimmedContent;
-    closeScratchpad({ resetMutation: false });
-    toast.success("Saved to Inbox");
+    setPhase("pill");
 
     createInboxNote.mutate(
       { content: noteContent },
@@ -104,7 +154,7 @@ export function GlobalScratchpad() {
         <motion.div
           key="global-scratchpad"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          animate={{ opacity: phase === "leaving" ? 0 : 1 }}
           exit={{ opacity: 0 }}
           transition={SCRATCHPAD_TRANSITION}
           className="fixed inset-0 z-50 bg-black/10 px-3 pt-[18vh] supports-backdrop-filter:backdrop-blur-xs"
@@ -116,12 +166,17 @@ export function GlobalScratchpad() {
         >
           <div className="relative mx-auto w-full max-w-md text-foreground">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={SCRATCHPAD_TRANSITION}
+              key="scratchpad-card"
+              initial={{ opacity: 0, scale: 0.95, y: 6 }}
+              animate={
+                phase === "open"
+                  ? { opacity: 1, scale: 1, y: 0 }
+                  : { opacity: 0, scale: 0.96, y: -6 }
+              }
+              transition={MORPH_TRANSITION}
               className={cn(
                 "relative overflow-hidden rounded-lg",
+                phase === "open" ? "" : "pointer-events-none",
                 GLASS_FRAME_CLASS,
               )}
             >
@@ -193,6 +248,23 @@ export function GlobalScratchpad() {
                   <span>to save</span>
                 </span>
               </div>
+            </motion.div>
+            <motion.div
+              key="scratchpad-pill"
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={
+                phase === "pill"
+                  ? { opacity: 1, scale: 1 }
+                  : { opacity: 0, scale: 0.96 }
+              }
+              transition={
+                phase === "pill" ? MORPH_TRANSITION : PILL_EXIT_TRANSITION
+              }
+              style={{ x: "-50%", y: "-50%" }}
+              className="absolute top-1/2 left-1/2 z-10 inline-flex items-center gap-2 rounded-full bg-background/95 px-4 py-2 text-sm font-medium whitespace-nowrap text-foreground shadow-xl ring-1 ring-border backdrop-blur"
+            >
+              <CheckIcon />
+              <span>Saved to Inbox</span>
             </motion.div>
           </div>
         </motion.div>

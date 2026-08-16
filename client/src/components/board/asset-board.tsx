@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 
 import { MasonryEmptyState } from "@/components/masonry-empty-state";
+import { Masonry } from "@/components/masonry-grid";
 import type { Asset, ImageAsset, NoteAsset } from "@/types/asset";
 import { AssetCard } from "./asset-card";
 import { useMarqueeSelection } from "./use-marquee-selection";
@@ -191,7 +192,7 @@ export function AssetBoard({
           {emptyStateChildren}
         </MasonryEmptyState>
       ) : (
-        <div className="min-w-0 columns-6 gap-2.5 *:mb-2.5 *:break-inside-avoid max-md:columns-4 max-sm:columns-2">
+        <Masonry className="min-w-0">
           {assets.map((asset) => (
             <AssetCard
               key={
@@ -210,7 +211,7 @@ export function AssetBoard({
               onOpenNote={onOpenNote}
             />
           ))}
-        </div>
+        </Masonry>
       )}
       {marquee.marquee ? (
         <div
