@@ -1,5 +1,6 @@
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ExternalLink, LoaderCircleIcon } from "lucide-react";
+import { useState } from "react";
 import {
   getImageViewerLayoutId,
   IMAGE_VIEWER_TRANSITION,
@@ -23,6 +24,7 @@ export function ImageAssetCard({
   const activeViewerAssetId = useActiveImageViewer();
   const imageIsInViewer = activeViewerAssetId === asset.id;
   const hasBar = asset.sourceLabel;
+  const [hovered, setHovered] = useState(false);
 
   return (
     <div
@@ -46,6 +48,8 @@ export function ImageAssetCard({
         event.preventDefault();
         onOpen();
       }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {!imageIsInViewer ? (
         <motion.div
@@ -84,22 +88,30 @@ export function ImageAssetCard({
           </div>
         </div>
       ) : null}
-      {hasBar && !asset.uploadStatus ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-full justify-center px-2.5 pb-2.5 opacity-0 transition-[translate,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 motion-reduce:transition-none">
-          <div className="group/pill inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-sidebar-foreground/25">
-            <a
-              href={asset.sourceUrl ?? asset.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => event.stopPropagation()}
-              className="inline-flex min-w-0 items-center gap-1"
-            >
-              <ExternalLink className="size-3 shrink-0" />
-              <span className="truncate">{asset.sourceLabel}</span>
-            </a>
-          </div>
-        </div>
-      ) : null}
+      <AnimatePresence>
+        {hovered && hasBar && !asset.uploadStatus ? (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
+          >
+            <div className="group/pill inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-sidebar-foreground/25">
+              <a
+                href={asset.sourceUrl ?? asset.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => event.stopPropagation()}
+                className="inline-flex min-w-0 items-center gap-1"
+              >
+                <ExternalLink className="size-3 shrink-0" />
+                <span className="truncate">{asset.sourceLabel}</span>
+              </a>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
