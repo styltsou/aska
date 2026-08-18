@@ -74,10 +74,38 @@ export function firstPreviewRowsByParent<T>(
   return selected;
 }
 
-/** Collapses markdown whitespace while preserving a bounded folder-card preview. */
+/** Bounds Markdown for card previews while preserving its block structure. */
 export function makeSnippet(content: string, maxLength = 1000): string {
-  const singleLine = content.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
-  return singleLine.length > maxLength
-    ? singleLine.slice(0, maxLength).trimEnd() + "…"
-    : singleLine;
+  const normalized = content.replace(/\r\n?/g, "\n");
+  if (normalized.length <= maxLength) return normalized;
+
+  let snippet = normalized.slice(0, maxLength);
+  const openFence = findOpenFence(snippet);
+  if (openFence) {
+    snippet += `${snippet.endsWith("\n") ? "" : "\n"}${openFence}`;
+  }
+
+  return `${snippet}\n\n…`;
+}
+
+function findOpenFence(content: string): string | undefined {
+  let openFence: string | undefined;
+
+  for (const line of content.split("\n")) {
+    const match = line.match(/^\s*(`{3,}|~{3,})/);
+    if (!match) continue;
+
+    const fence = match[1]!;
+    if (
+      openFence &&
+      fence[0] === openFence[0] &&
+      fence.length >= openFence.length
+    ) {
+      openFence = undefined;
+    } else if (!openFence) {
+      openFence = fence;
+    }
+  }
+
+  return openFence;
 }

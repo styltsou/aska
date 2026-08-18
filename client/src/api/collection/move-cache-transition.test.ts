@@ -26,6 +26,7 @@ const movedNote: Extract<CollectionNode, { type: "note" }> = {
   isFavorite: false,
   wordCount: 3,
   readingTimeMinutes: 1,
+  createdAt: "2026-01-01T00:00:00.000Z",
   position: { x: 24, y: 48 },
 };
 
@@ -44,6 +45,7 @@ const targetFolder: Extract<CollectionNode, { type: "folder" }> = {
   count: 2,
   folderCount: 1,
   previews: [{ assetId: "note-7", type: "note", snippet: "Older" }],
+  createdAt: "2026-01-01T00:00:00.000Z",
   position: { x: 720, y: 48 },
 };
 
@@ -55,6 +57,7 @@ const movedFolder: Extract<CollectionNode, { type: "folder" }> = {
   count: 3,
   folderCount: 0,
   previews: [{ assetId: "note-8", type: "note", snippet: "Inside New" }],
+  createdAt: "2026-01-01T00:00:00.000Z",
   position: { x: 240, y: 48 },
 };
 
@@ -223,6 +226,7 @@ describe("move cache transition", () => {
         count: 2,
         folderCount: 1,
         previews: [getAssetPreview(movedNote)],
+        createdAt: "2026-01-01T00:00:00.000Z",
         position: null,
       },
     ]);

@@ -18,6 +18,12 @@ export type ClipboardAssetPayload =
       kind: "empty";
     };
 
+export function getPreferredClipboardText(
+  clipboard: Pick<DataTransfer, "getData">,
+): string {
+  return clipboard.getData("text/markdown") || clipboard.getData("text/plain");
+}
+
 export async function copyImageToClipboard(
   loadImageBlob: () => Promise<Blob>,
 ): Promise<void> {
@@ -93,12 +99,13 @@ export async function readClipboardAssetPayload(): Promise<ClipboardAssetPayload
     }
   }
 
-  const text = (await navigator.clipboard.readText()).trim();
-  if (!text) {
+  const text = await readPreferredClipboardText(clipboardItem);
+  const trimmedText = text.trim();
+  if (!trimmedText) {
     return { kind: "empty" };
   }
 
-  const imageUrl = parseHttpUrl(text);
+  const imageUrl = parseHttpUrl(trimmedText);
   if (imageUrl) {
     return {
       kind: "remote-image-url",
@@ -119,4 +126,19 @@ async function readFirstClipboardItem(): Promise<ClipboardItem | undefined> {
 
   const items = await navigator.clipboard.read().catch(() => []);
   return items[0];
+}
+
+async function readPreferredClipboardText(
+  clipboardItem: ClipboardItem | undefined,
+): Promise<string> {
+  const markdownType = clipboardItem?.types.find(
+    (type) => type.toLowerCase().split(";", 1)[0] === "text/markdown",
+  );
+  if (markdownType) {
+    const markdown = await clipboardItem!.getType(markdownType);
+    const text = await markdown.text();
+    if (text) return text;
+  }
+
+  return navigator.clipboard.readText();
 }

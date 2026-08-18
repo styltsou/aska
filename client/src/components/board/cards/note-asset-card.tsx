@@ -43,6 +43,33 @@ const MD_COMPONENTS: Components = {
       {...props}
     />
   ),
+  h4: ({ className, ...props }) => (
+    <h4
+      className={cn(
+        "text-sidebar-foreground mt-3 mb-1.5 text-base leading-snug font-semibold first:mt-0",
+        className,
+      )}
+      {...props}
+    />
+  ),
+  h5: ({ className, ...props }) => (
+    <h5
+      className={cn(
+        "text-sidebar-foreground mt-3 mb-1 text-sm leading-snug font-semibold first:mt-0",
+        className,
+      )}
+      {...props}
+    />
+  ),
+  h6: ({ className, ...props }) => (
+    <h6
+      className={cn(
+        "text-sidebar-foreground mt-3 mb-1 text-sm leading-snug font-medium first:mt-0",
+        className,
+      )}
+      {...props}
+    />
+  ),
   p: ({ className, ...props }) => (
     <p
       className={cn(
