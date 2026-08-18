@@ -3,12 +3,14 @@ import { immer } from "zustand/middleware/immer";
 import { describe, expect, it } from "vitest";
 
 import { createFilterBarSlice, MAX_COLOR_FILTERS } from "./filter-bar-slice";
+import { createCollectionViewSlice } from "./collection-view-slice";
 import { createPexelsBrowserScopeSlice } from "./pexels-browser-slice";
 import type { SessionStore } from "@/store";
 
 function createTestStore() {
   return createStore<SessionStore>()(
     immer((...a) => ({
+      ...createCollectionViewSlice(...a),
       ...createFilterBarSlice(...a),
       ...createPexelsBrowserScopeSlice(...a),
     })),

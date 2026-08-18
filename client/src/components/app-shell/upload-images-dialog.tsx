@@ -533,7 +533,7 @@ export function UploadImagesDialog({
                   className={sourceTabClassName(mode === "local")}
                   disabled={isInteractionDisabled}
                   role="tab"
-                  size="xs"
+                  size="sm"
                   type="button"
                   variant="ghost"
                   onClick={() => selectMode("local")}
@@ -559,7 +559,7 @@ export function UploadImagesDialog({
                   className={sourceTabClassName(mode === "remote")}
                   disabled={isInteractionDisabled}
                   role="tab"
-                  size="xs"
+                  size="sm"
                   type="button"
                   variant="ghost"
                   onClick={() => selectMode("remote")}
@@ -585,7 +585,7 @@ export function UploadImagesDialog({
                   className={sourceTabClassName(mode === "cloud")}
                   disabled={isInteractionDisabled}
                   role="tab"
-                  size="xs"
+                  size="sm"
                   type="button"
                   variant="ghost"
                   onClick={() => selectMode("cloud")}
@@ -824,7 +824,7 @@ function AnimatedDialogPanel({ children }: { children: React.ReactNode }) {
 
 function sourceTabClassName(isActive: boolean) {
   return cn(
-    "relative isolate px-2",
+    "relative isolate px-3",
     isActive
       ? "text-foreground hover:bg-transparent hover:text-foreground"
       : "text-muted-foreground transition-colors duration-[50ms] hover:bg-foreground/[0.05] hover:text-foreground active:bg-foreground/[0.08] dark:hover:bg-foreground/[0.1] dark:active:bg-foreground/[0.14]",

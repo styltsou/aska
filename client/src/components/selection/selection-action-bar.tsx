@@ -56,7 +56,7 @@ import { cn } from "@/lib/utils";
 
 type SelectionActionBarProps = {
   count: number;
-  surface: "inbox" | "canvas";
+  surface: "inbox" | "canvas" | "browse";
   onClear: () => void;
   onMove?: () => void;
   onDelete?: () => void;
@@ -285,7 +285,7 @@ export function SelectionActionBar({
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete {count} items?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  {surface === "canvas"
+                  {surface !== "inbox"
                     ? "Folders and their contents will be permanently deleted."
                     : "This action cannot be undone."}
                 </AlertDialogDescription>
@@ -294,7 +294,7 @@ export function SelectionActionBar({
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                variant="destructive"
+                variant="destructive-primary"
                 onClick={(event) => {
                   event.preventDefault();
                   setDeleteDialogOpen(false);

@@ -337,9 +337,11 @@ const CANVAS_COLUMNS: PreviewAsset[][] = [
 
 export function AuthCanvasPreview() {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-[1]"
+    >
       <div className="absolute top-1/2 left-[68%] grid w-[51rem] origin-center [transform:translate(-50%,-50%)_perspective(1200px)_rotateX(4deg)_rotateY(-11deg)_rotateZ(-7deg)_scale(1.02)] grid-cols-[repeat(4,10.5rem)] gap-7 p-8">
-        <div className="absolute -inset-[32rem] z-0 bg-[color-mix(in_oklch,var(--muted)_58%,var(--background))] bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_17%,transparent)_1px,transparent_1px)] bg-[size:24px_24px]" />
         {CANVAS_COLUMNS.map((column, columnIndex) => (
           <div
             key={`column-${columnIndex}`}

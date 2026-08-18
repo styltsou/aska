@@ -1,11 +1,6 @@
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { ExternalLink, LoaderCircleIcon } from "lucide-react";
 import { useState } from "react";
-import {
-  getImageViewerLayoutId,
-  IMAGE_VIEWER_TRANSITION,
-  useActiveImageViewer,
-} from "@/components/board/image-viewer-transition";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import type { ImageAsset } from "@/types/asset";
 import { hasSelectionModifier } from "@/lib/selection";
@@ -20,9 +15,6 @@ export function ImageAssetCard({
   onOpen?: () => void;
   isContextMenuOpen?: boolean;
 }) {
-  const shouldReduceMotion = useReducedMotion();
-  const activeViewerAssetId = useActiveImageViewer();
-  const imageIsInViewer = activeViewerAssetId === asset.id;
   const hasBar = asset.sourceLabel;
   const [hovered, setHovered] = useState(false);
 
@@ -51,26 +43,16 @@ export function ImageAssetCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {!imageIsInViewer ? (
-        <motion.div
-          layoutId={
-            onOpen && !shouldReduceMotion
-              ? getImageViewerLayoutId(asset.id)
-              : undefined
-          }
-          transition={IMAGE_VIEWER_TRANSITION}
-          className="absolute inset-0 overflow-hidden rounded-[6px]"
-        >
-          <ProgressiveImage
-            src={asset.url}
-            fallbackSrc={asset.localPreviewUrl}
-            blurDataURL={asset.uploadStatus ? undefined : asset.blurDataURL}
-            alt={asset.alt ?? ""}
-            className="absolute inset-0 h-full w-full rounded-[inherit] object-cover"
-            loading="lazy"
-          />
-        </motion.div>
-      ) : null}
+      <div className="absolute inset-0 overflow-hidden rounded-[6px]">
+        <ProgressiveImage
+          src={asset.url}
+          fallbackSrc={asset.localPreviewUrl}
+          blurDataURL={asset.uploadStatus ? undefined : asset.blurDataURL}
+          alt={asset.alt ?? ""}
+          className="absolute inset-0 h-full w-full rounded-[inherit] object-cover"
+          loading="lazy"
+        />
+      </div>
       {asset.uploadStatus ? (
         <div className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5">
           <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">

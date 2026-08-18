@@ -75,6 +75,7 @@ export type CollectionFolderNode = {
   count: number;
   folderCount: number;
   previews: FolderChildPreview[];
+  createdAt: string;
   position: BoardPosition | null;
   /** Browser-only marker while a flatten mutation for this folder is in flight. */
   flattenStatus?: "pending";
@@ -87,6 +88,7 @@ export type CreatedFolder = {
   path: string;
   count: number;
   previews: FolderChildPreview[];
+  createdAt: string;
   position: BoardPosition | null;
 };
 
@@ -137,6 +139,7 @@ export type CollectionNoteNode = {
   isFavorite: boolean;
   wordCount: number;
   readingTimeMinutes: number;
+  createdAt: string;
   clientId?: string;
   position: BoardPosition | null;
 };

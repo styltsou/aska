@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
-import { motion, type Transition } from "motion/react";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { cn } from "@/lib/utils";
 
@@ -26,9 +25,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { FolderChildPreview } from "@/api/collection/types";
 
-const PREVIEW_TRANSITION: Transition = {
-  duration: 0.15,
-  ease: [0.16, 1, 0.3, 1] as const,
+const PREVIEW_TRANSITION = "transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+
+const PREVIEW_POSITION: CSSProperties = {
+  inset: 0,
+  margin: "auto",
+  width: "54%",
+  transformOrigin: "bottom center",
 };
 
 interface CollectionCardItem {
@@ -48,6 +51,7 @@ export function CollectionCard({
   collection,
   workspaceSlug,
 }: CollectionCardProps) {
+  const [hovered, setHovered] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const deleteCollection = useDeleteCollection(workspaceSlug);
 
@@ -56,17 +60,15 @@ export function CollectionCard({
       <ContextMenu>
         <ContextMenuTrigger
           render={(triggerProps) => (
-            <motion.div
-              initial="rest"
-              whileHover="hover"
-              className="relative aspect-square"
-            >
+            <div className="relative aspect-square">
               <Link
                 {...triggerProps}
                 to="/$workspaceSlug/collections/$"
                 search={{ note: undefined, image: undefined }}
                 params={{ workspaceSlug, _splat: collection.slug }}
                 className="relative grid aspect-square cursor-pointer grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 data-popup-open:border-sidebar-foreground/20"
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
               >
                 <div className="relative flex min-h-0 items-center justify-center overflow-hidden bg-sidebar">
                   {collection.previews.length === 0 ? (
@@ -83,26 +85,12 @@ export function CollectionCard({
                       const preview = collection.previews[0];
                       if (preview.type === "image" && preview.url) {
                         return (
-                          <motion.div
-                            variants={{
-                              rest: {
-                                rotate: -3,
-                                scale: 1,
-                                transition: PREVIEW_TRANSITION,
-                              },
-                              hover: {
-                                rotate: -3,
-                                scale: 1.02,
-                                transition: PREVIEW_TRANSITION,
-                              },
-                            }}
+                          <div
                             style={{
+                              ...PREVIEW_POSITION,
                               zIndex: 0,
-                              width: "54%",
-                              top: "50%",
-                              left: "50%",
-                              translate: "-50% -50%",
-                              transformOrigin: "bottom center",
+                              transform: `rotate(-3deg) scale(${hovered ? 1.02 : 1})`,
+                              transition: PREVIEW_TRANSITION,
                             }}
                             className="absolute aspect-square"
                           >
@@ -112,34 +100,20 @@ export function CollectionCard({
                               alt=""
                               className="size-full rounded-xl object-cover shadow-md ring-1 ring-sidebar-foreground/5"
                             />
-                          </motion.div>
+                          </div>
                         );
                       }
                       return (
-                        <motion.div
+                        <div
                           className={cn(
                             "ring-sidebar-foreground/5 absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl px-3 pt-3 pb-0 shadow-md ring-1",
                             !preview.color && "bg-card",
                           )}
-                          variants={{
-                            rest: {
-                              rotate: -3,
-                              scale: 1,
-                              transition: PREVIEW_TRANSITION,
-                            },
-                            hover: {
-                              rotate: -3,
-                              scale: 1.02,
-                              transition: PREVIEW_TRANSITION,
-                            },
-                          }}
                           style={{
+                            ...PREVIEW_POSITION,
                             zIndex: 0,
-                            width: "54%",
-                            top: "50%",
-                            left: "50%",
-                            translate: "-50% -50%",
-                            transformOrigin: "bottom center",
+                            transform: `rotate(-3deg) scale(${hovered ? 1.02 : 1})`,
+                            transition: PREVIEW_TRANSITION,
                             ...(preview.color
                               ? { backgroundColor: preview.color }
                               : {}),
@@ -148,14 +122,14 @@ export function CollectionCard({
                           {preview.snippet ? (
                             <NoteMarkdown
                               content={preview.snippet}
-                              className="text-xs leading-[1.2] [&_a]:!text-xs [&_blockquote]:!text-xs [&_code]:!text-xs [&_h1]:!my-0 [&_h1]:!text-xs [&_h2]:!my-0 [&_h2]:!text-xs [&_h3]:!my-0 [&_h3]:!text-xs [&_li]:!my-0 [&_li]:!text-xs [&_ol]:!my-0 [&_p]:!my-0 [&_p]:!text-xs [&_pre]:!text-xs [&_ul]:!my-0"
+                              className="text-xs leading-[1.2] [&_a]:!text-xs [&_blockquote]:!text-xs [&_code]:!text-xs [&_h1]:!my-0 [&_h1]:!text-xs [&_h2]:!my-0 [&_h2]:!text-xs [&_h3]:!my-0 [&_h3]:!text-xs [&_h4]:!my-0 [&_h4]:!text-xs [&_h5]:!my-0 [&_h5]:!text-xs [&_h6]:!my-0 [&_h6]:!text-xs [&_li]:!my-0 [&_li]:!text-xs [&_ol]:!my-0 [&_p]:!my-0 [&_p]:!text-xs [&_pre]:!text-xs [&_ul]:!my-0"
                             />
                           ) : (
                             <span className="text-[10px] font-medium text-sidebar-foreground/20">
                               Note
                             </span>
                           )}
-                        </motion.div>
+                        </div>
                       );
                     })()
                   ) : (
@@ -171,34 +145,16 @@ export function CollectionCard({
 
                       if (preview.type === "image" && preview.url) {
                         return (
-                          <motion.div
+                          <div
                             key={preview.assetId}
-                            variants={{
-                              rest: {
-                                x,
-                                y,
-                                rotate: deg,
-                                scale: 1,
-                                transition: PREVIEW_TRANSITION,
-                              },
-                              hover: {
-                                x: hoverX,
-                                y: hoverY,
-                                rotate: hovDeg,
-                                scale: 1.02,
-                                transition: {
-                                  ...PREVIEW_TRANSITION,
-                                  delay: z * 0.012,
-                                },
-                              },
-                            }}
                             style={{
+                              ...PREVIEW_POSITION,
                               zIndex: z,
-                              width: "54%",
-                              top: "50%",
-                              left: "50%",
-                              translate: "-50% -50%",
-                              transformOrigin: "bottom center",
+                              transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
+                              transition: PREVIEW_TRANSITION,
+                              transitionDelay: hovered
+                                ? `${(count - 1 - z) * 10}ms`
+                                : `${z * 10}ms`,
                             }}
                             className="absolute aspect-square"
                           >
@@ -208,42 +164,24 @@ export function CollectionCard({
                               alt=""
                               className="size-full rounded-xl object-cover shadow-md ring-1 ring-sidebar-foreground/5"
                             />
-                          </motion.div>
+                          </div>
                         );
                       }
                       return (
-                        <motion.div
+                        <div
                           key={preview.assetId}
                           className={cn(
                             "ring-sidebar-foreground/5 absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl px-3 pt-3 pb-0 shadow-md ring-1",
                             !preview.color && "bg-card",
                           )}
-                          variants={{
-                            rest: {
-                              x,
-                              y,
-                              rotate: deg,
-                              scale: 1,
-                              transition: PREVIEW_TRANSITION,
-                            },
-                            hover: {
-                              x: hoverX,
-                              y: hoverY,
-                              rotate: hovDeg,
-                              scale: 1.02,
-                              transition: {
-                                ...PREVIEW_TRANSITION,
-                                delay: z * 0.012,
-                              },
-                            },
-                          }}
                           style={{
+                            ...PREVIEW_POSITION,
                             zIndex: z,
-                            width: "54%",
-                            top: "50%",
-                            left: "50%",
-                            translate: "-50% -50%",
-                            transformOrigin: "bottom center",
+                            transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
+                            transition: PREVIEW_TRANSITION,
+                            transitionDelay: hovered
+                              ? `${(count - 1 - z) * 10}ms`
+                              : `${z * 10}ms`,
                             ...(preview.color
                               ? { backgroundColor: preview.color }
                               : {}),
@@ -252,14 +190,14 @@ export function CollectionCard({
                           {preview.snippet ? (
                             <NoteMarkdown
                               content={preview.snippet}
-                              className="text-xs leading-[1.2] [&_a]:!text-xs [&_blockquote]:!text-xs [&_code]:!text-xs [&_h1]:!my-0 [&_h1]:!text-xs [&_h2]:!my-0 [&_h2]:!text-xs [&_h3]:!my-0 [&_h3]:!text-xs [&_li]:!my-0 [&_li]:!text-xs [&_ol]:!my-0 [&_p]:!my-0 [&_p]:!text-xs [&_pre]:!text-xs [&_ul]:!my-0"
+                              className="text-xs leading-[1.2] [&_a]:!text-xs [&_blockquote]:!text-xs [&_code]:!text-xs [&_h1]:!my-0 [&_h1]:!text-xs [&_h2]:!my-0 [&_h2]:!text-xs [&_h3]:!my-0 [&_h3]:!text-xs [&_h4]:!my-0 [&_h4]:!text-xs [&_h5]:!my-0 [&_h5]:!text-xs [&_h6]:!my-0 [&_h6]:!text-xs [&_li]:!my-0 [&_li]:!text-xs [&_ol]:!my-0 [&_p]:!my-0 [&_p]:!text-xs [&_pre]:!text-xs [&_ul]:!my-0"
                             />
                           ) : (
                             <span className="text-[10px] font-medium text-sidebar-foreground/20">
                               Note
                             </span>
                           )}
-                        </motion.div>
+                        </div>
                       );
                     })
                   )}
@@ -273,7 +211,7 @@ export function CollectionCard({
                   </span>
                 </div>
               </Link>
-            </motion.div>
+            </div>
           )}
         />
         <ContextMenuContent>
@@ -302,7 +240,7 @@ export function CollectionCard({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              variant="destructive"
+              variant="destructive-primary"
               disabled={deleteCollection.isPending}
               onClick={() => {
                 deleteCollection.mutate(collection.slug, {

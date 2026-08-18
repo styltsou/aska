@@ -1,7 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { startTransition, useEffect } from "react";
-import { LayoutGroup } from "motion/react";
-import { ActiveImageViewerContext } from "@/components/board/image-viewer-transition";
 
 import { useInboxContents, useMarkInboxSeen } from "@/api/collection";
 import {
@@ -126,63 +124,59 @@ function InboxPage() {
   };
 
   return (
-    <ActiveImageViewerContext.Provider value={viewerImage?.id}>
-      <LayoutGroup id="image-viewer">
-        <BoardContextMenu
-          workspaceSlug={workspaceSlug}
-          collectionPath=""
-          target="inbox"
-        >
-          <BoardUploadZone
-            workspaceSlug={workspaceSlug}
-            collectionPath=""
-            target="inbox"
-          >
-            <AssetBoard
-              assets={displayAssets}
-              inboxContext={{ workspaceSlug }}
-              onOpenNote={handleOpenNote}
-              onOpenImage={handleOpenImage}
-              emptyTitle={
-                hasResolvedColorSearch || isTypeFilterActive
-                  ? "No matching assets"
-                  : "Inbox is empty"
-              }
-              emptyDescription={
-                hasResolvedColorSearch
-                  ? "Try a different color combination."
-                  : isTypeFilterActive
-                    ? "Try a different asset type."
-                    : "Quick captures and imports that are not in a collection yet will appear here."
-              }
-            />
-          </BoardUploadZone>
-          <NoteDetailDrawer note={drawerNote} onClose={handleCloseNote} />
-          <ImageAssetViewer
-            asset={viewerImage}
-            open={viewerImage !== undefined}
-            workspaceSlug={workspaceSlug}
-            onOpenChange={(open) => {
-              if (!open) handleCloseImage();
-            }}
-          />
-          {(assets.length > 0 || selectedAssetTypes.length > 0) && (
-            <FilterBar
-              scope={filterScope}
-              searchStatus={{
-                resultCount: hasResolvedColorSearch
-                  ? colorSearch.data.results.length
-                  : isTypeFilterActive && !isFetching
-                    ? assets.length
-                    : undefined,
-                isSearching:
-                  colorSearch.isSearching || (isTypeFilterActive && isFetching),
-              }}
-            />
-          )}
-        </BoardContextMenu>
-      </LayoutGroup>
-    </ActiveImageViewerContext.Provider>
+    <BoardContextMenu
+      workspaceSlug={workspaceSlug}
+      collectionPath=""
+      target="inbox"
+    >
+      <BoardUploadZone
+        workspaceSlug={workspaceSlug}
+        collectionPath=""
+        target="inbox"
+      >
+        <AssetBoard
+          assets={displayAssets}
+          inboxContext={{ workspaceSlug }}
+          onOpenNote={handleOpenNote}
+          onOpenImage={handleOpenImage}
+          emptyTitle={
+            hasResolvedColorSearch || isTypeFilterActive
+              ? "No matching assets"
+              : "Inbox is empty"
+          }
+          emptyDescription={
+            hasResolvedColorSearch
+              ? "Try a different color combination."
+              : isTypeFilterActive
+                ? "Try a different asset type."
+                : "Quick captures and imports that are not in a collection yet will appear here."
+          }
+        />
+      </BoardUploadZone>
+      <NoteDetailDrawer note={drawerNote} onClose={handleCloseNote} />
+      <ImageAssetViewer
+        asset={viewerImage}
+        open={viewerImage !== undefined}
+        workspaceSlug={workspaceSlug}
+        onOpenChange={(open) => {
+          if (!open) handleCloseImage();
+        }}
+      />
+      {(assets.length > 0 || selectedAssetTypes.length > 0) && (
+        <FilterBar
+          scope={filterScope}
+          searchStatus={{
+            resultCount: hasResolvedColorSearch
+              ? colorSearch.data.results.length
+              : isTypeFilterActive && !isFetching
+                ? assets.length
+                : undefined,
+            isSearching:
+              colorSearch.isSearching || (isTypeFilterActive && isFetching),
+          }}
+        />
+      )}
+    </BoardContextMenu>
   );
 }
 

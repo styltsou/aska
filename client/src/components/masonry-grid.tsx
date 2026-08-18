@@ -1,4 +1,11 @@
-import { Children, useEffect, useRef, useState } from "react";
+import {
+  Children,
+  isValidElement,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
@@ -26,20 +33,21 @@ export function Masonry({
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [width, setWidth] = useState(0);
-  const [items, setItems] = useState<Item[]>([]);
+  const items = useMemo<Item[]>(
+    () =>
+      Children.toArray(children).map((node, index) => ({
+        node,
+        key:
+          isValidElement(node) && node.key !== null
+            ? String(node.key)
+            : String(index),
+      })),
+    [children],
+  );
   const [positions, setPositions] = useState<
     { x: number; y: number; width: number }[]
   >([]);
   const [height, setHeight] = useState(0);
-
-  useEffect(() => {
-    setItems(
-      Children.toArray(children).map((node, index) => ({
-        node,
-        key: String(index),
-      })),
-    );
-  }, [children]);
 
   useIsomorphicLayoutEffect(() => {
     const el = containerRef.current;

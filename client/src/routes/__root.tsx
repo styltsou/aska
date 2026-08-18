@@ -8,6 +8,7 @@ import {
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppShell } from "@/components/app-shell";
 import { NotFoundPage } from "@/components/not-found-page";
+import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createRootRoute({
@@ -83,16 +84,16 @@ function RootError({ reset }: ErrorComponentProps) {
             Your session may have expired, or the service may be temporarily
             unavailable. Please try again.
           </p>
-          <button
+          <Button
             type="button"
-            className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+            className="h-9 px-4"
             onClick={() => {
               reset();
               window.location.reload();
             }}
           >
             Try again
-          </button>
+          </Button>
         </div>
       </div>
     </ThemeProvider>
