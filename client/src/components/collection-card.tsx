@@ -122,7 +122,7 @@ export function CollectionCard({
                           {preview.snippet ? (
                             <NoteMarkdown
                               content={preview.snippet}
-                              className="text-xs leading-[1.2] [&_a]:!text-xs [&_blockquote]:!text-xs [&_code]:!text-xs [&_h1]:!my-0 [&_h1]:!text-xs [&_h2]:!my-0 [&_h2]:!text-xs [&_h3]:!my-0 [&_h3]:!text-xs [&_h4]:!my-0 [&_h4]:!text-xs [&_h5]:!my-0 [&_h5]:!text-xs [&_h6]:!my-0 [&_h6]:!text-xs [&_li]:!my-0 [&_li]:!text-xs [&_ol]:!my-0 [&_p]:!my-0 [&_p]:!text-xs [&_pre]:!text-xs [&_ul]:!my-0"
+                              className="text-xs leading-[1.2] [&_a]:!text-xs [&_blockquote]:!my-2 [&_blockquote]:!text-xs [&_code]:!text-xs [&_h1]:!mt-0 [&_h1]:!mb-2 [&_h1]:!text-sm [&_h2]:!mt-3 [&_h2]:!mb-1.5 [&_h2]:!text-[13px] [&_h3]:!mt-3 [&_h3]:!mb-1.5 [&_h3]:!text-[13px] [&_h4]:!mt-3 [&_h4]:!mb-1.5 [&_h4]:!text-xs [&_h5]:!mt-3 [&_h5]:!mb-1.5 [&_h5]:!text-xs [&_h6]:!mt-3 [&_h6]:!mb-1.5 [&_h6]:!text-xs [&_li]:!my-0 [&_li]:!text-xs [&_ol]:!my-2 [&_p]:!my-2 [&_p]:!text-xs [&_pre]:!my-2 [&_pre]:!text-xs [&_ul]:!my-2"
                             />
                           ) : (
                             <span className="text-[10px] font-medium text-sidebar-foreground/20">
@@ -190,7 +190,7 @@ export function CollectionCard({
                           {preview.snippet ? (
                             <NoteMarkdown
                               content={preview.snippet}
-                              className="text-xs leading-[1.2] [&_a]:!text-xs [&_blockquote]:!text-xs [&_code]:!text-xs [&_h1]:!my-0 [&_h1]:!text-xs [&_h2]:!my-0 [&_h2]:!text-xs [&_h3]:!my-0 [&_h3]:!text-xs [&_h4]:!my-0 [&_h4]:!text-xs [&_h5]:!my-0 [&_h5]:!text-xs [&_h6]:!my-0 [&_h6]:!text-xs [&_li]:!my-0 [&_li]:!text-xs [&_ol]:!my-0 [&_p]:!my-0 [&_p]:!text-xs [&_pre]:!text-xs [&_ul]:!my-0"
+                              className="text-xs leading-[1.2] [&_a]:!text-xs [&_blockquote]:!my-2 [&_blockquote]:!text-xs [&_code]:!text-xs [&_h1]:!mt-0 [&_h1]:!mb-2 [&_h1]:!text-sm [&_h2]:!mt-3 [&_h2]:!mb-1.5 [&_h2]:!text-[13px] [&_h3]:!mt-3 [&_h3]:!mb-1.5 [&_h3]:!text-[13px] [&_h4]:!mt-3 [&_h4]:!mb-1.5 [&_h4]:!text-xs [&_h5]:!mt-3 [&_h5]:!mb-1.5 [&_h5]:!text-xs [&_h6]:!mt-3 [&_h6]:!mb-1.5 [&_h6]:!text-xs [&_li]:!my-0 [&_li]:!text-xs [&_ol]:!my-2 [&_p]:!my-2 [&_p]:!text-xs [&_pre]:!my-2 [&_pre]:!text-xs [&_ul]:!my-2"
                             />
                           ) : (
                             <span className="text-[10px] font-medium text-sidebar-foreground/20">

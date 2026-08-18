@@ -50,6 +50,9 @@ import type {
 } from "./types";
 import type { WorkspaceData } from "@/api/workspace";
 import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
+import { BOARD_CARD_WIDTH } from "@/components/canvas/canvas-node-layout";
+import { makeBoardKey } from "@/components/canvas/canvas-key";
+import { emitBatchPlacementCompleted } from "@/components/canvas/batch-placement-completed";
 import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
 import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
@@ -1087,6 +1090,22 @@ export function useUploadLocalImages(
           };
         },
       );
+      if (optimisticImages.length > 1) {
+        const placedImages = optimisticImages.filter(
+          (image) => image.position !== null,
+        );
+        if (placedImages.length === optimisticImages.length) {
+          emitBatchPlacementCompleted({
+            boardKey: makeBoardKey(
+              workspaceSlug,
+              collectionSlug,
+              parentFolderPath,
+            ),
+            nodeIds: placedImages.map((image) => image.id),
+            bounds: getImageBatchBounds(placedImages),
+          });
+        }
+      }
       updateCollectionAssetCount(
         queryClient,
         workspaceSlug,
@@ -1224,6 +1243,22 @@ export function useUploadLocalImages(
       }
     },
   });
+}
+
+function getImageBatchBounds(images: CollectionImageNode[]) {
+  return images.reduce(
+    (bounds, image) => {
+      const position = image.position!;
+      const height = BOARD_CARD_WIDTH * (image.height / image.width);
+      return {
+        left: Math.min(bounds.left, position.x),
+        top: Math.min(bounds.top, position.y),
+        right: Math.max(bounds.right, position.x + BOARD_CARD_WIDTH),
+        bottom: Math.max(bounds.bottom, position.y + height),
+      };
+    },
+    { left: Infinity, top: Infinity, right: -Infinity, bottom: -Infinity },
+  );
 }
 
 export function useUploadInboxImages(workspaceSlug: string) {

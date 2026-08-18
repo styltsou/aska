@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getBoardDropPlacement,
   getBoardPastePlacement,
+  getBoardViewportCenterPlacement,
   setBoardFlowPositionConverter,
   setBoardPointerPosition,
 } from "./board-pointer-position";
@@ -18,9 +19,9 @@ describe("board event placement", () => {
       ({ x, y }) => ({ x: x - 100.4, y: y + 20.6 }),
     );
 
-    expect(
-      getBoardDropPlacement(boardKey, { x: 420.8, y: 125.2 }, visibleBounds),
-    ).toEqual({ position: { x: 320, y: 146 } });
+    expect(getBoardDropPlacement(boardKey, { x: 420.8, y: 125.2 })).toEqual({
+      position: { x: 320, y: 146 },
+    });
 
     clearConverter();
   });
@@ -31,7 +32,6 @@ describe("board event placement", () => {
 
     expect(getBoardPastePlacement(boardKey, visibleBounds)).toEqual({
       position: { x: -120, y: 340 },
-      visibleBounds,
     });
   });
 
@@ -41,13 +41,17 @@ describe("board event placement", () => {
     );
   });
 
+  it("resolves a viewport anchor in the browser before calling placement", () => {
+    expect(getBoardViewportCenterPlacement(visibleBounds)).toEqual({
+      position: { x: 500, y: 400 },
+    });
+  });
+
   it("does not fall back to a stale pointer when a drop converter is unavailable", () => {
     const boardKey = "drop-without-converter";
     setBoardPointerPosition(boardKey, { x: 900, y: 700 });
 
-    expect(
-      getBoardDropPlacement(boardKey, { x: 420, y: 125 }, visibleBounds),
-    ).toEqual({ visibleBounds });
+    expect(getBoardDropPlacement(boardKey, { x: 420, y: 125 })).toEqual({});
   });
 
   it("does not let an older canvas cleanup remove a newer converter", () => {
@@ -63,9 +67,9 @@ describe("board event placement", () => {
 
     clearOldConverter();
 
-    expect(
-      getBoardDropPlacement(boardKey, { x: 0, y: 0 }, visibleBounds),
-    ).toEqual({ position: { x: 2, y: 2 } });
+    expect(getBoardDropPlacement(boardKey, { x: 0, y: 0 })).toEqual({
+      position: { x: 2, y: 2 },
+    });
 
     clearNewConverter();
   });

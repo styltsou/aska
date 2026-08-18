@@ -20,7 +20,7 @@ export function CollectionViewToggle({
     >
       <motion.span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0.5 left-0.5 z-0 w-[calc((100%_-_0.375rem)/2)] rounded-[calc(var(--radius-md)-2px)] bg-background/85 shadow-[0_1px_1px_rgb(0_0_0_/_0.04)] ring-1 ring-foreground/[0.06]"
+        className="pointer-events-none absolute inset-y-0.5 left-0.5 z-0 w-[calc((100%_-_0.375rem)/2)] rounded-[calc(var(--radius-md)-2px)] bg-gradient-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]"
         initial={false}
         animate={{
           x: value === "canvas" ? 0 : "calc(100% + 0.125rem)",

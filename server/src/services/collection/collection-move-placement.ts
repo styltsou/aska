@@ -2,8 +2,8 @@ export const CANVAS_CARD_WIDTH = 280;
 export const CANVAS_ITEM_GAP = 32;
 
 const NOTE_CARD_MAX_HEIGHT = 320;
-const COLLISION_SEARCH_LIMIT = 16;
-const COLLISION_SEARCH_STEP = CANVAS_ITEM_GAP;
+const LOCAL_NUDGE_LIMIT = 4;
+const COMPOSITION_SEARCH_LIMIT = 16;
 const EMPTY_FOLDER_POSITION = { x: 48, y: 48 };
 
 export type MovePlacementNode = {
@@ -21,12 +21,14 @@ type Bounds = { left: number; top: number; right: number; bottom: number };
 
 /**
  * Finds a system-chosen destination position for a node moved into a folder.
- * The destination composition bounds play the same role as a visible viewport
- * for top-bar and command-palette insertions.
+ * A single move preserves the composition centre and makes only a bounded,
+ * deterministic local nudge. Batch moves deliberately use the denser packing
+ * search described by the placement policy.
  */
 export function getFolderMovePosition(
   destinationNodes: MovePlacementNode[],
   movedNode: MovePlacementNode,
+  isBatch = false,
 ): BoardPosition {
   const positionedNodes = destinationNodes.flatMap((node) => {
     if (node.positionX === null || node.positionY === null) return [];
@@ -51,15 +53,20 @@ export function getFolderMovePosition(
     ),
   };
 
-  if (isAvailable(preferred, footprint, positionedNodes, compositionBounds)) {
-    return preferred;
+  if (!isBatch) {
+    return findLocalNudgePosition(
+      preferred,
+      footprint,
+      positionedNodes,
+      compositionBounds,
+    );
   }
 
-  for (let radius = 1; radius <= COLLISION_SEARCH_LIMIT; radius += 1) {
+  for (let radius = 0; radius <= COMPOSITION_SEARCH_LIMIT; radius += 1) {
     for (const offset of squarePerimeterOffsets(radius)) {
       const position = {
-        x: preferred.x + offset.x * COLLISION_SEARCH_STEP,
-        y: preferred.y + offset.y * COLLISION_SEARCH_STEP,
+        x: preferred.x + offset.x * (footprint.width + CANVAS_ITEM_GAP),
+        y: preferred.y + offset.y * (footprint.height + CANVAS_ITEM_GAP),
       };
 
       if (
@@ -72,6 +79,25 @@ export function getFolderMovePosition(
 
   // A full composition still has a clear visual centre. Keep the move near
   // its destination rather than inventing a distant fallback location.
+  return preferred;
+}
+
+function findLocalNudgePosition(
+  preferred: BoardPosition,
+  footprint: CardFootprint,
+  occupiedNodes: Array<{ position: BoardPosition; footprint: CardFootprint }>,
+  compositionBounds: Bounds,
+): BoardPosition {
+  for (let step = 0; step <= LOCAL_NUDGE_LIMIT; step += 1) {
+    const position = {
+      x: preferred.x + step * (footprint.width + CANVAS_ITEM_GAP),
+      y: preferred.y,
+    };
+    if (isAvailable(position, footprint, occupiedNodes, compositionBounds)) {
+      return position;
+    }
+  }
+
   return preferred;
 }
 
@@ -190,12 +216,8 @@ function intersects(left: Bounds, right: Bounds): boolean {
 
 function* squarePerimeterOffsets(radius: number) {
   for (let y = -radius; y <= radius; y += 1) {
-    yield { x: -radius, y };
-    yield { x: radius, y };
-  }
-
-  for (let x = -radius + 1; x < radius; x += 1) {
-    yield { x, y: -radius };
-    yield { x, y: radius };
+    for (let x = -radius; x <= radius; x += 1) {
+      if (Math.max(Math.abs(x), Math.abs(y)) === radius) yield { x, y };
+    }
   }
 }

@@ -110,7 +110,7 @@ export function FolderAssetCard({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.94 }}
                     transition={previewTransition}
-                    className="aspect-square overflow-hidden rounded-sm"
+                    className="aspect-square overflow-hidden rounded-sm ring-1 ring-sidebar-foreground/5"
                   >
                     <ProgressiveImage
                       src={preview.url}
@@ -132,7 +132,7 @@ export function FolderAssetCard({
                   exit={{ opacity: 0, scale: 0.94 }}
                   transition={previewTransition}
                   className={cn(
-                    "flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-sm p-2",
+                    "ring-sidebar-foreground/5 flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-sm p-2 ring-1",
                     !preview.color && "bg-card",
                   )}
                   style={
@@ -144,7 +144,7 @@ export function FolderAssetCard({
                   {preview.snippet ? (
                     <NoteMarkdown
                       content={preview.snippet}
-                      className="text-[10px] leading-[1.2] [&_a]:!text-[10px] [&_blockquote]:!text-[10px] [&_code]:!text-[10px] [&_h1]:!my-0 [&_h1]:!text-[10px] [&_h1]:!leading-[1.2] [&_h2]:!my-0 [&_h2]:!text-[10px] [&_h2]:!leading-[1.2] [&_h3]:!my-0 [&_h3]:!text-[10px] [&_h3]:!leading-[1.2] [&_h4]:!my-0 [&_h4]:!text-[10px] [&_h4]:!leading-[1.2] [&_h5]:!my-0 [&_h5]:!text-[10px] [&_h5]:!leading-[1.2] [&_h6]:!my-0 [&_h6]:!text-[10px] [&_h6]:!leading-[1.2] [&_li]:!my-0 [&_li]:!text-[10px] [&_li]:!leading-[1.2] [&_ol]:!my-0 [&_p]:!my-0 [&_p]:!text-[10px] [&_p]:!leading-[1.2] [&_pre]:!text-[10px] [&_ul]:!my-0"
+                      className="text-[10px] leading-[1.2] [&_a]:!text-[10px] [&_blockquote]:!my-1.5 [&_blockquote]:!text-[10px] [&_code]:!text-[10px] [&_h1]:!mt-0 [&_h1]:!mb-1.5 [&_h1]:!text-xs [&_h1]:!leading-[1.2] [&_h2]:!mt-2 [&_h2]:!mb-1 [&_h2]:!text-[11px] [&_h2]:!leading-[1.2] [&_h3]:!mt-2 [&_h3]:!mb-1 [&_h3]:!text-[11px] [&_h3]:!leading-[1.2] [&_h4]:!mt-2 [&_h4]:!mb-1 [&_h4]:!text-[10px] [&_h4]:!leading-[1.2] [&_h5]:!mt-2 [&_h5]:!mb-1 [&_h5]:!text-[10px] [&_h5]:!leading-[1.2] [&_h6]:!mt-2 [&_h6]:!mb-1 [&_h6]:!text-[10px] [&_h6]:!leading-[1.2] [&_li]:!my-0 [&_li]:!text-[10px] [&_li]:!leading-[1.2] [&_ol]:!my-1.5 [&_p]:!my-1.5 [&_p]:!text-[10px] [&_p]:!leading-[1.2] [&_pre]:!my-1.5 [&_pre]:!text-[10px] [&_ul]:!my-1.5"
                     />
                   ) : (
                     <span className="text-[10px] font-medium text-sidebar-foreground/20">

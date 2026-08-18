@@ -8,6 +8,7 @@ import {
   SelectionMode,
   useReactFlow,
   type NodeChange,
+  type NodePositionChange,
   type NodeTypes,
   type Viewport,
   type XYPosition,
@@ -45,6 +46,7 @@ import { toast } from "sonner";
 
 import { formatPlatformShortcut } from "@/lib/platform";
 import { makeBoardKey } from "./canvas-key";
+import { onBatchPlacementCompleted } from "./batch-placement-completed";
 import {
   setBoardFlowPositionConverter,
   setBoardPointerPosition,
@@ -62,6 +64,14 @@ import {
 } from "./canvas-node-layout";
 import { createLatestValueQueue } from "./latest-value-queue";
 import { CanvasControls } from "./canvas-controls";
+import {
+  getCanvasAlignmentBounds,
+  getCanvasAlignmentSnap,
+  getVisibleCanvasAlignmentRects,
+  type CanvasAlignmentGuides,
+  type CanvasAlignmentRect,
+} from "./canvas-alignment-guides";
+import { CanvasAlignmentGuideLines } from "./canvas-alignment-guide-lines";
 import {
   makeCanvasDropStackStyles,
   type CanvasDropStackStyle,
@@ -118,6 +128,9 @@ type PendingFolderDrop = {
 type CanvasDragSession = {
   primaryNodeId: string;
   origins: Map<string, XYPosition>;
+  alignmentCandidates: CanvasAlignmentRect[];
+  currentPositions: Map<string, XYPosition>;
+  draggedRects: Map<string, CanvasAlignmentRect>;
   isGroup: boolean;
 };
 
@@ -151,6 +164,9 @@ function CanvasSurface({
   );
   const isCanvasLocked = usePersistedStore(
     (state) => state.boardLocks[boardKey] ?? false,
+  );
+  const areAlignmentGuidesEnabled = usePersistedStore(
+    (state) => state.boardAlignmentGuides[boardKey] ?? true,
   );
   const setStoredViewport = usePersistedStore(
     (state) => state.setBoardViewport,
@@ -194,10 +210,12 @@ function CanvasSurface({
     screenToFlowPosition,
   } = useReactFlow<CanvasNode>();
   const boardRef = useRef<HTMLDivElement>(null);
+  const boardSizeRef = useRef({ width: 0, height: 0 });
   const suppressedClickIdsRef = useRef(new Set<string>());
   const dragSessionRef = useRef<CanvasDragSession | undefined>(undefined);
   const dropTargetNodeIdRef = useRef<string | undefined>(undefined);
   const dropStackStylesRef = useRef(new Map<string, CanvasDropStackStyle>());
+  const alignmentBypassRef = useRef(false);
   const dragVersionRef = useRef(new Map<string, number>());
   const pendingNodePositionsRef = useRef(new Map<string, XYPosition>());
   const persistPositionRef = useRef<
@@ -209,6 +227,8 @@ function CanvasSurface({
     ),
   );
   const [dropTargetNodeId, setDropTargetNodeId] = useState<string>();
+  const [alignmentGuides, setAlignmentGuides] =
+    useState<CanvasAlignmentGuides>();
   const [pendingFolderDrop, setPendingFolderDrop] =
     useState<PendingFolderDrop>();
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
@@ -273,6 +293,7 @@ function CanvasSurface({
 
       const { width, height } = board.getBoundingClientRect();
       if (width <= 0 || height <= 0) return;
+      boardSizeRef.current = { width, height };
 
       const { x, y, zoom } = viewport;
       setBoardVisibleBounds(boardKey, {
@@ -466,6 +487,19 @@ function CanvasSurface({
     },
     [boardKey, clearSelection, eligibleNodeIds, toggleSelectedNode],
   );
+  const clearAlignmentGuides = useCallback(() => {
+    setAlignmentGuides((current) =>
+      current === undefined ? current : undefined,
+    );
+  }, []);
+  const setActiveAlignmentGuides = useCallback(
+    (next: CanvasAlignmentGuides | undefined) => {
+      setAlignmentGuides((current) =>
+        alignmentGuidesEqual(current, next) ? current : next,
+      );
+    },
+    [],
+  );
   const clearDropTarget = useCallback(() => {
     dropTargetNodeIdRef.current = undefined;
     dropStackStylesRef.current = new Map();
@@ -551,6 +585,47 @@ function CanvasSurface({
   const [flowNodes, setFlowNodes] = useState<CanvasNode[]>(() =>
     nodes.map((node, index) => makeFlowNode(node, index, makeNodeData(node))),
   );
+
+  useEffect(() => {
+    let timer: number | undefined;
+
+    const unsubscribe = onBatchPlacementCompleted((placement) => {
+      if (placement.boardKey !== boardKey) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const visibleBounds =
+          useTransientStore.getState().boardVisibleBounds[boardKey];
+        if (!visibleBounds) return;
+
+        const { bounds } = placement;
+        const exceedsViewport =
+          bounds.left < visibleBounds.left ||
+          bounds.top < visibleBounds.top ||
+          bounds.right > visibleBounds.right ||
+          bounds.bottom > visibleBounds.bottom;
+        if (!exceedsViewport) return;
+
+        const nodeIds = new Set(placement.nodeIds);
+        const batchNodes = getNodes().filter((node) => nodeIds.has(node.id));
+        if (batchNodes.length === 0) return;
+
+        const reducedMotion = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        void fitView({
+          nodes: batchNodes,
+          padding: 0.12,
+          maxZoom: getViewport().zoom,
+          duration: reducedMotion ? 0 : 180,
+        });
+      }, 180);
+    });
+
+    return () => {
+      window.clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [boardKey, fitView, getNodes, getViewport]);
 
   useEffect(() => {
     activateSelectionScope(boardKey);
@@ -694,9 +769,86 @@ function CanvasSurface({
     });
   }, [fitView, focusedNodeId, getNode]);
 
-  const handleNodesChange = useCallback((changes: NodeChange<CanvasNode>[]) => {
-    setFlowNodes((current) => applyNodeChanges(changes, current));
-  }, []);
+  const handleNodesChange = useCallback(
+    (changes: NodeChange<CanvasNode>[]) => {
+      const dragSession = dragSessionRef.current;
+      const primaryChange = dragSession
+        ? getPositionChange(changes, dragSession.primaryNodeId)
+        : undefined;
+
+      if (
+        !areAlignmentGuidesEnabled ||
+        !dragSession ||
+        !primaryChange?.position ||
+        alignmentBypassRef.current ||
+        dropTargetNodeIdRef.current
+      ) {
+        clearAlignmentGuides();
+        if (dragSession) recordDraggedChangePositions(dragSession, changes);
+        setFlowNodes((current) => applyNodeChanges(changes, current));
+        return;
+      }
+
+      const primaryOrigin = dragSession.draggedRects.get(
+        dragSession.primaryNodeId,
+      );
+      if (!primaryOrigin) {
+        clearAlignmentGuides();
+        recordDraggedChangePositions(dragSession, changes);
+        setFlowNodes((current) => applyNodeChanges(changes, current));
+        return;
+      }
+
+      const dragOffset = {
+        x: primaryChange.position.x - primaryOrigin.x,
+        y: primaryChange.position.y - primaryOrigin.y,
+      };
+      const movingBounds = getCanvasAlignmentBounds(
+        Array.from(dragSession.draggedRects.values(), (rectangle) => ({
+          ...rectangle,
+          x: rectangle.x + dragOffset.x,
+          y: rectangle.y + dragOffset.y,
+        })),
+      );
+      const viewport = getViewport();
+      const visibleBounds = getCanvasViewportBounds(
+        boardSizeRef.current,
+        viewport,
+      );
+      const snap = movingBounds
+        ? getCanvasAlignmentSnap({
+            moving: movingBounds,
+            candidates: getVisibleCanvasAlignmentRects(
+              dragSession.alignmentCandidates,
+              visibleBounds,
+            ),
+            zoom: viewport.zoom,
+          })
+        : undefined;
+
+      setActiveAlignmentGuides(snap?.guides);
+      const adjustedChanges = withAlignedDragPositions(
+        changes,
+        dragSession,
+        {
+          x: dragOffset.x + (snap?.offset.x ?? 0),
+          y: dragOffset.y + (snap?.offset.y ?? 0),
+        },
+        primaryChange.dragging,
+      );
+      setDraggedPositions(dragSession, {
+        x: dragOffset.x + (snap?.offset.x ?? 0),
+        y: dragOffset.y + (snap?.offset.y ?? 0),
+      });
+      setFlowNodes((current) => applyNodeChanges(adjustedChanges, current));
+    },
+    [
+      areAlignmentGuidesEnabled,
+      clearAlignmentGuides,
+      getViewport,
+      setActiveAlignmentGuides,
+    ],
+  );
   const updateDropTarget = useCallback(
     (event: MouseEvent | TouchEvent, node: CanvasNode) => {
       if (!isDraggableNode(node)) {
@@ -735,6 +887,7 @@ function CanvasSurface({
 
       if (dropTargetNodeIdRef.current === nextTargetId) return;
       dropTargetNodeIdRef.current = nextTargetId;
+      if (nextTargetId) clearAlignmentGuides();
       const dragSession = dragSessionRef.current;
       dropStackStylesRef.current =
         nextTargetId && dragSession
@@ -745,7 +898,13 @@ function CanvasSurface({
           : new Map();
       setDropTargetNodeId(nextTargetId);
     },
-    [clearDropTarget, getIntersectingNodes, getNodes, screenToFlowPosition],
+    [
+      clearAlignmentGuides,
+      clearDropTarget,
+      getIntersectingNodes,
+      getNodes,
+      screenToFlowPosition,
+    ],
   );
 
   return (
@@ -755,6 +914,7 @@ function CanvasSurface({
       onPointerDownCapture={marquee.onPointerDownCapture}
       onPointerMoveCapture={(event) => {
         marquee.onPointerMoveCapture(event);
+        alignmentBypassRef.current = event.altKey;
         setBoardPointerPosition(
           boardKey,
           roundPosition(
@@ -810,6 +970,8 @@ function CanvasSurface({
         }}
         onPaneClick={() => clearSelection(boardKey)}
         onNodeDragStart={(_, node, movedNodes) => {
+          alignmentBypassRef.current = false;
+          clearAlignmentGuides();
           clearDropTarget();
           setFlowNodes((current) => {
             let changed = false;
@@ -827,6 +989,25 @@ function CanvasSurface({
           const draggedNodeIds = new Set(
             dragNodes.map((dragNode) => dragNode.id),
           );
+          const currentFlowNodes = getNodes();
+          const currentFlowNodesById = new Map(
+            currentFlowNodes.map((flowNode) => [flowNode.id, flowNode]),
+          );
+          const draggedRects = new Map(
+            dragNodes.flatMap((dragNode) => {
+              const flowNode =
+                currentFlowNodesById.get(dragNode.id) ?? dragNode;
+              const rectangle = toCanvasAlignmentRect(flowNode);
+              return rectangle ? [[dragNode.id, rectangle] as const] : [];
+            }),
+          );
+          const alignmentCandidates = areAlignmentGuidesEnabled
+            ? currentFlowNodes.flatMap((flowNode) => {
+                if (draggedNodeIds.has(flowNode.id)) return [];
+                const rectangle = toCanvasAlignmentRect(flowNode);
+                return rectangle ? [rectangle] : [];
+              })
+            : [];
           setFlowNodes((current) =>
             current.map((flowNode) =>
               draggedNodeIds.has(flowNode.id)
@@ -845,6 +1026,14 @@ function CanvasSurface({
                 },
               ]),
             ),
+            alignmentCandidates,
+            currentPositions: new Map(
+              dragNodes.map((dragNode) => [
+                dragNode.id,
+                roundPosition(dragNode.position),
+              ]),
+            ),
+            draggedRects,
             isGroup: dragNodes.length > 1,
           };
         }}
@@ -855,6 +1044,8 @@ function CanvasSurface({
           const session = dragSessionRef.current;
           const dragNodes = movedNodes.length > 0 ? movedNodes : [node];
           dragSessionRef.current = undefined;
+          alignmentBypassRef.current = false;
+          clearAlignmentGuides();
           const draggedNodeIds = new Set(
             dragNodes.map((dragNode) => dragNode.id),
           );
@@ -921,7 +1112,9 @@ function CanvasSurface({
 
           const moved = dragNodes.flatMap((dragNode) => {
             const origin = session.origins.get(dragNode.id);
-            const position = roundPosition(dragNode.position);
+            const position = roundPosition(
+              session.currentPositions.get(dragNode.id) ?? dragNode.position,
+            );
             return origin && !positionsEqual(origin, position)
               ? [{ node: dragNode, origin, position }]
               : [];
@@ -1011,6 +1204,10 @@ function CanvasSurface({
           gap={24}
           size={1}
           color="color-mix(in oklch, var(--foreground) 14%, transparent)"
+        />
+        <CanvasAlignmentGuideLines
+          guides={alignmentGuides}
+          zoom={getViewport().zoom}
         />
         <CanvasControls
           isCanvasLocked={isCanvasLocked}
@@ -1130,6 +1327,126 @@ function updateLocalNodePosition(
 ): CanvasNode[] {
   return nodes.map((node) =>
     node.id === nodeId ? { ...node, position } : node,
+  );
+}
+
+function toCanvasAlignmentRect(
+  node: CanvasNode,
+): CanvasAlignmentRect | undefined {
+  const width = node.measured?.width;
+  const height = node.measured?.height;
+  if (
+    !width ||
+    !height ||
+    !Number.isFinite(width) ||
+    !Number.isFinite(height)
+  ) {
+    return undefined;
+  }
+
+  return {
+    id: node.id,
+    x: node.position.x,
+    y: node.position.y,
+    width,
+    height,
+  };
+}
+
+function getCanvasViewportBounds(
+  surface: { width: number; height: number },
+  viewport: Viewport,
+) {
+  return {
+    left: -viewport.x / viewport.zoom,
+    top: -viewport.y / viewport.zoom,
+    right: (surface.width - viewport.x) / viewport.zoom,
+    bottom: (surface.height - viewport.y) / viewport.zoom,
+  };
+}
+
+function getPositionChange(
+  changes: NodeChange<CanvasNode>[],
+  nodeId: string,
+): NodePositionChange | undefined {
+  return changes.find(
+    (change): change is NodePositionChange =>
+      change.type === "position" && change.id === nodeId,
+  );
+}
+
+function withAlignedDragPositions(
+  changes: NodeChange<CanvasNode>[],
+  session: CanvasDragSession,
+  offset: XYPosition,
+  dragging: boolean | undefined,
+): NodeChange<CanvasNode>[] {
+  const draggedNodeIds = new Set(session.draggedRects.keys());
+  const nonDragPositionChanges = changes.filter(
+    (change) => change.type !== "position" || !draggedNodeIds.has(change.id),
+  );
+  const alignedChanges: NodePositionChange[] = Array.from(
+    session.draggedRects.values(),
+    (rectangle) => {
+      const position = {
+        x: rectangle.x + offset.x,
+        y: rectangle.y + offset.y,
+      };
+      return {
+        id: rectangle.id,
+        type: "position",
+        position,
+        positionAbsolute: position,
+        dragging,
+      };
+    },
+  );
+
+  return [...nonDragPositionChanges, ...alignedChanges];
+}
+
+function recordDraggedChangePositions(
+  session: CanvasDragSession,
+  changes: NodeChange<CanvasNode>[],
+) {
+  for (const change of changes) {
+    if (
+      change.type === "position" &&
+      change.position &&
+      session.currentPositions.has(change.id)
+    ) {
+      session.currentPositions.set(change.id, change.position);
+    }
+  }
+}
+
+function setDraggedPositions(session: CanvasDragSession, offset: XYPosition) {
+  for (const rectangle of session.draggedRects.values()) {
+    session.currentPositions.set(rectangle.id, {
+      x: rectangle.x + offset.x,
+      y: rectangle.y + offset.y,
+    });
+  }
+}
+
+function alignmentGuidesEqual(
+  left: CanvasAlignmentGuides | undefined,
+  right: CanvasAlignmentGuides | undefined,
+): boolean {
+  return (
+    alignmentGuideSegmentEqual(left?.vertical, right?.vertical) &&
+    alignmentGuideSegmentEqual(left?.horizontal, right?.horizontal)
+  );
+}
+
+function alignmentGuideSegmentEqual(
+  left: CanvasAlignmentGuides["vertical"],
+  right: CanvasAlignmentGuides["vertical"],
+): boolean {
+  return (
+    left?.coordinate === right?.coordinate &&
+    left?.start === right?.start &&
+    left?.end === right?.end
   );
 }
 

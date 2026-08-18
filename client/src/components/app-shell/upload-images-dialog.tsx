@@ -541,7 +541,7 @@ export function UploadImagesDialog({
                   {mode === "local" ? (
                     <motion.span
                       aria-hidden="true"
-                      className="absolute inset-0 z-0 rounded-[calc(var(--radius-md)-2px)] bg-background/85 shadow-[0_1px_1px_rgb(0_0_0_/_0.04)] ring-1 ring-foreground/[0.06]"
+                      className="absolute inset-0 z-0 rounded-[calc(var(--radius-md)-2px)] bg-gradient-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]"
                       layoutId="upload-image-source-active"
                       transition={{
                         duration: 0.12,
@@ -567,7 +567,7 @@ export function UploadImagesDialog({
                   {mode === "remote" ? (
                     <motion.span
                       aria-hidden="true"
-                      className="absolute inset-0 z-0 rounded-[calc(var(--radius-md)-2px)] bg-background/85 shadow-[0_1px_1px_rgb(0_0_0_/_0.04)] ring-1 ring-foreground/[0.06]"
+                      className="absolute inset-0 z-0 rounded-[calc(var(--radius-md)-2px)] bg-gradient-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]"
                       layoutId="upload-image-source-active"
                       transition={{
                         duration: 0.12,
@@ -593,7 +593,7 @@ export function UploadImagesDialog({
                   {mode === "cloud" ? (
                     <motion.span
                       aria-hidden="true"
-                      className="absolute inset-0 z-0 rounded-[calc(var(--radius-md)-2px)] bg-background/85 shadow-[0_1px_1px_rgb(0_0_0_/_0.04)] ring-1 ring-foreground/[0.06]"
+                      className="absolute inset-0 z-0 rounded-[calc(var(--radius-md)-2px)] bg-gradient-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]"
                       layoutId="upload-image-source-active"
                       transition={{
                         duration: 0.12,
@@ -824,7 +824,7 @@ function AnimatedDialogPanel({ children }: { children: React.ReactNode }) {
 
 function sourceTabClassName(isActive: boolean) {
   return cn(
-    "relative isolate px-3",
+    "relative isolate px-4 py-2.5",
     isActive
       ? "text-foreground hover:bg-transparent hover:text-foreground"
       : "text-muted-foreground transition-colors duration-[50ms] hover:bg-foreground/[0.05] hover:text-foreground active:bg-foreground/[0.08] dark:hover:bg-foreground/[0.1] dark:active:bg-foreground/[0.14]",

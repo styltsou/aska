@@ -3,6 +3,7 @@ import type { BoardInsertionPlacement } from "@/api/collection";
 import { useTransientStore } from "@/store";
 
 import { makeBoardKey } from "./canvas-key";
+import { getBoardViewportCenterPlacement } from "./board-pointer-position";
 
 export function useBoardInsertionPlacement(
   workspaceSlug: string | undefined,
@@ -26,7 +27,7 @@ export function useBoardInsertionPlacement(
   );
 
   return useMemo(
-    () => (visibleBounds ? { visibleBounds } : undefined),
+    () => getBoardViewportCenterPlacement(visibleBounds),
     [visibleBounds],
   );
 }

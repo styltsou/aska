@@ -363,7 +363,11 @@ export class CollectionAssetMoveService {
             ),
           )
           .for("update", { of: collectionNodes });
-        const position = getFolderMovePosition(destinationNodes, sourceNode);
+        const position = getFolderMovePosition(
+          destinationNodes,
+          sourceNode,
+          sources.length > 1,
+        );
 
         if (source.nodeType === "folder") {
           if (sourceNodeId === null) {

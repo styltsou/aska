@@ -73,9 +73,6 @@ export function BoardUploadZone({
       }
 
       const { photos } = operation.source.data as PexelsPhotoDragData;
-      const visibleBounds = boardKey
-        ? useTransientStore.getState().boardVisibleBounds[boardKey]
-        : undefined;
       const placement = boardKey
         ? {
             ...getBoardDropPlacement(
@@ -87,9 +84,7 @@ export function BoardUploadZone({
                 photo: photos[0],
                 zoom: getBoardViewportZoom(boardKey),
               }),
-              visibleBounds,
             ),
-            allowOverlap: true,
           }
         : {};
       void importPexelsPhotos(photos, placement);
@@ -113,15 +108,8 @@ export function BoardUploadZone({
     if (!hasImageFile(event.dataTransfer)) return;
     event.preventDefault();
     setIsDraggingImage(false);
-    const visibleBounds = boardKey
-      ? useTransientStore.getState().boardVisibleBounds[boardKey]
-      : undefined;
     const placement = boardKey
-      ? getBoardDropPlacement(
-          boardKey,
-          { x: event.clientX, y: event.clientY },
-          visibleBounds,
-        )
+      ? getBoardDropPlacement(boardKey, { x: event.clientX, y: event.clientY })
       : {};
     void uploadFiles(Array.from(event.dataTransfer.files), placement);
   }

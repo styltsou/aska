@@ -2,7 +2,6 @@ import type { CollectionNode } from "@/api/collection";
 import type {
   BoardInsertionPlacement,
   BoardPosition,
-  BoardVisibleBounds,
 } from "@/api/collection/types";
 
 export const BOARD_CARD_WIDTH = 280;
@@ -20,9 +19,20 @@ const FALLBACK_ROW_HEIGHT = 400;
 const FALLBACK_ORIGIN = 48;
 const NOTE_CARD_MAX_HEIGHT = 320;
 const FOLDER_CARD_HEIGHT = BOARD_CARD_WIDTH;
-const COLLISION_SEARCH_STEP = BOARD_ITEM_GAP;
-const COLLISION_SEARCH_LIMIT = 16;
+const LOCAL_NUDGE_LIMIT = 4;
 const INSERTION_GRID_COLUMNS = 4;
+
+const PENDING_FOLDER: CollectionNode = {
+  id: "folder-pending",
+  type: "folder",
+  name: "",
+  slug: "pending",
+  count: 0,
+  folderCount: 0,
+  previews: [],
+  createdAt: "",
+  position: null,
+};
 
 export function getInitialNodePosition(
   node: CollectionNode,
@@ -33,55 +43,26 @@ export function getInitialNodePosition(
   return getFallbackPosition(index);
 }
 
-/**
- * Finds a position for a new folder created inside a destination folder. The
- * existing children's footprints define a composition bounding box; the new
- * folder is placed centre-outward inside that box when there is room, and just
- * to the right of the box when it is full.
- */
+/** Resolves a folder created from the move dialog against the destination. */
 export function getFolderChildPosition(
   existingNodes: CollectionNode[],
 ): BoardPosition {
-  const positionedNodes = existingNodes.filter(
-    (node) => node.position !== null,
-  );
-
+  const positionedNodes = existingNodes.filter((node) => node.position);
   if (positionedNodes.length === 0) return getFallbackPosition(0);
 
   const occupied = positionedNodes.map((node) =>
     getNodeBounds(node, node.position!),
   );
-  const compositionBounds = getCompositionBounds(occupied);
-  const preferred = {
-    x: Math.round(
-      (compositionBounds.left + compositionBounds.right - BOARD_CARD_WIDTH) / 2,
-    ),
-    y: Math.round(
-      (compositionBounds.top + compositionBounds.bottom - BOARD_CARD_WIDTH) / 2,
-    ),
-  };
-
-  if (isSlotAvailable(preferred, occupied, compositionBounds)) {
-    return preferred;
-  }
-
-  for (let radius = 1; radius <= COLLISION_SEARCH_LIMIT; radius += 1) {
-    for (const offset of squarePerimeterOffsets(radius)) {
-      const position = {
-        x: preferred.x + offset.x * COLLISION_SEARCH_STEP,
-        y: preferred.y + offset.y * COLLISION_SEARCH_STEP,
-      };
-
-      if (isSlotAvailable(position, occupied, compositionBounds)) {
-        return position;
-      }
-    }
-  }
-
-  return {
-    x: compositionBounds.right + BOARD_ITEM_GAP,
-    y: compositionBounds.top,
-  };
+  const bounds = getCompositionBounds(occupied);
+  return findLocalNudgePosition(
+    PENDING_FOLDER,
+    {
+      x: Math.round((bounds.left + bounds.right - BOARD_CARD_WIDTH) / 2),
+      y: Math.round((bounds.top + bounds.bottom - BOARD_CARD_WIDTH) / 2),
+    },
+    occupied,
+    bounds,
+  );
 }
 
 function getCompositionBounds(nodes: NodeBounds[]): NodeBounds {
@@ -96,45 +77,18 @@ function getCompositionBounds(nodes: NodeBounds[]): NodeBounds {
   );
 }
 
-function isSlotAvailable(
-  position: BoardPosition,
-  occupied: NodeBounds[],
-  bounds: NodeBounds,
-): boolean {
-  const inset = BOARD_ITEM_GAP / 2;
-  return (
-    position.x >= bounds.left &&
-    position.y >= bounds.top &&
-    position.x + BOARD_CARD_WIDTH <= bounds.right &&
-    position.y + BOARD_CARD_WIDTH <= bounds.bottom &&
-    !hasCollision(
-      {
-        left: position.x - inset,
-        top: position.y - inset,
-        right: position.x + BOARD_CARD_WIDTH + inset,
-        bottom: position.y + BOARD_CARD_WIDTH + inset,
-      },
-      occupied,
-    )
-  );
-}
-
 export function reserveNodePositions(
   existingNodes: CollectionNode[],
   newNodes: CollectionNode[],
   placement?: BoardPosition | BoardInsertionPlacement,
 ): BoardPosition[] {
-  const { position: requested, visibleBounds } = normalizePlacement(placement);
+  const { position: requested } = normalizePlacement(placement);
   const occupied = existingNodes.map((node, index) =>
     getNodeBounds(node, getInitialNodePosition(node, index)),
   );
   const placementNodes = getPlacementNodes(newNodes, placement);
   const batchStartIndex = getBatchStartIndex(placement);
-  const viewportAnchor =
-    !requested && visibleBounds
-      ? findViewportInsertionAnchor(placementNodes[0]!, occupied, visibleBounds)
-      : undefined;
-  const anchor = requested ?? viewportAnchor?.position;
+  const anchor = requested;
   const preferredPositions = anchor
     ? getInsertionGridPositions(placementNodes, anchor).slice(
         batchStartIndex,
@@ -144,20 +98,8 @@ export function reserveNodePositions(
         getFallbackPosition(existingNodes.length + index),
       );
 
-  if (requested && placement && !("x" in placement) && placement.allowOverlap) {
-    return preferredPositions;
-  }
-
   return newNodes.map((node, index) => {
-    if (index === 0 && viewportAnchor && !viewportAnchor.isAvailable) {
-      // The current view is full. Keep the card discoverable instead of
-      // silently moving it outside the viewport.
-      const position = preferredPositions[index]!;
-      occupied.push(getNodeBounds(node, position));
-      return position;
-    }
-
-    const position = findAvailablePosition(
+    const position = findLocalNudgePosition(
       node,
       preferredPositions[index]!,
       occupied,
@@ -175,44 +117,21 @@ type NodeBounds = {
   bottom: number;
 };
 
-function findAvailablePosition(
+function findLocalNudgePosition(
   node: CollectionNode,
   preferred: BoardPosition,
   occupied: NodeBounds[],
+  bounds?: NodeBounds,
 ): BoardPosition {
-  if (isAvailablePosition(node, preferred, occupied)) {
-    return preferred;
+  for (let step = 0; step <= LOCAL_NUDGE_LIMIT; step += 1) {
+    const position = {
+      x: preferred.x + step * (BOARD_CARD_WIDTH + BOARD_ITEM_GAP),
+      y: preferred.y,
+    };
+    if (isAvailablePosition(node, position, occupied, bounds)) return position;
   }
 
-  for (let radius = 1; radius <= COLLISION_SEARCH_LIMIT; radius += 1) {
-    for (const offset of squarePerimeterOffsets(radius)) {
-      const position = {
-        x: preferred.x + offset.x * COLLISION_SEARCH_STEP,
-        y: preferred.y + offset.y * COLLISION_SEARCH_STEP,
-      };
-
-      if (isAvailablePosition(node, position, occupied)) {
-        return position;
-      }
-    }
-  }
-
-  return {
-    x: preferred.x + (COLLISION_SEARCH_LIMIT + 1) * COLLISION_SEARCH_STEP,
-    y: preferred.y,
-  };
-}
-
-function* squarePerimeterOffsets(radius: number) {
-  for (let y = -radius; y <= radius; y += 1) {
-    yield { x: -radius, y };
-    yield { x: radius, y };
-  }
-
-  for (let x = -radius + 1; x < radius; x += 1) {
-    yield { x, y: -radius };
-    yield { x, y: radius };
-  }
+  return preferred;
 }
 
 function getNodeBounds(
@@ -316,40 +235,6 @@ function getInsertionGridPositions(
   return positions;
 }
 
-function findViewportInsertionAnchor(
-  node: CollectionNode,
-  occupied: NodeBounds[],
-  visibleBounds: BoardVisibleBounds,
-): { position: BoardPosition; isAvailable: boolean } {
-  const preferred = clampToVisibleBounds(
-    node,
-    {
-      x: (visibleBounds.left + visibleBounds.right - BOARD_CARD_WIDTH) / 2,
-      y: (visibleBounds.top + visibleBounds.bottom - getNodeHeight(node)) / 2,
-    },
-    visibleBounds,
-  );
-
-  if (isAvailablePosition(node, preferred, occupied, visibleBounds)) {
-    return { position: preferred, isAvailable: true };
-  }
-
-  for (let radius = 1; radius <= COLLISION_SEARCH_LIMIT; radius += 1) {
-    for (const offset of squarePerimeterOffsets(radius)) {
-      const position = {
-        x: preferred.x + offset.x * COLLISION_SEARCH_STEP,
-        y: preferred.y + offset.y * COLLISION_SEARCH_STEP,
-      };
-
-      if (isAvailablePosition(node, position, occupied, visibleBounds)) {
-        return { position, isAvailable: true };
-      }
-    }
-  }
-
-  return { position: preferred, isAvailable: false };
-}
-
 function getRowHeights(nodes: CollectionNode[], columns: number): number[] {
   const heights: number[] = [];
 
@@ -361,52 +246,30 @@ function getRowHeights(nodes: CollectionNode[], columns: number): number[] {
   return heights;
 }
 
-function clampToVisibleBounds(
-  node: CollectionNode,
-  position: BoardPosition,
-  visibleBounds: BoardVisibleBounds,
-): BoardPosition {
-  const width = BOARD_CARD_WIDTH;
-  const height = getNodeHeight(node);
-
-  return {
-    x: Math.round(
-      clamp(position.x, visibleBounds.left, visibleBounds.right - width),
-    ),
-    y: Math.round(
-      clamp(position.y, visibleBounds.top, visibleBounds.bottom - height),
-    ),
-  };
-}
-
 function isAvailablePosition(
   node: CollectionNode,
   position: BoardPosition,
   occupied: NodeBounds[],
-  visibleBounds?: BoardVisibleBounds,
+  bounds?: NodeBounds,
 ): boolean {
-  if (visibleBounds && !isWithinVisibleBounds(node, position, visibleBounds)) {
+  if (bounds && !isWithinBounds(node, position, bounds)) {
     return false;
   }
 
   return !hasCollision(getNodeBounds(node, position), occupied);
 }
 
-function isWithinVisibleBounds(
+function isWithinBounds(
   node: CollectionNode,
   position: BoardPosition,
-  visibleBounds: BoardVisibleBounds,
+  bounds: NodeBounds,
 ): boolean {
   return (
-    position.x >= visibleBounds.left &&
-    position.y >= visibleBounds.top &&
-    position.x + BOARD_CARD_WIDTH <= visibleBounds.right &&
-    position.y + getNodeHeight(node) <= visibleBounds.bottom
+    position.x >= bounds.left &&
+    position.y >= bounds.top &&
+    position.x + BOARD_CARD_WIDTH <= bounds.right &&
+    position.y + getNodeHeight(node) <= bounds.bottom
   );
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), Math.max(min, max));
 }
 
 function hasCollision(candidate: NodeBounds, occupied: NodeBounds[]): boolean {

@@ -7,14 +7,17 @@ import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { readClipboardAssetPayload } from "@/lib/clipboard";
 import { useBoardAssetActions } from "./use-board-asset-actions";
 import {
+  usePersistedStore,
   useTransientStore,
   useSessionStore,
   getPexelsBrowserScope,
 } from "@/store";
 import { cn } from "@/lib/utils";
 import { formatPlatformShortcut } from "@/lib/platform";
+import { getBoardViewportCenterPlacement } from "@/components/canvas/board-pointer-position";
 import {
   ContextMenu,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
@@ -27,22 +30,31 @@ export function BoardContextMenu({
   collectionPath,
   target = "collection",
   boardKey,
+  showCanvasControls = false,
   children,
 }: {
   workspaceSlug: string;
   collectionPath: string;
   target?: "collection" | "inbox";
   boardKey?: string;
+  showCanvasControls?: boolean;
   children: React.ReactNode;
 }) {
   const position = useTransientStore((state) =>
     boardKey ? state.insertionPositions[boardKey] : undefined,
   );
+  const areAlignmentGuidesEnabled = usePersistedStore((state) =>
+    boardKey ? (state.boardAlignmentGuides[boardKey] ?? true) : false,
+  );
+  const setBoardAlignmentGuides = usePersistedStore(
+    (state) => state.setBoardAlignmentGuides,
+  );
   const visibleBounds = useTransientStore((state) =>
     boardKey ? state.boardVisibleBounds[boardKey] : undefined,
   );
   const placement = useMemo(
-    () => (position || visibleBounds ? { position, visibleBounds } : undefined),
+    () =>
+      position ? { position } : getBoardViewportCenterPlacement(visibleBounds),
     [position, visibleBounds],
   );
   const { addClipboardAsset, isPending } = useBoardAssetActions({
@@ -128,6 +140,19 @@ export function BoardContextMenu({
               {formatPlatformShortcut("⌘+V")}
             </ContextMenuShortcut>
           </ContextMenuItem>
+          {showCanvasControls && boardKey ? (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuCheckboxItem
+                checked={areAlignmentGuidesEnabled}
+                onCheckedChange={(enabled) =>
+                  setBoardAlignmentGuides(boardKey, enabled === true)
+                }
+              >
+                Alignment guides
+              </ContextMenuCheckboxItem>
+            </>
+          ) : null}
         </ContextMenuContent>
       </ContextMenu>
       <CreateFolderDialog

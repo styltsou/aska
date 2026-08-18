@@ -1,4 +1,5 @@
 import {
+  AlignCenterHorizontalIcon,
   ArrowDownIcon,
   ArrowUpIcon,
   FileTextIcon,
@@ -7,10 +8,12 @@ import {
   ImagePlusIcon,
   ImageIcon,
   InboxIcon,
+  LayoutGridIcon,
   MoonIcon,
   CornerDownLeftIcon,
   NotebookPenIcon,
   PanelLeftIcon,
+  PanelsTopLeftIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
 } from "lucide-react";
@@ -47,10 +50,12 @@ import { formatPlatformShortcut } from "@/lib/platform";
 import { openSettings } from "@/lib/settings-dialog";
 import {
   useSessionStore,
+  usePersistedStore,
   useTransientStore,
   getPexelsBrowserScope,
+  getCollectionViewScope,
 } from "@/store";
-import { useBoardInsertionPlacement } from "@/components/canvas";
+import { makeBoardKey, useBoardInsertionPlacement } from "@/components/canvas";
 
 type CommandId =
   | "new-note"
@@ -62,6 +67,8 @@ type CommandId =
   | "open-pexels-browser"
   | "toggle-filter-bar"
   | "toggle-sidebar"
+  | "toggle-collection-view"
+  | "toggle-alignment-guides"
   | "open-settings"
   | "change-theme";
 
@@ -140,6 +147,18 @@ const COMMAND_GROUPS = [
         shortcut: "⌘+B",
       },
       {
+        id: "toggle-collection-view",
+        label: "Toggle canvas / browse view",
+        icon: PanelLeftIcon,
+        shortcut: "⇧+V",
+      },
+      {
+        id: "toggle-alignment-guides",
+        label: "Alignment guides",
+        icon: AlignCenterHorizontalIcon,
+        shortcut: undefined,
+      },
+      {
         id: "change-theme",
         label: "Change theme",
         icon: MoonIcon,
@@ -178,6 +197,10 @@ export function CommandPalette() {
   const { theme, setTheme } = useTheme();
   const { toggleSidebar } = useSidebar();
   const toggleFilterBar = useSessionStore((state) => state.toggleFilterBar);
+  const setCollectionView = useSessionStore((state) => state.setCollectionView);
+  const setBoardAlignmentGuides = usePersistedStore(
+    (state) => state.setBoardAlignmentGuides,
+  );
   const openScratchpad = useTransientStore((state) => state.openScratchpad);
   const openPexelsBrowser = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
@@ -186,6 +209,15 @@ export function CommandPalette() {
     .split("/")
     .filter(Boolean);
   const collectionPath = view === "collections" ? viewPath.join("/") : "";
+  const collectionViewScope =
+    view === "collections" && workspaceSlug && viewPath[0]
+      ? getCollectionViewScope(workspaceSlug, viewPath[0])
+      : undefined;
+  const collectionView = useSessionStore((state) =>
+    collectionViewScope
+      ? (state.collectionViews[collectionViewScope] ?? "canvas")
+      : undefined,
+  );
   const pexelsScope =
     view === "collections" && viewPath.length > 0
       ? getPexelsBrowserScope(workspaceSlug, viewPath[0])
@@ -198,6 +230,20 @@ export function CommandPalette() {
         : undefined;
   const canCreateNote = view === "inbox" || Boolean(collectionPath);
   const canCreateFolder = Boolean(collectionPath);
+  const canToggleCollectionView = Boolean(collectionViewScope);
+  const boardKey =
+    workspaceSlug && view === "collections" && viewPath[0]
+      ? makeBoardKey(
+          workspaceSlug,
+          viewPath[0],
+          viewPath.slice(1).join("/") || undefined,
+        )
+      : undefined;
+  const areAlignmentGuidesEnabled = usePersistedStore((state) =>
+    boardKey ? (state.boardAlignmentGuides[boardKey] ?? true) : false,
+  );
+  const canToggleAlignmentGuides =
+    collectionView === "canvas" && Boolean(boardKey);
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
 
   useEffect(() => {
@@ -266,6 +312,11 @@ export function CommandPalette() {
           event.preventDefault();
           runCommand("browse-collections");
           return;
+        case "KeyV":
+          if (!canToggleCollectionView) return;
+          event.preventDefault();
+          runCommand("toggle-collection-view");
+          return;
       }
     }
   });
@@ -300,6 +351,19 @@ export function CommandPalette() {
       case "toggle-sidebar":
         setOpen(false);
         toggleSidebar();
+        return;
+      case "toggle-collection-view":
+        if (!collectionViewScope || !collectionView) return;
+        setOpen(false);
+        setCollectionView(
+          collectionViewScope,
+          collectionView === "canvas" ? "browse" : "canvas",
+        );
+        return;
+      case "toggle-alignment-guides":
+        if (!boardKey) return;
+        setOpen(false);
+        setBoardAlignmentGuides(boardKey, !areAlignmentGuidesEnabled);
         return;
       case "change-theme":
         setOpen(false);
@@ -370,6 +434,10 @@ export function CommandPalette() {
                     (item.id !== "new-note" || canCreateNote) &&
                     (item.id !== "new-folder" || canCreateFolder) &&
                     (item.id !== "upload-images" || canCreateFolder) &&
+                    (item.id !== "toggle-collection-view" ||
+                      canToggleCollectionView) &&
+                    (item.id !== "toggle-alignment-guides" ||
+                      canToggleAlignmentGuides) &&
                     (item.id !== "open-pexels-browser" || canCreateFolder),
                 ),
               }))
@@ -379,18 +447,32 @@ export function CommandPalette() {
                     {index > 0 ? <CommandSeparator /> : null}
                     <CommandGroup heading={group.heading}>
                       {group.items.map((item) => {
-                        const Icon = item.icon;
+                        const Icon =
+                          item.id === "toggle-collection-view"
+                            ? collectionView === "canvas"
+                              ? LayoutGridIcon
+                              : PanelsTopLeftIcon
+                            : item.icon;
                         const label =
                           item.id === "change-theme"
                             ? theme === "dark"
                               ? "Switch to light mode"
                               : "Switch to dark mode"
-                            : item.label;
+                            : item.id === "toggle-collection-view"
+                              ? collectionView === "canvas"
+                                ? "Switch to browse view"
+                                : "Switch to canvas view"
+                              : item.label;
 
                         return (
                           <CommandItem
                             key={item.id}
                             value={item.label}
+                            data-checked={
+                              item.id === "toggle-alignment-guides"
+                                ? areAlignmentGuidesEnabled
+                                : undefined
+                            }
                             onSelect={() => runCommand(item.id)}
                           >
                             <Icon className="size-4 text-muted-foreground" />

@@ -31,8 +31,12 @@ contents.
 Every positioned collection node exposes `position: { x, y }`. Coordinates are
 signed integer CSS pixels, allowing placement and panning in every direction.
 Dragging is freeform: there is no grid snapping, collision resolution after a
-drop, or artificial canvas extent. Positions are rounded only to whole pixels
-before persistence. When an insertion coordinate is already occupied, Aska
+drop, or artificial canvas extent. Alignment guides are enabled by default for
+each canvas and temporarily snap a dragged card or selection to the nearest
+matching card edges and centres currently visible in the viewport; off-screen
+cards do not participate. People can turn guides off from the canvas context
+menu or command palette. Positions are rounded only to whole pixels before persistence.
+When an insertion coordinate is already occupied, Aska
 finds a nearby available position using card footprints and spacing; a free
 requested coordinate is never adjusted.
 
@@ -174,6 +178,8 @@ intended canvas location.
 
 ## Deferred Capabilities
 
+- Further alignment-guide refinement, including equal-spacing cues, optional
+  distance labels, and continued interaction and visual tuning.
 - Multi-select actions and resize handles.
 - Deliberate z-ordering and arbitrary canvas objects.
 - Relationships and other diagram-style features.

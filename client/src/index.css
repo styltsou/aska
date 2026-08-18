@@ -319,6 +319,27 @@
   cursor: grabbing;
 }
 
+.aska-alignment-guide {
+  --alignment-guide-color: color-mix(in oklch, var(--primary) 82%, transparent);
+  position: absolute;
+}
+
+.aska-alignment-guide--vertical {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--alignment-guide-color) 0 var(--alignment-guide-dash),
+    transparent var(--alignment-guide-dash) var(--alignment-guide-period)
+  );
+}
+
+.aska-alignment-guide--horizontal {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--alignment-guide-color) 0 var(--alignment-guide-dash),
+    transparent var(--alignment-guide-dash) var(--alignment-guide-period)
+  );
+}
+
 /* The selection region is a gesture, while selected cards provide the lasting state. */
 .aska-flow .react-flow__nodesselection {
   display: none;

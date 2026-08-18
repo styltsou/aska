@@ -64,7 +64,6 @@ export function getBoardViewportZoom(boardKey: string) {
 export function getBoardDropPlacement(
   boardKey: string,
   clientPosition: BoardPosition,
-  visibleBounds: BoardVisibleBounds | undefined,
 ): BoardInsertionPlacement {
   const position = getBoardFlowPosition(boardKey, clientPosition);
   if (position) {
@@ -73,7 +72,7 @@ export function getBoardDropPlacement(
     };
   }
 
-  return visibleBounds ? { visibleBounds } : {};
+  return {};
 }
 
 export function getBoardPastePlacement(
@@ -81,5 +80,20 @@ export function getBoardPastePlacement(
   visibleBounds: BoardVisibleBounds | undefined,
 ): BoardInsertionPlacement | undefined {
   const position = getBoardPointerPosition(boardKey);
-  return position || visibleBounds ? { position, visibleBounds } : undefined;
+  return position
+    ? { position }
+    : getBoardViewportCenterPlacement(visibleBounds);
+}
+
+export function getBoardViewportCenterPlacement(
+  visibleBounds: BoardVisibleBounds | undefined,
+): BoardInsertionPlacement | undefined {
+  if (!visibleBounds) return undefined;
+
+  return {
+    position: {
+      x: Math.round((visibleBounds.left + visibleBounds.right) / 2),
+      y: Math.round((visibleBounds.top + visibleBounds.bottom) / 2),
+    },
+  };
 }

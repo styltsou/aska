@@ -18,15 +18,17 @@ export type BoardVisibleBounds = {
 };
 
 export type BoardInsertionPlacement = {
+  /**
+   * A flow-space anchor observed by the browser. The placement resolver never
+   * derives one from browser-local viewport state.
+   */
   position?: BoardPosition;
-  visibleBounds?: BoardVisibleBounds;
   batch?: {
     index: number;
     size: number;
     /** Complete image geometry for batches whose items are created one at a time. */
     imageDimensions?: readonly { width: number; height: number }[];
   };
-  allowOverlap?: boolean;
 };
 
 export type DetailedCollection = {
