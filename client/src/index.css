@@ -42,6 +42,7 @@
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
+  --color-skeleton: var(--skeleton);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
@@ -74,6 +75,7 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
+  --skeleton: color-mix(in oklch, var(--muted) 92%, var(--foreground));
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
@@ -96,6 +98,18 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --control-primary-top: #373737;
+  --control-primary-bottom: #171717;
+  --control-primary-hover-top: #4a4a4a;
+  --control-primary-hover-bottom: #202020;
+  --control-primary-edge: #0e0e0e;
+  --control-primary-foreground: #fafafa;
+  --control-outline-surface: oklch(1 0 0);
+  --control-outline-hover: oklch(0.975 0 0);
+  --control-outline-edge: oklch(0.9 0 0);
+  --control-secondary-surface: oklch(0.97 0 0);
+  --control-secondary-hover: oklch(0.95 0 0);
+  --control-secondary-edge: oklch(0.88 0 0);
 }
 
 .dark {
@@ -111,6 +125,7 @@
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
+  --skeleton: color-mix(in oklch, var(--muted) 92%, var(--foreground));
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
@@ -132,6 +147,120 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --control-primary-top: #ffffff;
+  --control-primary-bottom: #e5e5e5;
+  --control-primary-hover-top: #ffffff;
+  --control-primary-hover-bottom: #eeeeee;
+  --control-primary-edge: #c9c9c9;
+  --control-primary-foreground: #171717;
+  --control-outline-surface: oklch(0.19 0 0);
+  --control-outline-hover: oklch(0.225 0 0);
+  --control-outline-edge: oklch(1 0 0 / 12%);
+  --control-secondary-surface: oklch(0.255 0 0);
+  --control-secondary-hover: oklch(0.275 0 0);
+  --control-secondary-edge: oklch(1 0 0 / 14%);
+}
+
+@layer components {
+  .button-control-primary {
+    border-color: var(--control-primary-edge);
+    background: linear-gradient(
+      to bottom,
+      var(--control-primary-top),
+      var(--control-primary-bottom)
+    );
+    background-clip: border-box;
+    color: var(--control-primary-foreground);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 18%),
+      0 1px 2px rgb(0 0 0 / 16%);
+    transition:
+      background 100ms ease,
+      color 100ms ease,
+      box-shadow 100ms ease;
+  }
+
+  .dark .button-control-primary {
+    box-shadow:
+      0 1px 0 #a8a8a8,
+      0 2px 4px rgb(0 0 0 / 32%);
+  }
+
+  .button-control-primary:hover {
+    background: linear-gradient(
+      to bottom,
+      var(--control-primary-hover-top),
+      var(--control-primary-hover-bottom)
+    );
+  }
+
+  .button-control-destructive {
+    border-color: color-mix(in oklch, var(--destructive) 84%, black);
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--destructive) 90%, white),
+      color-mix(in oklch, var(--destructive) 94%, black)
+    );
+    color: var(--primary-foreground);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 18%),
+      0 1px 2px rgb(0 0 0 / 16%);
+    transition:
+      background 100ms ease,
+      color 100ms ease,
+      box-shadow 100ms ease;
+  }
+
+  .button-control-destructive:hover {
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--destructive) 84%, white),
+      color-mix(in oklch, var(--destructive) 98%, black)
+    );
+  }
+
+  .dark .button-control-destructive {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 22%),
+      0 1px 2px rgb(0 0 0 / 28%);
+  }
+
+  .button-control-outline,
+  .button-control-secondary {
+    background: var(--control-surface);
+    color: var(--foreground);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+    transition:
+      background 100ms ease,
+      color 100ms ease,
+      box-shadow 100ms ease;
+  }
+
+  .button-control-outline {
+    --control-surface: var(--control-outline-surface);
+    --control-surface-hover: var(--control-outline-hover);
+
+    border-color: var(--control-outline-edge);
+  }
+
+  .button-control-secondary {
+    --control-surface: var(--control-secondary-surface);
+    --control-surface-hover: var(--control-secondary-hover);
+
+    border-color: var(--control-secondary-edge);
+  }
+
+  .dark .button-control-outline,
+  .dark .button-control-secondary {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 22%);
+  }
+
+  .button-control-outline:hover,
+  .button-control-outline[aria-expanded="true"],
+  .button-control-secondary:hover,
+  .button-control-secondary[aria-expanded="true"] {
+    background: var(--control-surface-hover);
+  }
 }
 
 @layer base {

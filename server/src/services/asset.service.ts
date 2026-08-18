@@ -258,6 +258,7 @@ export class AssetService implements IAssetService {
       isFavorite: false,
       wordCount,
       readingTimeMinutes,
+      createdAt: note.createdAt.toISOString(),
       position: null,
     };
   }
@@ -429,6 +430,7 @@ export class AssetService implements IAssetService {
         isFavorite: row.isFavorite,
         wordCount,
         readingTimeMinutes,
+        createdAt: row.createdAt.toISOString(),
         position: null,
       } satisfies CollectionNoteNode);
     }

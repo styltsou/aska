@@ -4,6 +4,7 @@ import type {
   CollectionsData,
   FolderChildPreview,
 } from "./types";
+import { makeMarkdownPreview } from "@/lib/markdown-preview";
 
 const MAX_COLLECTION_PREVIEWS = 4;
 
@@ -43,7 +44,7 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
     assetId: node.id,
     type: "note",
     color: node.color ?? undefined,
-    snippet: makeSnippet(node.content),
+    snippet: makeMarkdownPreview(node.content),
   };
 }
 
@@ -314,13 +315,6 @@ export function rollbackCollectionPreview(
       };
     }),
   };
-}
-
-function makeSnippet(content: string, maxLength = 1000): string {
-  const singleLine = content.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
-  return singleLine.length > maxLength
-    ? `${singleLine.slice(0, maxLength).trimEnd()}...`
-    : singleLine;
 }
 
 function getFolderPathFromKey(key: readonly unknown[]): string | undefined {

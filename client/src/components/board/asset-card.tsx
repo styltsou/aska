@@ -21,6 +21,7 @@ export const AssetCard = memo(function AssetCard({
   isSelected = false,
   onToggleSelection,
   onSelectionContextMenu,
+  folderDropState,
 }: {
   asset: Asset;
   onOpenFolder?: (asset: FolderAsset) => void;
@@ -41,15 +42,17 @@ export const AssetCard = memo(function AssetCard({
     assetId: string,
     event: MouseEvent<HTMLDivElement>,
   ) => void;
+  folderDropState?: {
+    isDropTarget: boolean;
+    incomingAssetId?: string;
+    incomingAssetCount?: number;
+  };
 }) {
   const selectable = isPersistedSelectableAsset(asset);
 
   return (
     <div
-      className={cn(
-        "min-w-0 rounded-lg",
-        isSelected && "ring-2 ring-ring ring-offset-2 ring-offset-background",
-      )}
+      className={cn("relative min-w-0 rounded-lg")}
       data-selection-node-id={selectable ? asset.id : undefined}
       aria-selected={selectable ? isSelected : undefined}
       onClick={(event) => {
@@ -92,6 +95,9 @@ export const AssetCard = memo(function AssetCard({
             {asset.type === "folder" && (
               <FolderAssetCard
                 asset={asset}
+                isDropTarget={folderDropState?.isDropTarget}
+                incomingAssetId={folderDropState?.incomingAssetId}
+                incomingAssetCount={folderDropState?.incomingAssetCount}
                 onOpen={onOpenFolder ? () => onOpenFolder(asset) : undefined}
                 isContextMenuOpen={isContextMenuOpen}
               />
@@ -99,6 +105,12 @@ export const AssetCard = memo(function AssetCard({
           </>
         )}
       </AssetContextMenu>
+      {isSelected ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-background"
+        />
+      ) : null}
     </div>
   );
 });

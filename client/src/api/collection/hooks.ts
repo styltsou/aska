@@ -29,6 +29,7 @@ import {
   updateCollectionNodePosition,
   updateCollectionNodePositions,
 } from "./fetchers";
+import { makeMarkdownPreview } from "@/lib/markdown-preview";
 import type {
   BoardInsertionPlacement,
   CollectionContentsResponse,
@@ -667,6 +668,7 @@ export function useCreateFolder(workspaceSlug: string, collectionSlug: string) {
         count: 0,
         folderCount: 0,
         previews: [],
+        createdAt: new Date().toISOString(),
         position: null,
       };
       const position = reserveNodePositions(
@@ -706,6 +708,7 @@ export function useCreateFolder(workspaceSlug: string, collectionSlug: string) {
                 count: data.folder.count,
                 folderCount: 0,
                 previews: data.folder.previews,
+                createdAt: data.folder.createdAt,
                 position: data.folder.position,
               },
             ],
@@ -736,6 +739,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         isFavorite: false,
         wordCount: countWords(data.content),
         readingTimeMinutes: 1,
+        createdAt: new Date().toISOString(),
         position: null,
       };
       const position = reserveNodePositions(
@@ -773,6 +777,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         isFavorite: false,
         wordCount: 0,
         readingTimeMinutes: 1,
+        createdAt: new Date().toISOString(),
         clientId: optimisticId,
         position: null,
       };
@@ -871,7 +876,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         assetId: data.note.id,
         type: "note",
         color: data.note.color ?? undefined,
-        snippet: data.note.content.slice(0, 100),
+        snippet: makeMarkdownPreview(data.note.content),
       };
       addPreviewToCollection(
         queryClient,
@@ -951,6 +956,7 @@ export function useCreateInboxNote(workspaceSlug: string) {
           1,
           Math.ceil(countWords(variables.content) / 200),
         ),
+        createdAt: new Date().toISOString(),
         position: null,
       };
 

@@ -1,4 +1,3 @@
-import { cn } from "@/lib/utils";
 import { CropIcon, FlipHorizontal2Icon, RotateCcwIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -94,19 +93,19 @@ export function CropToolbar({
         </span>
         <div className="flex flex-wrap gap-1">
           {ASPECT_RATIOS.map((ratio) => (
-            <button
+            <Button
               key={ratio.label}
               type="button"
+              size="xs"
+              variant={aspect === ratio.value ? "default" : "ghost"}
+              aria-pressed={aspect === ratio.value}
               onClick={() => onAspectChange(ratio.value)}
-              className={cn(
-                "rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                aspect === ratio.value
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
+              className={
+                aspect === ratio.value ? undefined : "text-muted-foreground"
+              }
             >
               {ratio.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>

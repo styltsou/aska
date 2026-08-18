@@ -26,7 +26,12 @@ import { useWorkspace } from "@/api/workspace";
 import { useCollectionContents } from "@/api/collection";
 import { useBoardInsertionPlacement } from "@/components/canvas";
 import { titleFromSlug } from "@/lib/slug";
-import { getPexelsBrowserScope, useSessionStore } from "@/store";
+import {
+  getCollectionViewScope,
+  getPexelsBrowserScope,
+  useSessionStore,
+} from "@/store";
+import { CollectionViewToggle } from "@/components/collection-view-toggle";
 
 function AppBreadcrumbs() {
   const pathname = useRouterState({
@@ -127,6 +132,15 @@ export function AppHeader() {
   const isBoardView =
     collectionsSegment === "collections" && pathSegments.length > 0;
   const collectionPath = pathSegments.join("/");
+  const collectionSlug = pathSegments[0] ?? "";
+  const collectionViewScope = getCollectionViewScope(
+    workspaceSlug,
+    collectionSlug,
+  );
+  const boardView = useSessionStore(
+    (state) => state.collectionViews[collectionViewScope] ?? "canvas",
+  );
+  const setCollectionView = useSessionStore((state) => state.setCollectionView);
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
   const openPexelsBrowser = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
@@ -151,6 +165,10 @@ export function AppHeader() {
         ) : null}
         {isBoardView ? (
           <>
+            <CollectionViewToggle
+              value={boardView}
+              onChange={(view) => setCollectionView(collectionViewScope, view)}
+            />
             <Tooltip>
               <TooltipTrigger
                 render={

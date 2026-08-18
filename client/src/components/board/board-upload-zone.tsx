@@ -14,6 +14,7 @@ import {
   PEXELS_PHOTO_DRAG_TYPE,
   type PexelsPhotoDragData,
 } from "@/lib/pexels-dnd";
+import { getPreferredClipboardText } from "@/lib/clipboard";
 import { useTransientStore } from "@/store";
 import { cn, parseHttpUrl } from "@/lib/utils";
 import { getPexelsDropTopLeft, PexelsDragOverlay } from "./pexels-drag-overlay";
@@ -136,15 +137,16 @@ export function BoardUploadZone({
       return;
     }
 
-    const text = event.clipboardData.getData("text/plain").trim();
-    const url = parseHttpUrl(text);
+    const text = getPreferredClipboardText(event.clipboardData);
+    const trimmedText = text.trim();
+    const url = parseHttpUrl(trimmedText);
     if (url) {
       event.preventDefault();
       void importRemoteUrl(url);
       return;
     }
 
-    if (text) {
+    if (trimmedText) {
       event.preventDefault();
       void createTextNote(text);
     }

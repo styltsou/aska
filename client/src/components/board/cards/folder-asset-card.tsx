@@ -144,7 +144,7 @@ export function FolderAssetCard({
                   {preview.snippet ? (
                     <NoteMarkdown
                       content={preview.snippet}
-                      className="text-[10px] leading-[1.2] [&_a]:!text-[10px] [&_blockquote]:!text-[10px] [&_code]:!text-[10px] [&_h1]:!my-0 [&_h1]:!text-[10px] [&_h1]:!leading-[1.2] [&_h2]:!my-0 [&_h2]:!text-[10px] [&_h2]:!leading-[1.2] [&_h3]:!my-0 [&_h3]:!text-[10px] [&_h3]:!leading-[1.2] [&_li]:!my-0 [&_li]:!text-[10px] [&_li]:!leading-[1.2] [&_ol]:!my-0 [&_p]:!my-0 [&_p]:!text-[10px] [&_p]:!leading-[1.2] [&_pre]:!text-[10px] [&_ul]:!my-0"
+                      className="text-[10px] leading-[1.2] [&_a]:!text-[10px] [&_blockquote]:!text-[10px] [&_code]:!text-[10px] [&_h1]:!my-0 [&_h1]:!text-[10px] [&_h1]:!leading-[1.2] [&_h2]:!my-0 [&_h2]:!text-[10px] [&_h2]:!leading-[1.2] [&_h3]:!my-0 [&_h3]:!text-[10px] [&_h3]:!leading-[1.2] [&_h4]:!my-0 [&_h4]:!text-[10px] [&_h4]:!leading-[1.2] [&_h5]:!my-0 [&_h5]:!text-[10px] [&_h5]:!leading-[1.2] [&_h6]:!my-0 [&_h6]:!text-[10px] [&_h6]:!leading-[1.2] [&_li]:!my-0 [&_li]:!text-[10px] [&_li]:!leading-[1.2] [&_ol]:!my-0 [&_p]:!my-0 [&_p]:!text-[10px] [&_p]:!leading-[1.2] [&_pre]:!text-[10px] [&_ul]:!my-0"
                     />
                   ) : (
                     <span className="text-[10px] font-medium text-sidebar-foreground/20">
@@ -163,7 +163,7 @@ export function FolderAssetCard({
           </div>
         </div>
       )}
-      <div className="absolute right-px bottom-px left-px flex items-center gap-2 rounded-b-[calc(var(--radius)-1px)] bg-sidebar/60 px-3 py-2.5 backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:bg-sidebar/80">
+      <div className="absolute right-px bottom-px left-px flex items-center gap-2 rounded-[calc(var(--radius)-1px)] border-t border-sidebar-foreground/10 bg-sidebar/85 px-3 py-2.5 backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-focus-within:bg-sidebar/60 group-hover:bg-sidebar/60">
         <FolderIcon className="size-4 shrink-0 text-sidebar-foreground" />
         <span className="truncate text-sm font-medium">{asset.name}</span>
         {asset.count !== undefined && (

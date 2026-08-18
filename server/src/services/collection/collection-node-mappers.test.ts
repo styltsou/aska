@@ -77,7 +77,7 @@ describe("collection node mappers", () => {
       assetId: "note-8",
       type: "note",
       color: "yellow",
-      snippet: "One two",
+      snippet: "One\n two",
     });
   });
 
@@ -115,8 +115,16 @@ describe("collection node mappers", () => {
     });
   });
 
-  it("normalizes and bounds note snippets", () => {
-    expect(makeSnippet("  One\n two  ")).toBe("One two");
-    expect(makeSnippet("abcdef", 4)).toBe("abcd…");
+  it("preserves Markdown structure while bounding note snippets", () => {
+    expect(makeSnippet("# One\n\n- two\n  - nested")).toBe(
+      "# One\n\n- two\n  - nested",
+    );
+    expect(makeSnippet("abcdef", 4)).toBe("abcd\n\n…");
+  });
+
+  it("closes a fenced block when a snippet ends inside it", () => {
+    expect(makeSnippet("```ts\nconst answer = 42;", 12)).toBe(
+      "```ts\nconst \n```\n\n…",
+    );
   });
 });

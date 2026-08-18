@@ -389,6 +389,7 @@ export class CollectionQueryService {
           count: countMap.get(fid) ?? 0,
           folderCount: folderCountMap.get(fid) ?? 0,
           previews: previewMap.get(fid) ?? [],
+          createdAt: child.createdAt.toISOString(),
           position,
         };
       }
@@ -440,6 +441,7 @@ export class CollectionQueryService {
         isFavorite: child.isFavorite ?? false,
         wordCount,
         readingTimeMinutes,
+        createdAt: child.createdAt.toISOString(),
         position,
       };
     });

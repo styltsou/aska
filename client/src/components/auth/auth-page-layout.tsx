@@ -18,11 +18,15 @@ export function AuthPageLayout({
   caption?: ReactNode;
 }) {
   return (
-    <main className="grid min-h-[100svh] grid-cols-[minmax(30rem,0.92fr)_minmax(0,1.08fr)] bg-background max-[62rem]:grid-cols-1">
+    <main className="grid min-h-[100svh] grid-cols-2 bg-background max-[62rem]:grid-cols-1">
       <section
         className="relative col-start-2 row-start-1 m-[1rem_1rem_1rem_0] min-h-[calc(100svh-2rem)] overflow-hidden rounded-[1.25rem] border border-border bg-[color-mix(in_oklch,var(--muted)_58%,var(--background))] max-[62rem]:hidden"
         aria-label="A preview of an Aska canvas"
       >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_17%,transparent)_1px,transparent_1px)] bg-[size:24px_24px]"
+        />
         <AuthCanvasPreview />
         <div
           aria-hidden="true"

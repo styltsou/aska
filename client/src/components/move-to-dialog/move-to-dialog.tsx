@@ -222,6 +222,7 @@ export function MoveToDialog({
             count: 0,
             folderCount: 0,
             previews: result.folder.previews,
+            createdAt: result.folder.createdAt,
             position: result.folder.position,
           };
           queryClient.setQueryData<CollectionContentsResponse>(

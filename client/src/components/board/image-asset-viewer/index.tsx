@@ -49,11 +49,6 @@ import { copyImageToClipboard } from "@/lib/clipboard";
 import { GLASS_FRAME_CLASS, GLASS_SURFACE_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { motion, useReducedMotion } from "motion/react";
-import {
-  getImageViewerLayoutId,
-  IMAGE_VIEWER_TRANSITION,
-} from "@/components/board/image-viewer-transition";
 
 const MIN_FREE_CROP_SIZE = 80;
 const COLOR_PREVIEW_GAP = 14;
@@ -501,9 +496,6 @@ function ProgressiveViewerImage({
   originalUrl,
   alt,
   aspectRatio,
-  layoutId,
-  onLayoutAnimationStart,
-  onLayoutAnimationComplete,
   imageRef,
   pickMode,
   onPick,
@@ -513,9 +505,6 @@ function ProgressiveViewerImage({
   originalUrl?: string;
   alt: string;
   aspectRatio: number;
-  layoutId?: string;
-  onLayoutAnimationStart?: () => void;
-  onLayoutAnimationComplete?: () => void;
   imageRef?: Ref<HTMLImageElement>;
   pickMode?: boolean;
   onPick?: (hex: string) => void;
@@ -752,21 +741,18 @@ function ProgressiveViewerImage({
   }, []);
 
   return (
-    <motion.div
-      layoutId={layoutId}
-      transition={IMAGE_VIEWER_TRANSITION}
-      onLayoutAnimationStart={onLayoutAnimationStart}
-      onLayoutAnimationComplete={onLayoutAnimationComplete}
+    <div
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       onClick={handleClick}
       className={cn(
-        "relative overflow-hidden rounded-lg",
+        "relative isolate overflow-hidden rounded-lg",
         pickMode && "cursor-crosshair",
       )}
       style={{
         width: `min(100cqw, calc(100cqh * ${aspectRatio}))`,
         height: `min(100cqh, calc(100cqw / ${aspectRatio}))`,
+        clipPath: "inset(0 round var(--radius-lg))",
       }}
     >
       <img
@@ -816,7 +802,7 @@ function ProgressiveViewerImage({
           </div>
         </div>
       ) : null}
-    </motion.div>
+    </div>
   );
 }
 
@@ -832,32 +818,14 @@ export function ImageAssetViewer({
   workspaceSlug: string;
 }) {
   const retainedAssetRef = useRef(selectedAsset);
-  const shouldReduceMotion = useReducedMotion();
   const queryClient = useQueryClient();
   const [editedAsset, setEditedAsset] = useState<ImageAsset | null>(null);
-  const [showBackdrop, setShowBackdrop] = useState(false);
-  const [showChrome, setShowChrome] = useState(false);
   const [optimisticCropPreviewUrl, setOptimisticCropPreviewUrl] = useState<
     string | null
   >(null);
   useEffect(() => {
     if (selectedAsset) retainedAssetRef.current = selectedAsset;
   }, [selectedAsset]);
-
-  useEffect(() => {
-    if (!open) {
-      setShowBackdrop(false);
-      setShowChrome(false);
-      return;
-    }
-
-    const frame = requestAnimationFrame(() => setShowBackdrop(true));
-    const fallback = window.setTimeout(() => setShowChrome(true), 200);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.clearTimeout(fallback);
-    };
-  }, [open]);
 
   const asset = editedAsset ?? selectedAsset ?? retainedAssetRef.current;
   const title = asset?.title || asset?.sourceLabel || "Image preview";
@@ -1340,15 +1308,14 @@ export function ImageAssetViewer({
       <DialogContent
         showCloseButton={false}
         initialFocus={false}
-        overlayClassName="bg-transparent duration-0"
-        className="top-1/2 h-[100svh] w-screen max-w-none -translate-y-1/2 rounded-none bg-transparent shadow-none ring-0 duration-100 data-ending-style:scale-100! data-ending-style:opacity-100! data-starting-style:scale-100! data-starting-style:opacity-100!"
+        overlayClassName="bg-transparent"
+        className="top-1/2 h-[100svh] w-screen max-w-none -translate-y-1/2 rounded-none bg-transparent shadow-none ring-0"
       >
         <DialogBody className="relative isolate h-full min-h-0 w-full overflow-hidden rounded-none border-0 bg-transparent p-0 text-foreground">
           {displayUrl ? (
             <div
               className={cn(
-                "pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[inherit] bg-neutral-950 opacity-0 transition-opacity duration-150 ease-out will-change-opacity motion-reduce:transition-none",
-                showBackdrop && "opacity-100",
+                "pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-[inherit] bg-neutral-950",
               )}
               aria-hidden="true"
             >
@@ -1368,8 +1335,7 @@ export function ImageAssetViewer({
 
           <div
             className={cn(
-              "pointer-events-none absolute inset-x-3 top-3 z-30 flex justify-end opacity-0 transition-opacity duration-100 ease-out motion-reduce:transition-none sm:inset-x-4 sm:top-4",
-              showChrome && "opacity-100",
+              "pointer-events-none absolute inset-x-3 top-3 z-30 flex justify-end sm:inset-x-4 sm:top-4",
             )}
           >
             <div
@@ -1581,13 +1547,6 @@ export function ImageAssetViewer({
                     originalUrl={viewerImageUrl}
                     alt={asset?.alt ?? ""}
                     aspectRatio={viewerAspectRatio}
-                    layoutId={
-                      asset && !shouldReduceMotion
-                        ? getImageViewerLayoutId(asset.id)
-                        : undefined
-                    }
-                    onLayoutAnimationStart={() => setShowChrome(false)}
-                    onLayoutAnimationComplete={() => setShowChrome(true)}
                     imageRef={viewerImageRef}
                     pickMode={isEyeDropping}
                     onPick={handlePickColorResult}
@@ -1600,9 +1559,9 @@ export function ImageAssetViewer({
 
           <aside
             className={cn(
-              "pointer-events-none absolute right-3 z-20 flex max-h-[calc(100%-6rem)] w-[min(20rem,calc(100%-1.5rem))] min-h-0 flex-col gap-1 opacity-0 transition-opacity duration-100 ease-out motion-reduce:transition-none sm:right-4 sm:w-80",
+              "pointer-events-none absolute right-3 z-20 flex max-h-[calc(100%-6rem)] w-[min(20rem,calc(100%-1.5rem))] min-h-0 flex-col gap-1 sm:right-4 sm:w-80",
               cropMode ? "bottom-14" : "bottom-3 sm:bottom-4",
-              showChrome && "pointer-events-auto opacity-100",
+              "pointer-events-auto",
             )}
           >
             {!cropMode && asset ? (

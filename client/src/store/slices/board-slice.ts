@@ -2,6 +2,8 @@ import type { StateCreator } from "zustand";
 import type { Viewport, XYPosition } from "@xyflow/react";
 import type { BoardVisibleBounds } from "@/api/collection";
 
+export type BoardView = "canvas" | "browse";
+
 export interface PersistedBoardSlice {
   boardViewports: Record<string, Viewport>;
   boardLocks: Record<string, boolean | undefined>;

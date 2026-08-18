@@ -86,6 +86,7 @@ export const CollectionFolderNodeSchema = z.object({
   count: z.number(),
   folderCount: z.number(),
   previews: z.array(FolderChildPreviewSchema),
+  createdAt: z.string(),
   position: BoardPositionSchema.nullable(),
 });
 
@@ -122,6 +123,7 @@ export const CollectionNoteNodeSchema = z.object({
   isFavorite: z.boolean(),
   wordCount: z.number(),
   readingTimeMinutes: z.number(),
+  createdAt: z.string(),
   position: BoardPositionSchema.nullable(),
 });
 
@@ -152,6 +154,7 @@ export const CreatedFolderSchema = z.object({
   path: z.string(),
   count: z.number(),
   previews: z.array(FolderChildPreviewSchema),
+  createdAt: z.string(),
   position: BoardPositionSchema.nullable(),
 });
 

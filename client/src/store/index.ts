@@ -15,6 +15,11 @@ import {
   type PexelsBrowserScopeSlice,
 } from "@/store/slices/pexels-browser-slice";
 import {
+  createCollectionViewSlice,
+  getCollectionViewScope,
+  type CollectionViewSlice,
+} from "@/store/slices/collection-view-slice";
+import {
   createSidebarSlice,
   createTransientSidebarSlice,
   type SidebarSlice,
@@ -36,7 +41,7 @@ import {
   type ScratchpadSlice,
 } from "@/store/slices/scratchpad-slice";
 
-export { getPexelsBrowserScope };
+export { getCollectionViewScope, getPexelsBrowserScope };
 
 // True cross-session state, persisted to localStorage.
 export type PersistedStore = PersistedBoardSlice & SidebarSlice;
@@ -53,10 +58,13 @@ export const usePersistedStore = create<PersistedStore>()(
 );
 
 // Tab-scoped state, persisted to sessionStorage.
-export type SessionStore = FilterBarSlice & PexelsBrowserScopeSlice;
+export type SessionStore = CollectionViewSlice &
+  FilterBarSlice &
+  PexelsBrowserScopeSlice;
 export const useSessionStore = create<SessionStore>()(
   persist(
     immer((...a) => ({
+      ...createCollectionViewSlice(...a),
       ...createFilterBarSlice(...a),
       ...createPexelsBrowserScopeSlice(...a),
     })),

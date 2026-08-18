@@ -93,7 +93,6 @@ export const CanvasCard = memo(function CanvasCard({
       className={cn(
         "relative w-full rounded-lg transition-[filter,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
         dragging && "drop-shadow-xl",
-        selected && "ring-2 ring-ring ring-offset-2 ring-offset-background",
         data.isColorDimmed && "pointer-events-none opacity-30 saturate-50",
         data.isColorFocused && "outline-2 outline-primary outline-offset-2",
         node.type === "folder" &&
@@ -167,6 +166,12 @@ export const CanvasCard = memo(function CanvasCard({
             <span>Flattening…</span>
           </div>
         </div>
+      ) : null}
+      {selected ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-background"
+        />
       ) : null}
     </motion.div>
   );

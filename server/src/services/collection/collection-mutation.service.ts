@@ -143,6 +143,7 @@ export class CollectionMutationService {
       path: [...parentTarget.pathFolderSlugs, folder.slug].join("/"),
       count: 0,
       previews: [],
+      createdAt: folder.createdAt.toISOString(),
       position: data.position ?? null,
     };
   }
@@ -213,6 +214,7 @@ export class CollectionMutationService {
       isFavorite: false,
       wordCount,
       readingTimeMinutes,
+      createdAt: note.createdAt.toISOString(),
       position: data.position ?? null,
     };
   }
