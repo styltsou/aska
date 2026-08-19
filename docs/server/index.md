@@ -92,6 +92,11 @@ CLOUDFRONT_COOKIE_DOMAIN
 CLOUDFRONT_SIGNED_COOKIE_EXPIRES_SECONDS
 MAX_DIRECT_UPLOAD_BYTES
 IMAGE_PIPELINE_CALLBACK_SECRET
+RESOURCE_PIPELINE_CALLBACK_SECRET
+URL_RESOLUTION_QUEUE_URL
+RESOURCE_MEDIA_QUEUE_URL
+URL_UNFURL_SUCCESS_TTL_SECONDS
+URL_UNFURL_FAILURE_TTL_SECONDS
 LOG_LEVEL
 LOG_SLOW_REQUEST_MS
 LOG_SUCCESS_SAMPLE_RATIO
@@ -158,7 +163,7 @@ available:
 TEST_DATABASE_URL=postgresql://... bun run test:integration
 ```
 
-CI runs the same commands for the client, server, and image pipeline. See the
+CI runs the same commands for the client, server, image pipeline, and URL-resource workers. See the
 [Development Workflow](../development-workflow.md) for the pre-commit hook and
 cross-package commands.
 
@@ -172,6 +177,7 @@ cross-package commands.
 - [Schema Design Rationale](./schema-design-rationale.md)
 - [Image Upload and Processing Pipeline](./image-upload-implementation-plan.md)
 - [Image Pipeline Reliability and Evolution](./image-pipeline-reliability.md)
+- [URL Unfurling and External Resources](./url-unfurling.md)
 - [Error Handling](./error-handling.md)
 - [Observability](./observability.md)
 - [Scaffold Recipes](./scaffold-recipes.md)

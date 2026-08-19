@@ -18,11 +18,13 @@ export type LightCollection = z.infer<typeof LightCollectionSchema>;
 
 export const FolderChildPreviewSchema = z.object({
   assetId: z.string(),
-  type: z.enum(["image", "note"]),
+  type: z.enum(["image", "note", "link"]),
   url: z.string().optional(),
   blurDataURL: z.string().nullable().optional(),
   color: z.string().optional(),
   snippet: z.string().optional(),
+  hostname: z.string().optional(),
+  title: z.string().nullable().optional(),
 });
 
 export type FolderChildPreview = z.infer<typeof FolderChildPreviewSchema>;
@@ -127,14 +129,58 @@ export const CollectionNoteNodeSchema = z.object({
   position: BoardPositionSchema.nullable(),
 });
 
+export const LinkResolutionStatusSchema = z.enum([
+  "queued",
+  "resolving",
+  "partial",
+  "ready",
+  "failed",
+]);
+
+export const CollectionLinkNodeSchema = z.object({
+  id: z.string(),
+  type: z.literal("link"),
+  originalUrl: z.string(),
+  canonicalUrl: z.string().nullable(),
+  hostname: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  siteName: z.string().nullable(),
+  resourceKind: z.string(),
+  resolutionStatus: LinkResolutionStatusSchema,
+  failureCategory: z.string().nullable(),
+  resolvedAt: z.string().nullable(),
+  staleAt: z.string().nullable(),
+  previewImage: z
+    .object({
+      url: z.string(),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+      blurDataURL: z.string().nullable().optional(),
+      alt: z.string().nullable().optional(),
+    })
+    .nullable(),
+  favicon: z
+    .object({
+      url: z.string(),
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    })
+    .nullable(),
+  createdAt: z.string(),
+  position: BoardPositionSchema.nullable(),
+});
+
 export type CollectionImageNode = z.infer<typeof CollectionImageNodeSchema>;
 
 export type CollectionNoteNode = z.infer<typeof CollectionNoteNodeSchema>;
+export type CollectionLinkNode = z.infer<typeof CollectionLinkNodeSchema>;
 
 export const CollectionNodeSchema = z.discriminatedUnion("type", [
   CollectionFolderNodeSchema,
   CollectionImageNodeSchema,
   CollectionNoteNodeSchema,
+  CollectionLinkNodeSchema,
 ]);
 
 export type CollectionNode = z.infer<typeof CollectionNodeSchema>;
@@ -178,8 +224,10 @@ export const InboxContentsResponseSchema = CollectionContentsResponseSchema;
 
 export type InboxContentsResponse = z.infer<typeof InboxContentsResponseSchema>;
 
-const AssetNodeIdSchema = z.string().regex(/^(image|note)-\d+$/);
-const CollectionNodeIdSchema = z.string().regex(/^(folder|image|note)-\d+$/);
+const AssetNodeIdSchema = z.string().regex(/^(image|note|link)-\d+$/);
+const CollectionNodeIdSchema = z
+  .string()
+  .regex(/^(folder|image|note|link)-\d+$/);
 const FolderNodeIdSchema = z.string().regex(/^folder-\d+$/);
 
 export const AssetPathParamSchema = z.object({
@@ -267,7 +315,12 @@ export type UpdateNodePositionsInput = z.infer<
   typeof UpdateNodePositionsSchema
 >;
 
-export const ContentTypeFilterSchema = z.enum(["image", "note", "folder"]);
+export const ContentTypeFilterSchema = z.enum([
+  "image",
+  "note",
+  "link",
+  "folder",
+]);
 export type ContentTypeFilter = z.infer<typeof ContentTypeFilterSchema>;
 
 const ContentTypesQuerySchema = z.preprocess(
@@ -275,7 +328,7 @@ const ContentTypesQuerySchema = z.preprocess(
     typeof value === "string" && value.length > 0
       ? value.split(",")
       : undefined,
-  z.array(ContentTypeFilterSchema).min(1).max(3).optional(),
+  z.array(ContentTypeFilterSchema).min(1).max(4).optional(),
 );
 
 export const ContentTypeQuerySchema = z.object({

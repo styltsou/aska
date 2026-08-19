@@ -1,14 +1,16 @@
 export type FolderChildPreview = {
   assetId: string;
-  type: "image" | "note";
+  type: "image" | "note" | "link";
   url?: string;
   blurDataURL?: string | null;
   color?: string;
   snippet?: string;
+  hostname?: string;
+  title?: string | null;
 };
 
 export type BoardPosition = { x: number; y: number };
-export type ContentTypeFilter = "image" | "note" | "folder";
+export type ContentTypeFilter = "image" | "note" | "link" | "folder";
 
 export type BoardVisibleBounds = {
   left: number;
@@ -146,6 +148,52 @@ export type CollectionNoteNode = {
   position: BoardPosition | null;
 };
 
+export type LinkResolutionStatus =
+  | "queued"
+  | "resolving"
+  | "partial"
+  | "ready"
+  | "failed";
+
+export type CollectionLinkNode = {
+  id: string;
+  type: "link";
+  originalUrl: string;
+  canonicalUrl: string | null;
+  hostname: string;
+  title: string;
+  description: string | null;
+  siteName: string | null;
+  resourceKind: string;
+  resolutionStatus: LinkResolutionStatus;
+  failureCategory: string | null;
+  resolvedAt: string | null;
+  staleAt: string | null;
+  previewImage: {
+    url: string;
+    width: number;
+    height: number;
+    blurDataURL?: string | null;
+    alt?: string | null;
+  } | null;
+  favicon: {
+    url: string;
+    width: number;
+    height: number;
+  } | null;
+  createdAt: string;
+  clientId?: string;
+  position: BoardPosition | null;
+};
+
+export type CreateLinkInput = {
+  url: string;
+  parentFolderPath?: string;
+  position?: BoardPosition;
+};
+
+export type CreateLinkResponse = { link: CollectionLinkNode };
+
 export type CreateNoteResponse = {
   note: CollectionNoteNode;
 };
@@ -280,7 +328,8 @@ export type FlattenFolderResponse = {
 export type CollectionNode =
   | CollectionFolderNode
   | CollectionImageNode
-  | CollectionNoteNode;
+  | CollectionNoteNode
+  | CollectionLinkNode;
 
 export type Breadcrumb = {
   id: number;

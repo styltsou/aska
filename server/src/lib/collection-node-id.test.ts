@@ -18,9 +18,14 @@ describe("collection node identifiers", () => {
       assetType: "note",
       entityId: 5,
     });
+    expect(parseCollectionNodeId("link-9")).toEqual({
+      nodeType: "asset",
+      assetType: "link",
+      entityId: 9,
+    });
   });
 
-  it("parses only image and note identifiers as assets", () => {
+  it("parses image, note, and link identifiers as assets", () => {
     expect(parseAssetNodeId("image-42")).toEqual({
       assetType: "image",
       entityId: 42,
@@ -28,6 +33,10 @@ describe("collection node identifiers", () => {
     expect(parseAssetNodeId("note-5")).toEqual({
       assetType: "note",
       entityId: 5,
+    });
+    expect(parseAssetNodeId("link-9")).toEqual({
+      assetType: "link",
+      entityId: 9,
     });
     expect(() => parseAssetNodeId("folder-7")).toThrow("Invalid asset id");
   });

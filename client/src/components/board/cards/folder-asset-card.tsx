@@ -1,4 +1,4 @@
-import { FolderIcon, PlusIcon } from "lucide-react";
+import { FolderIcon, Globe2Icon, PlusIcon } from "lucide-react";
 import { AnimatePresence, motion, type Transition } from "motion/react";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { cn } from "@/lib/utils";
@@ -119,6 +119,22 @@ export function FolderAssetCard({
                       className="size-full object-cover"
                       loading="lazy"
                     />
+                  </motion.div>
+                );
+              }
+              if (preview.type === "link") {
+                return (
+                  <motion.div
+                    key={preview.assetId}
+                    layout="position"
+                    layoutDependency={previewLayoutKey}
+                    transition={previewTransition}
+                    className="flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-sm bg-card p-2 text-center ring-1 ring-sidebar-foreground/5"
+                  >
+                    <Globe2Icon className="size-5 text-muted-foreground/60" />
+                    <span className="max-w-full truncate text-[8px] text-muted-foreground">
+                      {preview.hostname}
+                    </span>
                   </motion.div>
                 );
               }

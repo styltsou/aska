@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { shapeIntersection } from "@dnd-kit/collision";
 import { useDragDropMonitor, useDroppable } from "@dnd-kit/react";
-import { ImagePlusIcon } from "lucide-react";
+import { ImagePlusIcon, Link2Icon } from "lucide-react";
 import type { BoardInsertionPlacement } from "@/api/collection";
 import {
   getBoardDropPlacement,
@@ -14,7 +14,7 @@ import {
   PEXELS_PHOTO_DRAG_TYPE,
   type PexelsPhotoDragData,
 } from "@/lib/pexels-dnd";
-import { getPreferredClipboardText } from "@/lib/clipboard";
+import { getDroppedHttpUrl, getPreferredClipboardText } from "@/lib/clipboard";
 import { useTransientStore } from "@/store";
 import { cn, parseHttpUrl } from "@/lib/utils";
 import { getPexelsDropTopLeft, PexelsDragOverlay } from "./pexels-drag-overlay";
@@ -42,7 +42,7 @@ export function BoardUploadZone({
   const {
     createTextNote,
     importPexelsPhotos,
-    importRemoteUrl,
+    createLinkFromUrl,
     isPending,
     statusText,
     uploadFiles,
@@ -52,7 +52,9 @@ export function BoardUploadZone({
     target,
     getPlacement,
   });
-  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const [draggingKind, setDraggingKind] = useState<"image" | "link" | null>(
+    null,
+  );
   const pexelsDropTargetId = `pexels-canvas:${boardKey ?? target}`;
   const { ref: droppableRef, isDropTarget: isPexelsDropTarget } = useDroppable({
     id: pexelsDropTargetId,
@@ -92,26 +94,37 @@ export function BoardUploadZone({
   });
 
   function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
-    if (!hasImageFile(event.dataTransfer)) return;
+    const kind = hasImageFile(event.dataTransfer)
+      ? "image"
+      : hasDraggedUrl(event.dataTransfer)
+        ? "link"
+        : null;
+    if (!kind) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
-    setIsDraggingImage(true);
+    setDraggingKind(kind);
   }
 
   function handleDragLeave(event: React.DragEvent<HTMLDivElement>) {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-      setIsDraggingImage(false);
+      setDraggingKind(null);
     }
   }
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
-    if (!hasImageFile(event.dataTransfer)) return;
+    const hasImage = hasImageFile(event.dataTransfer);
+    const url = hasImage ? undefined : getDroppedHttpUrl(event.dataTransfer);
+    if (!hasImage && !url) return;
     event.preventDefault();
-    setIsDraggingImage(false);
+    setDraggingKind(null);
     const placement = boardKey
       ? getBoardDropPlacement(boardKey, { x: event.clientX, y: event.clientY })
       : {};
-    void uploadFiles(Array.from(event.dataTransfer.files), placement);
+    if (hasImage) {
+      void uploadFiles(Array.from(event.dataTransfer.files), placement);
+    } else if (url) {
+      void createLinkFromUrl(url, placement);
+    }
   }
 
   function handlePaste(event: React.ClipboardEvent<HTMLDivElement>) {
@@ -130,7 +143,7 @@ export function BoardUploadZone({
     const url = parseHttpUrl(trimmedText);
     if (url) {
       event.preventDefault();
-      void importRemoteUrl(url);
+      void createLinkFromUrl(url);
       return;
     }
 
@@ -163,12 +176,20 @@ export function BoardUploadZone({
       <div
         className={cn(
           "border-primary/50 bg-background/70 pointer-events-none absolute inset-0 z-10 flex items-center justify-center border border-dashed opacity-0 backdrop-blur-sm transition-opacity",
-          isDraggingImage && "opacity-100",
+          draggingKind && "opacity-100",
         )}
       >
         <div className="flex items-center gap-2 rounded-lg bg-popover px-3 py-2 text-sm font-medium shadow-sm ring-1 ring-border">
-          <ImagePlusIcon className="size-4" />
-          <span>Drop images to add</span>
+          {draggingKind === "link" ? (
+            <Link2Icon className="size-4" />
+          ) : (
+            <ImagePlusIcon className="size-4" />
+          )}
+          <span>
+            {draggingKind === "link"
+              ? "Drop link to add"
+              : "Drop images to add"}
+          </span>
         </div>
       </div>
       {isPending ? (
@@ -209,5 +230,11 @@ function hasImageFile(dataTransfer: DataTransfer): boolean {
   return Array.from(dataTransfer.items).some(
     (item) =>
       item.kind === "file" && SUPPORTED_IMAGE_MIME_TYPE_SET.has(item.type),
+  );
+}
+
+function hasDraggedUrl(dataTransfer: DataTransfer): boolean {
+  return Array.from(dataTransfer.types).some(
+    (type) => type === "text/uri-list" || type === "text/plain",
   );
 }

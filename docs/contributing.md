@@ -28,6 +28,9 @@ cd ../server && bun install
 cd ../services/image-shared && bun install
 cd ../image-variants && bun install
 cd ../image-palette && bun install
+cd ../url-unfurl-shared && bun install
+cd ../url-resolution && bun install
+cd ../resource-media && bun install
 ```
 
 Copy `server/.env.example` to `server/.env` for direct server development and
@@ -47,6 +50,7 @@ The shared `dev` stage is never a Live stage. See
 | Persistent data | Drizzle schema and migration | service queries, tenant constraints, schema docs, integration tests |
 | Collection/canvas behavior | collection service and canvas/board client code | placement/move invariants, [Collection Canvas](./collection-canvas.md), and [Canvas Placement Policy](./placement-policy.md) |
 | Image ingestion/enrichment | upload service, callback contract, a worker | idempotency, queue retries, signed callback, pipeline docs |
+| URL resolution/resource media | URL service, resolver or media worker | SSRF boundary, generations, roles, signed claims/results, [URL Unfurling](./server/url-unfurling.md) |
 | Infrastructure/configuration | `sst.config.ts` and environment schema | AWS workflow, secret handling, deployed client origins |
 | Errors/logs/traces | Sentry integration, logger, meaningful service boundary | [Observability](./server/observability.md), PII/redaction, sampling |
 
@@ -96,6 +100,8 @@ the router/Vite tooling regenerate it when routes change.
   a mixed batch move must either commit every node or roll back every node.
 - Image workers expect at-least-once delivery. Make callbacks and writes
   idempotent, then let the shared SQS handler own retry policy.
+- URL/resource workers also expect at-least-once delivery. Messages carry IDs
+  and generations only; workers must claim current work before external fetches.
 - Do not store presigned or signed delivery URLs. Persist workspace-rooted
   object keys and resolve delivery URLs on reads; deployed stages authorize
   CloudFront access with workspace-scoped signed cookies.
@@ -111,6 +117,9 @@ cd client && bun run lint && bun run typecheck && bun run format && bun run test
 cd server && bun run lint && bun run typecheck && bun run lambda:typecheck && bun run format && bun run test
 cd services/image-variants && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/url-resolution && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/resource-media && bun run lint && bun run typecheck && bun run format && bun run test
 ```
 
 For persistence changes, also run integration tests against a disposable

@@ -25,6 +25,8 @@ import {
 } from "@/api/collection";
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
 import type { Asset, ImageAsset, NoteAsset } from "@/types/asset";
+import type { LinkAsset } from "@/types/asset";
+import { useRefreshLink } from "@/api/url-unfurl";
 import {
   MoveToDialog,
   type MoveToDialogSource,
@@ -98,6 +100,35 @@ function folderActions() {
   );
 }
 
+function linkActions(asset: LinkAsset, onRefresh: () => void) {
+  const refreshAllowed =
+    asset.failureCategory !== "credentials" &&
+    asset.failureCategory !== "sensitive_query";
+  return (
+    <>
+      <ContextMenuItem
+        onClick={() =>
+          window.open(asset.originalUrl, "_blank", "noopener,noreferrer")
+        }
+      >
+        Open link
+      </ContextMenuItem>
+      <ContextMenuItem
+        onClick={() => {
+          void navigator.clipboard
+            .writeText(asset.originalUrl)
+            .then(() => toast.success("Copied link."));
+        }}
+      >
+        Copy link
+      </ContextMenuItem>
+      {refreshAllowed ? (
+        <ContextMenuItem onClick={onRefresh}>Refresh preview</ContextMenuItem>
+      ) : null}
+    </>
+  );
+}
+
 export function AssetContextMenu({
   asset,
   children,
@@ -136,6 +167,7 @@ export function AssetContextMenu({
     deleteContext?.workspaceSlug ?? "",
     deleteContext?.collectionSlug ?? "",
   );
+  const refreshLink = useRefreshLink(workspaceSlug ?? "");
   const moveSource: MoveToDialogSource | undefined = deleteContext
     ? {
         workspaceSlug: deleteContext.workspaceSlug,
@@ -301,7 +333,18 @@ export function AssetContextMenu({
               <ContextMenuSeparator />
               {asset.type === "image"
                 ? imageActions(asset, handleCopyImage)
-                : noteActions(asset)}
+                : asset.type === "note"
+                  ? noteActions(asset)
+                  : linkActions(asset, () => {
+                      refreshLink.mutate(asset.id, {
+                        onError: (error) =>
+                          toast.error(
+                            error instanceof Error
+                              ? error.message
+                              : "Unable to refresh link.",
+                          ),
+                      });
+                    })}
             </>
           )}
           <ContextMenuSeparator />

@@ -4,7 +4,13 @@ import { env } from "@/config";
 import { factory } from "@/factory";
 import { AppError, ErrorCode } from "@/lib/errors";
 
-const IMAGE_PIPELINE_CALLBACK_PATH = "/api/v1/internal/image-pipeline/callback";
+const HMAC_AUTHENTICATED_PIPELINE_PATHS = new Set([
+  "/api/v1/internal/image-pipeline/callback",
+  "/api/v1/internal/url-resolution/claim",
+  "/api/v1/internal/url-resolution/result",
+  "/api/v1/internal/resource-media/claim",
+  "/api/v1/internal/resource-media/result",
+]);
 
 let jwks: JWTVerifyGetKey | undefined;
 let jwksTeamDomain: string | undefined;
@@ -19,10 +25,11 @@ export const cloudflareAccess = factory.createMiddleware(async (c, next) => {
   // Browsers deliberately omit cookies from CORS preflights. Cloudflare Access
   // answers those OPTIONS requests using its configured CORS response; Hono
   // still validates the actual credentialed request. Image workers instead
-  // authenticate this one callback with an HMAC secret and replay checks.
+  // authenticate these explicitly allowlisted pipeline callbacks with HMAC
+  // secrets and replay checks. Do not replace this with an /internal wildcard.
   if (
     c.req.method === "OPTIONS" ||
-    c.req.path === IMAGE_PIPELINE_CALLBACK_PATH
+    HMAC_AUTHENTICATED_PIPELINE_PATHS.has(c.req.path)
   ) {
     return next();
   }

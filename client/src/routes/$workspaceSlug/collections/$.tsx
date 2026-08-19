@@ -341,8 +341,8 @@ function CollectionPage() {
                   isTypeFilterActive
                     ? "Try a different asset type."
                     : folderPath
-                      ? "Add images, notes, or folders to start arranging this board."
-                      : "Add images, notes, or folders to start arranging this collection."
+                      ? "Add images, notes, links, or folders to start arranging this board."
+                      : "Add images, notes, links, or folders to start arranging this collection."
                 }
                 onOpenNote={handleOpenNote}
                 onOpenImage={handleOpenImage}
@@ -374,8 +374,8 @@ function CollectionPage() {
                   isTypeFilterActive
                     ? "Try a different asset type."
                     : folderPath
-                      ? "Add images, notes, or folders to this folder."
-                      : "Add images, notes, or folders to this collection."
+                      ? "Add images, notes, links, or folders to this folder."
+                      : "Add images, notes, links, or folders to this collection."
                 }
                 onOpenNote={handleOpenNote}
                 onOpenImage={handleOpenImage}

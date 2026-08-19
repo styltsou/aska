@@ -1,4 +1,4 @@
-import { FolderIcon } from "lucide-react";
+import { FolderIcon, Globe2Icon } from "lucide-react";
 
 import type { FolderChildPreview } from "@/api/collection";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
@@ -33,6 +33,14 @@ export function FolderPreviewRow({
               className="size-full object-cover"
               loading="lazy"
             />
+          </div>
+        ) : preview.type === "link" ? (
+          <div
+            key={preview.assetId}
+            className="flex size-8 shrink-0 items-center justify-center rounded-[3px] border bg-card"
+            title={preview.title ?? preview.hostname}
+          >
+            <Globe2Icon className="size-3.5 text-muted-foreground" />
           </div>
         ) : (
           <div

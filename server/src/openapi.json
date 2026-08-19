@@ -3,7 +3,7 @@
   "info": {
     "title": "Aska API",
     "summary": "Backend API for Aska's visual workspace and archive.",
-    "description": "Aska is a multi-tenant visual workspace. Workspaces contain collections, folders, and assets such as images and notes. Assets can be organised within collection folder trees or live in the inbox (unplaced).\n\nAll endpoints under `/api/v1` require authentication via `authMiddleware`. The authenticated session must belong to the workspace's organisation.",
+    "description": "Aska is a multi-tenant visual workspace. Workspaces contain collections, folders, and assets such as images, notes, and links. Assets can be organised within collection folder trees or live in the inbox (unplaced).\n\nAll endpoints under `/api/v1` require authentication via `authMiddleware`. The authenticated session must belong to the workspace's organisation.",
     "version": "0.1.0"
   },
   "servers": [
@@ -36,6 +36,10 @@
     {
       "name": "Image Uploads",
       "description": "Direct upload (presigned URL) and remote URL ingestion for images, scoped to a collection or the inbox."
+    },
+    {
+      "name": "Link Unfurling",
+      "description": "Optimistic link-card creation and asynchronous external metadata resolution."
     }
   ],
   "paths": {
@@ -391,7 +395,7 @@
         "operationId": "getCollectionContents",
         "tags": ["Collections"],
         "summary": "Get collection contents at a folder path",
-        "description": "Returns the breadcrumb trail and child nodes (folders, images, notes) at the specified folder path within a collection. Omit `folderPath` to list the collection root.",
+        "description": "Returns the breadcrumb trail and child nodes (folders, images, notes, and links) at the specified folder path within a collection. Omit `folderPath` to list the collection root.",
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
@@ -412,14 +416,14 @@
             "name": "types",
             "in": "query",
             "required": false,
-            "description": "Comma-separated node types to include. Omit to include folders, images, and notes.",
+            "description": "Comma-separated node types to include. Omit to include folders, images, notes, and links.",
             "style": "form",
             "explode": false,
             "schema": {
               "type": "array",
               "items": {
                 "type": "string",
-                "enum": ["image", "note", "folder"]
+                "enum": ["image", "note", "link", "folder"]
               },
               "minItems": 1,
               "maxItems": 3
@@ -469,7 +473,7 @@
             "description": "Node identifier in the form `{kind}-{id}`, e.g. `folder-42` or `image-7`.",
             "schema": {
               "type": "string",
-              "pattern": "^(folder|image|note)-\\d+$"
+              "pattern": "^(folder|image|note|link)-\\d+$"
             }
           }
         ],
@@ -554,7 +558,7 @@
         "operationId": "updateCollectionNodePosition",
         "tags": ["Collections"],
         "summary": "Update a collection node's canvas position",
-        "description": "Persists the signed integer canvas coordinate for an image, note, or folder after placement or dragging. The request includes the current parent folder ID so a delayed source-canvas position write is rejected after an asset moves.",
+        "description": "Persists the signed integer canvas coordinate for an image, note, link, or folder after placement or dragging. The request includes the current parent folder ID so a delayed source-canvas position write is rejected after an asset moves.",
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
@@ -569,7 +573,7 @@
             "description": "Node identifier in the form `{kind}-{id}`, e.g. `folder-42` or `image-7`.",
             "schema": {
               "type": "string",
-              "pattern": "^(folder|image|note)-\\d+$"
+              "pattern": "^(folder|image|note|link)-\\d+$"
             }
           }
         ],
@@ -617,7 +621,7 @@
         "operationId": "moveCollectionNodesToFolder",
         "tags": ["Collections"],
         "summary": "Atomically move one or more nodes to a collection destination",
-        "description": "Moves one to 100 image, note, or folder nodes in one transaction. Assets may originate in Inbox (no placement) or another collection; folders may move only within their current collection. `targetFolderNodeId: null` selects the target collection root. Canvas coordinates are separate position endpoints.",
+        "description": "Moves one to 100 image, note, link, or folder nodes in one transaction. Assets may originate in Inbox (no placement) or another collection; folders may move only within their current collection. `targetFolderNodeId: null` selects the target collection root. Canvas coordinates are separate position endpoints.",
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
@@ -686,7 +690,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "enum": ["image", "note", "folder"]
+                "enum": ["image", "note", "link", "folder"]
               },
               "minItems": 1,
               "maxItems": 3
@@ -807,12 +811,110 @@
         }
       }
     },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/links": {
+      "post": {
+        "operationId": "createCollectionLink",
+        "tags": ["Link Unfurling"],
+        "summary": "Create and asynchronously resolve a link card",
+        "description": "Persists a usable link card immediately. Generic metadata and stored media variants are resolved asynchronously and appear in later collection reads.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLinkRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The link card was created; resolution may still be queued.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreateLinkResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/inbox/links": {
+      "post": {
+        "operationId": "createInboxLink",
+        "tags": ["Link Unfurling"],
+        "summary": "Create and asynchronously resolve an inbox link card",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceSlug" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLinkRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The inbox link card was created; resolution may still be queued.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreateLinkResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/links/{assetId}/resolution": {
+      "post": {
+        "operationId": "refreshLinkResolution",
+        "tags": ["Link Unfurling"],
+        "summary": "Retry or refresh link resolution",
+        "description": "Queues a new generation unless the resource already has active work. URLs containing credentials or sensitive query keys remain blocked from retrieval.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^link-\\d+$" }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Refresh accepted, or existing active work reused.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreateLinkResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}/assets/{assetId}": {
       "delete": {
         "operationId": "deleteAsset",
         "tags": ["Assets"],
         "summary": "Permanently delete an asset",
-        "description": "Permanently deletes the asset, its metadata, and its associated S3 storage objects (original image, display variant, preview variant, and upload object). This action cannot be undone.\n\nTo only remove an asset from a collection without deleting it, use `DELETE /collections/{slug}/nodes/{nodeId}` instead.",
+        "description": "Permanently deletes the asset card. Image objects are deleted with the image asset. Link resources shared by other cards remain; an unreferenced link resource and its stored media enter the asynchronous grace-period cleanup lifecycle. This action cannot be undone.\n\nTo only remove an asset from a collection without deleting it, use `DELETE /collections/{slug}/nodes/{nodeId}` instead.",
         "parameters": [
           {
             "$ref": "#/components/parameters/WorkspaceSlug"
@@ -821,10 +923,10 @@
             "name": "assetId",
             "in": "path",
             "required": true,
-            "description": "Asset identifier in the form `{kind}-{id}`, e.g. `image-42` or `note-17`.",
+            "description": "Asset identifier in the form `{kind}-{id}`, e.g. `image-42`, `note-17`, or `link-9`.",
             "schema": {
               "type": "string",
-              "pattern": "^(image|note)-\\d+$"
+              "pattern": "^(image|note|link)-\\d+$"
             }
           }
         ],
@@ -1205,6 +1307,16 @@
           }
         }
       },
+      "RateLimited": {
+        "description": "The workspace has created too many URL-resolution attempts in the current window.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "InternalError": {
         "description": "An unexpected server error occurred.",
         "content": {
@@ -1380,7 +1492,7 @@
           },
           "type": {
             "type": "string",
-            "enum": ["image", "note"]
+            "enum": ["image", "note", "link"]
           },
           "url": {
             "type": "string",
@@ -1398,6 +1510,14 @@
           "snippet": {
             "type": "string",
             "description": "Text snippet for note previews."
+          },
+          "hostname": {
+            "type": "string",
+            "description": "Hostname for link previews."
+          },
+          "title": {
+            "type": ["string", "null"],
+            "description": "Resolved or fallback title for link previews."
           }
         },
         "description": "Preview thumbnail for a folder child."
@@ -1648,6 +1768,26 @@
           }
         }
       },
+      "CreateLinkRequest": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "description": "HTTP(S) URL. The fragment is ignored for resource identity; query parameters are retained."
+          },
+          "parentFolderPath": {
+            "type": "string",
+            "description": "Folder path to create the link in. Omit for collection root."
+          },
+          "position": {
+            "$ref": "#/components/schemas/BoardPosition",
+            "description": "Optional initial position in the target canvas."
+          }
+        }
+      },
       "CollectionFolderNode": {
         "type": "object",
         "required": [
@@ -1823,6 +1963,78 @@
           }
         }
       },
+      "CollectionLinkNode": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "originalUrl",
+          "canonicalUrl",
+          "hostname",
+          "title",
+          "description",
+          "siteName",
+          "resourceKind",
+          "resolutionStatus",
+          "failureCategory",
+          "resolvedAt",
+          "staleAt",
+          "previewImage",
+          "favicon",
+          "createdAt",
+          "position"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^link-\\d+$" },
+          "type": { "type": "string", "enum": ["link"] },
+          "originalUrl": { "type": "string", "format": "uri" },
+          "canonicalUrl": { "type": ["string", "null"], "format": "uri" },
+          "hostname": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": ["string", "null"] },
+          "siteName": { "type": ["string", "null"] },
+          "resourceKind": { "type": "string" },
+          "resolutionStatus": {
+            "type": "string",
+            "enum": ["queued", "resolving", "partial", "ready", "failed"]
+          },
+          "failureCategory": {
+            "type": ["string", "null"],
+            "description": "Stable, non-sensitive failure category; never contains a remote response body."
+          },
+          "resolvedAt": { "type": ["string", "null"], "format": "date-time" },
+          "staleAt": { "type": ["string", "null"], "format": "date-time" },
+          "previewImage": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/LinkMediaVariant" },
+              { "type": "null" }
+            ]
+          },
+          "favicon": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/LinkMediaVariant" },
+              { "type": "null" }
+            ]
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "position": { "$ref": "#/components/schemas/NullableBoardPosition" }
+        }
+      },
+      "LinkMediaVariant": {
+        "type": "object",
+        "required": ["url", "width", "height"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Authorized URL for a stored, validated variant; never the discovered remote URL."
+          },
+          "width": { "type": "integer", "minimum": 1 },
+          "height": { "type": "integer", "minimum": 1 },
+          "blurDataURL": { "type": ["string", "null"] },
+          "alt": { "type": ["string", "null"] }
+        }
+      },
       "Breadcrumb": {
         "type": "object",
         "required": ["id", "name", "slug"],
@@ -1881,6 +2093,9 @@
                     },
                     {
                       "$ref": "#/components/schemas/CollectionNoteNode"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CollectionLinkNode"
                     }
                   ],
                   "discriminator": {
@@ -1888,7 +2103,8 @@
                     "mapping": {
                       "folder": "#/components/schemas/CollectionFolderNode",
                       "image": "#/components/schemas/CollectionImageNode",
-                      "note": "#/components/schemas/CollectionNoteNode"
+                      "note": "#/components/schemas/CollectionNoteNode",
+                      "link": "#/components/schemas/CollectionLinkNode"
                     }
                   }
                 }
@@ -1908,6 +2124,19 @@
               "note": {
                 "$ref": "#/components/schemas/CollectionNoteNode"
               }
+            }
+          }
+        }
+      },
+      "CreateLinkResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["link"],
+            "properties": {
+              "link": { "$ref": "#/components/schemas/CollectionLinkNode" }
             }
           }
         }
@@ -1992,7 +2221,7 @@
               "properties": {
                 "nodeId": {
                   "type": "string",
-                  "pattern": "^(folder|image|note)-\\d+$"
+                  "pattern": "^(folder|image|note|link)-\\d+$"
                 },
                 "position": {
                   "$ref": "#/components/schemas/BoardPosition"
@@ -2045,7 +2274,7 @@
             "uniqueItems": true,
             "items": {
               "type": "string",
-              "pattern": "^(folder|image|note)-\\d+$"
+              "pattern": "^(folder|image|note|link)-\\d+$"
             }
           },
           "targetFolderNodeId": {

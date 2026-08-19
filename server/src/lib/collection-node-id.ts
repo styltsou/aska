@@ -1,16 +1,20 @@
 import { AppError, ErrorCode } from "@/lib/errors";
 
 export type AssetNodeIdentifier = {
-  assetType: "image" | "note";
+  assetType: "image" | "note" | "link";
   entityId: number;
 };
 
 export type CollectionNodeIdentifier =
   | { nodeType: "folder"; entityId: number }
-  | { nodeType: "asset"; assetType: "image" | "note"; entityId: number };
+  | {
+      nodeType: "asset";
+      assetType: "image" | "note" | "link";
+      entityId: number;
+    };
 
-const collectionNodeIdPattern = /^(folder|image|note)-(\d+)$/;
-const assetNodeIdPattern = /^(image|note)-(\d+)$/;
+const collectionNodeIdPattern = /^(folder|image|note|link)-(\d+)$/;
+const assetNodeIdPattern = /^(image|note|link)-(\d+)$/;
 
 /** Parses a public collection-node ID into its persisted target kind and ID. */
 export function parseCollectionNodeId(
@@ -33,7 +37,7 @@ export function parseCollectionNodeId(
   };
 }
 
-/** Restricts Inbox asset operations to image and note node identifiers. */
+/** Restricts Inbox asset operations to persisted asset node identifiers. */
 export function parseAssetNodeId(nodeId: string): AssetNodeIdentifier {
   const match = assetNodeIdPattern.exec(nodeId);
   const entityId = match ? Number(match[2]) : NaN;

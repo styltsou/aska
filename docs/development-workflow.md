@@ -1,7 +1,7 @@
 # Development Workflow
 
 Each package uses Bun for dependency installation and scripts. CI runs the
-quality commands for the client, server, and image pipeline on pull requests and
+quality commands for the client, server, image pipeline, and URL-resource workers on pull requests and
 pushes to `main`. It also verifies the client production build and checks that
 the server schema does not generate an uncommitted migration.
 
@@ -9,7 +9,7 @@ the server schema does not generate an uncommitted migration.
 
 Running `bun install` from the repository root configures Git to use the tracked
 `.githooks` directory. The pre-commit hook formats staged client, server, and
-image-worker source files with Oxfmt. Any fixes are re-staged automatically.
+worker source files with Oxfmt. Any fixes are re-staged automatically.
 The client Oxfmt configuration enables `sortTailwindcss` against `src/index.css`,
 so the same pass also normalizes Tailwind class order.
 
@@ -24,8 +24,8 @@ suite and require `TEST_DATABASE_URL` to point to a disposable database.
 cd server && TEST_DATABASE_URL=postgresql://... bun run test:integration
 ```
 
-The client and image pipeline use Vitest with `--passWithNoTests` until they
-have test files.
+The client and workers use Vitest with `--passWithNoTests` so package checks
+remain valid even before a worker gains its first focused test.
 
 Run the package-local checks before pushing:
 
@@ -34,4 +34,7 @@ cd client && bun run lint && bun run typecheck && bun run format && bun run test
 cd server && bun run lint && bun run typecheck && bun run lambda:typecheck && bun run format && bun run test
 cd services/image-variants && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/url-resolution && bun run lint && bun run typecheck && bun run format && bun run test
+cd services/resource-media && bun run lint && bun run typecheck && bun run format && bun run test
 ```

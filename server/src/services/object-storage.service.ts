@@ -247,7 +247,7 @@ export class ObjectStorageService implements IObjectStorageService {
 }
 
 function isMediaObjectKey(key: string): boolean {
-  return /^[^/]+\/[^/]+\/(?:original\.[a-z0-9]+|display\.webp|preview\.webp)$/i.test(
+  return /^[^/]+\/[^/]+\/(?:original\.[a-z0-9]+|master\.webp|display\.webp|preview\.webp)$/i.test(
     key,
   );
 }

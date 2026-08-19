@@ -79,10 +79,7 @@ export default $config({
     const cloudFrontPublicKey = stableCloudDomains
       ? new sst.Secret("CloudFrontMediaPublicKey")
       : undefined;
-    const sentryEnvironment = getSentryEnvironment(
-      "aska-api",
-      sentryDsn.value,
-    );
+    const sentryEnvironment = getSentryEnvironment("aska-api", sentryDsn.value);
     const cloudflareAccessEnvironment = stableCloudDomains
       ? getCloudflareAccessEnvironment()
       : {};
@@ -111,6 +108,14 @@ export default $config({
       queue: imagePaletteQueue,
       deadLetterQueue: imagePaletteDeadLetterQueue,
     } = createImageQueue("ImagePaletteQueue", "ImagePaletteDeadLetterQueue");
+    const {
+      queue: urlResolutionQueue,
+      deadLetterQueue: urlResolutionDeadLetterQueue,
+    } = createImageQueue("UrlResolutionQueue", "UrlResolutionDeadLetterQueue");
+    const {
+      queue: resourceMediaQueue,
+      deadLetterQueue: resourceMediaDeadLetterQueue,
+    } = createImageQueue("ResourceMediaQueue", "ResourceMediaDeadLetterQueue");
     const imageUploadTopic = new sst.aws.SnsTopic("ImageUploadTopic");
     const assets = new sst.aws.Bucket("Assets", {
       // SST owns the bucket policy. CloudFront OAC presents its distribution
@@ -163,27 +168,25 @@ export default $config({
     // receiving uploads.
     new aws.sns.TopicPolicy("ImageUploadTopicPublishPolicy", {
       arn: imageUploadTopic.arn,
-      policy: aws.iam
-        .getPolicyDocumentOutput({
-          statements: [
-            {
-              sid: "AllowS3ObjectCreatedNotifications",
-              actions: ["sns:Publish"],
-              resources: [imageUploadTopic.arn],
-              principals: [
-                { type: "Service", identifiers: ["s3.amazonaws.com"] },
-              ],
-              conditions: [
-                {
-                  test: "ArnEquals",
-                  variable: "aws:SourceArn",
-                  values: [assets.arn],
-                },
-              ],
-            },
-          ],
-        })
-        .json,
+      policy: aws.iam.getPolicyDocumentOutput({
+        statements: [
+          {
+            sid: "AllowS3ObjectCreatedNotifications",
+            actions: ["sns:Publish"],
+            resources: [imageUploadTopic.arn],
+            principals: [
+              { type: "Service", identifiers: ["s3.amazonaws.com"] },
+            ],
+            conditions: [
+              {
+                test: "ArnEquals",
+                variable: "aws:SourceArn",
+                values: [assets.arn],
+              },
+            ],
+          },
+        ],
+      }).json,
     });
     assets.notify({
       notifications: [
@@ -232,7 +235,7 @@ export default $config({
       runtime: "nodejs22.x",
       memory: "1024 MB",
       timeout: "29 seconds",
-      link: [assets],
+      link: [assets, urlResolutionQueue, resourceMediaQueue],
       nodejs: {
         sourcemap: true,
         // Crop rendering runs inline in the API and needs Sharp's native
@@ -241,11 +244,23 @@ export default $config({
       },
       copyFiles: [
         { from: "server/node_modules/sharp", to: "node_modules/sharp" },
-        { from: "server/node_modules/@img/colour", to: "node_modules/@img/colour" },
-        { from: "server/node_modules/detect-libc", to: "node_modules/detect-libc" },
+        {
+          from: "server/node_modules/@img/colour",
+          to: "node_modules/@img/colour",
+        },
+        {
+          from: "server/node_modules/detect-libc",
+          to: "node_modules/detect-libc",
+        },
         { from: "server/node_modules/semver", to: "node_modules/semver" },
-        { from: "server/node_modules/@img/sharp-linux-x64", to: "node_modules/@img/sharp-linux-x64" },
-        { from: "server/node_modules/@img/sharp-libvips-linux-x64", to: "node_modules/@img/sharp-libvips-linux-x64" },
+        {
+          from: "server/node_modules/@img/sharp-linux-x64",
+          to: "node_modules/@img/sharp-linux-x64",
+        },
+        {
+          from: "server/node_modules/@img/sharp-libvips-linux-x64",
+          to: "node_modules/@img/sharp-libvips-linux-x64",
+        },
       ],
       environment: {
         NODE_OPTIONS: "--enable-source-maps",
@@ -264,6 +279,9 @@ export default $config({
         RESEND_API_KEY: resendApiKey.value,
         PEXELS_API_KEY: pexelsApiKey.value,
         IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+        RESOURCE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+        URL_RESOLUTION_QUEUE_URL: urlResolutionQueue.url,
+        RESOURCE_MEDIA_QUEUE_URL: resourceMediaQueue.url,
         S3_BUCKET: assets.name,
         S3_REGION: "eu-central-1",
         S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: "900",
@@ -289,7 +307,7 @@ export default $config({
         runtime: "nodejs22.x",
         memory: "512 MB",
         timeout: "30 seconds",
-        link: [assets],
+        link: [assets, urlResolutionQueue, resourceMediaQueue],
         nodejs: { sourcemap: true },
         environment: {
           NODE_OPTIONS: "--enable-source-maps",
@@ -303,6 +321,9 @@ export default $config({
           S3_REGION: "eu-central-1",
           S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: "900",
           S3_PRESIGNED_READ_EXPIRES_SECONDS: "900",
+          RESOURCE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+          URL_RESOLUTION_QUEUE_URL: urlResolutionQueue.url,
+          RESOURCE_MEDIA_QUEUE_URL: resourceMediaQueue.url,
           ...(media
             ? {
                 MEDIA_BASE_URL: media.domainUrl,
@@ -316,7 +337,9 @@ export default $config({
         },
       },
     });
-    const imageWorkerFiles = (service: "image-variants" | "image-palette") => [
+    const imageWorkerFiles = (
+      service: "image-variants" | "image-palette" | "resource-media",
+    ) => [
       {
         from: `services/${service}/node_modules/sharp`,
         to: "node_modules/sharp",
@@ -395,6 +418,39 @@ export default $config({
         },
       },
     );
+    urlResolutionQueue.subscribe(
+      {
+        handler: "services/url-resolution/src/lambda.handler",
+        runtime: "nodejs22.x",
+        memory: "1024 MB",
+        timeout: "30 seconds",
+        nodejs: { sourcemap: true },
+        environment: {
+          NODE_OPTIONS: "--enable-source-maps",
+          NODE_ENV: stableCloudDomains ? "production" : "development",
+          PIPELINE_API_BASE_URL: api.url,
+          RESOURCE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+          ...getSentryEnvironment("url-resolution", sentryDsn.value),
+        },
+      },
+      { batch: { size: 1, partialResponses: true } },
+    );
+    resourceMediaQueue.subscribe(
+      {
+        handler: "services/resource-media/src/lambda.handler",
+        ...imageWorkerDefaults,
+        copyFiles: imageWorkerFiles("resource-media"),
+        environment: {
+          NODE_OPTIONS: "--enable-source-maps",
+          NODE_ENV: stableCloudDomains ? "production" : "development",
+          PIPELINE_API_BASE_URL: api.url,
+          RESOURCE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+          S3_BUCKET: assets.name,
+          ...getSentryEnvironment("resource-media", sentryDsn.value),
+        },
+      },
+      { batch: { size: 1, partialResponses: true } },
+    );
     const client = new sst.aws.StaticSite("Client", {
       path: "client",
       build: {
@@ -435,6 +491,10 @@ export default $config({
       imageVariantsDeadLetterQueue: imageVariantsDeadLetterQueue.url,
       imagePaletteQueue: imagePaletteQueue.url,
       imagePaletteDeadLetterQueue: imagePaletteDeadLetterQueue.url,
+      urlResolutionQueue: urlResolutionQueue.url,
+      urlResolutionDeadLetterQueue: urlResolutionDeadLetterQueue.url,
+      resourceMediaQueue: resourceMediaQueue.url,
+      resourceMediaDeadLetterQueue: resourceMediaDeadLetterQueue.url,
     };
   },
 });
@@ -446,8 +506,7 @@ function getSentryEnvironment(
     SENTRY_DSN: dsn,
     SENTRY_SERVICE: serviceName,
     SENTRY_ENVIRONMENT: $app.stage,
-    SENTRY_TRACES_SAMPLE_RATE:
-      process.env.SENTRY_TRACES_SAMPLE_RATE ?? "0.2",
+    SENTRY_TRACES_SAMPLE_RATE: process.env.SENTRY_TRACES_SAMPLE_RATE ?? "0.2",
     ...(process.env.SENTRY_RELEASE
       ? { SENTRY_RELEASE: process.env.SENTRY_RELEASE }
       : {}),

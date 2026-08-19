@@ -18,6 +18,9 @@ jobs:
       image-variants: ${{ steps.filter.outputs.image-variants }}
       image-palette: ${{ steps.filter.outputs.image-palette }}
       image-shared: ${{ steps.filter.outputs.image-shared }}
+      url-unfurl-shared: ${{ steps.filter.outputs.url-unfurl-shared }}
+      url-resolution: ${{ steps.filter.outputs.url-resolution }}
+      resource-media: ${{ steps.filter.outputs.resource-media }}
       infra: ${{ steps.filter.outputs.infra }}
       deploy: ${{ steps.filter.outputs.deploy }}
     steps:
@@ -43,6 +46,15 @@ jobs:
               - '.github/workflows/ci.yml'
             image-shared:
               - 'services/image-shared/**'
+            url-unfurl-shared:
+              - 'services/url-unfurl-shared/**'
+              - '.github/workflows/ci.yml'
+            url-resolution:
+              - 'services/url-resolution/**'
+              - '.github/workflows/ci.yml'
+            resource-media:
+              - 'services/resource-media/**'
+              - '.github/workflows/ci.yml'
             infra:
               - 'sst.config.ts'
               - 'sst-env.d.ts'
@@ -91,6 +103,18 @@ jobs:
             directory: services/image-palette
             command: bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
             changed: ${{ needs.changes.outputs.image-palette || needs.changes.outputs.image-shared }}
+          - name: URL unfurl shared
+            directory: services/url-unfurl-shared
+            command: bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.url-unfurl-shared }}
+          - name: URL resolution
+            directory: services/url-resolution
+            command: bun install --frozen-lockfile --cwd ../url-unfurl-shared && bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.url-resolution || needs.changes.outputs.url-unfurl-shared || needs.changes.outputs.image-shared }}
+          - name: Resource media
+            directory: services/resource-media
+            command: bun install --frozen-lockfile --cwd ../url-unfurl-shared && bun install --frozen-lockfile --cwd ../image-shared && bun install --frozen-lockfile --cwd ../image-variants && bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.resource-media || needs.changes.outputs.url-unfurl-shared || needs.changes.outputs.image-shared || needs.changes.outputs.image-variants }}
     defaults:
       run:
         working-directory: ${{ matrix.directory }}
@@ -107,6 +131,8 @@ jobs:
         run: bun run lint
       - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run typecheck
+      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
+        run: bun run lambda:typecheck
       - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run format
       - if: fromJSON(matrix.changed) && matrix.name == 'Server'
@@ -143,6 +169,9 @@ jobs:
           bun install --frozen-lockfile --cwd services/image-shared
           bun install --frozen-lockfile --cwd services/image-variants
           bun install --frozen-lockfile --cwd services/image-palette
+          bun install --frozen-lockfile --cwd services/url-unfurl-shared
+          bun install --frozen-lockfile --cwd services/url-resolution
+          bun install --frozen-lockfile --cwd services/resource-media
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:

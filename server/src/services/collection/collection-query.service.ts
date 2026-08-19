@@ -14,8 +14,10 @@ import {
   assets,
   collectionNodes,
   collectionsTable,
+  externalResources,
   folders,
   imageAssets,
+  linkAssets,
   member,
   noteAssets,
   organization,
@@ -44,6 +46,10 @@ import {
   resolveTargetInCollection,
 } from "./collection-target-resolver";
 import type { DetailedCollectionRow, WorkspaceInfo } from "./collection.types";
+import {
+  getResourceMediaLookup,
+  projectLinkNode,
+} from "@/services/url-unfurl/projection";
 
 type Deps = {
   objectStorageService: IObjectStorageService;
@@ -141,10 +147,18 @@ export class CollectionQueryService {
         assetType: assets.type,
         noteColor: noteAssets.color,
         noteContent: noteAssets.markdown,
+        linkResourceId: externalResources.id,
+        linkHostname: externalResources.hostname,
+        linkTitle: externalResources.title,
       })
       .from(collectionNodes)
       .innerJoin(assets, eq(assets.id, collectionNodes.assetId))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+      .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
+      .leftJoin(
+        externalResources,
+        eq(externalResources.id, linkAssets.resourceId),
+      )
       .where(
         and(
           inArray(collectionNodes.collectionId, collectionIds),
@@ -189,6 +203,13 @@ export class CollectionQueryService {
           color: row.noteColor ?? undefined,
           snippet,
         };
+      } else if (row.assetType === "link" && row.linkHostname) {
+        preview = {
+          assetId: `link-${row.assetId}`,
+          type: "link",
+          hostname: row.linkHostname,
+          title: row.linkTitle,
+        };
       }
 
       if (!preview) continue;
@@ -222,7 +243,7 @@ export class CollectionQueryService {
     const collection = await getCollectionBySlug(orgId, collectionSlug);
     const target = await resolveTargetInCollection(collection, folderPath);
     const assetTypes = types?.filter(
-      (type): type is "image" | "note" => type !== "folder",
+      (type): type is "image" | "note" | "link" => type !== "folder",
     );
     const typeCondition =
       types === undefined
@@ -258,6 +279,18 @@ export class CollectionQueryService {
         createdAt: collectionNodes.createdAt,
         noteContent: noteAssets.markdown,
         noteColor: noteAssets.color,
+        linkOriginalUrl: linkAssets.originalUrl,
+        linkResourceId: externalResources.id,
+        linkHostname: externalResources.hostname,
+        linkCanonicalUrl: externalResources.canonicalUrl,
+        linkTitle: externalResources.title,
+        linkDescription: externalResources.description,
+        linkSiteName: externalResources.siteName,
+        linkResourceKind: externalResources.resourceKind,
+        linkResolutionStatus: externalResources.resolutionStatus,
+        linkFailureCategory: externalResources.failureCategory,
+        linkResolvedAt: externalResources.resolvedAt,
+        linkStaleAt: externalResources.staleAt,
         folderId: folders.id,
         folderName: folders.name,
         folderSlug: folders.slug,
@@ -266,6 +299,11 @@ export class CollectionQueryService {
       .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+      .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
+      .leftJoin(
+        externalResources,
+        eq(externalResources.id, linkAssets.resourceId),
+      )
       .leftJoin(folders, eq(folders.id, collectionNodes.folderId))
       .where(
         and(
@@ -333,10 +371,18 @@ export class CollectionQueryService {
           assetId: assets.id,
           color: noteAssets.color,
           content: noteAssets.markdown,
+          resourceId: externalResources.id,
+          hostname: externalResources.hostname,
+          title: externalResources.title,
         })
         .from(collectionNodes)
         .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
         .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+        .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
+        .leftJoin(
+          externalResources,
+          eq(externalResources.id, linkAssets.resourceId),
+        )
         .where(
           and(
             eq(collectionNodes.collectionId, collection.id),
@@ -364,6 +410,15 @@ export class CollectionQueryService {
         .map((row) => row.assetId!),
     ];
     const imageVariants = await this.getSignedImageVariantLookup(imageAssetIds);
+    const linkResourceIds = children
+      .filter(
+        (child) => child.assetType === "link" && child.linkResourceId !== null,
+      )
+      .map((child) => child.linkResourceId!);
+    const resourceMedia = await getResourceMediaLookup(
+      linkResourceIds,
+      this.objectStorageService,
+    );
 
     for (const row of selectedFolderPreviewRows) {
       if (!row.folderId) continue;
@@ -427,6 +482,36 @@ export class CollectionQueryService {
           createdAt: child.createdAt.toISOString(),
           position,
         };
+      }
+
+      if (
+        child.assetType === "link" &&
+        child.assetId &&
+        child.linkOriginalUrl &&
+        child.linkResourceId &&
+        child.linkHostname &&
+        child.linkResolutionStatus
+      ) {
+        return projectLinkNode(
+          {
+            assetId: child.assetId,
+            originalUrl: child.linkOriginalUrl,
+            resourceId: child.linkResourceId,
+            hostname: child.linkHostname,
+            canonicalUrl: child.linkCanonicalUrl,
+            resourceTitle: child.linkTitle,
+            description: child.linkDescription,
+            siteName: child.linkSiteName,
+            resourceKind: child.linkResourceKind ?? "web_page",
+            resolutionStatus: child.linkResolutionStatus,
+            failureCategory: child.linkFailureCategory,
+            resolvedAt: child.linkResolvedAt,
+            staleAt: child.linkStaleAt,
+            createdAt: child.createdAt,
+          },
+          resourceMedia.get(child.linkResourceId),
+          position,
+        );
       }
 
       const { wordCount, readingTimeMinutes } = calculateNoteMetrics(

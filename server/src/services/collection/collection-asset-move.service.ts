@@ -521,7 +521,7 @@ type MoveSourceNode = {
   pathFolderIds: number[];
   pathFolderSlugs: string[];
   pathFolderNames: string[];
-  assetType: "image" | "note" | null;
+  assetType: "image" | "note" | "link" | null;
   imageWidth: number | null;
   imageHeight: number | null;
 };

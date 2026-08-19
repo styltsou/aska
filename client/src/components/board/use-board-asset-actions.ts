@@ -9,6 +9,7 @@ import {
   useUploadInboxImages,
   useUploadLocalImages,
 } from "@/api/collection";
+import { useCreateInboxLink, useCreateLink } from "@/api/url-unfurl";
 import type { BoardInsertionPlacement } from "@/api/collection";
 import type { PexelsPhoto } from "@/api/pexels";
 import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
@@ -41,6 +42,8 @@ export function useBoardAssetActions({
   const createInboxNote = useCreateInboxNote(workspaceSlug);
   const uploadInboxImages = useUploadInboxImages(workspaceSlug);
   const createInboxRemoteImage = useCreateInboxRemoteImage(workspaceSlug);
+  const createLink = useCreateLink(workspaceSlug, collectionSlug);
+  const createInboxLink = useCreateInboxLink(workspaceSlug);
 
   const isPending =
     createNote.isPending ||
@@ -48,7 +51,9 @@ export function useBoardAssetActions({
     createRemoteImage.isPending ||
     createInboxNote.isPending ||
     uploadInboxImages.isPending ||
-    createInboxRemoteImage.isPending;
+    createInboxRemoteImage.isPending ||
+    createLink.isPending ||
+    createInboxLink.isPending;
 
   const statusText = useMemo(() => {
     if (uploadLocalImages.isPending) return "Uploading images";
@@ -57,12 +62,15 @@ export function useBoardAssetActions({
     if (createInboxNote.isPending) return "Creating note";
     if (uploadInboxImages.isPending) return "Uploading images";
     if (createInboxRemoteImage.isPending) return "Importing image";
+    if (createLink.isPending || createInboxLink.isPending) return "Adding link";
     return null;
   }, [
     createInboxNote.isPending,
     createInboxRemoteImage.isPending,
+    createInboxLink.isPending,
     createNote.isPending,
     createRemoteImage.isPending,
+    createLink.isPending,
     uploadInboxImages.isPending,
     uploadLocalImages.isPending,
   ]);
@@ -104,34 +112,33 @@ export function useBoardAssetActions({
     ],
   );
 
-  const importRemoteUrl = useCallback(
-    async (value: string) => {
+  const createLinkFromUrl = useCallback(
+    async (value: string, actionPlacement?: BoardInsertionPlacement) => {
       const url = parseHttpUrl(value);
       if (!url) return;
 
       try {
-        const insertionPlacement = getPlacement?.() ?? placement;
+        const insertionPlacement =
+          actionPlacement ?? getPlacement?.() ?? placement;
         if (target === "inbox") {
-          await createInboxRemoteImage.mutateAsync({
+          await createInboxLink.mutateAsync({
             url,
           });
         } else {
-          await createRemoteImage.mutateAsync({
+          await createLink.mutateAsync({
             url,
             parentFolderPath,
             placement: insertionPlacement,
           });
         }
-        toast.success("Image imported");
+        toast.success("Link added");
       } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Unable to import image.",
-        );
+        toast.error(err instanceof Error ? err.message : "Unable to add link.");
       }
     },
     [
-      createInboxRemoteImage,
-      createRemoteImage,
+      createInboxLink,
+      createLink,
       getPlacement,
       parentFolderPath,
       placement,
@@ -239,8 +246,8 @@ export function useBoardAssetActions({
           await uploadFiles([payload.file]);
           return;
 
-        case "remote-image-url":
-          await importRemoteUrl(payload.url);
+        case "link-url":
+          await createLinkFromUrl(payload.url);
           return;
 
         case "text-note":
@@ -252,14 +259,14 @@ export function useBoardAssetActions({
           return;
       }
     },
-    [createTextNote, importRemoteUrl, uploadFiles],
+    [createLinkFromUrl, createTextNote, uploadFiles],
   );
 
   return {
     addClipboardAsset,
     createTextNote,
     importPexelsPhotos,
-    importRemoteUrl,
+    createLinkFromUrl,
     isPending,
     statusText,
     uploadFiles,

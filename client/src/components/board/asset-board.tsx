@@ -196,7 +196,9 @@ export function AssetBoard({
           {assets.map((asset) => (
             <AssetCard
               key={
-                asset.type === "image" ? (asset.clientId ?? asset.id) : asset.id
+                asset.type === "image" || asset.type === "link"
+                  ? (asset.clientId ?? asset.id)
+                  : asset.id
               }
               asset={asset}
               deleteContext={deleteContext}

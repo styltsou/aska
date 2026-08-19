@@ -17,6 +17,9 @@ export type FolderPreviewRow = {
   assetId: number | null;
   color: string | null;
   content: string | null;
+  resourceId?: number | null;
+  hostname?: string | null;
+  title?: string | null;
 };
 
 /** Converts nullable persisted coordinates into the board's optional position. */
@@ -40,6 +43,15 @@ export function toFolderPreview(
       type: "image",
       url: previewUrl,
       blurDataURL: variants?.blurDataURL,
+    };
+  }
+
+  if (row.assetType === "link" && row.hostname) {
+    return {
+      assetId: `link-${row.assetId}`,
+      type: "link",
+      hostname: row.hostname,
+      title: row.title ?? null,
     };
   }
 

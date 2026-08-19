@@ -8,11 +8,12 @@ export const ErrorCode = {
   INTERNAL_ERROR: "internal_error",
   NOT_FOUND: "not_found",
   NOT_IMPLEMENTED: "not_implemented",
+  RATE_LIMITED: "rate_limited",
 } as const;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
-type StatusCode = 400 | 401 | 403 | 404 | 409 | 500 | 501;
+type StatusCode = 400 | 401 | 403 | 404 | 409 | 429 | 500 | 501;
 
 const statusMap: Record<ErrorCode, StatusCode> = {
   [ErrorCode.VALIDATION_ERROR]: 400,
@@ -22,6 +23,7 @@ const statusMap: Record<ErrorCode, StatusCode> = {
   [ErrorCode.INTERNAL_ERROR]: 500,
   [ErrorCode.NOT_FOUND]: 404,
   [ErrorCode.NOT_IMPLEMENTED]: 501,
+  [ErrorCode.RATE_LIMITED]: 429,
 };
 
 export class AppError extends HTTPException {

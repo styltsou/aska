@@ -40,6 +40,33 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
     };
   }
 
+  if (node.type === "link") {
+    return {
+      id: node.id,
+      type: "link",
+      originalUrl: node.originalUrl,
+      canonicalUrl: node.canonicalUrl ?? undefined,
+      hostname: node.hostname,
+      title: node.title,
+      description: node.description ?? undefined,
+      siteName: node.siteName ?? undefined,
+      resourceKind: node.resourceKind,
+      resolutionStatus: node.resolutionStatus,
+      failureCategory: node.failureCategory ?? undefined,
+      resolvedAt: node.resolvedAt ?? undefined,
+      staleAt: node.staleAt ?? undefined,
+      previewImage: node.previewImage
+        ? {
+            ...node.previewImage,
+            blurDataURL: node.previewImage.blurDataURL ?? undefined,
+            alt: node.previewImage.alt ?? undefined,
+          }
+        : undefined,
+      favicon: node.favicon ?? undefined,
+      clientId: node.clientId,
+    };
+  }
+
   return {
     id: node.id,
     type: "note",

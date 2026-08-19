@@ -28,7 +28,7 @@ describe("collection node mappers", () => {
     ]);
   });
 
-  it("maps image and note folder previews", () => {
+  it("maps image, note, and link folder previews", () => {
     const imageVariants = new Map([
       [
         7,
@@ -78,6 +78,25 @@ describe("collection node mappers", () => {
       type: "note",
       color: "yellow",
       snippet: "One\n two",
+    });
+    expect(
+      toFolderPreview(
+        {
+          folderId: 1,
+          assetType: "link",
+          assetId: 9,
+          color: null,
+          content: null,
+          hostname: "example.com",
+          title: "Example link",
+        },
+        imageVariants,
+      ),
+    ).toEqual({
+      assetId: "link-9",
+      type: "link",
+      hostname: "example.com",
+      title: "Example link",
     });
   });
 

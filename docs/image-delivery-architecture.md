@@ -24,6 +24,19 @@ each media representation immutable:
 {workspaceId}/{storageId}/preview.webp
 ```
 
+Validated external-resource images use the same private delivery boundary with
+an explicit master and role-specific variants:
+
+```text
+{workspaceId}/{storageId}/master.webp
+{workspaceId}/{storageId}/display.webp
+{workspaceId}/{storageId}/preview.webp
+```
+
+These namespaces belong to `external_resource_media`, not `image_assets`.
+Favicon profiles only need `master.webp`. Link-preview profiles may create all
+three representations. Their remote source URLs are never returned to clients.
+
 `workspaceId` is the immutable organization ID, not a mutable workspace slug.
 Putting it first is deliberate: the storage namespace is the same tenant
 boundary used for authorization, so a member's CloudFront policy can grant
@@ -88,11 +101,13 @@ flow while allowing the supported `dev:cloud` localhost client to send media
 cookies to the CDN. Browsers that block all third-party cookies still need the
 same-site HTTPS tunnel workflow for local browser testing.
 
-The image worker receives media object-created events. Because the workspace ID
+The upload image workers receive media object-created events. Because the workspace ID
 is the top-level key segment, there is no single static source prefix that
 matches originals for every workspace. Events are therefore forwarded and the
 worker strictly accepts only `original.*` keys, ignoring `display.webp` and
 `preview.webp` writes so generated output cannot recursively trigger processing.
+They also ignore resource-media `master.webp` objects. The resource-media worker
+is started by its dedicated SQS queue, not by S3 notifications.
 
 The media distribution is a delivery boundary, not an application
 authorization substitute. API endpoints continue to enforce user and
@@ -100,7 +115,7 @@ organization access before returning asset metadata.
 
 ## Read paths
 
-- Original, display, and preview files use stable CloudFront URLs in the
+- Original, master, display, and preview files use stable CloudFront URLs in the
   deployed media stage.
 - Browser uploads use presigned S3 **PUT** URLs in their workspace namespace.
 - Local and hybrid development also use uncached, short-lived presigned S3 GET
@@ -119,3 +134,6 @@ never uploaded to CloudFront. The API receives the private key and signs viewer
 cookies. Rotate both secrets together (the public key must match the private
 key), then merge a deployment-triggering change to `main`; GitHub Actions does
 not store or copy this runtime key.
+
+See [URL Unfurling and External Resources](./server/url-unfurling.md) for media
+roles, processing profiles, and orphan cleanup.

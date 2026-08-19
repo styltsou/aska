@@ -40,6 +40,17 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
     };
   }
 
+  if (node.type === "link") {
+    return {
+      assetId: node.id,
+      type: "link",
+      hostname: node.hostname,
+      title: node.title,
+      url: node.previewImage?.url,
+      blurDataURL: node.previewImage?.blurDataURL,
+    };
+  }
+
   return {
     assetId: node.id,
     type: "note",

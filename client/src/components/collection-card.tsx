@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { FolderChildPreview } from "@/api/collection/types";
+import { Globe2Icon } from "lucide-react";
 
 const PREVIEW_TRANSITION = "transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1)";
 
@@ -103,6 +104,24 @@ export function CollectionCard({
                           </div>
                         );
                       }
+                      if (preview.type === "link") {
+                        return (
+                          <div
+                            className="absolute flex aspect-square flex-col items-center justify-center gap-1 rounded-xl bg-card p-3 shadow-md ring-1 ring-sidebar-foreground/5"
+                            style={{
+                              ...PREVIEW_POSITION,
+                              zIndex: 0,
+                              transform: `rotate(-3deg) scale(${hovered ? 1.02 : 1})`,
+                              transition: PREVIEW_TRANSITION,
+                            }}
+                          >
+                            <Globe2Icon className="size-7 text-muted-foreground/50" />
+                            <span className="max-w-full truncate text-[9px] text-muted-foreground">
+                              {preview.hostname}
+                            </span>
+                          </div>
+                        );
+                      }
                       return (
                         <div
                           className={cn(
@@ -164,6 +183,25 @@ export function CollectionCard({
                               alt=""
                               className="size-full rounded-xl object-cover shadow-md ring-1 ring-sidebar-foreground/5"
                             />
+                          </div>
+                        );
+                      }
+                      if (preview.type === "link") {
+                        return (
+                          <div
+                            key={preview.assetId}
+                            className="absolute flex aspect-square flex-col items-center justify-center gap-1 rounded-xl bg-card p-3 shadow-md ring-1 ring-sidebar-foreground/5"
+                            style={{
+                              ...PREVIEW_POSITION,
+                              zIndex: z,
+                              transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
+                              transition: PREVIEW_TRANSITION,
+                            }}
+                          >
+                            <Globe2Icon className="size-7 text-muted-foreground/50" />
+                            <span className="max-w-full truncate text-[9px] text-muted-foreground">
+                              {preview.hostname}
+                            </span>
                           </div>
                         );
                       }

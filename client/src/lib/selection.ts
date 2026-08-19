@@ -28,7 +28,8 @@ export function isSelectionShortcutBlocked(
 export function isPersistedSelectableAsset(asset: SelectionCandidate): boolean {
   return !(
     asset.uploadStatus !== undefined ||
-    (asset.type === "note" && asset.id.startsWith("note-optimistic-"))
+    (asset.type === "note" && asset.id.startsWith("note-optimistic-")) ||
+    (asset.type === "link" && asset.id.startsWith("link-optimistic-"))
   );
 }
 

@@ -7,6 +7,8 @@ import assetRoutes from "./asset.routes";
 import imagePipelineRoutes from "./image-pipeline.routes";
 import colorSearchRoutes from "./color-search.routes";
 import pexelsRoutes from "./pexels.routes";
+import resourcePipelineRoutes from "./resource-pipeline.routes";
+import urlUnfurlRoutes from "./url-unfurl.routes";
 
 export const apiRoutes = factory
   .createApp()
@@ -16,4 +18,6 @@ export const apiRoutes = factory
   .route("/", colorSearchRoutes)
   .route("/", imageUploadRoutes)
   .route("/", pexelsRoutes)
-  .route("/", imagePipelineRoutes);
+  .route("/", imagePipelineRoutes)
+  .route("/", urlUnfurlRoutes)
+  .route("/", resourcePipelineRoutes);

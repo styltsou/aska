@@ -10,6 +10,8 @@ import type {
   CreateFolderResponse,
   CreateImageUploadInput,
   CreateImageUploadResponse,
+  CreateLinkInput,
+  CreateLinkResponse,
   CreateNoteInput,
   CreateNoteResponse,
   CreateRemoteImageInput,
@@ -61,6 +63,36 @@ export async function createNote(
   return apiPost<CreateNoteResponse>(
     `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/notes`,
     data,
+  );
+}
+
+export async function createLink(
+  workspaceSlug: string,
+  collectionSlug: string,
+  data: CreateLinkInput,
+): Promise<CreateLinkResponse> {
+  return apiPost<CreateLinkResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/links`,
+    data,
+  );
+}
+
+export async function createInboxLink(
+  workspaceSlug: string,
+  data: CreateLinkInput,
+): Promise<CreateLinkResponse> {
+  return apiPost<CreateLinkResponse>(
+    `/api/v1/workspace/${workspaceSlug}/inbox/links`,
+    data,
+  );
+}
+
+export async function refreshLink(
+  workspaceSlug: string,
+  assetId: string,
+): Promise<CreateLinkResponse> {
+  return apiPost<CreateLinkResponse>(
+    `/api/v1/workspace/${workspaceSlug}/links/${encodeURIComponent(assetId)}/resolution`,
   );
 }
 

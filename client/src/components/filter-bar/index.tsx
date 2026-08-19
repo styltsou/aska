@@ -11,6 +11,7 @@ import {
   FileTextIcon,
   FolderIcon,
   ImageIcon,
+  Link2Icon,
   LoaderCircleIcon,
   PlusIcon,
   TagIcon,
@@ -439,6 +440,7 @@ const ASSET_TYPE_OPTIONS: Array<{
 }> = [
   { type: "image", label: "Images", icon: ImageIcon },
   { type: "note", label: "Notes", icon: FileTextIcon },
+  { type: "link", label: "Links", icon: Link2Icon },
   { type: "folder", label: "Folders", icon: FolderIcon },
 ];
 

@@ -1,7 +1,7 @@
 # Observability
 
 Sentry is the application observability backend for the React client, Hono API,
-and both image-processing Lambdas. It owns error grouping, distributed traces,
+and asynchronous worker Lambdas. It owns error grouping, distributed traces,
 structured logs, custom metrics, release context, and error-triggered browser
 session replay. CloudWatch still receives single-line JSON logs from the server
 and workers as a deployment-level fallback.
@@ -30,7 +30,8 @@ they are not requirements for this application today.
 
 All three runtimes use the same release value when one is supplied. Events are
 tagged with `service=aska-client`, `aska-api`, `image-variants`, or
-`image-palette`, so one Sentry project remains practical for this application.
+`image-palette`, `url-resolution`, or `resource-media`, so one Sentry project
+remains practical for this application.
 
 ## Configuration
 
@@ -90,6 +91,11 @@ Application log metadata is sanitized before it reaches Sentry or stdout. Keys
 that resemble authorization headers, cookies, passwords, secrets, tokens, API
 keys, or credentials are redacted. This sanitizer is a final guardrail, not
 permission to log sensitive payloads.
+
+URL workers additionally prohibit logging normalized/source URLs, query
+strings, remote headers or bodies, parsed metadata, and provider extensions.
+Use resource/attempt/media IDs, resolver versions, processing profiles, status
+classes, and bounded failure categories instead.
 
 ## Logging
 

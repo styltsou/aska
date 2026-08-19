@@ -7,7 +7,8 @@ One stage creates one isolated AWS copy:
 stage dev
   API Gateway -> Hono Lambda
   private S3 assets bucket -> SNS -> two SQS queues -> variants and palette Lambdas
-  EventBridge Scheduler -> media-cleanup Lambda -> displaced S3 object cleanup
+  API -> URL-resolution SQS -> resolver Lambda -> resource-media SQS -> media Lambda -> S3
+  EventBridge Scheduler -> media-cleanup Lambda -> cleanup + stale resource-work recovery
   private S3 client bucket -> CloudFront -> React/Vite client
   dead-letter queue, IAM permissions, and stage-specific SST secrets
 ```
@@ -48,6 +49,9 @@ uploaded from the browser goes to the real S3 bucket, publishes one SNS event,
 and SNS creates one message in each image-processing queue for the variants and
 palette workers. In the stable CI deployment, those same workers run in AWS.
 Both test the actual permissions, event shape, queue flow, and callback path.
+Pasting a URL additionally exercises the dedicated resolution and resource-media
+queues, signed claim/result callbacks, safe external retrieval, and private S3
+variant delivery.
 
 ## One-time stable `dev` setup
 
@@ -146,20 +150,24 @@ preflight; API Gateway and Hono then enforce the exact CORS policy, and every
 real API request still requires a valid Cloudflare Access JWT. The deployment
 config sets the permitted browser origin to `https://aska-app.styltsou.com`.
 
-Create one additional, more-specific self-hosted Access application for this
-exact callback URL:
+Create more-specific self-hosted Access path rules for these pipeline callbacks:
 
 ```text
 https://aska-api.styltsou.com/api/v1/internal/image-pipeline/callback
+https://aska-api.styltsou.com/api/v1/internal/url-resolution/claim
+https://aska-api.styltsou.com/api/v1/internal/url-resolution/result
+https://aska-api.styltsou.com/api/v1/internal/resource-media/claim
+https://aska-api.styltsou.com/api/v1/internal/resource-media/result
 ```
 
-Give that path-only application a **Bypass / Everyone** policy. Cloudflare's
-more-specific path rule takes precedence over the API-wide Allow rule. This is
-not a user bypass: it is the only route the asynchronous AWS image workers can
-reach without a browser Access cookie, and the API independently requires its
-rotated HMAC callback secret, timestamp/replay checks, and upload-key
-validation. Do not broaden the path, add a wildcard, or use Bypass on the API
-hostname itself.
+Use exact-path applications, or one application matching only
+`/api/v1/internal/*`, with a **Bypass / Everyone** policy. Cloudflare's
+more-specific rule takes precedence over the API-wide Allow rule. The origin
+itself exempts only the five explicit paths above, and every handler requires a
+rotated HMAC callback secret plus timestamp/replay checks. Do not broaden the
+bypass beyond `/api/v1/internal/*` or use Bypass on the API hostname itself.
+Any future internal endpoint must add HMAC authentication before it is included
+in both allowlists.
 
 The API's generated `execute-api` hostname is disabled in this stage. This is
 important: otherwise it would be an unprotected route around the Access policy.
@@ -174,7 +182,7 @@ CLOUDFLARE_ACCESS_AUD
 
 This prevents a request that somehow reaches AWS without passing through
 Cloudflare from being treated as an authenticated browser request. The only
-origin-level exemption is the exact HMAC-authenticated image callback path
+origin-level exemptions are the explicit HMAC-authenticated pipeline paths
 described above, plus CORS preflight.
 
 If Cloudflare Access is not configured yet, do that first and do not share the
@@ -204,14 +212,15 @@ bun run sst -- secret set SentryDsn 'https://public-key@o0.ingest.sentry.io/proj
 | `BetterAuthSecret`            | `BETTER_AUTH_SECRET` in the API                  | Signs/encrypts Better Auth data                      |
 | `ResendApiKey`                | `RESEND_API_KEY` in the API                      | Sends transactional email                            |
 | `PexelsApiKey`                 | `PEXELS_API_KEY` in the API                        | Enables server-side Pexels search and imports        |
-| `ImagePipelineCallbackSecret` | `IMAGE_PIPELINE_CALLBACK_SECRET` in both Lambdas | The pipeline signs its callback; the API verifies it |
+| `ImagePipelineCallbackSecret` | Image/resource pipeline HMAC environment in the API and workers | Pipelines sign callbacks; the API verifies them |
 | `CloudFrontMediaPrivateKeyBase64` | `CLOUDFRONT_PRIVATE_KEY_BASE64` in the API    | Signs CloudFront viewer cookies                      |
 | `CloudFrontMediaPublicKey`    | CloudFront `PublicKey` resource                    | Verifies signed cookies at the edge; generated once with the private key |
 | `SentryDsn`                  | Sentry DSN in the client, API, and workers       | Routes application telemetry to the Sentry project  |
 
-There is only one image-pipeline callback secret. The same SST secret is passed
-to both functions under the same `IMAGE_PIPELINE_CALLBACK_SECRET` name. Do not
-create a separate pipeline-only callback secret.
+There is one pipeline callback secret at the SST layer. It is injected as
+`IMAGE_PIPELINE_CALLBACK_SECRET` for uploads and
+`RESOURCE_PIPELINE_CALLBACK_SECRET` for URL-resolution/media claims and
+results. This keeps rotation atomic while preserving separate code contracts.
 
 ### Personal Live-stage secrets
 
@@ -347,7 +356,7 @@ for hybrid development.
 
 ## Continuous deployment
 
-GitHub Actions runs the client, server, and image-pipeline quality checks for
+GitHub Actions runs the client, server, image-pipeline, and URL-resource worker quality checks for
 pull requests and pushes to `main`. After the checks pass for a push to `main`,
 the workflow deploys real Lambda code to the stable SST `dev` stage.
 
@@ -365,6 +374,9 @@ workers:
 | `services/image-variants/**`   | Image variants                            | Yes           |
 | `services/image-palette/**`    | Image palette                             | Yes           |
 | `services/image-shared/**`     | Image variants **and** image palette      | Yes           |
+| `services/url-unfurl-shared/**` | URL resolver **and** resource media      | Yes           |
+| `services/url-resolution/**`   | URL resolver                              | Yes           |
+| `services/resource-media/**`   | Resource media                            | Yes           |
 | SST config / root deps / CI    | Server (plus jobs matching other paths)   | Yes           |
 | Docs / Markdown only           | None                                      | No            |
 

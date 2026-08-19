@@ -83,6 +83,19 @@ const envSchema = z
     S3_ACCESS_KEY_ID: z.string().optional(),
     S3_SECRET_ACCESS_KEY: z.string().optional(),
     IMAGE_PIPELINE_CALLBACK_SECRET: z.string().min(32).optional(),
+    RESOURCE_PIPELINE_CALLBACK_SECRET: z.string().min(32).optional(),
+    URL_RESOLUTION_QUEUE_URL: z.url().optional(),
+    RESOURCE_MEDIA_QUEUE_URL: z.url().optional(),
+    URL_UNFURL_SUCCESS_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .default(7 * 24 * 60 * 60),
+    URL_UNFURL_FAILURE_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .default(15 * 60),
     S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: z.coerce
       .number()
       .int()

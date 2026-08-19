@@ -9,16 +9,17 @@ yet. This document describes the code and AWS resources that exist today.
 
 Aska is a multi-tenant visual workspace. A workspace owns collections, assets,
 and members. The Inbox is an archive rendered as a masonry board. A collection
-is an authored infinite canvas that can contain image assets, note assets, and
-folders. Folders are canvas nodes that open nested canvases; they are not
+is an authored infinite canvas that can contain image, note, and link assets,
+plus folders. Folders are canvas nodes that open nested canvases; they are not
 assets.
 
 The implemented system includes Better Auth sessions and organizations,
-workspace/collection navigation, image ingestion, notes, folders, canvas
-placement and moves, palette extraction, and local color search. Social-link
-capture, article ingestion, saved smart collections, and full-text retrieval
-are product direction, not current services. Do not add UI or API behavior by
-assuming those planned features already have a data model.
+workspace/collection navigation, image ingestion, generic URL unfurling, notes,
+folders, canvas placement and moves, palette extraction, and local color
+search. Platform-specific social capture, article extraction, saved smart
+collections, and full-text retrieval are product direction, not current
+services. Do not add UI or API behavior by assuming those planned features
+already have a data model.
 
 ## Runtime topology
 
@@ -37,6 +38,10 @@ S3 original.* object-created event
   -> SNS topic
      ├─ SQS -> image-variants Lambda -> S3 workspace image variants -> signed API callback
      └─ SQS -> image-palette Lambda -------------> signed API callback
+
+Link API transaction -> URL-resolution SQS -> SSRF-safe resolver Lambda
+  -> signed claim/result -> resource-media SQS -> role-aware media Lambda
+  -> private S3 workspace variants -> signed result
 ```
 
 `sst.config.ts` is the infrastructure source of truth. SST creates the API,
@@ -59,6 +64,9 @@ Deployment details, stage policy, and secret handling are in
 | `services/image-shared/`   | SQS retry contract and signed callback client | `src/sqs-handler.ts`, `src/pipeline-callback.ts`                 |
 | `services/image-variants/` | Sharp rendition worker                        | `src/lambda.ts`, `src/processor.ts`                              |
 | `services/image-palette/`  | Sharp/OKLab palette worker                    | `src/lambda.ts`, `src/processor.ts`                              |
+| `services/url-unfurl-shared/` | Safe external fetch, queue, callback primitives | `src/safe-fetch.ts`, `src/task-handler.ts`                    |
+| `services/url-resolution/` | Ordered URL resolvers and generic HTML metadata | `src/types.ts`, `src/generic-resolver.ts`                       |
+| `services/resource-media/` | Role-specific external image validation/variants | `src/lambda.ts`, `src/processor.ts`                             |
 | `sst.config.ts`            | AWS topology and runtime environment          | resource definitions and Lambda environments                     |
 | `docs/`                    | Durable architecture and contribution context | [Documentation home](./README.md)                                |
 
@@ -119,8 +127,10 @@ for immutable image bytes. The API stores workspace-rooted media object keys
 and builds stable CloudFront URLs for original and rendition reads; it never
 stores delivery URLs.
 
-`assets` is the common record for archived content. `image_assets` and
-`note_assets` are concrete subtype tables. `folders` are separate organizational
+`assets` is the common record for archived content. `image_assets`,
+`note_assets`, and `link_assets` are concrete subtype tables. Link assets point
+to workspace-scoped `external_resources`; attempts and role-aware resource media
+remain separate from card placement. `folders` are separate organizational
 containers. `collection_nodes` describes a collection's spatial tree and owns
 a placement's parent folder, canvas coordinates, and denormalized folder path.
 `uploads` is a durable asynchronous image-workflow record, not an asset.
@@ -151,6 +161,21 @@ and [Image Pipeline Reliability](./server/image-pipeline-reliability.md).
 Current image-delivery behavior is documented in
 [Image Delivery Architecture](./image-delivery-architecture.md).
 
+## URL unfurling lifecycle
+
+Pasting or dropping a URL inserts an optimistic React Query node and calls the
+normal asset/card API. The API transaction persists the link immediately and
+enqueues only an attempt ID plus generation. URL and resource-media workers
+claim current work through signed internal API calls, perform bounded SSRF-safe
+retrieval, and report independently. Collection reads expose every completed
+field and stored media variant without waiting for the slowest operation.
+
+Resources are reused by normalized URL only inside one workspace. Generation
+checks reject stale results; deletion turns later claims into no-ops; the
+scheduled cleanup path requeues expired leases and removes unreferenced
+resources after a grace period. See
+[URL Unfurling and External Resources](./server/url-unfurling.md).
+
 ## Observability and operations
 
 The API emits one structured JSON record for a completed request, with
@@ -170,6 +195,10 @@ structured service logs; normal method entry/exit logs do not.
 - Keep browser upload bytes out of the API Lambda; use presigned S3 URLs.
 - Never let generated variants trigger image work; workers accept only
   `{workspaceId}/{storageId}/original.*` events.
+- Never fetch or render resolver-discovered media directly in the browser; use
+  the SSRF-safe resource-media worker and stored workspace variants.
+- Keep resolver logic separate from shared media processing and future
+  ingestion/indexing work.
 - Keep worker callbacks authenticated on their raw payload and idempotent.
 - Treat React Query as server state and keep optimistic transitions scoped to
   the cache keys they affect.

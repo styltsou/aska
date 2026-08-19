@@ -1462,6 +1462,7 @@ function isPendingCollectionNode(node: CollectionNode): boolean {
   return (
     (node.type === "image" && node.uploadStatus !== undefined) ||
     (node.type === "note" && node.id.startsWith("note-optimistic-")) ||
+    (node.type === "link" && node.id.startsWith("link-optimistic-")) ||
     (node.type === "folder" && node.flattenStatus === "pending")
   );
 }
@@ -1482,7 +1483,7 @@ function getClientPosition(
 }
 
 function getNodeClientId(node: CollectionNode): string | undefined {
-  if (node.type === "image" || node.type === "note") {
+  if (node.type === "image" || node.type === "note" || node.type === "link") {
     return node.clientId;
   }
 

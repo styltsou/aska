@@ -64,6 +64,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.organization.id,
       to: r.mediaCleanupJobs.organizationId,
     }),
+    externalResources: r.many.externalResources({
+      from: r.organization.id,
+      to: r.externalResources.organizationId,
+    }),
   },
 
   collectionsTable: {
@@ -89,6 +93,10 @@ export const relations = defineRelations(schema, (r) => ({
     note: r.one.noteAssets({
       from: r.assets.id,
       to: r.noteAssets.assetId,
+    }),
+    link: r.one.linkAssets({
+      from: r.assets.id,
+      to: r.linkAssets.assetId,
     }),
     uploads: r.many.uploads({
       from: r.assets.id,
@@ -126,6 +134,50 @@ export const relations = defineRelations(schema, (r) => ({
     asset: r.one.assets({
       from: r.noteAssets.assetId,
       to: r.assets.id,
+    }),
+  },
+
+  linkAssets: {
+    asset: r.one.assets({
+      from: r.linkAssets.assetId,
+      to: r.assets.id,
+    }),
+    resource: r.one.externalResources({
+      from: r.linkAssets.resourceId,
+      to: r.externalResources.id,
+    }),
+  },
+
+  externalResources: {
+    organization: r.one.organization({
+      from: r.externalResources.organizationId,
+      to: r.organization.id,
+    }),
+    links: r.many.linkAssets({
+      from: r.externalResources.id,
+      to: r.linkAssets.resourceId,
+    }),
+    attempts: r.many.resourceResolutionAttempts({
+      from: r.externalResources.id,
+      to: r.resourceResolutionAttempts.resourceId,
+    }),
+    media: r.many.externalResourceMedia({
+      from: r.externalResources.id,
+      to: r.externalResourceMedia.resourceId,
+    }),
+  },
+
+  resourceResolutionAttempts: {
+    resource: r.one.externalResources({
+      from: r.resourceResolutionAttempts.resourceId,
+      to: r.externalResources.id,
+    }),
+  },
+
+  externalResourceMedia: {
+    resource: r.one.externalResources({
+      from: r.externalResourceMedia.resourceId,
+      to: r.externalResources.id,
     }),
   },
 

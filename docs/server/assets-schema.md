@@ -10,6 +10,10 @@ For the design rationale and tradeoffs, see
 
 - `assets`: shared row for archived content.
 - `image_assets`: image-specific fields keyed by `asset_id`.
+- `link_assets`: card-specific original URL and normalized-resource reference.
+- `external_resources`: workspace-scoped resolved URL identity and metadata.
+- `resource_resolution_attempts`: generation-guarded URL resolution work.
+- `external_resource_media`: role-aware discovered media and stored variants.
 - `media_cleanup_jobs`: retryable deletion work for replaced media objects.
 - `note_assets`: markdown note fields keyed by `asset_id`.
 - `folders`: folder identity, display name, and slug.
@@ -39,6 +43,12 @@ access scope, not folder or collection location. Folder and collection moves
 update database placement only and never rename media objects.
 `image_assets.blur_data_url` stores the inline blurred WebP shown while those
 URLs decode.
+
+Resource-media keys use the same authorization namespace and immutable-storage
+convention: `{workspaceId}/{storageId}/master.webp` plus optional
+`display.webp` and `preview.webp`. The separate table is intentional: a generic
+Open Graph preview is supporting link media, not an `image_assets` primary
+image, and therefore must not enter palette or visual-analysis pipelines.
 
 An in-place crop rotates the active `storage_id` on the associated `uploads`
 workflow record. It immediately stores only the new cropped original in
@@ -80,11 +90,12 @@ Use class-table inheritance for real asset variants:
 assets
   image_assets
   note_assets
+  link_assets -> external_resources
 ```
 
-Do not create a generic social asset table by default. Future social imports
-should get concrete subtype tables such as `instagram_assets` or `x_assets`
-when their fields are understood.
+Do not create a generic social asset table by default. Provider-specific URL
+fields belong in the controlled resource extension area until a genuinely new
+card contract is understood. See [URL Unfurling](./url-unfurling.md).
 
 ## Folder Nodes
 
@@ -93,10 +104,10 @@ Folders are not assets. A folder is placed into a collection through a
 
 Assets are placed into a collection through a `collection_nodes` row with
 `node_type = "asset"` and `asset_id` set. Asset nodes can point to any asset
-subtype, currently images and notes.
+subtype, currently images, notes, and links.
 
-This keeps the collection view as one spatial stream of image, note, and folder
-nodes instead of forcing folders to the top.
+This keeps the collection view as one spatial stream of image, note, link, and
+folder nodes instead of forcing folders to the top.
 
 Child nodes use `parent_folder_id`, not `parent_node_id`, because only folders
 can contain children. The database also enforces that the parent folder is
@@ -124,8 +135,8 @@ Use slugs for reads and IDs for mutations.
 ## Asset Counts
 
 Displayed counts always mean assets, never folders. A collection count includes
-every image and note placed anywhere in that collection. A folder count includes
-every image and note in that folder and all nested folders.
+every image, note, and link placed anywhere in that collection. A folder count
+includes every asset in that folder and all nested folders.
 
 The read service computes collection counts with `collection_id` and
 `node_type = "asset"`. It computes the counts for all folder cards in one
@@ -163,6 +174,10 @@ folder references all belong to the same organization.
 tenant predicate part of the palette GiST index. Its composite foreign key to
 `assets(id, organization_id)` prevents the denormalized value from drifting
 from its parent image asset.
+
+Link/resource relations repeat `organization_id` and use composite foreign
+keys for the same reason. Resource URL reuse and media sharing are deliberately
+workspace-local; no lookup may deduplicate across organizations.
 
 ## Folder Moves
 

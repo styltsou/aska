@@ -9,11 +9,17 @@ server_files="$(printf '%s\n' "$staged_files" | grep -E '^server/.*\.(json|ts)$'
 variant_files="$(printf '%s\n' "$staged_files" | grep -E '^services/image-variants/.*\.(json|ts)$' || true)"
 palette_files="$(printf '%s\n' "$staged_files" | grep -E '^services/image-palette/.*\.(json|ts)$' || true)"
 shared_files="$(printf '%s\n' "$staged_files" | grep -E '^services/image-shared/.*\.(json|ts)$' || true)"
+url_shared_files="$(printf '%s\n' "$staged_files" | grep -E '^services/url-unfurl-shared/.*\.(json|ts)$' || true)"
+url_resolution_files="$(printf '%s\n' "$staged_files" | grep -E '^services/url-resolution/.*\.(json|ts)$' || true)"
+resource_media_files="$(printf '%s\n' "$staged_files" | grep -E '^services/resource-media/.*\.(json|ts)$' || true)"
 client_relative_files="$(printf '%s\n' "$client_files" | sed 's#^client/##')"
 server_relative_files="$(printf '%s\n' "$server_files" | sed 's#^server/##')"
 variant_relative_files="$(printf '%s\n' "$variant_files" | sed 's#^services/image-variants/##')"
 palette_relative_files="$(printf '%s\n' "$palette_files" | sed 's#^services/image-palette/##')"
 shared_relative_files="$(printf '%s\n' "$shared_files" | sed 's#^services/image-shared/##')"
+url_shared_relative_files="$(printf '%s\n' "$url_shared_files" | sed 's#^services/url-unfurl-shared/##')"
+url_resolution_relative_files="$(printf '%s\n' "$url_resolution_files" | sed 's#^services/url-resolution/##')"
+resource_media_relative_files="$(printf '%s\n' "$resource_media_files" | sed 's#^services/resource-media/##')"
 
 if [ -n "$client_files" ]; then
   (cd client && bun ./node_modules/oxfmt/bin/oxfmt --write $client_relative_files)
@@ -35,6 +41,18 @@ if [ -n "$shared_files" ]; then
   (cd services/image-shared && bun ./node_modules/oxfmt/bin/oxfmt --write $shared_relative_files)
 fi
 
-if [ -n "$client_files$server_files$variant_files$palette_files$shared_files" ]; then
-  git add $client_files $server_files $variant_files $palette_files $shared_files
+if [ -n "$url_shared_files" ]; then
+  (cd services/url-unfurl-shared && bun ./node_modules/oxfmt/bin/oxfmt --write $url_shared_relative_files)
+fi
+
+if [ -n "$url_resolution_files" ]; then
+  (cd services/url-resolution && bun ./node_modules/oxfmt/bin/oxfmt --write $url_resolution_relative_files)
+fi
+
+if [ -n "$resource_media_files" ]; then
+  (cd services/resource-media && bun ./node_modules/oxfmt/bin/oxfmt --write $resource_media_relative_files)
+fi
+
+if [ -n "$client_files$server_files$variant_files$palette_files$shared_files$url_shared_files$url_resolution_files$resource_media_files" ]; then
+  git add $client_files $server_files $variant_files $palette_files $shared_files $url_shared_files $url_resolution_files $resource_media_files
 fi

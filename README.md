@@ -12,8 +12,9 @@ Creative tools are optimized for text. Designers save references via browser boo
 
 ## What it does
 
-Aska ingests content from multiple streams — image uploads, social media links
-(X, Instagram), and article URLs — and preserves them as durable visual assets.
+Aska ingests image uploads, notes, and generic web links as durable visual
+assets. Provider-specific social capture and article extraction are future
+extensions of the implemented URL-resource pipeline.
 The Inbox renders the archive as a masonry grid, while collections provide an
 infinite spatial canvas for composing moodboards.
 
@@ -25,14 +26,21 @@ infinite spatial canvas for composing moodboards.
   or "Spring Palette". This is the main organizational unit.
 - **Folders** — First-class objects on a collection canvas that open nested
   canvases. Folder placement is independent from the placement of its contents.
-- **Assets** — The polymorphic card that unifies everything: image uploads, social captures, article bookmarks, and notes.
+- **Assets** — The polymorphic card that currently unifies image uploads,
+  generic link bookmarks, and notes, with richer resource types added behind
+  the same card boundary.
 
 ### Ingest
 
 - **Image upload** — Drag and drop into the Inbox or at a chosen collection
   canvas position. Stored in cloud storage, full resolution preserved.
-- **X / Instagram capture** — Paste a link. Aska extracts the media, text context, and author. Mirrored safely so deletion of the original post doesn't lose the reference.
-- **Article bookmark** — Paste a URL. Aska extracts readable content and meta info, generates a preview card, and indexes the text for search.
+- **Link bookmark** — Paste or drop an HTTP(S) URL. Aska creates a card
+  immediately, resolves generic metadata in the background, and stores safe
+  responsive preview variants. The original link remains usable if resolution
+  fails.
+- **Provider and article ingestion (planned)** — Rich social resolution,
+  readable-content extraction, and indexing build on the same resource and
+  resolver boundaries; they are not part of generic unfurling.
 - **Notes** — Quick text snippets with color labels for raw ideas.
 
 ### Surface & find
@@ -47,14 +55,15 @@ infinite spatial canvas for composing moodboards.
 
 Aska is multi-tenant from day one. Every asset, collection, and folder belongs
 to a workspace and has creator metadata. Collections contain a spatial tree of
-nodes: image and note assets are leaf nodes, while folders organize nested
+nodes: image, note, and link assets are leaf nodes, while folders organize nested
 content. Each placement has an authored position on its collection or folder
 canvas. Folders are not assets.
 
 The application consists of a React/Vite client, a Bun/Hono API backed by
-Postgres and Drizzle, plus AWS Lambda image workers that process S3 uploads
-asynchronously through independent SQS queues. Collection and folder badges show descendant asset counts:
-images and notes count, folders do not. The client uses XYFlow for collection
+Postgres and Drizzle, plus AWS Lambda workers that process S3 uploads and
+external URL resources asynchronously through independent SQS queues. Collection
+and folder badges show descendant asset counts: images, notes, and links count;
+folders do not. The client uses XYFlow for collection
 canvas rendering and interaction while Aska's API remains the source of truth
 for node identity, hierarchy, and position.
 
@@ -81,6 +90,9 @@ cd client && bun install && bun run dev
 cd server && bun install && bun run dev
 cd services/image-variants && bun install
 cd services/image-palette && bun install
+cd services/url-unfurl-shared && bun install
+cd services/url-resolution && bun install
+cd services/resource-media && bun install
 ```
 
 For normal end-to-end development, use real AWS S3 and SQS through SST instead

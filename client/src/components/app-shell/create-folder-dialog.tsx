@@ -86,7 +86,7 @@ export function CreateFolderDialog({
             <DialogHeader>
               <DialogTitle>New folder</DialogTitle>
               <DialogDescription>
-                Create a folder to organize images and notes.
+                Create a folder to organize images, notes, and links.
               </DialogDescription>
             </DialogHeader>
             <div>

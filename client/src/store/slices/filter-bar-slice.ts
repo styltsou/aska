@@ -4,7 +4,7 @@ import type { SessionStore } from "@/store";
 export type FilterColor = string;
 export const FILTER_TYPES = ["Color", "Tags", "Type"] as const;
 export type FilterType = (typeof FILTER_TYPES)[number];
-export type AssetFilterType = "image" | "note" | "folder";
+export type AssetFilterType = "image" | "note" | "link" | "folder";
 export const MAX_COLOR_FILTERS = 5;
 
 export type FilterBarState = {

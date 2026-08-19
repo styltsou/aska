@@ -13,7 +13,9 @@ import { db } from "@/db";
 import {
   assets,
   collectionNodes,
+  externalResources,
   imageAssets,
+  linkAssets,
   member,
   noteAssets,
   uploads,
@@ -21,6 +23,7 @@ import {
 } from "@/db/schema";
 import type {
   CollectionImageNode,
+  CollectionLinkNode,
   CollectionNode,
   CollectionNoteNode,
   ContentTypeFilter,
@@ -33,9 +36,16 @@ import { parseAssetNodeId } from "@/lib/collection-node-id";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import { first } from "@/lib/query";
 import type { IObjectStorageService } from "@/services/object-storage.service";
+import {
+  getResourceMediaLookup,
+  projectLinkNode,
+} from "@/services/url-unfurl/projection";
 
 type Deps = {
   objectStorageService: IObjectStorageService;
+  resourceLifecycle?: {
+    markResourceUnreferencedIfNeeded(resourceId: number): Promise<void>;
+  };
 };
 
 export type AssetDownload = {
@@ -79,9 +89,11 @@ export interface IAssetService {
 
 export class AssetService implements IAssetService {
   private readonly objectStorageService: IObjectStorageService;
+  private readonly resourceLifecycle: Deps["resourceLifecycle"];
 
-  constructor({ objectStorageService }: Deps) {
+  constructor({ objectStorageService, resourceLifecycle }: Deps) {
     this.objectStorageService = objectStorageService;
+    this.resourceLifecycle = resourceLifecycle;
   }
 
   async getInboxContents(
@@ -89,7 +101,7 @@ export class AssetService implements IAssetService {
     types?: ContentTypeFilter[],
   ): Promise<InboxContentsResponse> {
     const assetTypes = types?.filter(
-      (type): type is "image" | "note" => type !== "folder",
+      (type): type is "image" | "note" | "link" => type !== "folder",
     );
 
     if (types !== undefined && assetTypes?.length === 0) {
@@ -115,10 +127,27 @@ export class AssetService implements IAssetService {
         imageDominantColors: imageAssets.dominantColors,
         noteContent: noteAssets.markdown,
         noteColor: noteAssets.color,
+        linkOriginalUrl: linkAssets.originalUrl,
+        linkResourceId: externalResources.id,
+        linkHostname: externalResources.hostname,
+        linkCanonicalUrl: externalResources.canonicalUrl,
+        linkTitle: externalResources.title,
+        linkDescription: externalResources.description,
+        linkSiteName: externalResources.siteName,
+        linkResourceKind: externalResources.resourceKind,
+        linkResolutionStatus: externalResources.resolutionStatus,
+        linkFailureCategory: externalResources.failureCategory,
+        linkResolvedAt: externalResources.resolvedAt,
+        linkStaleAt: externalResources.staleAt,
       })
       .from(assets)
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+      .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
+      .leftJoin(
+        externalResources,
+        eq(externalResources.id, linkAssets.resourceId),
+      )
       .where(
         and(
           eq(assets.organizationId, orgId),
@@ -269,6 +298,21 @@ export class AssetService implements IAssetService {
   ): Promise<{ deletedAssetId: string }> {
     const target = parseAssetNodeId(assetNodeId);
     const assetId = target.entityId;
+    const resourceId =
+      target.assetType === "link"
+        ? first(
+            await db
+              .select({ resourceId: linkAssets.resourceId })
+              .from(linkAssets)
+              .where(
+                and(
+                  eq(linkAssets.organizationId, orgId),
+                  eq(linkAssets.assetId, assetId),
+                ),
+              )
+              .limit(1),
+          )?.resourceId
+        : undefined;
 
     if (target.assetType === "image") {
       const keys = await collectAssetObjectKeys(orgId, [assetId]);
@@ -280,6 +324,12 @@ export class AssetService implements IAssetService {
     await db
       .delete(assets)
       .where(and(eq(assets.organizationId, orgId), eq(assets.id, assetId)));
+
+    if (resourceId) {
+      await this.resourceLifecycle?.markResourceUnreferencedIfNeeded(
+        resourceId,
+      );
+    }
 
     return { deletedAssetId: assetNodeId };
   }
@@ -342,6 +392,23 @@ export class AssetService implements IAssetService {
     const imageAssetIds = parsed
       .filter((p) => p.parsed.assetType === "image")
       .map((p) => p.parsed.entityId);
+    const linkAssetIds = parsed
+      .filter((p) => p.parsed.assetType === "link")
+      .map((p) => p.parsed.entityId);
+    const resourceIds =
+      linkAssetIds.length > 0
+        ? (
+            await db
+              .select({ resourceId: linkAssets.resourceId })
+              .from(linkAssets)
+              .where(
+                and(
+                  eq(linkAssets.organizationId, orgId),
+                  inArray(linkAssets.assetId, linkAssetIds),
+                ),
+              )
+          ).map((row) => row.resourceId)
+        : [];
 
     if (imageAssetIds.length > 0) {
       const keys = await collectAssetObjectKeys(orgId, imageAssetIds);
@@ -358,6 +425,12 @@ export class AssetService implements IAssetService {
         and(eq(assets.organizationId, orgId), inArray(assets.id, allAssetIds)),
       );
 
+    for (const resourceId of new Set(resourceIds)) {
+      await this.resourceLifecycle?.markResourceUnreferencedIfNeeded(
+        resourceId,
+      );
+    }
+
     return {
       deletedCount: parsed.length,
       deletedAssetCount: parsed.length,
@@ -367,7 +440,7 @@ export class AssetService implements IAssetService {
   private async rowsToAssetNodes(
     rows: Array<{
       assetId: number;
-      assetType: "image" | "note";
+      assetType: "image" | "note" | "link";
       title: string | null;
       isFavorite: boolean;
       createdAt: Date;
@@ -379,9 +452,29 @@ export class AssetService implements IAssetService {
       imageDominantColors: string[] | null;
       noteContent: string | null;
       noteColor: string | null;
+      linkOriginalUrl: string | null;
+      linkResourceId: number | null;
+      linkHostname: string | null;
+      linkCanonicalUrl: string | null;
+      linkTitle: string | null;
+      linkDescription: string | null;
+      linkSiteName: string | null;
+      linkResourceKind: string | null;
+      linkResolutionStatus: CollectionLinkNode["resolutionStatus"] | null;
+      linkFailureCategory: string | null;
+      linkResolvedAt: Date | null;
+      linkStaleAt: Date | null;
     }>,
   ): Promise<CollectionNode[]> {
     const nodes: CollectionNode[] = [];
+    const resourceMedia = await getResourceMediaLookup(
+      rows.flatMap((row) =>
+        row.assetType === "link" && row.linkResourceId
+          ? [row.linkResourceId]
+          : [],
+      ),
+      this.objectStorageService,
+    );
 
     for (const row of rows) {
       if (row.assetType === "image") {
@@ -417,6 +510,38 @@ export class AssetService implements IAssetService {
           createdAt: row.createdAt.toISOString(),
           position: null,
         } satisfies CollectionImageNode);
+        continue;
+      }
+
+      if (
+        row.assetType === "link" &&
+        row.linkOriginalUrl &&
+        row.linkResourceId &&
+        row.linkHostname &&
+        row.linkResolutionStatus
+      ) {
+        nodes.push(
+          projectLinkNode(
+            {
+              assetId: row.assetId,
+              originalUrl: row.linkOriginalUrl,
+              resourceId: row.linkResourceId,
+              hostname: row.linkHostname,
+              canonicalUrl: row.linkCanonicalUrl,
+              resourceTitle: row.linkTitle,
+              description: row.linkDescription,
+              siteName: row.linkSiteName,
+              resourceKind: row.linkResourceKind ?? "web_page",
+              resolutionStatus: row.linkResolutionStatus,
+              failureCategory: row.linkFailureCategory,
+              resolvedAt: row.linkResolvedAt,
+              staleAt: row.linkStaleAt,
+              createdAt: row.createdAt,
+            },
+            resourceMedia.get(row.linkResourceId),
+            null,
+          ),
+        );
         continue;
       }
 

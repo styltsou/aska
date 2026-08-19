@@ -41,7 +41,7 @@ finds a nearby available position using card footprints and spacing; a free
 requested coordinate is never adjusted.
 
 Existing rows without coordinates receive deterministic fallback positions
-based on the API's stable node order. New notes, folders, and images can reserve
+based on the API's stable node order. New notes, links, folders, and images can reserve
 a position captured from a canvas context menu or direct drop in flow space.
 Multi-image insertions use a four-column grid with the shared 32-pixel canvas
 gutter; each row advances by its tallest card's height plus that gutter.
@@ -88,7 +88,7 @@ If the node was moved into a folder before a delayed position request arrives,
 the server returns a conflict instead of writing source-canvas coordinates into
 the destination placement.
 
-Dragging a persisted image, note, or folder over a visible folder card is a
+Dragging a persisted image, note, link, or folder over a visible folder card is a
 separate same-collection move operation:
 
 ```txt
@@ -119,7 +119,7 @@ preview, because folder previews represent direct asset children. All
 collection-content queries are invalidated after settlement so cached subtree
 routes reconcile against the server.
 
-Optimistic notes and image uploads remain draggable before their server node is
+Optimistic notes, links, and image uploads remain draggable before their server node is
 ready. Their local position is keyed by a client identity and transferred to
 the resolved node before a single position update is sent. Pending cards do
 not open or expose asset actions; notes show a subtle saving indicator and

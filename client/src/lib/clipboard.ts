@@ -7,7 +7,7 @@ export type ClipboardAssetPayload =
       file: File;
     }
   | {
-      kind: "remote-image-url";
+      kind: "link-url";
       url: string;
     }
   | {
@@ -105,11 +105,11 @@ export async function readClipboardAssetPayload(): Promise<ClipboardAssetPayload
     return { kind: "empty" };
   }
 
-  const imageUrl = parseHttpUrl(trimmedText);
-  if (imageUrl) {
+  const linkUrl = parseHttpUrl(trimmedText);
+  if (linkUrl) {
     return {
-      kind: "remote-image-url",
-      url: imageUrl,
+      kind: "link-url",
+      url: linkUrl,
     };
   }
 
@@ -117,6 +117,20 @@ export async function readClipboardAssetPayload(): Promise<ClipboardAssetPayload
     kind: "text-note",
     content: text,
   };
+}
+
+/** Reads a browser-dragged hyperlink without treating arbitrary dropped text as a URL. */
+export function getDroppedHttpUrl(
+  dataTransfer: Pick<DataTransfer, "getData">,
+): string | undefined {
+  const uriList = dataTransfer
+    .getData("text/uri-list")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line && !line.startsWith("#"));
+  return (
+    parseHttpUrl(uriList ?? dataTransfer.getData("text/plain")) ?? undefined
+  );
 }
 
 async function readFirstClipboardItem(): Promise<ClipboardItem | undefined> {

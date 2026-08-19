@@ -6,7 +6,7 @@ folder, and asset model.
 ## Goals
 
 - Keep archived content separate from board organization.
-- Return a collection as one spatial stream of images, notes, and folders.
+- Return a collection as one spatial stream of images, notes, links, and folders.
 - Support nested folders.
 - Support slug-based reads and ID-based mutations.
 - Keep common reads simple and fast.
@@ -82,7 +82,7 @@ for the callback contract and extraction algorithm.
 ## Folders Are Not Assets
 
 Folders are organizational containers, not archived content. They do not share
-the lifecycle or behavior of image/note assets: no ingest pipeline, no source
+the lifecycle or behavior of image, note, or link assets: no ingest pipeline, no source
 mirroring, no extracted media metadata, and no text extraction.
 
 The folder identity is stored in `folders`:
@@ -122,7 +122,7 @@ path_folder_names
 depth
 ```
 
-This lets one query return mixed image, note, and folder nodes with authored
+This lets one query return mixed image, note, link, and folder nodes with authored
 canvas coordinates. Positions belong to placements rather than assets or
 folder identities because the same archived content and container identity are
 separate from how a moodboard is composed.

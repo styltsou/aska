@@ -40,6 +40,10 @@ import {
 } from "@/services/image-upload/upload-repository";
 import type { IObjectStorageService } from "@/services/object-storage.service";
 import { type IPexelsService, PexelsService } from "@/services/pexels.service";
+import {
+  SafeFetchError,
+  safeFetch,
+} from "../../../services/url-unfurl-shared/src/safe-fetch";
 
 export type ImageUploadStatus = {
   id: number;
@@ -275,41 +279,13 @@ export class ImageUploadService implements IImageUploadService {
     );
     const provenance = await this.resolveProvenance(data);
     const remoteUrl = parseRemoteImageUrl(provenance?.downloadUrl ?? data.url);
-    const response = await fetch(remoteUrl, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(15_000),
-      headers: { Accept: allowedImageContentTypes.join(",") },
-    });
-    if (!response.ok) {
-      throw new AppError(
-        ErrorCode.VALIDATION_ERROR,
-        `Remote image request failed with status ${response.status}`,
-      );
-    }
-
-    const contentType = normalizeRemoteImageContentType(
-      response.headers.get("content-type"),
-    );
-    const contentLength = Number(response.headers.get("content-length") ?? 0);
-    if (contentLength > env.MAX_DIRECT_UPLOAD_BYTES) {
-      throw new AppError(
-        ErrorCode.VALIDATION_ERROR,
-        "Remote image is too large",
-      );
-    }
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (
-      bytes.byteLength === 0 ||
-      bytes.byteLength > env.MAX_DIRECT_UPLOAD_BYTES
-    ) {
-      throw new AppError(
-        ErrorCode.VALIDATION_ERROR,
-        "Remote image is invalid or too large",
-      );
-    }
+    const fetched = await safeRemoteImageFetch(remoteUrl);
+    const contentType = normalizeRemoteImageContentType(fetched.contentType);
+    const bytes = fetched.body;
+    const finalRemoteUrl = new URL(fetched.finalUrl);
 
     const storageId = crypto.randomUUID();
-    const fileName = fileNameFromRemoteImageUrl(remoteUrl, contentType);
+    const fileName = fileNameFromRemoteImageUrl(finalRemoteUrl, contentType);
     const objectKey = makeOriginalObjectKey(
       orgId,
       storageId,
@@ -331,8 +307,8 @@ export class ImageUploadService implements IImageUploadService {
         fileName,
         title: data.title,
         alt: data.alt,
-        sourceLabel: new URL(provenance?.url ?? remoteUrl).hostname,
-        sourceUrl: provenance?.url ?? remoteUrl.toString(),
+        sourceLabel: new URL(provenance?.url ?? finalRemoteUrl).hostname,
+        sourceUrl: provenance?.url ?? finalRemoteUrl.toString(),
         provenance,
         contentType,
         sizeBytes: bytes.byteLength,
@@ -664,5 +640,24 @@ export class ImageUploadService implements IImageUploadService {
         })
         .where(eq(imageAssets.assetId, upload.assetId!));
     });
+  }
+}
+
+async function safeRemoteImageFetch(remoteUrl: URL) {
+  try {
+    return await safeFetch(remoteUrl, {
+      accept: allowedImageContentTypes.join(","),
+      allowedContentTypes: allowedImageContentTypes,
+      maxBytes: env.MAX_DIRECT_UPLOAD_BYTES,
+      totalTimeoutMs: 15_000,
+    });
+  } catch (error) {
+    if (error instanceof SafeFetchError) {
+      throw new AppError(
+        ErrorCode.VALIDATION_ERROR,
+        "Remote image could not be retrieved safely",
+      );
+    }
+    throw error;
   }
 }

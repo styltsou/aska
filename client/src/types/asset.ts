@@ -34,13 +34,41 @@ export interface NoteAsset {
   readingTimeMinutes?: number;
 }
 
+export interface LinkAsset {
+  id: string;
+  type: "link";
+  originalUrl: string;
+  canonicalUrl?: string;
+  hostname: string;
+  title: string;
+  description?: string;
+  siteName?: string;
+  resourceKind: string;
+  resolutionStatus: "queued" | "resolving" | "partial" | "ready" | "failed";
+  failureCategory?: string;
+  resolvedAt?: string;
+  staleAt?: string;
+  previewImage?: {
+    url: string;
+    width: number;
+    height: number;
+    blurDataURL?: string;
+    alt?: string;
+  };
+  favicon?: { url: string; width: number; height: number };
+  clientId?: string;
+  isFavorite?: boolean;
+}
+
 export interface FolderAssetPreview {
   assetId: string;
-  type: "image" | "note";
+  type: "image" | "note" | "link";
   url?: string;
   blurDataURL?: string | null;
   color?: string;
   snippet?: string;
+  hostname?: string;
+  title?: string | null;
 }
 
 export interface FolderAsset {
@@ -53,4 +81,4 @@ export interface FolderAsset {
   isFavorite?: boolean;
 }
 
-export type Asset = ImageAsset | NoteAsset | FolderAsset;
+export type Asset = ImageAsset | NoteAsset | LinkAsset | FolderAsset;

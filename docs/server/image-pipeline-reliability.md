@@ -28,6 +28,12 @@ but own separate effects:
 - The palette worker calculates and persists `image_colors`,
   `dominant_colors`, and `image_assets.palette_status`.
 
+External link previews are deliberately not another SNS subscriber. They have
+different trust, retry, and processing semantics and use the dedicated
+URL-resolution and resource-media queues. The resource-media processor reuses
+the rendition function, but preview images never enter palette extraction.
+See [URL Unfurling](./url-unfurling.md).
+
 ## Delivery and retries
 
 Both consumers use a batch size of one and report partial batch failures. SQS
