@@ -221,7 +221,10 @@ export function configureEnv(bindings: Record<string, unknown>): void {
     }
     throw new Error("Invalid environment variables");
   }
-  _env = result.data;
+  const data = result.data;
+  data.RESOURCE_PIPELINE_CALLBACK_SECRET ??=
+    data.IMAGE_PIPELINE_CALLBACK_SECRET;
+  _env = data;
 }
 
 export const env = new Proxy<Env>({} as Env, {

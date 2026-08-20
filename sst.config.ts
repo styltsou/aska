@@ -266,8 +266,6 @@ export default $config({
         NODE_OPTIONS: "--enable-source-maps",
         NODE_ENV: stableCloudDomains ? "production" : "development",
         LOG_LEVEL: process.env.LOG_LEVEL ?? "info",
-        LOG_SLOW_REQUEST_MS: process.env.LOG_SLOW_REQUEST_MS ?? "1000",
-        LOG_SUCCESS_SAMPLE_RATIO: process.env.LOG_SUCCESS_SAMPLE_RATIO ?? "1",
         DATABASE_URL: databaseUrl.value,
         BETTER_AUTH_SECRET: betterAuthSecret.value,
         BETTER_AUTH_URL: api.url,
@@ -279,23 +277,17 @@ export default $config({
         RESEND_API_KEY: resendApiKey.value,
         PEXELS_API_KEY: pexelsApiKey.value,
         IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
-        RESOURCE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
         URL_RESOLUTION_QUEUE_URL: urlResolutionQueue.url,
         RESOURCE_MEDIA_QUEUE_URL: resourceMediaQueue.url,
         S3_BUCKET: assets.name,
-        S3_REGION: "eu-central-1",
-        S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: "900",
-        S3_PRESIGNED_READ_EXPIRES_SECONDS: "900",
         ...(media
           ? {
               MEDIA_BASE_URL: media.domainUrl,
               CLOUDFRONT_KEY_PAIR_ID: media.publicKeyId,
               CLOUDFRONT_PRIVATE_KEY_BASE64: cloudFrontPrivateKey!.value,
               CLOUDFRONT_COOKIE_DOMAIN: ".styltsou.com",
-              CLOUDFRONT_SIGNED_COOKIE_EXPIRES_SECONDS: "3600",
             }
           : {}),
-        MAX_DIRECT_UPLOAD_BYTES: "20971520",
         ...cloudflareAccessEnvironment,
         ...sentryEnvironment,
       },
@@ -506,7 +498,6 @@ function getSentryEnvironment(
     SENTRY_DSN: dsn,
     SENTRY_SERVICE: serviceName,
     SENTRY_ENVIRONMENT: $app.stage,
-    SENTRY_TRACES_SAMPLE_RATE: process.env.SENTRY_TRACES_SAMPLE_RATE ?? "0.2",
     ...(process.env.SENTRY_RELEASE
       ? { SENTRY_RELEASE: process.env.SENTRY_RELEASE }
       : {}),

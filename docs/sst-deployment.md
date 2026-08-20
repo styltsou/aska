@@ -221,6 +221,9 @@ There is one pipeline callback secret at the SST layer. It is injected as
 `IMAGE_PIPELINE_CALLBACK_SECRET` for uploads and
 `RESOURCE_PIPELINE_CALLBACK_SECRET` for URL-resolution/media claims and
 results. This keeps rotation atomic while preserving separate code contracts.
+The API lambda only receives `IMAGE_PIPELINE_CALLBACK_SECRET`; the server
+falls back to it when `RESOURCE_PIPELINE_CALLBACK_SECRET` is unset, keeping
+the API's environment variables under the Lambda 4 KB limit.
 
 ### Personal Live-stage secrets
 
