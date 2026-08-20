@@ -78,10 +78,8 @@ function InboxPage() {
         (a): a is ImageAsset => a.type === "image" && a.id === selectedImageId,
       ) ?? undefined)
     : undefined;
-  const { drawerNote, openDrawer, closeDrawer } = useImmediateNoteDrawer(
-    selectedNote,
-    selectedNoteId,
-  );
+  const { drawerNote, drawerMode, openDrawer, closeDrawer } =
+    useImmediateNoteDrawer(selectedNote, selectedNoteId);
   const { viewerImage, openViewer, closeViewer } = useImmediateImageViewer(
     selectedImage,
     selectedImageId,
@@ -99,8 +97,8 @@ function InboxPage() {
     );
   }
 
-  const handleOpenNote = (note: NoteAsset) => {
-    openDrawer(note);
+  const handleOpenNote = (note: NoteAsset, mode: "read" | "edit" = "read") => {
+    openDrawer(note, mode);
     void navigate({ search: (prev) => ({ ...prev, note: note.id }) });
   };
 
@@ -153,7 +151,12 @@ function InboxPage() {
           }
         />
       </BoardUploadZone>
-      <NoteDetailDrawer note={drawerNote} onClose={handleCloseNote} />
+      <NoteDetailDrawer
+        note={drawerNote}
+        workspaceSlug={workspaceSlug}
+        initialMode={drawerMode}
+        onClose={handleCloseNote}
+      />
       <ImageAssetViewer
         asset={viewerImage}
         open={viewerImage !== undefined}

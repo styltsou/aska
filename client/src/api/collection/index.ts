@@ -18,6 +18,7 @@ export {
   useUploadLocalImages,
   useUpdateCollectionNodePosition,
   useUpdateCollectionNodePositions,
+  useUpdateNote,
   collectionContentsQueryOptions,
   collectionsQueryOptions,
   inboxContentsQueryOptions,
@@ -63,4 +64,7 @@ export type {
   UpdateNodePositionResponse,
   UpdateNodePositionsInput,
   UpdateNodePositionsResponse,
+  UpdatedNote,
+  UpdateNoteInput,
+  UpdateNoteResponse,
 } from "./types";

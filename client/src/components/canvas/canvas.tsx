@@ -102,7 +102,10 @@ type CanvasProps = {
   emptyDescription: string;
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
-  onOpenNote: (node: Extract<CollectionNode, { type: "note" }>) => void;
+  onOpenNote: (
+    node: Extract<CollectionNode, { type: "note" }>,
+    mode?: "read" | "edit",
+  ) => void;
 };
 
 type ActionRefs = Pick<
@@ -460,8 +463,8 @@ function CanvasSurface({
     [],
   );
   const openNote = useCallback(
-    (node: Extract<CollectionNode, { type: "note" }>) =>
-      actionRefs.current.onOpenNote(node),
+    (node: Extract<CollectionNode, { type: "note" }>, mode?: "read" | "edit") =>
+      actionRefs.current.onOpenNote(node, mode),
     [],
   );
   const suppressClick = useCallback(

@@ -69,6 +69,23 @@ export const CreateNoteSchema = z.object({
 
 export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
 
+export const UpdateNoteSchema = z.object({
+  content: z.string().min(1).max(10_000),
+});
+
+export type UpdateNoteInput = z.infer<typeof UpdateNoteSchema>;
+
+export type UpdatedNote = {
+  id: string;
+  type: "note";
+  content: string;
+  color: string | null;
+  isFavorite: boolean;
+  wordCount: number;
+  readingTimeMinutes: number;
+  updatedAt: string;
+};
+
 export const CreatedCollectionSchema = z.object({
   id: z.number(),
   name: z.string(),

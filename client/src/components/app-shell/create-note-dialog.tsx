@@ -1,26 +1,30 @@
-import React, {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { CheckIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
+
 import { useCreateInboxNote, useCreateNote } from "@/api/collection";
 import type { BoardInsertionPlacement } from "@/api/collection";
+import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogBody,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogBody,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import {
   clearCreateNoteDraft,
   getCreateNoteDraftId,
@@ -28,7 +32,12 @@ import {
   saveCreateNoteDraft,
 } from "@/lib/create-note-draft";
 
-const MAX_EDITOR_HEIGHT = 256;
+const NOTE_DRAWER_WIDTH = 800;
+const NoteRichText = lazy(() =>
+  import("@/components/board/note-rich-text").then((module) => ({
+    default: module.NoteRichText,
+  })),
+);
 
 export function CreateNoteDialog({
   workspaceSlug,
@@ -57,27 +66,22 @@ export function CreateNoteDialog({
   const parentFolderPath = folderSegments.join("/") || undefined;
   const createNote = useCreateNote(workspaceSlug, collectionSlug);
   const createInboxNote = useCreateInboxNote(workspaceSlug);
+  const navigate = useNavigate();
+  const editorRef = useRef<NoteRichTextHandle>(null);
+  const hasRestoredOpenRef = useRef(false);
+  const isInitialPageReloadRef = useRef(isPageReload());
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const [content, setContent] = useState(initialContent);
-  const [editorHeight, setEditorHeight] = useState<number>();
+  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const hasRestoredOpenRef = useRef(false);
-  const isInitialPageReloadRef = useRef(isPageReload());
   const draftId = useMemo(
     () => getCreateNoteDraftId(workspaceSlug, collectionPath, target),
     [collectionPath, target, workspaceSlug],
   );
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "0px";
-    textarea.style.height = `${textarea.scrollHeight}px`;
-    setEditorHeight(Math.min(textarea.scrollHeight, MAX_EDITOR_HEIGHT));
-  }, [content, open]);
+  const isPending = createNote.isPending || createInboxNote.isPending;
+  const canSave = content.trim().length > 0 && !isPending;
+  const isDirty = content.length > 0;
 
   useEffect(() => {
     if (!open) return;
@@ -108,105 +112,179 @@ export function CreateNoteDialog({
     setInternalOpen(true);
   }, [controlledOpen, draftId, restoreOpen]);
 
-  function updateOpenState(nextOpen: boolean) {
-    if (nextOpen) {
-      const draft = loadCreateNoteDraft(draftId);
-      setContent(initialContent || draft?.content || "");
-    } else {
-      setContent("");
-      setError(null);
-      clearCreateNoteDraft(draftId);
-    }
+  function setOpen(nextOpen: boolean) {
     onOpenChange?.(nextOpen);
-    if (controlledOpen === undefined) {
-      setInternalOpen(nextOpen);
+    if (controlledOpen === undefined) setInternalOpen(nextOpen);
+  }
+
+  function finishClose({ clearDraft = true } = {}) {
+    if (clearDraft) clearCreateNoteDraft(draftId);
+    setContent("");
+    setError(null);
+    setDiscardDialogOpen(false);
+    setOpen(false);
+  }
+
+  function requestClose() {
+    if (isDirty) {
+      setDiscardDialogOpen(true);
+      return;
     }
+    finishClose();
   }
 
   function handleOpenChange(nextOpen: boolean) {
-    updateOpenState(nextOpen);
+    if (nextOpen) {
+      const draft = loadCreateNoteDraft(draftId);
+      setContent(initialContent || draft?.content || "");
+      setError(null);
+      setOpen(true);
+      return;
+    }
+    requestClose();
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-
-    const trimmedContent = content.trim();
-    if (!trimmedContent) {
-      setError("Write something before creating the note.");
+  function handleSave() {
+    if (!canSave) {
+      setError("Write something before saving the note.");
       return;
     }
 
+    const noteContent = (editorRef.current?.getMarkdown() ?? content).trim();
+    setError(null);
+
+    const onSuccess = (data: { note: { id: string } }) => {
+      clearCreateNoteDraft(draftId);
+      finishClose();
+      if (target === "inbox") {
+        void navigate({
+          to: "/$workspaceSlug/inbox",
+          params: { workspaceSlug },
+          search: { note: data.note.id, image: undefined },
+        });
+      } else {
+        void navigate({
+          to: "/$workspaceSlug/collections/$",
+          params: { workspaceSlug, _splat: collectionPath },
+          search: { note: data.note.id, image: undefined },
+        });
+      }
+    };
     const onError = (err: unknown) => {
-      toast.error(
-        err instanceof Error ? err.message : "Unable to create note.",
-      );
+      const message =
+        err instanceof Error ? err.message : "Unable to create note.";
+      setError(message);
+      toast.error(message);
     };
 
     if (target === "inbox") {
-      createInboxNote.mutate({ content: trimmedContent }, { onError });
+      createInboxNote.mutate({ content: noteContent }, { onSuccess, onError });
     } else {
       createNote.mutate(
-        { content: trimmedContent, parentFolderPath, placement },
-        { onError },
+        { content: noteContent, parentFolderPath, placement },
+        { onSuccess, onError },
       );
     }
-    updateOpenState(false);
-  }
-
-  function handleContentChange(nextContent: string) {
-    setContent(nextContent);
-    if (!nextContent) clearCreateNoteDraft(draftId);
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      {children ? <DialogTrigger render={children} /> : null}
-      <DialogContent className="max-w-md">
-        <form className="contents" onSubmit={handleSubmit}>
-          <DialogBody className="flex flex-col gap-4">
-            <DialogHeader>
-              <DialogTitle>New note</DialogTitle>
-              <DialogDescription>
-                {target === "inbox"
-                  ? "Capture a text note in Inbox."
-                  : "Add a text note to this board."}
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea
-              className="max-h-64 rounded-lg border border-input focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50"
-              style={{ height: editorHeight }}
+    <>
+      <Drawer
+        open={open}
+        onOpenChange={handleOpenChange}
+        swipeDirection="right"
+      >
+        {children ? <DrawerTrigger render={children} /> : null}
+        <DrawerContent
+          className="rounded-xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-2xl duration-200 [--bleed:0px] [--drawer-bleed-background:var(--sidebar)] [--drawer-inset:0.75rem] data-ending-style:duration-150 data-starting-style:duration-200"
+          style={
+            {
+              "--drawer-content-width": `min(${NOTE_DRAWER_WIDTH}px, calc(100vw - 1.5rem))`,
+            } as React.CSSProperties
+          }
+        >
+          <div className="flex min-h-0 flex-1 flex-col">
+            <DrawerHeader className="flex-row items-center justify-between border-b border-sidebar-border p-4">
+              <DrawerTitle className="text-sm">New note</DrawerTitle>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  size="sm"
+                  disabled={!canSave}
+                  onClick={() => handleSave()}
+                >
+                  <CheckIcon />
+                  <span>{isPending ? "Saving…" : "Save"}</span>
+                </Button>
+                <Button variant="ghost" size="icon-sm" onClick={requestClose}>
+                  <XIcon />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </div>
+            </DrawerHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <Suspense
+                fallback={
+                  <div className="px-8 py-7 text-sm text-muted-foreground">
+                    Opening editor…
+                  </div>
+                }
+              >
+                <NoteRichText
+                  ref={editorRef}
+                  markdown={content}
+                  editable
+                  autoFocus
+                  onChange={(nextContent) => {
+                    setContent(nextContent);
+                    setError(null);
+                    if (!nextContent) clearCreateNoteDraft(draftId);
+                  }}
+                  onSaveShortcut={() => handleSave()}
+                />
+              </Suspense>
+            </div>
+            {error ? (
+              <p className="border-t border-sidebar-border px-4 py-2.5 text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+          </div>
+        </DrawerContent>
+      </Drawer>
+      <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogBody>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Save this note?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Your draft will remain here if you continue writing.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </AlertDialogBody>
+          <AlertDialogFooter className="sm:grid sm:grid-cols-3">
+            <AlertDialogAction
+              variant="outline"
+              onClick={(event) => {
+                event.preventDefault();
+                finishClose();
+              }}
             >
-              <textarea
-                ref={textareaRef}
-                autoComplete="off"
-                autoFocus
-                className="block min-h-16 w-full resize-none overflow-hidden bg-transparent px-2.5 py-2 pr-5 text-sm leading-6 outline-none placeholder:text-muted-foreground"
-                placeholder="Enter to create, Shift+Enter for a new line"
-                required
-                value={content}
-                onChange={(event) => handleContentChange(event.target.value)}
-                onKeyDown={(event) => {
-                  if (
-                    event.key === "Enter" &&
-                    !event.shiftKey &&
-                    !event.nativeEvent.isComposing
-                  ) {
-                    event.preventDefault();
-                    event.currentTarget.form?.requestSubmit();
-                  }
-                }}
-              />
-            </ScrollArea>
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          </DialogBody>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline">Cancel</Button>} />
-            <Button type="submit">Create</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              Discard
+            </AlertDialogAction>
+            <AlertDialogCancel>Continue writing</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!canSave}
+              onClick={(event) => {
+                event.preventDefault();
+                handleSave();
+              }}
+            >
+              Save note
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

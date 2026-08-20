@@ -1,9 +1,11 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { CodeBlock } from "@/components/ui/code-block";
 import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
+import { remarkHighlight } from "@/lib/remark-highlight";
 import type { NoteAsset } from "@/types/asset";
 
 const BARE_URL_RE = /(^|[^[(])(https?:\/\/[^\s<"'>)\]]+)/gi;
@@ -100,6 +102,12 @@ const MD_COMPONENTS: Components = {
   li: ({ className, ...props }) => (
     <li className={cn("pl-1 leading-6 [&>p]:my-0", className)} {...props} />
   ),
+  input: ({ className, ...props }) => (
+    <input
+      className={cn("mr-2 size-3.5 accent-primary", className)}
+      {...props}
+    />
+  ),
   a: ({ className, ...props }) => (
     <a
       className={cn(
@@ -114,6 +122,15 @@ const MD_COMPONENTS: Components = {
   blockquote: ({ className, ...props }) => (
     <blockquote
       className={cn("text-sidebar-foreground/65 my-3 pl-3 italic", className)}
+      {...props}
+    />
+  ),
+  mark: ({ className, ...props }) => (
+    <mark
+      className={cn(
+        "rounded-[0.18em] bg-amber-200/75 px-[0.08em] text-inherit box-decoration-clone dark:bg-amber-400/30",
+        className,
+      )}
       {...props}
     />
   ),
@@ -161,7 +178,10 @@ export function NoteMarkdown({
 }) {
   return (
     <div className={className}>
-      <ReactMarkdown components={MD_COMPONENTS}>
+      <ReactMarkdown
+        components={MD_COMPONENTS}
+        remarkPlugins={[remarkGfm, remarkHighlight]}
+      >
         {linkifyBareUrls(content)}
       </ReactMarkdown>
     </div>
@@ -180,7 +200,7 @@ export function NoteAssetCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [hasOverflow, setHasOverflow] = useState(false);
-  const effectiveOnOpen = hasOverflow ? onOpen : undefined;
+  const effectiveOnOpen = onOpen;
 
   const updateOverflow = useCallback(() => {
     const card = cardRef.current;
@@ -236,6 +256,12 @@ export function NoteAssetCard({
       role={effectiveOnOpen ? "button" : undefined}
       tabIndex={effectiveOnOpen ? 0 : undefined}
       onClick={(event) => {
+        if (
+          event.target instanceof Element &&
+          event.target.closest("a[href]")
+        ) {
+          return;
+        }
         if (!hasSelectionModifier(event)) effectiveOnOpen?.();
       }}
       onKeyDown={(event) => {

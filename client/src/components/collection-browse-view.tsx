@@ -63,7 +63,10 @@ type CollectionBrowseViewProps = {
   emptyDescription: string;
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
-  onOpenNote: (node: Extract<CollectionNode, { type: "note" }>) => void;
+  onOpenNote: (
+    node: Extract<CollectionNode, { type: "note" }>,
+    mode?: "read" | "edit",
+  ) => void;
 };
 
 export function CollectionBrowseView({
@@ -490,7 +493,10 @@ function BrowseNodeCard({
   ) => void;
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
-  onOpenNote: (node: Extract<CollectionNode, { type: "note" }>) => void;
+  onOpenNote: (
+    node: Extract<CollectionNode, { type: "note" }>,
+    mode?: "read" | "edit",
+  ) => void;
 }) {
   const draggableNodeIds = isSelected ? selectedNodeIds : [node.id];
   const isPartOfActiveDrag = activeDrag?.nodeIds.includes(node.id) === true;
@@ -557,7 +563,11 @@ function BrowseNodeCard({
         onOpenImage={
           node.type === "image" ? () => onOpenImage(node) : undefined
         }
-        onOpenNote={node.type === "note" ? () => onOpenNote(node) : undefined}
+        onOpenNote={
+          node.type === "note"
+            ? (_asset, mode) => onOpenNote(node, mode)
+            : undefined
+        }
       />
     </div>
   );

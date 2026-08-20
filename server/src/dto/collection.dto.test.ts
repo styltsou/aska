@@ -10,6 +10,7 @@ import {
   CollectionContentsQuerySchema,
   UpdateNodePositionSchema,
   UpdateNodePositionsSchema,
+  UpdateNoteSchema,
   MoveCollectionNodesParentSchema,
 } from "./collection.dto";
 
@@ -41,6 +42,16 @@ describe("collection board position DTOs", () => {
       CreateNoteSchema.parse({ content: "Idea", position: { x: 72, y: 48 } })
         .position,
     ).toEqual({ x: 72, y: 48 });
+  });
+
+  it("requires non-empty bounded note updates", () => {
+    expect(UpdateNoteSchema.parse({ content: "A growing idea" })).toEqual({
+      content: "A growing idea",
+    });
+    expect(UpdateNoteSchema.safeParse({ content: "" }).success).toBe(false);
+    expect(
+      UpdateNoteSchema.safeParse({ content: "x".repeat(10_001) }).success,
+    ).toBe(false);
   });
 
   it("requires a complete position update", () => {

@@ -956,6 +956,46 @@
         }
       }
     },
+    "/api/v1/workspace/{workspaceSlug}/assets/{assetId}/note": {
+      "patch": {
+        "operationId": "updateNote",
+        "tags": ["Assets"],
+        "summary": "Update a note",
+        "description": "Replaces the persisted Markdown for an existing note and recalculates its reading metrics.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "description": "Note asset identifier, e.g. `note-17`.",
+            "schema": { "type": "string", "pattern": "^note-\\d+$" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateNoteRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The note was updated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UpdateNoteResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/images/uploads": {
       "post": {
         "operationId": "createDirectImageUpload",
@@ -1768,6 +1808,18 @@
           }
         }
       },
+      "UpdateNoteRequest": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Complete replacement note content in Markdown format."
+          }
+        }
+      },
       "CreateLinkRequest": {
         "type": "object",
         "required": ["url"],
@@ -2124,6 +2176,42 @@
               "note": {
                 "$ref": "#/components/schemas/CollectionNoteNode"
               }
+            }
+          }
+        }
+      },
+      "UpdatedNote": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "content",
+          "color",
+          "isFavorite",
+          "wordCount",
+          "readingTimeMinutes",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^note-\\d+$" },
+          "type": { "type": "string", "enum": ["note"] },
+          "content": { "type": "string" },
+          "color": { "type": "string", "nullable": true },
+          "isFavorite": { "type": "boolean" },
+          "wordCount": { "type": "integer" },
+          "readingTimeMinutes": { "type": "number" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UpdateNoteResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["note"],
+            "properties": {
+              "note": { "$ref": "#/components/schemas/UpdatedNote" }
             }
           }
         }

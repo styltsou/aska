@@ -28,6 +28,7 @@ import {
   markInboxSeen,
   updateCollectionNodePosition,
   updateCollectionNodePositions,
+  updateNote,
 } from "./fetchers";
 import { makeMarkdownPreview } from "@/lib/markdown-preview";
 import type {
@@ -47,6 +48,8 @@ import type {
   InboxContentsResponse,
   UpdateNodePositionInput,
   UpdateNodePositionsInput,
+  UpdatedNote,
+  UpdateNoteInput,
 } from "./types";
 import type { WorkspaceData } from "@/api/workspace";
 import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
@@ -1025,6 +1028,73 @@ export function useCreateInboxNote(workspaceSlug: string) {
             ),
           };
         },
+      );
+    },
+  });
+}
+
+function applyUpdatedNoteToContents(
+  current: CollectionContentsResponse | undefined,
+  note: UpdatedNote,
+): CollectionContentsResponse | undefined {
+  if (!current) return current;
+
+  return {
+    ...current,
+    nodes: current.nodes.map((node) => {
+      if (node.type === "note" && node.id === note.id) {
+        return { ...node, ...note };
+      }
+
+      if (node.type !== "folder") return node;
+
+      return {
+        ...node,
+        previews: node.previews.map((preview) =>
+          preview.type === "note" && preview.assetId === note.id
+            ? { ...preview, snippet: makeMarkdownPreview(note.content) }
+            : preview,
+        ),
+      };
+    }),
+  };
+}
+
+export function useUpdateNote(workspaceSlug: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ assetId, ...data }: UpdateNoteInput & { assetId: string }) =>
+      updateNote(workspaceSlug, assetId, data),
+    onSuccess: ({ note }) => {
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        {
+          predicate: ({ queryKey }) =>
+            (queryKey[0] === "collectionContents" ||
+              queryKey[0] === "inboxContents") &&
+            queryKey[1] === workspaceSlug,
+        },
+        (current) => applyUpdatedNoteToContents(current, note),
+      );
+
+      queryClient.setQueryData<CollectionsData>(
+        collectionQueryKeys.collections(workspaceSlug),
+        (current) =>
+          current
+            ? {
+                collections: current.collections.map((collection) => ({
+                  ...collection,
+                  previews: collection.previews.map((preview) =>
+                    preview.type === "note" && preview.assetId === note.id
+                      ? {
+                          ...preview,
+                          snippet: makeMarkdownPreview(note.content),
+                        }
+                      : preview,
+                  ),
+                })),
+              }
+            : current,
       );
     },
   });

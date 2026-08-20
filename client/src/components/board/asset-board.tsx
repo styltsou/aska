@@ -48,7 +48,7 @@ export function AssetBoard({
   deleteContext?: CollectionDeleteContext;
   inboxContext?: InboxContext;
   onOpenFolder?: (asset: Extract<Asset, { type: "folder" }>) => void;
-  onOpenNote?: (note: NoteAsset) => void;
+  onOpenNote?: (note: NoteAsset, mode?: "read" | "edit") => void;
   onOpenImage?: (image: ImageAsset) => void;
 }) {
   const scopeKey = inboxContext

@@ -24,7 +24,10 @@ export type CanvasNodeData = {
   };
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
-  onOpenNote: (node: Extract<CollectionNode, { type: "note" }>) => void;
+  onOpenNote: (
+    node: Extract<CollectionNode, { type: "note" }>,
+    mode?: "read" | "edit",
+  ) => void;
   onCardClick: (id: string, event: React.MouseEvent) => void;
   suppressClick: (id: string) => boolean;
   isColorDimmed: boolean;
@@ -151,6 +154,11 @@ export const CanvasCard = memo(function CanvasCard({
           deleteContext={data.deleteContext}
           onOpenImage={
             node.type === "image" ? () => data.onOpenImage(node) : undefined
+          }
+          onEditNote={
+            node.type === "note"
+              ? () => data.onOpenNote(node, "edit")
+              : undefined
           }
         >
           {card}

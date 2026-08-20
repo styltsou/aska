@@ -201,3 +201,12 @@ These mutations intentionally use separate contracts:
   batch atomically. Assets may cross collections; folders are restricted to
   moves within their existing collection so their subtree invariants remain
   intact.
+
+## Note Updates
+
+`PATCH /api/v1/workspace/:workspaceSlug/assets/:assetId/note` replaces a
+note's complete Markdown document. The service scopes the asset to the active
+workspace, rejects non-note asset IDs, updates the asset's editor/timestamp
+metadata, and recalculates word-count and reading-time metrics in the same
+response. The endpoint is shared by Inbox and placed notes because note content
+belongs to the asset rather than to a collection placement.

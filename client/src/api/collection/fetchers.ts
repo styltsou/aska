@@ -28,6 +28,8 @@ import type {
   UpdateNodePositionResponse,
   UpdateNodePositionsInput,
   UpdateNodePositionsResponse,
+  UpdateNoteInput,
+  UpdateNoteResponse,
 } from "./types";
 
 export async function fetchCollections(slug: string): Promise<CollectionsData> {
@@ -148,6 +150,17 @@ export async function createInboxNote(
 ): Promise<CreateNoteResponse> {
   return apiPost<CreateNoteResponse>(
     `/api/v1/workspace/${workspaceSlug}/inbox/notes`,
+    data,
+  );
+}
+
+export async function updateNote(
+  workspaceSlug: string,
+  assetId: string,
+  data: UpdateNoteInput,
+): Promise<UpdateNoteResponse> {
+  return apiPatch<UpdateNoteResponse>(
+    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/note`,
     data,
   );
 }

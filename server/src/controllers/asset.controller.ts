@@ -4,6 +4,7 @@ import {
   ContentTypeQuerySchema,
   CreateNoteSchema,
   ImageCropPathParamSchema,
+  UpdateNoteSchema,
   WorkspaceParamSchema,
 } from "@/dto/collection.dto";
 import { factory } from "@/factory";
@@ -55,6 +56,30 @@ export const createInboxNote = factory.createHandlers(
     const note = await assetService.createInboxNote(workspace.id, userId, data);
 
     return c.json(success({ note }), 201);
+  },
+);
+
+export const updateNote = factory.createHandlers(
+  authMiddleware,
+  validate.param(AssetPathParamSchema),
+  validate.body(UpdateNoteSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const note = await assetService.updateNote(
+      workspace.id,
+      userId,
+      assetId,
+      data,
+    );
+
+    return c.json(success({ note }));
   },
 );
 

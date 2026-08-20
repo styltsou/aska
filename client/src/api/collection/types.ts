@@ -107,6 +107,25 @@ export type CreateNoteInput = {
   position?: BoardPosition;
 };
 
+export type UpdateNoteInput = {
+  content: string;
+};
+
+export type UpdatedNote = {
+  id: string;
+  type: "note";
+  content: string;
+  color: string | null;
+  isFavorite: boolean;
+  wordCount: number;
+  readingTimeMinutes: number;
+  updatedAt: string;
+};
+
+export type UpdateNoteResponse = {
+  note: UpdatedNote;
+};
+
 export type CollectionImageNode = {
   id: string;
   type: "image";

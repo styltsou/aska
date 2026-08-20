@@ -27,7 +27,7 @@ export const AssetCard = memo(function AssetCard({
   asset: Asset;
   onOpenFolder?: (asset: FolderAsset) => void;
   onOpenImage?: (asset: ImageAsset) => void;
-  onOpenNote?: (asset: NoteAsset) => void;
+  onOpenNote?: (asset: NoteAsset, mode?: "read" | "edit") => void;
   deleteContext?: {
     workspaceSlug: string;
     collectionSlug: string;
@@ -76,6 +76,11 @@ export const AssetCard = memo(function AssetCard({
             ? () => onOpenImage(asset)
             : undefined
         }
+        onEditNote={
+          asset.type === "note" && onOpenNote
+            ? () => onOpenNote(asset, "edit")
+            : undefined
+        }
       >
         {(isContextMenuOpen) => (
           <>
@@ -89,7 +94,9 @@ export const AssetCard = memo(function AssetCard({
             {asset.type === "note" && (
               <NoteAssetCard
                 asset={asset}
-                onOpen={onOpenNote ? () => onOpenNote(asset) : undefined}
+                onOpen={
+                  onOpenNote ? () => onOpenNote(asset, "read") : undefined
+                }
                 isContextMenuOpen={isContextMenuOpen}
               />
             )}

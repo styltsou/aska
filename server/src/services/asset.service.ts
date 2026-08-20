@@ -29,6 +29,8 @@ import type {
   ContentTypeFilter,
   CreateNoteInput,
   InboxContentsResponse,
+  UpdatedNote,
+  UpdateNoteInput,
 } from "@/dto/collection.dto";
 import type { BulkDeleteResult } from "@/services/collection/collection.types";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -75,6 +77,12 @@ export interface IAssetService {
     userId: string,
     data: CreateNoteInput,
   ): Promise<CollectionNoteNode>;
+  updateNote(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    data: UpdateNoteInput,
+  ): Promise<UpdatedNote>;
   deleteAsset(
     orgId: string,
     assetNodeId: string,
@@ -289,6 +297,64 @@ export class AssetService implements IAssetService {
       readingTimeMinutes,
       createdAt: note.createdAt.toISOString(),
       position: null,
+    };
+  }
+
+  async updateNote(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    data: UpdateNoteInput,
+  ): Promise<UpdatedNote> {
+    const target = parseAssetNodeId(assetNodeId);
+    if (target.assetType !== "note") {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, "Asset is not a note");
+    }
+
+    const updated = await db.transaction(async (tx) => {
+      const [asset] = await tx
+        .update(assets)
+        .set({ updatedByUserId: userId })
+        .where(
+          and(
+            eq(assets.id, target.entityId),
+            eq(assets.organizationId, orgId),
+            eq(assets.type, "note"),
+          ),
+        )
+        .returning({
+          id: assets.id,
+          isFavorite: assets.isFavorite,
+          updatedAt: assets.updatedAt,
+        });
+
+      if (!asset) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
+      }
+
+      const [note] = await tx
+        .update(noteAssets)
+        .set({ markdown: data.content })
+        .where(eq(noteAssets.assetId, asset.id))
+        .returning({ color: noteAssets.color });
+
+      if (!note) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
+      }
+
+      return { ...asset, color: note.color };
+    });
+
+    const metrics = calculateNoteMetrics(data.content);
+
+    return {
+      id: `note-${updated.id}`,
+      type: "note",
+      content: data.content,
+      color: updated.color,
+      isFavorite: updated.isFavorite,
+      ...metrics,
+      updatedAt: updated.updatedAt.toISOString(),
     };
   }
 

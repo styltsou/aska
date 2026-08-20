@@ -80,13 +80,15 @@ async function copyText(asset: NoteAsset) {
   toast.success("Copied note text.");
 }
 
-function noteActions(asset: NoteAsset) {
+function noteActions(asset: NoteAsset, onEditNote?: () => void) {
   return (
     <>
       <ContextMenuItem onClick={() => void copyText(asset)}>
         Copy text
       </ContextMenuItem>
-      <ContextMenuItem>Edit note</ContextMenuItem>
+      <ContextMenuItem disabled={!onEditNote} onClick={onEditNote}>
+        Edit note
+      </ContextMenuItem>
     </>
   );
 }
@@ -135,6 +137,7 @@ export function AssetContextMenu({
   deleteContext,
   inboxContext,
   onOpenImage,
+  onEditNote,
 }: {
   asset: Asset;
   children: (isContextMenuOpen: boolean) => React.ReactNode;
@@ -148,6 +151,7 @@ export function AssetContextMenu({
     workspaceSlug: string;
   };
   onOpenImage?: () => void;
+  onEditNote?: () => void;
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
@@ -334,7 +338,7 @@ export function AssetContextMenu({
               {asset.type === "image"
                 ? imageActions(asset, handleCopyImage)
                 : asset.type === "note"
-                  ? noteActions(asset)
+                  ? noteActions(asset, onEditNote)
                   : linkActions(asset, () => {
                       refreshLink.mutate(asset.id, {
                         onError: (error) =>

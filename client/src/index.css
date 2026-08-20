@@ -279,6 +279,101 @@
   }
 }
 
+@layer components {
+  .note-rich-text-content {
+    @apply text-sm leading-6 text-sidebar-foreground/80;
+  }
+
+  .note-rich-text-content > *:first-child {
+    margin-top: 0;
+  }
+
+  .note-rich-text-content > *:last-child {
+    margin-bottom: 0;
+  }
+
+  .note-rich-text-content p {
+    @apply my-2.5;
+  }
+
+  .note-rich-text-content h1 {
+    @apply mb-3 text-xl leading-tight font-semibold tracking-tight text-sidebar-foreground;
+  }
+
+  .note-rich-text-content h2 {
+    @apply mt-4 mb-2 text-lg leading-snug font-semibold text-sidebar-foreground;
+  }
+
+  .note-rich-text-content h3 {
+    @apply mt-4 mb-1.5 text-base leading-snug font-semibold text-sidebar-foreground;
+  }
+
+  .note-rich-text-content ul:not([data-type="taskList"]) {
+    @apply my-3 ml-4 list-disc space-y-1.5 marker:text-sidebar-foreground/35;
+  }
+
+  .note-rich-text-content ol {
+    @apply my-3 ml-4 list-decimal space-y-1.5 marker:text-sidebar-foreground/35;
+  }
+
+  .note-rich-text-content li {
+    @apply pl-1;
+  }
+
+  .note-rich-text-content li > p {
+    @apply my-0;
+  }
+
+  .note-rich-text-content ul[data-type="taskList"] {
+    @apply my-3 list-none space-y-1.5 pl-0;
+  }
+
+  .note-rich-text-content ul[data-type="taskList"] li {
+    @apply flex items-start gap-2 pl-0;
+  }
+
+  .note-rich-text-content ul[data-type="taskList"] label {
+    @apply mt-1 flex size-4 shrink-0 items-center justify-center;
+  }
+
+  .note-rich-text-content ul[data-type="taskList"] input {
+    @apply size-3.5 accent-primary;
+  }
+
+  .note-rich-text-content blockquote {
+    @apply my-3 border-l-2 border-sidebar-border pl-3 text-sidebar-foreground/65 italic;
+  }
+
+  .note-rich-text-content hr {
+    @apply my-4 border-t border-sidebar-border;
+  }
+
+  .note-rich-text-content code:not(pre code) {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-[0.8125rem] font-medium text-sidebar-foreground;
+  }
+
+  .note-rich-text-content pre {
+    @apply my-3 overflow-x-auto rounded-lg border border-sidebar-border bg-muted/65 p-3 font-mono text-xs leading-5 text-sidebar-foreground;
+  }
+
+  .note-rich-text-content a {
+    @apply font-medium text-primary underline underline-offset-4;
+  }
+
+  .note-rich-text-content .note-highlight {
+    @apply rounded-[0.18em] bg-amber-200/75 box-decoration-clone px-[0.08em] text-inherit dark:bg-amber-400/30;
+  }
+
+  .note-rich-text-editable .ProseMirror {
+    @apply min-h-[calc(100dvh-8.5rem)] cursor-text px-8 py-7 sm:px-10;
+  }
+
+  .note-rich-text-editable .is-editor-empty:first-child::before {
+    @apply pointer-events-none float-left h-0 text-muted-foreground;
+    content: attr(data-placeholder);
+  }
+}
+
 .aska-crop-area {
   box-shadow: none !important;
 }

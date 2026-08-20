@@ -88,6 +88,38 @@ afterEach(async () => {
 });
 
 describe("CollectionService integration", () => {
+  it("updates a note and recalculates its metrics", async () => {
+    const note = await assetService.createInboxNote(
+      fixture.organizationId,
+      fixture.userId,
+      { content: "Small thought" },
+    );
+
+    const updated = await assetService.updateNote(
+      fixture.organizationId,
+      fixture.userId,
+      note.id,
+      { content: "A longer **working note** with a ==highlighted idea==." },
+    );
+
+    expect(updated).toMatchObject({
+      id: note.id,
+      content: "A longer **working note** with a ==highlighted idea==.",
+      wordCount: 8,
+      readingTimeMinutes: 1,
+    });
+    const inbox = await assetService.getInboxContents(fixture.organizationId);
+    expect(inbox.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: note.id,
+          content: updated.content,
+          wordCount: 8,
+        }),
+      ]),
+    );
+  });
+
   it("flattens direct children beside the parent composition and preserves nested layouts", async () => {
     const collection = await collectionService.createCollection(
       fixture.organizationId,

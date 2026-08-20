@@ -201,10 +201,8 @@ function CollectionPage() {
         (a): a is ImageAsset => a.type === "image" && a.id === selectedImageId,
       ) ?? undefined)
     : undefined;
-  const { drawerNote, openDrawer, closeDrawer } = useImmediateNoteDrawer(
-    selectedNote,
-    selectedNoteId,
-  );
+  const { drawerNote, drawerMode, openDrawer, closeDrawer } =
+    useImmediateNoteDrawer(selectedNote, selectedNoteId);
   const { viewerImage, openViewer, closeViewer } = useImmediateImageViewer(
     selectedImage,
     selectedImageId,
@@ -247,10 +245,13 @@ function CollectionPage() {
     );
   }
 
-  const handleOpenNote = (note: CollectionNoteNode) => {
+  const handleOpenNote = (
+    note: CollectionNoteNode,
+    mode: "read" | "edit" = "read",
+  ) => {
     const asset = collectionNodeToAsset(note);
     if (asset.type === "note") {
-      openDrawer(asset);
+      openDrawer(asset, mode);
     }
     void navigate({ search: (prev) => ({ ...prev, note: note.id }) });
   };
@@ -387,8 +388,9 @@ function CollectionPage() {
       </BoardContextMenu>
       <NoteDetailDrawer
         note={drawerNote}
+        workspaceSlug={workspaceSlug}
+        initialMode={drawerMode}
         noteExtractionTarget={{
-          workspaceSlug,
           collectionSlug,
           parentFolderPath,
         }}

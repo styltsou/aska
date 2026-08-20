@@ -71,6 +71,8 @@ function markdownFromNode(node: Node): string {
     case "del":
     case "s":
       return `~~${markdownFromChildren(element).trim()}~~`;
+    case "mark":
+      return `==${markdownFromChildren(element).trim()}==`;
     case "hr":
       return blockMarkdown("---");
     default:
