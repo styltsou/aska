@@ -105,7 +105,7 @@ jobs:
             changed: ${{ needs.changes.outputs.image-palette || needs.changes.outputs.image-shared }}
           - name: URL unfurl shared
             directory: services/url-unfurl-shared
-            command: bun run lint && bun run typecheck && bun run format && bun run test
+            command: bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
             changed: ${{ needs.changes.outputs.url-unfurl-shared }}
           - name: URL resolution
             directory: services/url-resolution
@@ -127,6 +127,12 @@ jobs:
         uses: oven-sh/setup-bun@v2
       - if: fromJSON(matrix.changed)
         run: bun install --frozen-lockfile
+      # Server's typecheck follows imports into the shared service packages
+      # (image-shared, url-unfurl-shared), so their deps must be installed too.
+      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
+        run: bun install --frozen-lockfile --cwd ../services/image-shared
+      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
+        run: bun install --frozen-lockfile --cwd ../services/url-unfurl-shared
       - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run lint
       - if: fromJSON(matrix.changed) && matrix.name == 'Server'
