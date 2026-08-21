@@ -57,7 +57,13 @@ function linkedQueueUrl(
 ): string | undefined {
   if (localFallback) return localFallback;
   try {
-    return Resource[name].url;
+    // The server package typecheck deliberately runs without SST's generated
+    // deployment declarations. Keep that build-time detail at this boundary;
+    // SST still injects the linked resource at runtime in deployed functions.
+    const linkedResources = Resource as Partial<
+      Record<LinkedQueueName, { url: string }>
+    >;
+    return linkedResources[name]?.url;
   } catch {
     // Direct package tests and standalone local runs are intentionally allowed
     // without SST links; enqueueing then follows the existing false result.
