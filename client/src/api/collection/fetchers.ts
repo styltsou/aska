@@ -14,6 +14,8 @@ import type {
   CreateLinkResponse,
   CreateNoteInput,
   CreateNoteResponse,
+  CreateColorInput,
+  CreateColorResponse,
   GetNoteResponse,
   CreateRemoteImageInput,
   CreateRemoteImageResponse,
@@ -65,6 +67,17 @@ export async function createNote(
 ): Promise<CreateNoteResponse> {
   return apiPost<CreateNoteResponse>(
     `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/notes`,
+    data,
+  );
+}
+
+export async function createColor(
+  workspaceSlug: string,
+  collectionSlug: string,
+  data: CreateColorInput,
+): Promise<CreateColorResponse> {
+  return apiPost<CreateColorResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/colors`,
     data,
   );
 }
@@ -160,6 +173,16 @@ export async function createInboxNote(
 ): Promise<CreateNoteResponse> {
   return apiPost<CreateNoteResponse>(
     `/api/v1/workspace/${workspaceSlug}/inbox/notes`,
+    data,
+  );
+}
+
+export async function createInboxColor(
+  workspaceSlug: string,
+  data: CreateColorInput,
+): Promise<CreateColorResponse> {
+  return apiPost<CreateColorResponse>(
+    `/api/v1/workspace/${workspaceSlug}/inbox/colors`,
     data,
   );
 }

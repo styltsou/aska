@@ -24,7 +24,7 @@ import {
   useFlattenFolder,
 } from "@/api/collection";
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
-import type { Asset, ImageAsset, NoteAsset } from "@/types/asset";
+import type { Asset, ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import type { LinkAsset } from "@/types/asset";
 import { useRefreshLink } from "@/api/url-unfurl";
 import {
@@ -90,6 +90,20 @@ function noteActions(asset: NoteAsset, onEditNote?: () => void) {
         Edit note
       </ContextMenuItem>
     </>
+  );
+}
+
+function colorActions(asset: ColorAsset) {
+  return (
+    <ContextMenuItem
+      onClick={() => {
+        void navigator.clipboard
+          .writeText(asset.hex)
+          .then(() => toast.success("Copied color."));
+      }}
+    >
+      Copy hex
+    </ContextMenuItem>
   );
 }
 
@@ -339,16 +353,18 @@ export function AssetContextMenu({
                 ? imageActions(asset, handleCopyImage)
                 : asset.type === "note"
                   ? noteActions(asset, onEditNote)
-                  : linkActions(asset, () => {
-                      refreshLink.mutate(asset.id, {
-                        onError: (error) =>
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : "Unable to refresh link.",
-                          ),
-                      });
-                    })}
+                  : asset.type === "color"
+                    ? colorActions(asset)
+                    : linkActions(asset, () => {
+                        refreshLink.mutate(asset.id, {
+                          onError: (error) =>
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : "Unable to refresh link.",
+                            ),
+                        });
+                      })}
             </>
           )}
           <ContextMenuSeparator />

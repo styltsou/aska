@@ -138,6 +138,18 @@ export function FolderAssetCard({
                   </motion.div>
                 );
               }
+              if (preview.type === "color") {
+                return (
+                  <motion.div
+                    key={preview.assetId}
+                    layout="position"
+                    layoutDependency={previewLayoutKey}
+                    transition={previewTransition}
+                    className="aspect-square overflow-hidden rounded-sm ring-1 ring-sidebar-foreground/5"
+                    style={{ backgroundColor: preview.hex }}
+                  />
+                );
+              }
               return (
                 <motion.div
                   key={preview.assetId}

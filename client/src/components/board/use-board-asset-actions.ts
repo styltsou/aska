@@ -3,6 +3,8 @@ import { toast } from "sonner";
 
 import {
   useCreateInboxNote,
+  useCreateColor,
+  useCreateInboxColor,
   useCreateInboxRemoteImage,
   useCreateNote,
   useCreateRemoteImage,
@@ -40,6 +42,8 @@ export function useBoardAssetActions({
   const uploadLocalImages = useUploadLocalImages(workspaceSlug, collectionSlug);
   const createRemoteImage = useCreateRemoteImage(workspaceSlug, collectionSlug);
   const createInboxNote = useCreateInboxNote(workspaceSlug);
+  const createColor = useCreateColor(workspaceSlug, collectionSlug);
+  const createInboxColor = useCreateInboxColor(workspaceSlug);
   const uploadInboxImages = useUploadInboxImages(workspaceSlug);
   const createInboxRemoteImage = useCreateInboxRemoteImage(workspaceSlug);
   const createLink = useCreateLink(workspaceSlug, collectionSlug);
@@ -53,7 +57,9 @@ export function useBoardAssetActions({
     uploadInboxImages.isPending ||
     createInboxRemoteImage.isPending ||
     createLink.isPending ||
-    createInboxLink.isPending;
+    createInboxLink.isPending ||
+    createColor.isPending ||
+    createInboxColor.isPending;
 
   const statusText = useMemo(() => {
     if (uploadLocalImages.isPending) return "Uploading images";
@@ -63,6 +69,8 @@ export function useBoardAssetActions({
     if (uploadInboxImages.isPending) return "Uploading images";
     if (createInboxRemoteImage.isPending) return "Importing image";
     if (createLink.isPending || createInboxLink.isPending) return "Adding link";
+    if (createColor.isPending || createInboxColor.isPending)
+      return "Creating color";
     return null;
   }, [
     createInboxNote.isPending,
@@ -71,6 +79,8 @@ export function useBoardAssetActions({
     createNote.isPending,
     createRemoteImage.isPending,
     createLink.isPending,
+    createColor.isPending,
+    createInboxColor.isPending,
     uploadInboxImages.isPending,
     uploadLocalImages.isPending,
   ]);
@@ -239,6 +249,37 @@ export function useBoardAssetActions({
     ],
   );
 
+  const createColorFromHex = useCallback(
+    async (hex: string, actionPlacement?: BoardInsertionPlacement) => {
+      try {
+        const insertionPlacement =
+          actionPlacement ?? getPlacement?.() ?? placement;
+        if (target === "inbox") {
+          await createInboxColor.mutateAsync({ hex });
+        } else {
+          await createColor.mutateAsync({
+            hex,
+            parentFolderPath,
+            placement: insertionPlacement,
+          });
+        }
+        toast.success("Color created");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Unable to create color.",
+        );
+      }
+    },
+    [
+      createColor,
+      createInboxColor,
+      getPlacement,
+      parentFolderPath,
+      placement,
+      target,
+    ],
+  );
+
   const addClipboardAsset = useCallback(
     async (payload: ClipboardAssetPayload) => {
       switch (payload.kind) {
@@ -250,6 +291,10 @@ export function useBoardAssetActions({
           await createLinkFromUrl(payload.url);
           return;
 
+        case "color-hex":
+          await createColorFromHex(payload.hex);
+          return;
+
         case "text-note":
           await createTextNote(payload.content);
           return;
@@ -259,12 +304,13 @@ export function useBoardAssetActions({
           return;
       }
     },
-    [createLinkFromUrl, createTextNote, uploadFiles],
+    [createColorFromHex, createLinkFromUrl, createTextNote, uploadFiles],
   );
 
   return {
     addClipboardAsset,
     createTextNote,
+    createColorFromHex,
     importPexelsPhotos,
     createLinkFromUrl,
     isPending,

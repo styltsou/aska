@@ -1,7 +1,7 @@
 import { AppError, ErrorCode } from "@/lib/errors";
 
 export type AssetNodeIdentifier = {
-  assetType: "image" | "note" | "link";
+  assetType: "image" | "note" | "link" | "color";
   entityId: number;
 };
 
@@ -9,12 +9,12 @@ export type CollectionNodeIdentifier =
   | { nodeType: "folder"; entityId: number }
   | {
       nodeType: "asset";
-      assetType: "image" | "note" | "link";
+      assetType: "image" | "note" | "link" | "color";
       entityId: number;
     };
 
-const collectionNodeIdPattern = /^(folder|image|note|link)-(\d+)$/;
-const assetNodeIdPattern = /^(image|note|link)-(\d+)$/;
+const collectionNodeIdPattern = /^(folder|image|note|link|color)-(\d+)$/;
+const assetNodeIdPattern = /^(image|note|link|color)-(\d+)$/;
 
 /** Parses a public collection-node ID into its persisted target kind and ID. */
 export function parseCollectionNodeId(

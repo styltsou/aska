@@ -9,6 +9,7 @@ import { FolderAssetCard } from "@/components/board/cards/folder-asset-card";
 import { ImageAssetCard } from "@/components/board/cards/image-asset-card";
 import { NoteAssetCard } from "@/components/board/cards/note-asset-card";
 import { LinkAssetCard } from "@/components/board/cards/link-asset-card";
+import { ColorAssetCard } from "@/components/board/cards/color-asset-card";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +82,9 @@ export const CanvasCard = memo(function CanvasCard({
       ) : null}
       {node.type === "link" && asset.type === "link" ? (
         <LinkAssetCard asset={asset} isContextMenuOpen={isContextMenuOpen} />
+      ) : null}
+      {node.type === "color" && asset.type === "color" ? (
+        <ColorAssetCard asset={asset} isContextMenuOpen={isContextMenuOpen} />
       ) : null}
       {node.type === "folder" && asset.type === "folder" ? (
         <FolderAssetCard
@@ -194,6 +198,7 @@ function isPendingCollectionNode(node: CollectionNode): boolean {
     (node.type === "image" && node.uploadStatus !== undefined) ||
     (node.type === "note" && node.id.startsWith("note-optimistic-")) ||
     (node.type === "link" && node.id.startsWith("link-optimistic-")) ||
+    (node.type === "color" && node.id.startsWith("color-optimistic-")) ||
     (node.type === "folder" && node.flattenStatus === "pending")
   );
 }

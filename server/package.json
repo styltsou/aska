@@ -27,6 +27,7 @@
     "@sentry/hono": "^10.69.0",
     "@sentry/node": "^10.69.0",
     "better-auth": "^1.6.23",
+    "color-namer": "^1.4.0",
     "drizzle-orm": "^1.0.0-rc.4",
     "hono": "^4.12.27",
     "jose": "^6.2.3",

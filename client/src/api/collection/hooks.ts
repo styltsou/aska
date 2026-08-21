@@ -16,6 +16,8 @@ import {
   createFolder,
   createImageUpload,
   createNote,
+  createColor,
+  createInboxColor,
   createRemoteImage,
   fetchImageUploadStatus,
   fetchInboxImageUploadStatus,
@@ -44,6 +46,7 @@ import type {
   CreateFolderInput,
   CreateRemoteImageInput,
   CreateNoteInput,
+  CreateColorInput,
   GetNoteResponse,
   FolderChildPreview,
   ImageUploadStatus,
@@ -76,6 +79,10 @@ type CreateFolderMutationInput = CreateFolderInput & {
 };
 
 type CreateNoteMutationInput = CreateNoteInput & {
+  placement?: BoardInsertionPlacement;
+};
+
+type CreateColorMutationInput = CreateColorInput & {
   placement?: BoardInsertionPlacement;
 };
 
@@ -923,6 +930,25 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
   });
 }
 
+export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ placement, ...data }: CreateColorMutationInput) =>
+      createColor(workspaceSlug, collectionSlug, {
+        ...data,
+        position: placement?.position ?? data.position,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["collectionContents", workspaceSlug, collectionSlug],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: collectionQueryKeys.collections(workspaceSlug),
+      });
+    },
+  });
+}
+
 export function useInboxContents(
   workspaceSlug: string,
   types?: readonly ContentTypeFilter[],
@@ -1043,6 +1069,19 @@ export function useCreateInboxNote(workspaceSlug: string) {
           };
         },
       );
+    },
+  });
+}
+
+export function useCreateInboxColor(workspaceSlug: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateColorInput) =>
+      createInboxColor(workspaceSlug, data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: collectionQueryKeys.inbox(workspaceSlug),
+      });
     },
   });
 }

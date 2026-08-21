@@ -16,10 +16,12 @@ export type FolderPreviewRow = {
   assetType: string | null;
   assetId: number | null;
   color: string | null;
+  hex?: string | null;
   content: string | null;
   resourceId?: number | null;
   hostname?: string | null;
   title?: string | null;
+  assetTitle?: string | null;
 };
 
 /** Converts nullable persisted coordinates into the board's optional position. */
@@ -51,6 +53,15 @@ export function toFolderPreview(
       assetId: `link-${row.assetId}`,
       type: "link",
       hostname: row.hostname,
+      title: row.assetTitle ?? row.title ?? null,
+    };
+  }
+
+  if (row.assetType === "color" && row.hex) {
+    return {
+      assetId: `color-${row.assetId}`,
+      type: "color",
+      hex: row.hex,
       title: row.title ?? null,
     };
   }

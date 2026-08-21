@@ -6,12 +6,15 @@ import {
   assets,
   collectionNodes,
   collectionsTable,
+  colorAssets,
   folders,
   noteAssets,
 } from "@/db/schema";
 import type {
+  CollectionColorNode,
   CollectionNoteNode,
   CreateCollectionInput,
+  CreateColorInput,
   CreateFolderInput,
   CreateNoteInput,
   CreatedFolder,
@@ -20,6 +23,7 @@ import type {
 } from "@/dto/collection.dto";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { parseCollectionNodeId } from "@/lib/collection-node-id";
+import { getColorName, normalizeHexColor } from "@/lib/color-names";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import {
   getCollectionBySlug,
@@ -215,6 +219,74 @@ export class CollectionMutationService {
       wordCount,
       readingTimeMinutes,
       createdAt: note.createdAt.toISOString(),
+      updatedAt: note.updatedAt.toISOString(),
+      position: data.position ?? null,
+    };
+  }
+
+  async createColor(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: CreateColorInput,
+  ): Promise<CollectionColorNode> {
+    const collection = await getCollectionBySlug(orgId, collectionSlug);
+    const parentTarget = await resolveTargetInCollection(
+      collection,
+      data.parentFolderPath,
+    );
+    const hex = normalizeHexColor(data.hex);
+    const name = getColorName(hex);
+
+    const color = await db.transaction(async (tx) => {
+      const [insertedAsset] = await tx
+        .insert(assets)
+        .values({
+          organizationId: orgId,
+          type: "color",
+          title: name,
+          createdByUserId: userId,
+          updatedByUserId: userId,
+        })
+        .returning();
+
+      if (!insertedAsset) {
+        throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create color");
+      }
+
+      await tx.insert(colorAssets).values({
+        assetId: insertedAsset.id,
+        hex,
+      });
+
+      await tx.insert(collectionNodes).values({
+        organizationId: orgId,
+        collectionId: collection.id,
+        parentFolderId: parentTarget.parentFolderId,
+        nodeType: "asset",
+        assetId: insertedAsset.id,
+        positionX: data.position?.x,
+        positionY: data.position?.y,
+        depth: parentTarget.pathFolderSlugs.length,
+        pathFolderIds: parentTarget.pathFolderIds,
+        pathFolderSlugs: parentTarget.pathFolderSlugs,
+        pathFolderNames: parentTarget.pathFolderNames,
+      });
+
+      return insertedAsset;
+    });
+
+    if (!color) {
+      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create color");
+    }
+
+    return {
+      id: `color-${color.id}`,
+      type: "color",
+      hex,
+      title: name,
+      isFavorite: false,
+      createdAt: color.createdAt.toISOString(),
       position: data.position ?? null,
     };
   }

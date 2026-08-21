@@ -1,8 +1,10 @@
 import type {
   CollectionContentsResponse,
+  CollectionColorNode,
   ContentTypeFilter,
   CollectionNoteNode,
   CreateCollectionInput,
+  CreateColorInput,
   CreateFolderInput,
   CreateNoteInput,
   CreatedFolder,
@@ -58,6 +60,12 @@ export interface ICollectionService {
     collectionSlug: string,
     data: CreateNoteInput,
   ): Promise<CollectionNoteNode>;
+  createColor(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: CreateColorInput,
+  ): Promise<CollectionColorNode>;
   deleteNode(
     orgId: string,
     collectionSlug: string,
@@ -160,6 +168,15 @@ export class CollectionService implements ICollectionService {
     data: CreateNoteInput,
   ): Promise<CollectionNoteNode> {
     return this.mutations.createNote(orgId, userId, collectionSlug, data);
+  }
+
+  createColor(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: CreateColorInput,
+  ): Promise<CollectionColorNode> {
+    return this.mutations.createColor(orgId, userId, collectionSlug, data);
   }
 
   deleteNode(

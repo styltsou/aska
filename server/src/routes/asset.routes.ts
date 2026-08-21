@@ -1,5 +1,6 @@
 import {
   createInboxNote,
+  createInboxColor,
   getNote,
   cropImage,
   deleteAsset,
@@ -16,6 +17,7 @@ const assetRoutes = factory
   .get("/workspace/:workspaceSlug/assets/:assetId/note", ...getNote)
   .post("/workspace/:workspaceSlug/inbox/seen", ...markInboxSeen)
   .post("/workspace/:workspaceSlug/inbox/notes", ...createInboxNote)
+  .post("/workspace/:workspaceSlug/inbox/colors", ...createInboxColor)
   .patch("/workspace/:workspaceSlug/assets/:assetId/note", ...updateNote)
   .post("/workspace/:workspaceSlug/images/:assetId/crop", ...cropImage)
   .delete("/workspace/:workspaceSlug/assets/:assetId", ...deleteAsset)

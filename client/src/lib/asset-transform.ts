@@ -68,6 +68,17 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
     };
   }
 
+  if (node.type === "color") {
+    return {
+      id: node.id,
+      type: "color",
+      hex: node.hex,
+      title: node.title,
+      isFavorite: node.isFavorite,
+      clientId: node.clientId,
+    };
+  }
+
   return {
     id: node.id,
     type: "note",

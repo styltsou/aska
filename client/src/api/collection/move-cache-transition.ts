@@ -51,6 +51,15 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
     };
   }
 
+  if (node.type === "color") {
+    return {
+      assetId: node.id,
+      type: "color",
+      hex: node.hex,
+      title: node.title,
+    };
+  }
+
   return {
     assetId: node.id,
     type: "note",

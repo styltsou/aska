@@ -12,6 +12,7 @@ import {
 import { db } from "@/db";
 import {
   assets,
+  colorAssets,
   collectionNodes,
   externalResources,
   imageAssets,
@@ -23,11 +24,13 @@ import {
 } from "@/db/schema";
 import type {
   CollectionImageNode,
+  CollectionColorNode,
   CollectionLinkNode,
   CollectionNode,
   CollectionNoteNode,
   ContentTypeFilter,
   CreateNoteInput,
+  CreateColorInput,
   InboxContentsResponse,
   UpdatedNote,
   UpdateNoteInput,
@@ -35,6 +38,7 @@ import type {
 import type { BulkDeleteResult } from "@/services/collection/collection.types";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { parseAssetNodeId } from "@/lib/collection-node-id";
+import { getColorName, normalizeHexColor } from "@/lib/color-names";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import { first } from "@/lib/query";
 import type { IObjectStorageService } from "@/services/object-storage.service";
@@ -78,6 +82,11 @@ export interface IAssetService {
     userId: string,
     data: CreateNoteInput,
   ): Promise<CollectionNoteNode>;
+  createInboxColor(
+    orgId: string,
+    userId: string,
+    data: CreateColorInput,
+  ): Promise<CollectionColorNode>;
   updateNote(
     orgId: string,
     userId: string,
@@ -155,7 +164,7 @@ export class AssetService implements IAssetService {
     types?: ContentTypeFilter[],
   ): Promise<InboxContentsResponse> {
     const assetTypes = types?.filter(
-      (type): type is "image" | "note" | "link" => type !== "folder",
+      (type): type is "image" | "note" | "link" | "color" => type !== "folder",
     );
 
     if (types !== undefined && assetTypes?.length === 0) {
@@ -182,6 +191,7 @@ export class AssetService implements IAssetService {
         imageDominantColors: imageAssets.dominantColors,
         noteContent: noteAssets.markdown,
         noteColor: noteAssets.color,
+        colorHex: colorAssets.hex,
         linkOriginalUrl: linkAssets.originalUrl,
         linkResourceId: externalResources.id,
         linkHostname: externalResources.hostname,
@@ -198,6 +208,7 @@ export class AssetService implements IAssetService {
       .from(assets)
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+      .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
       .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
       .leftJoin(
         externalResources,
@@ -280,6 +291,41 @@ export class AssetService implements IAssetService {
     );
 
     return { unreadCount: Number(unread?.count ?? 0) };
+  }
+
+  async createInboxColor(
+    orgId: string,
+    userId: string,
+    data: CreateColorInput,
+  ): Promise<CollectionColorNode> {
+    const hex = normalizeHexColor(data.hex);
+    const title = getColorName(hex);
+    const color = await db.transaction(async (tx) => {
+      const [asset] = await tx
+        .insert(assets)
+        .values({
+          organizationId: orgId,
+          type: "color",
+          title,
+          lastAddedToInboxAt: new Date(),
+          createdByUserId: userId,
+          updatedByUserId: userId,
+        })
+        .returning();
+      if (!asset)
+        throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create color");
+      await tx.insert(colorAssets).values({ assetId: asset.id, hex });
+      return asset;
+    });
+    return {
+      id: `color-${color.id}`,
+      type: "color",
+      hex,
+      title,
+      isFavorite: false,
+      createdAt: color.createdAt.toISOString(),
+      position: null,
+    };
   }
 
   async markInboxSeen(
@@ -554,7 +600,7 @@ export class AssetService implements IAssetService {
   private async rowsToAssetNodes(
     rows: Array<{
       assetId: number;
-      assetType: "image" | "note" | "link";
+      assetType: "image" | "note" | "link" | "color";
       title: string | null;
       isFavorite: boolean;
       createdAt: Date;
@@ -567,6 +613,7 @@ export class AssetService implements IAssetService {
       imageDominantColors: string[] | null;
       noteContent: string | null;
       noteColor: string | null;
+      colorHex: string | null;
       linkOriginalUrl: string | null;
       linkResourceId: number | null;
       linkHostname: string | null;
@@ -657,6 +704,19 @@ export class AssetService implements IAssetService {
             null,
           ),
         );
+        continue;
+      }
+
+      if (row.assetType === "color" && row.colorHex) {
+        nodes.push({
+          id: `color-${row.assetId}`,
+          type: "color",
+          hex: row.colorHex,
+          title: row.title,
+          isFavorite: row.isFavorite,
+          createdAt: row.createdAt.toISOString(),
+          position: null,
+        } satisfies CollectionColorNode);
         continue;
       }
 

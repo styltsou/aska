@@ -14,6 +14,7 @@ import {
   assets,
   collectionNodes,
   collectionsTable,
+  colorAssets,
   externalResources,
   folders,
   imageAssets,
@@ -145,7 +146,9 @@ export class CollectionQueryService {
         collectionId: collectionNodes.collectionId,
         assetId: assets.id,
         assetType: assets.type,
+        assetTitle: assets.title,
         noteColor: noteAssets.color,
+        colorHex: colorAssets.hex,
         noteContent: noteAssets.markdown,
         linkResourceId: externalResources.id,
         linkHostname: externalResources.hostname,
@@ -154,6 +157,7 @@ export class CollectionQueryService {
       .from(collectionNodes)
       .innerJoin(assets, eq(assets.id, collectionNodes.assetId))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+      .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
       .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
       .leftJoin(
         externalResources,
@@ -210,6 +214,13 @@ export class CollectionQueryService {
           hostname: row.linkHostname,
           title: row.linkTitle,
         };
+      } else if (row.assetType === "color" && row.colorHex) {
+        preview = {
+          assetId: `color-${row.assetId}`,
+          type: "color",
+          hex: row.colorHex,
+          title: row.assetTitle,
+        };
       }
 
       if (!preview) continue;
@@ -243,7 +254,7 @@ export class CollectionQueryService {
     const collection = await getCollectionBySlug(orgId, collectionSlug);
     const target = await resolveTargetInCollection(collection, folderPath);
     const assetTypes = types?.filter(
-      (type): type is "image" | "note" | "link" => type !== "folder",
+      (type): type is "image" | "note" | "link" | "color" => type !== "folder",
     );
     const typeCondition =
       types === undefined
@@ -270,6 +281,7 @@ export class CollectionQueryService {
         assetType: assets.type,
         title: assets.title,
         isFavorite: assets.isFavorite,
+        assetUpdatedAt: assets.updatedAt,
         imageAlt: imageAssets.alt,
         sourceLabel: imageAssets.sourceLabel,
         sourceUrl: imageAssets.sourceUrl,
@@ -279,6 +291,7 @@ export class CollectionQueryService {
         createdAt: collectionNodes.createdAt,
         noteContent: noteAssets.markdown,
         noteColor: noteAssets.color,
+        colorHex: colorAssets.hex,
         linkOriginalUrl: linkAssets.originalUrl,
         linkResourceId: externalResources.id,
         linkHostname: externalResources.hostname,
@@ -299,6 +312,7 @@ export class CollectionQueryService {
       .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+      .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
       .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
       .leftJoin(
         externalResources,
@@ -369,7 +383,9 @@ export class CollectionQueryService {
           folderId: collectionNodes.parentFolderId,
           assetType: assets.type,
           assetId: assets.id,
+          assetTitle: assets.title,
           color: noteAssets.color,
+          hex: colorAssets.hex,
           content: noteAssets.markdown,
           resourceId: externalResources.id,
           hostname: externalResources.hostname,
@@ -378,6 +394,7 @@ export class CollectionQueryService {
         .from(collectionNodes)
         .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
         .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+        .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
         .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
         .leftJoin(
           externalResources,
@@ -485,6 +502,18 @@ export class CollectionQueryService {
         };
       }
 
+      if (child.assetType === "color" && child.assetId && child.colorHex) {
+        return {
+          id: `color-${child.assetId}`,
+          type: "color" as const,
+          hex: child.colorHex,
+          title: child.title,
+          isFavorite: child.isFavorite ?? false,
+          createdAt: child.createdAt.toISOString(),
+          position,
+        };
+      }
+
       if (
         child.assetType === "link" &&
         child.assetId &&
@@ -528,6 +557,8 @@ export class CollectionQueryService {
         wordCount,
         readingTimeMinutes,
         createdAt: child.createdAt.toISOString(),
+        updatedAt:
+          child.assetUpdatedAt?.toISOString() ?? child.createdAt.toISOString(),
         position,
       };
     });

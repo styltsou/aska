@@ -3,6 +3,7 @@ import {
   CropInputSchema,
   ContentTypeQuerySchema,
   CreateNoteSchema,
+  CreateColorSchema,
   ImageCropPathParamSchema,
   UpdateNoteSchema,
   WorkspaceParamSchema,
@@ -72,6 +73,27 @@ export const createInboxNote = factory.createHandlers(
     const note = await assetService.createInboxNote(workspace.id, userId, data);
 
     return c.json(success({ note }), 201);
+  },
+);
+
+export const createInboxColor = factory.createHandlers(
+  authMiddleware,
+  validate.param(WorkspaceParamSchema),
+  validate.body(CreateColorSchema),
+  async (c) => {
+    const { workspaceSlug } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const color = await assetService.createInboxColor(
+      workspace.id,
+      userId,
+      data,
+    );
+    return c.json(success({ color }), 201);
   },
 );
 

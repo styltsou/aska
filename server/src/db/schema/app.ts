@@ -18,7 +18,12 @@ import { sql } from "drizzle-orm";
 
 import { organization, user } from "./auth";
 
-export const assetTypeEnum = pgEnum("asset_type", ["image", "note", "link"]);
+export const assetTypeEnum = pgEnum("asset_type", [
+  "image",
+  "note",
+  "link",
+  "color",
+]);
 export const collectionNodeTypeEnum = pgEnum("collection_node_type", [
   "asset",
   "folder",
@@ -584,6 +589,27 @@ export const noteAssets = pgTable("note_assets", {
   markdown: text().notNull(),
   color: varchar({ length: 32 }),
 });
+
+/**
+ * A color swatch asset. `hex` is a normalized lowercase hex value: always
+ * #rrggbb when opaque, #rrggbbaa only when transparency is present, so the
+ * RGB identity is stable for future search/palette features.
+ */
+export const colorAssets = pgTable(
+  "color_assets",
+  {
+    assetId: integer("asset_id")
+      .primaryKey()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    hex: varchar({ length: 9 }).notNull(),
+  },
+  (table) => [
+    check(
+      "color_assets_hex_format_chk",
+      sql`${table.hex} ~ '^#[0-9a-f]{6}([0-9a-f]{2})?$'`,
+    ),
+  ],
+);
 
 export const folders = pgTable(
   "folders",

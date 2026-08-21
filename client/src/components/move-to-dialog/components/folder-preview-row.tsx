@@ -42,6 +42,13 @@ export function FolderPreviewRow({
           >
             <Globe2Icon className="size-3.5 text-muted-foreground" />
           </div>
+        ) : preview.type === "color" ? (
+          <div
+            key={preview.assetId}
+            className="size-8 shrink-0 rounded-[3px] border"
+            style={{ backgroundColor: preview.hex }}
+            title={preview.title ?? preview.hex}
+          />
         ) : (
           <div
             key={preview.assetId}

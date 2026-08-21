@@ -8,7 +8,7 @@ const EMPTY_FOLDER_POSITION = { x: 48, y: 48 };
 
 export type MovePlacementNode = {
   nodeType: "asset" | "folder";
-  assetType: "image" | "note" | "link" | null;
+  assetType: "image" | "note" | "link" | "color" | null;
   imageWidth: number | null;
   imageHeight: number | null;
   positionX: number | null;

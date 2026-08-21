@@ -1,6 +1,7 @@
 import {
   bulkDelete,
   createCollection,
+  createColor,
   createFolder,
   createNote,
   deleteCollection,
@@ -27,6 +28,10 @@ const collectionRoutes = factory
   .post(
     "/workspace/:workspaceSlug/collections/:collectionSlug/notes",
     ...createNote,
+  )
+  .post(
+    "/workspace/:workspaceSlug/collections/:collectionSlug/colors",
+    ...createColor,
   )
   .delete(
     "/workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId",

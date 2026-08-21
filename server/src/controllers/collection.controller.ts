@@ -6,6 +6,7 @@ import {
   FolderNodePathParamSchema,
   CollectionPathParamSchema,
   CreateCollectionSchema,
+  CreateColorSchema,
   CreateFolderSchema,
   CreateNoteSchema,
   CollectionContentsQuerySchema,
@@ -152,6 +153,30 @@ export const createNote = factory.createHandlers(
     );
 
     return c.json(success({ note }), 201);
+  },
+);
+
+export const createColor = factory.createHandlers(
+  authMiddleware,
+  validate.param(CollectionPathParamSchema),
+  validate.body(CreateColorSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const color = await collectionService.createColor(
+      workspace.id,
+      userId,
+      collectionSlug,
+      data,
+    );
+
+    return c.json(success({ color }), 201);
   },
 );
 

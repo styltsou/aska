@@ -122,6 +122,20 @@ export function CollectionCard({
                           </div>
                         );
                       }
+                      if (preview.type === "color") {
+                        return (
+                          <div
+                            className="absolute aspect-square rounded-xl shadow-md ring-1 ring-sidebar-foreground/5"
+                            style={{
+                              ...PREVIEW_POSITION,
+                              zIndex: 0,
+                              backgroundColor: preview.hex,
+                              transform: `rotate(-3deg) scale(${hovered ? 1.02 : 1})`,
+                              transition: PREVIEW_TRANSITION,
+                            }}
+                          />
+                        );
+                      }
                       return (
                         <div
                           className={cn(
@@ -203,6 +217,24 @@ export function CollectionCard({
                               {preview.hostname}
                             </span>
                           </div>
+                        );
+                      }
+                      if (preview.type === "color") {
+                        return (
+                          <div
+                            key={preview.assetId}
+                            className="absolute aspect-square rounded-xl shadow-md ring-1 ring-sidebar-foreground/5"
+                            style={{
+                              ...PREVIEW_POSITION,
+                              zIndex: z,
+                              backgroundColor: preview.hex,
+                              transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
+                              transition: PREVIEW_TRANSITION,
+                              transitionDelay: hovered
+                                ? `${(count - 1 - z) * 10}ms`
+                                : `${z * 10}ms`,
+                            }}
+                          />
                         );
                       }
                       return (

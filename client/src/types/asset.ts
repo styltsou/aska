@@ -63,15 +63,25 @@ export interface LinkAsset {
   isFavorite?: boolean;
 }
 
+export interface ColorAsset {
+  id: string;
+  type: "color";
+  hex: string;
+  title?: string | null;
+  isFavorite?: boolean;
+  clientId?: string;
+}
+
 export interface FolderAssetPreview {
   assetId: string;
-  type: "image" | "note" | "link";
+  type: "image" | "note" | "link" | "color";
   url?: string;
   blurDataURL?: string | null;
   color?: string;
   snippet?: string;
   hostname?: string;
   title?: string | null;
+  hex?: string;
 }
 
 export interface FolderAsset {
@@ -84,4 +94,9 @@ export interface FolderAsset {
   isFavorite?: boolean;
 }
 
-export type Asset = ImageAsset | NoteAsset | LinkAsset | FolderAsset;
+export type Asset =
+  | ImageAsset
+  | NoteAsset
+  | LinkAsset
+  | ColorAsset
+  | FolderAsset;

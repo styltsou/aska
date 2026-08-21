@@ -5,6 +5,7 @@ import { ImageAssetCard } from "@/components/board/cards/image-asset-card";
 import { NoteAssetCard } from "@/components/board/cards/note-asset-card";
 import { FolderAssetCard } from "@/components/board/cards/folder-asset-card";
 import { LinkAssetCard } from "@/components/board/cards/link-asset-card";
+import { ColorAssetCard } from "@/components/board/cards/color-asset-card";
 import { AssetContextMenu } from "./asset-context-menu";
 import {
   hasSelectionModifier,
@@ -102,6 +103,12 @@ export const AssetCard = memo(function AssetCard({
             )}
             {asset.type === "link" && (
               <LinkAssetCard
+                asset={asset}
+                isContextMenuOpen={isContextMenuOpen}
+              />
+            )}
+            {asset.type === "color" && (
+              <ColorAssetCard
                 asset={asset}
                 isContextMenuOpen={isContextMenuOpen}
               />

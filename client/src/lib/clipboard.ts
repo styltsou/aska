@@ -11,6 +11,10 @@ export type ClipboardAssetPayload =
       url: string;
     }
   | {
+      kind: "color-hex";
+      hex: string;
+    }
+  | {
       kind: "text-note";
       content: string;
     }
@@ -111,6 +115,15 @@ export async function readClipboardAssetPayload(): Promise<ClipboardAssetPayload
       kind: "link-url",
       url: linkUrl,
     };
+  }
+
+  if (/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(trimmedText)) {
+    const raw = trimmedText.slice(1).toLowerCase();
+    const expanded =
+      raw.length === 3 || raw.length === 4
+        ? [...raw].map((digit) => digit + digit).join("")
+        : raw;
+    return { kind: "color-hex", hex: `#${expanded}` };
   }
 
   return {
