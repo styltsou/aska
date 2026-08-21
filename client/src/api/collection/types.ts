@@ -1,16 +1,17 @@
 export type FolderChildPreview = {
   assetId: string;
-  type: "image" | "note" | "link";
+  type: "image" | "note" | "link" | "color";
   url?: string;
   blurDataURL?: string | null;
   color?: string;
   snippet?: string;
   hostname?: string;
   title?: string | null;
+  hex?: string;
 };
 
 export type BoardPosition = { x: number; y: number };
-export type ContentTypeFilter = "image" | "note" | "link" | "folder";
+export type ContentTypeFilter = "image" | "note" | "link" | "color" | "folder";
 
 export type BoardVisibleBounds = {
   left: number;
@@ -169,7 +170,7 @@ export type CollectionNoteNode = {
   wordCount: number;
   readingTimeMinutes: number;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   clientId?: string;
   position: BoardPosition | null;
 };
@@ -223,6 +224,25 @@ export type CreateLinkResponse = { link: CollectionLinkNode };
 export type CreateNoteResponse = {
   note: CollectionNoteNode;
 };
+
+export type CreateColorInput = {
+  hex: string;
+  parentFolderPath?: string;
+  position?: BoardPosition;
+};
+
+export type CollectionColorNode = {
+  id: string;
+  type: "color";
+  hex: string;
+  title: string | null;
+  isFavorite: boolean;
+  createdAt: string;
+  clientId?: string;
+  position: BoardPosition | null;
+};
+
+export type CreateColorResponse = { color: CollectionColorNode };
 
 export type CreateImageUploadInput = {
   fileName: string;
@@ -355,7 +375,8 @@ export type CollectionNode =
   | CollectionFolderNode
   | CollectionImageNode
   | CollectionNoteNode
-  | CollectionLinkNode;
+  | CollectionLinkNode
+  | CollectionColorNode;
 
 export type Breadcrumb = {
   id: number;

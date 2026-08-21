@@ -18,10 +18,11 @@ export type LightCollection = z.infer<typeof LightCollectionSchema>;
 
 export const FolderChildPreviewSchema = z.object({
   assetId: z.string(),
-  type: z.enum(["image", "note", "link"]),
+  type: z.enum(["image", "note", "link", "color"]),
   url: z.string().optional(),
   blurDataURL: z.string().nullable().optional(),
   color: z.string().optional(),
+  hex: z.string().optional(),
   snippet: z.string().optional(),
   hostname: z.string().optional(),
   title: z.string().nullable().optional(),
@@ -69,6 +70,21 @@ export const CreateNoteSchema = z.object({
 
 export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
 
+const HexColorSchema = z
+  .string()
+  .regex(
+    /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i,
+    "Must be a hex color like #rrggbb or #rrggbbaa",
+  );
+
+export const CreateColorSchema = z.object({
+  hex: HexColorSchema,
+  parentFolderPath: z.string().optional(),
+  position: BoardPositionSchema.optional(),
+});
+
+export type CreateColorInput = z.infer<typeof CreateColorSchema>;
+
 export const UpdateNoteSchema = z.object({
   content: z.string().min(1).max(10_000),
 });
@@ -83,6 +99,7 @@ export type UpdatedNote = {
   isFavorite: boolean;
   wordCount: number;
   readingTimeMinutes: number;
+  createdAt?: string;
   updatedAt: string;
 };
 
@@ -144,6 +161,7 @@ export const CollectionNoteNodeSchema = z.object({
   wordCount: z.number(),
   readingTimeMinutes: z.number(),
   createdAt: z.string(),
+  updatedAt: z.string().optional(),
   position: BoardPositionSchema.nullable(),
 });
 
@@ -189,16 +207,28 @@ export const CollectionLinkNodeSchema = z.object({
   position: BoardPositionSchema.nullable(),
 });
 
+export const CollectionColorNodeSchema = z.object({
+  id: z.string(),
+  type: z.literal("color"),
+  hex: z.string(),
+  title: z.string().nullable(),
+  isFavorite: z.boolean(),
+  createdAt: z.string(),
+  position: BoardPositionSchema.nullable(),
+});
+
 export type CollectionImageNode = z.infer<typeof CollectionImageNodeSchema>;
 
 export type CollectionNoteNode = z.infer<typeof CollectionNoteNodeSchema>;
 export type CollectionLinkNode = z.infer<typeof CollectionLinkNodeSchema>;
+export type CollectionColorNode = z.infer<typeof CollectionColorNodeSchema>;
 
 export const CollectionNodeSchema = z.discriminatedUnion("type", [
   CollectionFolderNodeSchema,
   CollectionImageNodeSchema,
   CollectionNoteNodeSchema,
   CollectionLinkNodeSchema,
+  CollectionColorNodeSchema,
 ]);
 
 export type CollectionNode = z.infer<typeof CollectionNodeSchema>;
@@ -242,10 +272,10 @@ export const InboxContentsResponseSchema = CollectionContentsResponseSchema;
 
 export type InboxContentsResponse = z.infer<typeof InboxContentsResponseSchema>;
 
-const AssetNodeIdSchema = z.string().regex(/^(image|note|link)-\d+$/);
+const AssetNodeIdSchema = z.string().regex(/^(image|note|link|color)-\d+$/);
 const CollectionNodeIdSchema = z
   .string()
-  .regex(/^(folder|image|note|link)-\d+$/);
+  .regex(/^(folder|image|note|link|color)-\d+$/);
 const FolderNodeIdSchema = z.string().regex(/^folder-\d+$/);
 
 export const AssetPathParamSchema = z.object({
@@ -337,6 +367,7 @@ export const ContentTypeFilterSchema = z.enum([
   "image",
   "note",
   "link",
+  "color",
   "folder",
 ]);
 export type ContentTypeFilter = z.infer<typeof ContentTypeFilterSchema>;
@@ -346,7 +377,7 @@ const ContentTypesQuerySchema = z.preprocess(
     typeof value === "string" && value.length > 0
       ? value.split(",")
       : undefined,
-  z.array(ContentTypeFilterSchema).min(1).max(4).optional(),
+  z.array(ContentTypeFilterSchema).min(1).max(5).optional(),
 );
 
 export const ContentTypeQuerySchema = z.object({
