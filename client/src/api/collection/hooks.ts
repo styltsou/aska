@@ -38,6 +38,7 @@ import type {
   BoardInsertionPlacement,
   CollectionContentsResponse,
   CollectionImageNode,
+  CollectionNoteNode,
   CollectionNode,
   ContentTypeFilter,
   CollectionsData,
@@ -128,11 +129,19 @@ export function inboxContentsQueryOptions(
   };
 }
 
-export function useNote(workspaceSlug: string, assetId: string | undefined) {
+export function useNote(
+  workspaceSlug: string,
+  assetId: string | undefined,
+  initialNote?: CollectionNoteNode,
+) {
   return useQuery({
     queryKey: collectionQueryKeys.note(workspaceSlug, assetId ?? ""),
     queryFn: () => fetchNote(workspaceSlug, assetId!),
     enabled: Boolean(workspaceSlug && assetId),
+    // A board click can open immediately from its already-loaded node, while
+    // the direct endpoint remains the canonical source and refreshes it.
+    initialData: initialNote ? { note: initialNote } : undefined,
+    initialDataUpdatedAt: initialNote ? 0 : undefined,
     staleTime: COLLECTION_CONTENTS_STALE_TIME,
   });
 }

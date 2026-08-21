@@ -23,6 +23,7 @@ import {
   useUpdateNote,
 } from "@/api/collection";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
+import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
 import {
   NoteWorkspace,
   NoteWorkspaceContent,
@@ -56,11 +57,19 @@ type ExtractionFeedback = {
 
 export function NoteDetailDrawer({
   note,
+  open = note !== undefined,
+  isLoading = false,
+  loadError,
+  onRetry,
   workspaceSlug,
   noteExtractionTarget,
   onClose,
 }: {
   note: NoteAsset | undefined;
+  open?: boolean;
+  isLoading?: boolean;
+  loadError?: unknown;
+  onRetry?: () => void;
   workspaceSlug: string;
   noteExtractionTarget?: {
     target?: "collection" | "inbox";
@@ -336,10 +345,7 @@ export function NoteDetailDrawer({
   }
 
   return (
-    <NoteWorkspace
-      open={note !== undefined}
-      onOpenChange={(open) => !open && requestClose()}
-    >
+    <NoteWorkspace open={open} onOpenChange={(open) => !open && requestClose()}>
       <NoteWorkspaceContent>
         <NoteWorkspaceTitle>Note</NoteWorkspaceTitle>
         <Button
@@ -469,7 +475,25 @@ export function NoteDetailDrawer({
           className="note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto"
         >
           <div className="note-workspace-column">
-            {note ? (
+            {isLoading ? (
+              <div className="py-14 text-sm text-muted-foreground">
+                Opening note…
+              </div>
+            ) : loadError ? (
+              <div className="space-y-3 py-14 text-sm">
+                <div>
+                  <p className="font-medium">Couldn’t load this note</p>
+                  <p className="mt-1 text-muted-foreground">
+                    Check your connection and try again.
+                  </p>
+                </div>
+                {onRetry ? (
+                  <Button size="sm" onClick={onRetry}>
+                    Try again
+                  </Button>
+                ) : null}
+              </div>
+            ) : note ? (
               <Suspense
                 fallback={
                   <div className="py-14 text-sm text-muted-foreground">
@@ -477,36 +501,42 @@ export function NoteDetailDrawer({
                   </div>
                 }
               >
-                <NoteRichText
-                  key={note.id}
-                  ref={richTextRef}
-                  markdown={frontMatter.body}
-                  editable
-                  autoFocus={false}
-                  scrollContainerRef={noteContentRef}
-                  onExtractSelection={
-                    noteExtractionTarget ? extractSelection : undefined
-                  }
-                  onHighlightSelection={
-                    noteExtractionTarget
-                      ? (content) =>
-                          persist(
-                            composeFrontMatter(
-                              parseFrontMatter(draftRef.current),
-                              content,
-                            ),
-                          )
-                      : undefined
-                  }
-                  isHighlighting={saveState === "saving"}
-                  onChange={handleDraftChange}
-                  onSaveShortcut={() => {
-                    const content = getSaveableNoteContent(draftRef.current);
-                    if (content) persist(content);
-                  }}
-                />
+                <NoteEditorErrorBoundary noteId={note.id}>
+                  <NoteRichText
+                    key={note.id}
+                    ref={richTextRef}
+                    markdown={frontMatter.body}
+                    editable
+                    autoFocus={false}
+                    scrollContainerRef={noteContentRef}
+                    onExtractSelection={
+                      noteExtractionTarget ? extractSelection : undefined
+                    }
+                    onHighlightSelection={
+                      noteExtractionTarget
+                        ? (content) =>
+                            persist(
+                              composeFrontMatter(
+                                parseFrontMatter(draftRef.current),
+                                content,
+                              ),
+                            )
+                        : undefined
+                    }
+                    isHighlighting={saveState === "saving"}
+                    onChange={handleDraftChange}
+                    onSaveShortcut={() => {
+                      const content = getSaveableNoteContent(draftRef.current);
+                      if (content) persist(content);
+                    }}
+                  />
+                </NoteEditorErrorBoundary>
               </Suspense>
-            ) : null}
+            ) : (
+              <div className="py-14 text-sm text-muted-foreground">
+                This note is no longer available.
+              </div>
+            )}
           </div>
         </div>
         {saveState === "error" ? (

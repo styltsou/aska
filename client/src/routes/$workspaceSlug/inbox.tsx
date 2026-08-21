@@ -1,14 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { startTransition, useEffect } from "react";
 
-import { useInboxContents, useMarkInboxSeen, useNote } from "@/api/collection";
+import {
+  type CollectionNoteNode,
+  useInboxContents,
+  useMarkInboxSeen,
+  useNote,
+} from "@/api/collection";
 import {
   type ColorSearchResult,
   useColorImageSearch,
 } from "@/api/color-search";
 import { AssetBoard } from "@/components/board/asset-board";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
-import { useImmediateNoteDrawer } from "@/components/board/use-immediate-note-drawer";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { BoardContextMenu, BoardUploadZone } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
@@ -68,29 +72,21 @@ function InboxPage() {
   const displayAssets = hasResolvedColorSearch
     ? colorSearch.data.results.map(colorSearchResultToImageAsset)
     : assets;
-  const selectedNote = selectedNoteId
-    ? (displayAssets.find(
-        (a): a is NoteAsset => a.type === "note" && a.id === selectedNoteId,
+  const selectedNoteNode = selectedNoteId
+    ? (data?.nodes.find(
+        (node): node is CollectionNoteNode =>
+          node.type === "note" && node.id === selectedNoteId,
       ) ?? undefined)
     : undefined;
-  const deepLinkedNote = useNote(
-    workspaceSlug,
-    selectedNoteId && !selectedNote ? selectedNoteId : undefined,
-  );
-  const resolvedSelectedNote =
-    selectedNote ??
-    (deepLinkedNote.data
-      ? collectionNodeToAsset(deepLinkedNote.data.note)
-      : undefined);
+  const noteQuery = useNote(workspaceSlug, selectedNoteId, selectedNoteNode);
+  const drawerNote = noteQuery.data
+    ? collectionNodeToAsset(noteQuery.data.note)
+    : undefined;
   const selectedImage = selectedImageId
     ? (displayAssets.find(
         (a): a is ImageAsset => a.type === "image" && a.id === selectedImageId,
       ) ?? undefined)
     : undefined;
-  const { drawerNote, openDrawer, closeDrawer } = useImmediateNoteDrawer(
-    resolvedSelectedNote?.type === "note" ? resolvedSelectedNote : undefined,
-    selectedNoteId,
-  );
   const { viewerImage, openViewer, closeViewer } = useImmediateImageViewer(
     selectedImage,
     selectedImageId,
@@ -109,12 +105,10 @@ function InboxPage() {
   }
 
   const handleOpenNote = (note: NoteAsset, _mode: "read" | "edit" = "read") => {
-    openDrawer(note);
     void navigate({ search: (prev) => ({ ...prev, note: note.id }) });
   };
 
   const handleCloseNote = () => {
-    closeDrawer();
     void navigate({ search: (prev) => ({ ...prev, note: undefined }) });
   };
 
@@ -163,7 +157,11 @@ function InboxPage() {
         />
       </BoardUploadZone>
       <NoteDetailDrawer
-        note={drawerNote}
+        note={drawerNote?.type === "note" ? drawerNote : undefined}
+        open={selectedNoteId !== undefined}
+        isLoading={noteQuery.isPending && !noteQuery.data}
+        loadError={noteQuery.error}
+        onRetry={() => void noteQuery.refetch()}
         workspaceSlug={workspaceSlug}
         noteExtractionTarget={{ target: "inbox" }}
         onClose={handleCloseNote}

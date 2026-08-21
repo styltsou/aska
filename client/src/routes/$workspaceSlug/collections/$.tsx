@@ -16,11 +16,10 @@ import {
 } from "@/api/collection";
 import { type ColorSearchScope, useColorImageSearch } from "@/api/color-search";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
-import { useImmediateNoteDrawer } from "@/components/board/use-immediate-note-drawer";
 import { BoardContextMenu, BoardUploadZone } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
-import type { ImageAsset, NoteAsset } from "@/types/asset";
+import type { ImageAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
 import { useImmediateImageViewer } from "@/components/board/use-immediate-image-viewer";
 import {
@@ -192,29 +191,21 @@ function CollectionPage() {
   const boardView = useSessionStore(
     (state) => state.collectionViews[collectionViewScope] ?? "canvas",
   );
-  const selectedNote = selectedNoteId
-    ? (assets.find(
-        (a): a is NoteAsset => a.type === "note" && a.id === selectedNoteId,
+  const selectedNoteNode = selectedNoteId
+    ? (nodes.find(
+        (node): node is CollectionNoteNode =>
+          node.type === "note" && node.id === selectedNoteId,
       ) ?? undefined)
     : undefined;
-  const deepLinkedNote = useNote(
-    workspaceSlug,
-    selectedNoteId && !selectedNote ? selectedNoteId : undefined,
-  );
-  const resolvedSelectedNote =
-    selectedNote ??
-    (deepLinkedNote.data
-      ? collectionNodeToAsset(deepLinkedNote.data.note)
-      : undefined);
+  const noteQuery = useNote(workspaceSlug, selectedNoteId, selectedNoteNode);
+  const drawerNote = noteQuery.data
+    ? collectionNodeToAsset(noteQuery.data.note)
+    : undefined;
   const selectedImage = selectedImageId
     ? (assets.find(
         (a): a is ImageAsset => a.type === "image" && a.id === selectedImageId,
       ) ?? undefined)
     : undefined;
-  const { drawerNote, openDrawer, closeDrawer } = useImmediateNoteDrawer(
-    resolvedSelectedNote?.type === "note" ? resolvedSelectedNote : undefined,
-    selectedNoteId,
-  );
   const { viewerImage, openViewer, closeViewer } = useImmediateImageViewer(
     selectedImage,
     selectedImageId,
@@ -261,15 +252,10 @@ function CollectionPage() {
     note: CollectionNoteNode,
     _mode: "read" | "edit" = "read",
   ) => {
-    const asset = collectionNodeToAsset(note);
-    if (asset.type === "note") {
-      openDrawer(asset);
-    }
     void navigate({ search: (prev) => ({ ...prev, note: note.id }) });
   };
 
   const handleCloseNote = () => {
-    closeDrawer();
     void navigate({ search: (prev) => ({ ...prev, note: undefined }) });
   };
 
@@ -401,7 +387,11 @@ function CollectionPage() {
         </BoardUploadZone>
       </BoardContextMenu>
       <NoteDetailDrawer
-        note={drawerNote}
+        note={drawerNote?.type === "note" ? drawerNote : undefined}
+        open={selectedNoteId !== undefined}
+        isLoading={noteQuery.isPending && !noteQuery.data}
+        loadError={noteQuery.error}
+        onRetry={() => void noteQuery.refetch()}
         workspaceSlug={workspaceSlug}
         noteExtractionTarget={{
           collectionSlug,
