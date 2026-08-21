@@ -7,6 +7,7 @@ export interface ImageAsset {
   originalUrl?: string;
   originalWidth?: number;
   originalHeight?: number;
+  contentType?: string;
   width: number;
   height: number;
   alt?: string;

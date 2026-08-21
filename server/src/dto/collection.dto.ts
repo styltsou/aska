@@ -118,6 +118,7 @@ export const CollectionImageNodeSchema = z.object({
   originalUrl: z.string().optional(),
   originalWidth: z.number().optional(),
   originalHeight: z.number().optional(),
+  contentType: z.string().optional(),
   width: z.number(),
   height: z.number(),
   title: z.string().nullable(),

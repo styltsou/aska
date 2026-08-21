@@ -16,13 +16,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 import {
+  ArrowLeftIcon,
   CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
   ExternalLinkIcon,
+  PencilIcon,
   PipetteIcon,
-  XIcon,
 } from "lucide-react";
 import type { ImageAsset } from "@/types/asset";
 import {
@@ -60,7 +64,17 @@ function clamp(value: number, min: number, max: number) {
 
 const FLOATING_ISLAND_SURFACE_CLASS = cn(
   "relative z-10 rounded-md",
+  "border border-border bg-background shadow-none",
+);
+
+const VIEWER_BUTTON_GROUP_SURFACE_CLASS = cn(
+  "relative z-10 rounded-md",
   GLASS_SURFACE_CLASS,
+);
+
+const VIEWER_CONTROL_FRAME_CLASS = cn(
+  "relative rounded-lg p-1",
+  GLASS_FRAME_CLASS,
 );
 
 const COLOR_PICKER_SURFACE_CLASS = cn(
@@ -808,13 +822,17 @@ function ProgressiveViewerImage({
 
 export function ImageAssetViewer({
   asset: selectedAsset,
+  assets = [],
   open,
   onOpenChange,
+  onAssetChange,
   workspaceSlug,
 }: {
   asset?: ImageAsset;
+  assets?: ImageAsset[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAssetChange?: (asset: ImageAsset) => void;
   workspaceSlug: string;
 }) {
   const retainedAssetRef = useRef(selectedAsset);
@@ -829,6 +847,16 @@ export function ImageAssetViewer({
 
   const asset = editedAsset ?? selectedAsset ?? retainedAssetRef.current;
   const title = asset?.title || asset?.sourceLabel || "Image preview";
+  const currentAssetIndex = asset
+    ? assets.findIndex((candidate) => candidate.id === asset.id)
+    : -1;
+  const hasImageNavigation = currentAssetIndex >= 0 && assets.length > 1;
+  const previousAsset = hasImageNavigation
+    ? assets[currentAssetIndex - 1]
+    : undefined;
+  const nextAsset = hasImageNavigation
+    ? assets[currentAssetIndex + 1]
+    : undefined;
 
   const originalAspect = asset
     ? (asset.originalWidth ?? asset.width) /
@@ -1333,173 +1361,216 @@ export function ImageAssetViewer({
             Larger preview and details for the selected image asset.
           </DialogDescription>
 
-          <div
-            className={cn(
-              "pointer-events-none absolute inset-x-3 top-3 z-30 flex justify-end sm:inset-x-4 sm:top-4",
-            )}
-          >
+          <div className="pointer-events-none absolute top-5 left-5 z-30 flex items-center gap-1">
             <div
               className={cn(
-                "pointer-events-auto flex min-w-0 items-center gap-1 [&_[data-slot=button]]:duration-75",
-                !cropMode && asset?.sourceUrl ? "lg:w-80" : "ml-auto",
+                "pointer-events-auto flex items-center gap-1",
+                VIEWER_CONTROL_FRAME_CLASS,
               )}
             >
-              {!cropMode && asset?.sourceUrl ? (
-                <a
-                  href={asset.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={asset.sourceUrl}
-                  className="hidden min-w-0 lg:block lg:flex-1"
-                >
-                  <div
-                    className={cn(
-                      FLOATING_ISLAND_SURFACE_CLASS,
-                      "flex h-[34px] min-w-0 items-center gap-1.5 px-2.5 text-sm font-medium text-primary transition-colors duration-75 hover:bg-muted hover:text-primary",
-                    )}
-                  >
-                    <ExternalLinkIcon className="size-4 shrink-0" />
-                    <span className="truncate">{sourceLabel}</span>
-                  </div>
-                </a>
-              ) : null}
-
-              <div className={FLOATING_ISLAND_SURFACE_CLASS}>
-                <ButtonGroup>
-                  {cropMode ? (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCancelCrop}
-                        disabled={isSavingCrop}
-                      >
-                        Discard
-                      </Button>
-                      <ButtonGroupSeparator className="bg-border/70" />
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={handleApplyCrop}
-                        disabled={isSavingCrop}
-                      >
-                        <CheckIcon className="size-3.5" />
-                        {isSavingCrop ? "Saving…" : "Apply crop"}
-                      </Button>
-                    </>
-                  ) : asset ? (
-                    <>
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={handleCopyImage}
-                            />
-                          }
-                        >
-                          {hasCopiedImage ? <CheckIcon /> : <CopyIcon />}
-                          <span className="sr-only">
-                            {hasCopiedImage ? "Copied image" : "Copy image"}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {hasCopiedImage ? "Copied image" : "Copy image"}
-                        </TooltipContent>
-                      </Tooltip>
-                      <ButtonGroupSeparator className="bg-border/70" />
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={handleDownload}
-                            />
-                          }
-                        >
-                          <DownloadIcon />
-                          <span className="sr-only">Download</span>
-                        </TooltipTrigger>
-                        <TooltipContent>Download</TooltipContent>
-                      </Tooltip>
-                      <ButtonGroupSeparator className="bg-border/70" />
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={handlePickColor}
-                              className={cn(
-                                "transition-all duration-100 hover:bg-foreground/5",
-                                isEyeDropping && "bg-foreground/8",
-                              )}
-                              aria-pressed={isEyeDropping}
-                            />
-                          }
-                        >
-                          {hasCopiedColor ? <CheckIcon /> : <PipetteIcon />}
-                          <span className="sr-only">
-                            {isEyeDropping
-                              ? "Click the image to copy a color. Press Escape to cancel."
-                              : hasCopiedColor
-                                ? "Copied color"
-                                : "Pick color"}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isEyeDropping
-                            ? "Click the image to copy · Escape to cancel"
-                            : hasCopiedColor
-                              ? "Copied color"
-                              : "Pick color"}
-                        </TooltipContent>
-                      </Tooltip>
-                      <ButtonGroupSeparator className="bg-border/70" />
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="default"
-                              onClick={handleStartCrop}
-                            />
-                          }
-                        >
-                          Edit
-                        </TooltipTrigger>
-                        <TooltipContent>Edit image</TooltipContent>
-                      </Tooltip>
-                    </>
-                  ) : null}
-                </ButtonGroup>
-              </div>
-
-              <div className={FLOATING_ISLAND_SURFACE_CLASS}>
+              <div className={VIEWER_BUTTON_GROUP_SURFACE_CLASS}>
                 <ButtonGroup>
                   <Tooltip>
                     <TooltipTrigger
                       render={
                         <DialogClose
-                          render={<Button variant="ghost" size="icon" />}
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              className="hover:bg-secondary active:bg-foreground/[0.1]"
+                            />
+                          }
                         />
                       }
                     >
-                      <XIcon />
-                      <span className="sr-only">Close</span>
+                      <ArrowLeftIcon />
+                      <span className="sr-only">Back to board</span>
                     </TooltipTrigger>
-                    <TooltipContent>Close</TooltipContent>
+                    <TooltipContent>Back to board</TooltipContent>
                   </Tooltip>
                 </ButtonGroup>
               </div>
+              {hasImageNavigation ? (
+                <div className={VIEWER_BUTTON_GROUP_SURFACE_CLASS}>
+                  <ButtonGroup>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={!previousAsset}
+                            onClick={() =>
+                              previousAsset && onAssetChange?.(previousAsset)
+                            }
+                          />
+                        }
+                      >
+                        <ChevronLeftIcon />
+                        <span className="sr-only">Previous image</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Previous image</TooltipContent>
+                    </Tooltip>
+                    <ButtonGroupSeparator className="bg-border/70" />
+                    <span className="flex h-7 min-w-10 items-center justify-center px-1 text-xs font-medium text-muted-foreground tabular-nums">
+                      {currentAssetIndex + 1} / {assets.length}
+                    </span>
+                    <ButtonGroupSeparator className="bg-border/70" />
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={!nextAsset}
+                            onClick={() =>
+                              nextAsset && onAssetChange?.(nextAsset)
+                            }
+                          />
+                        }
+                      >
+                        <ChevronRightIcon />
+                        <span className="sr-only">Next image</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Next image</TooltipContent>
+                    </Tooltip>
+                  </ButtonGroup>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-x-3 top-3 z-30 flex justify-end sm:inset-x-4 sm:top-4 lg:inset-x-auto lg:top-5 lg:right-5",
+            )}
+          >
+            <div
+              className={cn(
+                "pointer-events-auto flex min-w-0 items-center gap-1 [&_[data-slot=button]]:duration-75",
+                cropMode || !asset
+                  ? "ml-auto"
+                  : "ml-auto lg:ml-0 lg:w-[22.5rem] lg:justify-between",
+              )}
+            >
+              {cropMode ? (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCancelCrop}
+                    disabled={isSavingCrop}
+                  >
+                    Discard
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleApplyCrop}
+                    disabled={isSavingCrop}
+                  >
+                    <CheckIcon className="size-3.5" />
+                    {isSavingCrop ? "Saving…" : "Apply crop"}
+                  </Button>
+                </div>
+              ) : asset ? (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleStartCrop}
+                        />
+                      }
+                    >
+                      <PencilIcon />
+                      Edit
+                    </TooltipTrigger>
+                    <TooltipContent>Edit image</TooltipContent>
+                  </Tooltip>
+                  <div className="flex items-center gap-0.5">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={handlePickColor}
+                            className={cn(
+                              "transition-all duration-100 hover:bg-foreground/5",
+                              isEyeDropping && "bg-foreground/8",
+                            )}
+                            aria-pressed={isEyeDropping}
+                          />
+                        }
+                      >
+                        {hasCopiedColor ? <CheckIcon /> : <PipetteIcon />}
+                        <span className="sr-only">
+                          {isEyeDropping
+                            ? "Click the image to copy a color. Press Escape to cancel."
+                            : hasCopiedColor
+                              ? "Copied color"
+                              : "Pick color"}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isEyeDropping
+                          ? "Click the image to copy · Escape to cancel"
+                          : hasCopiedColor
+                            ? "Copied color"
+                            : "Pick color"}
+                      </TooltipContent>
+                    </Tooltip>
+                    <span
+                      className="mx-1 h-4 w-px bg-border/70"
+                      aria-hidden="true"
+                    />
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={handleCopyImage}
+                          />
+                        }
+                      >
+                        {hasCopiedImage ? <CheckIcon /> : <CopyIcon />}
+                        <span className="sr-only">
+                          {hasCopiedImage ? "Copied image" : "Copy image"}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {hasCopiedImage ? "Copied image" : "Copy image"}
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={handleDownload}
+                          />
+                        }
+                      >
+                        <DownloadIcon />
+                        <span className="sr-only">Download</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Download</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
 
           <div className="relative z-10 flex h-full min-h-0 flex-col">
             {cropMode && asset ? (
-              <div className="relative z-10 min-h-0 flex-1 p-6 sm:p-8 lg:pr-[23rem]">
+              <div className="relative z-10 min-h-0 flex-1 px-6 py-16 sm:px-8 lg:pr-[25rem]">
                 <div ref={cropperContainerRef} className="relative size-full">
                   {!mediaLoaded && blurPlaceholder ? (
                     <div className="absolute inset-0 overflow-hidden">
@@ -1539,7 +1610,7 @@ export function ImageAssetViewer({
                 </div>
               </div>
             ) : (
-              <div className="[container-type:size] flex min-h-0 flex-1 items-center justify-center p-6 sm:p-8 lg:pr-[23rem]">
+              <div className="[container-type:size] flex min-h-0 flex-1 items-center justify-center px-6 py-16 sm:px-8 lg:pr-[25rem]">
                 {open && displayUrl ? (
                   <ProgressiveViewerImage
                     key={viewerImageUrl}
@@ -1559,36 +1630,40 @@ export function ImageAssetViewer({
 
           <aside
             className={cn(
-              "pointer-events-none absolute right-3 z-20 flex max-h-[calc(100%-6rem)] w-[min(20rem,calc(100%-1.5rem))] min-h-0 flex-col gap-1 sm:right-4 sm:w-80",
+              "pointer-events-none absolute right-3 z-20 flex max-h-[calc(100%-6rem)] w-[min(20rem,calc(100%-1.5rem))] min-h-0 flex-col gap-1 sm:right-4 sm:w-80 lg:inset-y-0 lg:right-0 lg:max-h-none lg:w-[25rem] lg:gap-0 lg:border-l lg:border-border lg:bg-background lg:px-5 lg:pt-14 lg:pb-5",
               cropMode ? "bottom-14" : "bottom-3 sm:bottom-4",
               "pointer-events-auto",
             )}
           >
-            {!cropMode && asset ? (
-              <div
-                className={cn(FLOATING_ISLAND_SURFACE_CLASS, "shrink-0 p-3")}
-              >
-                <p className="truncate text-sm leading-5 font-medium">
-                  {title}
-                </p>
-              </div>
-            ) : null}
             <div
               className={cn(
                 FLOATING_ISLAND_SURFACE_CLASS,
-                "min-h-0 flex-1 overflow-y-auto p-4",
+                "min-h-0 flex flex-1 flex-col overflow-y-auto p-4 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:shadow-none",
               )}
             >
+              {!cropMode && asset ? (
+                <div className="mb-5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Name
+                  </span>
+                  <p className="mt-1 text-sm font-medium wrap-break-word text-foreground">
+                    {asset.title ?? "Untitled image"}
+                  </p>
+                </div>
+              ) : null}
               {!cropMode && asset?.sourceUrl ? (
-                <div className="mb-4 flex items-center gap-1 text-xs font-medium text-muted-foreground lg:hidden">
-                  <ExternalLinkIcon className="size-3 shrink-0" />
+                <div className="mb-5">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Source
+                  </span>
                   <a
                     href={asset.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="truncate transition-colors hover:text-foreground"
+                    className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-sm font-medium text-primary transition-colors hover:text-foreground"
                   >
-                    {asset.sourceLabel ?? "Source"}
+                    <ExternalLinkIcon className="size-3.5 shrink-0" />
+                    {sourceLabel ?? "Source"}
                   </a>
                 </div>
               ) : null}
@@ -1608,7 +1683,15 @@ export function ImageAssetViewer({
                   />
                 </div>
               ) : asset ? (
-                <ImageMetadataDetails asset={asset} />
+                <>
+                  <div className="pb-5">
+                    <ImageColorPalette asset={asset} compact />
+                  </div>
+                  <div className="mt-auto pt-4">
+                    <Separator className="mb-4" />
+                    <ImageMetadataDetails asset={asset} />
+                  </div>
+                </>
               ) : null}
               {cropError ? (
                 <p className="mt-4 text-xs text-destructive" role="alert">
@@ -1616,13 +1699,6 @@ export function ImageAssetViewer({
                 </p>
               ) : null}
             </div>
-            {!cropMode && asset ? (
-              <div
-                className={cn(FLOATING_ISLAND_SURFACE_CLASS, "shrink-0 p-3")}
-              >
-                <ImageColorPalette asset={asset} />
-              </div>
-            ) : null}
           </aside>
         </DialogBody>
       </DialogContent>

@@ -467,6 +467,7 @@ export class CollectionQueryService {
           originalUrl: variant?.original?.url,
           originalWidth: variant?.original?.width,
           originalHeight: variant?.original?.height,
+          contentType: variant?.original?.contentType ?? display.contentType,
           width: display.width,
           height: display.height,
           title: child.title,

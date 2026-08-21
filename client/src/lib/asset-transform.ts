@@ -22,6 +22,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
       originalUrl: node.originalUrl,
       originalWidth: node.originalWidth,
       originalHeight: node.originalHeight,
+      contentType: node.contentType,
       width: node.width,
       height: node.height,
       title: node.title ?? undefined,

@@ -18,6 +18,24 @@ function formatDate(iso: string): string {
   });
 }
 
+function formatFileType(contentType?: string): string {
+  if (!contentType) return "Unknown";
+
+  const knownTypes: Record<string, string> = {
+    "image/avif": "AVIF",
+    "image/bmp": "BMP",
+    "image/gif": "GIF",
+    "image/jpeg": "JPG",
+    "image/png": "PNG",
+    "image/svg+xml": "SVG",
+    "image/webp": "WEBP",
+  };
+  if (knownTypes[contentType]) return knownTypes[contentType];
+
+  const subtype = contentType.split("/")[1]?.replace("+xml", "");
+  return subtype ? subtype.toUpperCase() : contentType.toUpperCase();
+}
+
 function getSwatchIconColor(color: string): "text-black" | "text-white" {
   const value = Number.parseInt(color.slice(1), 16);
   const channels = [(value >> 16) & 255, (value >> 8) & 255, value & 255];
@@ -38,7 +56,13 @@ function getSwatchIconColor(color: string): "text-black" | "text-white" {
   return luminance > 0.25 ? "text-black" : "text-white";
 }
 
-function ColorRow({ color }: { color: string }) {
+function ColorRow({
+  color,
+  compact = false,
+}: {
+  color: string;
+  compact?: boolean;
+}) {
   const [isCopied, setIsCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reduceMotion = useReducedMotion();
@@ -66,7 +90,10 @@ function ColorRow({ color }: { color: string }) {
       type="button"
       onClick={() => void copy()}
       aria-label={`Copy ${color.toUpperCase()}`}
-      className="group relative aspect-square w-full cursor-pointer rounded-sm border border-black/10 shadow-sm transition-transform duration-75 outline-none hover:scale-[0.985] focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.95] dark:border-white/15"
+      className={cn(
+        "group relative cursor-pointer rounded-sm border border-black/10 transition-transform duration-75 outline-none hover:scale-[0.985] focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-[0.95] dark:border-white/15",
+        compact ? "size-8" : "aspect-square w-full",
+      )}
       style={{ backgroundColor: color }}
     >
       <span
@@ -110,12 +137,10 @@ export function ImageMetadataDetails({ asset }: { asset: ImageAsset }) {
     metaRows.push({ label: "Size", value: formatSize(asset.sizeBytes) });
   }
 
+  metaRows.push({ label: "Type", value: formatFileType(asset.contentType) });
+
   if (asset.createdAt) {
     metaRows.push({ label: "Added", value: formatDate(asset.createdAt) });
-  }
-
-  if (asset.alt) {
-    metaRows.push({ label: "Alt text", value: asset.alt });
   }
 
   return (
@@ -132,7 +157,13 @@ export function ImageMetadataDetails({ asset }: { asset: ImageAsset }) {
   );
 }
 
-export function ImageColorPalette({ asset }: { asset: ImageAsset }) {
+export function ImageColorPalette({
+  asset,
+  compact = false,
+}: {
+  asset: ImageAsset;
+  compact?: boolean;
+}) {
   const dominantColors = (asset.dominantColors ?? [])
     .filter((color) => /^#[\da-f]{6}$/i.test(color))
     .slice(0, 8);
@@ -143,9 +174,13 @@ export function ImageColorPalette({ asset }: { asset: ImageAsset }) {
         Colors
       </span>
       {dominantColors.length > 0 ? (
-        <div className="grid grid-cols-3 gap-1.5">
+        <div
+          className={cn(
+            compact ? "flex flex-wrap gap-1.5" : "grid grid-cols-3 gap-1.5",
+          )}
+        >
           {dominantColors.map((color) => (
-            <ColorRow key={color} color={color} />
+            <ColorRow key={color} color={color} compact={compact} />
           ))}
         </div>
       ) : asset.paletteStatus === "processing" ? (

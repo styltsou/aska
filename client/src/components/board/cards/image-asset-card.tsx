@@ -27,7 +27,7 @@ export function ImageAssetCard({
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}
       style={{ aspectRatio: `${asset.width} / ${asset.height}` }}
-      onDoubleClick={(event) => {
+      onClick={(event) => {
         if (!hasSelectionModifier(event)) {
           onOpen?.();
         }

@@ -135,6 +135,7 @@ export type CollectionImageNode = {
   originalUrl?: string;
   originalWidth?: number;
   originalHeight?: number;
+  contentType?: string;
   width: number;
   height: number;
   title: string | null;
