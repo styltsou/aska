@@ -57,25 +57,19 @@ type ExtractionFeedback = {
 
 export function NoteDetailDrawer({
   note,
-  open = note !== undefined,
-  isLoading = false,
-  loadError,
-  onRetry,
   workspaceSlug,
   noteExtractionTarget,
+  onNoteChange,
   onClose,
 }: {
   note: NoteAsset | undefined;
-  open?: boolean;
-  isLoading?: boolean;
-  loadError?: unknown;
-  onRetry?: () => void;
   workspaceSlug: string;
   noteExtractionTarget?: {
     target?: "collection" | "inbox";
     collectionSlug?: string;
     parentFolderPath?: string;
   };
+  onNoteChange?: (note: NoteAsset) => void;
   onClose: () => void;
 }) {
   const noteContentRef = useRef<HTMLDivElement>(null);
@@ -190,8 +184,15 @@ export function NoteDetailDrawer({
       mutate(
         { assetId: noteId, content },
         {
-          onSuccess: () => {
+          onSuccess: ({ note: updatedNote }) => {
             failedContentRef.current = undefined;
+            if (note && onNoteChange) {
+              onNoteChange({
+                ...note,
+                ...updatedNote,
+                color: updatedNote.color ?? undefined,
+              });
+            }
             if (draftRef.current === content) {
               draftRef.current = content;
               setDraft(content);
@@ -219,7 +220,7 @@ export function NoteDetailDrawer({
         },
       );
     },
-    [isPending, mutate, noteContent, noteId, onClose],
+    [isPending, mutate, note, noteContent, noteId, onClose, onNoteChange],
   );
 
   useEffect(() => {
@@ -345,7 +346,10 @@ export function NoteDetailDrawer({
   }
 
   return (
-    <NoteWorkspace open={open} onOpenChange={(open) => !open && requestClose()}>
+    <NoteWorkspace
+      open={note !== undefined}
+      onOpenChange={(open) => !open && requestClose()}
+    >
       <NoteWorkspaceContent>
         <NoteWorkspaceTitle>Note</NoteWorkspaceTitle>
         <Button
@@ -475,25 +479,7 @@ export function NoteDetailDrawer({
           className="note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto"
         >
           <div className="note-workspace-column">
-            {isLoading ? (
-              <div className="py-14 text-sm text-muted-foreground">
-                Opening note…
-              </div>
-            ) : loadError ? (
-              <div className="space-y-3 py-14 text-sm">
-                <div>
-                  <p className="font-medium">Couldn’t load this note</p>
-                  <p className="mt-1 text-muted-foreground">
-                    Check your connection and try again.
-                  </p>
-                </div>
-                {onRetry ? (
-                  <Button size="sm" onClick={onRetry}>
-                    Try again
-                  </Button>
-                ) : null}
-              </div>
-            ) : note ? (
+            {note ? (
               <Suspense
                 fallback={
                   <div className="py-14 text-sm text-muted-foreground">
@@ -532,11 +518,7 @@ export function NoteDetailDrawer({
                   />
                 </NoteEditorErrorBoundary>
               </Suspense>
-            ) : (
-              <div className="py-14 text-sm text-muted-foreground">
-                This note is no longer available.
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
         {saveState === "error" ? (

@@ -26,7 +26,6 @@ import {
   deleteCollectionNode,
   fetchCollectionContents,
   fetchInboxContents,
-  fetchNote,
   flattenFolder,
   markInboxSeen,
   updateCollectionNodePosition,
@@ -38,7 +37,6 @@ import type {
   BoardInsertionPlacement,
   CollectionContentsResponse,
   CollectionImageNode,
-  CollectionNoteNode,
   CollectionNode,
   ContentTypeFilter,
   CollectionsData,
@@ -48,7 +46,6 @@ import type {
   CreateRemoteImageInput,
   CreateNoteInput,
   CreateColorInput,
-  GetNoteResponse,
   FolderChildPreview,
   ImageUploadStatus,
   InboxContentsResponse,
@@ -127,23 +124,6 @@ export function inboxContentsQueryOptions(
       activeLinkRefetchInterval(query.state.data),
     refetchIntervalInBackground: false,
   };
-}
-
-export function useNote(
-  workspaceSlug: string,
-  assetId: string | undefined,
-  initialNote?: CollectionNoteNode,
-) {
-  return useQuery({
-    queryKey: collectionQueryKeys.note(workspaceSlug, assetId ?? ""),
-    queryFn: () => fetchNote(workspaceSlug, assetId!),
-    enabled: Boolean(workspaceSlug && assetId),
-    // A board click can open immediately from its already-loaded node, while
-    // the direct endpoint remains the canonical source and refreshes it.
-    initialData: initialNote ? { note: initialNote } : undefined,
-    initialDataUpdatedAt: initialNote ? 0 : undefined,
-    staleTime: COLLECTION_CONTENTS_STALE_TIME,
-  });
 }
 
 export function collectionContentsQueryOptions(
@@ -1138,12 +1118,6 @@ export function useUpdateNote(workspaceSlug: string) {
         },
         (current) => applyUpdatedNoteToContents(current, note),
       );
-      queryClient.setQueryData<GetNoteResponse>(
-        collectionQueryKeys.note(workspaceSlug, note.id),
-        (current) =>
-          current ? { note: { ...current.note, ...note } } : current,
-      );
-
       queryClient.setQueryData<CollectionsData>(
         collectionQueryKeys.collections(workspaceSlug),
         (current) =>

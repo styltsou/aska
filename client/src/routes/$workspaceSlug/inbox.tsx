@@ -1,18 +1,14 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { startTransition, useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 
-import {
-  type CollectionNoteNode,
-  useInboxContents,
-  useMarkInboxSeen,
-  useNote,
-} from "@/api/collection";
+import { useInboxContents, useMarkInboxSeen } from "@/api/collection";
 import {
   type ColorSearchResult,
   useColorImageSearch,
 } from "@/api/color-search";
 import { AssetBoard } from "@/components/board/asset-board";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
+import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { BoardContextMenu, BoardUploadZone } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
@@ -21,14 +17,11 @@ import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { useSessionStore } from "@/store";
 import type { ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
-import { useImmediateImageViewer } from "@/components/board/use-immediate-image-viewer";
+import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
 import { ResourceLoadError } from "@/components/resource-load-error";
 
 export const Route = createFileRoute("/$workspaceSlug/inbox")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    note: typeof search.note === "string" ? search.note : undefined,
-    image: typeof search.image === "string" ? search.image : undefined,
-  }),
+  validateSearch: (_search: Record<string, unknown>) => ({}),
   head: () => ({
     meta: [{ title: "Inbox | Aska" }],
   }),
@@ -38,16 +31,17 @@ export const Route = createFileRoute("/$workspaceSlug/inbox")({
 
 function InboxPage() {
   const { workspaceSlug } = Route.useParams();
-  const search = Route.useSearch();
-  const selectedNoteId = search.note;
-  const selectedImageId = search.image;
-  const navigate = useNavigate({ from: Route.fullPath });
   const filterScope = `inbox:${workspaceSlug}`;
   const filterBar = useSessionStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
   );
   const selectedAssetTypes =
     filterBar.filterType === "Type" ? (filterBar.selectedAssetTypes ?? []) : [];
+  const { drawerNote, openDrawer, closeDrawer, updateDrawerNote } =
+    usePersistedNoteDrawer(`aska.note-drawer:inbox:${workspaceSlug}`);
+  const { viewerImage, openViewer, closeViewer } = usePersistedImageViewer(
+    `aska.image-viewer:inbox:${workspaceSlug}`,
+  );
   const { data, isLoading, isFetching, isError, refetch } = useInboxContents(
     workspaceSlug,
     selectedAssetTypes,
@@ -72,25 +66,6 @@ function InboxPage() {
   const displayAssets = hasResolvedColorSearch
     ? colorSearch.data.results.map(colorSearchResultToImageAsset)
     : assets;
-  const selectedNoteNode = selectedNoteId
-    ? (data?.nodes.find(
-        (node): node is CollectionNoteNode =>
-          node.type === "note" && node.id === selectedNoteId,
-      ) ?? undefined)
-    : undefined;
-  const noteQuery = useNote(workspaceSlug, selectedNoteId, selectedNoteNode);
-  const drawerNote = noteQuery.data
-    ? collectionNodeToAsset(noteQuery.data.note)
-    : undefined;
-  const selectedImage = selectedImageId
-    ? (displayAssets.find(
-        (a): a is ImageAsset => a.type === "image" && a.id === selectedImageId,
-      ) ?? undefined)
-    : undefined;
-  const { viewerImage, openViewer, closeViewer } = useImmediateImageViewer(
-    selectedImage,
-    selectedImageId,
-  );
 
   if (isLoading) return <MasonryGridSkeleton />;
 
@@ -105,26 +80,16 @@ function InboxPage() {
   }
 
   const handleOpenNote = (note: NoteAsset, _mode: "read" | "edit" = "read") => {
-    void navigate({ search: (prev) => ({ ...prev, note: note.id }) });
+    openDrawer(note);
   };
 
-  const handleCloseNote = () => {
-    void navigate({ search: (prev) => ({ ...prev, note: undefined }) });
-  };
+  const handleCloseNote = () => closeDrawer();
 
   const handleOpenImage = (image: ImageAsset) => {
     openViewer(image);
-    startTransition(() => {
-      void navigate({ search: (prev) => ({ ...prev, image: image.id }) });
-    });
   };
 
-  const handleCloseImage = () => {
-    closeViewer();
-    startTransition(() => {
-      void navigate({ search: (prev) => ({ ...prev, image: undefined }) });
-    });
-  };
+  const handleCloseImage = () => closeViewer();
 
   return (
     <BoardContextMenu
@@ -157,11 +122,8 @@ function InboxPage() {
         />
       </BoardUploadZone>
       <NoteDetailDrawer
-        note={drawerNote?.type === "note" ? drawerNote : undefined}
-        open={selectedNoteId !== undefined}
-        isLoading={noteQuery.isPending && !noteQuery.data}
-        loadError={noteQuery.error}
-        onRetry={() => void noteQuery.refetch()}
+        note={drawerNote}
+        onNoteChange={updateDrawerNote}
         workspaceSlug={workspaceSlug}
         noteExtractionTarget={{ target: "inbox" }}
         onClose={handleCloseNote}

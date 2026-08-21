@@ -12,8 +12,12 @@ import { ArrowLeftIcon, RotateCcwIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useCreateInboxNote, useCreateNote } from "@/api/collection";
-import type { BoardInsertionPlacement } from "@/api/collection";
+import type {
+  BoardInsertionPlacement,
+  CollectionNoteNode,
+} from "@/api/collection";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
+import { persistNoteDrawer } from "@/components/board/use-persisted-note-drawer";
 import {
   NoteWorkspace,
   NoteWorkspaceContent,
@@ -28,6 +32,7 @@ import {
   saveCreateNoteDraft,
 } from "@/lib/create-note-draft";
 import { composeFrontMatter, parseFrontMatter } from "@/lib/front-matter";
+import { collectionNodeToAsset } from "@/lib/asset-transform";
 
 const CREATE_DELAY_MS = 700;
 const NoteRichText = lazy(() =>
@@ -129,21 +134,28 @@ export function CreateNoteDialog({
     ) => {
       if (!noteContent || isCreating) return;
       setError(null);
-      const onSuccess = (data: { note: { id: string } }) => {
+      const onSuccess = (data: { note: CollectionNoteNode }) => {
         clearCreateNoteDraft(draftId);
         setContent("");
         close();
+        const note = collectionNodeToAsset(data.note);
+        if (note.type !== "note") return;
         if (target === "inbox") {
+          persistNoteDrawer(`aska.note-drawer:inbox:${workspaceSlug}`, note);
           void navigate({
             to: "/$workspaceSlug/inbox",
             params: { workspaceSlug },
-            search: { note: data.note.id, image: undefined },
+            search: {},
           });
         } else {
+          persistNoteDrawer(
+            `aska.note-drawer:collection:${workspaceSlug}:${collectionPath}`,
+            note,
+          );
           void navigate({
             to: "/$workspaceSlug/collections/$",
             params: { workspaceSlug, _splat: collectionPath },
-            search: { note: data.note.id, image: undefined },
+            search: {},
           });
         }
       };

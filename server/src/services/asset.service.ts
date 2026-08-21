@@ -67,7 +67,6 @@ function sanitizeFilename(name: string): string {
 }
 
 export interface IAssetService {
-  getNote(orgId: string, assetNodeId: string): Promise<CollectionNoteNode>;
   getInboxContents(
     orgId: string,
     types?: ContentTypeFilter[],
@@ -112,51 +111,6 @@ export class AssetService implements IAssetService {
   constructor({ objectStorageService, resourceLifecycle }: Deps) {
     this.objectStorageService = objectStorageService;
     this.resourceLifecycle = resourceLifecycle;
-  }
-
-  async getNote(
-    orgId: string,
-    assetNodeId: string,
-  ): Promise<CollectionNoteNode> {
-    const target = parseAssetNodeId(assetNodeId);
-    if (target.assetType !== "note") {
-      throw new AppError(ErrorCode.VALIDATION_ERROR, "Asset is not a note");
-    }
-
-    const [row] = await db
-      .select({
-        id: assets.id,
-        content: noteAssets.markdown,
-        color: noteAssets.color,
-        isFavorite: assets.isFavorite,
-        createdAt: assets.createdAt,
-        updatedAt: assets.updatedAt,
-      })
-      .from(assets)
-      .innerJoin(noteAssets, eq(noteAssets.assetId, assets.id))
-      .where(
-        and(
-          eq(assets.id, target.entityId),
-          eq(assets.organizationId, orgId),
-          eq(assets.type, "note"),
-        ),
-      );
-
-    if (!row) {
-      throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
-    }
-
-    return {
-      id: `note-${row.id}`,
-      type: "note",
-      content: row.content,
-      color: row.color,
-      isFavorite: row.isFavorite,
-      ...calculateNoteMetrics(row.content),
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-      position: null,
-    };
   }
 
   async getInboxContents(

@@ -128,10 +128,6 @@ export type UpdateNoteResponse = {
   note: UpdatedNote;
 };
 
-export type GetNoteResponse = {
-  note: CollectionNoteNode;
-};
-
 export type CollectionImageNode = {
   id: string;
   type: "image";

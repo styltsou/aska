@@ -1,27 +1,21 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  startTransition,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { collectionQueryKeys } from "@/api/collection/query-keys";
 import {
   type CollectionNoteNode,
   useCollectionContents,
-  useNote,
 } from "@/api/collection";
 import { type ColorSearchScope, useColorImageSearch } from "@/api/color-search";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
+import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
 import { BoardContextMenu, BoardUploadZone } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import type { ImageAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
-import { useImmediateImageViewer } from "@/components/board/use-immediate-image-viewer";
+import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
 import {
   makeBoardKey,
   Canvas,
@@ -39,10 +33,7 @@ import { CollectionBrowseView } from "@/components/collection-browse-view";
 const EMPTY_COLOR_RESULTS: readonly [] = [];
 
 export const Route = createFileRoute("/$workspaceSlug/collections/$")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    note: typeof search.note === "string" ? search.note : undefined,
-    image: typeof search.image === "string" ? search.image : undefined,
-  }),
+  validateSearch: (_search: Record<string, unknown>) => ({}),
   head: () => ({
     meta: [{ title: "Collection | Aska" }],
   }),
@@ -52,11 +43,15 @@ export const Route = createFileRoute("/$workspaceSlug/collections/$")({
 
 function CollectionPage() {
   const { workspaceSlug, _splat } = Route.useParams();
-  const search = Route.useSearch();
-  const selectedNoteId = search.note;
-  const selectedImageId = search.image;
   const navigate = useNavigate({ from: Route.fullPath });
   const collectionPath = _splat ?? "";
+  const { drawerNote, openDrawer, closeDrawer, updateDrawerNote } =
+    usePersistedNoteDrawer(
+      `aska.note-drawer:collection:${workspaceSlug}:${collectionPath}`,
+    );
+  const { viewerImage, openViewer, closeViewer } = usePersistedImageViewer(
+    `aska.image-viewer:collection:${workspaceSlug}:${collectionPath}`,
+  );
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
     .filter(Boolean);
@@ -191,25 +186,6 @@ function CollectionPage() {
   const boardView = useSessionStore(
     (state) => state.collectionViews[collectionViewScope] ?? "canvas",
   );
-  const selectedNoteNode = selectedNoteId
-    ? (nodes.find(
-        (node): node is CollectionNoteNode =>
-          node.type === "note" && node.id === selectedNoteId,
-      ) ?? undefined)
-    : undefined;
-  const noteQuery = useNote(workspaceSlug, selectedNoteId, selectedNoteNode);
-  const drawerNote = noteQuery.data
-    ? collectionNodeToAsset(noteQuery.data.note)
-    : undefined;
-  const selectedImage = selectedImageId
-    ? (assets.find(
-        (a): a is ImageAsset => a.type === "image" && a.id === selectedImageId,
-      ) ?? undefined)
-    : undefined;
-  const { viewerImage, openViewer, closeViewer } = useImmediateImageViewer(
-    selectedImage,
-    selectedImageId,
-  );
 
   const isNotFound =
     error instanceof ApiError &&
@@ -252,25 +228,16 @@ function CollectionPage() {
     note: CollectionNoteNode,
     _mode: "read" | "edit" = "read",
   ) => {
-    void navigate({ search: (prev) => ({ ...prev, note: note.id }) });
+    const asset = collectionNodeToAsset(note);
+    if (asset.type === "note") openDrawer(asset);
   };
 
-  const handleCloseNote = () => {
-    void navigate({ search: (prev) => ({ ...prev, note: undefined }) });
-  };
+  const handleCloseNote = () => closeDrawer();
 
-  const handleCloseImage = () => {
-    closeViewer();
-    startTransition(() => {
-      void navigate({ search: (prev) => ({ ...prev, image: undefined }) });
-    });
-  };
+  const handleCloseImage = () => closeViewer();
 
   const handleSelectViewerImage = (image: ImageAsset) => {
     openViewer(image);
-    startTransition(() => {
-      void navigate({ search: (prev) => ({ ...prev, image: image.id }) });
-    });
   };
 
   const handleOpenImage = (
@@ -283,13 +250,14 @@ function CollectionPage() {
   const handleOpenFolder = (
     folder: Extract<(typeof nodes)[number], { type: "folder" }>,
   ) => {
+    closeDrawer();
     void navigate({
       to: "/$workspaceSlug/collections/$",
       params: {
         workspaceSlug,
         _splat: `${collectionPath}/${folder.slug}`,
       },
-      search: { note: undefined, image: undefined },
+      search: {},
     });
   };
 
@@ -387,11 +355,8 @@ function CollectionPage() {
         </BoardUploadZone>
       </BoardContextMenu>
       <NoteDetailDrawer
-        note={drawerNote?.type === "note" ? drawerNote : undefined}
-        open={selectedNoteId !== undefined}
-        isLoading={noteQuery.isPending && !noteQuery.data}
-        loadError={noteQuery.error}
-        onRetry={() => void noteQuery.refetch()}
+        note={drawerNote}
+        onNoteChange={updateDrawerNote}
         workspaceSlug={workspaceSlug}
         noteExtractionTarget={{
           collectionSlug,

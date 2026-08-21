@@ -49,7 +49,7 @@ export function CreateCollectionDialog({
           void navigate({
             to: "/$workspaceSlug/collections/$",
             params: { workspaceSlug, _splat: data.collection.slug },
-            search: { note: undefined, image: undefined },
+            search: {},
             replace: true,
           });
           handleOpenChange(false);

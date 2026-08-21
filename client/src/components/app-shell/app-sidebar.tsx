@@ -79,7 +79,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <Link
           to="/$workspaceSlug/inbox"
           params={{ workspaceSlug }}
-          search={{ note: undefined, image: undefined }}
+          search={{}}
           activeOptions={{ exact: true }}
           onClick={(event) => {
             if (
@@ -108,7 +108,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           workspaceSlug,
           _splat: collection.slug,
         }}
-        search={{ note: undefined, image: undefined }}
+        search={{}}
         activeOptions={{ exact: false }}
       />
     ),

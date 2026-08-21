@@ -106,7 +106,7 @@ export function FolderNotFound({
               void navigate({
                 to: "/$workspaceSlug/collections/$",
                 params: { workspaceSlug, _splat: collectionSlug },
-                search: { note: undefined, image: undefined },
+                search: {},
               })
             }
           >

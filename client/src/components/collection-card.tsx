@@ -65,7 +65,7 @@ export function CollectionCard({
               <Link
                 {...triggerProps}
                 to="/$workspaceSlug/collections/$"
-                search={{ note: undefined, image: undefined }}
+                search={{}}
                 params={{ workspaceSlug, _splat: collection.slug }}
                 className="relative grid aspect-square cursor-pointer grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 data-popup-open:border-sidebar-foreground/20"
                 onMouseEnter={() => setHovered(true)}

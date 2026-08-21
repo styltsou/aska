@@ -105,7 +105,7 @@ function AppBreadcrumbs() {
                           workspaceSlug,
                           _splat: segment.path,
                         }}
-                        search={{ note: undefined, image: undefined }}
+                        search={{}}
                         activeOptions={{ exact: true }}
                       />
                     }

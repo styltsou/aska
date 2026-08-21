@@ -16,7 +16,6 @@ import type {
   CreateNoteResponse,
   CreateColorInput,
   CreateColorResponse,
-  GetNoteResponse,
   CreateRemoteImageInput,
   CreateRemoteImageResponse,
   DeleteCollectionNodeResponse,
@@ -151,15 +150,6 @@ export async function fetchInboxContents(
   const query = buildTypesQuery(types);
   return apiGet<InboxContentsResponse>(
     `/api/v1/workspace/${workspaceSlug}/inbox${query}`,
-  );
-}
-
-export async function fetchNote(
-  workspaceSlug: string,
-  assetId: string,
-): Promise<GetNoteResponse> {
-  return apiGet<GetNoteResponse>(
-    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/note`,
   );
 }
 

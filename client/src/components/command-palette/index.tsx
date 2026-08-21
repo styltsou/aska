@@ -389,7 +389,7 @@ export function CommandPalette() {
         void navigate({
           to: "/$workspaceSlug/inbox",
           params: { workspaceSlug },
-          search: { note: undefined, image: undefined },
+          search: {},
         });
         return;
       case "browse-collections":
