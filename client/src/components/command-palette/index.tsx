@@ -198,8 +198,8 @@ export function CommandPalette() {
   const { toggleSidebar } = useSidebar();
   const toggleFilterBar = useSessionStore((state) => state.toggleFilterBar);
   const setCollectionView = useSessionStore((state) => state.setCollectionView);
-  const setBoardAlignmentGuides = usePersistedStore(
-    (state) => state.setBoardAlignmentGuides,
+  const setWorkspaceAlignmentGuides = usePersistedStore(
+    (state) => state.setWorkspaceAlignmentGuides,
   );
   const openScratchpad = useTransientStore((state) => state.openScratchpad);
   const openPexelsBrowser = useSessionStore(
@@ -240,7 +240,9 @@ export function CommandPalette() {
         )
       : undefined;
   const areAlignmentGuidesEnabled = usePersistedStore((state) =>
-    boardKey ? (state.boardAlignmentGuides[boardKey] ?? true) : false,
+    workspaceSlug
+      ? (state.workspaceAlignmentGuides[workspaceSlug] ?? true)
+      : false,
   );
   const canToggleAlignmentGuides =
     collectionView === "canvas" && Boolean(boardKey);
@@ -361,9 +363,9 @@ export function CommandPalette() {
         );
         return;
       case "toggle-alignment-guides":
-        if (!boardKey) return;
+        if (!boardKey || !workspaceSlug) return;
         setOpen(false);
-        setBoardAlignmentGuides(boardKey, !areAlignmentGuidesEnabled);
+        setWorkspaceAlignmentGuides(workspaceSlug, !areAlignmentGuidesEnabled);
         return;
       case "change-theme":
         setOpen(false);

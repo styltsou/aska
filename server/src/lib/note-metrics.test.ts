@@ -11,4 +11,15 @@ describe("calculateNoteMetrics", () => {
       readingTimeMinutes: 1,
     });
   });
+
+  it("ignores front matter", () => {
+    expect(
+      calculateNoteMetrics(
+        "---\ntitle: Some title\ntags: [one, two]\n---\n\nThree words here",
+      ),
+    ).toEqual({
+      wordCount: 3,
+      readingTimeMinutes: 1,
+    });
+  });
 });

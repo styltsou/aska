@@ -14,6 +14,7 @@ function node(id: string, createdAt: string): CollectionNode {
     wordCount: 1,
     readingTimeMinutes: 1,
     createdAt,
+    updatedAt: createdAt,
     position: null,
   };
 }

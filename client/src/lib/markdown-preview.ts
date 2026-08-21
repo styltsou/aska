@@ -1,3 +1,5 @@
+import { parseFrontMatter } from "@/lib/front-matter";
+
 const FENCE_RE = /^\s*(`{3,}|~{3,})/;
 
 /**
@@ -5,7 +7,9 @@ const FENCE_RE = /^\s*(`{3,}|~{3,})/;
  * structure. Newlines and indentation are meaningful Markdown syntax.
  */
 export function makeMarkdownPreview(content: string, maxLength = 1000): string {
-  const normalized = content.replace(/\r\n?/g, "\n");
+  const normalized = parseFrontMatter(
+    content.replace(/\r\n?/g, "\n"),
+  ).body.trimStart();
   if (normalized.length <= maxLength) return normalized;
 
   let preview = normalized.slice(0, maxLength);

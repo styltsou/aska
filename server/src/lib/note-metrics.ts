@@ -8,6 +8,7 @@ export type NoteMetrics = {
 
 export function calculateNoteMetrics(markdown: string): NoteMetrics {
   const plainText = markdown
+    .replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(?:\r?\n|$)/, " ")
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/`([^`]*)`/g, "$1")
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")

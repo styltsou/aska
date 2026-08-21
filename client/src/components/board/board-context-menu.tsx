@@ -43,11 +43,11 @@ export function BoardContextMenu({
   const position = useTransientStore((state) =>
     boardKey ? state.insertionPositions[boardKey] : undefined,
   );
-  const areAlignmentGuidesEnabled = usePersistedStore((state) =>
-    boardKey ? (state.boardAlignmentGuides[boardKey] ?? true) : false,
+  const areAlignmentGuidesEnabled = usePersistedStore(
+    (state) => state.workspaceAlignmentGuides[workspaceSlug] ?? true,
   );
-  const setBoardAlignmentGuides = usePersistedStore(
-    (state) => state.setBoardAlignmentGuides,
+  const setWorkspaceAlignmentGuides = usePersistedStore(
+    (state) => state.setWorkspaceAlignmentGuides,
   );
   const visibleBounds = useTransientStore((state) =>
     boardKey ? state.boardVisibleBounds[boardKey] : undefined,
@@ -146,7 +146,7 @@ export function BoardContextMenu({
               <ContextMenuCheckboxItem
                 checked={areAlignmentGuidesEnabled}
                 onCheckedChange={(enabled) =>
-                  setBoardAlignmentGuides(boardKey, enabled === true)
+                  setWorkspaceAlignmentGuides(workspaceSlug, enabled === true)
                 }
               >
                 Alignment guides

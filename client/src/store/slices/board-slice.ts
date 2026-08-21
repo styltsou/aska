@@ -7,10 +7,13 @@ export type BoardView = "canvas" | "browse";
 export interface PersistedBoardSlice {
   boardViewports: Record<string, Viewport>;
   boardLocks: Record<string, boolean | undefined>;
-  boardAlignmentGuides: Record<string, boolean | undefined>;
+  workspaceAlignmentGuides: Record<string, boolean | undefined>;
   setBoardViewport: (boardKey: string, viewport: Viewport) => void;
   setBoardLock: (boardKey: string, locked: boolean) => void;
-  setBoardAlignmentGuides: (boardKey: string, enabled: boolean) => void;
+  setWorkspaceAlignmentGuides: (
+    workspaceSlug: string,
+    enabled: boolean,
+  ) => void;
 }
 
 export const createPersistedBoardSlice: StateCreator<PersistedBoardSlice> = (
@@ -18,7 +21,7 @@ export const createPersistedBoardSlice: StateCreator<PersistedBoardSlice> = (
 ) => ({
   boardViewports: {},
   boardLocks: {},
-  boardAlignmentGuides: {},
+  workspaceAlignmentGuides: {},
   setBoardViewport: (boardKey, viewport) =>
     set((state) => ({
       boardViewports: { ...state.boardViewports, [boardKey]: viewport },
@@ -27,11 +30,11 @@ export const createPersistedBoardSlice: StateCreator<PersistedBoardSlice> = (
     set((state) => ({
       boardLocks: { ...state.boardLocks, [boardKey]: locked },
     })),
-  setBoardAlignmentGuides: (boardKey, enabled) =>
+  setWorkspaceAlignmentGuides: (workspaceSlug, enabled) =>
     set((state) => ({
-      boardAlignmentGuides: {
-        ...state.boardAlignmentGuides,
-        [boardKey]: enabled,
+      workspaceAlignmentGuides: {
+        ...state.workspaceAlignmentGuides,
+        [workspaceSlug]: enabled,
       },
     })),
 });

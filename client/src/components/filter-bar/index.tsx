@@ -14,6 +14,7 @@ import {
   Link2Icon,
   LoaderCircleIcon,
   PlusIcon,
+  PaletteIcon,
   TagIcon,
   XIcon,
 } from "lucide-react";
@@ -38,7 +39,7 @@ import { SimpleColorPicker } from "@/components/ui/color-picker";
 import {
   FLOATING_GLASS_BACKDROP_CLASS,
   GLASS_FRAME_CLASS,
-  GLASS_SURFACE_CLASS,
+  GLASS_ISLAND_CLASS,
 } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
@@ -85,7 +86,7 @@ type FilterSearchStatus = {
   onNext?: () => void;
 };
 
-const FILTER_ISLAND_CLASS = cn("relative z-10 rounded-md", GLASS_SURFACE_CLASS);
+const FILTER_ISLAND_CLASS = GLASS_ISLAND_CLASS;
 const FILTER_ISLAND_TRANSITION = {
   duration: 0.1,
   ease: [0, 0, 0.2, 1] as const,
@@ -441,6 +442,7 @@ const ASSET_TYPE_OPTIONS: Array<{
   { type: "image", label: "Images", icon: ImageIcon },
   { type: "note", label: "Notes", icon: FileTextIcon },
   { type: "link", label: "Links", icon: Link2Icon },
+  { type: "color", label: "Colors", icon: PaletteIcon },
   { type: "folder", label: "Folders", icon: FolderIcon },
 ];
 

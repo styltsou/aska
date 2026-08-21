@@ -1,5 +1,4 @@
 import { NavMain } from "@/components/app-shell/nav-main";
-import { NavContext } from "@/components/app-shell/nav-context";
 import { NavProjects } from "@/components/app-shell/nav-projects";
 import { NavSecondary } from "@/components/app-shell/nav-secondary";
 import { NavUser } from "@/components/app-shell/nav-user";
@@ -22,11 +21,8 @@ import {
 } from "lucide-react";
 import type { AuthState } from "@/lib/auth-flow";
 import { useWorkspace } from "@/api/workspace";
-import { useCollectionContents, useMarkInboxSeen } from "@/api/collection";
-import {
-  getSidebarCollectionLocation,
-  makeChildFolderPath,
-} from "@/components/app-shell/sidebar-collection-navigation";
+import { useMarkInboxSeen } from "@/api/collection";
+import { getSidebarCollectionLocation } from "@/components/app-shell/sidebar-collection-navigation";
 import { openSettings } from "@/lib/settings-dialog";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
@@ -48,28 +44,14 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       onClick: openSettings,
     },
   ];
-  const {
-    workspaceSlug,
-    collectionSlug: activeCollectionSlug,
-    folderSegments: activeFolderSegments,
-    folderPath: activeFolderPath,
-  } = getSidebarCollectionLocation(pathname);
+  const { workspaceSlug, collectionSlug: activeCollectionSlug } =
+    getSidebarCollectionLocation(pathname);
   const { data: workspaceData, isLoading: isWorkspaceLoading } =
     useWorkspace(workspaceSlug);
   const { mutate: markInboxSeen } = useMarkInboxSeen(workspaceSlug);
   const collections = workspaceData?.collections ?? [];
   const isCollectionsRoot = pathname === `/${workspaceSlug}`;
   const isInbox = pathname === `/${workspaceSlug}/inbox`;
-  const {
-    data: currentCollectionContents,
-    isLoading: areCurrentFoldersLoading,
-  } = useCollectionContents(
-    workspaceSlug,
-    activeCollectionSlug ?? "",
-    activeFolderPath || undefined,
-    { enabled: !!activeCollectionSlug },
-  );
-
   const navMain = [
     {
       title: "Collections",
@@ -132,30 +114,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     ),
   }));
 
-  const navContext = activeCollectionSlug
-    ? (currentCollectionContents?.nodes ?? [])
-        .filter((node) => node.type === "folder")
-        .map((folder) => ({
-          title: folder.name,
-          count: folder.count,
-          link: (
-            <Link
-              to="/$workspaceSlug/collections/$"
-              params={{
-                workspaceSlug,
-                _splat: makeChildFolderPath(
-                  activeCollectionSlug,
-                  activeFolderSegments,
-                  folder.slug,
-                ),
-              }}
-              search={{ note: undefined, image: undefined }}
-              activeOptions={{ exact: true }}
-            />
-          ),
-        }))
-    : [];
-
   return (
     <Sidebar variant="inset" className="pt-0 pb-0" {...props}>
       <SidebarHeader>
@@ -167,10 +125,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           collections={navCollections}
           isLoading={isWorkspaceLoading}
         />
-        {activeCollectionSlug &&
-        (areCurrentFoldersLoading || navContext.length > 0) ? (
-          <NavContext items={navContext} isLoading={areCurrentFoldersLoading} />
-        ) : null}
         <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

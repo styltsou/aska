@@ -34,6 +34,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   clearUploadImagesDraft,
@@ -523,90 +524,42 @@ export function UploadImagesDialog({
                 </DialogDescription>
               </DialogHeader>
 
-              <div
-                aria-label="Image source"
-                className="grid w-full grid-cols-3 gap-0.5 rounded-md border border-border/60 bg-muted p-0.5 shadow-[0_1px_1px_rgb(0_0_0_/_0.02)] ring-1 ring-foreground/[0.025] backdrop-blur-sm"
-                role="tablist"
+              <Tabs
+                value={mode}
+                onValueChange={(nextMode) =>
+                  selectMode(nextMode as "local" | "remote" | "cloud")
+                }
               >
-                <Button
-                  aria-selected={mode === "local"}
-                  className={sourceTabClassName(mode === "local")}
-                  disabled={isInteractionDisabled}
-                  role="tab"
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                  onClick={() => selectMode("local")}
+                <TabsList
+                  aria-label="Image source"
+                  className="grid w-full grid-cols-3"
                 >
-                  {mode === "local" ? (
-                    <motion.span
-                      aria-hidden="true"
-                      className="absolute inset-0 z-0 rounded-[calc(var(--radius-md)-2px)] bg-gradient-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]"
-                      layoutId="upload-image-source-active"
-                      transition={{
-                        duration: 0.12,
-                        ease: [0.16, 1, 0.3, 1],
-                      }}
-                    />
-                  ) : null}
-                  <span className="relative z-10 flex items-center gap-1">
+                  <TabsTrigger
+                    value="local"
+                    disabled={isInteractionDisabled}
+                    className="h-8 px-4"
+                  >
                     <MonitorUpIcon />
                     Computer
-                  </span>
-                </Button>
-                <Button
-                  aria-selected={mode === "remote"}
-                  className={sourceTabClassName(mode === "remote")}
-                  disabled={isInteractionDisabled}
-                  role="tab"
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                  onClick={() => selectMode("remote")}
-                >
-                  {mode === "remote" ? (
-                    <motion.span
-                      aria-hidden="true"
-                      className="absolute inset-0 z-0 rounded-[calc(var(--radius-md)-2px)] bg-gradient-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]"
-                      layoutId="upload-image-source-active"
-                      transition={{
-                        duration: 0.12,
-                        ease: [0.16, 1, 0.3, 1],
-                      }}
-                    />
-                  ) : null}
-                  <span className="relative z-10 flex items-center gap-1">
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="remote"
+                    disabled={isInteractionDisabled}
+                    className="h-8 px-4"
+                  >
                     <LinkIcon />
                     URL
-                  </span>
-                </Button>
-                <Button
-                  aria-selected={mode === "cloud"}
-                  className={sourceTabClassName(mode === "cloud")}
-                  disabled={isInteractionDisabled}
-                  role="tab"
-                  size="sm"
-                  type="button"
-                  variant="ghost"
-                  onClick={() => selectMode("cloud")}
-                >
-                  {mode === "cloud" ? (
-                    <motion.span
-                      aria-hidden="true"
-                      className="absolute inset-0 z-0 rounded-[calc(var(--radius-md)-2px)] bg-gradient-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]"
-                      layoutId="upload-image-source-active"
-                      transition={{
-                        duration: 0.12,
-                        ease: [0.16, 1, 0.3, 1],
-                      }}
-                    />
-                  ) : null}
-                  <span className="relative z-10 flex items-center gap-1">
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="cloud"
+                    disabled={isInteractionDisabled}
+                    className="h-8 px-4"
+                  >
                     <CloudIcon />
                     More
-                  </span>
-                </Button>
-              </div>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
 
               {mode === "local" ? (
                 <div className="space-y-1.5">
@@ -819,15 +772,6 @@ function AnimatedDialogPanel({ children }: { children: React.ReactNode }) {
     >
       <div ref={contentRef}>{children}</div>
     </motion.div>
-  );
-}
-
-function sourceTabClassName(isActive: boolean) {
-  return cn(
-    "relative isolate px-4 py-2.5",
-    isActive
-      ? "text-foreground hover:bg-transparent hover:text-foreground"
-      : "text-muted-foreground transition-colors duration-[50ms] hover:bg-foreground/[0.05] hover:text-foreground active:bg-foreground/[0.08] dark:hover:bg-foreground/[0.1] dark:active:bg-foreground/[0.14]",
   );
 }
 

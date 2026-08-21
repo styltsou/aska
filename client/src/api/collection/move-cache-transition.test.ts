@@ -27,6 +27,7 @@ const movedNote: Extract<CollectionNode, { type: "note" }> = {
   wordCount: 3,
   readingTimeMinutes: 1,
   createdAt: "2026-01-01T00:00:00.000Z",
+  updatedAt: "2026-01-01T00:00:00.000Z",
   position: { x: 24, y: 48 },
 };
 

@@ -19,11 +19,3 @@ export function getSidebarCollectionLocation(
     folderPath: folderSegments.join("/") || undefined,
   };
 }
-
-export function makeChildFolderPath(
-  collectionSlug: string,
-  folderSegments: string[],
-  childSlug: string,
-): string {
-  return [collectionSlug, ...folderSegments, childSlug].join("/");
-}

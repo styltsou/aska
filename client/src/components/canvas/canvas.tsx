@@ -169,7 +169,7 @@ function CanvasSurface({
     (state) => state.boardLocks[boardKey] ?? false,
   );
   const areAlignmentGuidesEnabled = usePersistedStore(
-    (state) => state.boardAlignmentGuides[boardKey] ?? true,
+    (state) => state.workspaceAlignmentGuides[workspaceSlug] ?? true,
   );
   const setStoredViewport = usePersistedStore(
     (state) => state.setBoardViewport,
@@ -1466,6 +1466,7 @@ function isPendingCollectionNode(node: CollectionNode): boolean {
     (node.type === "image" && node.uploadStatus !== undefined) ||
     (node.type === "note" && node.id.startsWith("note-optimistic-")) ||
     (node.type === "link" && node.id.startsWith("link-optimistic-")) ||
+    (node.type === "color" && node.id.startsWith("color-optimistic-")) ||
     (node.type === "folder" && node.flattenStatus === "pending")
   );
 }
@@ -1486,7 +1487,12 @@ function getClientPosition(
 }
 
 function getNodeClientId(node: CollectionNode): string | undefined {
-  if (node.type === "image" || node.type === "note" || node.type === "link") {
+  if (
+    node.type === "image" ||
+    node.type === "note" ||
+    node.type === "link" ||
+    node.type === "color"
+  ) {
     return node.clientId;
   }
 
