@@ -110,6 +110,11 @@
   --control-secondary-surface: oklch(0.97 0 0);
   --control-secondary-hover: oklch(0.95 0 0);
   --control-secondary-edge: oklch(0.88 0 0);
+  --code-comment: #6e7781;
+  --code-keyword: #cf222e;
+  --code-string: #0a3069;
+  --code-function: #8250df;
+  --code-constant: #0550ae;
 }
 
 .dark {
@@ -159,9 +164,52 @@
   --control-secondary-surface: oklch(0.255 0 0);
   --control-secondary-hover: oklch(0.275 0 0);
   --control-secondary-edge: oklch(1 0 0 / 14%);
+  --code-comment: #8b949e;
+  --code-keyword: #ff7b72;
+  --code-string: #a5d6ff;
+  --code-function: #d2a8ff;
+  --code-constant: #79c0ff;
 }
 
 @layer components {
+  .note-workspace-column {
+    @apply mx-auto min-h-full w-full max-w-5xl px-5 sm:px-10 lg:px-16;
+  }
+
+  .note-workspace-scroll-container {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .note-workspace-scroll-container:hover {
+    scrollbar-color: color-mix(
+        in oklab,
+        var(--sidebar-foreground) 28%,
+        transparent
+      )
+      transparent;
+  }
+
+  .note-workspace-scroll-container::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .note-workspace-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .note-workspace-scroll-container::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    background-clip: padding-box;
+  }
+
+  .note-workspace-scroll-container:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--sidebar-foreground) 28%, transparent);
+    background-clip: padding-box;
+  }
+
   .button-control-primary {
     border-color: var(--control-primary-edge);
     background: linear-gradient(
@@ -248,11 +296,15 @@
     --control-surface-hover: var(--control-secondary-hover);
 
     border-color: var(--control-secondary-edge);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
   }
 
-  .dark .button-control-outline,
-  .dark .button-control-secondary {
+  .dark .button-control-outline {
     box-shadow: 0 1px 2px rgb(0 0 0 / 22%);
+  }
+
+  .dark .button-control-secondary {
+    box-shadow: 0 1px 2px rgb(0 0 0 / 14%);
   }
 
   .button-control-outline:hover,
@@ -281,7 +333,64 @@
 
 @layer components {
   .note-rich-text-content {
-    @apply text-sm leading-6 text-sidebar-foreground/80;
+    @apply text-base leading-7 text-sidebar-foreground/80;
+  }
+
+  /* Note cards are the same document language as the editor, reduced to a
+     readable thumbnail scale. Keep block structure so headings, lists, marks,
+     and code remain recognizable instead of becoming a text strip. */
+  .note-rich-text-content .note-card-preview-content {
+    @apply text-[0.8125rem] leading-5;
+  }
+
+  .note-rich-text-content .note-card-preview-content h1 {
+    @apply mt-5 mb-2.5 text-2xl leading-tight;
+  }
+
+  .note-rich-text-content .note-card-preview-content h2 {
+    @apply mt-4 mb-2 text-xl leading-snug;
+  }
+
+  .note-rich-text-content .note-card-preview-content h3 {
+    @apply mt-3.5 mb-1.5 text-lg leading-snug;
+  }
+
+  .note-rich-text-content .note-card-preview-content p {
+    @apply my-2;
+    overflow-wrap: anywhere;
+  }
+
+  .note-rich-text-content
+    .note-card-preview-content
+    ul:not([data-type="taskList"]),
+  .note-rich-text-content .note-card-preview-content ol {
+    @apply my-2 ml-4 space-y-1;
+  }
+
+  .note-rich-text-content .note-card-preview-content li {
+    @apply pl-0.5;
+    overflow-wrap: anywhere;
+  }
+
+  .note-rich-text-content .note-card-preview-content blockquote {
+    @apply my-2 pl-2.5;
+  }
+
+  .note-rich-text-content .note-card-preview-content pre {
+    @apply my-2 max-w-full overflow-hidden rounded-md p-2.5 text-[0.6875rem] leading-4;
+    overflow-wrap: anywhere;
+  }
+
+  .note-rich-text-content .note-card-preview-content pre code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .note-rich-text-content .note-card-preview-content table {
+    @apply my-2 text-xs;
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
   }
 
   .note-rich-text-content > *:first-child {
@@ -297,15 +406,15 @@
   }
 
   .note-rich-text-content h1 {
-    @apply mb-3 text-xl leading-tight font-semibold tracking-tight text-sidebar-foreground;
+    @apply mt-7 mb-4 text-3xl leading-tight font-semibold tracking-tight text-sidebar-foreground;
   }
 
   .note-rich-text-content h2 {
-    @apply mt-4 mb-2 text-lg leading-snug font-semibold text-sidebar-foreground;
+    @apply mt-6 mb-3 text-2xl leading-snug font-semibold text-sidebar-foreground;
   }
 
   .note-rich-text-content h3 {
-    @apply mt-4 mb-1.5 text-base leading-snug font-semibold text-sidebar-foreground;
+    @apply mt-5 mb-2 text-xl leading-snug font-semibold text-sidebar-foreground;
   }
 
   .note-rich-text-content ul:not([data-type="taskList"]) {
@@ -332,12 +441,20 @@
     @apply flex items-start gap-2 pl-0;
   }
 
-  .note-rich-text-content ul[data-type="taskList"] label {
-    @apply mt-1 flex size-4 shrink-0 items-center justify-center;
+  .note-rich-text-content ul[data-type="taskList"] .note-task-checkbox {
+    @apply mt-[0.4rem] flex size-4 shrink-0 items-center justify-center;
   }
 
-  .note-rich-text-content ul[data-type="taskList"] input {
-    @apply size-3.5 accent-primary;
+  .note-rich-text-content ul[data-type="taskList"] > li > div {
+    @apply min-w-0 flex-1;
+  }
+
+  .note-rich-text-content ul[data-type="taskList"] > li > div > p:first-child {
+    @apply mt-0;
+  }
+
+  .note-rich-text-content ul[data-type="taskList"] > li > div > p:last-child {
+    @apply mb-0;
   }
 
   .note-rich-text-content blockquote {
@@ -356,6 +473,51 @@
     @apply my-3 overflow-x-auto rounded-lg border border-sidebar-border bg-muted/65 p-3 font-mono text-xs leading-5 text-sidebar-foreground;
   }
 
+  .note-rich-text-content pre code .hljs-comment,
+  .note-rich-text-content pre code .hljs-quote {
+    color: var(--code-comment);
+    font-style: italic;
+  }
+
+  .note-rich-text-content pre code .hljs-keyword,
+  .note-rich-text-content pre code .hljs-selector-tag,
+  .note-rich-text-content pre code .hljs-doctag,
+  .note-rich-text-content pre code .hljs-meta .hljs-keyword,
+  .note-rich-text-content pre code .hljs-template-tag {
+    color: var(--code-keyword);
+  }
+
+  .note-rich-text-content pre code .hljs-string,
+  .note-rich-text-content pre code .hljs-regexp,
+  .note-rich-text-content pre code .hljs-addition,
+  .note-rich-text-content pre code .hljs-meta .hljs-string {
+    color: var(--code-string);
+  }
+
+  .note-rich-text-content pre code .hljs-title,
+  .note-rich-text-content pre code .hljs-title.function_,
+  .note-rich-text-content pre code .hljs-section,
+  .note-rich-text-content pre code .hljs-name {
+    color: var(--code-function);
+  }
+
+  .note-rich-text-content pre code .hljs-number,
+  .note-rich-text-content pre code .hljs-literal,
+  .note-rich-text-content pre code .hljs-symbol,
+  .note-rich-text-content pre code .hljs-bullet,
+  .note-rich-text-content pre code .hljs-link,
+  .note-rich-text-content pre code .hljs-built_in {
+    color: var(--code-constant);
+  }
+
+  .note-rich-text-content pre code .hljs-emphasis {
+    font-style: italic;
+  }
+
+  .note-rich-text-content pre code .hljs-strong {
+    @apply font-semibold;
+  }
+
   .note-rich-text-content a {
     @apply font-medium text-primary underline underline-offset-4;
   }
@@ -364,12 +526,46 @@
     @apply rounded-[0.18em] bg-amber-200/75 box-decoration-clone px-[0.08em] text-inherit dark:bg-amber-400/30;
   }
 
-  .note-rich-text-editable .ProseMirror {
-    @apply min-h-[calc(100dvh-8.5rem)] cursor-text px-8 py-7 sm:px-10;
+  .note-rich-text-content table {
+    @apply my-3 w-full border-collapse text-sm;
   }
 
-  .note-rich-text-editable .is-editor-empty:first-child::before {
-    @apply pointer-events-none float-left h-0 text-muted-foreground;
+  .note-rich-text-content th,
+  .note-rich-text-content td {
+    @apply relative border border-sidebar-border px-2.5 py-1.5 text-left align-top;
+  }
+
+  .note-rich-text-content th {
+    @apply bg-muted/65 font-semibold text-sidebar-foreground;
+  }
+
+  .note-rich-text-content th > p,
+  .note-rich-text-content td > p {
+    @apply my-0;
+  }
+
+  .note-rich-text-content .selectedCell::after {
+    content: "";
+    @apply pointer-events-none absolute inset-0 bg-primary/10;
+  }
+
+  .note-rich-text-content .column-resize-handle {
+    @apply pointer-events-none absolute top-0 right-[-2px] bottom-[-1px] w-0.5 bg-primary/50;
+  }
+
+  .note-rich-text-content .resize-cursor {
+    cursor: col-resize;
+  }
+
+  .note-rich-text-editable .ProseMirror {
+    @apply min-h-[calc(100dvh-8.5rem)] cursor-text pt-20 pb-10 text-base leading-7 sm:pb-14;
+  }
+
+  .note-rich-text-editable .ProseMirror p.is-empty::before,
+  .note-rich-text-editable .ProseMirror h1.is-empty::before,
+  .note-rich-text-editable .ProseMirror h2.is-empty::before,
+  .note-rich-text-editable .ProseMirror h3.is-empty::before {
+    @apply pointer-events-none float-left h-0 font-normal text-muted-foreground;
     content: attr(data-placeholder);
   }
 }

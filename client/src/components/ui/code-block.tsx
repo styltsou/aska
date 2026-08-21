@@ -60,12 +60,12 @@ export async function highlightCode(
   return await Promise.all([
     codeToHtml(code, {
       lang: language,
-      theme: "one-light",
+      theme: "github-light",
       transformers,
     }),
     codeToHtml(code, {
       lang: language,
-      theme: "one-dark-pro",
+      theme: "github-dark",
       transformers,
     }),
   ]);
@@ -113,13 +113,13 @@ export const CodeBlock = ({
             <>
               <ScrollArea className="min-w-0 dark:hidden">
                 <div
-                  className="min-w-max [&_code]:font-mono [&_code]:text-sm [&_pre]:m-0 [&_pre]:overflow-visible! [&_pre]:bg-background! [&_pre]:p-4 [&_pre]:text-sm [&_pre]:text-foreground!"
+                  className="w-full min-w-0 [&_code]:font-mono [&_code]:text-sm [&_pre]:m-0 [&_pre]:overflow-visible! [&_pre]:bg-background! [&_pre]:p-4 [&_pre]:text-sm [&_pre]:text-foreground!"
                   dangerouslySetInnerHTML={{ __html: html }}
                 />
               </ScrollArea>
               <ScrollArea className="hidden min-w-0 dark:block">
                 <div
-                  className="min-w-max [&_code]:font-mono [&_code]:text-sm [&_pre]:m-0 [&_pre]:overflow-visible! [&_pre]:bg-background! [&_pre]:p-4 [&_pre]:text-sm [&_pre]:text-foreground!"
+                  className="w-full min-w-0 [&_code]:font-mono [&_code]:text-sm [&_pre]:m-0 [&_pre]:overflow-visible! [&_pre]:bg-background! [&_pre]:p-4 [&_pre]:text-sm [&_pre]:text-foreground!"
                   dangerouslySetInnerHTML={{ __html: darkHtml }}
                 />
               </ScrollArea>

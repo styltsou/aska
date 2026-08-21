@@ -63,6 +63,7 @@ function sanitizeFilename(name: string): string {
 }
 
 export interface IAssetService {
+  getNote(orgId: string, assetNodeId: string): Promise<CollectionNoteNode>;
   getInboxContents(
     orgId: string,
     types?: ContentTypeFilter[],
@@ -104,6 +105,51 @@ export class AssetService implements IAssetService {
     this.resourceLifecycle = resourceLifecycle;
   }
 
+  async getNote(
+    orgId: string,
+    assetNodeId: string,
+  ): Promise<CollectionNoteNode> {
+    const target = parseAssetNodeId(assetNodeId);
+    if (target.assetType !== "note") {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, "Asset is not a note");
+    }
+
+    const [row] = await db
+      .select({
+        id: assets.id,
+        content: noteAssets.markdown,
+        color: noteAssets.color,
+        isFavorite: assets.isFavorite,
+        createdAt: assets.createdAt,
+        updatedAt: assets.updatedAt,
+      })
+      .from(assets)
+      .innerJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+      .where(
+        and(
+          eq(assets.id, target.entityId),
+          eq(assets.organizationId, orgId),
+          eq(assets.type, "note"),
+        ),
+      );
+
+    if (!row) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
+    }
+
+    return {
+      id: `note-${row.id}`,
+      type: "note",
+      content: row.content,
+      color: row.color,
+      isFavorite: row.isFavorite,
+      ...calculateNoteMetrics(row.content),
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      position: null,
+    };
+  }
+
   async getInboxContents(
     orgId: string,
     types?: ContentTypeFilter[],
@@ -127,6 +173,7 @@ export class AssetService implements IAssetService {
         title: assets.title,
         isFavorite: assets.isFavorite,
         createdAt: assets.createdAt,
+        updatedAt: assets.updatedAt,
         imageAlt: imageAssets.alt,
         sourceLabel: imageAssets.sourceLabel,
         sourceUrl: imageAssets.sourceUrl,
@@ -296,6 +343,7 @@ export class AssetService implements IAssetService {
       wordCount,
       readingTimeMinutes,
       createdAt: note.createdAt.toISOString(),
+      updatedAt: note.updatedAt.toISOString(),
       position: null,
     };
   }
@@ -510,6 +558,7 @@ export class AssetService implements IAssetService {
       title: string | null;
       isFavorite: boolean;
       createdAt: Date;
+      updatedAt: Date;
       imageAlt: string | null;
       sourceLabel: string | null;
       sourceUrl: string | null;
@@ -622,6 +671,7 @@ export class AssetService implements IAssetService {
         wordCount,
         readingTimeMinutes,
         createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
         position: null,
       } satisfies CollectionNoteNode);
     }

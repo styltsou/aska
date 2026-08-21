@@ -12,6 +12,7 @@ import { collectionQueryKeys } from "@/api/collection/query-keys";
 import {
   type CollectionNoteNode,
   useCollectionContents,
+  useNote,
 } from "@/api/collection";
 import { type ColorSearchScope, useColorImageSearch } from "@/api/color-search";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
@@ -196,13 +197,24 @@ function CollectionPage() {
         (a): a is NoteAsset => a.type === "note" && a.id === selectedNoteId,
       ) ?? undefined)
     : undefined;
+  const deepLinkedNote = useNote(
+    workspaceSlug,
+    selectedNoteId && !selectedNote ? selectedNoteId : undefined,
+  );
+  const resolvedSelectedNote =
+    selectedNote ??
+    (deepLinkedNote.data
+      ? collectionNodeToAsset(deepLinkedNote.data.note)
+      : undefined);
   const selectedImage = selectedImageId
     ? (assets.find(
         (a): a is ImageAsset => a.type === "image" && a.id === selectedImageId,
       ) ?? undefined)
     : undefined;
-  const { drawerNote, drawerMode, openDrawer, closeDrawer } =
-    useImmediateNoteDrawer(selectedNote, selectedNoteId);
+  const { drawerNote, openDrawer, closeDrawer } = useImmediateNoteDrawer(
+    resolvedSelectedNote?.type === "note" ? resolvedSelectedNote : undefined,
+    selectedNoteId,
+  );
   const { viewerImage, openViewer, closeViewer } = useImmediateImageViewer(
     selectedImage,
     selectedImageId,
@@ -247,11 +259,11 @@ function CollectionPage() {
 
   const handleOpenNote = (
     note: CollectionNoteNode,
-    mode: "read" | "edit" = "read",
+    _mode: "read" | "edit" = "read",
   ) => {
     const asset = collectionNodeToAsset(note);
     if (asset.type === "note") {
-      openDrawer(asset, mode);
+      openDrawer(asset);
     }
     void navigate({ search: (prev) => ({ ...prev, note: note.id }) });
   };
@@ -268,16 +280,18 @@ function CollectionPage() {
     });
   };
 
+  const handleSelectViewerImage = (image: ImageAsset) => {
+    openViewer(image);
+    startTransition(() => {
+      void navigate({ search: (prev) => ({ ...prev, image: image.id }) });
+    });
+  };
+
   const handleOpenImage = (
     image: Extract<(typeof nodes)[number], { type: "image" }>,
   ) => {
     const asset = collectionNodeToAsset(image);
-    if (asset.type === "image") openViewer(asset);
-    startTransition(() => {
-      void navigate({
-        search: (prev) => ({ ...prev, image: image.id }),
-      });
-    });
+    if (asset.type === "image") handleSelectViewerImage(asset);
   };
 
   const handleOpenFolder = (
@@ -389,7 +403,6 @@ function CollectionPage() {
       <NoteDetailDrawer
         note={drawerNote}
         workspaceSlug={workspaceSlug}
-        initialMode={drawerMode}
         noteExtractionTarget={{
           collectionSlug,
           parentFolderPath,
@@ -398,8 +411,12 @@ function CollectionPage() {
       />
       <ImageAssetViewer
         asset={viewerImage}
+        assets={assets.filter(
+          (asset): asset is ImageAsset => asset.type === "image",
+        )}
         open={viewerImage !== undefined}
         workspaceSlug={workspaceSlug}
+        onAssetChange={handleSelectViewerImage}
         onOpenChange={(open) => {
           if (!open) handleCloseImage();
         }}

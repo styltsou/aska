@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { startTransition, useEffect } from "react";
 
-import { useInboxContents, useMarkInboxSeen } from "@/api/collection";
+import { useInboxContents, useMarkInboxSeen, useNote } from "@/api/collection";
 import {
   type ColorSearchResult,
   useColorImageSearch,
@@ -73,13 +73,24 @@ function InboxPage() {
         (a): a is NoteAsset => a.type === "note" && a.id === selectedNoteId,
       ) ?? undefined)
     : undefined;
+  const deepLinkedNote = useNote(
+    workspaceSlug,
+    selectedNoteId && !selectedNote ? selectedNoteId : undefined,
+  );
+  const resolvedSelectedNote =
+    selectedNote ??
+    (deepLinkedNote.data
+      ? collectionNodeToAsset(deepLinkedNote.data.note)
+      : undefined);
   const selectedImage = selectedImageId
     ? (displayAssets.find(
         (a): a is ImageAsset => a.type === "image" && a.id === selectedImageId,
       ) ?? undefined)
     : undefined;
-  const { drawerNote, drawerMode, openDrawer, closeDrawer } =
-    useImmediateNoteDrawer(selectedNote, selectedNoteId);
+  const { drawerNote, openDrawer, closeDrawer } = useImmediateNoteDrawer(
+    resolvedSelectedNote?.type === "note" ? resolvedSelectedNote : undefined,
+    selectedNoteId,
+  );
   const { viewerImage, openViewer, closeViewer } = useImmediateImageViewer(
     selectedImage,
     selectedImageId,
@@ -97,8 +108,8 @@ function InboxPage() {
     );
   }
 
-  const handleOpenNote = (note: NoteAsset, mode: "read" | "edit" = "read") => {
-    openDrawer(note, mode);
+  const handleOpenNote = (note: NoteAsset, _mode: "read" | "edit" = "read") => {
+    openDrawer(note);
     void navigate({ search: (prev) => ({ ...prev, note: note.id }) });
   };
 
@@ -154,13 +165,17 @@ function InboxPage() {
       <NoteDetailDrawer
         note={drawerNote}
         workspaceSlug={workspaceSlug}
-        initialMode={drawerMode}
+        noteExtractionTarget={{ target: "inbox" }}
         onClose={handleCloseNote}
       />
       <ImageAssetViewer
         asset={viewerImage}
+        assets={displayAssets.filter(
+          (asset): asset is ImageAsset => asset.type === "image",
+        )}
         open={viewerImage !== undefined}
         workspaceSlug={workspaceSlug}
+        onAssetChange={handleOpenImage}
         onOpenChange={(open) => {
           if (!open) handleCloseImage();
         }}

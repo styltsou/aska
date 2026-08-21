@@ -76,5 +76,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
     isFavorite: node.isFavorite,
     wordCount: node.wordCount,
     readingTimeMinutes: node.readingTimeMinutes,
+    createdAt: node.createdAt,
+    updatedAt: node.updatedAt,
   };
 }

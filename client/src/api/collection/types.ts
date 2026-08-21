@@ -119,11 +119,16 @@ export type UpdatedNote = {
   isFavorite: boolean;
   wordCount: number;
   readingTimeMinutes: number;
+  createdAt?: string;
   updatedAt: string;
 };
 
 export type UpdateNoteResponse = {
   note: UpdatedNote;
+};
+
+export type GetNoteResponse = {
+  note: CollectionNoteNode;
 };
 
 export type CollectionImageNode = {
@@ -164,6 +169,7 @@ export type CollectionNoteNode = {
   wordCount: number;
   readingTimeMinutes: number;
   createdAt: string;
+  updatedAt: string;
   clientId?: string;
   position: BoardPosition | null;
 };

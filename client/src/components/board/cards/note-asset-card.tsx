@@ -1,8 +1,9 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { CodeBlock } from "@/components/ui/code-block";
+import { parseFrontMatter } from "@/lib/front-matter";
 import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
 import { remarkHighlight } from "@/lib/remark-highlight";
@@ -176,13 +177,15 @@ export function NoteMarkdown({
   content: string;
   className?: string;
 }) {
+  const body = useMemo(() => parseFrontMatter(content).body, [content]);
+
   return (
-    <div className={className}>
+    <div className={cn("note-card-preview-content", className)}>
       <ReactMarkdown
         components={MD_COMPONENTS}
         remarkPlugins={[remarkGfm, remarkHighlight]}
       >
-        {linkifyBareUrls(content)}
+        {linkifyBareUrls(body)}
       </ReactMarkdown>
     </div>
   );
@@ -275,7 +278,10 @@ export function NoteAssetCard({
     >
       <div
         ref={contentRef}
-        className={cn("min-w-0 break-words", hasOverflow && "pb-8")}
+        className={cn(
+          "note-rich-text-content min-w-0 break-words",
+          hasOverflow && "pb-8",
+        )}
       >
         <NoteMarkdown content={asset.content} className="min-w-0" />
       </div>

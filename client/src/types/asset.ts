@@ -33,6 +33,8 @@ export interface NoteAsset {
   isFavorite?: boolean;
   wordCount?: number;
   readingTimeMinutes?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface LinkAsset {

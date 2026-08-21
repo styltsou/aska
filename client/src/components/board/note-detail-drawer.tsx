@@ -3,383 +3,559 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import {
+  ArrowLeftIcon,
   CheckIcon,
-  HighlighterIcon,
-  PackagePlusIcon,
-  PencilIcon,
-  XIcon,
+  DotIcon,
+  InfoIcon,
+  LoaderCircleIcon,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import type { RefObject } from "react";
 
-import { useCreateNote, useUpdateNote } from "@/api/collection";
+import {
+  useCreateInboxNote,
+  useCreateNote,
+  useUpdateNote,
+} from "@/api/collection";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
+import {
+  NoteWorkspace,
+  NoteWorkspaceContent,
+  NoteWorkspaceTitle,
+} from "@/components/board/note-workspace-dialog";
 import { useBoardInsertionPlacement } from "@/components/canvas";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogBody,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import { markdownFromSelection } from "@/lib/markdown";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { composeFrontMatter, parseFrontMatter } from "@/lib/front-matter";
+import { getSaveableNoteContent } from "@/lib/note-content";
 import { cn } from "@/lib/utils";
 import type { NoteAsset } from "@/types/asset";
 
-const DRAWER_MIN_WIDTH = 672;
-const DRAWER_MAX_WIDTH = 1344;
-const DEFAULT_DRAWER_WIDTH = 800;
-type NoteDrawerMode = "read" | "edit";
+const AUTOSAVE_DELAY_MS = 700;
+const SAVE_STATUS_VISIBLE_MS = 2_000;
 const NoteRichText = lazy(() =>
   import("@/components/board/note-rich-text").then((module) => ({
     default: module.NoteRichText,
   })),
 );
 
-function getStoredWidth(): number {
-  try {
-    const saved = localStorage.getItem("note-drawer-width");
-    if (saved) {
-      const parsed = Number(saved);
-      if (!Number.isNaN(parsed)) {
-        return Math.min(Math.max(parsed, DRAWER_MIN_WIDTH), DRAWER_MAX_WIDTH);
-      }
-    }
-  } catch {}
-  return DEFAULT_DRAWER_WIDTH;
-}
+type SaveState = "saved" | "saving" | "error" | "empty";
+type ExtractionFeedback = {
+  status: "extracting" | "success" | "error";
+  destination: string;
+};
 
 export function NoteDetailDrawer({
   note,
   workspaceSlug,
   noteExtractionTarget,
-  initialMode = "read",
   onClose,
 }: {
   note: NoteAsset | undefined;
   workspaceSlug: string;
   noteExtractionTarget?: {
-    collectionSlug: string;
+    target?: "collection" | "inbox";
+    collectionSlug?: string;
     parentFolderPath?: string;
   };
-  initialMode?: NoteDrawerMode;
   onClose: () => void;
 }) {
   const noteContentRef = useRef<HTMLDivElement>(null);
   const richTextRef = useRef<NoteRichTextHandle>(null);
+  const draftRef = useRef(note?.content ?? "");
   const closeAfterSaveRef = useRef(false);
-  const [width, setWidth] = useState(getStoredWidth);
-  const widthRef = useRef(width);
-  const isResizing = useRef(false);
-  const startX = useRef(0);
-  const startWidth = useRef(0);
-  const [mode, setMode] = useState<NoteDrawerMode>(initialMode);
+  const failedContentRef = useRef<string | undefined>(undefined);
+  const detailsCloseTimeoutRef = useRef<number | undefined>(undefined);
+  const saveStatusHideTimeoutRef = useRef<number | undefined>(undefined);
+  const extractionFeedbackTimeoutRef = useRef<number | undefined>(undefined);
+  const hasObservedSaveStateRef = useRef(false);
   const [draft, setDraft] = useState(note?.content ?? "");
-  const [discardDialogOpen, setDiscardDialogOpen] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("saved");
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [showSaveState, setShowSaveState] = useState(false);
+  const [extractionFeedback, setExtractionFeedback] =
+    useState<ExtractionFeedback>();
+  const frontMatter = useMemo(() => parseFrontMatter(draft), [draft]);
   const updateNote = useUpdateNote(workspaceSlug);
-  const noteRef = useRef(note);
-  const resetUpdateRef = useRef(updateNote.reset);
-  noteRef.current = note;
-  resetUpdateRef.current = updateNote.reset;
-  const isDirty = note !== undefined && draft !== note.content;
-  const canSave = isDirty && draft.trim().length > 0 && !updateNote.isPending;
+  const extractionCollectionSlug = noteExtractionTarget?.collectionSlug ?? "";
+  const createExtractedCollectionNote = useCreateNote(
+    workspaceSlug,
+    extractionCollectionSlug,
+  );
+  const createExtractedInboxNote = useCreateInboxNote(workspaceSlug);
+  const extractionPlacement = useBoardInsertionPlacement(
+    workspaceSlug,
+    [extractionCollectionSlug, noteExtractionTarget?.parentFolderPath]
+      .filter(Boolean)
+      .join("/"),
+  );
+  const extractionPosition = extractionPlacement?.position;
+  const { isPending, mutate, reset } = updateNote;
+  const noteId = note?.id;
+  const noteContent = note?.content;
 
-  widthRef.current = width;
-
-  useEffect(() => {
-    const currentNote = noteRef.current;
-    if (!currentNote) return;
-    setMode(initialMode);
-    setDraft(
-      initialMode === "edit"
-        ? (loadEditDraft(currentNote.id) ?? currentNote.content)
-        : currentNote.content,
-    );
-    resetUpdateRef.current();
-  }, [initialMode, note?.id]);
+  draftRef.current = draft;
 
   useEffect(() => {
-    const currentNote = noteRef.current;
-    if (!currentNote || mode !== "read") return;
-    setDraft(currentNote.content);
-  }, [mode, note?.content]);
+    if (saveStatusHideTimeoutRef.current !== undefined) {
+      window.clearTimeout(saveStatusHideTimeoutRef.current);
+      saveStatusHideTimeoutRef.current = undefined;
+    }
 
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isResizing.current = true;
-    startX.current = e.clientX;
-    startWidth.current = widthRef.current;
+    if (!hasObservedSaveStateRef.current) {
+      hasObservedSaveStateRef.current = true;
+      return;
+    }
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing.current) return;
-      const delta = startX.current - e.clientX;
-      const newWidth = Math.min(
-        Math.max(startWidth.current + delta, DRAWER_MIN_WIDTH),
-        Math.min(DRAWER_MAX_WIDTH, window.innerWidth * 0.92),
+    setShowSaveState(true);
+    if (saveState === "saved") {
+      saveStatusHideTimeoutRef.current = window.setTimeout(
+        () => setShowSaveState(false),
+        SAVE_STATUS_VISIBLE_MS,
       );
-      widthRef.current = newWidth;
-      setWidth(newWidth);
-    };
+    }
+  }, [saveState]);
 
-    const handleMouseUp = () => {
-      if (!isResizing.current) return;
-      isResizing.current = false;
-      try {
-        localStorage.setItem("note-drawer-width", String(widthRef.current));
-      } catch {}
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
+  useEffect(
+    () => () => {
+      if (extractionFeedbackTimeoutRef.current !== undefined) {
+        window.clearTimeout(extractionFeedbackTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  }, []);
+  useEffect(() => {
+    if (!noteId || noteContent === undefined) return;
+    const recoveredDraft = loadEditDraft(noteId);
+    const nextDraft = recoveredDraft ?? noteContent;
+    draftRef.current = nextDraft;
+    setDraft(nextDraft);
+    setSaveState(
+      recoveredDraft && recoveredDraft !== noteContent ? "saving" : "saved",
+    );
+    failedContentRef.current = undefined;
+    reset();
+  }, [noteContent, noteId, reset]);
+
+  useEffect(() => {
+    const container = noteContentRef.current;
+    if (container) container.scrollTop = 0;
+  }, [noteId]);
+
+  useEffect(() => {
+    if (!noteId || draft !== noteContent) return;
+    clearEditDraft(noteId);
+    failedContentRef.current = undefined;
+    setSaveState("saved");
+  }, [draft, noteContent, noteId]);
+
+  const persist = useCallback(
+    (content: string, closeAfterSave = false) => {
+      if (!noteId) return;
+
+      if (content === noteContent) {
+        if (draftRef.current === content) {
+          draftRef.current = content;
+          setDraft(content);
+          clearEditDraft(noteId);
+          setSaveState("saved");
+        }
+        if (closeAfterSave) onClose();
+        return;
+      }
+
+      if (isPending) return;
+
+      closeAfterSaveRef.current ||= closeAfterSave;
+      setSaveState("saving");
+      mutate(
+        { assetId: noteId, content },
+        {
+          onSuccess: () => {
+            failedContentRef.current = undefined;
+            if (draftRef.current === content) {
+              draftRef.current = content;
+              setDraft(content);
+              clearEditDraft(noteId);
+              setSaveState("saved");
+            }
+            if (closeAfterSaveRef.current) {
+              closeAfterSaveRef.current = false;
+              const latestContent = getSaveableNoteContent(draftRef.current);
+              if (latestContent && latestContent !== content) {
+                window.setTimeout(() => persist(latestContent, true), 0);
+                return;
+              }
+              onClose();
+            }
+          },
+          onError: (error) => {
+            failedContentRef.current = content;
+            closeAfterSaveRef.current = false;
+            setSaveState("error");
+            toast.error(
+              error instanceof Error ? error.message : "Could not save note.",
+            );
+          },
+        },
+      );
+    },
+    [isPending, mutate, noteContent, noteId, onClose],
+  );
+
+  useEffect(() => {
+    if (!noteId || draft === noteContent || isPending) return;
+    const content = getSaveableNoteContent(draft);
+    if (!content) {
+      setSaveState("empty");
+      return;
+    }
+    if (failedContentRef.current === content) return;
+    const timeout = window.setTimeout(
+      () => persist(content),
+      AUTOSAVE_DELAY_MS,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [draft, isPending, noteContent, noteId, persist]);
 
   const metrics =
     note?.wordCount !== undefined && note.readingTimeMinutes !== undefined
       ? {
-          wordCount: note.wordCount,
-          readingTimeMinutes: note.readingTimeMinutes,
+          words: `${note.wordCount.toLocaleString()} words`,
+          readingTime: `${note.readingTimeMinutes.toLocaleString()} ${note.readingTimeMinutes === 1 ? "min" : "mins"} read`,
         }
       : undefined;
+  const createdLabel = note?.createdAt
+    ? formatNoteDate(note.createdAt)
+    : undefined;
+  const updatedTimestamp = note?.updatedAt ?? note?.createdAt;
+  const updatedLabel = updatedTimestamp
+    ? formatRelativeTime(updatedTimestamp)
+    : undefined;
 
-  function beginEdit() {
-    if (!note) return;
-    setDraft(loadEditDraft(note.id) ?? note.content);
-    setMode("edit");
-  }
+  const extractSelection = useCallback(
+    (content: string) => {
+      if (!noteExtractionTarget) return;
+      window.getSelection()?.removeAllRanges();
+      const destination =
+        noteExtractionTarget.target === "inbox"
+          ? "Inbox"
+          : noteExtractionTarget.parentFolderPath
+            ? "this folder"
+            : "this collection";
 
-  function handleDraftChange(content: string) {
-    if (!note) return;
-    setDraft(content);
-    if (content === note.content) {
-      clearEditDraft(note.id);
-    } else {
-      saveEditDraft(note.id, content);
+      if (extractionFeedbackTimeoutRef.current !== undefined) {
+        window.clearTimeout(extractionFeedbackTimeoutRef.current);
+      }
+      setExtractionFeedback({ status: "extracting", destination });
+
+      const onSuccess = () => {
+        setExtractionFeedback({ status: "success", destination });
+        extractionFeedbackTimeoutRef.current = window.setTimeout(
+          () => setExtractionFeedback(undefined),
+          2_500,
+        );
+      };
+      const onError = () => {
+        setExtractionFeedback({ status: "error", destination });
+        extractionFeedbackTimeoutRef.current = window.setTimeout(
+          () => setExtractionFeedback(undefined),
+          4_000,
+        );
+      };
+      if (noteExtractionTarget.target === "inbox") {
+        createExtractedInboxNote.mutate({ content }, { onSuccess, onError });
+      } else {
+        createExtractedCollectionNote.mutate(
+          {
+            content,
+            parentFolderPath: noteExtractionTarget.parentFolderPath,
+            placement: extractionPosition
+              ? { position: extractionPosition }
+              : undefined,
+          },
+          { onSuccess, onError },
+        );
+      }
+    },
+    [
+      createExtractedCollectionNote,
+      createExtractedInboxNote,
+      extractionPosition,
+      noteExtractionTarget,
+    ],
+  );
+
+  function openDetails() {
+    if (detailsCloseTimeoutRef.current !== undefined) {
+      window.clearTimeout(detailsCloseTimeoutRef.current);
+      detailsCloseTimeoutRef.current = undefined;
     }
+    setDetailsOpen(true);
   }
 
-  function saveChanges({ closeAfterSave = false } = {}) {
-    if (!note || !canSave) return;
-    closeAfterSaveRef.current = closeAfterSave;
-    const content = draft.trim();
-
-    updateNote.mutate(
-      { assetId: note.id, content },
-      {
-        onSuccess: ({ note: updatedNote }) => {
-          clearEditDraft(note.id);
-          setDraft(updatedNote.content);
-          setMode("read");
-          setDiscardDialogOpen(false);
-          toast.success("Note updated.");
-          if (closeAfterSaveRef.current) onClose();
-          closeAfterSaveRef.current = false;
-        },
-        onError: (error) => {
-          closeAfterSaveRef.current = false;
-          toast.error(
-            error instanceof Error ? error.message : "Unable to update note.",
-          );
-        },
-      },
+  function closeDetailsSoon() {
+    if (detailsCloseTimeoutRef.current !== undefined) {
+      window.clearTimeout(detailsCloseTimeoutRef.current);
+    }
+    detailsCloseTimeoutRef.current = window.setTimeout(
+      () => setDetailsOpen(false),
+      120,
     );
+  }
+
+  function handleDraftChange(bodyContent: string) {
+    if (!note) return;
+    const content = composeFrontMatter(frontMatter, bodyContent);
+    draftRef.current = content;
+    setDraft(content);
+    failedContentRef.current = undefined;
+    if (content === note.content) clearEditDraft(note.id);
+    else saveEditDraft(note.id, content);
   }
 
   function requestClose() {
-    if (mode === "edit" && isDirty) {
-      setDiscardDialogOpen(true);
+    if (!note) return onClose();
+    const content = getSaveableNoteContent(draftRef.current);
+    if (!content || content === note.content) return onClose();
+    if (updateNote.isPending) {
+      closeAfterSaveRef.current = true;
       return;
     }
-    onClose();
-  }
-
-  function discardAndClose() {
-    if (note) clearEditDraft(note.id);
-    setDiscardDialogOpen(false);
-    onClose();
-  }
-
-  function handleHighlight() {
-    if (!note || updateNote.isPending) return;
-    const previousContent = note.content;
-    const highlightedContent = richTextRef.current?.toggleHighlight();
-    if (!highlightedContent || highlightedContent === previousContent) return;
-
-    updateNote.mutate(
-      { assetId: note.id, content: highlightedContent },
-      {
-        onSuccess: () => toast.success("Highlight saved."),
-        onError: (error) => {
-          richTextRef.current?.restoreMarkdown(previousContent);
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Unable to save highlight.",
-          );
-        },
-      },
-    );
+    persist(content, true);
   }
 
   return (
-    <>
-      <Drawer
-        open={note !== undefined}
-        onOpenChange={(open) => {
-          if (!open) requestClose();
-        }}
-        swipeDirection="right"
-      >
-        <DrawerContent
-          className={cn(
-            "border-sidebar-border bg-sidebar text-sidebar-foreground rounded-xl border shadow-2xl duration-200 [--bleed:0px] [--drawer-bleed-background:var(--sidebar)] [--drawer-inset:0.75rem] data-ending-style:duration-150 data-starting-style:duration-200",
-          )}
-          style={
-            {
-              "--drawer-content-width": `min(${width}px, calc(100vw - 1.5rem))`,
-            } as React.CSSProperties
-          }
+    <NoteWorkspace
+      open={note !== undefined}
+      onOpenChange={(open) => !open && requestClose()}
+    >
+      <NoteWorkspaceContent>
+        <NoteWorkspaceTitle>Note</NoteWorkspaceTitle>
+        <Button
+          className="absolute top-5 left-5 z-10 rounded-lg border border-transparent bg-transparent text-foreground shadow-none hover:bg-secondary focus-visible:border-border active:bg-foreground/[0.1]"
+          variant="ghost"
+          size="icon-lg"
+          onClick={requestClose}
         >
-          <div className="relative flex min-h-0 flex-1 flex-col">
-            <div
-              className="absolute inset-y-0 left-0 z-20 w-1 -translate-x-1/2 cursor-col-resize before:absolute before:inset-y-0 before:-left-2 before:w-5 hover:bg-sidebar-foreground/10 active:bg-sidebar-foreground/20"
-              onMouseDown={handleResizeStart}
-            />
-            <DrawerHeader className="flex-row items-center justify-between border-b border-sidebar-border p-4">
-              <DrawerTitle className="sr-only">
-                {mode === "edit" ? "Edit note" : "Note details"}
-              </DrawerTitle>
-              <div className="flex min-w-0 items-center gap-2">
-                {mode === "edit" ? (
-                  <span className="text-xs font-medium text-sidebar-foreground/50">
-                    {isDirty ? "Unsaved changes" : "Editing"}
-                  </span>
-                ) : metrics ? (
-                  <div className="flex items-center gap-2 text-xs font-medium text-sidebar-foreground/50">
-                    <span>{metrics.wordCount.toLocaleString()} words</span>
-                    <span className="text-sidebar-foreground/25">/</span>
-                    <span>
-                      {metrics.readingTimeMinutes.toLocaleString()}{" "}
-                      {metrics.readingTimeMinutes === 1 ? "min" : "mins"} read
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-              <div className="flex items-center gap-1.5">
-                {mode === "read" ? (
-                  <Button variant="outline" size="sm" onClick={beginEdit}>
-                    <PencilIcon />
-                    <span>Edit</span>
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    disabled={!canSave}
-                    onClick={() => saveChanges()}
-                  >
-                    <CheckIcon />
-                    <span>{updateNote.isPending ? "Saving…" : "Save"}</span>
-                  </Button>
-                )}
-                <Button variant="ghost" size="icon-sm" onClick={requestClose}>
-                  <XIcon />
-                  <span className="sr-only">Close</span>
-                </Button>
-              </div>
-            </DrawerHeader>
-            <ScrollArea
-              viewportRef={noteContentRef}
+          <ArrowLeftIcon />
+          <span className="sr-only">Back to board</span>
+        </Button>
+        <AnimatePresence initial={false}>
+          {extractionFeedback ? (
+            <motion.div
+              key={extractionFeedback.status}
+              initial={{ opacity: 0, scale: 0.96, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: -4 }}
+              transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+              role="status"
+              aria-live="polite"
               className={cn(
-                "min-h-0 flex-1 text-sm",
-                mode === "read" && "px-5 py-4",
+                "pointer-events-none absolute top-5 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full border bg-background/95 px-3 py-1.5 text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-xl",
+                extractionFeedback.status === "error" &&
+                  "border-destructive/30 bg-destructive/10 text-destructive",
               )}
             >
-              {noteExtractionTarget && mode === "read" ? (
-                <NoteSelectionToolbar
-                  containerRef={noteContentRef}
-                  active={note !== undefined}
-                  workspaceSlug={workspaceSlug}
-                  collectionSlug={noteExtractionTarget.collectionSlug}
-                  parentFolderPath={noteExtractionTarget.parentFolderPath}
-                  isHighlighting={updateNote.isPending}
-                  onHighlight={handleHighlight}
-                  onExtract={onClose}
+              {extractionFeedback.status === "extracting" ? (
+                <LoaderCircleIcon className="size-3.5 animate-spin" />
+              ) : extractionFeedback.status === "success" ? (
+                <CheckIcon className="size-3.5" />
+              ) : null}
+              <span>
+                {extractionFeedback.status === "extracting"
+                  ? `Extracting to ${extractionFeedback.destination}…`
+                  : extractionFeedback.status === "success"
+                    ? `Extracted to ${extractionFeedback.destination}`
+                    : "Couldn’t extract note"}
+              </span>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+        <div className="absolute top-5 right-5 z-10 flex h-10 items-center rounded-lg pt-0 pr-0 pb-0 pl-3.5 text-xs font-medium text-muted-foreground">
+          <span
+            className={cn(
+              "inline-block w-24 text-right transition-opacity duration-100 ease-out motion-reduce:transition-none",
+              showSaveState ? "opacity-100" : "pointer-events-none opacity-0",
+            )}
+            aria-hidden={!showSaveState}
+          >
+            {saveStateLabel(saveState)}
+          </span>
+          {metrics ? (
+            <>
+              <span
+                className={cn(
+                  "mx-3 hidden h-4 w-px bg-border transition-opacity duration-100 ease-out sm:block motion-reduce:transition-none",
+                  showSaveState ? "opacity-100" : "opacity-0",
+                )}
+                aria-hidden="true"
+              />
+              <span className="hidden sm:inline">{metrics.words}</span>
+              <DotIcon
+                className="mx-1.5 hidden size-3 sm:block"
+                aria-hidden="true"
+              />
+              <span className="hidden sm:inline">{metrics.readingTime}</span>
+            </>
+          ) : null}
+          {createdLabel || updatedLabel ? (
+            <>
+              {showSaveState || metrics ? (
+                <span
+                  className="mx-2 hidden h-4 w-px bg-border sm:block"
+                  aria-hidden="true"
                 />
               ) : null}
-              {note ? (
-                <Suspense fallback={<NoteDrawerContentSkeleton />}>
-                  <NoteRichText
-                    key={`${note.id}:${mode}`}
-                    ref={richTextRef}
-                    markdown={mode === "edit" ? draft : note.content}
-                    editable={mode === "edit"}
-                    autoFocus={mode === "edit"}
-                    onChange={mode === "edit" ? handleDraftChange : undefined}
-                    onSaveShortcut={() => saveChanges()}
-                  />
-                </Suspense>
-              ) : (
-                <NoteDrawerContentSkeleton />
-              )}
-            </ScrollArea>
+              <Popover open={detailsOpen} onOpenChange={setDetailsOpen}>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground"
+                      aria-label="Note details"
+                      onMouseEnter={openDetails}
+                      onMouseLeave={closeDetailsSoon}
+                      onFocus={openDetails}
+                    />
+                  }
+                >
+                  <InfoIcon className="size-4" />
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  sideOffset={10}
+                  onMouseEnter={openDetails}
+                  onMouseLeave={closeDetailsSoon}
+                  className="w-fit min-w-0 border-border/60 bg-background/95 whitespace-nowrap shadow-2xl backdrop-blur-xl"
+                >
+                  <div className="flex flex-col gap-1 text-xs">
+                    {createdLabel ? (
+                      <div>
+                        <span className="text-muted-foreground">
+                          Created at{" "}
+                        </span>
+                        <span>{createdLabel}</span>
+                      </div>
+                    ) : null}
+                    {updatedLabel ? (
+                      <div>
+                        <span className="text-muted-foreground">
+                          Updated at{" "}
+                        </span>
+                        <span>{updatedLabel}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </>
+          ) : null}
+        </div>
+        <div
+          ref={noteContentRef}
+          className="note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto"
+        >
+          <div className="note-workspace-column">
+            {note ? (
+              <Suspense
+                fallback={
+                  <div className="py-14 text-sm text-muted-foreground">
+                    Opening note…
+                  </div>
+                }
+              >
+                <NoteRichText
+                  key={note.id}
+                  ref={richTextRef}
+                  markdown={frontMatter.body}
+                  editable
+                  autoFocus={false}
+                  scrollContainerRef={noteContentRef}
+                  onExtractSelection={
+                    noteExtractionTarget ? extractSelection : undefined
+                  }
+                  onHighlightSelection={
+                    noteExtractionTarget
+                      ? (content) =>
+                          persist(
+                            composeFrontMatter(
+                              parseFrontMatter(draftRef.current),
+                              content,
+                            ),
+                          )
+                      : undefined
+                  }
+                  isHighlighting={saveState === "saving"}
+                  onChange={handleDraftChange}
+                  onSaveShortcut={() => {
+                    const content = getSaveableNoteContent(draftRef.current);
+                    if (content) persist(content);
+                  }}
+                />
+              </Suspense>
+            ) : null}
           </div>
-        </DrawerContent>
-      </Drawer>
-      <AlertDialog open={discardDialogOpen} onOpenChange={setDiscardDialogOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogBody>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Save changes?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This note has changes that have not been saved.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-          </AlertDialogBody>
-          <AlertDialogFooter className="sm:grid sm:grid-cols-3">
-            <AlertDialogAction
-              variant="outline"
-              onClick={(event) => {
-                event.preventDefault();
-                discardAndClose();
-              }}
-            >
-              Discard
-            </AlertDialogAction>
-            <AlertDialogCancel>Continue editing</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={!canSave}
-              onClick={(event) => {
-                event.preventDefault();
-                saveChanges({ closeAfterSave: true });
-              }}
-            >
-              Save changes
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        </div>
+        {saveState === "error" ? (
+          <p className="absolute right-4 bottom-4 left-4 z-10 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive backdrop-blur-sm sm:right-auto sm:left-6">
+            Changes are stored on this device. Keep editing to retry saving.
+          </p>
+        ) : null}
+      </NoteWorkspaceContent>
+    </NoteWorkspace>
   );
+}
+
+function saveStateLabel(state: SaveState) {
+  if (state === "saving") return "Saving…";
+  if (state === "error") return "Save failed";
+  if (state === "empty") return "Add text to save";
+  return "Saved";
+}
+
+const NOTE_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+});
+const NOTE_DATE_WITH_YEAR_FORMAT = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+});
+
+function formatNoteDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.getFullYear() === new Date().getFullYear()
+    ? NOTE_DATE_FORMAT.format(date)
+    : NOTE_DATE_WITH_YEAR_FORMAT.format(date);
+}
+
+function formatRelativeTime(iso: string): string {
+  const elapsedMs = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(elapsedMs)) return "";
+  if (elapsedMs < 60_000) return "just now";
+
+  const minutes = Math.floor(elapsedMs / 60_000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return formatNoteDate(iso);
 }
 
 function editDraftKey(noteId: string) {
@@ -404,244 +580,4 @@ function clearEditDraft(noteId: string) {
   try {
     localStorage.removeItem(editDraftKey(noteId));
   } catch {}
-}
-
-function NoteDrawerContentSkeleton() {
-  return (
-    <div className="space-y-4 py-0.5" role="status">
-      <span className="sr-only">Loading note</span>
-      <Skeleton className="h-5 w-2/5" />
-      <div className="space-y-2">
-        <Skeleton className="h-3.5 w-full" />
-        <Skeleton className="h-3.5 w-11/12" />
-        <Skeleton className="h-3.5 w-4/5" />
-      </div>
-      <Skeleton className="h-28 w-full" />
-      <div className="space-y-2">
-        <Skeleton className="h-3.5 w-full" />
-        <Skeleton className="h-3.5 w-3/4" />
-      </div>
-    </div>
-  );
-}
-
-type SelectionToolbarPosition = {
-  left: number;
-  top: number;
-  placement: "top" | "bottom";
-  content: string;
-};
-
-function NoteSelectionToolbar({
-  containerRef,
-  active,
-  workspaceSlug,
-  collectionSlug,
-  parentFolderPath,
-  isHighlighting,
-  onHighlight,
-  onExtract,
-}: {
-  containerRef: RefObject<HTMLDivElement | null>;
-  active: boolean;
-  workspaceSlug: string;
-  collectionSlug: string;
-  parentFolderPath?: string;
-  isHighlighting: boolean;
-  onHighlight: () => void;
-  onExtract?: () => void;
-}) {
-  const [position, setPosition] = useState<SelectionToolbarPosition | null>(
-    null,
-  );
-  const createNote = useCreateNote(workspaceSlug, collectionSlug);
-  const placement = useBoardInsertionPlacement(
-    workspaceSlug,
-    [collectionSlug, parentFolderPath].filter(Boolean).join("/"),
-  );
-
-  const getToolbarPosition =
-    useCallback((): SelectionToolbarPosition | null => {
-      if (!active) {
-        return null;
-      }
-
-      const container = containerRef.current;
-      const selection = window.getSelection();
-
-      if (
-        !container ||
-        !selection ||
-        selection.isCollapsed ||
-        selection.rangeCount === 0
-      ) {
-        return null;
-      }
-
-      const { anchorNode, focusNode } = selection;
-      const selectionIsInside =
-        (!anchorNode || container.contains(anchorNode)) &&
-        (!focusNode || container.contains(focusNode));
-
-      if (!selectionIsInside) {
-        return null;
-      }
-
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      const content = markdownFromSelection(range, selection).trim();
-
-      if ((rect.width === 0 && rect.height === 0) || !content) {
-        return null;
-      }
-
-      const toolbarWidth = 224;
-      const toolbarOffset = 10;
-      const viewportPadding = 12;
-      const selectionCenter = rect.left + rect.width / 2;
-      const left = Math.min(
-        Math.max(selectionCenter, viewportPadding + toolbarWidth / 2),
-        window.innerWidth - viewportPadding - toolbarWidth / 2,
-      );
-      const canFitAbove = rect.top > 52;
-
-      return {
-        left,
-        top: canFitAbove
-          ? rect.top - toolbarOffset
-          : rect.bottom + toolbarOffset,
-        placement: canFitAbove ? "top" : "bottom",
-        content,
-      };
-    }, [active, containerRef]);
-
-  const handleExtractAsset = useCallback(() => {
-    if (!position) return;
-
-    const content = position.content;
-    onExtract?.();
-    window.getSelection()?.removeAllRanges();
-    setPosition(null);
-
-    createNote.mutate(
-      { content, parentFolderPath, placement },
-      {
-        onError: (err) => {
-          toast.error(
-            err instanceof Error
-              ? err.message
-              : "Unable to extract note asset.",
-          );
-        },
-      },
-    );
-  }, [createNote, parentFolderPath, placement, position, onExtract]);
-
-  useEffect(() => {
-    if (!active) {
-      setPosition(null);
-      return;
-    }
-
-    const eventStartedInToolbar = (event: Event) =>
-      event.target instanceof Element &&
-      event.target.closest("[data-note-selection-toolbar]");
-    const hideToolbar = (event: Event) => {
-      if (eventStartedInToolbar(event)) {
-        return;
-      }
-
-      setPosition(null);
-    };
-    const showToolbar = (event: Event) => {
-      if (eventStartedInToolbar(event)) {
-        return;
-      }
-
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
-          setPosition(getToolbarPosition());
-        });
-      });
-    };
-    const updateVisibleToolbar = () => {
-      setPosition((current) => {
-        if (!current) {
-          return null;
-        }
-
-        return getToolbarPosition();
-      });
-    };
-    const scrollContainer = containerRef.current;
-
-    document.addEventListener("selectionchange", hideToolbar);
-    document.addEventListener("pointerdown", hideToolbar);
-    document.addEventListener("pointerup", showToolbar);
-    document.addEventListener("keyup", showToolbar);
-    window.addEventListener("resize", updateVisibleToolbar);
-    scrollContainer?.addEventListener("scroll", updateVisibleToolbar, {
-      passive: true,
-    });
-
-    return () => {
-      document.removeEventListener("selectionchange", hideToolbar);
-      document.removeEventListener("pointerdown", hideToolbar);
-      document.removeEventListener("pointerup", showToolbar);
-      document.removeEventListener("keyup", showToolbar);
-      window.removeEventListener("resize", updateVisibleToolbar);
-      scrollContainer?.removeEventListener("scroll", updateVisibleToolbar);
-    };
-  }, [active, containerRef, getToolbarPosition]);
-
-  if (!position) {
-    return null;
-  }
-
-  return createPortal(
-    <ButtonGroup
-      className="fixed z-60 -translate-x-1/2 rounded-lg bg-background/90 text-foreground shadow-xl ring-1 ring-foreground/10 backdrop-blur-2xl backdrop-saturate-150"
-      style={{
-        left: position.left,
-        top: position.top,
-        transform:
-          position.placement === "top"
-            ? "translate(-50%, -100%)"
-            : "translate(-50%, 0)",
-      }}
-      role="toolbar"
-      aria-label="Text selection actions"
-      data-note-selection-toolbar
-      onMouseDown={(event) => {
-        event.preventDefault();
-      }}
-    >
-      <Button
-        className="gap-1.5 px-2.5"
-        variant="outline"
-        size="sm"
-        type="button"
-        onClick={handleExtractAsset}
-      >
-        <PackagePlusIcon data-icon="inline-start" />
-        <span>Extract asset</span>
-      </Button>
-      <Button
-        className="gap-1.5 px-2.5"
-        variant="outline"
-        size="sm"
-        type="button"
-        disabled={isHighlighting}
-        onClick={() => {
-          onHighlight();
-          window.getSelection()?.removeAllRanges();
-          setPosition(null);
-        }}
-      >
-        <HighlighterIcon data-icon="inline-start" />
-        <span>{isHighlighting ? "Saving…" : "Highlight"}</span>
-      </Button>
-    </ButtonGroup>,
-    document.body,
-  );
 }

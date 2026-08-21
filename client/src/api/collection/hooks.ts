@@ -24,6 +24,7 @@ import {
   deleteCollectionNode,
   fetchCollectionContents,
   fetchInboxContents,
+  fetchNote,
   flattenFolder,
   markInboxSeen,
   updateCollectionNodePosition,
@@ -43,6 +44,7 @@ import type {
   CreateFolderInput,
   CreateRemoteImageInput,
   CreateNoteInput,
+  GetNoteResponse,
   FolderChildPreview,
   ImageUploadStatus,
   InboxContentsResponse,
@@ -117,6 +119,15 @@ export function inboxContentsQueryOptions(
       activeLinkRefetchInterval(query.state.data),
     refetchIntervalInBackground: false,
   };
+}
+
+export function useNote(workspaceSlug: string, assetId: string | undefined) {
+  return useQuery({
+    queryKey: collectionQueryKeys.note(workspaceSlug, assetId ?? ""),
+    queryFn: () => fetchNote(workspaceSlug, assetId!),
+    enabled: Boolean(workspaceSlug && assetId),
+    staleTime: COLLECTION_CONTENTS_STALE_TIME,
+  });
 }
 
 export function collectionContentsQueryOptions(
@@ -753,6 +764,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         wordCount: countWords(data.content),
         readingTimeMinutes: 1,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         position: null,
       };
       const position = reserveNodePositions(
@@ -791,6 +803,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         wordCount: 0,
         readingTimeMinutes: 1,
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         clientId: optimisticId,
         position: null,
       };
@@ -970,6 +983,7 @@ export function useCreateInboxNote(workspaceSlug: string) {
           Math.ceil(countWords(variables.content) / 200),
         ),
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         position: null,
       };
 
@@ -1075,6 +1089,11 @@ export function useUpdateNote(workspaceSlug: string) {
             queryKey[1] === workspaceSlug,
         },
         (current) => applyUpdatedNoteToContents(current, note),
+      );
+      queryClient.setQueryData<GetNoteResponse>(
+        collectionQueryKeys.note(workspaceSlug, note.id),
+        (current) =>
+          current ? { note: { ...current.note, ...note } } : current,
       );
 
       queryClient.setQueryData<CollectionsData>(

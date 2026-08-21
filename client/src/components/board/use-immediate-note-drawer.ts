@@ -9,14 +9,12 @@ export function useImmediateNoteDrawer(
   const routeNoteRef = useRef(routeNote);
   routeNoteRef.current = routeNote;
   const [drawerNote, setDrawerNote] = useState(routeNote);
-  const [drawerMode, setDrawerMode] = useState<"read" | "edit">("read");
   const lastResolvedRouteNoteId = useRef(routeNote?.id);
 
   useEffect(() => {
     if (!routeNoteId) {
       lastResolvedRouteNoteId.current = undefined;
       setDrawerNote(undefined);
-      setDrawerMode("read");
       return;
     }
 
@@ -49,18 +47,13 @@ export function useImmediateNoteDrawer(
     routeNoteId,
   ]);
 
-  const openDrawer = useCallback(
-    (note: NoteAsset, mode: "read" | "edit" = "read") => {
-      setDrawerNote(note);
-      setDrawerMode(mode);
-    },
-    [],
-  );
+  const openDrawer = useCallback((note: NoteAsset) => {
+    setDrawerNote(note);
+  }, []);
 
   const closeDrawer = useCallback(() => {
     setDrawerNote(undefined);
-    setDrawerMode("read");
   }, []);
 
-  return { drawerNote, drawerMode, openDrawer, closeDrawer };
+  return { drawerNote, openDrawer, closeDrawer };
 }
