@@ -10,6 +10,6 @@
   "include": [
     "src/**/*.ts",
     "../url-unfurl-shared/src/**/*.ts",
-    "../image-shared/src/observability.ts"
+    "../image-shared/src/**/*.ts"
   ]
 }

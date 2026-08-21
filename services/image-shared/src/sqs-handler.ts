@@ -1,16 +1,7 @@
-import type { SQSBatchResponse, SQSHandler, S3Event } from "aws-lambda";
-import * as Sentry from "@sentry/aws-serverless";
+import type { S3Event, SQSHandler } from "aws-lambda";
 
-import {
-  captureException,
-  log,
-  markSpanError,
-  recordMessageDuration,
-  runWithSpan,
-} from "./observability";
 import { isOriginalImageObjectKey } from "./pipeline-callback";
-
-const MAX_PROCESSING_ATTEMPTS = 5;
+import { createTaskHandler } from "./task-handler";
 
 export type SourceImage = {
   bucket: string;
@@ -54,126 +45,33 @@ function sourcesFromS3Event(event: S3Event): SourceImage[] {
   });
 }
 
-/**
- * Wraps an independent image processor in the shared SQS retry contract.
- *
- * A failed job is redelivered until its fifth receive. At that point the API
- * receives the matching terminal status. If that terminal callback is down,
- * the message remains failed so SQS can redeliver it and ultimately retain it
- * in the queue's DLQ.
- */
+/** Normalizes either a raw S3 event or its SNS envelope at the queue boundary. */
+export function sourceImagesFromSqsBody(body: string): SourceImage[] {
+  return sourcesFromS3Event(parseS3Event(body));
+}
+
+/** Adapts upload events to the shared task retry and terminal-result contract. */
 export function createSqsHandler({
   pipeline,
   process,
   reportTerminalFailure,
 }: HandlerOptions): SQSHandler {
-  const handle = async (event: {
-    Records: Array<{
-      messageId: string;
-      body: string;
-      attributes: { ApproximateReceiveCount?: string };
-    }>;
-  }): Promise<SQSBatchResponse> => {
-    const batchItemFailures: SQSBatchResponse["batchItemFailures"] = [];
-
-    for (const message of event.Records) {
-      const attempts = Number(
-        message.attributes.ApproximateReceiveCount ?? "1",
-      );
-      const startedAt = performance.now();
-      let outcome: "success" | "error" = "success";
-      await runWithSpan(
-        `image.${pipeline}.process`,
-        {
-          "messaging.system": "aws_sqs",
-          "messaging.message.id": message.messageId,
-          "messaging.destination.name": pipeline,
-          "aws.sqs.approximate_receive_count": attempts,
-        },
-        async (span) => {
-          if (attempts > MAX_PROCESSING_ATTEMPTS) {
-            try {
-              const s3Event = parseS3Event(message.body);
-              for (const source of sourcesFromS3Event(s3Event)) {
-                await reportTerminalFailure(
-                  source,
-                  "Image processing failed before its terminal callback could be delivered",
-                );
-              }
-            } catch (callbackError) {
-              log("error", "image terminal failure callback failed", {
-                event: `image_${pipeline}.failure_callback_failed`,
-                messageId: message.messageId,
-                attempts,
-                error: String(callbackError),
-              });
-              markSpanError(span, callbackError);
-              captureException(callbackError, {
-                pipeline,
-                messageId: message.messageId,
-                attempts,
-              });
-              batchItemFailures.push({ itemIdentifier: message.messageId });
-            }
-            outcome = "error";
-            return;
-          }
-
-          try {
-            const s3Event = parseS3Event(message.body);
-            for (const source of sourcesFromS3Event(s3Event))
-              await process(source);
-          } catch (error) {
-            const detail =
-              error instanceof Error
-                ? error.message
-                : "Unknown image processing error";
-            log("error", "image processing failed", {
-              event: `image_${pipeline}.failed`,
-              messageId: message.messageId,
-              attempts,
-              error: detail,
-            });
-            markSpanError(span, error);
-            captureException(error, {
-              pipeline,
-              messageId: message.messageId,
-              attempts,
-            });
-            outcome = "error";
-
-            if (attempts < MAX_PROCESSING_ATTEMPTS) {
-              batchItemFailures.push({ itemIdentifier: message.messageId });
-              return;
-            }
-
-            try {
-              const s3Event = parseS3Event(message.body);
-              for (const source of sourcesFromS3Event(s3Event)) {
-                await reportTerminalFailure(source, detail.slice(0, 1000));
-              }
-            } catch (callbackError) {
-              log("error", "image terminal failure callback failed", {
-                event: `image_${pipeline}.failure_callback_failed`,
-                messageId: message.messageId,
-                error: String(callbackError),
-              });
-              markSpanError(span, callbackError);
-              captureException(callbackError, {
-                pipeline,
-                messageId: message.messageId,
-                attempts,
-              });
-              batchItemFailures.push({ itemIdentifier: message.messageId });
-            }
-          }
-        },
-      );
-      recordMessageDuration(pipeline, outcome, performance.now() - startedAt);
-    }
-
-    return { batchItemFailures };
-  };
-
-  return Sentry.wrapHandler(handle, { flushTimeout: 2_000 });
+  return createTaskHandler({
+    pipeline: `image-${pipeline}`,
+    parse: sourceImagesFromSqsBody,
+    process: async (sources) => {
+      for (const source of sources) await process(source);
+    },
+    reportTerminalFailure: async (sources, error) => {
+      const detail =
+        error instanceof Error
+          ? error.message ===
+            "Task failed before its terminal callback could be delivered"
+            ? "Image processing failed before its terminal callback could be delivered"
+            : error.message
+          : "Unknown image processing error";
+      for (const source of sources)
+        await reportTerminalFailure(source, detail.slice(0, 1_000));
+    },
+  });
 }

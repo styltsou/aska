@@ -49,10 +49,7 @@ const required = (name: string): string => {
 export async function sendCallback(payload: PipelineCallback) {
   const body = JSON.stringify(payload);
   const timestamp = Date.now().toString();
-  const signature = createHmac(
-    "sha256",
-    required("IMAGE_PIPELINE_CALLBACK_SECRET"),
-  )
+  const signature = createHmac("sha256", required("PIPELINE_CALLBACK_SECRET"))
     .update(`${timestamp}.${body}`)
     .digest("hex");
   const response = await fetch(

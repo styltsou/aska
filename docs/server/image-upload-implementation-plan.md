@@ -105,7 +105,7 @@ x-aska-signature: HMAC-SHA256(timestamp + "." + raw JSON body)
 ```
 
 Hono rejects missing, malformed, stale, or invalid signatures. Both functions
-use the same `IMAGE_PIPELINE_CALLBACK_SECRET` value.
+use the same `PIPELINE_CALLBACK_SECRET` value.
 
 The callback identifies an upload by `originalObjectKey` and guards it with the
 source S3 ETag. Completion is idempotent: duplicate callbacks safely overwrite
@@ -196,14 +196,14 @@ CLOUDFRONT_PRIVATE_KEY_BASE64
 CLOUDFRONT_COOKIE_DOMAIN
 CLOUDFRONT_SIGNED_COOKIE_EXPIRES_SECONDS
 MAX_DIRECT_UPLOAD_BYTES
-IMAGE_PIPELINE_CALLBACK_SECRET
+PIPELINE_CALLBACK_SECRET
 ```
 
 Image-pipeline Lambda configuration:
 
 ```txt
 PIPELINE_API_BASE_URL
-IMAGE_PIPELINE_CALLBACK_SECRET
+PIPELINE_CALLBACK_SECRET
 ```
 
 Set the same random callback secret in both environments. The SST configuration

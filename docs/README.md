@@ -52,6 +52,8 @@ link back out to `specs/`.
 - [URL Unfurling and External Resources](./server/url-unfurling.md) — optimistic
   link cards, generic resolution, SSRF-safe retrieval, resource media, caching,
   lifecycle, and resolver extension boundaries.
+- [Background Tasks and Events](./task-architecture.md) — queue boundaries,
+  command versus event routing, retries, and criteria for adding workers.
 - [Image Cropping](./server/image-cropping.md) — in-place source replacement,
   normal pipeline reuse, and cleanup outbox behavior.
 - [Image Delivery Architecture](./image-delivery-architecture.md) — private,

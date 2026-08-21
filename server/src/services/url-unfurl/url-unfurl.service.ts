@@ -885,7 +885,12 @@ export class UrlUnfurlService {
       .limit(50);
     let mediaRequeued = 0;
     for (const media of mediaRows) {
-      if (await this.queue.enqueueResourceMedia(media.id, media.generation)) {
+      if (
+        await this.queue.enqueueResourceMediaRenditions(
+          media.id,
+          media.generation,
+        )
+      ) {
         await db
           .update(externalResourceMedia)
           .set({ enqueuedAt: new Date() })
@@ -1036,7 +1041,9 @@ export class UrlUnfurlService {
     resourceId: number,
   ) {
     try {
-      if (!(await this.queue.enqueueResourceMedia(mediaId, generation)))
+      if (
+        !(await this.queue.enqueueResourceMediaRenditions(mediaId, generation))
+      )
         throw new Error("media_queue_unavailable");
       await db
         .update(externalResourceMedia)

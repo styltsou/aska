@@ -1,7 +1,8 @@
 import { initializeSentry } from "../../image-shared/src/observability";
-import { callPipeline } from "../../url-unfurl-shared/src/pipeline-client";
+import { callPipeline } from "../../image-shared/src/pipeline-client";
+import { createTaskHandler } from "../../image-shared/src/task-handler";
+import { parseUrlResolutionJob } from "../../url-unfurl-shared/src/resolution-job";
 import { SafeFetchError } from "../../url-unfurl-shared/src/safe-fetch";
-import { createTaskHandler } from "../../url-unfurl-shared/src/task-handler";
 import { GenericHtmlResolver } from "./generic-resolver";
 import { resolveWithRegistry } from "./types";
 
@@ -22,13 +23,7 @@ type Claim =
 const resolvers = [new GenericHtmlResolver()] as const;
 
 function parseTask(body: string): Task {
-  const parsed = JSON.parse(body) as Partial<Task>;
-  if (
-    !Number.isSafeInteger(parsed.attemptId) ||
-    !Number.isSafeInteger(parsed.generation)
-  )
-    throw new Error("Invalid URL resolution task");
-  return { attemptId: parsed.attemptId!, generation: parsed.generation! };
+  return parseUrlResolutionJob(JSON.parse(body));
 }
 
 async function processTask(task: Task) {

@@ -30,7 +30,6 @@ cd ../image-variants && bun install
 cd ../image-palette && bun install
 cd ../url-unfurl-shared && bun install
 cd ../url-resolution && bun install
-cd ../resource-media && bun install
 ```
 
 Copy `server/.env.example` to `server/.env` for direct server development and
@@ -43,16 +42,16 @@ The shared `dev` stage is never a Live stage. See
 
 ## Choose the smallest correct change surface
 
-| If you are changing… | Usually change… | Also check… |
-| --- | --- | --- |
-| A browser screen or interaction | route, feature component, feature-local API hook | React Query cache transition, accessibility, visual state |
-| A public API operation | route, controller, DTO, service | OpenAPI, client feature module, error responses, tests |
-| Persistent data | Drizzle schema and migration | service queries, tenant constraints, schema docs, integration tests |
-| Collection/canvas behavior | collection service and canvas/board client code | placement/move invariants, [Collection Canvas](./collection-canvas.md), and [Canvas Placement Policy](./placement-policy.md) |
-| Image ingestion/enrichment | upload service, callback contract, a worker | idempotency, queue retries, signed callback, pipeline docs |
-| URL resolution/resource media | URL service, resolver or media worker | SSRF boundary, generations, roles, signed claims/results, [URL Unfurling](./server/url-unfurling.md) |
-| Infrastructure/configuration | `sst.config.ts` and environment schema | AWS workflow, secret handling, deployed client origins |
-| Errors/logs/traces | Sentry integration, logger, meaningful service boundary | [Observability](./server/observability.md), PII/redaction, sampling |
+| If you are changing…            | Usually change…                                         | Also check…                                                                                                                  |
+| ------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| A browser screen or interaction | route, feature component, feature-local API hook        | React Query cache transition, accessibility, visual state                                                                    |
+| A public API operation          | route, controller, DTO, service                         | OpenAPI, client feature module, error responses, tests                                                                       |
+| Persistent data                 | Drizzle schema and migration                            | service queries, tenant constraints, schema docs, integration tests                                                          |
+| Collection/canvas behavior      | collection service and canvas/board client code         | placement/move invariants, [Collection Canvas](./collection-canvas.md), and [Canvas Placement Policy](./placement-policy.md) |
+| Image ingestion/enrichment      | upload service, callback contract, a worker             | idempotency, queue retries, signed callback, pipeline docs                                                                   |
+| URL resolution/resource media   | URL service, resolver or image-variants source adapter  | SSRF boundary, generations, roles, signed claims/results, [URL Unfurling](./server/url-unfurling.md)                         |
+| Infrastructure/configuration    | `sst.config.ts` and environment schema                  | AWS workflow, secret handling, deployed client origins                                                                       |
+| Errors/logs/traces              | Sentry integration, logger, meaningful service boundary | [Observability](./server/observability.md), PII/redaction, sampling                                                          |
 
 Avoid broad refactors while delivering a feature unless the refactor is needed
 to preserve an invariant or safely implement the feature. Keep unrelated
@@ -109,8 +108,8 @@ the router/Vite tooling regenerate it when routes change.
 ## Verification
 
 Run checks only for packages affected by the change, plus every dependent
-package whose contract changed. Before merging a cross-cutting feature, run all
-four packages:
+package whose contract changed. Before merging a cross-cutting feature, run
+the full package matrix:
 
 ```sh
 cd client && bun run lint && bun run typecheck && bun run format && bun run test && bun run build
@@ -119,7 +118,6 @@ cd services/image-variants && bun run lint && bun run typecheck && bun run forma
 cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/url-resolution && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/resource-media && bun run lint && bun run typecheck && bun run format && bun run test
 ```
 
 For persistence changes, also run integration tests against a disposable

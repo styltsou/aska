@@ -106,8 +106,9 @@ is the top-level key segment, there is no single static source prefix that
 matches originals for every workspace. Events are therefore forwarded and the
 worker strictly accepts only `original.*` keys, ignoring `display.webp` and
 `preview.webp` writes so generated output cannot recursively trigger processing.
-They also ignore resource-media `master.webp` objects. The resource-media worker
-is started by its dedicated SQS queue, not by S3 notifications.
+They also ignore resource-media `master.webp` objects. Resource-media work is
+sent directly to `ImageVariantsQueue`; it is not triggered by S3 notifications
+and never fans out to palette analysis.
 
 The media distribution is a delivery boundary, not an application
 authorization substitute. API endpoints continue to enforce user and

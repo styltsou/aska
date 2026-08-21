@@ -40,7 +40,7 @@ S3 original.* object-created event
      └─ SQS -> image-palette Lambda -------------> signed API callback
 
 Link API transaction -> URL-resolution SQS -> SSRF-safe resolver Lambda
-  -> signed claim/result -> resource-media SQS -> role-aware media Lambda
+  -> signed claim/result -> image-variants SQS -> shared role/profile renderer
   -> private S3 workspace variants -> signed result
 ```
 
@@ -57,18 +57,17 @@ Deployment details, stage policy, and secret handling are in
 
 ## Repository map
 
-| Path                       | Owns                                          | Start here when changing it                                      |
-| -------------------------- | --------------------------------------------- | ---------------------------------------------------------------- |
-| `client/`                  | React 19/Vite browser application             | `src/routes/`, `src/api/`, `src/components/`, `src/store/`       |
-| `server/`                  | Hono API Lambda, auth, persistence, OpenAPI   | `src/app.ts`, `src/routes/`, `src/controllers/`, `src/services/` |
-| `services/image-shared/`   | SQS retry contract and signed callback client | `src/sqs-handler.ts`, `src/pipeline-callback.ts`                 |
-| `services/image-variants/` | Sharp rendition worker                        | `src/lambda.ts`, `src/processor.ts`                              |
-| `services/image-palette/`  | Sharp/OKLab palette worker                    | `src/lambda.ts`, `src/processor.ts`                              |
-| `services/url-unfurl-shared/` | Safe external fetch, queue, callback primitives | `src/safe-fetch.ts`, `src/task-handler.ts`                    |
-| `services/url-resolution/` | Ordered URL resolvers and generic HTML metadata | `src/types.ts`, `src/generic-resolver.ts`                       |
-| `services/resource-media/` | Role-specific external image validation/variants | `src/lambda.ts`, `src/processor.ts`                             |
-| `sst.config.ts`            | AWS topology and runtime environment          | resource definitions and Lambda environments                     |
-| `docs/`                    | Durable architecture and contribution context | [Documentation home](./README.md)                                |
+| Path                          | Owns                                                     | Start here when changing it                                      |
+| ----------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------- |
+| `client/`                     | React 19/Vite browser application                        | `src/routes/`, `src/api/`, `src/components/`, `src/store/`       |
+| `server/`                     | Hono API Lambda, auth, persistence, OpenAPI              | `src/app.ts`, `src/routes/`, `src/controllers/`, `src/services/` |
+| `services/image-shared/`      | Shared SQS runtime, job contracts, and signed API client | `src/task-handler.ts`, `src/pipeline-client.ts`                  |
+| `services/image-variants/`    | Shared upload/resource-media rendition worker            | `src/lambda.ts`, `src/processor.ts`                              |
+| `services/image-palette/`     | Sharp/OKLab palette worker                               | `src/lambda.ts`, `src/processor.ts`                              |
+| `services/url-unfurl-shared/` | SSRF-safe external fetch and URL-resolution job contract | `src/safe-fetch.ts`, `src/resolution-job.ts`                     |
+| `services/url-resolution/`    | Ordered URL resolvers and generic HTML metadata          | `src/types.ts`, `src/generic-resolver.ts`                        |
+| `sst.config.ts`               | AWS topology and runtime environment                     | resource definitions and Lambda environments                     |
+| `docs/`                       | Durable architecture and contribution context            | [Documentation home](./README.md)                                |
 
 Each package has its own `package.json`, lockfile, TypeScript config, and
 quality commands. Install and run commands from the package being changed.
@@ -154,8 +153,9 @@ create upload session + image asset + upload record (transaction)
 
 The two workers are independent and at-least-once. Callbacks must be HMAC
 verified, idempotent, and guarded by the original object key plus ETag. New
-asynchronous image work should get its own queue/worker unless it has the same
-retry and failure semantics as an existing worker. See
+asynchronous work belongs in an existing workload lane when ownership,
+compute, retry, and failure semantics match; otherwise it gets an isolated
+queue. See [Background Tasks and Events](./task-architecture.md),
 [Image Upload and Processing Pipeline](./server/image-upload-implementation-plan.md)
 and [Image Pipeline Reliability](./server/image-pipeline-reliability.md).
 Current image-delivery behavior is documented in
@@ -165,10 +165,11 @@ Current image-delivery behavior is documented in
 
 Pasting or dropping a URL inserts an optimistic React Query node and calls the
 normal asset/card API. The API transaction persists the link immediately and
-enqueues only an attempt ID plus generation. URL and resource-media workers
-claim current work through signed internal API calls, perform bounded SSRF-safe
-retrieval, and report independently. Collection reads expose every completed
-field and stored media variant without waiting for the slowest operation.
+enqueues only an attempt ID plus generation. The URL resolver and shared image
+variants worker claim current work through signed internal API calls, perform
+bounded SSRF-safe retrieval, and report independently. Collection reads expose
+every completed field and stored media variant without waiting for the slowest
+operation.
 
 Resources are reused by normalized URL only inside one workspace. Generation
 checks reject stale results; deletion turns later claims into no-ops; the
@@ -196,7 +197,8 @@ structured service logs; normal method entry/exit logs do not.
 - Never let generated variants trigger image work; workers accept only
   `{workspaceId}/{storageId}/original.*` events.
 - Never fetch or render resolver-discovered media directly in the browser; use
-  the SSRF-safe resource-media worker and stored workspace variants.
+  the SSRF-safe resource-media source adapter in the image-variants worker and
+  stored workspace variants.
 - Keep resolver logic separate from shared media processing and future
   ingestion/indexing work.
 - Keep worker callbacks authenticated on their raw payload and idempotent.

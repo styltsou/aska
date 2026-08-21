@@ -77,7 +77,7 @@ beforeEach(async () => {
       resolutionTasks.push({ id, generation });
       return true;
     },
-    async enqueueResourceMedia(id, generation) {
+    async enqueueResourceMediaRenditions(id, generation) {
       mediaTasks.push({ id, generation });
       return true;
     },

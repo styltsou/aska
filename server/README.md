@@ -57,7 +57,7 @@ GET /docs
 
 Image uploads are enriched asynchronously by `../services/image-variants` and
 `../services/image-palette`.
-Set `IMAGE_PIPELINE_CALLBACK_SECRET` to the same value as the image-pipeline
-Lambda secret before deploying. The S3 notification route, SQS consumer, and
-object-key namespaces are documented in
+Set `PIPELINE_CALLBACK_SECRET` to the same value for the API and worker Lambdas
+before deploying. The S3 notification route, SQS consumer, and object-key
+namespaces are documented in
 [`../services/image-shared/`](../services/image-shared/).

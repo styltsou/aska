@@ -83,7 +83,7 @@ export default $config({
     const cloudflareAccessEnvironment = stableCloudDomains
       ? getCloudflareAccessEnvironment()
       : {};
-    const createImageQueue = (name: string, deadLetterQueueName: string) => {
+    const createWorkerQueue = (name: string, deadLetterQueueName: string) => {
       const deadLetterQueue = new sst.aws.Queue(deadLetterQueueName, {
         transform: {
           queue: {
@@ -93,7 +93,7 @@ export default $config({
       });
       const queue = new sst.aws.Queue(name, {
         visibilityTimeout: "180 seconds",
-        // The worker reports a terminal image status on receive five. Keep one
+        // The worker reports a terminal task status on receive five. Keep one
         // additional receive for a failed terminal callback before preserving
         // the message in the DLQ.
         dlq: { queue: deadLetterQueue.arn, retry: 6 },
@@ -103,19 +103,15 @@ export default $config({
     const {
       queue: imageVariantsQueue,
       deadLetterQueue: imageVariantsDeadLetterQueue,
-    } = createImageQueue("ImageVariantsQueue", "ImageVariantsDeadLetterQueue");
+    } = createWorkerQueue("ImageVariantsQueue", "ImageVariantsDeadLetterQueue");
     const {
       queue: imagePaletteQueue,
       deadLetterQueue: imagePaletteDeadLetterQueue,
-    } = createImageQueue("ImagePaletteQueue", "ImagePaletteDeadLetterQueue");
+    } = createWorkerQueue("ImagePaletteQueue", "ImagePaletteDeadLetterQueue");
     const {
       queue: urlResolutionQueue,
       deadLetterQueue: urlResolutionDeadLetterQueue,
-    } = createImageQueue("UrlResolutionQueue", "UrlResolutionDeadLetterQueue");
-    const {
-      queue: resourceMediaQueue,
-      deadLetterQueue: resourceMediaDeadLetterQueue,
-    } = createImageQueue("ResourceMediaQueue", "ResourceMediaDeadLetterQueue");
+    } = createWorkerQueue("UrlResolutionQueue", "UrlResolutionDeadLetterQueue");
     const imageUploadTopic = new sst.aws.SnsTopic("ImageUploadTopic");
     const assets = new sst.aws.Bucket("Assets", {
       // SST owns the bucket policy. CloudFront OAC presents its distribution
@@ -235,7 +231,7 @@ export default $config({
       runtime: "nodejs22.x",
       memory: "1024 MB",
       timeout: "29 seconds",
-      link: [assets, urlResolutionQueue, resourceMediaQueue],
+      link: [assets, urlResolutionQueue, imageVariantsQueue],
       nodejs: {
         sourcemap: true,
         // Crop rendering runs inline in the API and needs Sharp's native
@@ -276,9 +272,7 @@ export default $config({
         ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".styltsou.com" } : {}),
         RESEND_API_KEY: resendApiKey.value,
         PEXELS_API_KEY: pexelsApiKey.value,
-        IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
-        URL_RESOLUTION_QUEUE_URL: urlResolutionQueue.url,
-        RESOURCE_MEDIA_QUEUE_URL: resourceMediaQueue.url,
+        PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
         S3_BUCKET: assets.name,
         ...(media
           ? {
@@ -299,7 +293,7 @@ export default $config({
         runtime: "nodejs22.x",
         memory: "512 MB",
         timeout: "30 seconds",
-        link: [assets, urlResolutionQueue, resourceMediaQueue],
+        link: [assets, urlResolutionQueue, imageVariantsQueue],
         nodejs: { sourcemap: true },
         environment: {
           NODE_OPTIONS: "--enable-source-maps",
@@ -313,9 +307,7 @@ export default $config({
           S3_REGION: "eu-central-1",
           S3_PRESIGNED_UPLOAD_EXPIRES_SECONDS: "900",
           S3_PRESIGNED_READ_EXPIRES_SECONDS: "900",
-          RESOURCE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
-          URL_RESOLUTION_QUEUE_URL: urlResolutionQueue.url,
-          RESOURCE_MEDIA_QUEUE_URL: resourceMediaQueue.url,
+          PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
           ...(media
             ? {
                 MEDIA_BASE_URL: media.domainUrl,
@@ -329,9 +321,7 @@ export default $config({
         },
       },
     });
-    const imageWorkerFiles = (
-      service: "image-variants" | "image-palette" | "resource-media",
-    ) => [
+    const imageWorkerFiles = (service: "image-variants" | "image-palette") => [
       {
         from: `services/${service}/node_modules/sharp`,
         to: "node_modules/sharp",
@@ -361,7 +351,7 @@ export default $config({
       NODE_OPTIONS: "--enable-source-maps",
       NODE_ENV: stableCloudDomains ? "production" : "development",
       PIPELINE_API_BASE_URL: api.url,
-      IMAGE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+      PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
     };
     const imageWorkerDefaults = {
       runtime: "nodejs22.x" as const,
@@ -383,6 +373,7 @@ export default $config({
         copyFiles: imageWorkerFiles("image-variants"),
         environment: {
           ...imageWorkerEnvironment,
+          S3_BUCKET: assets.name,
           ...getSentryEnvironment("image-variants", sentryDsn.value),
         },
       },
@@ -421,24 +412,8 @@ export default $config({
           NODE_OPTIONS: "--enable-source-maps",
           NODE_ENV: stableCloudDomains ? "production" : "development",
           PIPELINE_API_BASE_URL: api.url,
-          RESOURCE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+          PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
           ...getSentryEnvironment("url-resolution", sentryDsn.value),
-        },
-      },
-      { batch: { size: 1, partialResponses: true } },
-    );
-    resourceMediaQueue.subscribe(
-      {
-        handler: "services/resource-media/src/lambda.handler",
-        ...imageWorkerDefaults,
-        copyFiles: imageWorkerFiles("resource-media"),
-        environment: {
-          NODE_OPTIONS: "--enable-source-maps",
-          NODE_ENV: stableCloudDomains ? "production" : "development",
-          PIPELINE_API_BASE_URL: api.url,
-          RESOURCE_PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
-          S3_BUCKET: assets.name,
-          ...getSentryEnvironment("resource-media", sentryDsn.value),
         },
       },
       { batch: { size: 1, partialResponses: true } },
@@ -485,8 +460,6 @@ export default $config({
       imagePaletteDeadLetterQueue: imagePaletteDeadLetterQueue.url,
       urlResolutionQueue: urlResolutionQueue.url,
       urlResolutionDeadLetterQueue: urlResolutionDeadLetterQueue.url,
-      resourceMediaQueue: resourceMediaQueue.url,
-      resourceMediaDeadLetterQueue: resourceMediaDeadLetterQueue.url,
     };
   },
 });

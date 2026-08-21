@@ -29,9 +29,9 @@ they are not requirements for this application today.
   partial-batch failure is intentional retry behavior, not an uncaught throw.
 
 All three runtimes use the same release value when one is supplied. Events are
-tagged with `service=aska-client`, `aska-api`, `image-variants`, or
-`image-palette`, `url-resolution`, or `resource-media`, so one Sentry project
-remains practical for this application.
+tagged with `service=aska-client`, `aska-api`, `image-variants`,
+`image-palette`, or `url-resolution`, so one Sentry project remains practical
+for this application.
 
 ## Configuration
 

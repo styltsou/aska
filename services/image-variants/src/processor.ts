@@ -7,11 +7,16 @@ import sharp from "sharp";
  * consumer spends as little wall time as possible per source object.
  */
 
+const MAX_PIXELS = 40_000_000;
+const MASTER_MAX_WIDTH = 2_400;
+
 export const VARIANT_WIDTHS = { display: 960, preview: 320 } as const;
+
+export type ImageRenditionProfile = "upload-v1" | "link-preview-v1" | "icon-v1";
 
 /** A generated, display-ready derivative that will be written to S3. */
 export type ProcessedVariant = {
-  role: "display" | "preview";
+  role: "master" | "display" | "preview";
   width: number;
   height: number;
   contentType: "image/webp";
@@ -24,7 +29,8 @@ export type ProcessedImageVariants = {
   width: number;
   height: number;
   format: string;
-  blurDataURL: string;
+  sizeBytes: number;
+  blurDataURL: string | null;
   variants: ProcessedVariant[];
 };
 
@@ -66,10 +72,53 @@ async function makeBlurDataURL(buffer: Uint8Array): Promise<string> {
  */
 export async function processImageVariants(
   buffer: Uint8Array,
+  profile: ImageRenditionProfile = "upload-v1",
 ): Promise<ProcessedImageVariants> {
-  const metadata = await sharp(buffer).metadata();
-  if (!metadata.width || !metadata.height)
-    throw new Error("Could not read image dimensions");
+  if (
+    profile !== "upload-v1" &&
+    profile !== "link-preview-v1" &&
+    profile !== "icon-v1"
+  )
+    throw terminal("unsupported_processing_profile");
+  const metadata = await sharp(buffer, {
+    limitInputPixels: MAX_PIXELS,
+    animated: false,
+  }).metadata();
+  if (!metadata.width || !metadata.height || !metadata.format)
+    throw terminal("invalid_image");
+  if (
+    metadata.width * metadata.height > MAX_PIXELS ||
+    (metadata.pages ?? 1) > 1
+  )
+    throw terminal("unsupported_image_dimensions");
+
+  if (profile === "icon-v1") {
+    const bytes = await sharp(buffer, {
+      limitInputPixels: MAX_PIXELS,
+      animated: false,
+    })
+      .resize(64, 64, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
+    const iconMetadata = await sharp(bytes).metadata();
+    return {
+      width: iconMetadata.width!,
+      height: iconMetadata.height!,
+      format: metadata.format,
+      sizeBytes: buffer.byteLength,
+      blurDataURL: null,
+      variants: [
+        {
+          role: "master",
+          width: iconMetadata.width!,
+          height: iconMetadata.height!,
+          contentType: "image/webp",
+          sizeBytes: bytes.length,
+          bytes,
+        },
+      ],
+    };
+  }
 
   const [display, preview, blurDataURL] = await Promise.all([
     makeWidthVariant(
@@ -89,13 +138,38 @@ export async function processImageVariants(
     makeBlurDataURL(buffer),
   ]);
 
+  const variants: ProcessedVariant[] = [display, preview];
+  if (profile === "link-preview-v1") {
+    const bytes = await sharp(buffer, {
+      limitInputPixels: MAX_PIXELS,
+      animated: false,
+    })
+      .resize(MASTER_MAX_WIDTH, undefined, { withoutEnlargement: true })
+      .webp({ quality: 86 })
+      .toBuffer();
+    const masterMetadata = await sharp(bytes).metadata();
+    variants.unshift({
+      role: "master",
+      width: masterMetadata.width!,
+      height: masterMetadata.height!,
+      contentType: "image/webp",
+      sizeBytes: bytes.length,
+      bytes,
+    });
+  }
+
   return {
     width: metadata.width,
     height: metadata.height,
-    format: metadata.format ?? "unknown",
+    format: metadata.format,
+    sizeBytes: buffer.byteLength,
     blurDataURL,
-    variants: [display, preview],
+    variants,
   };
+}
+
+function terminal(message: string): Error & { retryable: false } {
+  return Object.assign(new Error(message), { retryable: false as const });
 }
 
 /** Encodes binary data as base64 without relying on Node.js Buffer APIs. */

@@ -3,10 +3,12 @@ import * as Sentry from "@sentry/aws-serverless";
 
 import {
   captureException,
+  log,
   recordMessageDuration,
   runWithSpan,
-} from "../../image-shared/src/observability";
+} from "./observability";
 
+/** Applies the common at-least-once retry and terminal-callback contract. */
 export function createTaskHandler<T>(input: {
   pipeline: string;
   parse(body: string): T;
@@ -18,19 +20,44 @@ export function createTaskHandler<T>(input: {
     const batchItemFailures: SQSBatchResponse["batchItemFailures"] = [];
     for (const record of event.Records) {
       const startedAt = Date.now();
+      const attempts = Number(record.attributes.ApproximateReceiveCount ?? "1");
       let task: T;
       try {
         task = input.parse(record.body);
       } catch (error) {
+        log("error", "queued task payload rejected", {
+          event: `${input.pipeline}.invalid_payload`,
+          messageId: record.messageId,
+          attempts,
+          error,
+        });
         captureException(error, {
           pipeline: input.pipeline,
           messageId: record.messageId,
-          attempts: Number(record.attributes.ApproximateReceiveCount ?? "1"),
+          attempts,
         });
         recordMessageDuration(input.pipeline, "error", Date.now() - startedAt);
         continue;
       }
-      const attempts = Number(record.attributes.ApproximateReceiveCount ?? "1");
+      if (attempts > (input.maxAttempts ?? 5)) {
+        try {
+          await input.reportTerminalFailure(
+            task,
+            new Error(
+              "Task failed before its terminal callback could be delivered",
+            ),
+          );
+        } catch (callbackError) {
+          captureException(callbackError, {
+            pipeline: `${input.pipeline}.failure_callback`,
+            messageId: record.messageId,
+            attempts,
+          });
+          batchItemFailures.push({ itemIdentifier: record.messageId });
+        }
+        recordMessageDuration(input.pipeline, "error", Date.now() - startedAt);
+        continue;
+      }
       try {
         await runWithSpan(
           `${input.pipeline}.process`,
@@ -47,6 +74,12 @@ export function createTaskHandler<T>(input: {
           Date.now() - startedAt,
         );
       } catch (error) {
+        log("error", "queued task processing failed", {
+          event: `${input.pipeline}.failed`,
+          messageId: record.messageId,
+          attempts,
+          error,
+        });
         captureException(error, {
           pipeline: input.pipeline,
           messageId: record.messageId,

@@ -54,6 +54,14 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
+    "UrlResolutionDeadLetterQueue": {
+      "type": "sst.aws.Queue"
+      "url": string
+    }
+    "UrlResolutionQueue": {
+      "type": "sst.aws.Queue"
+      "url": string
+    }
   }
 }
 

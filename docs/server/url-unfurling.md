@@ -9,15 +9,15 @@ security, caching, retries, and future resolver extensions.
 The feature extends Aska's existing asset and collection-node architecture. It
 does not introduce a second card system.
 
-| Concept | Owner | Responsibility |
-| --- | --- | --- |
-| Card | `assets`, `link_assets`, `collection_nodes` | Workspace ownership, original pasted URL, placement, and board lifecycle |
-| Resource | `external_resources` | Workspace-scoped normalized external thing and current resolved fields |
-| Resolution attempt | `resource_resolution_attempts` | Durable trigger, generation, lease, retry, status, and safe diagnostics |
-| Resource media | `external_resource_media` | Discovered source, semantic role, processing policy, stored variants, and independent state |
-| Resolver | `services/url-resolution/` | Identify and normalize what a URL represents; request downstream media work |
-| Media worker | `services/resource-media/` | Safely retrieve, validate, transform, and store role-specific image variants |
-| Optional ingestion | future service/table | Document extraction, chunks, embeddings, and indexing; not part of this release |
+| Concept            | Owner                                       | Responsibility                                                                              |
+| ------------------ | ------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Card               | `assets`, `link_assets`, `collection_nodes` | Workspace ownership, original pasted URL, placement, and board lifecycle                    |
+| Resource           | `external_resources`                        | Workspace-scoped normalized external thing and current resolved fields                      |
+| Resolution attempt | `resource_resolution_attempts`              | Durable trigger, generation, lease, retry, status, and safe diagnostics                     |
+| Resource media     | `external_resource_media`                   | Discovered source, semantic role, processing policy, stored variants, and independent state |
+| Resolver           | `services/url-resolution/`                  | Identify and normalize what a URL represents; request downstream media work                 |
+| Media variants     | `services/image-variants/`                  | Safely acquire upload or resource-media sources and generate role/profile-specific variants |
+| Optional ingestion | future service/table                        | Document extraction, chunks, embeddings, and indexing; not part of this release             |
 
 `server/src/services/url-unfurl/url-unfurl.service.ts` coordinates persistence
 and state transitions. `server/src/services/url-unfurl/projection.ts` is the
@@ -35,7 +35,7 @@ sequenceDiagram
   participant D as Postgres
   participant Q as Resolution SQS
   participant R as URL resolver Lambda
-  participant M as Media SQS/Lambda
+  participant M as Image variants SQS/Lambda
   participant S as Private S3
 
   U->>C: Paste or drop HTTP(S) URL
@@ -144,10 +144,13 @@ profile:
 - `primary` and `cover`: reserved extension roles. A future resolver must map
   them to an explicit profile before use.
 
-The resource-media worker reuses `services/image-variants/src/processor.ts`
-for responsive rendition mechanics. It caps input at 20 MiB and 40 megapixels,
-rejects multi-page/animated input, never enlarges the source, and writes
-immutable keys under `{organizationId}/{storageId}/`. It does not invoke the
+The image-variants worker owns a common profile-driven Sharp processor with two
+source adapters: trusted S3 upload events and generation-guarded resource-media
+commands. The latter claims its untrusted remote URL through the API, retrieves
+it with the SSRF-safe client, and feeds the same processor. Processing caps
+input at 20 MiB and 40 megapixels, rejects multi-page/animated input, never
+enlarges the source, and writes immutable keys under
+`{organizationId}/{storageId}/`. Preview and icon profiles do not invoke the
 palette pipeline or treat an Open Graph image as principal content.
 
 Completed variant manifests store object keys, dimensions, content type, and
@@ -195,13 +198,13 @@ republish full content.
 
 The card-facing state is intentionally compact:
 
-| State | Meaning | UI behavior |
-| --- | --- | --- |
-| `queued` | Durable attempt exists or is being enqueued | Hostname card and subtle progress |
-| `resolving` | Metadata and/or required media work is active | Show every field already available |
-| `partial` | Useful metadata exists but preview processing failed | Keep text/basic card; retry is available |
-| `ready` | Metadata is complete and required media work is terminal | Full available card |
-| `failed` | Metadata resolution failed or retrieval was blocked | Basic clickable original URL; retry only when allowed |
+| State       | Meaning                                                  | UI behavior                                           |
+| ----------- | -------------------------------------------------------- | ----------------------------------------------------- |
+| `queued`    | Durable attempt exists or is being enqueued              | Hostname card and subtle progress                     |
+| `resolving` | Metadata and/or required media work is active            | Show every field already available                    |
+| `partial`   | Useful metadata exists but preview processing failed     | Keep text/basic card; retry is available              |
+| `ready`     | Metadata is complete and required media work is terminal | Full available card                                   |
+| `failed`    | Metadata resolution failed or retrieval was blocked      | Basic clickable original URL; retry only when allowed |
 
 Resolution attempts and media jobs are at-least-once. SQS messages contain only
 database IDs and generations. Before doing remote work, a worker makes an
@@ -229,7 +232,7 @@ Public endpoints are documented in `server/src/openapi.json`:
 They use the existing Better Auth workspace lookup and organization boundary.
 No client-provided organization or resource ID is trusted. Internal claim and
 result endpoints live under `/api/v1/internal/` and require an HMAC SHA-256
-signature made with `RESOURCE_PIPELINE_CALLBACK_SECRET`; they do not use a
+signature made with `PIPELINE_CALLBACK_SECRET`; they do not use a
 browser session and are not part of the public OpenAPI document.
 
 ## Observability

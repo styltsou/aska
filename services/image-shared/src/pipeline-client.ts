@@ -6,16 +6,14 @@ const required = (name: string): string => {
   return value;
 };
 
+/** Sends an authenticated worker claim or result to the owning API domain. */
 export async function callPipeline<T>(
   path: string,
   payload: unknown,
 ): Promise<T> {
   const body = JSON.stringify(payload);
   const timestamp = Date.now().toString();
-  const signature = createHmac(
-    "sha256",
-    required("RESOURCE_PIPELINE_CALLBACK_SECRET"),
-  )
+  const signature = createHmac("sha256", required("PIPELINE_CALLBACK_SECRET"))
     .update(`${timestamp}.${body}`)
     .digest("hex");
   const response = await fetch(

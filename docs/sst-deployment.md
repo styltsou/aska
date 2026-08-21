@@ -7,7 +7,7 @@ One stage creates one isolated AWS copy:
 stage dev
   API Gateway -> Hono Lambda
   private S3 assets bucket -> SNS -> two SQS queues -> variants and palette Lambdas
-  API -> URL-resolution SQS -> resolver Lambda -> resource-media SQS -> media Lambda -> S3
+  API -> URL-resolution SQS -> resolver Lambda -> image-variants SQS -> shared renderer -> S3
   EventBridge Scheduler -> media-cleanup Lambda -> cleanup + stale resource-work recovery
   private S3 client bucket -> CloudFront -> React/Vite client
   dead-letter queue, IAM permissions, and stage-specific SST secrets
@@ -49,9 +49,9 @@ uploaded from the browser goes to the real S3 bucket, publishes one SNS event,
 and SNS creates one message in each image-processing queue for the variants and
 palette workers. In the stable CI deployment, those same workers run in AWS.
 Both test the actual permissions, event shape, queue flow, and callback path.
-Pasting a URL additionally exercises the dedicated resolution and resource-media
-queues, signed claim/result callbacks, safe external retrieval, and private S3
-variant delivery.
+Pasting a URL additionally exercises the resolution queue and sends discovered
+media commands to the shared variants queue. Signed claims, safe external
+retrieval, and private S3 variant delivery remain independent progressive steps.
 
 ## One-time stable `dev` setup
 
@@ -206,24 +206,28 @@ bun run sst -- secret set SentryDsn 'https://public-key@o0.ingest.sentry.io/proj
 
 ### What each value configures
 
-| SST secret                    | Where SST injects it                             | Why it exists                                        |
-| ----------------------------- | ------------------------------------------------ | ---------------------------------------------------- |
-| `DatabaseUrl`                 | `DATABASE_URL` in the API                        | Connects the API to Neon                             |
-| `BetterAuthSecret`            | `BETTER_AUTH_SECRET` in the API                  | Signs/encrypts Better Auth data                      |
-| `ResendApiKey`                | `RESEND_API_KEY` in the API                      | Sends transactional email                            |
-| `PexelsApiKey`                 | `PEXELS_API_KEY` in the API                        | Enables server-side Pexels search and imports        |
-| `ImagePipelineCallbackSecret` | Image/resource pipeline HMAC environment in the API and workers | Pipelines sign callbacks; the API verifies them |
-| `CloudFrontMediaPrivateKeyBase64` | `CLOUDFRONT_PRIVATE_KEY_BASE64` in the API    | Signs CloudFront viewer cookies                      |
-| `CloudFrontMediaPublicKey`    | CloudFront `PublicKey` resource                    | Verifies signed cookies at the edge; generated once with the private key |
-| `SentryDsn`                  | Sentry DSN in the client, API, and workers       | Routes application telemetry to the Sentry project  |
+| SST secret                        | Where SST injects it                                            | Why it exists                                                            |
+| --------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `DatabaseUrl`                     | `DATABASE_URL` in the API                                       | Connects the API to Neon                                                 |
+| `BetterAuthSecret`                | `BETTER_AUTH_SECRET` in the API                                 | Signs/encrypts Better Auth data                                          |
+| `ResendApiKey`                    | `RESEND_API_KEY` in the API                                     | Sends transactional email                                                |
+| `PexelsApiKey`                    | `PEXELS_API_KEY` in the API                                     | Enables server-side Pexels search and imports                            |
+| `ImagePipelineCallbackSecret`     | Image/resource pipeline HMAC environment in the API and workers | Pipelines sign callbacks; the API verifies them                          |
+| `CloudFrontMediaPrivateKeyBase64` | `CLOUDFRONT_PRIVATE_KEY_BASE64` in the API                      | Signs CloudFront viewer cookies                                          |
+| `CloudFrontMediaPublicKey`        | CloudFront `PublicKey` resource                                 | Verifies signed cookies at the edge; generated once with the private key |
+| `SentryDsn`                       | Sentry DSN in the client, API, and workers                      | Routes application telemetry to the Sentry project                       |
 
 There is one pipeline callback secret at the SST layer. It is injected as
-`IMAGE_PIPELINE_CALLBACK_SECRET` for uploads and
-`RESOURCE_PIPELINE_CALLBACK_SECRET` for URL-resolution/media claims and
-results. This keeps rotation atomic while preserving separate code contracts.
-The API lambda only receives `IMAGE_PIPELINE_CALLBACK_SECRET`; the server
-falls back to it when `RESOURCE_PIPELINE_CALLBACK_SECRET` is unset, keeping
-the API's environment variables under the Lambda 4 KB limit.
+`PIPELINE_CALLBACK_SECRET` in the API and every worker. Signing transport is
+shared while upload, URL-resolution, and resource-media claim/result schemas
+remain separate domain contracts.
+
+The API and maintenance Lambda read queue URLs from SST's linked `Resource`
+object. Do not also inject those URLs as custom environment variables: links
+already grant send permissions and provide the typed URL at runtime, while
+duplicating them consumes the Lambda's fixed 4 KB environment block. The
+`URL_RESOLUTION_QUEUE_URL` and `IMAGE_VARIANTS_QUEUE_URL` settings remain
+optional fallbacks only for a server started directly outside SST.
 
 ### Personal Live-stage secrets
 
@@ -370,22 +374,22 @@ actually changed (`dorny/paths-filter` in a `changes` job). Only the affected
 parts run, so a client-only change does not rebuild the server or the image
 workers:
 
-| Change                         | Quality jobs run                          | Deploys `dev` |
-| ------------------------------ | ----------------------------------------- | ------------- |
-| `client/**`                    | Client                                    | Yes           |
-| `server/**`                    | Server                                    | Yes           |
-| `services/image-variants/**`   | Image variants                            | Yes           |
-| `services/image-palette/**`    | Image palette                             | Yes           |
-| `services/image-shared/**`     | Image variants **and** image palette      | Yes           |
-| `services/url-unfurl-shared/**` | URL resolver **and** resource media      | Yes           |
-| `services/url-resolution/**`   | URL resolver                              | Yes           |
-| `services/resource-media/**`   | Resource media                            | Yes           |
-| SST config / root deps / CI    | Server (plus jobs matching other paths)   | Yes           |
-| Docs / Markdown only           | None                                      | No            |
+| Change                          | Quality jobs run                            | Deploys `dev` |
+| ------------------------------- | ------------------------------------------- | ------------- |
+| `client/**`                     | Client                                      | Yes           |
+| `server/**`                     | Server                                      | Yes           |
+| `services/image-variants/**`    | Image variants                              | Yes           |
+| `services/image-palette/**`     | Image palette                               | Yes           |
+| `services/image-shared/**`      | Server, variants, palette, and URL resolver | Yes           |
+| `services/url-unfurl-shared/**` | Server, URL resolver, and image variants    | Yes           |
+| `services/url-resolution/**`    | URL resolver                                | Yes           |
+| SST config / root deps / CI     | Server (plus jobs matching other paths)     | Yes           |
+| Docs / Markdown only            | None                                        | No            |
 
-`services/image-shared` is a dependency, not a deployment target: changes to it
-re-run both worker services because they each `bun install` it. A change to the
-SST config, the root `package.json`/`bun.lock`, or `.github/workflows/**`
+`services/image-shared` and `services/url-unfurl-shared` are dependencies, not
+deployment targets. Their changes re-run every package that follows their
+source imports. A change to the SST config, the root
+`package.json`/`bun.lock`, or `.github/workflows/**`
 forces the Server job (and the deployment), since those are the closest signal
 that the wired-up stack still compiles. `sst.config.ts` changes always deploy
 because SST reconciles the whole stack in one run.

@@ -91,10 +91,9 @@ CLOUDFRONT_PRIVATE_KEY_BASE64
 CLOUDFRONT_COOKIE_DOMAIN
 CLOUDFRONT_SIGNED_COOKIE_EXPIRES_SECONDS
 MAX_DIRECT_UPLOAD_BYTES
-IMAGE_PIPELINE_CALLBACK_SECRET
-RESOURCE_PIPELINE_CALLBACK_SECRET
+PIPELINE_CALLBACK_SECRET
 URL_RESOLUTION_QUEUE_URL
-RESOURCE_MEDIA_QUEUE_URL
+IMAGE_VARIANTS_QUEUE_URL
 URL_UNFURL_SUCCESS_TTL_SECONDS
 URL_UNFURL_FAILURE_TTL_SECONDS
 LOG_LEVEL
@@ -111,6 +110,9 @@ TEST_DATABASE_URL
 `TEST_DATABASE_URL` is test-only. It must refer to a disposable database and
 is required by `bun run test:integration`; regular server commands continue to
 use `DATABASE_URL`.
+
+The queue URL variables are optional direct-local fallbacks. Deployed and SST
+Live Lambdas obtain both queues from SST resource links.
 
 `CORS_ORIGINS` is also passed to Better Auth as its trusted-origin list. Keep
 `BETTER_AUTH_URL` aligned with the URL where `/api/auth/*` is served.

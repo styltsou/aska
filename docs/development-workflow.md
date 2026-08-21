@@ -36,5 +36,4 @@ cd services/image-variants && bun run lint && bun run typecheck && bun run forma
 cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/url-resolution && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/resource-media && bun run lint && bun run typecheck && bun run format && bun run test
 ```

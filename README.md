@@ -92,7 +92,6 @@ cd services/image-variants && bun install
 cd services/image-palette && bun install
 cd services/url-unfurl-shared && bun install
 cd services/url-resolution && bun install
-cd services/resource-media && bun install
 ```
 
 For normal end-to-end development, use real AWS S3 and SQS through SST instead

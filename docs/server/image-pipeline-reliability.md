@@ -28,21 +28,22 @@ but own separate effects:
 - The palette worker calculates and persists `image_colors`,
   `dominant_colors`, and `image_assets.palette_status`.
 
-External link previews are deliberately not another SNS subscriber. They have
-different trust, retry, and processing semantics and use the dedicated
-URL-resolution and resource-media queues. The resource-media processor reuses
-the rendition function, but preview images never enter palette extraction.
-See [URL Unfurling](./url-unfurling.md).
+External link previews are deliberately not upload-topic subscribers. The API
+sends an ID-and-generation command directly to `ImageVariantsQueue`; the same
+variants Lambda claims the remote source, retrieves it safely, and selects its
+explicit preview or icon profile. Shared pixel processing is independent of
+source context, while preview images never enter palette extraction. See
+[URL Unfurling](./url-unfurling.md) and
+[Background Tasks and Events](../task-architecture.md).
 
 ## Delivery and retries
 
 Both consumers use a batch size of one and report partial batch failures. SQS
-redelivers a failed message after the 180-second visibility timeout. The worker
-retries processing for the first four receives; on receive five it sends the
-matching terminal callback (`image.variants.failed` or
-`image.palette.failed`). If that terminal callback cannot reach the API, the
-message remains retryable for one more receive and is then retained in that
-consumer's DLQ.
+redelivers a retryable failure after the 180-second visibility timeout. The
+shared task handler retries through receive four and reports terminal failure
+on receive five; explicitly non-retryable validation failures report terminal
+status earlier. If that terminal callback cannot reach the API, receive six
+retries the callback before SQS retains the message in that consumer's DLQ.
 
 This is at-least-once delivery. Duplicate S3 events, SQS deliveries, object
 writes, and callbacks are expected. The system is safe because variant keys
