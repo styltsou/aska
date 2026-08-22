@@ -18,6 +18,7 @@ import type {
 } from "@/api/collection";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { persistNoteDrawer } from "@/components/board/use-persisted-note-drawer";
+import { NoteEditorLoading } from "@/components/board/note-editor-loading";
 import {
   NoteWorkspace,
   NoteWorkspaceContent,
@@ -227,18 +228,9 @@ export function CreateNoteDialog({
           <ArrowLeftIcon />
           <span className="sr-only">Back to board</span>
         </Button>
-        <span className="absolute top-5 right-5 z-10 flex h-10 items-center rounded-lg px-3.5 text-xs font-medium text-muted-foreground">
-          {isCreating ? "Creating…" : error ? "Creation failed" : "New note"}
-        </span>
         <div className="note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto">
           <div className="note-workspace-column">
-            <Suspense
-              fallback={
-                <div className="py-14 text-sm text-muted-foreground">
-                  Opening note…
-                </div>
-              }
-            >
+            <Suspense fallback={<NoteEditorLoading />}>
               <NoteRichText
                 ref={editorRef}
                 markdown={frontMatter.body}

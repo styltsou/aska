@@ -1,8 +1,21 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  Children,
+  createElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { CopyIcon } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { common, createLowlight } from "lowlight";
+import type { RootContent } from "hast";
 
-import { CodeBlock } from "@/components/ui/code-block";
 import { parseFrontMatter } from "@/lib/front-matter";
 import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
@@ -10,12 +23,49 @@ import { remarkHighlight } from "@/lib/remark-highlight";
 import type { NoteAsset } from "@/types/asset";
 
 const BARE_URL_RE = /(^|[^[(])(https?:\/\/[^\s<"'>)\]]+)/gi;
+const lowlight = createLowlight(common);
 
 function linkifyBareUrls(text: string): string {
   return text.replace(
     BARE_URL_RE,
     (_, before, url) => `${before}[${url}](${url})`,
   );
+}
+
+function renderHighlightedCode(
+  nodes: RootContent[],
+  keyPrefix = "code",
+): ReactNode[] {
+  return nodes.map((node, index) => {
+    const key = `${keyPrefix}-${index}`;
+    if (node.type === "text") return node.value;
+    if (node.type !== "element") return null;
+
+    const className = Array.isArray(node.properties.className)
+      ? node.properties.className.join(" ")
+      : undefined;
+    return createElement(
+      node.tagName,
+      { key, className },
+      renderHighlightedCode(node.children, key),
+    );
+  });
+}
+
+function getCodeBlockLanguage(children: ReactNode): string {
+  const code = Children.toArray(children).find(
+    (child): child is ReactElement<{ className?: unknown }> =>
+      isValidElement(child),
+  );
+  if (!code) return "Plain text";
+
+  const className = code.props.className;
+  const match =
+    typeof className === "string" ? /language-(\w+)/.exec(className) : null;
+
+  return match?.[1]
+    ? match[1].replace(/\b\w/g, (letter) => letter.toUpperCase())
+    : "Plain text";
 }
 
 const MD_COMPONENTS: Components = {
@@ -141,7 +191,19 @@ const MD_COMPONENTS: Components = {
       {...props}
     />
   ),
-  pre: ({ children }) => <>{children}</>,
+  pre: ({ children, ...props }) => (
+    <div className="note-code-block note-code-block--preview">
+      <div className="note-code-block-header" aria-hidden="true">
+        <span className="note-code-block-language">
+          {getCodeBlockLanguage(children)}
+        </span>
+        <span className="note-code-block-copy flex size-7 items-center justify-center">
+          <CopyIcon className="size-3.5" />
+        </span>
+      </div>
+      <pre {...props}>{children}</pre>
+    </div>
+  ),
   code: ({ className, children, ...props }) => {
     const match = /language-(\w+)/.exec(className ?? "");
     const inline = !match;
@@ -160,12 +222,16 @@ const MD_COMPONENTS: Components = {
       );
     }
 
+    const source = String(children).replace(/\n$/, "");
+    const language = match[1];
+    const highlighted = lowlight.listLanguages().includes(language)
+      ? lowlight.highlight(language, source)
+      : undefined;
+
     return (
-      <CodeBlock
-        code={String(children).replace(/\n$/, "")}
-        language={match[1] as Parameters<typeof CodeBlock>[0]["language"]}
-        className="my-3"
-      />
+      <code className={className} {...props}>
+        {highlighted ? renderHighlightedCode(highlighted.children) : children}
+      </code>
     );
   },
 };
@@ -173,14 +239,32 @@ const MD_COMPONENTS: Components = {
 export function NoteMarkdown({
   content,
   className,
+  previewScale,
 }: {
   content: string;
   className?: string;
+  previewScale?: number;
 }) {
   const body = useMemo(() => parseFrontMatter(content).body, [content]);
 
   return (
-    <div className={cn("note-card-preview-content", className)}>
+    <div
+      className={cn(
+        "note-rich-text-content note-card-preview-content",
+        previewScale === undefined
+          ? "note-card-preview-content--card"
+          : "note-card-preview-content--scaled",
+        className,
+      )}
+      style={
+        previewScale === undefined
+          ? undefined
+          : {
+              width: `${100 / previewScale}%`,
+              transform: `scale(${previewScale})`,
+            }
+      }
+    >
       <ReactMarkdown
         components={MD_COMPONENTS}
         remarkPlugins={[remarkGfm, remarkHighlight]}
@@ -252,7 +336,7 @@ export function NoteAssetCard({
     <div
       ref={cardRef}
       className={cn(
-        "group bg-sidebar hover:border-sidebar-foreground/20 relative max-h-80 min-w-0 overflow-hidden rounded-lg border p-4 text-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "group bg-sidebar hover:border-sidebar-foreground/20 relative max-h-80 min-w-0 overflow-hidden rounded-lg border px-4 py-2.5 text-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
         effectiveOnOpen && "cursor-pointer",
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}

@@ -20,4 +20,20 @@ describe("NoteMarkdown", () => {
     expect(html).toContain('type="checkbox"');
     expect(html).toContain("checked");
   });
+
+  it("uses the editor's lowlight classes for code blocks", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown content={"```typescript\nconst note = true;\n```"} />,
+    );
+
+    expect(html).toContain("hljs-keyword");
+  });
+
+  it("highlights Bash variables with the shared code theme", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown content={'```bash\necho "$HOME"\n```'} />,
+    );
+
+    expect(html).toContain("hljs-variable");
+  });
 });

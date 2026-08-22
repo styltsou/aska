@@ -339,58 +339,62 @@
   /* Note cards are the same document language as the editor, reduced to a
      readable thumbnail scale. Keep block structure so headings, lists, marks,
      and code remain recognizable instead of becoming a text strip. */
-  .note-rich-text-content .note-card-preview-content {
+  .note-rich-text-content .note-card-preview-content--card {
     @apply text-[0.8125rem] leading-5;
   }
 
-  .note-rich-text-content .note-card-preview-content h1 {
-    @apply mt-5 mb-2.5 text-2xl leading-tight;
+  .note-rich-text-content .note-card-preview-content--card h1 {
+    @apply mt-4 mb-2 text-2xl leading-tight;
   }
 
-  .note-rich-text-content .note-card-preview-content h2 {
-    @apply mt-4 mb-2 text-xl leading-snug;
+  .note-rich-text-content .note-card-preview-content--card h2 {
+    @apply mt-3 mb-1.5 text-xl leading-snug;
   }
 
-  .note-rich-text-content .note-card-preview-content h3 {
-    @apply mt-3.5 mb-1.5 text-lg leading-snug;
+  .note-rich-text-content .note-card-preview-content--card h3 {
+    @apply mt-2.5 mb-1 text-lg leading-snug;
   }
 
-  .note-rich-text-content .note-card-preview-content p {
-    @apply my-2;
+  .note-rich-text-content .note-card-preview-content--card p {
+    @apply my-1.5;
     overflow-wrap: anywhere;
   }
 
   .note-rich-text-content
-    .note-card-preview-content
+    .note-card-preview-content--card
     ul:not([data-type="taskList"]),
-  .note-rich-text-content .note-card-preview-content ol {
-    @apply my-2 ml-4 space-y-1;
+  .note-rich-text-content .note-card-preview-content--card ol {
+    @apply my-1.5 ml-4 space-y-0.5;
   }
 
-  .note-rich-text-content .note-card-preview-content li {
+  .note-rich-text-content .note-card-preview-content--card li {
     @apply pl-0.5;
     overflow-wrap: anywhere;
   }
 
-  .note-rich-text-content .note-card-preview-content blockquote {
-    @apply my-2 pl-2.5;
+  .note-rich-text-content .note-card-preview-content--card blockquote {
+    @apply my-1.5 pl-2.5;
   }
 
-  .note-rich-text-content .note-card-preview-content pre {
-    @apply my-2 max-w-full overflow-hidden rounded-md p-2.5 text-[0.6875rem] leading-4;
+  .note-rich-text-content .note-card-preview-content--card pre {
+    @apply my-1.5 max-w-full overflow-hidden rounded-md p-2.5 text-[0.6875rem] leading-4;
     overflow-wrap: anywhere;
   }
 
-  .note-rich-text-content .note-card-preview-content pre code {
+  .note-rich-text-content .note-card-preview-content--card pre code {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
 
-  .note-rich-text-content .note-card-preview-content table {
+  .note-rich-text-content .note-card-preview-content--card table {
     @apply my-2 text-xs;
     display: block;
     max-width: 100%;
     overflow-x: auto;
+  }
+
+  .note-card-preview-content--scaled {
+    transform-origin: top left;
   }
 
   .note-rich-text-content > *:first-child {
@@ -473,8 +477,29 @@
     @apply my-3 overflow-x-auto rounded-lg border border-sidebar-border bg-muted/65 p-3 font-mono text-xs leading-5 text-sidebar-foreground;
   }
 
+  .note-rich-text-content .note-code-block {
+    @apply my-3 overflow-hidden rounded-lg border border-sidebar-border bg-sidebar/45;
+  }
+
+  .note-rich-text-content .note-code-block-header {
+    @apply flex items-center justify-between p-2;
+  }
+
+  .note-rich-text-content .note-code-block-language {
+    @apply flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-sidebar-foreground/65 transition-colors outline-none hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground focus-visible:bg-sidebar-foreground/8 focus-visible:text-sidebar-foreground data-popup-open:bg-sidebar-foreground/8 data-popup-open:text-sidebar-foreground;
+  }
+
+  .note-rich-text-content .note-code-block-copy {
+    @apply text-sidebar-foreground/60 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground;
+  }
+
+  .note-rich-text-content .note-code-block pre {
+    @apply m-0! rounded-t-lg rounded-b-none border-x-0 border-b-0;
+  }
+
   .note-rich-text-content pre code .hljs-comment,
-  .note-rich-text-content pre code .hljs-quote {
+  .note-rich-text-content pre code .hljs-quote,
+  .note-rich-text-content pre code .hljs-meta {
     color: var(--code-comment);
     font-style: italic;
   }
@@ -503,6 +528,7 @@
 
   .note-rich-text-content pre code .hljs-number,
   .note-rich-text-content pre code .hljs-literal,
+  .note-rich-text-content pre code .hljs-variable,
   .note-rich-text-content pre code .hljs-symbol,
   .note-rich-text-content pre code .hljs-bullet,
   .note-rich-text-content pre code .hljs-link,
@@ -527,16 +553,42 @@
   }
 
   .note-rich-text-content table {
-    @apply my-3 w-full border-collapse text-sm;
+    @apply my-3 w-full overflow-hidden rounded-lg border border-sidebar-border bg-muted/65 text-sm;
+    border-collapse: separate;
+    border-spacing: 0;
   }
 
   .note-rich-text-content th,
   .note-rich-text-content td {
-    @apply relative border border-sidebar-border px-2.5 py-1.5 text-left align-top;
+    @apply relative px-3 py-2 text-left align-top;
   }
 
   .note-rich-text-content th {
-    @apply bg-muted/65 font-semibold text-sidebar-foreground;
+    @apply font-semibold text-sidebar-foreground;
+  }
+
+  .note-rich-text-content td {
+    @apply bg-background;
+  }
+
+  .note-rich-text-content th + th,
+  .note-rich-text-content td + td {
+    @apply border-l border-sidebar-border;
+  }
+
+  .note-rich-text-content tbody tr:first-child td,
+  .note-rich-text-content tbody tr + tr td {
+    @apply border-t border-sidebar-border;
+  }
+
+  .note-rich-text-content tbody tr:first-child td:first-child,
+  .note-rich-text-content tbody tr:has(th) + tr td:first-child {
+    @apply rounded-tl-lg;
+  }
+
+  .note-rich-text-content tbody tr:first-child td:last-child,
+  .note-rich-text-content tbody tr:has(th) + tr td:last-child {
+    @apply rounded-tr-lg;
   }
 
   .note-rich-text-content th > p,
@@ -550,7 +602,12 @@
   }
 
   .note-rich-text-content .column-resize-handle {
-    @apply pointer-events-none absolute top-0 right-[-2px] bottom-[-1px] w-0.5 bg-primary/50;
+    @apply !pointer-events-auto absolute top-0 right-[-2px] bottom-[-1px] z-20 w-0.5 !cursor-col-resize bg-primary/50;
+  }
+
+  .note-rich-text-content .column-resize-handle::after {
+    content: "";
+    @apply absolute -inset-x-2 inset-y-0 cursor-col-resize;
   }
 
   .note-rich-text-content .resize-cursor {
@@ -561,37 +618,87 @@
     @apply min-h-[calc(100dvh-8.5rem)] cursor-text pt-20 pb-10 text-base leading-7 sm:pb-14;
   }
 
-  .note-rich-text-editable .ProseMirror p.is-empty::before,
-  .note-rich-text-editable .ProseMirror h1.is-empty::before,
-  .note-rich-text-editable .ProseMirror h2.is-empty::before,
-  .note-rich-text-editable .ProseMirror h3.is-empty::before {
+  .note-rich-text-editable .ProseMirror-focused p.is-empty::before,
+  .note-rich-text-editable .ProseMirror-focused h1.is-empty::before,
+  .note-rich-text-editable .ProseMirror-focused h2.is-empty::before,
+  .note-rich-text-editable .ProseMirror-focused h3.is-empty::before {
     @apply pointer-events-none float-left h-0 font-normal text-muted-foreground;
     content: attr(data-placeholder);
   }
 }
 
 .aska-crop-area {
+  border-width: 1px !important;
   box-shadow: none !important;
 }
 
 .aska-crop-area--light {
-  border-color: rgb(255 255 255) !important;
-  color: rgb(255 255 255) !important;
+  border-color: rgb(255 255 255 / 0.9) !important;
+  color: rgb(255 255 255 / 0.9) !important;
 }
 
 .aska-crop-area--dark {
-  border-color: rgb(0 0 0) !important;
-  color: rgb(0 0 0) !important;
+  border-color: rgb(0 0 0 / 0.9) !important;
+  color: rgb(0 0 0 / 0.9) !important;
 }
 
 .aska-crop-area--theme {
-  border-color: var(--sidebar-foreground) !important;
-  color: var(--sidebar-foreground) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--sidebar-foreground) 90%,
+    transparent
+  ) !important;
+  color: color-mix(
+    in srgb,
+    var(--sidebar-foreground) 90%,
+    transparent
+  ) !important;
 }
 
 .aska-crop-area::before,
 .aska-crop-area::after {
-  border-color: currentcolor !important;
+  border-color: color-mix(in srgb, currentcolor 72%, transparent) !important;
+  border-width: 1px !important;
+  transition: opacity 50ms ease;
+}
+
+.aska-crop-area--grid-hidden::before,
+.aska-crop-area--grid-hidden::after {
+  opacity: 0;
+}
+
+.aska-crop-frame::before,
+.aska-crop-frame::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-color: color-mix(in srgb, currentcolor 72%, transparent);
+  border-style: solid;
+  transition: opacity 50ms ease;
+}
+
+.aska-crop-frame--grid-hidden::before,
+.aska-crop-frame--grid-hidden::after {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aska-crop-area::before,
+  .aska-crop-area::after,
+  .aska-crop-frame::before,
+  .aska-crop-frame::after {
+    transition: none;
+  }
+}
+
+.aska-crop-frame::before {
+  inset: 0 33.33%;
+  border-width: 0 1px;
+}
+
+.aska-crop-frame::after {
+  inset: 33.33% 0;
+  border-width: 1px 0;
 }
 
 .aska-flow {
@@ -680,5 +787,43 @@
       100% 20px,
       -20px 100%,
       0 -20px;
+  }
+}
+
+.note-editor-loading {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.1em;
+  font-weight: 500;
+}
+
+.note-editor-loading-label {
+  background: linear-gradient(
+    100deg,
+    var(--muted-foreground) 0%,
+    color-mix(in oklch, var(--muted-foreground) 86%, var(--foreground)) 45%,
+    var(--muted-foreground) 90%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: note-editor-loading-shimmer 1.8s ease-in-out infinite;
+}
+
+.note-editor-loading-dots {
+  color: var(--muted-foreground);
+}
+
+@keyframes note-editor-loading-shimmer {
+  to {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-editor-loading-label {
+    background: none;
+    color: var(--muted-foreground);
+    animation: none;
   }
 }

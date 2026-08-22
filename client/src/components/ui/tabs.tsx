@@ -123,7 +123,7 @@ const triggerBaseClasses =
   "relative isolate inline-flex min-w-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap px-2.5 text-sm font-medium outline-none [&_svg]:pointer-events-none [&_svg]:size-4";
 
 const triggerInactiveClasses =
-  "text-muted-foreground transition-colors duration-[50ms] hover:bg-foreground/[0.05] hover:text-foreground active:bg-foreground/[0.08] dark:hover:bg-foreground/[0.1] dark:active:bg-foreground/[0.14]";
+  "text-muted-foreground transition-colors duration-[50ms] hover:text-foreground";
 
 export function TabsTrigger({
   value,
@@ -147,9 +147,7 @@ export function TabsTrigger({
         className={cn(
           triggerBaseClasses,
           "-mb-px border-b border-transparent pb-2 pt-1",
-          active
-            ? "text-foreground"
-            : cn(triggerInactiveClasses, "hover:bg-transparent"),
+          active ? "text-foreground" : triggerInactiveClasses,
           className,
         )}
       >

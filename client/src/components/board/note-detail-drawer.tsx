@@ -24,6 +24,7 @@ import {
 } from "@/api/collection";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
+import { NoteEditorLoading } from "@/components/board/note-editor-loading";
 import {
   NoteWorkspace,
   NoteWorkspaceContent,
@@ -480,20 +481,14 @@ export function NoteDetailDrawer({
         >
           <div className="note-workspace-column">
             {note ? (
-              <Suspense
-                fallback={
-                  <div className="py-14 text-sm text-muted-foreground">
-                    Opening note…
-                  </div>
-                }
-              >
+              <Suspense fallback={<NoteEditorLoading />}>
                 <NoteEditorErrorBoundary noteId={note.id}>
                   <NoteRichText
                     key={note.id}
                     ref={richTextRef}
                     markdown={frontMatter.body}
                     editable
-                    autoFocus={false}
+                    autoFocus
                     scrollContainerRef={noteContentRef}
                     onExtractSelection={
                       noteExtractionTarget ? extractSelection : undefined

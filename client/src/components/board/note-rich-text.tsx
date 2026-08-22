@@ -12,8 +12,10 @@ import {
   BoldIcon,
   BracesIcon,
   CheckSquareIcon,
+  CheckIcon,
   CodeIcon,
   ChevronDownIcon,
+  CopyIcon,
   Heading1Icon,
   Heading2Icon,
   Heading3Icon,
@@ -40,6 +42,10 @@ import { TableKit } from "@tiptap/extension-table";
 import { Markdown } from "@tiptap/markdown";
 import {
   EditorContent,
+  NodeViewContent,
+  NodeViewWrapper,
+  ReactNodeViewRenderer,
+  type ReactNodeViewProps,
   ReactRenderer,
   useEditor,
   useEditorState,
@@ -64,6 +70,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   ButtonGroup,
   ButtonGroupSeparator,
@@ -92,6 +103,35 @@ type SlashCommandGroup = {
 };
 
 const OPEN_LINK_EDITOR_EVENT = "aska:open-link-editor";
+const noteLowlight = createLowlight(common);
+
+function trailingEmptyParagraphPosition(editor: Editor): number | undefined {
+  const { doc } = editor.state;
+  const lastNode = doc.lastChild;
+  if (lastNode?.type.name !== "paragraph" || lastNode.content.size !== 0) {
+    return undefined;
+  }
+  return doc.content.size - lastNode.nodeSize + 1;
+}
+
+function focusFirstNewLine(editor: Editor) {
+  let position = trailingEmptyParagraphPosition(editor);
+  if (position === undefined) {
+    editor.commands.insertContentAt(
+      docEnd(editor),
+      { type: "paragraph" },
+      {
+        updateSelection: false,
+      },
+    );
+    position = trailingEmptyParagraphPosition(editor);
+  }
+  editor.commands.focus(position ?? "end", { scrollIntoView: false });
+}
+
+function docEnd(editor: Editor) {
+  return editor.state.doc.content.size;
+}
 
 const SLASH_COMMAND_GROUPS: SlashCommandGroup[] = [
   {
@@ -449,38 +489,86 @@ const CODE_BLOCK_LANGUAGES = [
   { value: "diff", label: "Diff" },
 ];
 
-function CodeBlockLanguagePicker({ editor }: { editor: Editor }) {
-  const language = useEditorState({
-    editor,
-    selector: ({ editor: currentEditor }) =>
-      currentEditor.isActive("codeBlock")
-        ? (currentEditor.getAttributes("codeBlock").language ?? "")
-        : "",
-  });
+function NoteCodeBlock({ node, updateAttributes }: ReactNodeViewProps) {
+  const [copied, setCopied] = useState(false);
+  const language =
+    typeof node.attrs.language === "string" ? node.attrs.language : "";
+  const languageLabel =
+    CODE_BLOCK_LANGUAGES.find((option) => option.value === language)?.label ??
+    "Plain text";
+
+  useEffect(() => {
+    if (!copied) return;
+    const timeout = window.setTimeout(() => setCopied(false), 1_500);
+    return () => window.clearTimeout(timeout);
+  }, [copied]);
 
   return (
-    <div className="flex items-center gap-1 rounded-lg border bg-background/95 p-1 shadow-xl backdrop-blur-xl">
-      <select
-        aria-label="Code block language"
-        className="h-8 cursor-pointer rounded-md bg-transparent px-1.5 text-xs font-medium outline-none"
-        value={language}
-        onChange={(event) => {
-          editor
-            .chain()
-            .focus()
-            .updateAttributes("codeBlock", {
-              language: event.target.value || null,
-            })
-            .run();
-        }}
-      >
-        {CODE_BLOCK_LANGUAGES.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <NodeViewWrapper className="note-code-block">
+      <div className="note-code-block-header" contentEditable={false}>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <button
+                type="button"
+                className="note-code-block-language"
+                aria-label="Code block language"
+                onMouseDown={(event) => event.preventDefault()}
+              >
+                <span>{languageLabel}</span>
+                <ChevronDownIcon className="size-3" />
+              </button>
+            }
+          />
+          <DropdownMenuContent align="start" sideOffset={6} className="w-40">
+            {CODE_BLOCK_LANGUAGES.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() =>
+                  updateAttributes({ language: option.value || null })
+                }
+              >
+                <span>{option.label}</span>
+                {option.value === language ? (
+                  <CheckIcon className="ml-auto size-3.5" />
+                ) : null}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="note-code-block-copy"
+                aria-label="Copy code"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  if (typeof navigator.clipboard?.writeText !== "function") {
+                    return;
+                  }
+                  void navigator.clipboard
+                    .writeText(node.textContent)
+                    .then(() => setCopied(true));
+                }}
+              >
+                {copied ? <CheckIcon /> : <CopyIcon />}
+                <span className="sr-only">
+                  {copied ? "Copied" : "Copy code"}
+                </span>
+              </Button>
+            }
+          />
+          <TooltipContent>{copied ? "Copied" : "Copy code"}</TooltipContent>
+        </Tooltip>
+      </div>
+      <pre>
+        <NodeViewContent<"code"> as="code" />
+      </pre>
+    </NodeViewWrapper>
   );
 }
 
@@ -495,8 +583,12 @@ const NOTE_EXTENSIONS = [
     codeBlock: false,
   }),
   Underline,
-  CodeBlockLowlight.configure({
-    lowlight: createLowlight(common),
+  CodeBlockLowlight.extend({
+    addNodeView() {
+      return ReactNodeViewRenderer(NoteCodeBlock);
+    },
+  }).configure({
+    lowlight: noteLowlight,
     defaultLanguage: null,
   }),
   TableKit.configure({ table: { resizable: true } }),
@@ -869,8 +961,11 @@ export const NoteRichText = forwardRef<
     content: markdown,
     contentType: "markdown",
     editable,
-    autofocus: autoFocus ? "end" : false,
-    immediatelyRender: true,
+    autofocus: false,
+    // A restored drawer can mount during the initial page render, before its
+    // portal has a stable DOM surface. Creating Tiptap after that commit keeps
+    // its floating extensions from reading layout too early.
+    immediatelyRender: false,
     onUpdate: ({ editor: currentEditor }) => {
       onChangeRef.current?.(currentEditor.getMarkdown());
     },
@@ -886,8 +981,18 @@ export const NoteRichText = forwardRef<
         }
         return false;
       },
+      handleDOMEvents: {
+        mousedown: (view, event) => {
+          if (!editableRef.current || view.hasFocus() || !editor) return false;
+          event.preventDefault();
+          focusFirstNewLine(editor);
+          return true;
+        },
+      },
       handleClick: (_view, _position, event) => {
-        if (editableRef.current) return false;
+        if (editableRef.current) {
+          return false;
+        }
         const target = event.target;
         const anchor =
           target instanceof Element ? target.closest("a[href]") : null;
@@ -903,23 +1008,14 @@ export const NoteRichText = forwardRef<
     editor?.setEditable(editable);
     if (!editable || !autoFocus) return;
 
-    let settleFrame = 0;
-    const focusAndScrollToEnd = () => {
-      editor?.commands.focus("end");
-      const container = scrollContainerRef?.current;
-      if (container) container.scrollTop = container.scrollHeight;
-    };
-
     const focusFrame = window.requestAnimationFrame(() => {
-      editor?.commands.focus("end");
-      settleFrame = window.requestAnimationFrame(focusAndScrollToEnd);
+      if (editor) focusFirstNewLine(editor);
     });
 
     return () => {
       window.cancelAnimationFrame(focusFrame);
-      if (settleFrame) window.cancelAnimationFrame(settleFrame);
     };
-  }, [autoFocus, editable, editor, scrollContainerRef]);
+  }, [autoFocus, editable, editor]);
 
   useEffect(() => {
     if (!editor || editor.getMarkdown() === markdown) return;
@@ -970,25 +1066,33 @@ export const NoteRichText = forwardRef<
               isHighlighting={isHighlighting}
             />
           </BubbleMenu>
-          <BubbleMenu
-            editor={editor}
-            options={{ placement: "top", offset: 8 }}
-            shouldShow={({ editor: currentEditor }) =>
-              currentEditor.isActive("codeBlock")
-            }
-          >
-            <CodeBlockLanguagePicker editor={editor} />
-          </BubbleMenu>
         </>
       ) : null}
-      <EditorContent
-        editor={editor}
-        className={cn(
-          "note-rich-text min-h-full",
-          editable && "note-rich-text-editable",
-          className,
-        )}
-      />
+      <div
+        className="note-rich-text-editor-shell min-h-[calc(100dvh-8.5rem)] cursor-text"
+        onMouseDownCapture={(event) => {
+          if (!editable || editor.isFocused) return;
+          if (
+            event.target instanceof Element &&
+            event.target.closest(
+              "button, a, input, textarea, select, [contenteditable='false']",
+            )
+          ) {
+            return;
+          }
+          event.preventDefault();
+          focusFirstNewLine(editor);
+        }}
+      >
+        <EditorContent
+          editor={editor}
+          className={cn(
+            "note-rich-text min-h-full",
+            editable && "note-rich-text-editable",
+            className,
+          )}
+        />
+      </div>
       {editable && scrollContainerRef ? (
         <NotePreviewRail
           editor={editor}
