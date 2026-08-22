@@ -602,6 +602,11 @@ export const colorAssets = pgTable(
       .primaryKey()
       .references(() => assets.id, { onDelete: "cascade" }),
     hex: varchar({ length: 9 }).notNull(),
+    gradient: jsonb("gradient").$type<{
+      from: string;
+      to: string;
+      angle: number;
+    }>(),
   },
   (table) => [
     check(

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
+import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { readClipboardAssetPayload } from "@/lib/clipboard";
@@ -65,6 +66,7 @@ export function BoardContextMenu({
   });
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const hasActiveModalLayer = useActiveModalLayer();
   const openPexelsBrowser = useSessionStore(
@@ -118,6 +120,9 @@ export function BoardContextMenu({
               {formatPlatformShortcut("⇧+N")}
             </ContextMenuShortcut>
           </ContextMenuItem>
+          <ContextMenuItem onClick={() => setColorDialogOpen(true)}>
+            New color
+          </ContextMenuItem>
           {target === "collection" ? (
             <>
               <ContextMenuItem onClick={() => setFolderDialogOpen(true)}>
@@ -168,6 +173,14 @@ export function BoardContextMenu({
         target={target}
         open={noteDialogOpen}
         onOpenChange={setNoteDialogOpen}
+        placement={placement}
+      />
+      <ColorEditorDialog
+        workspaceSlug={workspaceSlug}
+        collectionPath={collectionPath}
+        target={target}
+        open={colorDialogOpen}
+        onOpenChange={setColorDialogOpen}
         placement={placement}
       />
       {target === "collection" ? (

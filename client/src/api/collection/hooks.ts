@@ -31,6 +31,7 @@ import {
   updateCollectionNodePosition,
   updateCollectionNodePositions,
   updateNote,
+  updateColor,
 } from "./fetchers";
 import { makeMarkdownPreview } from "@/lib/markdown-preview";
 import type {
@@ -53,6 +54,8 @@ import type {
   UpdateNodePositionsInput,
   UpdatedNote,
   UpdateNoteInput,
+  UpdatedColor,
+  UpdateColorInput,
 } from "./types";
 import type { WorkspaceData } from "@/api/workspace";
 import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
@@ -1102,6 +1105,32 @@ function applyUpdatedNoteToContents(
   };
 }
 
+function applyUpdatedColorToContents(
+  current: CollectionContentsResponse | undefined,
+  color: UpdatedColor,
+): CollectionContentsResponse | undefined {
+  if (!current) return current;
+
+  return {
+    ...current,
+    nodes: current.nodes.map((node) => {
+      if (node.type === "color" && node.id === color.id) {
+        return { ...node, ...color };
+      }
+      if (node.type !== "folder") return node;
+
+      return {
+        ...node,
+        previews: node.previews.map((preview) =>
+          preview.type === "color" && preview.assetId === color.id
+            ? { ...preview, hex: color.hex, title: color.title }
+            : preview,
+        ),
+      };
+    }),
+  };
+}
+
 export function useUpdateNote(workspaceSlug: string) {
   const queryClient = useQueryClient();
 
@@ -1137,6 +1166,32 @@ export function useUpdateNote(workspaceSlug: string) {
               }
             : current,
       );
+    },
+  });
+}
+
+export function useUpdateColor(workspaceSlug: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      assetId,
+      ...data
+    }: UpdateColorInput & { assetId: string }) =>
+      updateColor(workspaceSlug, assetId, data),
+    onSuccess: ({ color }) => {
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        {
+          predicate: ({ queryKey }) =>
+            (queryKey[0] === "collectionContents" ||
+              queryKey[0] === "inboxContents") &&
+            queryKey[1] === workspaceSlug,
+        },
+        (current) => applyUpdatedColorToContents(current, color),
+      );
+      void queryClient.invalidateQueries({
+        queryKey: collectionQueryKeys.collections(workspaceSlug),
+      });
     },
   });
 }

@@ -21,6 +21,7 @@ export {
   useUpdateCollectionNodePosition,
   useUpdateCollectionNodePositions,
   useUpdateNote,
+  useUpdateColor,
   collectionContentsQueryOptions,
   collectionsQueryOptions,
   inboxContentsQueryOptions,
@@ -72,4 +73,7 @@ export type {
   UpdatedNote,
   UpdateNoteInput,
   UpdateNoteResponse,
+  UpdateColorInput,
+  UpdatedColor,
+  UpdateColorResponse,
 } from "./types";

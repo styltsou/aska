@@ -19,6 +19,7 @@ const FALLBACK_ROW_HEIGHT = 400;
 const FALLBACK_ORIGIN = 48;
 const NOTE_CARD_MAX_HEIGHT = 320;
 const FOLDER_CARD_HEIGHT = BOARD_CARD_WIDTH;
+const COLOR_CARD_HEIGHT = BOARD_CARD_WIDTH + 49;
 const LOCAL_NUDGE_LIMIT = 4;
 const INSERTION_GRID_COLUMNS = 4;
 
@@ -156,7 +157,9 @@ function getNodeHeight(node: CanvasLayoutNode): number {
     return BOARD_CARD_WIDTH * (node.height / node.width);
   }
 
-  return node.type === "note" ? NOTE_CARD_MAX_HEIGHT : FOLDER_CARD_HEIGHT;
+  if (node.type === "note") return NOTE_CARD_MAX_HEIGHT;
+  if (node.type === "color") return COLOR_CARD_HEIGHT;
+  return FOLDER_CARD_HEIGHT;
 }
 
 function normalizePlacement(

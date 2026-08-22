@@ -34,6 +34,8 @@ import type {
   InboxContentsResponse,
   UpdatedNote,
   UpdateNoteInput,
+  UpdateColorInput,
+  UpdatedColor,
 } from "@/dto/collection.dto";
 import type { BulkDeleteResult } from "@/services/collection/collection.types";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -92,6 +94,12 @@ export interface IAssetService {
     assetNodeId: string,
     data: UpdateNoteInput,
   ): Promise<UpdatedNote>;
+  updateColor(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    data: UpdateColorInput,
+  ): Promise<UpdatedColor>;
   deleteAsset(
     orgId: string,
     assetNodeId: string,
@@ -146,6 +154,7 @@ export class AssetService implements IAssetService {
         noteContent: noteAssets.markdown,
         noteColor: noteAssets.color,
         colorHex: colorAssets.hex,
+        colorGradient: colorAssets.gradient,
         linkOriginalUrl: linkAssets.originalUrl,
         linkResourceId: externalResources.id,
         linkHostname: externalResources.hostname,
@@ -253,7 +262,14 @@ export class AssetService implements IAssetService {
     data: CreateColorInput,
   ): Promise<CollectionColorNode> {
     const hex = normalizeHexColor(data.hex);
-    const title = getColorName(hex);
+    const gradient = data.gradient
+      ? {
+          from: normalizeHexColor(data.gradient.from),
+          to: normalizeHexColor(data.gradient.to),
+          angle: data.gradient.angle,
+        }
+      : null;
+    const title = gradient ? null : getColorName(hex);
     const color = await db.transaction(async (tx) => {
       const [asset] = await tx
         .insert(assets)
@@ -268,13 +284,14 @@ export class AssetService implements IAssetService {
         .returning();
       if (!asset)
         throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create color");
-      await tx.insert(colorAssets).values({ assetId: asset.id, hex });
+      await tx.insert(colorAssets).values({ assetId: asset.id, hex, gradient });
       return asset;
     });
     return {
       id: `color-${color.id}`,
       type: "color",
       hex,
+      gradient,
       title,
       isFavorite: false,
       createdAt: color.createdAt.toISOString(),
@@ -403,6 +420,62 @@ export class AssetService implements IAssetService {
       isFavorite: updated.isFavorite,
       ...metrics,
       updatedAt: updated.updatedAt.toISOString(),
+    };
+  }
+
+  async updateColor(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    data: UpdateColorInput,
+  ): Promise<UpdatedColor> {
+    const target = parseAssetNodeId(assetNodeId);
+    if (target.assetType !== "color") {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, "Asset is not a color");
+    }
+
+    const hex = normalizeHexColor(data.hex);
+    const gradient = data.gradient
+      ? {
+          from: normalizeHexColor(data.gradient.from),
+          to: normalizeHexColor(data.gradient.to),
+          angle: data.gradient.angle,
+        }
+      : data.gradient === null
+        ? null
+        : undefined;
+    const title = gradient === null ? getColorName(hex) : null;
+    const updated = await db.transaction(async (tx) => {
+      const [asset] = await tx
+        .update(assets)
+        .set({ title, updatedByUserId: userId })
+        .where(
+          and(
+            eq(assets.id, target.entityId),
+            eq(assets.organizationId, orgId),
+            eq(assets.type, "color"),
+          ),
+        )
+        .returning({ id: assets.id, isFavorite: assets.isFavorite });
+      if (!asset) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Color not found");
+      }
+
+      await tx
+        .update(colorAssets)
+        .set({ hex, ...(gradient === undefined ? {} : { gradient }) })
+        .where(eq(colorAssets.assetId, asset.id));
+
+      return asset;
+    });
+
+    return {
+      id: `color-${updated.id}`,
+      type: "color",
+      hex,
+      title,
+      isFavorite: updated.isFavorite,
+      gradient: gradient === undefined ? null : gradient,
     };
   }
 
@@ -568,6 +641,7 @@ export class AssetService implements IAssetService {
       noteContent: string | null;
       noteColor: string | null;
       colorHex: string | null;
+      colorGradient: { from: string; to: string; angle: number } | null;
       linkOriginalUrl: string | null;
       linkResourceId: number | null;
       linkHostname: string | null;
@@ -666,6 +740,7 @@ export class AssetService implements IAssetService {
           id: `color-${row.assetId}`,
           type: "color",
           hex: row.colorHex,
+          gradient: row.colorGradient ?? null,
           title: row.title,
           isFavorite: row.isFavorite,
           createdAt: row.createdAt.toISOString(),

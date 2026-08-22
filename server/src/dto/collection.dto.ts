@@ -77,13 +77,36 @@ const HexColorSchema = z
     "Must be a hex color like #rrggbb or #rrggbbaa",
   );
 
+const ColorGradientSchema = z.object({
+  from: HexColorSchema,
+  to: HexColorSchema,
+  angle: z.number().int().min(0).max(360),
+});
+
 export const CreateColorSchema = z.object({
   hex: HexColorSchema,
+  gradient: ColorGradientSchema.optional(),
   parentFolderPath: z.string().optional(),
   position: BoardPositionSchema.optional(),
 });
 
 export type CreateColorInput = z.infer<typeof CreateColorSchema>;
+
+export const UpdateColorSchema = z.object({
+  hex: HexColorSchema,
+  gradient: ColorGradientSchema.nullable().optional(),
+});
+
+export type UpdateColorInput = z.infer<typeof UpdateColorSchema>;
+
+export type UpdatedColor = {
+  id: string;
+  type: "color";
+  hex: string;
+  title: string | null;
+  isFavorite: boolean;
+  gradient?: z.infer<typeof ColorGradientSchema> | null;
+};
 
 export const UpdateNoteSchema = z.object({
   content: z.string().min(1).max(10_000),
@@ -211,6 +234,7 @@ export const CollectionColorNodeSchema = z.object({
   id: z.string(),
   type: z.literal("color"),
   hex: z.string(),
+  gradient: ColorGradientSchema.nullable().optional(),
   title: z.string().nullable(),
   isFavorite: z.boolean(),
   createdAt: z.string(),
@@ -295,6 +319,13 @@ export const CropInputSchema = z.object({
     width: z.number().finite().int().positive(),
     height: z.number().finite().int().positive(),
   }),
+  transform: z
+    .object({
+      rotation: z.number().int().min(0).max(270).multipleOf(90),
+      flipX: z.boolean(),
+      flipY: z.boolean(),
+    })
+    .default({ rotation: 0, flipX: false, flipY: false }),
 });
 
 export type CropInput = z.infer<typeof CropInputSchema>;

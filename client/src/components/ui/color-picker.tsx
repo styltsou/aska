@@ -15,16 +15,64 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
+function hexToHsl(hex: string) {
+  const value = hex.replace("#", "").slice(0, 6);
+  const red = Number.parseInt(value.slice(0, 2), 16) / 255;
+  const green = Number.parseInt(value.slice(2, 4), 16) / 255;
+  const blue = Number.parseInt(value.slice(4, 6), 16) / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const lightness = (max + min) / 2;
+  const delta = max - min;
+
+  if (delta === 0) return { hue: 0, sat: 0, lig: lightness * 100 };
+
+  const saturation = delta / (1 - Math.abs(2 * lightness - 1));
+  const hue =
+    max === red
+      ? 60 * (((green - blue) / delta) % 6)
+      : max === green
+        ? 60 * ((blue - red) / delta + 2)
+        : 60 * ((red - green) / delta + 4);
+
+  return {
+    hue: (hue + 360) % 360,
+    sat: saturation * 100,
+    lig: lightness * 100,
+  };
+}
+
 export function SimpleColorPicker({
   onPick,
+  initialHex,
+  actionLabel = "Add",
+  disabled = false,
+  onChange,
+  showAction = true,
 }: {
   onPick: (color: string) => void;
+  initialHex?: string;
+  actionLabel?: string;
+  disabled?: boolean;
+  onChange?: (color: string) => void;
+  showAction?: boolean;
 }) {
-  const [hue, setHue] = useState(200);
-  const [sat, setSat] = useState(100);
-  const [lig, setLig] = useState(50);
+  const initial = initialHex ? hexToHsl(initialHex) : undefined;
+  const [hue, setHue] = useState(initial?.hue ?? 200);
+  const [sat, setSat] = useState(initial?.sat ?? 100);
+  const [lig, setLig] = useState(initial?.lig ?? 50);
+
+  useEffect(() => {
+    if (!initialHex) return;
+    const color = hexToHsl(initialHex);
+    setHue(color.hue);
+    setSat(color.sat);
+    setLig(color.lig);
+  }, [initialHex]);
 
   const currentHex = hslToHex(hue, sat, lig);
+
+  useEffect(() => onChange?.(currentHex), [currentHex, onChange]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -130,13 +178,16 @@ export function SimpleColorPicker({
             }}
           />
         </div>
-        <button
-          type="button"
-          onClick={() => onPick(currentHex)}
-          className="shrink-0 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          Add
-        </button>
+        {showAction ? (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => onPick(currentHex)}
+            className="shrink-0 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            {actionLabel}
+          </button>
+        ) : null}
       </div>
     </div>
   );

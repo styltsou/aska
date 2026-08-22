@@ -6,6 +6,7 @@ import {
   CreateColorSchema,
   ImageCropPathParamSchema,
   UpdateNoteSchema,
+  UpdateColorSchema,
   WorkspaceParamSchema,
 } from "@/dto/collection.dto";
 import { factory } from "@/factory";
@@ -105,6 +106,28 @@ export const updateNote = factory.createHandlers(
   },
 );
 
+export const updateColor = factory.createHandlers(
+  authMiddleware,
+  validate.param(AssetPathParamSchema),
+  validate.body(UpdateColorSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const color = await assetService.updateColor(
+      workspace.id,
+      userId,
+      assetId,
+      data,
+    );
+    return c.json(success({ color }));
+  },
+);
+
 export const markInboxSeen = factory.createHandlers(
   authMiddleware,
   validate.param(WorkspaceParamSchema),
@@ -127,7 +150,7 @@ export const cropImage = factory.createHandlers(
   validate.body(CropInputSchema),
   async (c) => {
     const { workspaceSlug, assetId } = c.req.valid("param");
-    const { crop } = c.req.valid("json");
+    const { crop, transform } = c.req.valid("json");
     const workspace = await collectionService.getWorkspaceBySlug(
       workspaceSlug,
       c.get("userId"),
@@ -139,6 +162,7 @@ export const cropImage = factory.createHandlers(
           c.get("userId"),
           assetId,
           crop,
+          transform,
         ),
       ),
     );

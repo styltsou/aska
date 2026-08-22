@@ -10,7 +10,13 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { FileTextIcon, ImageIcon, PlusIcon, UploadIcon } from "lucide-react";
+import {
+  FileTextIcon,
+  ImageIcon,
+  PaletteIcon,
+  PlusIcon,
+  UploadIcon,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -21,6 +27,7 @@ import { getPlatformShift } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import { CreateCollectionDialog } from "@/components/app-shell/create-collection-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
+import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
 import { useWorkspace } from "@/api/workspace";
 import { useCollectionContents } from "@/api/collection";
@@ -196,6 +203,25 @@ export function AppHeader() {
                 {pexelsBrowserOpen
                   ? "Close Pexels photos"
                   : "Browse Pexels photos"}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <ColorEditorDialog
+                workspaceSlug={workspaceSlug}
+                collectionPath={collectionPath}
+                placement={placement}
+              >
+                <TooltipTrigger
+                  render={
+                    <Button type="button" size="sm" variant="outline">
+                      <PaletteIcon />
+                      <span>New color</span>
+                    </Button>
+                  }
+                />
+              </ColorEditorDialog>
+              <TooltipContent side="bottom" align="end">
+                New color
               </TooltipContent>
             </Tooltip>
             <Tooltip>

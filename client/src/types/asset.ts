@@ -67,6 +67,7 @@ export interface ColorAsset {
   id: string;
   type: "color";
   hex: string;
+  gradient?: { from: string; to: string; angle: number } | null;
   title?: string | null;
   isFavorite?: boolean;
   clientId?: string;

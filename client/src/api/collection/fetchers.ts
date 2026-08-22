@@ -32,6 +32,8 @@ import type {
   UpdateNodePositionsResponse,
   UpdateNoteInput,
   UpdateNoteResponse,
+  UpdateColorInput,
+  UpdateColorResponse,
 } from "./types";
 
 export async function fetchCollections(slug: string): Promise<CollectionsData> {
@@ -184,6 +186,17 @@ export async function updateNote(
 ): Promise<UpdateNoteResponse> {
   return apiPatch<UpdateNoteResponse>(
     `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/note`,
+    data,
+  );
+}
+
+export async function updateColor(
+  workspaceSlug: string,
+  assetId: string,
+  data: UpdateColorInput,
+): Promise<UpdateColorResponse> {
+  return apiPatch<UpdateColorResponse>(
+    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/color`,
     data,
   );
 }

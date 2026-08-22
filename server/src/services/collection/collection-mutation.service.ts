@@ -236,7 +236,14 @@ export class CollectionMutationService {
       data.parentFolderPath,
     );
     const hex = normalizeHexColor(data.hex);
-    const name = getColorName(hex);
+    const gradient = data.gradient
+      ? {
+          from: normalizeHexColor(data.gradient.from),
+          to: normalizeHexColor(data.gradient.to),
+          angle: data.gradient.angle,
+        }
+      : null;
+    const name = gradient ? null : getColorName(hex);
 
     const color = await db.transaction(async (tx) => {
       const [insertedAsset] = await tx
@@ -257,6 +264,7 @@ export class CollectionMutationService {
       await tx.insert(colorAssets).values({
         assetId: insertedAsset.id,
         hex,
+        gradient,
       });
 
       await tx.insert(collectionNodes).values({
@@ -284,6 +292,7 @@ export class CollectionMutationService {
       id: `color-${color.id}`,
       type: "color",
       hex,
+      gradient,
       title: name,
       isFavorite: false,
       createdAt: color.createdAt.toISOString(),

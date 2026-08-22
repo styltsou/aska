@@ -32,6 +32,7 @@ import {
   type MoveToDialogSource,
 } from "@/components/move-to-dialog";
 import { copyImageToClipboard } from "@/lib/clipboard";
+import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 
 type ImagePrefetch = {
   controller: AbortController;
@@ -93,17 +94,20 @@ function noteActions(asset: NoteAsset, onEditNote?: () => void) {
   );
 }
 
-function colorActions(asset: ColorAsset) {
+function colorActions(asset: ColorAsset, onEdit: () => void) {
   return (
-    <ContextMenuItem
-      onClick={() => {
-        void navigator.clipboard
-          .writeText(asset.hex)
-          .then(() => toast.success("Copied color."));
-      }}
-    >
-      Copy hex
-    </ContextMenuItem>
+    <>
+      <ContextMenuItem onClick={onEdit}>Edit color</ContextMenuItem>
+      <ContextMenuItem
+        onClick={() => {
+          void navigator.clipboard
+            .writeText(asset.hex)
+            .then(() => toast.success("Copied color."));
+        }}
+      >
+        Copy hex
+      </ContextMenuItem>
+    </>
   );
 }
 
@@ -169,6 +173,7 @@ export function AssetContextMenu({
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const imagePrefetchRef = useRef<ImagePrefetch | undefined>(undefined);
   const workspaceSlug =
     inboxContext?.workspaceSlug ?? deleteContext?.workspaceSlug;
@@ -354,7 +359,7 @@ export function AssetContextMenu({
                 : asset.type === "note"
                   ? noteActions(asset, onEditNote)
                   : asset.type === "color"
-                    ? colorActions(asset)
+                    ? colorActions(asset, () => setColorEditorOpen(true))
                     : linkActions(asset, () => {
                         refreshLink.mutate(asset.id, {
                           onError: (error) =>
@@ -409,6 +414,22 @@ export function AssetContextMenu({
         onOpenChange={setMoveDialogOpen}
         source={moveSource ?? { workspaceSlug: "", nodeIds: [] }}
       />
+      {asset.type === "color" && workspaceSlug ? (
+        <ColorEditorDialog
+          workspaceSlug={workspaceSlug}
+          collectionPath={
+            deleteContext
+              ? [deleteContext.collectionSlug, deleteContext.folderPath]
+                  .filter(Boolean)
+                  .join("/")
+              : undefined
+          }
+          target={inboxContext ? "inbox" : "collection"}
+          color={asset}
+          open={colorEditorOpen}
+          onOpenChange={setColorEditorOpen}
+        />
+      ) : null}
     </>
   );
 }
