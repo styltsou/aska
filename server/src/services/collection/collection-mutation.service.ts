@@ -24,6 +24,7 @@ import type {
 import { AppError, ErrorCode } from "@/lib/errors";
 import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import { getColorName, normalizeHexColor } from "@/lib/color-names";
+import { normalizeColorGradient } from "@/lib/color-gradient";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import {
   getCollectionBySlug,
@@ -237,11 +238,7 @@ export class CollectionMutationService {
     );
     const hex = normalizeHexColor(data.hex);
     const gradient = data.gradient
-      ? {
-          from: normalizeHexColor(data.gradient.from),
-          to: normalizeHexColor(data.gradient.to),
-          angle: data.gradient.angle,
-        }
+      ? normalizeColorGradient(data.gradient)
       : null;
     const name = gradient ? null : getColorName(hex);
 

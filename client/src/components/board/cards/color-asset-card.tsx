@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { gradientToCss } from "@/lib/color-gradient";
 import type { ColorAsset } from "@/types/asset";
 
 export function ColorAssetCard({
@@ -13,7 +14,14 @@ export function ColorAssetCard({
   const hex = asset.hex.toUpperCase();
   const surfaceStyle = asset.gradient
     ? {
-        background: `linear-gradient(${asset.gradient.angle}deg, ${asset.gradient.from}, ${asset.gradient.to})`,
+        background: gradientToCss(
+          asset.gradient.stops ?? [
+            { color: asset.gradient.from, position: 0 },
+            { color: asset.gradient.to, position: 100 },
+          ],
+          asset.gradient.type ?? "linear",
+          asset.gradient.angle,
+        ),
       }
     : { backgroundColor: asset.hex };
 

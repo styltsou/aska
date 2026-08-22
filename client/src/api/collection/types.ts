@@ -223,7 +223,7 @@ export type CreateNoteResponse = {
 
 export type CreateColorInput = {
   hex: string;
-  gradient?: { from: string; to: string; angle: number };
+  gradient?: ColorGradient;
   parentFolderPath?: string;
   position?: BoardPosition;
 };
@@ -232,7 +232,7 @@ export type CollectionColorNode = {
   id: string;
   type: "color";
   hex: string;
-  gradient?: { from: string; to: string; angle: number } | null;
+  gradient?: ColorGradient | null;
   title: string | null;
   isFavorite: boolean;
   createdAt: string;
@@ -244,7 +244,7 @@ export type CreateColorResponse = { color: CollectionColorNode };
 
 export type UpdateColorInput = {
   hex: string;
-  gradient?: { from: string; to: string; angle: number } | null;
+  gradient?: ColorGradient | null;
 };
 
 export type UpdatedColor = Pick<
@@ -253,6 +253,14 @@ export type UpdatedColor = Pick<
 >;
 
 export type UpdateColorResponse = { color: UpdatedColor };
+
+export type ColorGradient = {
+  from: string;
+  to: string;
+  angle: number;
+  type?: "linear" | "radial";
+  stops?: Array<{ color: string; position: number }>;
+};
 
 export type CreateImageUploadInput = {
   fileName: string;

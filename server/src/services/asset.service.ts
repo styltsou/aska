@@ -41,6 +41,10 @@ import type { BulkDeleteResult } from "@/services/collection/collection.types";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { parseAssetNodeId } from "@/lib/collection-node-id";
 import { getColorName, normalizeHexColor } from "@/lib/color-names";
+import {
+  normalizeColorGradient,
+  type StoredColorGradient,
+} from "@/lib/color-gradient";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import { first } from "@/lib/query";
 import type { IObjectStorageService } from "@/services/object-storage.service";
@@ -263,11 +267,7 @@ export class AssetService implements IAssetService {
   ): Promise<CollectionColorNode> {
     const hex = normalizeHexColor(data.hex);
     const gradient = data.gradient
-      ? {
-          from: normalizeHexColor(data.gradient.from),
-          to: normalizeHexColor(data.gradient.to),
-          angle: data.gradient.angle,
-        }
+      ? normalizeColorGradient(data.gradient)
       : null;
     const title = gradient ? null : getColorName(hex);
     const color = await db.transaction(async (tx) => {
@@ -436,11 +436,7 @@ export class AssetService implements IAssetService {
 
     const hex = normalizeHexColor(data.hex);
     const gradient = data.gradient
-      ? {
-          from: normalizeHexColor(data.gradient.from),
-          to: normalizeHexColor(data.gradient.to),
-          angle: data.gradient.angle,
-        }
+      ? normalizeColorGradient(data.gradient)
       : data.gradient === null
         ? null
         : undefined;
@@ -641,7 +637,7 @@ export class AssetService implements IAssetService {
       noteContent: string | null;
       noteColor: string | null;
       colorHex: string | null;
-      colorGradient: { from: string; to: string; angle: number } | null;
+      colorGradient: StoredColorGradient | null;
       linkOriginalUrl: string | null;
       linkResourceId: number | null;
       linkHostname: string | null;

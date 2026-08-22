@@ -81,6 +81,17 @@ const ColorGradientSchema = z.object({
   from: HexColorSchema,
   to: HexColorSchema,
   angle: z.number().int().min(0).max(360),
+  type: z.enum(["linear", "radial"]).optional(),
+  stops: z
+    .array(
+      z.object({
+        color: HexColorSchema,
+        position: z.number().min(0).max(100),
+      }),
+    )
+    .min(2)
+    .max(12)
+    .optional(),
 });
 
 export const CreateColorSchema = z.object({

@@ -606,6 +606,8 @@ export const colorAssets = pgTable(
       from: string;
       to: string;
       angle: number;
+      type?: "linear" | "radial";
+      stops?: Array<{ color: string; position: number }>;
     }>(),
   },
   (table) => [

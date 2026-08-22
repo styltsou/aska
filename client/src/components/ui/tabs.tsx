@@ -47,6 +47,7 @@ export function Tabs({
   onValueChange,
   variant = "segment",
   className,
+  transition,
   children,
 }: {
   value?: string;
@@ -54,6 +55,7 @@ export function Tabs({
   onValueChange?: (value: string) => void;
   variant?: TabsVariant;
   className?: string;
+  transition?: Transition;
   children: ReactNode;
 }) {
   const [internalValue, setInternalValue] = useState(defaultValue);
@@ -76,7 +78,9 @@ export function Tabs({
       }}
     >
       <MotionConfig
-        transition={reduceMotion ? { duration: 0 } : SPRING_TRANSITION}
+        transition={
+          reduceMotion ? { duration: 0 } : (transition ?? SPRING_TRANSITION)
+        }
       >
         <TabsContext.Provider value={contextValue}>
           <motion.div layoutRoot className={className}>
