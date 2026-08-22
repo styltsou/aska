@@ -25,6 +25,7 @@ export type CanvasNodeData = {
   };
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
+  onOpenColor: (node: Extract<CollectionNode, { type: "color" }>) => void;
   onOpenNote: (
     node: Extract<CollectionNode, { type: "note" }>,
     mode?: "read" | "edit",
@@ -86,6 +87,7 @@ export const CanvasCard = memo(function CanvasCard({
       {node.type === "color" && displayAsset.type === "color" ? (
         <ColorAssetCard
           asset={displayAsset}
+          onOpen={isPending ? undefined : () => data.onOpenColor(node)}
           isContextMenuOpen={isContextMenuOpen}
         />
       ) : null}

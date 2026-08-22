@@ -10,6 +10,7 @@ import {
 } from "@/db/schema";
 import type {
   ColorSearchLocation,
+  ColorSearchMatchMode,
   ColorSearchQueryColor,
   ColorSearchScope,
 } from "@/dto/color-search.dto";
@@ -31,6 +32,7 @@ export type ResolvedColorSearchScope =
       collectionId: number;
       collectionSlug: string;
       parentFolderId: number | null;
+      includeDescendants: boolean;
       folderPath?: string;
     };
 
@@ -81,6 +83,7 @@ export class ColorSearchRepository {
       collectionId: target.collection.id,
       collectionSlug: target.collection.slug,
       parentFolderId: target.parentFolderId,
+      includeDescendants: scope.includeDescendants,
       ...(folderPath ? { folderPath } : {}),
     };
   }
@@ -143,6 +146,8 @@ export class ColorSearchRepository {
         assetId: assets.id,
         positionX: collectionNodes.positionX,
         positionY: collectionNodes.positionY,
+        pathFolderSlugs: collectionNodes.pathFolderSlugs,
+        pathFolderNames: collectionNodes.pathFolderNames,
       })
       .from(collectionNodes)
       .innerJoin(assets, eq(assets.id, collectionNodes.assetId))
@@ -154,9 +159,7 @@ export class ColorSearchRepository {
           eq(assets.organizationId, orgId),
           eq(assets.type, "image"),
           inArray(assets.id, [...assetIds]),
-          scope.parentFolderId === null
-            ? isNull(collectionNodes.parentFolderId)
-            : eq(collectionNodes.parentFolderId, scope.parentFolderId),
+          this.collectionTableScopeCondition(scope),
         ),
       );
 
@@ -165,7 +168,10 @@ export class ColorSearchRepository {
       location: {
         type: "collection",
         collectionSlug: scope.collectionSlug,
-        ...(scope.folderPath ? { folderPath: scope.folderPath } : {}),
+        ...(row.pathFolderSlugs.length > 0
+          ? { folderPath: row.pathFolderSlugs.join("/") }
+          : {}),
+        folderNames: row.pathFolderNames,
         nodeId: `image-${row.assetId}`,
         position:
           row.positionX === null || row.positionY === null
@@ -186,6 +192,7 @@ export class ColorSearchRepository {
     orgId: string,
     scope: ResolvedColorSearchScope,
     queryColors: readonly ColorSearchQueryColor[],
+    matchMode: ColorSearchMatchMode,
   ): Promise<BroadCandidateAssets> {
     const queryColorValues = sql.join(
       queryColors.map(
@@ -260,8 +267,18 @@ export class ColorSearchRepository {
           AVG(distance) AS average_distance
         FROM candidate_matches
         GROUP BY asset_id
-        HAVING COUNT(DISTINCT query_index) = ${queryColors.length}
-        ORDER BY worst_distance ASC, average_distance ASC, asset_id DESC
+        ${
+          matchMode === "strict"
+            ? sql`HAVING COUNT(DISTINCT query_index) = ${queryColors.length}`
+            : sql``
+        }
+        ORDER BY
+          ${
+            matchMode === "weighted"
+              ? sql`COUNT(DISTINCT query_index) DESC,`
+              : sql``
+          }
+          worst_distance ASC, average_distance ASC, asset_id DESC
         LIMIT ${safetyLimit}
       )
       SELECT asset_id
@@ -306,12 +323,34 @@ export class ColorSearchRepository {
       WHERE cn.organization_id = ${orgId}
         AND cn.collection_id = ${scope.collectionId}
         AND cn.node_type = 'asset'
-        AND ${
-          scope.parentFolderId === null
-            ? sql`cn.parent_folder_id IS NULL`
-            : sql`cn.parent_folder_id = ${scope.parentFolderId}`
-        }
+        AND ${this.collectionScopeCondition(scope)}
     `;
+  }
+
+  private collectionScopeCondition(
+    scope: Extract<ResolvedColorSearchScope, { type: "collection" }>,
+  ) {
+    if (scope.includeDescendants) {
+      return scope.parentFolderId === null
+        ? sql`TRUE`
+        : sql`${scope.parentFolderId} = ANY(cn.path_folder_ids)`;
+    }
+    return scope.parentFolderId === null
+      ? sql`cn.parent_folder_id IS NULL`
+      : sql`cn.parent_folder_id = ${scope.parentFolderId}`;
+  }
+
+  private collectionTableScopeCondition(
+    scope: Extract<ResolvedColorSearchScope, { type: "collection" }>,
+  ) {
+    if (scope.includeDescendants) {
+      return scope.parentFolderId === null
+        ? sql`TRUE`
+        : sql`${scope.parentFolderId} = ANY(${collectionNodes.pathFolderIds})`;
+    }
+    return scope.parentFolderId === null
+      ? isNull(collectionNodes.parentFolderId)
+      : eq(collectionNodes.parentFolderId, scope.parentFolderId);
   }
 
   async getPaletteColors(

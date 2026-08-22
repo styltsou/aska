@@ -25,7 +25,7 @@ describe("ColorSearchRequestSchema", () => {
     ).toBe(true);
   });
 
-  it("rejects invalid color counts, non-finite values, and unsupported scopes", () => {
+  it("validates color counts, weighted searches, and supported scopes", () => {
     expect(
       ColorSearchRequestSchema.safeParse({
         colors: [],
@@ -38,6 +38,16 @@ describe("ColorSearchRequestSchema", () => {
         scope: { type: "inbox" },
       }).success,
     ).toBe(false);
+    expect(
+      ColorSearchRequestSchema.safeParse({
+        colors: Array.from({ length: 12 }, () => ({
+          ...color,
+          weight: 1 / 12,
+        })),
+        matchMode: "weighted",
+        scope: { type: "inbox" },
+      }).success,
+    ).toBe(true);
     expect(
       ColorSearchRequestSchema.safeParse({
         colors: [{ ...color, oklabL: Infinity }],
@@ -59,6 +69,6 @@ describe("ColorSearchRequestSchema", () => {
           includeDescendants: true,
         },
       }).success,
-    ).toBe(false);
+    ).toBe(true);
   });
 });

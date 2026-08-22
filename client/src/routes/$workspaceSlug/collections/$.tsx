@@ -9,6 +9,7 @@ import {
 } from "@/api/collection";
 import { type ColorSearchScope, useColorImageSearch } from "@/api/color-search";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
+import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
 import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
 import {
   BoardActionRail,
@@ -17,7 +18,7 @@ import {
 } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
-import type { ImageAsset } from "@/types/asset";
+import type { ColorAsset, ImageAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
 import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
 import {
@@ -56,6 +57,7 @@ function CollectionPage() {
   const { viewerImage, openViewer, closeViewer } = usePersistedImageViewer(
     `aska.image-viewer:collection:${workspaceSlug}:${collectionPath}`,
   );
+  const [drawerColor, setDrawerColor] = useState<ColorAsset>();
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
     .filter(Boolean);
@@ -251,6 +253,13 @@ function CollectionPage() {
     if (asset.type === "image") handleSelectViewerImage(asset);
   };
 
+  const handleOpenColor = (
+    color: Extract<(typeof nodes)[number], { type: "color" }>,
+  ) => {
+    const asset = collectionNodeToAsset(color);
+    if (asset.type === "color") setDrawerColor(asset);
+  };
+
   const handleOpenFolder = (
     folder: Extract<(typeof nodes)[number], { type: "folder" }>,
   ) => {
@@ -324,6 +333,7 @@ function CollectionPage() {
                   }
                   onOpenNote={handleOpenNote}
                   onOpenImage={handleOpenImage}
+                  onOpenColor={handleOpenColor}
                   onOpenFolder={handleOpenFolder}
                 />
               </>
@@ -358,6 +368,7 @@ function CollectionPage() {
                 }
                 onOpenNote={handleOpenNote}
                 onOpenImage={handleOpenImage}
+                onOpenColor={handleOpenColor}
                 onOpenFolder={handleOpenFolder}
               />
             )}
@@ -374,6 +385,15 @@ function CollectionPage() {
         }}
         onClose={handleCloseNote}
       />
+      {drawerColor ? (
+        <ColorDetailDrawer
+          color={drawerColor}
+          workspaceSlug={workspaceSlug}
+          scope={colorSearchScope}
+          onClose={() => setDrawerColor(undefined)}
+          onOpenImage={handleSelectViewerImage}
+        />
+      ) : null}
       <ImageAssetViewer
         asset={viewerImage}
         assets={assets.filter(

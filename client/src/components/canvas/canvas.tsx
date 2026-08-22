@@ -102,6 +102,7 @@ type CanvasProps = {
   emptyDescription: string;
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
+  onOpenColor: (node: Extract<CollectionNode, { type: "color" }>) => void;
   onOpenNote: (
     node: Extract<CollectionNode, { type: "note" }>,
     mode?: "read" | "edit",
@@ -110,7 +111,7 @@ type CanvasProps = {
 
 type ActionRefs = Pick<
   CanvasProps,
-  "onOpenFolder" | "onOpenImage" | "onOpenNote"
+  "onOpenFolder" | "onOpenImage" | "onOpenColor" | "onOpenNote"
 >;
 
 type QueuedPositionSave = {
@@ -159,6 +160,7 @@ function CanvasSurface({
   emptyDescription,
   onOpenFolder,
   onOpenImage,
+  onOpenColor,
   onOpenNote,
 }: CanvasProps) {
   const boardKey = makeBoardKey(workspaceSlug, collectionSlug, folderPath);
@@ -238,9 +240,10 @@ function CanvasSurface({
   const actionRefs = useRef<ActionRefs>({
     onOpenFolder,
     onOpenImage,
+    onOpenColor,
     onOpenNote,
   });
-  actionRefs.current = { onOpenFolder, onOpenImage, onOpenNote };
+  actionRefs.current = { onOpenFolder, onOpenImage, onOpenColor, onOpenNote };
   const selectedIds = useMemo(
     () => selectionIdsForScope(selection, boardKey),
     [boardKey, selection],
@@ -462,6 +465,11 @@ function CanvasSurface({
       actionRefs.current.onOpenImage(node),
     [],
   );
+  const openColor = useCallback(
+    (node: Extract<CollectionNode, { type: "color" }>) =>
+      actionRefs.current.onOpenColor(node),
+    [],
+  );
   const openNote = useCallback(
     (node: Extract<CollectionNode, { type: "note" }>, mode?: "read" | "edit") =>
       actionRefs.current.onOpenNote(node, mode),
@@ -541,6 +549,7 @@ function CanvasSurface({
         },
         onOpenFolder: openFolder,
         onOpenImage: openImage,
+        onOpenColor: openColor,
         onOpenNote: openNote,
         onCardClick: handleCardClick,
         suppressClick,
@@ -575,6 +584,7 @@ function CanvasSurface({
       focusedNodeId,
       isColorFilterActive,
       openFolder,
+      openColor,
       openImage,
       openNote,
       pendingFolderDrop,

@@ -2698,6 +2698,11 @@
             "type": "number",
             "minimum": -0.5,
             "maximum": 0.5
+          },
+          "weight": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1
           }
         },
         "description": "A color represented in the OKLab perceptual color space."
@@ -2733,8 +2738,7 @@
                 "maxLength": 2000
               },
               "includeDescendants": {
-                "const": false,
-                "description": "Recursive scope is reserved for a later navigator-aware increment."
+                "type": "boolean"
               }
             }
           }
@@ -2748,13 +2752,18 @@
           "colors": {
             "type": "array",
             "minItems": 1,
-            "maxItems": 5,
+            "maxItems": 12,
             "items": {
               "$ref": "#/components/schemas/ColorSearchOklabColor"
             }
           },
           "scope": {
             "$ref": "#/components/schemas/ColorSearchScope"
+          },
+          "matchMode": {
+            "type": "string",
+            "enum": ["strict", "weighted"],
+            "default": "strict"
           }
         }
       },
@@ -2839,7 +2848,13 @@
           },
           {
             "type": "object",
-            "required": ["type", "collectionSlug", "nodeId", "position"],
+            "required": [
+              "type",
+              "collectionSlug",
+              "folderNames",
+              "nodeId",
+              "position"
+            ],
             "properties": {
               "type": {
                 "const": "collection"
@@ -2849,6 +2864,10 @@
               },
               "folderPath": {
                 "type": "string"
+              },
+              "folderNames": {
+                "type": "array",
+                "items": { "type": "string" }
               },
               "nodeId": {
                 "type": "string"
@@ -2889,7 +2908,7 @@
         "properties": {
           "query": {
             "type": "object",
-            "required": ["colors", "scope"],
+            "required": ["colors", "scope", "matchMode"],
             "properties": {
               "colors": {
                 "type": "array",
@@ -2899,6 +2918,10 @@
               },
               "scope": {
                 "$ref": "#/components/schemas/ColorSearchScope"
+              },
+              "matchMode": {
+                "type": "string",
+                "enum": ["strict", "weighted"]
               }
             }
           },
@@ -2926,7 +2949,7 @@
             }
           },
           "algorithmVersion": {
-            "const": "oklab-color-search-v1"
+            "const": "oklab-color-search-v2"
           }
         }
       },

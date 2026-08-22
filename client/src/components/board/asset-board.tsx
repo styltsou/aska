@@ -3,7 +3,7 @@ import type { MouseEvent, ReactNode } from "react";
 
 import { MasonryEmptyState } from "@/components/masonry-empty-state";
 import { Masonry } from "@/components/masonry-grid";
-import type { Asset, ImageAsset, NoteAsset } from "@/types/asset";
+import type { Asset, ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import { AssetCard } from "./asset-card";
 import { useMarqueeSelection } from "./use-marquee-selection";
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
@@ -40,6 +40,7 @@ export function AssetBoard({
   onOpenFolder,
   onOpenNote,
   onOpenImage,
+  onOpenColor,
 }: {
   assets: Asset[];
   emptyTitle: string;
@@ -50,6 +51,7 @@ export function AssetBoard({
   onOpenFolder?: (asset: Extract<Asset, { type: "folder" }>) => void;
   onOpenNote?: (note: NoteAsset, mode?: "read" | "edit") => void;
   onOpenImage?: (image: ImageAsset) => void;
+  onOpenColor?: (color: ColorAsset) => void;
 }) {
   const scopeKey = inboxContext
     ? `inbox:${inboxContext.workspaceSlug}`
@@ -211,6 +213,7 @@ export function AssetBoard({
               onOpenFolder={onOpenFolder}
               onOpenImage={onOpenImage}
               onOpenNote={onOpenNote}
+              onOpenColor={onOpenColor}
             />
           ))}
         </Masonry>

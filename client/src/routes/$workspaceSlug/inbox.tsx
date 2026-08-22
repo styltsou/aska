@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useInboxContents, useMarkInboxSeen } from "@/api/collection";
 import {
@@ -7,6 +7,7 @@ import {
   useColorImageSearch,
 } from "@/api/color-search";
 import { AssetBoard } from "@/components/board/asset-board";
+import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
 import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
@@ -15,7 +16,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { MasonryGridSkeleton } from "@/components/masonry-grid-skeleton";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { useSessionStore } from "@/store";
-import type { ImageAsset, NoteAsset } from "@/types/asset";
+import type { ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
 import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
 import { ResourceLoadError } from "@/components/resource-load-error";
@@ -42,6 +43,7 @@ function InboxPage() {
   const { viewerImage, openViewer, closeViewer } = usePersistedImageViewer(
     `aska.image-viewer:inbox:${workspaceSlug}`,
   );
+  const [drawerColor, setDrawerColor] = useState<ColorAsset>();
   const { data, isLoading, isFetching, isError, refetch } = useInboxContents(
     workspaceSlug,
     selectedAssetTypes,
@@ -107,6 +109,7 @@ function InboxPage() {
           inboxContext={{ workspaceSlug }}
           onOpenNote={handleOpenNote}
           onOpenImage={handleOpenImage}
+          onOpenColor={setDrawerColor}
           emptyTitle={
             hasResolvedColorSearch || isTypeFilterActive
               ? "No matching assets"
@@ -128,6 +131,15 @@ function InboxPage() {
         noteExtractionTarget={{ target: "inbox" }}
         onClose={handleCloseNote}
       />
+      {drawerColor ? (
+        <ColorDetailDrawer
+          color={drawerColor}
+          workspaceSlug={workspaceSlug}
+          scope={{ type: "inbox" }}
+          onClose={() => setDrawerColor(undefined)}
+          onOpenImage={handleOpenImage}
+        />
+      ) : null}
       <ImageAssetViewer
         asset={viewerImage}
         assets={displayAssets.filter(

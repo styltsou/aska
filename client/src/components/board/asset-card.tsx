@@ -1,6 +1,12 @@
 import { memo } from "react";
 import type { MouseEvent } from "react";
-import type { Asset, FolderAsset, ImageAsset, NoteAsset } from "@/types/asset";
+import type {
+  Asset,
+  ColorAsset,
+  FolderAsset,
+  ImageAsset,
+  NoteAsset,
+} from "@/types/asset";
 import { ImageAssetCard } from "@/components/board/cards/image-asset-card";
 import { NoteAssetCard } from "@/components/board/cards/note-asset-card";
 import { FolderAssetCard } from "@/components/board/cards/folder-asset-card";
@@ -18,6 +24,7 @@ export const AssetCard = memo(function AssetCard({
   onOpenFolder,
   onOpenImage,
   onOpenNote,
+  onOpenColor,
   deleteContext,
   inboxContext,
   isSelected = false,
@@ -29,6 +36,7 @@ export const AssetCard = memo(function AssetCard({
   onOpenFolder?: (asset: FolderAsset) => void;
   onOpenImage?: (asset: ImageAsset) => void;
   onOpenNote?: (asset: NoteAsset, mode?: "read" | "edit") => void;
+  onOpenColor?: (asset: ColorAsset) => void;
   deleteContext?: {
     workspaceSlug: string;
     collectionSlug: string;
@@ -110,6 +118,9 @@ export const AssetCard = memo(function AssetCard({
             {displayAsset.type === "color" && (
               <ColorAssetCard
                 asset={displayAsset}
+                onOpen={
+                  onOpenColor ? () => onOpenColor(displayAsset) : undefined
+                }
                 isContextMenuOpen={isContextMenuOpen}
               />
             )}

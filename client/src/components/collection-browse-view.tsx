@@ -63,6 +63,7 @@ type CollectionBrowseViewProps = {
   emptyDescription: string;
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
+  onOpenColor: (node: Extract<CollectionNode, { type: "color" }>) => void;
   onOpenNote: (
     node: Extract<CollectionNode, { type: "note" }>,
     mode?: "read" | "edit",
@@ -84,6 +85,7 @@ export function CollectionBrowseView({
   emptyDescription,
   onOpenFolder,
   onOpenImage,
+  onOpenColor,
   onOpenNote,
 }: CollectionBrowseViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -324,6 +326,7 @@ export function CollectionBrowseView({
       onSelectionContextMenu={handleSelectionContextMenu}
       onOpenFolder={onOpenFolder}
       onOpenImage={onOpenImage}
+      onOpenColor={onOpenColor}
       onOpenNote={onOpenNote}
     />
   );
@@ -472,6 +475,7 @@ function BrowseNodeCard({
   onSelectionContextMenu,
   onOpenFolder,
   onOpenImage,
+  onOpenColor,
   onOpenNote,
 }: {
   node: CollectionNode;
@@ -493,6 +497,7 @@ function BrowseNodeCard({
   ) => void;
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
+  onOpenColor: (node: Extract<CollectionNode, { type: "color" }>) => void;
   onOpenNote: (
     node: Extract<CollectionNode, { type: "note" }>,
     mode?: "read" | "edit",
@@ -562,6 +567,9 @@ function BrowseNodeCard({
         }
         onOpenImage={
           node.type === "image" ? () => onOpenImage(node) : undefined
+        }
+        onOpenColor={
+          node.type === "color" ? () => onOpenColor(node) : undefined
         }
         onOpenNote={
           node.type === "note"

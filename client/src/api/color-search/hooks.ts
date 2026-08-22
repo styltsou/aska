@@ -5,18 +5,28 @@ import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { hexToOklab } from "@/lib/oklab";
 
 import { searchImagesByColor } from "./fetchers";
-import type { ColorSearchScope } from "./types";
+import type {
+  ColorSearchInput,
+  ColorSearchMatchMode,
+  ColorSearchScope,
+} from "./types";
 
 export const COLOR_SEARCH_DEBOUNCE_MS = 200;
 
 export const colorSearchQueryKeys = {
   all: ["color-search"] as const,
-  search: (workspaceSlug: string, scopeKey: string, colorSignature: string) =>
+  search: (
+    workspaceSlug: string,
+    scopeKey: string,
+    colorSignature: string,
+    matchMode: ColorSearchMatchMode,
+  ) =>
     [
       ...colorSearchQueryKeys.all,
       workspaceSlug,
       scopeKey,
       colorSignature,
+      matchMode,
     ] as const,
 };
 
@@ -25,30 +35,56 @@ export function useColorImageSearch(
   scope: ColorSearchScope,
   selectedHexColors: readonly string[],
 ) {
-  const colorSignature = selectedHexColors
-    .map((color) => color.toLowerCase())
+  const colors = useMemo(
+    () => selectedHexColors.map(hexToOklab),
+    [selectedHexColors],
+  );
+  return useColorSearch(workspaceSlug, scope, colors, "strict");
+}
+
+export function useWeightedColorImageSearch(
+  workspaceSlug: string,
+  scope: ColorSearchScope,
+  colors: ReadonlyArray<ColorSearchInput["colors"][number]>,
+) {
+  return useColorSearch(workspaceSlug, scope, colors, "weighted");
+}
+
+function useColorSearch(
+  workspaceSlug: string,
+  scope: ColorSearchScope,
+  colors: ReadonlyArray<ColorSearchInput["colors"][number]>,
+  matchMode: ColorSearchMatchMode,
+) {
+  const colorSignature = colors
+    .map(
+      (color) =>
+        `${color.oklabL.toFixed(6)}:${color.oklabA.toFixed(6)}:${color.oklabB.toFixed(6)}:${color.weight ?? 1}`,
+    )
     .join(",");
   const debouncedColorSignature = useDebouncedValue(
     colorSignature,
     COLOR_SEARCH_DEBOUNCE_MS,
   );
   const scopeKey = toScopeKey(scope);
-  const colors = useMemo(
-    () =>
-      debouncedColorSignature
-        ? debouncedColorSignature.split(",").map(hexToOklab)
-        : [],
-    [debouncedColorSignature],
+  const debouncedColors = useMemo(
+    () => (debouncedColorSignature === colorSignature ? colors : []),
+    [colorSignature, colors, debouncedColorSignature],
   );
   const query = useQuery({
     queryKey: colorSearchQueryKeys.search(
       workspaceSlug,
       scopeKey,
       debouncedColorSignature,
+      matchMode,
     ),
     queryFn: ({ signal }) =>
-      searchImagesByColor(workspaceSlug, { colors, scope }, signal),
-    enabled: colors.length > 0,
+      searchImagesByColor(
+        workspaceSlug,
+        { colors: debouncedColors, scope, matchMode },
+        signal,
+      ),
+    enabled: debouncedColors.length > 0,
     placeholderData: (previousData, previousQuery) =>
       previousQuery?.queryKey[1] === workspaceSlug &&
       previousQuery.queryKey[2] === scopeKey
@@ -59,7 +95,7 @@ export function useColorImageSearch(
   return {
     ...query,
     isSearching:
-      selectedHexColors.length > 0 &&
+      colors.length > 0 &&
       (colorSignature !== debouncedColorSignature || query.isFetching),
   };
 }

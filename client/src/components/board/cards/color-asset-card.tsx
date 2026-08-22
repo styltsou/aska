@@ -8,9 +8,11 @@ import type { ColorAsset } from "@/types/asset";
 export function ColorAssetCard({
   asset,
   isContextMenuOpen = false,
+  onOpen,
 }: {
   asset: ColorAsset;
   isContextMenuOpen?: boolean;
+  onOpen?: () => void;
 }) {
   const [surfaceHovered, setSurfaceHovered] = useState(false);
   const hasAlpha = asset.hex.length === 9 && !asset.hex.endsWith("ff");
@@ -58,18 +60,30 @@ export function ColorAssetCard({
     <div
       className={cn(
         "group relative w-full overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 hover:border-sidebar-foreground/20",
+        onOpen && "cursor-pointer",
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}
+      onMouseEnter={() => setSurfaceHovered(true)}
+      onMouseLeave={() => setSurfaceHovered(false)}
     >
+      {onOpen ? (
+        <button
+          type="button"
+          className="absolute inset-0 z-0 rounded-[inherit] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          aria-label={`Open ${name ?? gradientLabel ?? hex}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+        />
+      ) : null}
       <div
         className={cn(
-          "group/surface relative aspect-square w-full overflow-hidden rounded-b-[calc(var(--radius)-1px)]",
+          "group/surface pointer-events-none relative z-10 aspect-square w-full overflow-hidden rounded-b-[calc(var(--radius)-1px)]",
           hasAlpha &&
             "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
         )}
         style={surfaceStyle}
-        onMouseEnter={() => setSurfaceHovered(true)}
-        onMouseLeave={() => setSurfaceHovered(false)}
       >
         <AnimatePresence>
           {surfaceHovered ? (
@@ -82,7 +96,7 @@ export function ColorAssetCard({
             >
               <button
                 type="button"
-                className="inline-flex items-center rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-1 hover:ring-sidebar-foreground/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="pointer-events-auto inline-flex items-center rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-1 hover:ring-sidebar-foreground/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 onClick={(event) => {
                   event.stopPropagation();
                   void copyColorValue();
@@ -96,7 +110,7 @@ export function ColorAssetCard({
           ) : null}
         </AnimatePresence>
       </div>
-      <div className="flex min-w-0 items-center gap-3 bg-sidebar px-4 py-3">
+      <div className="pointer-events-none relative z-10 flex min-w-0 items-center gap-3 bg-sidebar px-4 py-3">
         <span
           className={cn(
             "truncate font-medium",

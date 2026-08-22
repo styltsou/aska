@@ -8,12 +8,15 @@ export type ColorSearchScope =
       type: "collection";
       collectionSlug: string;
       folderPath?: string;
-      includeDescendants: false;
+      includeDescendants: boolean;
     };
 
+export type ColorSearchMatchMode = "strict" | "weighted";
+
 export type ColorSearchInput = {
-  colors: OklabColor[];
+  colors: Array<OklabColor & { weight?: number }>;
   scope: ColorSearchScope;
+  matchMode?: ColorSearchMatchMode;
 };
 
 export type ColorSearchLocation =
@@ -26,6 +29,7 @@ export type ColorSearchLocation =
       type: "collection";
       collectionSlug: string;
       folderPath?: string;
+      folderNames: string[];
       nodeId: string;
       position: { x: number; y: number } | null;
     };
@@ -58,5 +62,5 @@ export type ColorSearchResponse = {
     cutoff: number;
     truncated: boolean;
   };
-  algorithmVersion: "oklab-color-search-v1";
+  algorithmVersion: "oklab-color-search-v2";
 };

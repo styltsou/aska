@@ -5,7 +5,7 @@ import {
   type SearchPaletteColor,
 } from "./color-assignment";
 
-export const COLOR_SEARCH_ALGORITHM_VERSION = "oklab-color-search-v1" as const;
+export const COLOR_SEARCH_ALGORITHM_VERSION = "oklab-color-search-v2" as const;
 
 export const COLOR_SEARCH_CONFIG = {
   candidateRadius: 0.16,
@@ -96,6 +96,59 @@ export function rankPalette(
       distance: roundScore(match.distance),
     })),
   };
+}
+
+/**
+ * Scores a gradient against the palette without requiring it to reproduce
+ * every stop. A stop's supplied weight represents the portion of the
+ * gradient it occupies, so broad matches outrank incidental accents.
+ */
+export function rankWeightedPalette(
+  assetId: number,
+  queryColors: readonly (OklabColor & { weight?: number })[],
+  paletteColors: readonly SearchPaletteColor[],
+): RankedColorSearchCandidate | null {
+  const totalWeight = queryColors.reduce(
+    (sum, color) => sum + (color.weight ?? 1),
+    0,
+  );
+  if (totalWeight === 0 || paletteColors.length === 0) return null;
+
+  let relevance = 0;
+  const matches: RankedPaletteMatch[] = [];
+
+  for (const [queryColorIndex, queryColor] of queryColors.entries()) {
+    let bestMatch: { color: SearchPaletteColor; distance: number } | undefined;
+    for (const paletteColor of paletteColors) {
+      const distance = oklabDistance(queryColor, paletteColor);
+      if (!bestMatch || distance < bestMatch.distance) {
+        bestMatch = { color: paletteColor, distance };
+      }
+    }
+    if (
+      !bestMatch ||
+      bestMatch.distance > COLOR_SEARCH_CONFIG.maximumMatchDistance
+    ) {
+      continue;
+    }
+
+    const distanceScore = Math.exp(
+      -0.5 * (bestMatch.distance / COLOR_SEARCH_CONFIG.sigma) ** 2,
+    );
+    const prominence =
+      0.7 +
+      0.15 * Math.sqrt(bestMatch.color.coverage) +
+      0.15 * bestMatch.color.salience;
+    relevance += (queryColor.weight ?? 1) * distanceScore * prominence;
+    matches.push({
+      queryColorIndex,
+      paletteHex: bestMatch.color.hex,
+      distance: roundScore(bestMatch.distance),
+    });
+  }
+
+  if (matches.length === 0) return null;
+  return { assetId, relevance: roundScore(relevance / totalWeight), matches };
 }
 
 export function applyAdaptiveCutoff<T extends RankedColorSearchCandidate>(

@@ -4,6 +4,7 @@ import {
   applyAdaptiveCutoff,
   normalizeQueryColors,
   rankPalette,
+  rankWeightedPalette,
 } from "./color-search-ranker";
 
 const queryColor = { oklabL: 0.628, oklabA: 0.225, oklabB: 0.126 };
@@ -48,6 +49,35 @@ describe("color search ranker", () => {
     );
 
     expect(ranked?.relevance).toBeGreaterThan(0.6);
+  });
+
+  it("ranks broad weighted gradient matches above a minor-stop-only match", () => {
+    const colors = [
+      { ...queryColor, weight: 0.8 },
+      { oklabL: 0.728, oklabA: -0.171, oklabB: 0.091, weight: 0.2 },
+    ];
+    const broad = rankWeightedPalette(1, colors, [
+      matchingPalette[0]!,
+      {
+        ...matchingPalette[0]!,
+        id: 2,
+        hex: "#5aa56b",
+        oklabL: 0.728,
+        oklabA: -0.171,
+        oklabB: 0.091,
+      },
+    ]);
+    const minorOnly = rankWeightedPalette(2, colors, [
+      {
+        ...matchingPalette[0]!,
+        oklabL: 0.728,
+        oklabA: -0.171,
+        oklabB: 0.091,
+      },
+    ]);
+
+    expect(broad?.relevance).toBeGreaterThan(minorOnly?.relevance ?? 0);
+    expect(minorOnly?.matches).toHaveLength(1);
   });
 
   it("orders equal relevance by descending asset id", () => {

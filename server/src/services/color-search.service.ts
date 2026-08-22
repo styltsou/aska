@@ -11,6 +11,7 @@ import {
   applyAdaptiveCutoff,
   normalizeQueryColors,
   rankPalette,
+  rankWeightedPalette,
 } from "./color-search/color-search-ranker";
 import { ColorSearchRepository } from "./color-search/color-search.repository";
 
@@ -42,11 +43,19 @@ export class ColorSearchService implements IColorSearchService {
     input: ColorSearchInput,
   ): Promise<ColorSearchResponse> {
     const startedAt = performance.now();
-    const queryColors = normalizeQueryColors(input.colors);
+    const queryColors =
+      input.matchMode === "weighted"
+        ? normalizeWeightedQueryColors(input.colors)
+        : normalizeQueryColors(input.colors);
     const scope = await this.repository.resolveScope(orgId, input.scope);
     const [scopedImageCount, broadCandidates] = await Promise.all([
       this.repository.getScopedImageCount(orgId, scope),
-      this.repository.findBroadCandidateAssets(orgId, scope, queryColors),
+      this.repository.findBroadCandidateAssets(
+        orgId,
+        scope,
+        queryColors,
+        input.matchMode,
+      ),
     ]);
     const paletteRows = await this.repository.getPaletteColors(
       orgId,
@@ -57,7 +66,10 @@ export class ColorSearchService implements IColorSearchService {
       const palette = palettesByAssetId.get(assetId);
       if (!palette) return [];
 
-      const ranked = rankPalette(assetId, queryColors, palette);
+      const ranked =
+        input.matchMode === "weighted"
+          ? rankWeightedPalette(assetId, queryColors, palette)
+          : rankPalette(assetId, queryColors, palette);
       return ranked ? [ranked] : [];
     });
     const thresholded = applyAdaptiveCutoff(rankedCandidates);
@@ -129,6 +141,7 @@ export class ColorSearchService implements IColorSearchService {
       query: {
         colors: queryColors,
         scope: input.scope,
+        matchMode: input.matchMode,
       },
       results,
       meta: {
@@ -152,7 +165,11 @@ export class ColorSearchService implements IColorSearchService {
     this.loggerService.info("Color image search completed", {
       algorithmVersion: COLOR_SEARCH_ALGORITHM_VERSION,
       colorCount: input.input.colors.length,
-      normalizedColorCount: normalizeQueryColors(input.input.colors).length,
+      normalizedColorCount:
+        input.input.matchMode === "weighted"
+          ? normalizeWeightedQueryColors(input.input.colors).length
+          : normalizeQueryColors(input.input.colors).length,
+      matchMode: input.input.matchMode,
       scopeType: input.input.scope.type,
       scopedImageCount: input.scopedImageCount,
       candidateCount: input.candidateCount,
@@ -162,6 +179,28 @@ export class ColorSearchService implements IColorSearchService {
       durationMs: Math.round(input.durationMs),
     });
   }
+}
+
+function normalizeWeightedQueryColors(
+  colors: ColorSearchInput["colors"],
+): ColorSearchInput["colors"] {
+  const normalized: ColorSearchInput["colors"] = [];
+  for (const color of colors) {
+    const existing = normalized.find(
+      (candidate) =>
+        Math.hypot(
+          candidate.oklabL - color.oklabL,
+          candidate.oklabA - color.oklabA,
+          candidate.oklabB - color.oklabB,
+        ) <= COLOR_SEARCH_CONFIG.duplicateColorDistance,
+    );
+    if (existing) {
+      existing.weight = (existing.weight ?? 1) + (color.weight ?? 1);
+    } else {
+      normalized.push({ ...color });
+    }
+  }
+  return normalized;
 }
 
 function groupPaletteRows(
