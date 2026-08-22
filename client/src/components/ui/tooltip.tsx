@@ -1,8 +1,77 @@
 "use client";
 
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
+import { motion, useReducedMotion, type Variants } from "motion/react";
+import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
+
+const TOOLTIP_EASE_OUT = [0.16, 1, 0.3, 1] as const;
+
+const REDUCED_TOOLTIP_VARIANTS: Variants = {
+  initial: { opacity: 0 },
+  animate: {
+    opacity: 1,
+    transition: { duration: 0.14, ease: TOOLTIP_EASE_OUT },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.1, ease: TOOLTIP_EASE_OUT },
+  },
+  instant: { opacity: 1, transition: { duration: 0 } },
+};
+
+function buildTooltipVariants(side: string): Variants {
+  const offset =
+    side === "top"
+      ? { y: 8 }
+      : side === "bottom"
+        ? { y: -8 }
+        : side === "left" || side === "inline-start"
+          ? { x: 8 }
+          : { x: -8 };
+
+  return {
+    initial: {
+      opacity: 0,
+      scale: 0.9,
+      filter: "blur(5px)",
+      x: offset.x ?? 0,
+      y: offset.y ?? 0,
+    },
+    animate: {
+      opacity: 1,
+      scale: 1,
+      filter: "blur(0px)",
+      x: 0,
+      y: 0,
+      transition: {
+        type: "spring",
+        stiffness: 380,
+        damping: 30,
+        mass: 0.7,
+        opacity: { duration: 0.14, ease: TOOLTIP_EASE_OUT },
+        filter: { duration: 0.18, ease: TOOLTIP_EASE_OUT },
+      },
+    },
+    exit: {
+      opacity: 0,
+      scale: 0.94,
+      filter: "blur(3px)",
+      x: (offset.x ?? 0) * 0.6,
+      y: (offset.y ?? 0) * 0.6,
+      transition: { duration: 0.12, ease: TOOLTIP_EASE_OUT },
+    },
+    instant: {
+      opacity: 1,
+      scale: 1,
+      filter: "blur(0px)",
+      x: 0,
+      y: 0,
+      transition: { duration: 0 },
+    },
+  };
+}
 
 function TooltipProvider({
   delay = 0,
@@ -28,16 +97,38 @@ function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
 function TooltipContent({
   className,
   side = "top",
-  sideOffset = 4,
+  sideOffset = 8,
   align = "center",
   alignOffset = 0,
   children,
+  render,
   ...props
 }: TooltipPrimitive.Popup.Props &
   Pick<
     TooltipPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  const reduceMotion = useReducedMotion();
+  const variants = reduceMotion
+    ? REDUCED_TOOLTIP_VARIANTS
+    : buildTooltipVariants(side);
+  const popupRender =
+    render ??
+    ((popupProps, state) => (
+      <motion.div
+        {...(popupProps as ComponentProps<typeof motion.div>)}
+        initial={state.instant ? false : "initial"}
+        animate={
+          state.instant
+            ? "instant"
+            : state.transitionStatus === "ending"
+              ? "exit"
+              : "animate"
+        }
+        variants={variants}
+      />
+    ));
+
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
@@ -49,14 +140,14 @@ function TooltipContent({
       >
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
+          render={popupRender}
           className={cn(
-            "bg-foreground text-background data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-1.5 rounded-md px-3 py-1.5 text-xs duration-75 ease-out has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm",
+            "z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground shadow-lg outline-none has-data-[slot=kbd]:pr-1.5 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm",
             className,
           )}
           {...props}
         >
           {children}
-          <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%-2px)] rotate-45 rounded-xs bg-foreground fill-foreground data-[side=bottom]:top-1 data-[side=inline-end]:top-1/2! data-[side=inline-end]:-left-1 data-[side=inline-end]:-translate-y-1/2 data-[side=inline-start]:top-1/2! data-[side=inline-start]:-right-1 data-[side=inline-start]:-translate-y-1/2 data-[side=left]:top-1/2! data-[side=left]:-right-1 data-[side=left]:-translate-y-1/2 data-[side=right]:top-1/2! data-[side=right]:-left-1 data-[side=right]:-translate-y-1/2 data-[side=top]:-bottom-2.5" />
         </TooltipPrimitive.Popup>
       </TooltipPrimitive.Positioner>
     </TooltipPrimitive.Portal>

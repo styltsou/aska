@@ -53,7 +53,7 @@ createRoot(document.getElementById("root")!, {
 }).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider delay={0}>
+      <TooltipProvider delay={120}>
         <RouterProvider router={router} />
       </TooltipProvider>
     </QueryClientProvider>
