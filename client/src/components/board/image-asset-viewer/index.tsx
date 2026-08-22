@@ -27,6 +27,7 @@ import {
   ExternalLinkIcon,
   PencilIcon,
   PipetteIcon,
+  RotateCcwIcon,
 } from "lucide-react";
 import type { ImageAsset } from "@/types/asset";
 import {
@@ -49,6 +50,7 @@ import { apiPost } from "@/lib/api";
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
 import { collectionQueryKeys } from "@/api/collection/query-keys";
 import { useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { copyImageToClipboard } from "@/lib/clipboard";
 import { GLASS_FRAME_CLASS, GLASS_SURFACE_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
@@ -57,9 +59,26 @@ import { toast } from "sonner";
 const MIN_FREE_CROP_SIZE = 80;
 const COLOR_PREVIEW_GAP = 14;
 const COLOR_PREVIEW_INSET = 8;
+const MAX_VIEWER_IMAGE_WIDTH = 1920;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function swapSize(size: Size): Size {
+  return { width: size.height, height: size.width };
+}
+
+function fitSizeWithinBounds(size: Size, maxSize: Size): Size {
+  const scale = Math.min(
+    1,
+    maxSize.width / size.width,
+    maxSize.height / size.height,
+  );
+  return {
+    width: Math.round(size.width * scale),
+    height: Math.round(size.height * scale),
+  };
 }
 
 const FLOATING_ISLAND_SURFACE_CLASS = cn(
@@ -82,12 +101,20 @@ const COLOR_PICKER_SURFACE_CLASS = cn(
   GLASS_FRAME_CLASS,
 );
 
+const VIEWER_CANVAS_CLASS =
+  "min-h-0 flex-1 px-5 py-14 sm:px-8 sm:py-16 lg:pr-[25rem]";
+
 type CropFrameColors = {
   frame: string;
   className: string;
 };
 
 type CropDimension = "width" | "height";
+type CropTransform = {
+  rotation: number;
+  flipX: boolean;
+  flipY: boolean;
+};
 
 type CropResponse = {
   image: Pick<
@@ -116,17 +143,35 @@ function getSourceLabel(asset: ImageAsset): string | undefined {
   }
 }
 
-async function makeCroppedPreview(url: string, crop: Area): Promise<string> {
+async function makeCroppedPreview(
+  url: string,
+  crop: Area,
+  transform: CropTransform,
+): Promise<string> {
   const response = await fetch(url);
   if (!response.ok) throw new Error("Could not load image preview");
   const bitmap = await createImageBitmap(await response.blob());
+  const isQuarterTurn = transform.rotation % 180 !== 0;
+  const transformedCanvas = document.createElement("canvas");
+  transformedCanvas.width = isQuarterTurn ? bitmap.height : bitmap.width;
+  transformedCanvas.height = isQuarterTurn ? bitmap.width : bitmap.height;
+  const transformedContext = transformedCanvas.getContext("2d");
+  if (!transformedContext) throw new Error("Could not transform image preview");
+  transformedContext.translate(
+    transformedCanvas.width / 2,
+    transformedCanvas.height / 2,
+  );
+  transformedContext.scale(transform.flipX ? -1 : 1, transform.flipY ? -1 : 1);
+  transformedContext.rotate((transform.rotation * Math.PI) / 180);
+  transformedContext.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(crop.width);
   canvas.height = Math.round(crop.height);
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Could not create image preview");
   context.drawImage(
-    bitmap,
+    transformedCanvas,
     Math.round(crop.x),
     Math.round(crop.y),
     Math.round(crop.width),
@@ -256,17 +301,33 @@ const RESIZE_TARGETS: {
   },
 ];
 
+const CORNER_HANDLE_CLASS: Partial<Record<ResizeDirection, string>> = {
+  "top-left": "top-[calc(50%-2px)] left-[calc(50%-2px)] border-t-4 border-l-4",
+  "top-right":
+    "top-[calc(50%-2px)] right-[calc(50%-2px)] border-t-4 border-r-4",
+  "bottom-right":
+    "right-[calc(50%-2px)] bottom-[calc(50%-2px)] border-r-4 border-b-4",
+  "bottom-left":
+    "bottom-[calc(50%-2px)] left-[calc(50%-2px)] border-b-4 border-l-4",
+};
+
 function FreeCropResizeHandles({
   cropSize,
   maxCropSize,
   aspect,
   frameColors,
+  showGrid,
+  onInteractionStart,
+  onInteractionEnd,
   onResize,
 }: {
   cropSize: Size;
   maxCropSize: Size;
   aspect?: number;
   frameColors: CropFrameColors;
+  showGrid: boolean;
+  onInteractionStart: () => void;
+  onInteractionEnd: () => void;
   onResize: (size: Size) => void;
 }) {
   const dragStart = useRef<{
@@ -282,6 +343,7 @@ function FreeCropResizeHandles({
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
+    onInteractionStart();
     dragStart.current = {
       direction,
       point: { x: event.clientX, y: event.clientY },
@@ -354,15 +416,20 @@ function FreeCropResizeHandles({
   const handlePointerEnd = (event: React.PointerEvent<HTMLButtonElement>) => {
     dragStart.current = null;
     event.currentTarget.releasePointerCapture(event.pointerId);
+    onInteractionEnd();
   };
 
   return (
     <div
-      className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 border"
+      className={cn(
+        "aska-crop-frame pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 border",
+        !showGrid && "aska-crop-frame--grid-hidden",
+      )}
       style={{
         width: cropSize.width,
         height: cropSize.height,
         borderColor: frameColors.frame,
+        color: frameColors.frame,
       }}
     >
       {RESIZE_TARGETS.filter(
@@ -372,19 +439,28 @@ function FreeCropResizeHandles({
           key={direction}
           type="button"
           aria-label={label}
-          className={`pointer-events-auto absolute focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${className}`}
+          className={cn(
+            "pointer-events-auto absolute focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            className,
+          )}
           onPointerDown={(event) => handlePointerDown(event, direction)}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
-        />
+        >
+          {CORNER_HANDLE_CLASS[direction] ? (
+            <span
+              aria-hidden="true"
+              className={cn(
+                "pointer-events-none absolute z-10 size-10 border-current",
+                CORNER_HANDLE_CLASS[direction],
+              )}
+            />
+          ) : null}
+        </button>
       ))}
     </div>
   );
-}
-
-function formatDimensions(width: number, height: number) {
-  return `${width} x ${height}`;
 }
 
 function fitCropSize(size: Size, aspect: number, maxSize: Size): Size {
@@ -410,6 +486,26 @@ function fitCropSize(size: Size, aspect: number, maxSize: Size): Size {
   }
 
   return { width: Math.round(width), height: Math.round(height) };
+}
+
+function fitCropSizeFromLargestDimension(
+  size: Size,
+  aspect: number,
+  maxSize: Size,
+): Size {
+  const largestDimension = Math.max(size.width, size.height);
+  const targetSize =
+    aspect >= 1
+      ? {
+          width: largestDimension,
+          height: largestDimension / aspect,
+        }
+      : {
+          width: largestDimension * aspect,
+          height: largestDimension,
+        };
+
+  return fitCropSize(targetSize, aspect, maxSize);
 }
 
 function fitCropMaxSize(size: Size, aspect: number): Size {
@@ -438,6 +534,8 @@ function CropInspector({
   const originalHeight = asset.originalHeight ?? asset.height;
   const outputWidth = Math.round(croppedAreaPixels?.width ?? originalWidth);
   const outputHeight = Math.round(croppedAreaPixels?.height ?? originalHeight);
+  const formattedOutputWidth = outputWidth.toLocaleString();
+  const formattedOutputHeight = outputHeight.toLocaleString();
 
   const handleIntegerInput = (event: React.FormEvent<HTMLInputElement>) => {
     event.currentTarget.value = event.currentTarget.value.replace(/\D/g, "");
@@ -453,48 +551,44 @@ function CropInspector({
     <section aria-label="Crop details">
       <dl className="space-y-3 text-sm">
         <div className="flex items-center justify-between gap-4">
-          <dt className="text-xs font-medium text-muted-foreground">
-            Original
-          </dt>
-          <dd className="font-mono text-sm text-foreground/90 tabular-nums">
-            {formatDimensions(originalWidth, originalHeight)}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between gap-4">
           <dt className="text-xs font-medium text-muted-foreground">Output</dt>
-          <dd className="flex items-center gap-1.5 font-mono text-sm text-foreground/90 tabular-nums">
+          <dd className="flex items-center gap-1 text-sm text-foreground/90">
             <input
               key={`width-${outputWidth}`}
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              defaultValue={outputWidth}
+              defaultValue={formattedOutputWidth}
               aria-label="Output width in pixels"
-              className="h-6 w-[6ch] rounded-sm border-0 bg-transparent px-0 text-right outline-none hover:bg-muted/60 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="h-6 rounded-sm border-0 bg-transparent px-0 text-right outline-none hover:bg-muted/60 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
+              style={{ width: `${Math.max(3, formattedOutputWidth.length)}ch` }}
               onInput={handleIntegerInput}
               onKeyDown={handleInputKeyDown}
               onBlur={(event) =>
                 onOutputDimensionChange(
                   "width",
-                  Number(event.currentTarget.value),
+                  Number(event.currentTarget.value.replaceAll(",", "")),
                 )
               }
             />
-            <span className="text-muted-foreground">x</span>
+            <span className="text-muted-foreground">×</span>
             <input
               key={`height-${outputHeight}`}
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
-              defaultValue={outputHeight}
+              defaultValue={formattedOutputHeight}
               aria-label="Output height in pixels"
-              className="h-6 w-[6ch] rounded-sm border-0 bg-transparent px-0 text-right outline-none hover:bg-muted/60 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="h-6 rounded-sm border-0 bg-transparent px-0 text-right outline-none hover:bg-muted/60 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
+              style={{
+                width: `${Math.max(3, formattedOutputHeight.length)}ch`,
+              }}
               onInput={handleIntegerInput}
               onKeyDown={handleInputKeyDown}
               onBlur={(event) =>
                 onOutputDimensionChange(
                   "height",
-                  Number(event.currentTarget.value),
+                  Number(event.currentTarget.value.replaceAll(",", "")),
                 )
               }
             />
@@ -524,6 +618,7 @@ function ProgressiveViewerImage({
   onPick?: (hex: string) => void;
   loadSamplingCanvas?: () => Promise<HTMLCanvasElement | null>;
 }) {
+  const maxViewerImageHeight = MAX_VIEWER_IMAGE_WIDTH / aspectRatio;
   const [shouldLoadOriginal, setShouldLoadOriginal] = useState(false);
   const [isOriginalReady, setIsOriginalReady] = useState(false);
   const [hover, setHover] = useState<{
@@ -764,8 +859,8 @@ function ProgressiveViewerImage({
         pickMode && "cursor-crosshair",
       )}
       style={{
-        width: `min(100cqw, calc(100cqh * ${aspectRatio}))`,
-        height: `min(100cqh, calc(100cqw / ${aspectRatio}))`,
+        width: `min(100cqw, calc(100cqh * ${aspectRatio}), ${MAX_VIEWER_IMAGE_WIDTH}px)`,
+        height: `min(100cqh, calc(100cqw / ${aspectRatio}), ${maxViewerImageHeight}px)`,
         clipPath: "inset(0 round var(--radius-lg))",
       }}
     >
@@ -867,6 +962,9 @@ export function ImageAssetViewer({
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [aspect, setAspect] = useState<number>(0);
+  const [rotation, setRotation] = useState(0);
+  const [flipX, setFlipX] = useState(false);
+  const [flipY, setFlipY] = useState(false);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [freeCropSize, setFreeCropSize] = useState<Size | null>(null);
   const [aspectCropSize, setAspectCropSize] = useState<Size | null>(null);
@@ -876,11 +974,15 @@ export function ImageAssetViewer({
   );
   const [mediaSize, setMediaSize] = useState<Size | null>(null);
   const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [isCropInteracting, setIsCropInteracting] = useState(false);
+  const [hasCropChanges, setHasCropChanges] = useState(false);
+  const [hasManualCropResize, setHasManualCropResize] = useState(false);
   const [isSavingCrop, setIsSavingCrop] = useState(false);
   const [cropError, setCropError] = useState<string | null>(null);
   const [hasCopiedImage, setHasCopiedImage] = useState(false);
   const [hasCopiedColor, setHasCopiedColor] = useState(false);
   const [isEyeDropping, setIsEyeDropping] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
   const cropperContainerRef = useRef<HTMLDivElement>(null);
   const viewerImageRef = useRef<HTMLImageElement>(null);
   const copiedImageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -897,11 +999,17 @@ export function ImageAssetViewer({
       setCropMode(false);
       setCrop({ x: 0, y: 0 });
       setZoom(1);
+      setRotation(0);
+      setFlipX(false);
+      setFlipY(false);
       setCroppedAreaPixels(null);
       setFreeCropSize(null);
       setAspectCropSize(null);
       setCropperCropSize(null);
       setMediaLoaded(false);
+      setIsCropInteracting(false);
+      setHasCropChanges(false);
+      setHasManualCropResize(false);
       setIsEyeDropping(false);
     }
   }, [open]);
@@ -910,6 +1018,9 @@ export function ImageAssetViewer({
     setCropMode(false);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
+    setRotation(0);
+    setFlipX(false);
+    setFlipY(false);
     setCroppedAreaPixels(null);
     setFreeCropSize(null);
     setAspectCropSize(null);
@@ -917,6 +1028,9 @@ export function ImageAssetViewer({
     setMediaSize(null);
     setMediaLoaded(false);
     setCropError(null);
+    setIsCropInteracting(false);
+    setHasCropChanges(false);
+    setHasManualCropResize(false);
     setHasCopiedImage(false);
     setHasCopiedColor(false);
     setIsEyeDropping(false);
@@ -981,14 +1095,24 @@ export function ImageAssetViewer({
   useEffect(() => {
     if (!mediaSize || mediaSize.width < 1 || mediaSize.height < 1) return;
 
-    const maxWidth = mediaSize.width * zoom;
-    const maxHeight = mediaSize.height * zoom;
+    const rotatedMediaWidth =
+      (rotation % 180 !== 0 ? mediaSize.height : mediaSize.width) * zoom;
+    const rotatedMediaHeight =
+      (rotation % 180 !== 0 ? mediaSize.width : mediaSize.height) * zoom;
+    const maxWidth = cropperContainerSize
+      ? Math.min(rotatedMediaWidth, cropperContainerSize.width)
+      : rotatedMediaWidth;
+    const maxHeight = cropperContainerSize
+      ? Math.min(rotatedMediaHeight, cropperContainerSize.height)
+      : rotatedMediaHeight;
 
     if (aspect === 0) {
       if (!freeCropSize) return;
 
-      const width = Math.round(Math.min(freeCropSize.width, maxWidth));
-      const height = Math.round(Math.min(freeCropSize.height, maxHeight));
+      const { width, height } = fitSizeWithinBounds(freeCropSize, {
+        width: maxWidth,
+        height: maxHeight,
+      });
 
       if (width !== freeCropSize.width || height !== freeCropSize.height) {
         setFreeCropSize({ width, height });
@@ -1009,21 +1133,80 @@ export function ImageAssetViewer({
         height: Math.round(aspectCropSize.height * scale),
       });
     }
-  }, [aspect, aspectCropSize, freeCropSize, mediaSize, zoom]);
+  }, [
+    aspect,
+    aspectCropSize,
+    cropperContainerSize,
+    freeCropSize,
+    mediaSize,
+    rotation,
+    zoom,
+  ]);
 
   const handleCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCroppedAreaPixels(croppedPixels);
   }, []);
 
-  const resolvedAspect = aspect === 0 ? originalAspect : aspect;
+  const handleCropChange = useCallback((nextCrop: { x: number; y: number }) => {
+    setCrop(nextCrop);
+    setHasCropChanges(true);
+  }, []);
+
+  const handleZoomChange = useCallback((nextZoom: number) => {
+    setZoom(nextZoom);
+    setHasCropChanges(true);
+  }, []);
+
+  const handleRotate = useCallback(
+    (direction: "clockwise" | "counterclockwise") => {
+      setFreeCropSize((size) => (size ? swapSize(size) : size));
+      setAspectCropSize((size) => (size ? swapSize(size) : size));
+      setCropperCropSize((size) => (size ? swapSize(size) : size));
+      setRotation(
+        (currentRotation) =>
+          (currentRotation + (direction === "clockwise" ? 90 : -90) + 360) %
+          360,
+      );
+      setHasCropChanges(true);
+    },
+    [],
+  );
+
+  const handleFlipHorizontal = useCallback(() => {
+    setFlipX((currentFlip) => !currentFlip);
+    setHasCropChanges(true);
+  }, []);
+
+  const handleFlipVertical = useCallback(() => {
+    setFlipY((currentFlip) => !currentFlip);
+    setHasCropChanges(true);
+  }, []);
+
+  const handleCropInteractionStart = useCallback(() => {
+    setIsCropInteracting(true);
+  }, []);
+
+  const handleCropInteractionEnd = useCallback(() => {
+    setIsCropInteracting(false);
+  }, []);
+
+  const isQuarterTurn = rotation % 180 !== 0;
+  const resolvedAspect =
+    aspect === 0
+      ? isQuarterTurn
+        ? 1 / originalAspect
+        : originalAspect
+      : isQuarterTurn
+        ? 1 / aspect
+        : aspect;
 
   const cropMaxSize = useMemo(() => {
     if (!cropperContainerSize) return null;
 
     const bounds = mediaSize
       ? {
-          width: mediaSize.width * zoom,
-          height: mediaSize.height * zoom,
+          width: (isQuarterTurn ? mediaSize.height : mediaSize.width) * zoom,
+          height: (isQuarterTurn ? mediaSize.width : mediaSize.height) * zoom,
         }
       : cropperContainerSize;
 
@@ -1037,7 +1220,7 @@ export function ImageAssetViewer({
         Math.min(bounds.height, cropperContainerSize.height),
       ),
     };
-  }, [cropperContainerSize, mediaSize, zoom]);
+  }, [cropperContainerSize, isQuarterTurn, mediaSize, zoom]);
 
   const handleCropSizeChange = useCallback(
     (size: Size) => {
@@ -1055,27 +1238,53 @@ export function ImageAssetViewer({
 
   const handleAspectChange = useCallback(
     (nextAspect: number) => {
+      setHasCropChanges(true);
       setAspect(nextAspect);
 
       if (nextAspect === 0) {
         setAspectCropSize(null);
-        setFreeCropSize(
-          (currentSize) => currentSize ?? aspectCropSize ?? cropperCropSize,
-        );
+        setFreeCropSize((currentSize) => {
+          if (currentSize) return currentSize;
+          if (!hasManualCropResize) {
+            return mediaSize
+              ? {
+                  width: Math.round(mediaSize.width),
+                  height: Math.round(mediaSize.height),
+                }
+              : null;
+          }
+          return aspectCropSize ?? cropperCropSize;
+        });
         return;
       }
 
       setFreeCropSize(null);
       const base = freeCropSize ?? aspectCropSize ?? cropperCropSize;
       if (base && cropMaxSize) {
-        setAspectCropSize(fitCropSize(base, nextAspect, cropMaxSize));
+        setAspectCropSize(
+          fitCropSizeFromLargestDimension(
+            base,
+            isQuarterTurn ? 1 / nextAspect : nextAspect,
+            cropMaxSize,
+          ),
+        );
       }
     },
-    [aspectCropSize, cropMaxSize, cropperCropSize, freeCropSize],
+    [
+      aspectCropSize,
+      cropMaxSize,
+      cropperCropSize,
+      freeCropSize,
+      hasManualCropResize,
+      isQuarterTurn,
+      mediaSize,
+    ],
   );
 
   const handleCropBoxResize = useCallback(
     (size: Size) => {
+      setHasCropChanges(true);
+      setHasManualCropResize(true);
       if (aspect === 0) {
         setFreeCropSize(size);
       } else {
@@ -1088,6 +1297,9 @@ export function ImageAssetViewer({
   const handleOutputDimensionChange = useCallback(
     (dimension: CropDimension, value: number) => {
       if (!asset || !Number.isFinite(value) || value < 1) return;
+
+      setHasCropChanges(true);
+      setHasManualCropResize(true);
 
       const currentWidth =
         croppedAreaPixels?.width ?? asset.originalWidth ?? asset.width;
@@ -1131,28 +1343,57 @@ export function ImageAssetViewer({
     [asset, aspect, croppedAreaPixels, cropMaxSize, freeCropSize],
   );
 
+  const handleResetCrop = useCallback(() => {
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setAspect(0);
+    setRotation(0);
+    setFlipX(false);
+    setFlipY(false);
+    setCroppedAreaPixels(null);
+    setFreeCropSize(null);
+    setAspectCropSize(null);
+    setCropperCropSize(null);
+    setCropError(null);
+    setIsCropInteracting(false);
+    setHasCropChanges(false);
+    setHasManualCropResize(false);
+  }, []);
+
   const handleStartCrop = useCallback(() => {
     setCropMode(true);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setAspect(0);
+    setRotation(0);
+    setFlipX(false);
+    setFlipY(false);
     setCroppedAreaPixels(null);
     setFreeCropSize(null);
     setAspectCropSize(null);
     setCropperCropSize(null);
     setMediaLoaded(false);
     setCropError(null);
+    setIsCropInteracting(false);
+    setHasCropChanges(false);
+    setHasManualCropResize(false);
   }, []);
 
   const handleCancelCrop = useCallback(() => {
     setCropMode(false);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
+    setRotation(0);
+    setFlipX(false);
+    setFlipY(false);
     setCroppedAreaPixels(null);
     setFreeCropSize(null);
     setAspectCropSize(null);
     setCropperCropSize(null);
     setCropError(null);
+    setIsCropInteracting(false);
+    setHasCropChanges(false);
+    setHasManualCropResize(false);
   }, []);
 
   const handleApplyCrop = useCallback(async () => {
@@ -1165,14 +1406,16 @@ export function ImageAssetViewer({
       width: Math.round(croppedAreaPixels.width),
       height: Math.round(croppedAreaPixels.height),
     };
+    const transform = { rotation, flipX, flipY };
     const request = apiPost<CropResponse>(
       `/api/v1/workspace/${workspaceSlug}/images/${encodeURIComponent(asset.id)}/crop`,
-      { crop: cropArea },
+      { crop: cropArea, transform },
     );
     try {
       const preview = await makeCroppedPreview(
         asset.originalUrl ?? asset.url,
         cropArea,
+        transform,
       ).catch(() => null);
       if (preview) setOptimisticCropPreviewUrl(preview);
       setCropMode(false);
@@ -1185,6 +1428,9 @@ export function ImageAssetViewer({
         localPreviewUrl: undefined,
       };
       setEditedAsset(nextAsset);
+      setRotation(0);
+      setFlipX(false);
+      setFlipY(false);
       setOptimisticCropPreviewUrl(null);
       void Promise.all([
         queryClient.invalidateQueries({
@@ -1205,7 +1451,15 @@ export function ImageAssetViewer({
     } finally {
       setIsSavingCrop(false);
     }
-  }, [asset, croppedAreaPixels, queryClient, workspaceSlug]);
+  }, [
+    asset,
+    croppedAreaPixels,
+    flipX,
+    flipY,
+    queryClient,
+    rotation,
+    workspaceSlug,
+  ]);
 
   const handleDownload = useCallback(() => {
     if (!asset) return;
@@ -1329,7 +1583,13 @@ export function ImageAssetViewer({
   const cropBoxMaxSize =
     aspect === 0 || !cropMaxSize
       ? cropMaxSize
-      : fitCropMaxSize(cropMaxSize, aspect);
+      : fitCropMaxSize(cropMaxSize, isQuarterTurn ? 1 / aspect : aspect);
+  const activeCropSize = cropBoxSize ?? cropperCropSize;
+  const cropHighlightClip =
+    activeCropSize && cropperContainerSize
+      ? `inset(${Math.max(0, (cropperContainerSize.height - activeCropSize.height) / 2)}px ${Math.max(0, (cropperContainerSize.width - activeCropSize.width) / 2)}px)`
+      : undefined;
+  const cropTransform = `translate(${crop.x}px, ${crop.y}px) scale(${zoom}) scaleX(${flipX ? -1 : 1}) scaleY(${flipY ? -1 : 1}) rotate(${rotation}deg)`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1441,40 +1701,16 @@ export function ImageAssetViewer({
             </div>
           </div>
 
-          <div
-            className={cn(
-              "pointer-events-none absolute inset-x-3 top-3 z-30 flex justify-end sm:inset-x-4 sm:top-4 lg:inset-x-auto lg:top-5 lg:right-5",
-            )}
-          >
+          <div className="pointer-events-none absolute inset-x-3 top-3 z-30 flex justify-end sm:inset-x-4 sm:top-4 lg:inset-x-auto lg:top-5 lg:right-5">
             <div
               className={cn(
                 "pointer-events-auto flex min-w-0 items-center gap-1 [&_[data-slot=button]]:duration-75",
-                cropMode || !asset
+                !asset
                   ? "ml-auto"
                   : "ml-auto lg:ml-0 lg:w-[22.5rem] lg:justify-between",
               )}
             >
-              {cropMode ? (
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCancelCrop}
-                    disabled={isSavingCrop}
-                  >
-                    Discard
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleApplyCrop}
-                    disabled={isSavingCrop}
-                  >
-                    <CheckIcon className="size-3.5" />
-                    {isSavingCrop ? "Saving…" : "Apply crop"}
-                  </Button>
-                </div>
-              ) : asset ? (
+              {asset ? (
                 <>
                   <Tooltip>
                     <TooltipTrigger
@@ -1483,6 +1719,7 @@ export function ImageAssetViewer({
                           variant="secondary"
                           size="sm"
                           onClick={handleStartCrop}
+                          disabled={cropMode || isSavingCrop}
                         />
                       }
                     >
@@ -1504,6 +1741,7 @@ export function ImageAssetViewer({
                               isEyeDropping && "bg-foreground/8",
                             )}
                             aria-pressed={isEyeDropping}
+                            disabled={cropMode}
                           />
                         }
                       >
@@ -1517,11 +1755,13 @@ export function ImageAssetViewer({
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
-                        {isEyeDropping
-                          ? "Click the image to copy · Escape to cancel"
-                          : hasCopiedColor
-                            ? "Copied color"
-                            : "Pick color"}
+                        {cropMode
+                          ? "Finish editing to pick a color"
+                          : isEyeDropping
+                            ? "Click the image to copy · Escape to cancel"
+                            : hasCopiedColor
+                              ? "Copied color"
+                              : "Pick color"}
                       </TooltipContent>
                     </Tooltip>
                     <span
@@ -1570,47 +1810,99 @@ export function ImageAssetViewer({
 
           <div className="relative z-10 flex h-full min-h-0 flex-col">
             {cropMode && asset ? (
-              <div className="relative z-10 min-h-0 flex-1 px-6 py-16 sm:px-8 lg:pr-[25rem]">
-                <div ref={cropperContainerRef} className="relative size-full">
-                  {!mediaLoaded && blurPlaceholder ? (
-                    <div className="absolute inset-0 overflow-hidden">
-                      <img
-                        src={blurPlaceholder}
-                        alt=""
-                        aria-hidden="true"
-                        className="size-full object-contain blur-[5px] brightness-90 saturate-75"
-                      />
-                    </div>
-                  ) : null}
-                  <Cropper
-                    image={asset.originalUrl ?? asset.url}
-                    crop={crop}
-                    zoom={zoom}
-                    aspect={resolvedAspect}
-                    cropSize={cropBoxSize ?? undefined}
-                    onCropChange={setCrop}
-                    onZoomChange={setZoom}
-                    onCropComplete={handleCropComplete}
-                    onCropSizeChange={handleCropSizeChange}
-                    onMediaLoaded={() => setMediaLoaded(true)}
-                    setMediaSize={setMediaSize}
-                    classes={{ cropAreaClassName: cropFrameColors.className }}
-                    disableAutomaticStylesInjection
-                    showGrid
-                  />
+              <div
+                className={cn(
+                  "[container-type:size] relative z-10 -ml-5 flex items-center justify-center sm:-ml-8",
+                  VIEWER_CANVAS_CLASS,
+                )}
+              >
+                <div
+                  ref={cropperContainerRef}
+                  className="relative mx-auto h-full w-full max-w-[1920px] overflow-visible"
+                  style={{
+                    width: `min(100cqw, calc(100cqh * ${originalAspect}), 1920px)`,
+                    height: `min(100cqh, calc(100cqw / ${originalAspect}), ${1920 / originalAspect}px)`,
+                  }}
+                >
+                  <div className="absolute inset-0 overflow-hidden rounded-lg">
+                    {!mediaLoaded && blurPlaceholder ? (
+                      <div className="absolute inset-0 overflow-hidden">
+                        <img
+                          src={blurPlaceholder}
+                          alt=""
+                          aria-hidden="true"
+                          className="size-full object-contain blur-[5px] brightness-90 saturate-75"
+                        />
+                      </div>
+                    ) : null}
+                    <Cropper
+                      image={asset.originalUrl ?? asset.url}
+                      crop={crop}
+                      zoom={zoom}
+                      rotation={rotation}
+                      transform={cropTransform}
+                      aspect={resolvedAspect}
+                      cropSize={cropBoxSize ?? undefined}
+                      onCropChange={handleCropChange}
+                      onZoomChange={handleZoomChange}
+                      onInteractionStart={handleCropInteractionStart}
+                      onInteractionEnd={handleCropInteractionEnd}
+                      onCropComplete={handleCropComplete}
+                      onCropSizeChange={handleCropSizeChange}
+                      onMediaLoaded={() => setMediaLoaded(true)}
+                      setMediaSize={setMediaSize}
+                      classes={{
+                        cropAreaClassName: cn(
+                          cropFrameColors.className,
+                          !isCropInteracting && "aska-crop-area--grid-hidden",
+                        ),
+                      }}
+                      style={{ mediaStyle: { filter: "brightness(0.48)" } }}
+                      objectFit="contain"
+                      disableAutomaticStylesInjection
+                      showGrid={isCropInteracting}
+                    />
+                    {mediaSize && cropHighlightClip ? (
+                      <div
+                        className="pointer-events-none absolute inset-0 z-10 overflow-hidden"
+                        style={{ clipPath: cropHighlightClip }}
+                      >
+                        <img
+                          src={asset.originalUrl ?? asset.url}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                          className="absolute top-1/2 left-1/2 max-w-none"
+                          style={{
+                            width: mediaSize.width,
+                            height: mediaSize.height,
+                            transform: `translate(-50%, -50%) ${cropTransform}`,
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
                   {cropBoxSize && cropBoxMaxSize ? (
                     <FreeCropResizeHandles
                       cropSize={cropBoxSize}
-                      aspect={aspect === 0 ? undefined : aspect}
+                      aspect={aspect === 0 ? undefined : resolvedAspect}
                       frameColors={cropFrameColors}
                       maxCropSize={cropBoxMaxSize}
+                      showGrid={isCropInteracting}
+                      onInteractionStart={handleCropInteractionStart}
+                      onInteractionEnd={handleCropInteractionEnd}
                       onResize={handleCropBoxResize}
                     />
                   ) : null}
                 </div>
               </div>
             ) : (
-              <div className="[container-type:size] flex min-h-0 flex-1 items-center justify-center px-6 py-16 sm:px-8 lg:pr-[25rem]">
+              <div
+                className={cn(
+                  "[container-type:size] -ml-5 flex items-center justify-center sm:-ml-8",
+                  VIEWER_CANVAS_CLASS,
+                )}
+              >
                 {open && displayUrl ? (
                   <ProgressiveViewerImage
                     key={viewerImageUrl}
@@ -1630,73 +1922,159 @@ export function ImageAssetViewer({
 
           <aside
             className={cn(
-              "pointer-events-none absolute right-3 z-20 flex max-h-[calc(100%-6rem)] w-[min(20rem,calc(100%-1.5rem))] min-h-0 flex-col gap-1 sm:right-4 sm:w-80 lg:inset-y-0 lg:right-0 lg:max-h-none lg:w-[25rem] lg:gap-0 lg:border-l lg:border-border lg:bg-background lg:px-5 lg:pt-14 lg:pb-5",
-              cropMode ? "bottom-14" : "bottom-3 sm:bottom-4",
+              "pointer-events-none absolute right-0 bottom-0 z-20 flex max-h-[calc(100%-6rem)] w-[min(20rem,100%)] min-h-0 flex-col gap-1 sm:w-80 lg:inset-y-0 lg:right-0 lg:max-h-none lg:w-[25rem] lg:gap-0 lg:border-l lg:border-border lg:bg-background",
               "pointer-events-auto",
             )}
           >
             <div
               className={cn(
                 FLOATING_ISLAND_SURFACE_CLASS,
-                "min-h-0 flex flex-1 flex-col overflow-y-auto p-4 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-0 lg:shadow-none",
+                "min-h-0 flex flex-1 flex-col overflow-y-auto p-4 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-5 lg:pt-[4.25rem] lg:pb-4 lg:shadow-none",
               )}
             >
-              {!cropMode && asset ? (
-                <div className="mb-5">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Name
-                  </span>
-                  <p className="mt-1 text-sm font-medium wrap-break-word text-foreground">
-                    {asset.title ?? "Untitled image"}
-                  </p>
-                </div>
-              ) : null}
-              {!cropMode && asset?.sourceUrl ? (
-                <div className="mb-5">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Source
-                  </span>
-                  <a
-                    href={asset.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-sm font-medium text-primary transition-colors hover:text-foreground"
+              <AnimatePresence initial={false} mode="popLayout">
+                {cropMode && asset ? (
+                  <motion.section
+                    key="image-edit-controls"
+                    layout="position"
+                    initial={
+                      shouldReduceMotion
+                        ? false
+                        : { opacity: 0, y: -8, scale: 0.98 }
+                    }
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={
+                      shouldReduceMotion
+                        ? undefined
+                        : { opacity: 0, y: -8, scale: 0.98 }
+                    }
+                    transition={
+                      shouldReduceMotion
+                        ? { duration: 0 }
+                        : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
+                    }
+                    className={cn(
+                      GLASS_FRAME_CLASS,
+                      "mb-6 overflow-hidden rounded-xl bg-background shadow-sm",
+                    )}
+                    aria-label="Edit image"
                   >
-                    <ExternalLinkIcon className="size-3.5 shrink-0" />
-                    {sourceLabel ?? "Source"}
-                  </a>
-                </div>
-              ) : null}
+                    <div className="relative z-10 space-y-5 rounded-b-xl border-b border-border bg-card px-4 py-4">
+                      <CropToolbar
+                        aspect={aspect}
+                        zoom={zoom}
+                        flipX={flipX}
+                        flipY={flipY}
+                        onAspectChange={handleAspectChange}
+                        onZoomChange={handleZoomChange}
+                        onRotate={handleRotate}
+                        onFlipHorizontal={handleFlipHorizontal}
+                        onFlipVertical={handleFlipVertical}
+                      />
+                      <CropInspector
+                        asset={asset}
+                        croppedAreaPixels={croppedAreaPixels}
+                        onOutputDimensionChange={handleOutputDimensionChange}
+                      />
+                      {cropError ? (
+                        <p className="text-xs text-destructive" role="alert">
+                          {cropError}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="relative z-0 flex gap-2 px-4 py-2.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="mr-auto"
+                        onClick={handleResetCrop}
+                        disabled={!hasCropChanges || isSavingCrop}
+                      >
+                        <RotateCcwIcon className="size-3.5" />
+                        Reset
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleCancelCrop}
+                        disabled={isSavingCrop}
+                      >
+                        Discard
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="default"
+                        size="sm"
+                        onClick={handleApplyCrop}
+                        disabled={isSavingCrop}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </motion.section>
+                ) : null}
+              </AnimatePresence>
+              <motion.div
+                layout="position"
+                transition={
+                  shouldReduceMotion
+                    ? { duration: 0 }
+                    : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
+                }
+              >
+                {asset ? (
+                  <div className="mb-5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Title
+                    </span>
+                    <p className="mt-1 text-sm font-medium wrap-break-word text-foreground">
+                      {asset.title ?? "Untitled image"}
+                    </p>
+                  </div>
+                ) : null}
+                {asset?.sourceUrl ? (
+                  <div className="mb-5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Source
+                    </span>
+                    <a
+                      href={asset.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-sm font-medium text-primary transition-colors hover:text-foreground"
+                    >
+                      <ExternalLinkIcon className="size-3.5 shrink-0" />
+                      {sourceLabel ?? "Source"}
+                    </a>
+                  </div>
+                ) : null}
 
-              {cropMode && asset ? (
-                <div className="space-y-5">
-                  <CropToolbar
-                    aspect={aspect}
-                    zoom={zoom}
-                    onAspectChange={handleAspectChange}
-                    onZoomChange={setZoom}
-                  />
-                  <CropInspector
-                    asset={asset}
-                    croppedAreaPixels={croppedAreaPixels}
-                    onOutputDimensionChange={handleOutputDimensionChange}
-                  />
-                </div>
-              ) : asset ? (
-                <>
+                {asset ? (
                   <div className="pb-5">
                     <ImageColorPalette asset={asset} compact />
                   </div>
-                  <div className="mt-auto pt-4">
-                    <Separator className="mb-4" />
-                    <ImageMetadataDetails asset={asset} />
-                  </div>
-                </>
-              ) : null}
-              {cropError ? (
-                <p className="mt-4 text-xs text-destructive" role="alert">
-                  {cropError}
-                </p>
+                ) : null}
+                {!cropMode && cropError ? (
+                  <p className="mt-4 text-xs text-destructive" role="alert">
+                    {cropError}
+                  </p>
+                ) : null}
+              </motion.div>
+              {asset ? (
+                <motion.div
+                  layout="position"
+                  transition={
+                    shouldReduceMotion
+                      ? { duration: 0 }
+                      : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
+                  }
+                  className="mt-auto pt-4"
+                >
+                  <Separator className="mb-4" />
+                  <ImageMetadataDetails asset={asset} />
+                </motion.div>
               ) : null}
             </div>
           </aside>

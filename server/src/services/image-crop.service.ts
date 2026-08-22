@@ -20,6 +20,7 @@ const MAX_SOURCE_BYTES = 25 * 1024 * 1024;
 const MAX_DECODED_PIXELS = 40_000_000;
 
 type Crop = { x: number; y: number; width: number; height: number };
+type CropTransform = { rotation: number; flipX: boolean; flipY: boolean };
 type QueryClient = Pick<
   typeof db,
   "delete" | "execute" | "insert" | "select" | "update"
@@ -44,6 +45,7 @@ export interface IImageCropService {
     userId: string,
     assetNodeId: string,
     crop: Crop,
+    transform: CropTransform,
   ): Promise<{ image: CroppedImage }>;
 }
 
@@ -54,14 +56,21 @@ export interface IImageCropService {
 export class ImageCropService implements IImageCropService {
   constructor(private readonly objectStorageService: IObjectStorageService) {}
 
-  async crop(orgId: string, userId: string, assetNodeId: string, crop: Crop) {
+  async crop(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    crop: Crop,
+    transform: CropTransform,
+  ) {
     const assetId = imageAssetId(assetNodeId);
     const initial = await this.getImage(orgId, assetId, db);
-    this.assertReadyForCrop(initial, crop);
+    this.assertReadyForCrop(initial, crop, transform);
 
     const originalBytes = await this.renderCroppedOriginal(
       initial.variants.original!,
       crop,
+      transform,
     );
     const storageId = crypto.randomUUID();
     const originalObjectKey = makeOriginalObjectKey(
@@ -92,7 +101,7 @@ export class ImageCropService implements IImageCropService {
           sql`select 1 from image_assets where asset_id = ${assetId} for update`,
         );
         const current = await this.getImage(orgId, assetId, tx);
-        this.assertReadyForCrop(current, crop);
+        this.assertReadyForCrop(current, crop, transform);
         if (
           current.variants.original?.objectKey !==
             initial.variants.original?.objectKey ||
@@ -166,6 +175,7 @@ export class ImageCropService implements IImageCropService {
   private async renderCroppedOriginal(
     source: StoredImageObjectVariant,
     crop: Crop,
+    transform: CropTransform,
   ) {
     const sourceBytes = await this.objectStorageService.getObjectBytes(
       source.objectKey,
@@ -176,7 +186,13 @@ export class ImageCropService implements IImageCropService {
         "Image source is too large to crop inline",
       );
     }
-    return sharp(sourceBytes, { limitInputPixels: MAX_DECODED_PIXELS })
+    let image = sharp(sourceBytes, {
+      limitInputPixels: MAX_DECODED_PIXELS,
+    }).rotate(transform.rotation);
+    if (transform.flipY) image = image.flip();
+    if (transform.flipX) image = image.flop();
+
+    return image
       .extract({
         left: crop.x,
         top: crop.y,
@@ -190,6 +206,7 @@ export class ImageCropService implements IImageCropService {
   private assertReadyForCrop(
     row: Awaited<ReturnType<ImageCropService["getImage"]>>,
     crop: Crop,
+    transform: CropTransform,
   ) {
     if (!row.variants.original || row.variantStatus !== "completed") {
       throw new AppError(
@@ -197,7 +214,11 @@ export class ImageCropService implements IImageCropService {
         "This image is still processing or its source is unavailable",
       );
     }
-    assertCropInSource(crop, row.width, row.height);
+    const [width, height] =
+      transform.rotation % 180 === 0
+        ? [row.width, row.height]
+        : [row.height, row.width];
+    assertCropInSource(crop, width, height);
   }
 
   private async getImage(orgId: string, assetId: number, client: QueryClient) {
