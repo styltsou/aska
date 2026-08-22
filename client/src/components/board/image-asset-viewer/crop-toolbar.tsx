@@ -192,6 +192,7 @@ export function CropToolbar({
         <RangeSlider
           value={zoom}
           onValueChange={onZoomChange}
+          className="h-8"
           min={1}
           max={3}
           step={0.01}

@@ -16,7 +16,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeftIcon,
   CheckIcon,
@@ -52,7 +51,11 @@ import { collectionQueryKeys } from "@/api/collection/query-keys";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { copyImageToClipboard } from "@/lib/clipboard";
-import { GLASS_FRAME_CLASS, GLASS_SURFACE_CLASS } from "@/lib/glass";
+import {
+  FLOATING_GLASS_BACKDROP_CLASS,
+  GLASS_FRAME_CLASS,
+  GLASS_SURFACE_CLASS,
+} from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -60,6 +63,7 @@ const MIN_FREE_CROP_SIZE = 80;
 const COLOR_PREVIEW_GAP = 14;
 const COLOR_PREVIEW_INSET = 8;
 const MAX_VIEWER_IMAGE_WIDTH = 1920;
+const IMAGE_NOTE_STORAGE_KEY = "aska:image-note:";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -102,14 +106,13 @@ const COLOR_PICKER_SURFACE_CLASS = cn(
 );
 
 const VIEWER_CANVAS_CLASS =
-  "min-h-0 flex-1 px-5 py-14 sm:px-8 sm:py-16 lg:pr-[25rem]";
+  "min-h-0 flex-1 px-5 py-14 pr-5 sm:px-8 sm:py-16 sm:pr-8 lg:pr-[27rem]";
 
 type CropFrameColors = {
   frame: string;
   className: string;
 };
 
-type CropDimension = "width" | "height";
 type CropTransform = {
   rotation: number;
   flipX: boolean;
@@ -521,84 +524,6 @@ function fitCropMaxSize(size: Size, aspect: number): Size {
   };
 }
 
-function CropInspector({
-  asset,
-  croppedAreaPixels,
-  onOutputDimensionChange,
-}: {
-  asset: ImageAsset;
-  croppedAreaPixels: Area | null;
-  onOutputDimensionChange: (dimension: CropDimension, value: number) => void;
-}) {
-  const originalWidth = asset.originalWidth ?? asset.width;
-  const originalHeight = asset.originalHeight ?? asset.height;
-  const outputWidth = Math.round(croppedAreaPixels?.width ?? originalWidth);
-  const outputHeight = Math.round(croppedAreaPixels?.height ?? originalHeight);
-  const formattedOutputWidth = outputWidth.toLocaleString();
-  const formattedOutputHeight = outputHeight.toLocaleString();
-
-  const handleIntegerInput = (event: React.FormEvent<HTMLInputElement>) => {
-    event.currentTarget.value = event.currentTarget.value.replace(/\D/g, "");
-  };
-
-  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.currentTarget.blur();
-    }
-  };
-
-  return (
-    <section aria-label="Crop details">
-      <dl className="space-y-3 text-sm">
-        <div className="flex items-center justify-between gap-4">
-          <dt className="text-xs font-medium text-muted-foreground">Output</dt>
-          <dd className="flex items-center gap-1 text-sm text-foreground/90">
-            <input
-              key={`width-${outputWidth}`}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              defaultValue={formattedOutputWidth}
-              aria-label="Output width in pixels"
-              className="h-6 rounded-sm border-0 bg-transparent px-0 text-right outline-none hover:bg-muted/60 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
-              style={{ width: `${Math.max(3, formattedOutputWidth.length)}ch` }}
-              onInput={handleIntegerInput}
-              onKeyDown={handleInputKeyDown}
-              onBlur={(event) =>
-                onOutputDimensionChange(
-                  "width",
-                  Number(event.currentTarget.value.replaceAll(",", "")),
-                )
-              }
-            />
-            <span className="text-muted-foreground">×</span>
-            <input
-              key={`height-${outputHeight}`}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              defaultValue={formattedOutputHeight}
-              aria-label="Output height in pixels"
-              className="h-6 rounded-sm border-0 bg-transparent px-0 text-right outline-none hover:bg-muted/60 focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
-              style={{
-                width: `${Math.max(3, formattedOutputHeight.length)}ch`,
-              }}
-              onInput={handleIntegerInput}
-              onKeyDown={handleInputKeyDown}
-              onBlur={(event) =>
-                onOutputDimensionChange(
-                  "height",
-                  Number(event.currentTarget.value.replaceAll(",", "")),
-                )
-              }
-            />
-          </dd>
-        </div>
-      </dl>
-    </section>
-  );
-}
-
 function ProgressiveViewerImage({
   displayUrl,
   originalUrl,
@@ -982,8 +907,10 @@ export function ImageAssetViewer({
   const [hasCopiedImage, setHasCopiedImage] = useState(false);
   const [hasCopiedColor, setHasCopiedColor] = useState(false);
   const [isEyeDropping, setIsEyeDropping] = useState(false);
+  const [imageNote, setImageNote] = useState("");
   const shouldReduceMotion = useReducedMotion();
   const cropperContainerRef = useRef<HTMLDivElement>(null);
+  const imageNoteRef = useRef<HTMLTextAreaElement>(null);
   const viewerImageRef = useRef<HTMLImageElement>(null);
   const copiedImageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -1035,6 +962,47 @@ export function ImageAssetViewer({
     setHasCopiedColor(false);
     setIsEyeDropping(false);
   }, [asset?.id]);
+
+  useEffect(() => {
+    if (!asset?.id) {
+      setImageNote("");
+      return;
+    }
+
+    try {
+      setImageNote(
+        window.localStorage.getItem(`${IMAGE_NOTE_STORAGE_KEY}${asset.id}`) ??
+          "",
+      );
+    } catch {
+      setImageNote("");
+    }
+  }, [asset?.id]);
+
+  useEffect(() => {
+    if (!asset?.id) return;
+
+    const timeout = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(
+          `${IMAGE_NOTE_STORAGE_KEY}${asset.id}`,
+          imageNote,
+        );
+      } catch {
+        // Local-only autosave is best effort until the backend field exists.
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [asset?.id, imageNote]);
+
+  useEffect(() => {
+    const textarea = imageNoteRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "0px";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [imageNote]);
 
   useEffect(() => {
     return () => {
@@ -1292,55 +1260,6 @@ export function ImageAssetViewer({
       }
     },
     [aspect],
-  );
-
-  const handleOutputDimensionChange = useCallback(
-    (dimension: CropDimension, value: number) => {
-      if (!asset || !Number.isFinite(value) || value < 1) return;
-
-      setHasCropChanges(true);
-      setHasManualCropResize(true);
-
-      const currentWidth =
-        croppedAreaPixels?.width ?? asset.originalWidth ?? asset.width;
-      const currentHeight =
-        croppedAreaPixels?.height ?? asset.originalHeight ?? asset.height;
-      const outputAspect = aspect === 0 ? currentWidth / currentHeight : aspect;
-      const targetWidth = dimension === "width" ? value : value * outputAspect;
-      const targetHeight =
-        dimension === "height" ? value : value / outputAspect;
-
-      if (aspect === 0 && freeCropSize && cropMaxSize) {
-        const maxWidth = cropMaxSize.width;
-        const maxHeight = cropMaxSize.height;
-        setFreeCropSize({
-          width: Math.round(
-            Math.min(
-              maxWidth,
-              Math.max(
-                MIN_FREE_CROP_SIZE,
-                freeCropSize.width * (targetWidth / currentWidth),
-              ),
-            ),
-          ),
-          height: Math.round(
-            Math.min(
-              maxHeight,
-              Math.max(
-                MIN_FREE_CROP_SIZE,
-                freeCropSize.height * (targetHeight / currentHeight),
-              ),
-            ),
-          ),
-        });
-        return;
-      }
-
-      setZoom((currentZoom) =>
-        Math.min(3, Math.max(1, currentZoom * (currentWidth / targetWidth))),
-      );
-    },
-    [asset, aspect, croppedAreaPixels, cropMaxSize, freeCropSize],
   );
 
   const handleResetCrop = useCallback(() => {
@@ -1623,91 +1542,93 @@ export function ImageAssetViewer({
 
           <div className="pointer-events-none absolute top-5 left-5 z-30 flex items-center gap-1">
             <div
-              className={cn(
-                "pointer-events-auto flex items-center gap-1",
-                VIEWER_CONTROL_FRAME_CLASS,
-              )}
+              className={cn("relative w-fit", FLOATING_GLASS_BACKDROP_CLASS)}
             >
-              <div className={VIEWER_BUTTON_GROUP_SURFACE_CLASS}>
-                <ButtonGroup>
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <DialogClose
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              className="hover:bg-secondary active:bg-foreground/[0.1]"
-                            />
-                          }
-                        />
-                      }
-                    >
-                      <ArrowLeftIcon />
-                      <span className="sr-only">Back to board</span>
-                    </TooltipTrigger>
-                    <TooltipContent>Back to board</TooltipContent>
-                  </Tooltip>
-                </ButtonGroup>
-              </div>
-              {hasImageNavigation ? (
+              <div
+                className={cn(
+                  "pointer-events-auto flex items-center gap-1",
+                  VIEWER_CONTROL_FRAME_CLASS,
+                )}
+              >
                 <div className={VIEWER_BUTTON_GROUP_SURFACE_CLASS}>
                   <ButtonGroup>
                     <Tooltip>
                       <TooltipTrigger
                         render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled={!previousAsset}
-                            onClick={() =>
-                              previousAsset && onAssetChange?.(previousAsset)
+                          <DialogClose
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="hover:bg-secondary active:bg-foreground/[0.1]"
+                              />
                             }
                           />
                         }
                       >
-                        <ChevronLeftIcon />
-                        <span className="sr-only">Previous image</span>
+                        <ArrowLeftIcon />
+                        <span className="sr-only">Back to board</span>
                       </TooltipTrigger>
-                      <TooltipContent>Previous image</TooltipContent>
-                    </Tooltip>
-                    <ButtonGroupSeparator className="bg-border/70" />
-                    <span className="flex h-7 min-w-10 items-center justify-center px-1 text-xs font-medium text-muted-foreground tabular-nums">
-                      {currentAssetIndex + 1} / {assets.length}
-                    </span>
-                    <ButtonGroupSeparator className="bg-border/70" />
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            disabled={!nextAsset}
-                            onClick={() =>
-                              nextAsset && onAssetChange?.(nextAsset)
-                            }
-                          />
-                        }
-                      >
-                        <ChevronRightIcon />
-                        <span className="sr-only">Next image</span>
-                      </TooltipTrigger>
-                      <TooltipContent>Next image</TooltipContent>
+                      <TooltipContent>Back to board</TooltipContent>
                     </Tooltip>
                   </ButtonGroup>
                 </div>
-              ) : null}
+                {hasImageNavigation ? (
+                  <div className={VIEWER_BUTTON_GROUP_SURFACE_CLASS}>
+                    <ButtonGroup>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={!previousAsset}
+                              onClick={() =>
+                                previousAsset && onAssetChange?.(previousAsset)
+                              }
+                            />
+                          }
+                        >
+                          <ChevronLeftIcon />
+                          <span className="sr-only">Previous image</span>
+                        </TooltipTrigger>
+                        <TooltipContent>Previous image</TooltipContent>
+                      </Tooltip>
+                      <ButtonGroupSeparator className="bg-border/70" />
+                      <span className="flex h-7 min-w-10 items-center justify-center px-1 text-xs font-medium text-muted-foreground tabular-nums">
+                        {currentAssetIndex + 1} / {assets.length}
+                      </span>
+                      <ButtonGroupSeparator className="bg-border/70" />
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={!nextAsset}
+                              onClick={() =>
+                                nextAsset && onAssetChange?.(nextAsset)
+                              }
+                            />
+                          }
+                        >
+                          <ChevronRightIcon />
+                          <span className="sr-only">Next image</span>
+                        </TooltipTrigger>
+                        <TooltipContent>Next image</TooltipContent>
+                      </Tooltip>
+                    </ButtonGroup>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
 
-          <div className="pointer-events-none absolute inset-x-3 top-3 z-30 flex justify-end sm:inset-x-4 sm:top-4 lg:inset-x-auto lg:top-5 lg:right-5">
+          <div className="pointer-events-none absolute top-0 right-0 z-30 w-[min(20rem,100%)] sm:w-80 lg:w-[25rem]">
             <div
               className={cn(
-                "pointer-events-auto flex min-w-0 items-center gap-1 [&_[data-slot=button]]:duration-75",
-                !asset
-                  ? "ml-auto"
-                  : "ml-auto lg:ml-0 lg:w-[22.5rem] lg:justify-between",
+                "pointer-events-auto flex min-h-16 w-full min-w-0 items-center gap-1 p-4 [&_[data-slot=button]]:duration-75 lg:px-5 lg:py-4",
+                !asset ? "justify-end" : "justify-between",
               )}
             >
               {asset ? (
@@ -1812,7 +1733,7 @@ export function ImageAssetViewer({
             {cropMode && asset ? (
               <div
                 className={cn(
-                  "[container-type:size] relative z-10 -ml-5 flex items-center justify-center sm:-ml-8",
+                  "[container-type:size] relative z-10 flex items-center justify-center",
                   VIEWER_CANVAS_CLASS,
                 )}
               >
@@ -1899,7 +1820,7 @@ export function ImageAssetViewer({
             ) : (
               <div
                 className={cn(
-                  "[container-type:size] -ml-5 flex items-center justify-center sm:-ml-8",
+                  "[container-type:size] flex items-center justify-center",
                   VIEWER_CANVAS_CLASS,
                 )}
               >
@@ -1922,17 +1843,13 @@ export function ImageAssetViewer({
 
           <aside
             className={cn(
-              "pointer-events-none absolute right-0 bottom-0 z-20 flex max-h-[calc(100%-6rem)] w-[min(20rem,100%)] min-h-0 flex-col gap-1 sm:w-80 lg:inset-y-0 lg:right-0 lg:max-h-none lg:w-[25rem] lg:gap-0 lg:border-l lg:border-border lg:bg-background",
+              GLASS_FRAME_CLASS,
+              "pointer-events-none absolute right-0 bottom-0 z-20 flex max-h-[calc(100%-6rem)] w-[min(20rem,100%)] min-h-0 flex-col gap-1 overflow-hidden rounded-none sm:w-80 lg:inset-y-0 lg:right-0 lg:max-h-none lg:w-[25rem] lg:gap-0",
               "pointer-events-auto",
             )}
           >
-            <div
-              className={cn(
-                FLOATING_ISLAND_SURFACE_CLASS,
-                "min-h-0 flex flex-1 flex-col overflow-y-auto p-4 lg:rounded-none lg:border-0 lg:bg-transparent lg:px-5 lg:pt-[4.25rem] lg:pb-4 lg:shadow-none",
-              )}
-            >
-              <AnimatePresence initial={false} mode="popLayout">
+            <div className="flex min-h-0 flex-1 flex-col pt-16">
+              <AnimatePresence initial={false} mode="sync">
                 {cropMode && asset ? (
                   <motion.section
                     key="image-edit-controls"
@@ -1940,26 +1857,35 @@ export function ImageAssetViewer({
                     initial={
                       shouldReduceMotion
                         ? false
-                        : { opacity: 0, y: -8, scale: 0.98 }
+                        : {
+                            opacity: 1,
+                            height: 0,
+                            clipPath: "inset(0 0 100% 0)",
+                          }
                     }
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    animate={{
+                      opacity: 1,
+                      height: "auto",
+                      clipPath: "inset(0 0 0% 0)",
+                    }}
                     exit={
                       shouldReduceMotion
                         ? undefined
-                        : { opacity: 0, y: -8, scale: 0.98 }
+                        : {
+                            opacity: 1,
+                            height: 0,
+                            clipPath: "inset(0 0 0% 0)",
+                          }
                     }
                     transition={
                       shouldReduceMotion
                         ? { duration: 0 }
-                        : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
+                        : { type: "spring", duration: 0.15, bounce: 0.08 }
                     }
-                    className={cn(
-                      GLASS_FRAME_CLASS,
-                      "mb-6 overflow-hidden rounded-xl bg-background shadow-sm",
-                    )}
+                    className="relative overflow-hidden rounded-t-xl border-t border-border bg-card shadow-sm"
                     aria-label="Edit image"
                   >
-                    <div className="relative z-10 space-y-5 rounded-b-xl border-b border-border bg-card px-4 py-4">
+                    <div className="relative z-10 space-y-5 rounded-t-xl px-4 py-4">
                       <CropToolbar
                         aspect={aspect}
                         zoom={zoom}
@@ -1971,23 +1897,18 @@ export function ImageAssetViewer({
                         onFlipHorizontal={handleFlipHorizontal}
                         onFlipVertical={handleFlipVertical}
                       />
-                      <CropInspector
-                        asset={asset}
-                        croppedAreaPixels={croppedAreaPixels}
-                        onOutputDimensionChange={handleOutputDimensionChange}
-                      />
                       {cropError ? (
                         <p className="text-xs text-destructive" role="alert">
                           {cropError}
                         </p>
                       ) : null}
                     </div>
-                    <div className="relative z-0 flex gap-2 px-4 py-2.5">
+                    <div className="relative z-0 flex gap-2 px-4 py-4">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="mr-auto"
+                        className="mr-auto bg-muted hover:bg-muted/80 active:bg-muted/70"
                         onClick={handleResetCrop}
                         disabled={!hasCropChanges || isSavingCrop}
                       >
@@ -2017,50 +1938,89 @@ export function ImageAssetViewer({
                 ) : null}
               </AnimatePresence>
               <motion.div
-                layout="position"
+                layout
                 transition={
                   shouldReduceMotion
                     ? { duration: 0 }
-                    : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
+                    : { type: "spring", duration: 0.15, bounce: 0.08 }
                 }
+                className={cn(
+                  "relative z-20 min-h-0 flex flex-1 flex-col before:pointer-events-none before:absolute before:inset-x-0 before:-top-2 before:z-0 before:h-3 before:bg-card before:opacity-0 before:transition-opacity before:duration-150 before:content-['']",
+                  cropMode && "before:opacity-100",
+                )}
               >
-                {asset ? (
-                  <div className="mb-5">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Title
-                    </span>
-                    <p className="mt-1 text-sm font-medium wrap-break-word text-foreground">
-                      {asset.title ?? "Untitled image"}
-                    </p>
-                  </div>
-                ) : null}
-                {asset?.sourceUrl ? (
-                  <div className="mb-5">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Source
-                    </span>
-                    <a
-                      href={asset.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-sm font-medium text-primary transition-colors hover:text-foreground"
-                    >
-                      <ExternalLinkIcon className="size-3.5 shrink-0" />
-                      {sourceLabel ?? "Source"}
-                    </a>
-                  </div>
-                ) : null}
+                <div
+                  className={cn(
+                    FLOATING_ISLAND_SURFACE_CLASS,
+                    "relative z-10 min-h-0 flex flex-1 flex-col overflow-y-auto border-y border-l border-border border-r-0 p-4 lg:rounded-xl lg:border-y lg:border-l lg:border-border lg:border-r-0 lg:bg-background lg:px-5 lg:pt-4 lg:pb-4 lg:shadow-sm",
+                  )}
+                >
+                  <motion.div
+                    layout="position"
+                    transition={
+                      shouldReduceMotion
+                        ? { duration: 0 }
+                        : { type: "spring", duration: 0.15, bounce: 0.08 }
+                    }
+                  >
+                    {asset ? (
+                      <div className="mb-5">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Title
+                        </span>
+                        <p className="mt-1 text-sm font-medium wrap-break-word text-foreground">
+                          {asset.title ?? "Untitled image"}
+                        </p>
+                      </div>
+                    ) : null}
+                    {asset?.sourceUrl ? (
+                      <div className="mb-5">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          Source
+                        </span>
+                        <a
+                          href={asset.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 flex min-w-0 items-center gap-1.5 truncate text-sm font-medium text-primary transition-colors hover:text-foreground"
+                        >
+                          <ExternalLinkIcon className="size-3.5 shrink-0" />
+                          {sourceLabel ?? "Source"}
+                        </a>
+                      </div>
+                    ) : null}
 
-                {asset ? (
-                  <div className="pb-5">
-                    <ImageColorPalette asset={asset} compact />
-                  </div>
-                ) : null}
-                {!cropMode && cropError ? (
-                  <p className="mt-4 text-xs text-destructive" role="alert">
-                    {cropError}
-                  </p>
-                ) : null}
+                    {asset ? (
+                      <div className="pb-5">
+                        <ImageColorPalette asset={asset} compact />
+                      </div>
+                    ) : null}
+                    {asset ? (
+                      <div className="mb-5">
+                        <label
+                          htmlFor="image-note"
+                          className="text-xs font-medium text-muted-foreground"
+                        >
+                          Notes
+                        </label>
+                        <textarea
+                          ref={imageNoteRef}
+                          id="image-note"
+                          value={imageNote}
+                          onChange={(event) => setImageNote(event.target.value)}
+                          placeholder="Add a note"
+                          rows={1}
+                          className="mt-1 block min-h-6 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
+                        />
+                      </div>
+                    ) : null}
+                    {!cropMode && cropError ? (
+                      <p className="mt-4 text-xs text-destructive" role="alert">
+                        {cropError}
+                      </p>
+                    ) : null}
+                  </motion.div>
+                </div>
               </motion.div>
               {asset ? (
                 <motion.div
@@ -2070,9 +2030,8 @@ export function ImageAssetViewer({
                       ? { duration: 0 }
                       : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
                   }
-                  className="mt-auto pt-4"
+                  className="shrink-0 bg-transparent p-4"
                 >
-                  <Separator className="mb-4" />
                   <ImageMetadataDetails asset={asset} />
                 </motion.div>
               ) : null}

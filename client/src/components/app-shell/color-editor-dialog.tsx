@@ -417,10 +417,10 @@ export function ColorEditorDialog({
           </div>
         </DrawerHeader>
 
-        <div className="min-h-0 flex-1 overflow-x-clip overflow-y-auto rounded-t-xl border-t border-border bg-background">
+        <div className="min-h-0 flex-1 overflow-x-clip overflow-y-auto rounded-xl border-y border-border bg-background pb-3">
           <div className="w-full">
             {isGradient ? (
-              <div className="space-y-4 p-3">
+              <div className="space-y-4 px-3 pt-3">
                 <div className="grid items-start justify-center gap-8 md:grid-cols-[24rem_minmax(0,1fr)]">
                   <div className="flex min-w-0 flex-col gap-3 md:order-last">
                     <div className="flex items-center justify-between gap-2">
@@ -760,7 +760,7 @@ export function ColorEditorDialog({
                 </div>
               </div>
             ) : (
-              <div className="grid w-full gap-3 p-3 sm:grid-cols-[minmax(0,1fr)_10.5rem]">
+              <div className="grid w-full gap-3 px-3 pt-3 sm:grid-cols-[minmax(0,1fr)_10.5rem]">
                 <SimpleColorPicker
                   initialHex={draftHex}
                   onPick={() => undefined}
@@ -820,7 +820,7 @@ export function ColorEditorDialog({
           </div>
         </div>
 
-        <DrawerFooter className="w-full bg-background !p-0">
+        <DrawerFooter className="w-full bg-transparent !p-0">
           <div className="flex w-full flex-col gap-2 p-3 sm:flex-row sm:justify-between">
             <DrawerClose render={<Button variant="outline">Cancel</Button>} />
             <div className="flex items-center gap-2 self-end sm:self-auto">
