@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 const MODAL_LAYER_SELECTOR = [
   '[data-slot="alert-dialog-content"]',
-  '[data-slot="dialog-content"]',
+  '[data-slot="dialog-content"]:not([data-command-palette-allowed="true"])',
   '[data-slot="drawer-popup"]',
   '[data-slot="sheet-content"]',
 ].join(",");

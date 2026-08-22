@@ -1515,6 +1515,7 @@ export function ImageAssetViewer({
       <DialogContent
         showCloseButton={false}
         initialFocus={false}
+        data-command-palette-allowed="true"
         overlayClassName="bg-transparent"
         className="top-1/2 h-[100svh] w-screen max-w-none -translate-y-1/2 rounded-none bg-transparent shadow-none ring-0"
       >
