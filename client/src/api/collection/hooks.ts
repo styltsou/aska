@@ -1148,6 +1148,7 @@ function applyColorDraftToContents(
         return {
           ...node,
           hex: draft.hex,
+          title: null,
           ...(draft.gradient === undefined ? {} : { gradient: draft.gradient }),
         };
       }
@@ -1157,7 +1158,7 @@ function applyColorDraftToContents(
         ...node,
         previews: node.previews.map((preview) =>
           preview.type === "color" && preview.assetId === draft.assetId
-            ? { ...preview, hex: draft.hex }
+            ? { ...preview, hex: draft.hex, title: null }
             : preview,
         ),
       };

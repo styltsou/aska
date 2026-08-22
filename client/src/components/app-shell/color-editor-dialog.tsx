@@ -353,8 +353,20 @@ export function ColorEditorDialog({
 
     try {
       if (color) {
-        await updateColor.mutateAsync({ assetId: color.id, hex, gradient });
-        toast.success("Color updated.");
+        updateColor.mutate(
+          { assetId: color.id, hex, gradient },
+          {
+            onSuccess: () => toast.success("Color updated."),
+            onError: (error) =>
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Unable to save color.",
+              ),
+          },
+        );
+        handleOpenChange(false);
+        return;
       } else if (target === "inbox") {
         await createInboxColor.mutateAsync({
           hex,
