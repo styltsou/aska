@@ -32,6 +32,7 @@ import {
   type MoveToDialogSource,
 } from "@/components/move-to-dialog";
 import { copyImageToClipboard } from "@/lib/clipboard";
+import { gradientToCss } from "@/lib/color-gradient";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 
 type ImagePrefetch = {
@@ -95,17 +96,40 @@ function noteActions(asset: NoteAsset, onEditNote?: () => void) {
 }
 
 function colorActions(asset: ColorAsset, onEdit: () => void) {
+  const copiedValue = asset.gradient
+    ? gradientToCss(
+        asset.gradient.stops ?? [
+          { color: asset.gradient.from, position: 0 },
+          { color: asset.gradient.to, position: 100 },
+        ],
+        asset.gradient.type ?? "linear",
+        asset.gradient.angle,
+      )
+    : asset.hex;
+  const copyLabel = asset.gradient ? "Copy CSS" : "Copy hex";
+
   return (
     <>
       <ContextMenuItem onClick={onEdit}>Edit color</ContextMenuItem>
       <ContextMenuItem
         onClick={() => {
           void navigator.clipboard
-            .writeText(asset.hex)
-            .then(() => toast.success("Copied color."));
+            .writeText(copiedValue)
+            .then(() =>
+              toast.success(
+                asset.gradient ? "Copied CSS gradient." : "Copied color.",
+              ),
+            )
+            .catch((error: unknown) =>
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Unable to copy color.",
+              ),
+            );
         }}
       >
-        Copy hex
+        {copyLabel}
       </ContextMenuItem>
     </>
   );
@@ -158,7 +182,7 @@ export function AssetContextMenu({
   onEditNote,
 }: {
   asset: Asset;
-  children: (isContextMenuOpen: boolean) => React.ReactNode;
+  children: (isContextMenuOpen: boolean, asset: Asset) => React.ReactNode;
   deleteContext?: {
     workspaceSlug: string;
     collectionSlug: string;
@@ -174,10 +198,18 @@ export function AssetContextMenu({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
+  const [colorPreview, setColorPreview] = useState<Pick<
+    ColorAsset,
+    "hex" | "gradient"
+  > | null>(null);
   const imagePrefetchRef = useRef<ImagePrefetch | undefined>(undefined);
   const workspaceSlug =
     inboxContext?.workspaceSlug ?? deleteContext?.workspaceSlug;
   const isFavorite = asset.isFavorite ?? false;
+  const displayAsset: Asset =
+    asset.type === "color" && colorPreview
+      ? { ...asset, ...colorPreview }
+      : asset;
   const removeNode = useDeleteCollectionNode(
     deleteContext?.workspaceSlug ?? "",
     deleteContext?.collectionSlug ?? "",
@@ -318,7 +350,7 @@ export function AssetContextMenu({
       <ContextMenu onOpenChange={handleContextMenuOpenChange}>
         <ContextMenuTrigger
           render={(triggerProps, state) => (
-            <div {...triggerProps}>{children(state.open)}</div>
+            <div {...triggerProps}>{children(state.open, displayAsset)}</div>
           )}
         />
         <ContextMenuContent>
@@ -340,6 +372,19 @@ export function AssetContextMenu({
                 </ContextMenuItem>
               ) : null}
             </>
+          ) : asset.type === "color" ? (
+            <>
+              {colorActions(asset, () => setColorEditorOpen(true))}
+              <ContextMenuSeparator />
+              <ContextMenuItem>
+                {isFavorite ? "Remove from favorites" : "Add to favorites"}
+              </ContextMenuItem>
+              {moveSource ? (
+                <ContextMenuItem onClick={() => setMoveDialogOpen(true)}>
+                  Move to...
+                </ContextMenuItem>
+              ) : null}
+            </>
           ) : (
             <>
               {asset.type === "image" && onOpenImage ? (
@@ -358,18 +403,16 @@ export function AssetContextMenu({
                 ? imageActions(asset, handleCopyImage)
                 : asset.type === "note"
                   ? noteActions(asset, onEditNote)
-                  : asset.type === "color"
-                    ? colorActions(asset, () => setColorEditorOpen(true))
-                    : linkActions(asset, () => {
-                        refreshLink.mutate(asset.id, {
-                          onError: (error) =>
-                            toast.error(
-                              error instanceof Error
-                                ? error.message
-                                : "Unable to refresh link.",
-                            ),
-                        });
-                      })}
+                  : linkActions(asset, () => {
+                      refreshLink.mutate(asset.id, {
+                        onError: (error) =>
+                          toast.error(
+                            error instanceof Error
+                              ? error.message
+                              : "Unable to refresh link.",
+                          ),
+                      });
+                    })}
             </>
           )}
           <ContextMenuSeparator />
@@ -428,6 +471,7 @@ export function AssetContextMenu({
           color={asset}
           open={colorEditorOpen}
           onOpenChange={setColorEditorOpen}
+          onPreviewChange={setColorPreview}
         />
       ) : null}
     </>

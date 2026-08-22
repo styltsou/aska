@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { gradientToCss } from "@/lib/color-gradient";
 import type { ColorAsset } from "@/types/asset";
@@ -9,9 +12,13 @@ export function ColorAssetCard({
   asset: ColorAsset;
   isContextMenuOpen?: boolean;
 }) {
+  const [surfaceHovered, setSurfaceHovered] = useState(false);
   const hasAlpha = asset.hex.length === 9 && !asset.hex.endsWith("ff");
   const name = asset.title?.trim();
   const hex = asset.hex.toUpperCase();
+  const gradientLabel = asset.gradient
+    ? `${asset.gradient.type === "radial" ? "Radial" : "Linear"} gradient`
+    : null;
   const surfaceStyle = asset.gradient
     ? {
         background: gradientToCss(
@@ -24,6 +31,28 @@ export function ColorAssetCard({
         ),
       }
     : { backgroundColor: asset.hex };
+  const copiedValue = asset.gradient
+    ? gradientToCss(
+        asset.gradient.stops ?? [
+          { color: asset.gradient.from, position: 0 },
+          { color: asset.gradient.to, position: 100 },
+        ],
+        asset.gradient.type ?? "linear",
+        asset.gradient.angle,
+      )
+    : asset.hex;
+  const copyLabel = asset.gradient ? "Copy CSS gradient" : "Copy hex color";
+
+  async function copyColorValue() {
+    try {
+      await navigator.clipboard.writeText(copiedValue);
+      toast.success(asset.gradient ? "Copied CSS gradient." : "Copied color.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Unable to copy color.",
+      );
+    }
+  }
 
   return (
     <div
@@ -34,24 +63,51 @@ export function ColorAssetCard({
     >
       <div
         className={cn(
-          "aspect-square w-full rounded-b-[calc(var(--radius)-1px)]",
+          "group/surface relative aspect-square w-full overflow-hidden rounded-b-[calc(var(--radius)-1px)]",
           hasAlpha &&
             "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
         )}
         style={surfaceStyle}
-      />
+        onMouseEnter={() => setSurfaceHovered(true)}
+        onMouseLeave={() => setSurfaceHovered(false)}
+      >
+        <AnimatePresence>
+          {surfaceHovered ? (
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2.5 pb-2.5"
+            >
+              <button
+                type="button"
+                className="inline-flex items-center rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-1 hover:ring-sidebar-foreground/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void copyColorValue();
+                }}
+                aria-label={copyLabel}
+                title={copyLabel}
+              >
+                {asset.gradient ? "Copy CSS" : "Copy hex"}
+              </button>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
       <div className="flex min-w-0 items-center gap-3 bg-sidebar px-4 py-3">
         <span
           className={cn(
             "truncate font-medium",
-            name
+            name || gradientLabel
               ? "text-base"
               : "font-mono text-lg font-semibold tracking-tight",
           )}
         >
-          {name ?? hex}
+          {name ?? gradientLabel ?? hex}
         </span>
-        {name ? (
+        {name && !gradientLabel ? (
           <span className="ml-auto shrink-0 font-mono text-sm font-semibold tracking-tight text-sidebar-foreground/70">
             {hex}
           </span>

@@ -1,5 +1,12 @@
-import { Fragment, useCallback, useRef, useState } from "react";
-import { XIcon } from "lucide-react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { CheckIcon, CopyIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -134,6 +141,7 @@ export function ColorEditorDialog({
   children,
   open: controlledOpen,
   onOpenChange,
+  onPreviewChange,
   placement,
 }: {
   workspaceSlug: string;
@@ -143,6 +151,9 @@ export function ColorEditorDialog({
   children?: React.ReactElement;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onPreviewChange?: (
+    preview: Pick<ColorAsset, "hex" | "gradient"> | null,
+  ) => void;
   placement?: BoardInsertionPlacement;
 }) {
   const [collectionSlug = "", ...folderSegments] = (collectionPath ?? "")
@@ -168,7 +179,13 @@ export function ColorEditorDialog({
   );
   const [activeStopId, setActiveStopId] = useState("initial-gradient-stop-0");
   const [openStopId, setOpenStopId] = useState<string | null>(null);
+  const [copiedPreview, setCopiedPreview] = useState<
+    "solid" | "gradient" | null
+  >(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const copiedPreviewTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const lastAddedStopRef = useRef<{ position: number; time: number } | null>(
     null,
   );
@@ -188,10 +205,88 @@ export function ColorEditorDialog({
     left: `${50 + Math.cos(knobIndicatorRadians) * 24}%`,
     top: `${50 + Math.sin(knobIndicatorRadians) * 24}%`,
   };
+  const draftGradient = useMemo(() => {
+    if (!isGradient) return null;
+    const stops = sortGradientStops(gradientStops);
+    const firstStop = stops[0]!;
+    const lastStop = stops.at(-1)!;
+
+    return {
+      from: firstStop.color,
+      to: lastStop.color,
+      angle: gradientAngle,
+      type: gradientType,
+      stops: stops.map(({ color, position }) => ({ color, position })),
+    };
+  }, [gradientAngle, gradientStops, gradientType, isGradient]);
+  const draftColorHex = draftGradient?.from ?? draftHex;
+  const savedGradient = color?.gradient ?? null;
+  const savedStops = sortGradientStops(initialStops(color)).map(
+    ({ color: stopColor, position }) => ({ color: stopColor, position }),
+  );
+  const isSavedDraft =
+    isEditing &&
+    mode === (savedGradient ? "gradient" : "solid") &&
+    draftColorHex === color.hex &&
+    (!isGradient ||
+      (gradientType === (savedGradient?.type ?? "linear") &&
+        gradientAngle === savedGradient?.angle &&
+        JSON.stringify(draftGradient?.stops) === JSON.stringify(savedStops)));
+
+  useEffect(() => {
+    if (!color || !open || !onPreviewChange) return;
+    onPreviewChange({ hex: draftColorHex, gradient: draftGradient });
+    return () => onPreviewChange(null);
+  }, [color, draftColorHex, draftGradient, onPreviewChange, open]);
+
+  useEffect(
+    () => () => {
+      if (copiedPreviewTimeoutRef.current) {
+        clearTimeout(copiedPreviewTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
+  async function copyEditorValue(
+    value: string,
+    label: string,
+    preview: "solid" | "gradient",
+  ) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedPreview(preview);
+      if (copiedPreviewTimeoutRef.current) {
+        clearTimeout(copiedPreviewTimeoutRef.current);
+      }
+      copiedPreviewTimeoutRef.current = setTimeout(
+        () => setCopiedPreview(null),
+        1_200,
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : `Unable to copy ${label}.`,
+      );
+    }
+  }
 
   function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) resetDraft();
     onOpenChange?.(nextOpen);
     if (controlledOpen === undefined) setInternalOpen(nextOpen);
+  }
+
+  function resetDraft() {
+    if (!color) return;
+
+    const stops = initialStops(color);
+    setDraftHex(color.hex);
+    setMode(color.gradient ? "gradient" : "solid");
+    setGradientStops(stops);
+    setGradientType(color.gradient?.type ?? "linear");
+    setGradientAngle(color.gradient?.angle ?? DEFAULT_GRADIENT_ANGLE);
+    setActiveStopId(stops[0]!.id);
+    setOpenStopId(null);
   }
 
   function updateStop(id: string, update: Partial<GradientStop>) {
@@ -253,21 +348,8 @@ export function ColorEditorDialog({
   }
 
   async function handleSave() {
-    const firstStop = sortedStops[0]!;
-    const lastStop = sortedStops.at(-1)!;
-    const gradient = isGradient
-      ? {
-          from: firstStop.color,
-          to: lastStop.color,
-          angle: gradientAngle,
-          type: gradientType,
-          stops: sortedStops.map(({ color, position }) => ({
-            color,
-            position,
-          })),
-        }
-      : null;
-    const hex = isGradient ? firstStop.color : draftHex;
+    const gradient = draftGradient;
+    const hex = draftColorHex;
 
     try {
       if (color) {
@@ -318,6 +400,7 @@ export function ColorEditorDialog({
               onValueChange={(value) => setMode(value as EditorMode)}
               variant="segment"
               className="shrink-0"
+              transition={{ duration: 0 }}
             >
               <TabsList aria-label="Color type">
                 <TabsTrigger value="solid" className="px-3 py-1.5 capitalize">
@@ -334,7 +417,7 @@ export function ColorEditorDialog({
           </div>
         </DrawerHeader>
 
-        <div className="min-h-0 flex-1 overflow-x-clip overflow-y-auto rounded-t-xl border-t border-border bg-background/85 backdrop-blur-sm">
+        <div className="min-h-0 flex-1 overflow-x-clip overflow-y-auto rounded-t-xl border-t border-border bg-background">
           <div className="w-full">
             {isGradient ? (
               <div className="space-y-4 p-3">
@@ -440,16 +523,50 @@ export function ColorEditorDialog({
                     </div>
                     <div className="order-3 grid h-44 w-full grid-cols-[minmax(0,1fr)_4.5rem] gap-3">
                       <div
-                        className="min-h-0 rounded-xl border border-border shadow-inner"
+                        className="group/gradient-preview relative min-h-0 overflow-hidden rounded-xl border border-border shadow-inner"
                         style={withCheckerboardBackground(gradientCss)}
                         aria-label="Gradient preview"
-                      />
+                      >
+                        <button
+                          type="button"
+                          className="absolute inset-0 flex cursor-pointer items-center justify-center gap-2 rounded-[inherit] bg-black/0 text-sm font-medium text-white! opacity-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)] transition-[background-color,opacity] duration-75 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/gradient-preview:bg-black/25 group-hover/gradient-preview:opacity-100 focus-visible:bg-black/25 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                          onClick={() =>
+                            void copyEditorValue(
+                              gradientCss,
+                              "CSS gradient",
+                              "gradient",
+                            )
+                          }
+                          aria-label={
+                            copiedPreview === "gradient"
+                              ? "Copied CSS gradient"
+                              : "Copy CSS gradient"
+                          }
+                          title={
+                            copiedPreview === "gradient"
+                              ? "Copied"
+                              : "Copy CSS gradient"
+                          }
+                        >
+                          {copiedPreview === "gradient" ? (
+                            <>
+                              <CheckIcon className="size-4" />
+                              Copied
+                            </>
+                          ) : (
+                            <>
+                              <CopyIcon className="size-4" />
+                              Copy CSS
+                            </>
+                          )}
+                        </button>
+                      </div>
                       <div className="order-last grid auto-rows-fr gap-1.5">
                         {PRESETS.map((preset) => (
                           <button
                             key={preset.name}
                             type="button"
-                            className="min-h-0 w-full rounded-md border border-border shadow-sm transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            className="min-h-0 w-full rounded-md border border-border transition-transform duration-75 hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.98]"
                             style={{
                               background: gradientToCss(
                                 preset.stops,
@@ -621,7 +738,7 @@ export function ColorEditorDialog({
                               type="button"
                               variant="ghost"
                               size="icon-sm"
-                              className="group/stop-remove cursor-pointer text-muted-foreground hover:!text-primary disabled:cursor-not-allowed"
+                              className="group/stop-remove cursor-pointer text-muted-foreground transition-colors duration-75 hover:!text-primary disabled:pointer-events-auto disabled:cursor-not-allowed"
                               disabled={gradientStops.length <= 2}
                               onClick={() => {
                                 const remaining = gradientStops.filter(
@@ -633,7 +750,7 @@ export function ColorEditorDialog({
                               }}
                               aria-label="Remove stop"
                             >
-                              <XIcon className="transition-colors duration-100 group-hover/stop-remove:text-primary" />
+                              <XIcon className="pointer-events-none text-muted-foreground transition-colors duration-75 group-hover/stop-remove:!text-primary" />
                             </Button>
                           </div>
                         </motion.div>
@@ -657,11 +774,39 @@ export function ColorEditorDialog({
                 />
                 <div className="grid h-full grid-rows-[minmax(0,1fr)_auto] gap-3 self-stretch">
                   <div
-                    className="aspect-square w-full self-start rounded-xl border border-border shadow-inner"
+                    className="group/solid-swatch relative aspect-square w-full self-start overflow-hidden rounded-xl border border-border shadow-inner"
                     style={withCheckerboardBackground(
                       `linear-gradient(${draftHex}, ${draftHex})`,
                     )}
-                  />
+                  >
+                    <button
+                      type="button"
+                      className="absolute inset-0 flex cursor-pointer items-center justify-center gap-2 rounded-[inherit] bg-black/0 text-sm font-medium text-white! opacity-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)] transition-[background-color,opacity] duration-75 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/solid-swatch:bg-black/25 group-hover/solid-swatch:opacity-100 focus-visible:bg-black/25 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                      onClick={() =>
+                        void copyEditorValue(draftHex, "hex color", "solid")
+                      }
+                      aria-label={
+                        copiedPreview === "solid"
+                          ? "Copied hex color"
+                          : "Copy hex color"
+                      }
+                      title={
+                        copiedPreview === "solid" ? "Copied" : "Copy hex color"
+                      }
+                    >
+                      {copiedPreview === "solid" ? (
+                        <>
+                          <CheckIcon className="size-4" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <CopyIcon className="size-4" />
+                          Copy hex
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <Input
                     className="w-full"
                     value={draftHex}
@@ -678,9 +823,20 @@ export function ColorEditorDialog({
         <DrawerFooter className="w-full bg-background !p-0">
           <div className="flex w-full flex-col gap-2 p-3 sm:flex-row sm:justify-between">
             <DrawerClose render={<Button variant="outline">Cancel</Button>} />
-            <Button disabled={isPending} onClick={() => void handleSave()}>
-              {isEditing ? "Save" : "Create color"}
-            </Button>
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              {isEditing ? (
+                <Button
+                  variant="outline"
+                  disabled={isPending || isSavedDraft}
+                  onClick={resetDraft}
+                >
+                  Reset
+                </Button>
+              ) : null}
+              <Button disabled={isPending} onClick={() => void handleSave()}>
+                {isEditing ? "Save" : "Create color"}
+              </Button>
+            </div>
           </div>
         </DrawerFooter>
       </DrawerContent>

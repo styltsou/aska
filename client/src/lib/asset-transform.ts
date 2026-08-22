@@ -73,6 +73,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
       id: node.id,
       type: "color",
       hex: node.hex,
+      gradient: node.gradient,
       title: node.title,
       isFavorite: node.isFavorite,
       clientId: node.clientId,

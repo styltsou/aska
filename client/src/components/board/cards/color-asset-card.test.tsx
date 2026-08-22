@@ -39,4 +39,27 @@ describe("ColorAssetCard", () => {
     expect(html.match(/#1A2B3C/g)).toHaveLength(1);
     expect(html).toContain("font-mono text-lg font-semibold");
   });
+
+  it("uses a gradient label instead of its first stop", () => {
+    const html = renderToStaticMarkup(
+      <ColorAssetCard
+        asset={{
+          id: "color-1",
+          type: "color",
+          hex: "#f43f5e",
+          title: null,
+          isFavorite: false,
+          gradient: {
+            from: "#f43f5e",
+            to: "#7c3aed",
+            angle: 135,
+            type: "radial",
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain("Radial gradient");
+    expect(html).not.toContain("#F43F5E");
+  });
 });

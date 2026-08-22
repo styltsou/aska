@@ -1131,6 +1131,36 @@ function applyUpdatedColorToContents(
   };
 }
 
+function applyColorDraftToContents(
+  current: CollectionContentsResponse | undefined,
+  draft: UpdateColorInput & { assetId: string },
+): CollectionContentsResponse | undefined {
+  if (!current) return current;
+
+  return {
+    ...current,
+    nodes: current.nodes.map((node) => {
+      if (node.type === "color" && node.id === draft.assetId) {
+        return {
+          ...node,
+          hex: draft.hex,
+          ...(draft.gradient === undefined ? {} : { gradient: draft.gradient }),
+        };
+      }
+      if (node.type !== "folder") return node;
+
+      return {
+        ...node,
+        previews: node.previews.map((preview) =>
+          preview.type === "color" && preview.assetId === draft.assetId
+            ? { ...preview, hex: draft.hex }
+            : preview,
+        ),
+      };
+    }),
+  };
+}
+
 export function useUpdateNote(workspaceSlug: string) {
   const queryClient = useQueryClient();
 
@@ -1172,6 +1202,12 @@ export function useUpdateNote(workspaceSlug: string) {
 
 export function useUpdateColor(workspaceSlug: string) {
   const queryClient = useQueryClient();
+  const contentsFilter = {
+    predicate: ({ queryKey }: { queryKey: readonly unknown[] }) =>
+      (queryKey[0] === "collectionContents" ||
+        queryKey[0] === "inboxContents") &&
+      queryKey[1] === workspaceSlug,
+  };
 
   return useMutation({
     mutationFn: ({
@@ -1179,14 +1215,26 @@ export function useUpdateColor(workspaceSlug: string) {
       ...data
     }: UpdateColorInput & { assetId: string }) =>
       updateColor(workspaceSlug, assetId, data),
+    onMutate: async (draft) => {
+      await queryClient.cancelQueries(contentsFilter);
+      const previousContents =
+        queryClient.getQueriesData<CollectionContentsResponse>(contentsFilter);
+
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        contentsFilter,
+        (current) => applyColorDraftToContents(current, draft),
+      );
+
+      return { previousContents };
+    },
+    onError: (_error, _draft, context) => {
+      context?.previousContents.forEach(([queryKey, contents]) => {
+        queryClient.setQueryData(queryKey, contents);
+      });
+    },
     onSuccess: ({ color }) => {
       queryClient.setQueriesData<CollectionContentsResponse>(
-        {
-          predicate: ({ queryKey }) =>
-            (queryKey[0] === "collectionContents" ||
-              queryKey[0] === "inboxContents") &&
-            queryKey[1] === workspaceSlug,
-        },
+        contentsFilter,
         (current) => applyUpdatedColorToContents(current, color),
       );
       void queryClient.invalidateQueries({

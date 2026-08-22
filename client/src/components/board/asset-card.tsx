@@ -83,7 +83,7 @@ export const AssetCard = memo(function AssetCard({
             : undefined
         }
       >
-        {(isContextMenuOpen) => (
+        {(isContextMenuOpen, displayAsset) => (
           <>
             {asset.type === "image" && (
               <ImageAssetCard
@@ -107,9 +107,9 @@ export const AssetCard = memo(function AssetCard({
                 isContextMenuOpen={isContextMenuOpen}
               />
             )}
-            {asset.type === "color" && (
+            {displayAsset.type === "color" && (
               <ColorAssetCard
-                asset={asset}
+                asset={displayAsset}
                 isContextMenuOpen={isContextMenuOpen}
               />
             )}

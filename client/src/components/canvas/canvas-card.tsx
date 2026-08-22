@@ -64,7 +64,7 @@ export const CanvasCard = memo(function CanvasCard({
     [dropStackStyle],
   );
 
-  const card = (isContextMenuOpen = false) => (
+  const card = (isContextMenuOpen = false, displayAsset = asset) => (
     <div className="min-w-0">
       {node.type === "image" && asset.type === "image" ? (
         <ImageAssetCard
@@ -83,8 +83,11 @@ export const CanvasCard = memo(function CanvasCard({
       {node.type === "link" && asset.type === "link" ? (
         <LinkAssetCard asset={asset} isContextMenuOpen={isContextMenuOpen} />
       ) : null}
-      {node.type === "color" && asset.type === "color" ? (
-        <ColorAssetCard asset={asset} isContextMenuOpen={isContextMenuOpen} />
+      {node.type === "color" && displayAsset.type === "color" ? (
+        <ColorAssetCard
+          asset={displayAsset}
+          isContextMenuOpen={isContextMenuOpen}
+        />
       ) : null}
       {node.type === "folder" && asset.type === "folder" ? (
         <FolderAssetCard

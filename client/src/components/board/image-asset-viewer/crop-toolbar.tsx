@@ -12,7 +12,7 @@ import {
   ButtonGroup,
   ButtonGroupSeparator,
 } from "@/components/ui/button-group";
-import { Slider } from "@/components/ui/slider";
+import { RangeSlider } from "@/components/ui/range-slider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -189,13 +189,14 @@ export function CropToolbar({
           <span>Zoom</span>
           <span>{Math.round(zoom * 100)}%</span>
         </div>
-        <Slider
-          value={[zoom]}
-          className="[&_[data-slot=slider-track]]:h-1.5"
-          onValueChange={(v) => onZoomChange(Array.isArray(v) ? v[0] : v)}
+        <RangeSlider
+          value={zoom}
+          onValueChange={onZoomChange}
           min={1}
           max={3}
           step={0.01}
+          aria-label="Zoom"
+          formatValueText={(v) => `${Math.round(v * 100)}%`}
         />
       </div>
     </section>
