@@ -5,6 +5,7 @@ import {
   CreateNoteSchema,
   CreateColorSchema,
   ImageCropPathParamSchema,
+  UpdateImageSchema,
   UpdateNoteSchema,
   UpdateColorSchema,
   WorkspaceParamSchema,
@@ -125,6 +126,28 @@ export const updateColor = factory.createHandlers(
       data,
     );
     return c.json(success({ color }));
+  },
+);
+
+export const updateImage = factory.createHandlers(
+  authMiddleware,
+  validate.param(AssetPathParamSchema),
+  validate.body(UpdateImageSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const image = await assetService.updateImage(
+      workspace.id,
+      userId,
+      assetId,
+      data,
+    );
+    return c.json(success({ image }));
   },
 );
 

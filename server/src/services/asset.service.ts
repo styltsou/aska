@@ -34,6 +34,8 @@ import type {
   InboxContentsResponse,
   UpdatedNote,
   UpdateNoteInput,
+  UpdatedImage,
+  UpdateImageInput,
   UpdateColorInput,
   UpdatedColor,
 } from "@/dto/collection.dto";
@@ -104,6 +106,12 @@ export interface IAssetService {
     assetNodeId: string,
     data: UpdateColorInput,
   ): Promise<UpdatedColor>;
+  updateImage(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    data: UpdateImageInput,
+  ): Promise<UpdatedImage>;
   deleteAsset(
     orgId: string,
     assetNodeId: string,
@@ -150,6 +158,7 @@ export class AssetService implements IAssetService {
         createdAt: assets.createdAt,
         updatedAt: assets.updatedAt,
         imageAlt: imageAssets.alt,
+        imageNote: imageAssets.note,
         sourceLabel: imageAssets.sourceLabel,
         sourceUrl: imageAssets.sourceUrl,
         imageVariants: imageAssets.variants,
@@ -475,6 +484,61 @@ export class AssetService implements IAssetService {
     };
   }
 
+  async updateImage(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    data: UpdateImageInput,
+  ): Promise<UpdatedImage> {
+    const target = parseAssetNodeId(assetNodeId);
+    if (target.assetType !== "image") {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, "Asset is not an image");
+    }
+
+    const note = data.note?.trim() ? data.note : null;
+    const updated = await db.transaction(async (tx) => {
+      const [asset] = await tx
+        .update(assets)
+        .set({ updatedByUserId: userId })
+        .where(
+          and(
+            eq(assets.id, target.entityId),
+            eq(assets.organizationId, orgId),
+            eq(assets.type, "image"),
+          ),
+        )
+        .returning({
+          id: assets.id,
+          isFavorite: assets.isFavorite,
+          updatedAt: assets.updatedAt,
+        });
+
+      if (!asset) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Image not found");
+      }
+
+      const [image] = await tx
+        .update(imageAssets)
+        .set({ note })
+        .where(eq(imageAssets.assetId, asset.id))
+        .returning({ note: imageAssets.note });
+
+      if (!image) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Image not found");
+      }
+
+      return { ...asset, note: image.note };
+    });
+
+    return {
+      id: `image-${updated.id}`,
+      type: "image",
+      note: updated.note,
+      isFavorite: updated.isFavorite,
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  }
+
   async deleteAsset(
     orgId: string,
     assetNodeId: string,
@@ -629,6 +693,7 @@ export class AssetService implements IAssetService {
       createdAt: Date;
       updatedAt: Date;
       imageAlt: string | null;
+      imageNote: string | null;
       sourceLabel: string | null;
       sourceUrl: string | null;
       imageVariants: ImageAssetVariants | null;
@@ -687,6 +752,7 @@ export class AssetService implements IAssetService {
           height: rendition.height,
           title: row.title,
           alt: row.imageAlt,
+          note: row.imageNote,
           sourceLabel: row.sourceLabel,
           sourceUrl: row.sourceUrl,
           isFavorite: row.isFavorite,

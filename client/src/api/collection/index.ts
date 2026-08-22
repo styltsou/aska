@@ -22,6 +22,7 @@ export {
   useUpdateCollectionNodePositions,
   useUpdateNote,
   useUpdateColor,
+  useUpdateImage,
   collectionContentsQueryOptions,
   collectionsQueryOptions,
   inboxContentsQueryOptions,
@@ -76,4 +77,7 @@ export type {
   UpdateColorInput,
   UpdatedColor,
   UpdateColorResponse,
+  UpdateImageInput,
+  UpdatedImage,
+  UpdateImageResponse,
 } from "./types";

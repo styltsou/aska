@@ -32,6 +32,8 @@ import type {
   UpdateNodePositionsResponse,
   UpdateNoteInput,
   UpdateNoteResponse,
+  UpdateImageInput,
+  UpdateImageResponse,
   UpdateColorInput,
   UpdateColorResponse,
 } from "./types";
@@ -197,6 +199,17 @@ export async function updateColor(
 ): Promise<UpdateColorResponse> {
   return apiPatch<UpdateColorResponse>(
     `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/color`,
+    data,
+  );
+}
+
+export async function updateImage(
+  workspaceSlug: string,
+  assetId: string,
+  data: UpdateImageInput,
+): Promise<UpdateImageResponse> {
+  return apiPatch<UpdateImageResponse>(
+    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/image`,
     data,
   );
 }

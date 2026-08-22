@@ -47,6 +47,7 @@ import { ImageColorPalette, ImageMetadataDetails } from "./image-metadata";
 import { CropToolbar } from "./crop-toolbar";
 import { apiPost } from "@/lib/api";
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
+import { useUpdateImage } from "@/api/collection";
 import { collectionQueryKeys } from "@/api/collection/query-keys";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -63,7 +64,62 @@ const MIN_FREE_CROP_SIZE = 80;
 const COLOR_PREVIEW_GAP = 14;
 const COLOR_PREVIEW_INSET = 8;
 const MAX_VIEWER_IMAGE_WIDTH = 1920;
-const IMAGE_NOTE_STORAGE_KEY = "aska:image-note:";
+const IMAGE_NOTE_STORAGE_KEY = "aska:image-note:v2:";
+const LEGACY_IMAGE_NOTE_STORAGE_KEY = "aska:image-note:";
+const IMAGE_NOTE_AUTOSAVE_DELAY_MS = 350;
+
+function imageNoteStorageKey(workspaceSlug: string, assetId: string) {
+  return `${IMAGE_NOTE_STORAGE_KEY}${JSON.stringify([workspaceSlug, assetId])}`;
+}
+
+function readImageNoteDraft(
+  workspaceSlug: string,
+  assetId: string,
+  hasServerNote: boolean,
+): string | undefined {
+  if (hasServerNote) return undefined;
+
+  try {
+    const current = window.localStorage.getItem(
+      imageNoteStorageKey(workspaceSlug, assetId),
+    );
+    if (current !== null) return current;
+
+    return (
+      window.localStorage.getItem(
+        `${LEGACY_IMAGE_NOTE_STORAGE_KEY}${assetId}`,
+      ) ?? undefined
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+function saveImageNoteDraft(
+  workspaceSlug: string,
+  assetId: string,
+  note: string,
+) {
+  try {
+    window.localStorage.setItem(
+      imageNoteStorageKey(workspaceSlug, assetId),
+      note,
+    );
+  } catch {
+    // Recovery is best effort when storage is unavailable.
+  }
+}
+
+function clearImageNoteDraft(workspaceSlug: string, assetId: string) {
+  try {
+    window.localStorage.removeItem(imageNoteStorageKey(workspaceSlug, assetId));
+    window.localStorage.removeItem(
+      `${LEGACY_IMAGE_NOTE_STORAGE_KEY}${assetId}`,
+    );
+  } catch {
+    // Recovery cleanup is best effort when storage is unavailable.
+  }
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -857,6 +913,7 @@ export function ImageAssetViewer({
 }) {
   const retainedAssetRef = useRef(selectedAsset);
   const queryClient = useQueryClient();
+  const { mutateAsync: updateImageAsync } = useUpdateImage(workspaceSlug);
   const [editedAsset, setEditedAsset] = useState<ImageAsset | null>(null);
   const [optimisticCropPreviewUrl, setOptimisticCropPreviewUrl] = useState<
     string | null
@@ -908,6 +965,13 @@ export function ImageAssetViewer({
   const [hasCopiedColor, setHasCopiedColor] = useState(false);
   const [isEyeDropping, setIsEyeDropping] = useState(false);
   const [imageNote, setImageNote] = useState("");
+  const imageNoteAssetIdRef = useRef<string | undefined>(undefined);
+  const imageNoteDraftRef = useRef("");
+  const imageNoteServerNoteRef = useRef<string | null | undefined>(asset?.note);
+  const imageNoteSavedRef = useRef(new Map<string, string>());
+  const imageNoteTimerRef = useRef<number | undefined>(undefined);
+  const imageNoteRequestRef = useRef<Promise<void> | null>(null);
+  const imageNoteQueueRef = useRef(new Map<string, string>());
   const shouldReduceMotion = useReducedMotion();
   const cropperContainerRef = useRef<HTMLDivElement>(null);
   const imageNoteRef = useRef<HTMLTextAreaElement>(null);
@@ -918,6 +982,10 @@ export function ImageAssetViewer({
   const copiedColorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+
+  useEffect(() => {
+    imageNoteServerNoteRef.current = asset?.note;
+  }, [asset?.id, asset?.note]);
 
   useEffect(() => {
     setEditedAsset(null);
@@ -963,38 +1031,149 @@ export function ImageAssetViewer({
     setIsEyeDropping(false);
   }, [asset?.id]);
 
+  const persistImageNote = useCallback(
+    (assetId: string, draft: string) => {
+      const note = draft.trim() ? draft : null;
+      const saved = imageNoteSavedRef.current.get(assetId) ?? null;
+      if (note === saved) {
+        clearImageNoteDraft(workspaceSlug, assetId);
+        return;
+      }
+
+      if (imageNoteRequestRef.current) {
+        imageNoteQueueRef.current.set(assetId, draft);
+        return;
+      }
+
+      const request = updateImageAsync({ assetId, note })
+        .then(({ image: updatedImage }) => {
+          const updatedNote = updatedImage.note ?? "";
+          imageNoteSavedRef.current.set(assetId, updatedNote);
+
+          if (imageNoteAssetIdRef.current === assetId) {
+            if (imageNoteDraftRef.current === draft) {
+              imageNoteDraftRef.current = updatedNote;
+              setImageNote(updatedNote);
+              clearImageNoteDraft(workspaceSlug, assetId);
+            } else {
+              imageNoteQueueRef.current.set(assetId, imageNoteDraftRef.current);
+            }
+          } else if (imageNoteQueueRef.current.get(assetId) === draft) {
+            imageNoteQueueRef.current.delete(assetId);
+            clearImageNoteDraft(workspaceSlug, assetId);
+          } else {
+            clearImageNoteDraft(workspaceSlug, assetId);
+          }
+        })
+        .catch((error: unknown) => {
+          saveImageNoteDraft(workspaceSlug, assetId, draft);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not save image note.",
+          );
+        })
+        .finally(() => {
+          imageNoteRequestRef.current = null;
+          const queued = imageNoteQueueRef.current.get(assetId);
+          if (queued !== undefined) {
+            imageNoteQueueRef.current.delete(assetId);
+            persistImageNote(assetId, queued);
+            return;
+          }
+
+          const nextQueued = imageNoteQueueRef.current.entries().next().value;
+          if (nextQueued) {
+            const [nextAssetId, nextDraft] = nextQueued;
+            imageNoteQueueRef.current.delete(nextAssetId);
+            persistImageNote(nextAssetId, nextDraft);
+          }
+        });
+
+      imageNoteRequestRef.current = request;
+    },
+    [updateImageAsync, workspaceSlug],
+  );
+
+  const flushImageNote = useCallback(() => {
+    if (imageNoteTimerRef.current !== undefined) {
+      window.clearTimeout(imageNoteTimerRef.current);
+      imageNoteTimerRef.current = undefined;
+    }
+
+    const assetId = imageNoteAssetIdRef.current;
+    if (assetId) persistImageNote(assetId, imageNoteDraftRef.current);
+  }, [persistImageNote]);
+
   useEffect(() => {
-    if (!asset?.id) {
+    if (imageNoteTimerRef.current !== undefined) {
+      window.clearTimeout(imageNoteTimerRef.current);
+      imageNoteTimerRef.current = undefined;
+    }
+
+    const assetId = asset?.id;
+    if (!assetId) {
+      imageNoteAssetIdRef.current = undefined;
+      imageNoteDraftRef.current = "";
       setImageNote("");
       return;
     }
 
-    try {
-      setImageNote(
-        window.localStorage.getItem(`${IMAGE_NOTE_STORAGE_KEY}${asset.id}`) ??
-          "",
-      );
-    } catch {
-      setImageNote("");
+    const serverNote = imageNoteServerNoteRef.current ?? "";
+    const recoveredDraft = readImageNoteDraft(
+      workspaceSlug,
+      assetId,
+      Boolean(serverNote),
+    );
+    const nextDraft = recoveredDraft ?? serverNote;
+    imageNoteAssetIdRef.current = assetId;
+    imageNoteSavedRef.current.set(assetId, serverNote);
+    imageNoteDraftRef.current = nextDraft;
+    setImageNote(nextDraft);
+
+    if (recoveredDraft !== undefined && recoveredDraft !== serverNote) {
+      imageNoteTimerRef.current = window.setTimeout(() => {
+        imageNoteTimerRef.current = undefined;
+        persistImageNote(assetId, recoveredDraft);
+      }, IMAGE_NOTE_AUTOSAVE_DELAY_MS);
     }
-  }, [asset?.id]);
+  }, [asset?.id, persistImageNote, workspaceSlug]);
 
-  useEffect(() => {
-    if (!asset?.id) return;
+  const handleImageNoteChange = useCallback(
+    (value: string) => {
+      const assetId = imageNoteAssetIdRef.current;
+      if (!assetId) return;
 
-    const timeout = window.setTimeout(() => {
-      try {
-        window.localStorage.setItem(
-          `${IMAGE_NOTE_STORAGE_KEY}${asset.id}`,
-          imageNote,
-        );
-      } catch {
-        // Local-only autosave is best effort until the backend field exists.
+      imageNoteDraftRef.current = value;
+      setImageNote(value);
+      saveImageNoteDraft(workspaceSlug, assetId, value);
+
+      if (imageNoteTimerRef.current !== undefined) {
+        window.clearTimeout(imageNoteTimerRef.current);
       }
-    }, 350);
+      imageNoteTimerRef.current = window.setTimeout(() => {
+        imageNoteTimerRef.current = undefined;
+        persistImageNote(assetId, imageNoteDraftRef.current);
+      }, IMAGE_NOTE_AUTOSAVE_DELAY_MS);
+    },
+    [persistImageNote, workspaceSlug],
+  );
 
-    return () => window.clearTimeout(timeout);
-  }, [asset?.id, imageNote]);
+  const handleAssetChange = useCallback(
+    (nextAsset: ImageAsset) => {
+      flushImageNote();
+      onAssetChange?.(nextAsset);
+    },
+    [flushImageNote, onAssetChange],
+  );
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen) flushImageNote();
+      onOpenChange(nextOpen);
+    },
+    [flushImageNote, onOpenChange],
+  );
 
   useEffect(() => {
     const textarea = imageNoteRef.current;
@@ -1511,7 +1690,7 @@ export function ImageAssetViewer({
   const cropTransform = `translate(${crop.x}px, ${crop.y}px) scale(${zoom}) scaleX(${flipX ? -1 : 1}) scaleY(${flipY ? -1 : 1}) rotate(${rotation}deg)`;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
         initialFocus={false}
@@ -1585,7 +1764,8 @@ export function ImageAssetViewer({
                               size="icon-sm"
                               disabled={!previousAsset}
                               onClick={() =>
-                                previousAsset && onAssetChange?.(previousAsset)
+                                previousAsset &&
+                                handleAssetChange(previousAsset)
                               }
                             />
                           }
@@ -1608,7 +1788,7 @@ export function ImageAssetViewer({
                               size="icon-sm"
                               disabled={!nextAsset}
                               onClick={() =>
-                                nextAsset && onAssetChange?.(nextAsset)
+                                nextAsset && handleAssetChange(nextAsset)
                               }
                             />
                           }
@@ -2008,7 +2188,9 @@ export function ImageAssetViewer({
                           ref={imageNoteRef}
                           id="image-note"
                           value={imageNote}
-                          onChange={(event) => setImageNote(event.target.value)}
+                          onChange={(event) =>
+                            handleImageNoteChange(event.target.value)
+                          }
                           placeholder="Add a note"
                           rows={1}
                           className="mt-1 block min-h-6 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"

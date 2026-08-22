@@ -203,6 +203,7 @@ export const imageAssets = pgTable(
     width: integer().notNull(),
     height: integer().notNull(),
     alt: text(),
+    note: text(),
     sourceLabel: varchar("source_label", { length: 120 }),
     sourceUrl: text("source_url"),
     provenance: jsonb().$type<ImageProvenance>(),

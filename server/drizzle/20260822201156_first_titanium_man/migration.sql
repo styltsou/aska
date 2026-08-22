@@ -1,0 +1,1 @@
+ALTER TABLE "image_assets" ADD COLUMN "note" text;

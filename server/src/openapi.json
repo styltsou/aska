@@ -996,6 +996,46 @@
         }
       }
     },
+    "/api/v1/workspace/{workspaceSlug}/assets/{assetId}/image": {
+      "patch": {
+        "operationId": "updateImage",
+        "tags": ["Assets"],
+        "summary": "Update image notes",
+        "description": "Replaces the plain-text note stored in the image asset metadata.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "description": "Image asset identifier, e.g. `image-17`.",
+            "schema": { "type": "string", "pattern": "^image-\\d+$" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateImageRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The image note was updated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UpdateImageResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/images/uploads": {
       "post": {
         "operationId": "createDirectImageUpload",
@@ -1820,6 +1860,18 @@
           }
         }
       },
+      "UpdateImageRequest": {
+        "type": "object",
+        "required": ["note"],
+        "properties": {
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 10000,
+            "description": "Complete replacement image note, or null to clear it."
+          }
+        }
+      },
       "CreateLinkRequest": {
         "type": "object",
         "required": ["url"],
@@ -1889,6 +1941,7 @@
           "url",
           "width",
           "height",
+          "note",
           "isFavorite",
           "createdAt",
           "position"
@@ -1933,6 +1986,11 @@
           "alt": {
             "type": "string",
             "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "description": "Plain-text note attached to the image asset."
           },
           "sourceLabel": {
             "type": "string",
@@ -2212,6 +2270,30 @@
             "required": ["note"],
             "properties": {
               "note": { "$ref": "#/components/schemas/UpdatedNote" }
+            }
+          }
+        }
+      },
+      "UpdatedImage": {
+        "type": "object",
+        "required": ["id", "type", "note", "isFavorite", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^image-\\d+$" },
+          "type": { "type": "string", "enum": ["image"] },
+          "note": { "type": "string", "nullable": true },
+          "isFavorite": { "type": "boolean" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UpdateImageResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["image"],
+            "properties": {
+              "image": { "$ref": "#/components/schemas/UpdatedImage" }
             }
           }
         }

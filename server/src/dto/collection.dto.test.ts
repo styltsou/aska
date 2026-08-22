@@ -11,6 +11,7 @@ import {
   UpdateNodePositionSchema,
   UpdateNodePositionsSchema,
   UpdateNoteSchema,
+  UpdateImageSchema,
   MoveCollectionNodesParentSchema,
 } from "./collection.dto";
 
@@ -182,6 +183,18 @@ describe("collection board position DTOs", () => {
     ).toEqual({ folderPath: "references", types: ["image", "note"] });
     expect(
       CollectionContentsQuerySchema.safeParse({ types: "video" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("image note DTOs", () => {
+  it("accepts bounded text and clearing an image note", () => {
+    expect(
+      UpdateImageSchema.parse({ note: "Reference for the hero image" }),
+    ).toEqual({ note: "Reference for the hero image" });
+    expect(UpdateImageSchema.parse({ note: null })).toEqual({ note: null });
+    expect(
+      UpdateImageSchema.safeParse({ note: "x".repeat(10_001) }).success,
     ).toBe(false);
   });
 });

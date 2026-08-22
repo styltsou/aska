@@ -119,6 +119,20 @@ export type UpdatedColor = {
   gradient?: z.infer<typeof ColorGradientSchema> | null;
 };
 
+export const UpdateImageSchema = z.object({
+  note: z.string().max(10_000).nullable(),
+});
+
+export type UpdateImageInput = z.infer<typeof UpdateImageSchema>;
+
+export type UpdatedImage = {
+  id: string;
+  type: "image";
+  note: string | null;
+  isFavorite: boolean;
+  updatedAt: string;
+};
+
 export const UpdateNoteSchema = z.object({
   content: z.string().min(1).max(10_000),
 });
@@ -174,6 +188,7 @@ export const CollectionImageNodeSchema = z.object({
   height: z.number(),
   title: z.string().nullable(),
   alt: z.string().nullable(),
+  note: z.string().nullable(),
   sourceLabel: z.string().nullable(),
   sourceUrl: z.string().nullable(),
   isFavorite: z.boolean(),

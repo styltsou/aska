@@ -31,6 +31,7 @@ import {
   updateCollectionNodePosition,
   updateCollectionNodePositions,
   updateNote,
+  updateImage,
   updateColor,
 } from "./fetchers";
 import { makeMarkdownPreview } from "@/lib/markdown-preview";
@@ -54,6 +55,8 @@ import type {
   UpdateNodePositionsInput,
   UpdatedNote,
   UpdateNoteInput,
+  UpdatedImage,
+  UpdateImageInput,
   UpdatedColor,
   UpdateColorInput,
 } from "./types";
@@ -493,6 +496,7 @@ function makeOptimisticImageNode(
     height: dimensions.height,
     title: file.name || null,
     alt: null,
+    note: null,
     sourceLabel: null,
     sourceUrl: null,
     isFavorite: false,
@@ -1161,6 +1165,38 @@ function applyColorDraftToContents(
   };
 }
 
+function applyUpdatedImageToContents(
+  current: CollectionContentsResponse | undefined,
+  image: UpdatedImage,
+): CollectionContentsResponse | undefined {
+  if (!current) return current;
+
+  return {
+    ...current,
+    nodes: current.nodes.map((node) =>
+      node.type === "image" && node.id === image.id
+        ? { ...node, note: image.note, isFavorite: image.isFavorite }
+        : node,
+    ),
+  };
+}
+
+function applyImageDraftToContents(
+  current: CollectionContentsResponse | undefined,
+  draft: UpdateImageInput & { assetId: string },
+): CollectionContentsResponse | undefined {
+  if (!current) return current;
+
+  return {
+    ...current,
+    nodes: current.nodes.map((node) =>
+      node.type === "image" && node.id === draft.assetId
+        ? { ...node, note: draft.note }
+        : node,
+    ),
+  };
+}
+
 export function useUpdateNote(workspaceSlug: string) {
   const queryClient = useQueryClient();
 
@@ -1240,6 +1276,47 @@ export function useUpdateColor(workspaceSlug: string) {
       void queryClient.invalidateQueries({
         queryKey: collectionQueryKeys.collections(workspaceSlug),
       });
+    },
+  });
+}
+
+export function useUpdateImage(workspaceSlug: string) {
+  const queryClient = useQueryClient();
+  const contentsFilter = {
+    predicate: ({ queryKey }: { queryKey: readonly unknown[] }) =>
+      (queryKey[0] === "collectionContents" ||
+        queryKey[0] === "inboxContents") &&
+      queryKey[1] === workspaceSlug,
+  };
+
+  return useMutation({
+    mutationFn: ({
+      assetId,
+      ...data
+    }: UpdateImageInput & { assetId: string }) =>
+      updateImage(workspaceSlug, assetId, data),
+    onMutate: async (draft) => {
+      await queryClient.cancelQueries(contentsFilter);
+      const previousContents =
+        queryClient.getQueriesData<CollectionContentsResponse>(contentsFilter);
+
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        contentsFilter,
+        (current) => applyImageDraftToContents(current, draft),
+      );
+
+      return { previousContents };
+    },
+    onError: (_error, _draft, context) => {
+      context?.previousContents.forEach(([queryKey, contents]) => {
+        queryClient.setQueryData(queryKey, contents);
+      });
+    },
+    onSuccess: ({ image }) => {
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        contentsFilter,
+        (current) => applyUpdatedImageToContents(current, image),
+      );
     },
   });
 }
@@ -1647,6 +1724,7 @@ export function useCreateRemoteImage(
         height: preview?.height ?? UNKNOWN_IMAGE_DIMENSIONS.height,
         title: data.title ?? null,
         alt: data.alt ?? null,
+        note: null,
         sourceLabel: null,
         sourceUrl: data.url,
         isFavorite: false,

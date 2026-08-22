@@ -33,6 +33,7 @@ const portraitImage: CollectionNode = {
   height: 560,
   title: null,
   alt: null,
+  note: null,
   sourceLabel: null,
   sourceUrl: null,
   isFavorite: false,

@@ -142,6 +142,7 @@ export type CollectionImageNode = {
   height: number;
   title: string | null;
   alt: string | null;
+  note: string | null;
   sourceLabel: string | null;
   sourceUrl: string | null;
   isFavorite: boolean;
@@ -253,6 +254,20 @@ export type UpdatedColor = Pick<
 >;
 
 export type UpdateColorResponse = { color: UpdatedColor };
+
+export type UpdateImageInput = {
+  note: string | null;
+};
+
+export type UpdatedImage = {
+  id: string;
+  type: "image";
+  note: string | null;
+  isFavorite: boolean;
+  updatedAt: string;
+};
+
+export type UpdateImageResponse = { image: UpdatedImage };
 
 export type ColorGradient = {
   from: string;

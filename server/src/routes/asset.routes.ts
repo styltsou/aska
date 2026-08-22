@@ -8,6 +8,7 @@ import {
   markInboxSeen,
   updateNote,
   updateColor,
+  updateImage,
 } from "@/controllers/asset.controller";
 import { factory } from "@/factory";
 
@@ -19,6 +20,7 @@ const assetRoutes = factory
   .post("/workspace/:workspaceSlug/inbox/colors", ...createInboxColor)
   .patch("/workspace/:workspaceSlug/assets/:assetId/note", ...updateNote)
   .patch("/workspace/:workspaceSlug/assets/:assetId/color", ...updateColor)
+  .patch("/workspace/:workspaceSlug/assets/:assetId/image", ...updateImage)
   .post("/workspace/:workspaceSlug/images/:assetId/crop", ...cropImage)
   .delete("/workspace/:workspaceSlug/assets/:assetId", ...deleteAsset)
   .get("/workspace/:workspaceSlug/assets/:assetId/download", ...downloadAsset);

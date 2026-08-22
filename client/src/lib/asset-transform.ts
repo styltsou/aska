@@ -27,6 +27,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
       height: node.height,
       title: node.title ?? undefined,
       alt: node.alt ?? undefined,
+      note: node.note,
       sourceLabel: node.sourceLabel ?? undefined,
       sourceUrl: node.sourceUrl ?? undefined,
       isFavorite: node.isFavorite,

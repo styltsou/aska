@@ -11,6 +11,7 @@ export interface ImageAsset {
   width: number;
   height: number;
   alt?: string;
+  note?: string | null;
   title?: string;
   sourceLabel?: string;
   sourceUrl?: string;
