@@ -40,6 +40,10 @@ import {
   createScratchpadSlice,
   type ScratchpadSlice,
 } from "@/store/slices/scratchpad-slice";
+import {
+  mergePersistedAppStore,
+  migratePersistedAppStore,
+} from "@/store/persisted-store-migration";
 
 export { getCollectionViewScope, getPexelsBrowserScope };
 
@@ -53,6 +57,10 @@ export const usePersistedStore = create<PersistedStore>()(
     }),
     {
       name: APP_STORE_STORAGE_KEY,
+      version: 1,
+      migrate: (persistedState) =>
+        migratePersistedAppStore(persistedState) as unknown as PersistedStore,
+      merge: mergePersistedAppStore,
     },
   ),
 );

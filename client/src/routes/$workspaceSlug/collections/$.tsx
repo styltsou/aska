@@ -10,7 +10,11 @@ import {
 import { type ColorSearchScope, useColorImageSearch } from "@/api/color-search";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
 import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
-import { BoardContextMenu, BoardUploadZone } from "@/components/board";
+import {
+  BoardActionRail,
+  BoardContextMenu,
+  BoardUploadZone,
+} from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import type { ImageAsset } from "@/types/asset";
@@ -286,37 +290,43 @@ function CollectionPage() {
         >
           <div className="relative flex h-full min-w-0 flex-1">
             {boardView === "canvas" ? (
-              <Canvas
-                key={boardKey}
-                workspaceSlug={workspaceSlug}
-                collectionSlug={collectionSlug}
-                folderPath={parentFolderPath}
-                expectedParentFolderNodeId={
-                  activeFolder ? `folder-${activeFolder.id}` : null
-                }
-                nodes={nodes}
-                isColorFilterActive={hasResolvedColorSearch}
-                colorMatchNodeIds={colorMatchNodeIds}
-                focusedNodeId={focusedColorNodeId}
-                loadError={loadError}
-                emptyTitle={
-                  isTypeFilterActive
-                    ? "No matching assets"
-                    : folderPath
-                      ? "Folder is empty"
-                      : "Collection is empty"
-                }
-                emptyDescription={
-                  isTypeFilterActive
-                    ? "Try a different asset type."
-                    : folderPath
-                      ? "Add images, notes, links, or folders to start arranging this board."
-                      : "Add images, notes, links, or folders to start arranging this collection."
-                }
-                onOpenNote={handleOpenNote}
-                onOpenImage={handleOpenImage}
-                onOpenFolder={handleOpenFolder}
-              />
+              <>
+                <BoardActionRail
+                  workspaceSlug={workspaceSlug}
+                  collectionPath={collectionPath}
+                />
+                <Canvas
+                  key={boardKey}
+                  workspaceSlug={workspaceSlug}
+                  collectionSlug={collectionSlug}
+                  folderPath={parentFolderPath}
+                  expectedParentFolderNodeId={
+                    activeFolder ? `folder-${activeFolder.id}` : null
+                  }
+                  nodes={nodes}
+                  isColorFilterActive={hasResolvedColorSearch}
+                  colorMatchNodeIds={colorMatchNodeIds}
+                  focusedNodeId={focusedColorNodeId}
+                  loadError={loadError}
+                  emptyTitle={
+                    isTypeFilterActive
+                      ? "No matching assets"
+                      : folderPath
+                        ? "Folder is empty"
+                        : "Collection is empty"
+                  }
+                  emptyDescription={
+                    isTypeFilterActive
+                      ? "Try a different asset type."
+                      : folderPath
+                        ? "Add images, notes, links, or folders to start arranging this board."
+                        : "Add images, notes, links, or folders to start arranging this collection."
+                  }
+                  onOpenNote={handleOpenNote}
+                  onOpenImage={handleOpenImage}
+                  onOpenFolder={handleOpenFolder}
+                />
+              </>
             ) : (
               <CollectionBrowseView
                 key={boardKey}

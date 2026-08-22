@@ -347,7 +347,7 @@ export function ColorEditorDialog({
     setActiveStopId(stops[0]!.id);
   }
 
-  async function handleSave() {
+  function handleSave() {
     const gradient = draftGradient;
     const hex = draftColorHex;
 
@@ -367,22 +367,45 @@ export function ColorEditorDialog({
         );
         handleOpenChange(false);
         return;
-      } else if (target === "inbox") {
-        await createInboxColor.mutateAsync({
-          hex,
-          ...(gradient ? { gradient } : {}),
-        });
-        toast.success("Color added to Inbox.");
-      } else {
-        await createColor.mutateAsync({
-          hex,
-          ...(gradient ? { gradient } : {}),
-          parentFolderPath,
-          placement,
-        });
-        toast.success("Color added.");
       }
+
       handleOpenChange(false);
+
+      if (target === "inbox") {
+        createInboxColor.mutate(
+          {
+            hex,
+            ...(gradient ? { gradient } : {}),
+          },
+          {
+            onSuccess: () => toast.success("Color added to Inbox."),
+            onError: (error) =>
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Unable to save color.",
+              ),
+          },
+        );
+      } else {
+        createColor.mutate(
+          {
+            hex,
+            ...(gradient ? { gradient } : {}),
+            parentFolderPath,
+            placement,
+          },
+          {
+            onSuccess: () => toast.success("Color added."),
+            onError: (error) =>
+              toast.error(
+                error instanceof Error
+                  ? error.message
+                  : "Unable to save color.",
+              ),
+          },
+        );
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Unable to save color.",

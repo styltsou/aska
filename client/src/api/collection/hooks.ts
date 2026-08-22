@@ -928,19 +928,174 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
 
 export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
   const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: ({ placement, ...data }: CreateColorMutationInput) =>
-      createColor(workspaceSlug, collectionSlug, {
+    mutationFn: ({ placement, ...data }: CreateColorMutationInput) => {
+      const current = queryClient.getQueryData<CollectionContentsResponse>(
+        collectionQueryKeys.contents(
+          workspaceSlug,
+          collectionSlug,
+          data.parentFolderPath,
+        ),
+      );
+      const placeholder: CollectionNode = {
+        id: "color-pending",
+        type: "color",
+        hex: data.hex,
+        gradient: data.gradient ?? null,
+        title: null,
+        isFavorite: false,
+        createdAt: new Date().toISOString(),
+        position: null,
+      };
+      const position = reserveNodePositions(
+        current?.nodes.filter(
+          (node) => !node.id.startsWith("color-optimistic-"),
+        ) ?? [],
+        [placeholder],
+        placement ?? data.position,
+      )[0];
+
+      return createColor(workspaceSlug, collectionSlug, {
         ...data,
-        position: placement?.position ?? data.position,
-      }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["collectionContents", workspaceSlug, collectionSlug],
+        position,
       });
-      void queryClient.invalidateQueries({
-        queryKey: collectionQueryKeys.collections(workspaceSlug),
-      });
+    },
+    onMutate: async (variables) => {
+      const contentsKey = collectionQueryKeys.contents(
+        workspaceSlug,
+        collectionSlug,
+        variables.parentFolderPath,
+      );
+      await queryClient.cancelQueries({ queryKey: contentsKey });
+
+      const previousContents =
+        queryClient.getQueryData<CollectionContentsResponse>(contentsKey);
+      const previousCollections = queryClient.getQueryData<CollectionsData>(
+        collectionQueryKeys.collections(workspaceSlug),
+      );
+      const previousWorkspace = queryClient.getQueryData<WorkspaceData>([
+        "workspace",
+        workspaceSlug,
+      ]);
+      const optimisticId = `color-optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimisticColor: CollectionNode = {
+        id: optimisticId,
+        type: "color",
+        hex: variables.hex,
+        gradient: variables.gradient ?? null,
+        title: null,
+        isFavorite: false,
+        createdAt: new Date().toISOString(),
+        clientId: optimisticId,
+        position: null,
+      };
+      optimisticColor.position =
+        reserveNodePositions(
+          previousContents?.nodes ?? [],
+          [optimisticColor],
+          variables.placement ?? variables.position,
+        )[0] ?? null;
+
+      queryClient.setQueryData<CollectionContentsResponse>(
+        contentsKey,
+        (current) =>
+          current
+            ? { ...current, nodes: [...current.nodes, optimisticColor] }
+            : current,
+      );
+      updateCollectionAssetCount(queryClient, workspaceSlug, collectionSlug, 1);
+      updateFolderAncestorCounts(
+        queryClient,
+        workspaceSlug,
+        collectionSlug,
+        variables.parentFolderPath,
+        1,
+      );
+
+      return {
+        contentsKey,
+        clientId: optimisticId,
+        optimisticId,
+        previousContents,
+        previousCollections,
+        previousWorkspace,
+      };
+    },
+    onError: (_error, variables, context) => {
+      if (!context) return;
+
+      queryClient.setQueryData(context.contentsKey, context.previousContents);
+      queryClient.setQueryData(
+        collectionQueryKeys.collections(workspaceSlug),
+        context.previousCollections,
+      );
+      queryClient.setQueryData(
+        ["workspace", workspaceSlug],
+        context.previousWorkspace,
+      );
+      updateFolderAncestorCounts(
+        queryClient,
+        workspaceSlug,
+        collectionSlug,
+        variables.parentFolderPath,
+        -1,
+      );
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.setQueryData<CollectionContentsResponse>(
+        collectionQueryKeys.contents(
+          workspaceSlug,
+          collectionSlug,
+          variables.parentFolderPath,
+        ),
+        (current) => {
+          if (!current) return current;
+
+          if (current.nodes.some((node) => node.id === data.color.id)) {
+            return {
+              ...current,
+              nodes: current.nodes.filter(
+                (node) => node.id !== context?.optimisticId,
+              ),
+            };
+          }
+
+          return {
+            ...current,
+            nodes: current.nodes.map((node) =>
+              node.id === context?.optimisticId
+                ? {
+                    ...data.color,
+                    clientId: context?.clientId,
+                    position: data.color.position ?? node.position,
+                  }
+                : node,
+            ),
+          };
+        },
+      );
+      const preview: FolderChildPreview = {
+        assetId: data.color.id,
+        type: "color",
+        hex: data.color.hex,
+        title: data.color.title,
+      };
+      addPreviewToCollection(
+        queryClient,
+        workspaceSlug,
+        collectionSlug,
+        preview,
+      );
+      addPreviewToParentFolder(
+        queryClient,
+        workspaceSlug,
+        collectionSlug,
+        variables.parentFolderPath,
+        preview,
+        0,
+      );
+      reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
     },
   });
 }
@@ -1071,13 +1226,82 @@ export function useCreateInboxNote(workspaceSlug: string) {
 
 export function useCreateInboxColor(workspaceSlug: string) {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (data: CreateColorInput) =>
       createInboxColor(workspaceSlug, data),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: collectionQueryKeys.inbox(workspaceSlug),
+    onMutate: async (variables) => {
+      const inboxKey = collectionQueryKeys.inbox(workspaceSlug);
+      const workspaceKey = ["workspace", workspaceSlug] as const;
+      await queryClient.cancelQueries({ queryKey: inboxKey });
+
+      const previousInbox =
+        queryClient.getQueryData<InboxContentsResponse>(inboxKey);
+      const previousWorkspace =
+        queryClient.getQueryData<WorkspaceData>(workspaceKey);
+      const optimisticId = `color-optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimisticColor: CollectionNode = {
+        id: optimisticId,
+        type: "color",
+        hex: variables.hex,
+        gradient: variables.gradient ?? null,
+        title: null,
+        isFavorite: false,
+        createdAt: new Date().toISOString(),
+        clientId: optimisticId,
+        position: null,
+      };
+
+      queryClient.setQueryData<InboxContentsResponse>(inboxKey, (current) => {
+        if (!current) {
+          return {
+            collection: { id: 0, name: "Inbox", slug: "inbox" },
+            breadcrumbs: [],
+            nodes: [optimisticColor],
+          };
+        }
+
+        return { ...current, nodes: [optimisticColor, ...current.nodes] };
       });
+      updateInboxUnreadCount(queryClient, workspaceSlug, (count) => count + 1);
+
+      return {
+        inboxKey,
+        workspaceKey,
+        optimisticId,
+        previousInbox,
+        previousWorkspace,
+      };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return;
+
+      queryClient.setQueryData(context.inboxKey, context.previousInbox);
+      queryClient.setQueryData(context.workspaceKey, context.previousWorkspace);
+    },
+    onSuccess: (data, _variables, context) => {
+      queryClient.setQueryData<InboxContentsResponse>(
+        collectionQueryKeys.inbox(workspaceSlug),
+        (current) => {
+          if (!current) return current;
+
+          if (current.nodes.some((node) => node.id === data.color.id)) {
+            return {
+              ...current,
+              nodes: current.nodes.filter(
+                (node) => node.id !== context?.optimisticId,
+              ),
+            };
+          }
+
+          return {
+            ...current,
+            nodes: current.nodes.map((node) =>
+              node.id === context?.optimisticId ? data.color : node,
+            ),
+          };
+        },
+      );
     },
   });
 }

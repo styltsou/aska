@@ -50,6 +50,12 @@ export function BoardContextMenu({
   const setWorkspaceAlignmentGuides = usePersistedStore(
     (state) => state.setWorkspaceAlignmentGuides,
   );
+  const isBoardActionRailVisible = usePersistedStore(
+    (state) => state.workspaceBoardActionRails?.[workspaceSlug] ?? true,
+  );
+  const setWorkspaceBoardActionRail = usePersistedStore(
+    (state) => state.setWorkspaceBoardActionRail,
+  );
   const visibleBounds = useTransientStore((state) =>
     boardKey ? state.boardVisibleBounds[boardKey] : undefined,
   );
@@ -155,6 +161,14 @@ export function BoardContextMenu({
                 }
               >
                 Alignment guides
+              </ContextMenuCheckboxItem>
+              <ContextMenuCheckboxItem
+                checked={isBoardActionRailVisible}
+                onCheckedChange={(visible) =>
+                  setWorkspaceBoardActionRail(workspaceSlug, visible === true)
+                }
+              >
+                Actions dock
               </ContextMenuCheckboxItem>
             </>
           ) : null}

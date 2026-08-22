@@ -1,4 +1,5 @@
 export { AssetCard } from "./asset-card";
+export { BoardActionRail } from "./board-action-rail";
 export { BoardContextMenu } from "./board-context-menu";
 export { BoardUploadZone } from "./board-upload-zone";
 export { ImageAssetCard } from "./cards/image-asset-card";

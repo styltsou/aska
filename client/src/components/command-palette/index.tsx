@@ -16,6 +16,7 @@ import {
   PanelsTopLeftIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
+  SquarePlusIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
@@ -69,6 +70,7 @@ type CommandId =
   | "toggle-sidebar"
   | "toggle-collection-view"
   | "toggle-alignment-guides"
+  | "toggle-board-action-rail"
   | "open-settings"
   | "change-theme";
 
@@ -159,6 +161,12 @@ const COMMAND_GROUPS = [
         shortcut: undefined,
       },
       {
+        id: "toggle-board-action-rail",
+        label: "Toggle actions dock",
+        icon: SquarePlusIcon,
+        shortcut: undefined,
+      },
+      {
         id: "change-theme",
         label: "Change theme",
         icon: MoonIcon,
@@ -201,13 +209,21 @@ export function CommandPalette() {
   const setWorkspaceAlignmentGuides = usePersistedStore(
     (state) => state.setWorkspaceAlignmentGuides,
   );
+  const [workspaceSlug, view, ...viewPath] = pathname
+    .split("/")
+    .filter(Boolean);
+  const isBoardActionRailVisible = usePersistedStore((state) =>
+    workspaceSlug
+      ? (state.workspaceBoardActionRails?.[workspaceSlug] ?? true)
+      : false,
+  );
+  const setWorkspaceBoardActionRail = usePersistedStore(
+    (state) => state.setWorkspaceBoardActionRail,
+  );
   const openScratchpad = useTransientStore((state) => state.openScratchpad);
   const openPexelsBrowser = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
   );
-  const [workspaceSlug, view, ...viewPath] = pathname
-    .split("/")
-    .filter(Boolean);
   const collectionPath = view === "collections" ? viewPath.join("/") : "";
   const collectionViewScope =
     view === "collections" && workspaceSlug && viewPath[0]
@@ -245,6 +261,8 @@ export function CommandPalette() {
       : false,
   );
   const canToggleAlignmentGuides =
+    collectionView === "canvas" && Boolean(boardKey);
+  const canToggleBoardActionRail =
     collectionView === "canvas" && Boolean(boardKey);
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
 
@@ -367,6 +385,11 @@ export function CommandPalette() {
         setOpen(false);
         setWorkspaceAlignmentGuides(workspaceSlug, !areAlignmentGuidesEnabled);
         return;
+      case "toggle-board-action-rail":
+        if (!boardKey || !workspaceSlug) return;
+        setOpen(false);
+        setWorkspaceBoardActionRail(workspaceSlug, !isBoardActionRailVisible);
+        return;
       case "change-theme":
         setOpen(false);
         setTheme(
@@ -440,6 +463,8 @@ export function CommandPalette() {
                       canToggleCollectionView) &&
                     (item.id !== "toggle-alignment-guides" ||
                       canToggleAlignmentGuides) &&
+                    (item.id !== "toggle-board-action-rail" ||
+                      canToggleBoardActionRail) &&
                     (item.id !== "open-pexels-browser" || canCreateFolder),
                 ),
               }))
@@ -464,7 +489,11 @@ export function CommandPalette() {
                               ? collectionView === "canvas"
                                 ? "Switch to browse view"
                                 : "Switch to canvas view"
-                              : item.label;
+                              : item.id === "toggle-board-action-rail"
+                                ? isBoardActionRailVisible
+                                  ? "Hide actions dock"
+                                  : "Show actions dock"
+                                : item.label;
 
                         return (
                           <CommandItem
@@ -473,7 +502,9 @@ export function CommandPalette() {
                             data-checked={
                               item.id === "toggle-alignment-guides"
                                 ? areAlignmentGuidesEnabled
-                                : undefined
+                                : item.id === "toggle-board-action-rail"
+                                  ? isBoardActionRailVisible
+                                  : undefined
                             }
                             onSelect={() => runCommand(item.id)}
                           >
