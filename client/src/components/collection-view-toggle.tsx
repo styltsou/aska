@@ -14,16 +14,17 @@ export function CollectionViewToggle({
     <Tabs
       value={value}
       onValueChange={(nextValue) => onChange(nextValue as BoardView)}
+      size="sm"
     >
       <TabsList
         aria-label="Collection view"
         className="grid h-7 w-full grid-cols-2"
       >
-        <TabsTrigger value="canvas" className="px-2 text-xs">
+        <TabsTrigger value="canvas" className="px-2">
           <PanelsTopLeftIcon />
           Canvas
         </TabsTrigger>
-        <TabsTrigger value="browse" className="px-2 text-xs">
+        <TabsTrigger value="browse" className="px-2">
           <LayoutGridIcon />
           Browse
         </TabsTrigger>

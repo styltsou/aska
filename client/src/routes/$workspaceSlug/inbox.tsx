@@ -8,6 +8,7 @@ import {
 } from "@/api/color-search";
 import { AssetBoard } from "@/components/board/asset-board";
 import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
+import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
 import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
@@ -44,6 +45,8 @@ function InboxPage() {
     `aska.image-viewer:inbox:${workspaceSlug}`,
   );
   const [drawerColor, setDrawerColor] = useState<ColorAsset>();
+  const [colorEditorOpen, setColorEditorOpen] = useState(false);
+  const [editingColor, setEditingColor] = useState<ColorAsset>();
   const { data, isLoading, isFetching, isError, refetch } = useInboxContents(
     workspaceSlug,
     selectedAssetTypes,
@@ -131,15 +134,25 @@ function InboxPage() {
         noteExtractionTarget={{ target: "inbox" }}
         onClose={handleCloseNote}
       />
-      {drawerColor ? (
-        <ColorDetailDrawer
-          color={drawerColor}
-          workspaceSlug={workspaceSlug}
-          scope={{ type: "inbox" }}
-          onClose={() => setDrawerColor(undefined)}
-          onOpenImage={handleOpenImage}
-        />
-      ) : null}
+      <ColorDetailDrawer
+        color={drawerColor}
+        open={drawerColor !== undefined}
+        workspaceSlug={workspaceSlug}
+        scope={{ type: "inbox" }}
+        onClose={() => setDrawerColor(undefined)}
+        onOpenImage={handleOpenImage}
+        onEdit={() => {
+          setEditingColor(drawerColor);
+          setColorEditorOpen(true);
+        }}
+      />
+      <ColorEditorDialog
+        workspaceSlug={workspaceSlug}
+        target="inbox"
+        color={editingColor}
+        open={colorEditorOpen}
+        onOpenChange={setColorEditorOpen}
+      />
       <ImageAssetViewer
         asset={viewerImage}
         assets={displayAssets.filter(

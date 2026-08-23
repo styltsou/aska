@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { gradientToCss } from "@/lib/color-gradient";
+import { hasSelectionModifier } from "@/lib/selection";
 import type { ColorAsset } from "@/types/asset";
 
 export function ColorAssetCard({
@@ -72,6 +73,10 @@ export function ColorAssetCard({
           className="absolute inset-0 z-0 rounded-[inherit] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           aria-label={`Open ${name ?? gradientLabel ?? hex}`}
           onClick={(event) => {
+            if (hasSelectionModifier(event)) {
+              event.preventDefault();
+              return;
+            }
             event.stopPropagation();
             onOpen();
           }}

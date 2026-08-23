@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
 } from "react";
 import { CheckIcon, CopyIcon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -419,11 +420,18 @@ export function ColorEditorDialog({
       <DrawerContent
         className={cn(
           GLASS_FRAME_CLASS,
-          "transition-[width,transform,height,opacity,filter] md:[--translate-x:-50%] md:data-[swipe-axis=y]:inset-x-auto md:data-[swipe-axis=y]:left-1/2",
+          "rounded-xl! border border-border shadow-2xl transition-[width,transform,height,opacity,filter] md:[--translate-x:-50%] md:data-[swipe-axis=y]:inset-x-auto md:data-[swipe-axis=y]:left-1/2",
           isGradient
             ? "md:data-[swipe-axis=y]:w-[min(calc(100%-2rem),68rem)]"
             : "md:data-[swipe-axis=y]:w-[min(calc(100%-2rem),44rem)]",
         )}
+        style={
+          {
+            "--drawer-inset": "0.75rem",
+            "--bleed": "0",
+            "--drawer-content-max-height": "calc(100dvh - 1.5rem)",
+          } as unknown as CSSProperties
+        }
       >
         <DrawerHeader className="w-full !p-0 text-left">
           <div className="flex w-full items-center justify-between gap-4 p-3">

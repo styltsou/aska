@@ -95,7 +95,11 @@ function noteActions(asset: NoteAsset, onEditNote?: () => void) {
   );
 }
 
-function colorActions(asset: ColorAsset, onEdit: () => void) {
+function colorActions(
+  asset: ColorAsset,
+  onOpen: () => void,
+  onEdit: () => void,
+) {
   const copiedValue = asset.gradient
     ? gradientToCss(
         asset.gradient.stops ?? [
@@ -110,6 +114,7 @@ function colorActions(asset: ColorAsset, onEdit: () => void) {
 
   return (
     <>
+      <ContextMenuItem onClick={onOpen}>Open</ContextMenuItem>
       <ContextMenuItem onClick={onEdit}>Edit color</ContextMenuItem>
       <ContextMenuItem
         onClick={() => {
@@ -179,6 +184,7 @@ export function AssetContextMenu({
   deleteContext,
   inboxContext,
   onOpenImage,
+  onOpenColor,
   onEditNote,
 }: {
   asset: Asset;
@@ -193,6 +199,7 @@ export function AssetContextMenu({
     workspaceSlug: string;
   };
   onOpenImage?: () => void;
+  onOpenColor?: () => void;
   onEditNote?: () => void;
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -374,7 +381,9 @@ export function AssetContextMenu({
             </>
           ) : asset.type === "color" ? (
             <>
-              {colorActions(asset, () => setColorEditorOpen(true))}
+              {colorActions(asset, onOpenColor ?? (() => {}), () =>
+                setColorEditorOpen(true),
+              )}
               <ContextMenuSeparator />
               <ContextMenuItem>
                 {isFavorite ? "Remove from favorites" : "Add to favorites"}

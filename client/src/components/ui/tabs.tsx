@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type TabsVariant = "segment" | "pill" | "underline";
+type TabsSize = "sm" | "md";
 
 const SPRING_TRANSITION: Transition = {
   type: "spring",
@@ -30,6 +31,7 @@ const EASE_OUT: [number, number, number, number] = [0.16, 1, 0.3, 1];
 type TabsContextValue = {
   current: string;
   variant: TabsVariant;
+  size: TabsSize;
   layoutId: string;
 };
 
@@ -46,6 +48,7 @@ export function Tabs({
   defaultValue = "",
   onValueChange,
   variant = "segment",
+  size = "md",
   className,
   transition,
   children,
@@ -54,6 +57,7 @@ export function Tabs({
   defaultValue?: string;
   onValueChange?: (value: string) => void;
   variant?: TabsVariant;
+  size?: TabsSize;
   className?: string;
   transition?: Transition;
   children: ReactNode;
@@ -64,8 +68,8 @@ export function Tabs({
   const current = value !== undefined ? value : internalValue;
 
   const contextValue = useMemo(
-    () => ({ current, variant, layoutId }),
-    [current, layoutId, variant],
+    () => ({ current, variant, size, layoutId }),
+    [current, layoutId, variant, size],
   );
 
   return (
@@ -124,7 +128,17 @@ const triggerRadiusClasses: Record<
 };
 
 const triggerBaseClasses =
-  "relative isolate inline-flex min-w-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap px-2.5 text-sm font-medium outline-none [&_svg]:pointer-events-none [&_svg]:size-4";
+  "relative isolate inline-flex min-w-0 cursor-pointer items-center justify-center whitespace-nowrap font-medium outline-none [&_svg]:pointer-events-none";
+
+const triggerSizeClasses: Record<TabsSize, string> = {
+  sm: "px-2.5 py-1 text-xs gap-1",
+  md: "px-2.5 text-sm gap-1.5",
+};
+
+const triggerIconSizeClasses: Record<TabsSize, string> = {
+  sm: "[&_svg]:size-3",
+  md: "[&_svg]:size-3.5",
+};
 
 const triggerInactiveClasses =
   "text-muted-foreground transition-colors duration-[50ms] hover:text-foreground";
@@ -140,7 +154,7 @@ export function TabsTrigger({
   className?: string;
   children: ReactNode;
 }) {
-  const { current, variant, layoutId } = useTabsContext();
+  const { current, variant, size, layoutId } = useTabsContext();
   const active = current === value;
 
   if (variant === "underline") {
@@ -150,6 +164,8 @@ export function TabsTrigger({
         disabled={disabled}
         className={cn(
           triggerBaseClasses,
+          triggerSizeClasses[size],
+          triggerIconSizeClasses[size],
           "-mb-px border-b border-transparent pb-2 pt-1",
           active ? "text-foreground" : triggerInactiveClasses,
           className,
@@ -177,6 +193,8 @@ export function TabsTrigger({
       aria-selected={active}
       className={cn(
         triggerBaseClasses,
+        triggerSizeClasses[size],
+        triggerIconSizeClasses[size],
         triggerRadiusClasses[variant],
         active ? "text-foreground" : triggerInactiveClasses,
         className,

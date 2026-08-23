@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import {
   ButtonGroup,
   ButtonGroupSeparator,
@@ -143,7 +144,7 @@ function fitSizeWithinBounds(size: Size, maxSize: Size): Size {
 
 const FLOATING_ISLAND_SURFACE_CLASS = cn(
   "relative z-10 rounded-md",
-  "border border-border bg-background shadow-none",
+  "border border-foreground/10 bg-background shadow-none",
 );
 
 const VIEWER_BUTTON_GROUP_SURFACE_CLASS = cn(
@@ -1176,14 +1177,6 @@ export function ImageAssetViewer({
   );
 
   useEffect(() => {
-    const textarea = imageNoteRef.current;
-    if (!textarea) return;
-
-    textarea.style.height = "0px";
-    textarea.style.height = `${textarea.scrollHeight}px`;
-  }, [imageNote]);
-
-  useEffect(() => {
     return () => {
       if (copiedImageTimeoutRef.current) {
         clearTimeout(copiedImageTimeoutRef.current);
@@ -1805,7 +1798,7 @@ export function ImageAssetViewer({
             </div>
           </div>
 
-          <div className="pointer-events-none absolute top-0 right-0 z-30 w-[min(20rem,100%)] sm:w-80 lg:w-[25rem]">
+          <div className="pointer-events-none absolute top-[0.75rem] right-[0.75rem] z-30 w-[min(20rem,calc(100%-1.5rem))] sm:w-80 lg:w-[25rem]">
             <div
               className={cn(
                 "pointer-events-auto flex min-h-16 w-full min-w-0 items-center gap-1 p-4 [&_[data-slot=button]]:duration-75 lg:px-5 lg:py-4",
@@ -1830,7 +1823,7 @@ export function ImageAssetViewer({
                     </TooltipTrigger>
                     <TooltipContent>Edit image</TooltipContent>
                   </Tooltip>
-                  <div className="flex items-center gap-0.5">
+                  <div className="flex items-center gap-1">
                     <Tooltip>
                       <TooltipTrigger
                         render={
@@ -1839,7 +1832,7 @@ export function ImageAssetViewer({
                             size="icon-sm"
                             onClick={handlePickColor}
                             className={cn(
-                              "transition-all duration-100 hover:bg-foreground/5",
+                              "hover:bg-foreground/8 dark:hover:bg-foreground/10",
                               isEyeDropping && "bg-foreground/8",
                             )}
                             aria-pressed={isEyeDropping}
@@ -1866,10 +1859,6 @@ export function ImageAssetViewer({
                               : "Pick color"}
                       </TooltipContent>
                     </Tooltip>
-                    <span
-                      className="mx-1 h-4 w-px bg-border/70"
-                      aria-hidden="true"
-                    />
                     <Tooltip>
                       <TooltipTrigger
                         render={
@@ -1877,6 +1866,7 @@ export function ImageAssetViewer({
                             variant="ghost"
                             size="icon-sm"
                             onClick={handleCopyImage}
+                            className="hover:bg-foreground/8 dark:hover:bg-foreground/10"
                           />
                         }
                       >
@@ -1896,6 +1886,7 @@ export function ImageAssetViewer({
                             variant="ghost"
                             size="icon-sm"
                             onClick={handleDownload}
+                            className="hover:bg-foreground/8 dark:hover:bg-foreground/10"
                           />
                         }
                       >
@@ -2025,7 +2016,7 @@ export function ImageAssetViewer({
           <aside
             className={cn(
               GLASS_FRAME_CLASS,
-              "pointer-events-none absolute right-0 bottom-0 z-20 flex max-h-[calc(100%-6rem)] w-[min(20rem,100%)] min-h-0 flex-col gap-1 overflow-hidden rounded-none sm:w-80 lg:inset-y-0 lg:right-0 lg:max-h-none lg:w-[25rem] lg:gap-0",
+              "pointer-events-none absolute top-[0.75rem] right-[0.75rem] bottom-[0.75rem] z-20 flex w-[min(20rem,calc(100%-1.5rem))] min-h-0 flex-col gap-1 overflow-hidden rounded-xl sm:w-80 lg:w-[25rem] lg:gap-0",
               "pointer-events-auto",
             )}
           >
@@ -2063,7 +2054,7 @@ export function ImageAssetViewer({
                         ? { duration: 0 }
                         : { type: "spring", duration: 0.15, bounce: 0.08 }
                     }
-                    className="relative overflow-hidden rounded-t-xl border-t border-border bg-card shadow-sm"
+                    className="relative overflow-hidden rounded-t-xl border-t border-foreground/10 bg-card shadow-none"
                     aria-label="Edit image"
                   >
                     <div className="relative z-10 space-y-5 rounded-t-xl px-4 py-4">
@@ -2133,7 +2124,7 @@ export function ImageAssetViewer({
                 <div
                   className={cn(
                     FLOATING_ISLAND_SURFACE_CLASS,
-                    "relative z-10 min-h-0 flex flex-1 flex-col overflow-y-auto border-y border-l border-border border-r-0 p-4 lg:rounded-xl lg:border-y lg:border-l lg:border-border lg:border-r-0 lg:bg-background lg:px-5 lg:pt-4 lg:pb-4 lg:shadow-sm",
+                    "relative z-10 min-h-0 flex flex-1 flex-col overflow-y-auto border-y border-l border-foreground/10 border-r-0 p-4 lg:rounded-xl lg:border-y lg:border-l lg:border-foreground/10 lg:border-r-0 lg:bg-background lg:px-5 lg:pt-4 lg:pb-4",
                   )}
                 >
                   <motion.div
@@ -2184,7 +2175,7 @@ export function ImageAssetViewer({
                         >
                           Notes
                         </label>
-                        <textarea
+                        <AutoResizeTextarea
                           ref={imageNoteRef}
                           id="image-note"
                           value={imageNote}

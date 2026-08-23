@@ -10,6 +10,7 @@ import {
 import { type ColorSearchScope, useColorImageSearch } from "@/api/color-search";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
 import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
+import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
 import {
   BoardActionRail,
@@ -58,6 +59,8 @@ function CollectionPage() {
     `aska.image-viewer:collection:${workspaceSlug}:${collectionPath}`,
   );
   const [drawerColor, setDrawerColor] = useState<ColorAsset>();
+  const [colorEditorOpen, setColorEditorOpen] = useState(false);
+  const [editingColor, setEditingColor] = useState<ColorAsset>();
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
     .filter(Boolean);
@@ -385,15 +388,26 @@ function CollectionPage() {
         }}
         onClose={handleCloseNote}
       />
-      {drawerColor ? (
-        <ColorDetailDrawer
-          color={drawerColor}
-          workspaceSlug={workspaceSlug}
-          scope={colorSearchScope}
-          onClose={() => setDrawerColor(undefined)}
-          onOpenImage={handleSelectViewerImage}
-        />
-      ) : null}
+      <ColorDetailDrawer
+        color={drawerColor}
+        open={drawerColor !== undefined}
+        workspaceSlug={workspaceSlug}
+        scope={colorSearchScope}
+        onClose={() => setDrawerColor(undefined)}
+        onOpenImage={handleSelectViewerImage}
+        onEdit={() => {
+          setEditingColor(drawerColor);
+          setColorEditorOpen(true);
+        }}
+      />
+      <ColorEditorDialog
+        workspaceSlug={workspaceSlug}
+        target="collection"
+        collectionPath={collectionPath}
+        color={editingColor}
+        open={colorEditorOpen}
+        onOpenChange={setColorEditorOpen}
+      />
       <ImageAssetViewer
         asset={viewerImage}
         assets={assets.filter(

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 export const GLASS_FRAME_CLASS =
-  "bg-popover/80 shadow-lg ring-1 ring-foreground/10 backdrop-blur-2xl backdrop-saturate-150";
+  "bg-popover/80 shadow-none ring-1 ring-foreground/10 backdrop-blur-2xl backdrop-saturate-150";
 
 export const GLASS_SURFACE_CLASS =
   "border border-border bg-background shadow-sm shadow-foreground/5";

@@ -13,9 +13,17 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  ButtonGroup,
+  ButtonGroupSeparator,
+} from "@/components/ui/button-group";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { getPlatformShift } from "@/lib/platform";
-import { GLASS_FRAME_CLASS } from "@/lib/glass";
+import {
+  FLOATING_GLASS_BACKDROP_CLASS,
+  GLASS_FRAME_CLASS,
+  GLASS_ISLAND_CLASS,
+} from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { useBoardInsertionPlacement } from "@/components/canvas";
 import {
@@ -29,7 +37,7 @@ import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
 
 const RAIL_BUTTON_CLASS =
-  "rounded-lg text-muted-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80 hover:text-foreground";
+  "rounded-lg text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80";
 
 const RAIL_TRANSITION = {
   duration: 0.12,
@@ -94,163 +102,191 @@ export function BoardActionRail({
         >
           <div
             className={cn(
-              "flex -translate-y-1/2 flex-col items-center gap-1 rounded-xl p-1.5",
-              GLASS_FRAME_CLASS,
+              "relative -translate-y-1/2",
+              FLOATING_GLASS_BACKDROP_CLASS,
             )}
           >
-            <Tooltip>
-              <UploadImagesDialog
-                workspaceSlug={workspaceSlug}
-                collectionPath={collectionPath}
-                restoreOpen
-                placement={placement}
-              >
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label="Upload images"
-                      className={RAIL_BUTTON_CLASS}
+            <div
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-lg p-1",
+                GLASS_FRAME_CLASS,
+              )}
+            >
+              <div className={GLASS_ISLAND_CLASS}>
+                <ButtonGroup orientation="vertical">
+                  <Tooltip>
+                    <UploadImagesDialog
+                      workspaceSlug={workspaceSlug}
+                      collectionPath={collectionPath}
+                      restoreOpen
+                      placement={placement}
                     >
-                      <UploadIcon />
-                    </Button>
-                  }
-                />
-              </UploadImagesDialog>
-              <TooltipContent side="right">
-                <span>Upload images</span>
-                <RailShortcut keys="U" />
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <CreateNoteDialog
-                workspaceSlug={workspaceSlug}
-                collectionPath={collectionPath}
-                restoreOpen
-                placement={placement}
-              >
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label="New note"
-                      className={RAIL_BUTTON_CLASS}
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label="Upload images"
+                            className={RAIL_BUTTON_CLASS}
+                          >
+                            <UploadIcon />
+                          </Button>
+                        }
+                      />
+                    </UploadImagesDialog>
+                    <TooltipContent side="right">
+                      <span>Upload images</span>
+                      <RailShortcut keys="U" />
+                    </TooltipContent>
+                  </Tooltip>
+                  <ButtonGroupSeparator
+                    orientation="horizontal"
+                    className="bg-border/70"
+                  />
+                  <Tooltip>
+                    <CreateNoteDialog
+                      workspaceSlug={workspaceSlug}
+                      collectionPath={collectionPath}
+                      restoreOpen
+                      placement={placement}
                     >
-                      <FileTextIcon />
-                    </Button>
-                  }
-                />
-              </CreateNoteDialog>
-              <TooltipContent side="right">
-                <span>New note</span>
-                <RailShortcut keys="N" />
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <ColorEditorDialog
-                workspaceSlug={workspaceSlug}
-                collectionPath={collectionPath}
-                placement={placement}
-              >
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label="New color"
-                      className={RAIL_BUTTON_CLASS}
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label="New note"
+                            className={RAIL_BUTTON_CLASS}
+                          >
+                            <FileTextIcon />
+                          </Button>
+                        }
+                      />
+                    </CreateNoteDialog>
+                    <TooltipContent side="right">
+                      <span>New note</span>
+                      <RailShortcut keys="N" />
+                    </TooltipContent>
+                  </Tooltip>
+                  <ButtonGroupSeparator
+                    orientation="horizontal"
+                    className="bg-border/70"
+                  />
+                  <Tooltip>
+                    <ColorEditorDialog
+                      workspaceSlug={workspaceSlug}
+                      collectionPath={collectionPath}
+                      placement={placement}
                     >
-                      <PaletteIcon />
-                    </Button>
-                  }
-                />
-              </ColorEditorDialog>
-              <TooltipContent side="right">New color</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <CreateFolderDialog
-                workspaceSlug={workspaceSlug}
-                collectionPath={collectionPath}
-                placement={placement}
-              >
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label="New folder"
-                      className={RAIL_BUTTON_CLASS}
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label="New color"
+                            className={RAIL_BUTTON_CLASS}
+                          >
+                            <PaletteIcon />
+                          </Button>
+                        }
+                      />
+                    </ColorEditorDialog>
+                    <TooltipContent side="right">New color</TooltipContent>
+                  </Tooltip>
+                  <ButtonGroupSeparator
+                    orientation="horizontal"
+                    className="bg-border/70"
+                  />
+                  <Tooltip>
+                    <CreateFolderDialog
+                      workspaceSlug={workspaceSlug}
+                      collectionPath={collectionPath}
+                      placement={placement}
                     >
-                      <FolderPlusIcon />
-                    </Button>
-                  }
-                />
-              </CreateFolderDialog>
-              <TooltipContent side="right">
-                <span>New folder</span>
-                <RailShortcut keys="D" />
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label={
-                      pexelsBrowserOpen
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label="New folder"
+                            className={RAIL_BUTTON_CLASS}
+                          >
+                            <FolderPlusIcon />
+                          </Button>
+                        }
+                      />
+                    </CreateFolderDialog>
+                    <TooltipContent side="right">
+                      <span>New folder</span>
+                      <RailShortcut keys="D" />
+                    </TooltipContent>
+                  </Tooltip>
+                </ButtonGroup>
+              </div>
+              <div className={GLASS_ISLAND_CLASS}>
+                <ButtonGroup orientation="vertical">
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          aria-label={
+                            pexelsBrowserOpen
+                              ? "Close Pexels photos"
+                              : "Browse Pexels photos"
+                          }
+                          aria-expanded={pexelsBrowserOpen}
+                          aria-pressed={pexelsBrowserOpen}
+                          data-active={pexelsBrowserOpen || undefined}
+                          className={cn(
+                            RAIL_BUTTON_CLASS,
+                            pexelsBrowserOpen &&
+                              "bg-sidebar-active text-sidebar-accent-foreground",
+                          )}
+                          onClick={() =>
+                            openPexelsBrowser(pexelsScope, !pexelsBrowserOpen)
+                          }
+                        >
+                          <ImageIcon />
+                        </Button>
+                      }
+                    />
+                    <TooltipContent side="right">
+                      {pexelsBrowserOpen
                         ? "Close Pexels photos"
-                        : "Browse Pexels photos"
-                    }
-                    aria-expanded={pexelsBrowserOpen}
-                    aria-pressed={pexelsBrowserOpen}
-                    data-active={pexelsBrowserOpen || undefined}
-                    className={cn(
-                      RAIL_BUTTON_CLASS,
-                      pexelsBrowserOpen &&
-                        "bg-sidebar-active text-sidebar-accent-foreground",
-                    )}
-                    onClick={() =>
-                      openPexelsBrowser(pexelsScope, !pexelsBrowserOpen)
-                    }
-                  >
-                    <ImageIcon />
-                  </Button>
-                }
-              />
-              <TooltipContent side="right">
-                {pexelsBrowserOpen
-                  ? "Close Pexels photos"
-                  : "Browse Pexels photos"}
-              </TooltipContent>
-            </Tooltip>
-            <div className="h-px w-5 bg-border/80" role="separator" />
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label="Hide actions dock"
-                    className={RAIL_BUTTON_CLASS}
-                    onClick={() =>
-                      setWorkspaceBoardActionRail(workspaceSlug, false)
-                    }
-                  >
-                    <ChevronLeftIcon />
-                  </Button>
-                }
-              />
-              <TooltipContent side="right">Hide actions dock</TooltipContent>
-            </Tooltip>
+                        : "Browse Pexels photos"}
+                    </TooltipContent>
+                  </Tooltip>
+                </ButtonGroup>
+              </div>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <div className={GLASS_ISLAND_CLASS}>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Hide actions dock"
+                        className={RAIL_BUTTON_CLASS}
+                        onClick={() =>
+                          setWorkspaceBoardActionRail(workspaceSlug, false)
+                        }
+                      >
+                        <ChevronLeftIcon />
+                      </Button>
+                    </div>
+                  }
+                />
+                <TooltipContent side="right">Hide actions dock</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </motion.div>
       ) : (
@@ -268,10 +304,13 @@ export function BoardActionRail({
                 render={
                   <Button
                     type="button"
-                    size="icon-sm"
+                    size="icon"
                     variant="ghost"
                     aria-label="Show actions dock"
-                    className="h-12 w-4 rounded-l-none rounded-r-lg border border-l-0 border-border/80 bg-popover/95 text-muted-foreground shadow-[0_12px_32px_rgb(0_0_0_/_0.12)] ring-1 ring-foreground/[0.035] backdrop-blur-xl transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted hover:text-foreground"
+                    className={cn(
+                      "h-12 w-4 rounded-l-none rounded-r-lg border border-l-0 border-border/80 text-muted-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80 hover:text-foreground",
+                      GLASS_FRAME_CLASS,
+                    )}
                     onClick={() =>
                       setWorkspaceBoardActionRail(workspaceSlug, true)
                     }

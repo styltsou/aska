@@ -1,6 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
-import { CopyIcon, ImageIcon, LoaderCircleIcon } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { AnimatePresence, motion } from "motion/react";
+import {
+  CheckIcon,
+  CopyIcon,
+  ImageIcon,
+  LoaderCircleIcon,
+  PanelRightIcon,
+  PencilIcon,
+  XIcon,
+} from "lucide-react";
 import { toast } from "sonner";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
 
 import {
   type ColorSearchScope,
@@ -8,14 +24,17 @@ import {
 } from "@/api/color-search";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { gradientToCss } from "@/lib/color-gradient";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { ColorAsset, ImageAsset } from "@/types/asset";
 
 const EMPTY_RESULTS: never[] = [];
@@ -26,15 +45,29 @@ export function ColorDetailDrawer({
   scope,
   onClose,
   onOpenImage,
+  onEdit,
+  open = color !== undefined,
 }: {
-  color: ColorAsset;
+  color?: ColorAsset;
   workspaceSlug: string;
   scope: ColorSearchScope;
   onClose: () => void;
   onOpenImage: (image: ImageAsset) => void;
+  onEdit?: () => void;
+  open?: boolean;
 }) {
+  const isMobile = useIsMobile();
+  const [activeColor, setActiveColor] = useState<ColorAsset | undefined>(color);
+  useEffect(() => {
+    if (color) setActiveColor(color);
+  }, [color]);
   const [includeDescendants, setIncludeDescendants] = useState(false);
-  const searchColors = useMemo(() => colorAssetToSearchColors(color), [color]);
+  const [copied, setCopied] = useState(false);
+  const copiedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchColors = useMemo(
+    () => (activeColor ? colorAssetToSearchColors(activeColor) : []),
+    [activeColor],
+  );
   const effectiveScope = useMemo<ColorSearchScope>(
     () =>
       scope.type === "collection" ? { ...scope, includeDescendants } : scope,
@@ -46,153 +79,256 @@ export function ColorDetailDrawer({
     searchColors,
   );
   const results = search.data?.results ?? EMPTY_RESULTS;
-  const hasGradient = color.gradient !== undefined && color.gradient !== null;
+  const hasGradient =
+    activeColor?.gradient !== undefined && activeColor?.gradient !== null;
   const gradientCss = hasGradient
     ? gradientToCss(
-        color.gradient?.stops ?? [
-          { color: color.gradient!.from, position: 0 },
-          { color: color.gradient!.to, position: 100 },
+        activeColor!.gradient?.stops ?? [
+          { color: activeColor!.gradient!.from, position: 0 },
+          { color: activeColor!.gradient!.to, position: 100 },
         ],
-        color.gradient?.type ?? "linear",
-        color.gradient?.angle ?? 90,
+        activeColor!.gradient?.type ?? "linear",
+        activeColor!.gradient?.angle ?? 90,
       )
     : undefined;
 
-  useEffect(() => setIncludeDescendants(false), [color.id]);
+  useEffect(() => setIncludeDescendants(false), [activeColor?.id]);
 
   function copyValue() {
-    const value = gradientCss ?? color.hex;
+    const value = gradientCss ?? activeColor?.hex ?? "";
     void navigator.clipboard
       .writeText(value)
-      .then(() =>
-        toast.success(hasGradient ? "Copied CSS gradient." : "Copied color."),
-      )
+      .then(() => {
+        toast.success(hasGradient ? "Copied CSS gradient." : "Copied color.");
+        setCopied(true);
+        if (copiedTimeout.current) clearTimeout(copiedTimeout.current);
+        copiedTimeout.current = setTimeout(() => setCopied(false), 1500);
+      })
       .catch(() => toast.error("Unable to copy color."));
   }
 
   return (
-    <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="gap-0 p-0 sm:max-w-md">
-        <SheetHeader className="gap-3 border-b pr-12">
-          <div className="flex items-center gap-3">
-            <div
-              aria-hidden
-              className="size-11 shrink-0 rounded-lg border shadow-sm"
-              style={
-                gradientCss
-                  ? { background: gradientCss }
-                  : { backgroundColor: color.hex }
-              }
-            />
-            <div className="min-w-0">
-              <SheetTitle>
-                {color.title?.trim() || color.hex.toUpperCase()}
-              </SheetTitle>
-              <SheetDescription className="font-mono text-xs">
-                {hasGradient ? "Gradient" : color.hex.toUpperCase()}
-              </SheetDescription>
+    <Drawer
+      open={open}
+      onOpenChange={(next) => !next && onClose()}
+      swipeDirection={isMobile ? "down" : "right"}
+      fast
+    >
+      {activeColor ? (
+        <DrawerContent
+          className="max-h-[calc(100dvh-1.5rem)] gap-0 rounded-xl! border border-border bg-background! p-0 text-foreground! shadow-2xl"
+          style={
+            {
+              "--drawer-content-width": "34rem",
+              "--drawer-inset": "0.75rem",
+              "--bleed": "0",
+            } as unknown as CSSProperties
+          }
+        >
+          <DrawerHeader className="flex-row! items-start justify-between gap-4 border-b px-4 py-4 text-left!">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <button
+                type="button"
+                onClick={copyValue}
+                aria-label={
+                  hasGradient ? "Copy CSS gradient" : "Copy hex color"
+                }
+                className="group/swatch relative size-12 shrink-0 cursor-pointer overflow-hidden rounded-xl border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                style={
+                  gradientCss
+                    ? { background: gradientCss }
+                    : { backgroundColor: activeColor.hex }
+                }
+              >
+                <span
+                  aria-hidden
+                  className="absolute inset-0 flex items-center justify-center rounded-[inherit] bg-black/0 text-white opacity-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)] transition-[background-color,opacity] duration-75 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/swatch:bg-black/25 group-hover/swatch:opacity-100 focus-visible:bg-black/25 focus-visible:opacity-100"
+                >
+                  {copied ? (
+                    <CheckIcon className="size-4" />
+                  ) : (
+                    <CopyIcon className="size-4" />
+                  )}
+                </span>
+              </button>
+              <div className="min-w-0">
+                <DrawerTitle className="truncate text-base leading-tight font-medium">
+                  {activeColor.title?.trim() || activeColor.hex.toUpperCase()}
+                </DrawerTitle>
+                <DrawerDescription className="font-mono text-xs">
+                  {hasGradient ? "Gradient" : activeColor.hex.toUpperCase()}
+                </DrawerDescription>
+              </div>
             </div>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-fit gap-1.5"
-            onClick={copyValue}
-          >
-            <CopyIcon className="size-3.5" />
-            {hasGradient ? "Copy CSS" : "Copy hex"}
-          </Button>
-        </SheetHeader>
-
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {scope.type === "collection" ? (
-            <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-              <span className="text-xs text-muted-foreground">
-                {includeDescendants ? "Entire collection" : "This view"}
-              </span>
+            <div className="flex shrink-0 items-center gap-1.5">
               <Button
                 type="button"
                 variant="ghost"
-                size="sm"
-                onClick={() => setIncludeDescendants((current) => !current)}
+                size="icon-sm"
+                aria-label="Peek"
+                title="Peek — coming soon"
+                disabled
               >
-                {includeDescendants ? "Search this view" : "Search collection"}
+                <PanelRightIcon className="size-4" />
               </Button>
+              {onEdit ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Edit color"
+                  onClick={onEdit}
+                >
+                  <PencilIcon className="size-4" />
+                </Button>
+              ) : null}
+              <DrawerClose
+                render={
+                  <Button variant="ghost" size="icon-sm" aria-label="Close" />
+                }
+              >
+                <XIcon className="size-4" />
+                <span className="sr-only">Close</span>
+              </DrawerClose>
             </div>
-          ) : null}
+          </DrawerHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            {search.isLoading || search.isSearching ? (
-              <ColorResultsSkeleton />
-            ) : search.isError ? (
-              <ColorSearchError onRetry={() => void search.refetch()} />
-            ) : results.length === 0 ? (
-              <ColorSearchEmpty />
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {results.map((result) => {
-                  const location =
-                    result.location.type === "collection" &&
-                    result.location.folderNames.length > 0
-                      ? result.location.folderNames.join(" / ")
-                      : result.location.type === "collection"
-                        ? "Collection root"
-                        : "Inbox";
-                  return (
-                    <button
-                      key={result.image.id}
-                      type="button"
-                      className="group min-w-0 text-left"
-                      onClick={() => {
-                        onClose();
-                        onOpenImage({
-                          id: result.image.id,
-                          type: "image",
-                          url: result.image.url,
-                          width: result.image.width,
-                          height: result.image.height,
-                          title: result.image.title ?? undefined,
-                          alt: result.image.alt ?? undefined,
-                          blurDataURL: result.image.blurDataURL ?? undefined,
-                          dominantColors: result.image.dominantColors,
-                        });
-                      }}
-                    >
-                      <img
-                        src={result.image.url}
-                        alt={
-                          result.image.alt ??
-                          result.image.title ??
-                          "Color match"
-                        }
-                        width={result.image.width}
-                        height={result.image.height}
-                        className="aspect-square w-full rounded-lg border object-cover transition-opacity group-hover:opacity-80"
-                      />
-                      <span className="mt-1 block truncate text-xs text-muted-foreground">
-                        {location}
-                      </span>
-                    </button>
-                  );
-                })}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {scope.type === "collection" ? (
+              <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+                <span className="text-sm font-medium text-muted-foreground">
+                  Search in
+                </span>
+                <Tabs
+                  value={includeDescendants ? "collection" : "view"}
+                  onValueChange={(value) =>
+                    setIncludeDescendants(value === "collection")
+                  }
+                  variant="segment"
+                  size="sm"
+                >
+                  <TabsList aria-label="Search scope">
+                    <TabsTrigger value="view">This view</TabsTrigger>
+                    <TabsTrigger value="collection">
+                      Entire collection
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
-            )}
+            ) : null}
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              {search.isLoading || search.isSearching ? (
+                <ColorResultsSkeleton />
+              ) : search.isError ? (
+                <ColorSearchError onRetry={() => void search.refetch()} />
+              ) : results.length === 0 ? (
+                <ColorSearchEmpty />
+              ) : (
+                <div className="columns-2 gap-3">
+                  {results.map((result) => {
+                    const location =
+                      result.location.type === "collection" &&
+                      result.location.folderNames.length > 0
+                        ? result.location.folderNames.join(" / ")
+                        : result.location.type === "collection"
+                          ? "Collection root"
+                          : "Inbox";
+                    return (
+                      <ImageResultTile
+                        key={result.image.id}
+                        image={result.image}
+                        label={location}
+                        onOpen={() => {
+                          onClose();
+                          onOpenImage({
+                            id: result.image.id,
+                            type: "image",
+                            url: result.image.url,
+                            width: result.image.width,
+                            height: result.image.height,
+                            title: result.image.title ?? undefined,
+                            alt: result.image.alt ?? undefined,
+                            blurDataURL: result.image.blurDataURL ?? undefined,
+                            dominantColors: result.image.dominantColors,
+                          });
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </DrawerContent>
+      ) : null}
+    </Drawer>
+  );
+}
+
+function ImageResultTile({
+  image,
+  label,
+  onOpen,
+}: {
+  image: {
+    id: string;
+    url: string;
+    width: number;
+    height: number;
+    title: string | null;
+    alt: string | null;
+    blurDataURL: string | null;
+    dominantColors: string[];
+  };
+  label: string;
+  onOpen: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      className="group/tile relative mb-3 block w-full break-inside-avoid overflow-hidden rounded-lg border border-transparent text-left focus-visible:ring-2 focus-visible:ring-ring"
+      style={{ aspectRatio: `${image.width} / ${image.height}` }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={onOpen}
+    >
+      <ProgressiveImage
+        src={image.url}
+        blurDataURL={image.blurDataURL ?? undefined}
+        alt={image.alt ?? image.title ?? "Color match"}
+        className="absolute inset-0 h-full w-full object-cover transition-all duration-300 ease-out group-hover/tile:scale-[1.025]"
+        loading="lazy"
+      />
+      <AnimatePresence>
+        {hovered ? (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ duration: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
+          >
+            <span className="inline-flex max-w-full min-w-0 items-center rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground">
+              <span className="truncate">{label}</span>
+            </span>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </button>
   );
 }
 
 function ColorResultsSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-3" aria-label="Searching for images">
+    <div className="columns-2 gap-3" aria-label="Searching for images">
       {Array.from({ length: 6 }, (_, index) => (
-        <div key={index} className="space-y-1.5">
-          <div className="aspect-square animate-pulse rounded-lg bg-muted" />
-          <div className="h-3 w-3/5 animate-pulse rounded bg-muted" />
-        </div>
+        <div
+          key={index}
+          className="mb-3 animate-pulse break-inside-avoid rounded-lg bg-muted"
+          style={{ aspectRatio: index % 2 === 0 ? "3 / 4" : "1 / 1" }}
+        />
       ))}
     </div>
   );
