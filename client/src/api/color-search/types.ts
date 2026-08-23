@@ -14,7 +14,7 @@ export type ColorSearchScope =
 export type ColorSearchMatchMode = "strict" | "weighted";
 
 export type ColorSearchInput = {
-  colors: Array<OklabColor & { weight?: number }>;
+  colors: ReadonlyArray<OklabColor & { weight?: number }>;
   scope: ColorSearchScope;
   matchMode?: ColorSearchMatchMode;
 };

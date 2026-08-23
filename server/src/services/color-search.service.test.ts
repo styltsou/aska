@@ -84,6 +84,7 @@ describe("ColorSearchService", () => {
     const response = await service.search("workspace-1", {
       colors: [{ oklabL: 0.628, oklabA: 0.225, oklabB: 0.126 }],
       scope: { type: "inbox" },
+      matchMode: "strict",
     });
 
     expect(repository.findBroadCandidateAssets).toHaveBeenCalledWith(

@@ -48,7 +48,7 @@ export const ColorSearchRequestSchema = z
         code: z.ZodIssueCode.too_big,
         maximum: 5,
         inclusive: true,
-        type: "array",
+        origin: "array",
         path: ["colors"],
         message: "Strict color search supports at most five colors",
       });

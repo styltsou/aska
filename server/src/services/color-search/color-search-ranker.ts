@@ -105,7 +105,7 @@ export function rankPalette(
  */
 export function rankWeightedPalette(
   assetId: number,
-  queryColors: readonly (OklabColor & { weight?: number })[],
+  queryColors: readonly (OklabColor & { weight?: number | undefined })[],
   paletteColors: readonly SearchPaletteColor[],
 ): RankedColorSearchCandidate | null {
   const totalWeight = queryColors.reduce(

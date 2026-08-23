@@ -54,7 +54,7 @@ export function ColorDetailDrawer({
           { color: color.gradient!.to, position: 100 },
         ],
         color.gradient?.type ?? "linear",
-        color.gradient?.angle,
+        color.gradient?.angle ?? 90,
       )
     : undefined;
 
