@@ -91,6 +91,7 @@ describe("ColorSearchService", () => {
       "workspace-1",
       { type: "inbox" },
       [{ oklabL: 0.628, oklabA: 0.225, oklabB: 0.126 }],
+      "strict",
     );
     expect(repository.getPaletteColors).toHaveBeenCalledWith(
       "workspace-1",
