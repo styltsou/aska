@@ -12,6 +12,27 @@ export class ApiError extends Error {
   }
 }
 
+const USER_FACING_API_MESSAGES: Record<string, string> = {
+  validation_error: "The provided information is invalid.",
+  unauthorized: "Your session has expired. Please sign in again.",
+  forbidden: "You do not have permission to perform this action.",
+  conflict: "This changed elsewhere. Please try again.",
+  not_found: "The requested item could not be found.",
+  rate_limited: "Too many requests. Please try again shortly.",
+  not_implemented: "This action is not available yet.",
+  internal_error: "Something went wrong. Please try again.",
+};
+
+export function getUserFacingApiErrorMessage(
+  error: unknown,
+  fallback: string,
+): string {
+  if (!(error instanceof ApiError)) return fallback;
+  return error.code
+    ? (USER_FACING_API_MESSAGES[error.code] ?? fallback)
+    : fallback;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${SERVER_URL}${path}`, {
     credentials: "include",
