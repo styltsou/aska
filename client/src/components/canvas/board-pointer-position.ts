@@ -69,6 +69,7 @@ export function getBoardDropPlacement(
   if (position) {
     return {
       position: { x: Math.round(position.x), y: Math.round(position.y) },
+      collisionBehavior: "preserve-anchor",
     };
   }
 
@@ -81,7 +82,7 @@ export function getBoardPastePlacement(
 ): BoardInsertionPlacement | undefined {
   const position = getBoardPointerPosition(boardKey);
   return position
-    ? { position }
+    ? { position, collisionBehavior: "preserve-anchor" }
     : getBoardViewportCenterPlacement(visibleBounds);
 }
 

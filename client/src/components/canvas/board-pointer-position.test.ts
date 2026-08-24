@@ -21,6 +21,7 @@ describe("board event placement", () => {
 
     expect(getBoardDropPlacement(boardKey, { x: 420.8, y: 125.2 })).toEqual({
       position: { x: 320, y: 146 },
+      collisionBehavior: "preserve-anchor",
     });
 
     clearConverter();
@@ -32,6 +33,7 @@ describe("board event placement", () => {
 
     expect(getBoardPastePlacement(boardKey, visibleBounds)).toEqual({
       position: { x: -120, y: 340 },
+      collisionBehavior: "preserve-anchor",
     });
   });
 
@@ -69,6 +71,7 @@ describe("board event placement", () => {
 
     expect(getBoardDropPlacement(boardKey, { x: 0, y: 0 })).toEqual({
       position: { x: 2, y: 2 },
+      collisionBehavior: "preserve-anchor",
     });
 
     clearNewConverter();

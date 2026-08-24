@@ -26,6 +26,12 @@ export type BoardInsertionPlacement = {
    * derives one from browser-local viewport state.
    */
   position?: BoardPosition;
+  /**
+   * Keeps an explicit pointer-based placement at its requested coordinate,
+   * even when it overlaps an existing card. This is client-only metadata and
+   * is resolved before the position is persisted.
+   */
+  collisionBehavior?: "preserve-anchor";
   batch?: {
     index: number;
     size: number;

@@ -132,7 +132,32 @@ describe("infinite canvas node placement", () => {
     ).toEqual([{ x: 900, y: 900 }]);
   });
 
-  it("nudges a direct-manipulation drop when its coordinate is occupied", () => {
+  it("preserves an occupied pointer anchor", () => {
+    expect(
+      reserveNodePositions([note], [{ ...note, id: "note-2" }], {
+        position: { x: 48, y: 48 },
+        collisionBehavior: "preserve-anchor",
+      }),
+    ).toEqual([{ x: 48, y: 48 }]);
+  });
+
+  it("preserves every cell in an occupied pointer-anchored batch", () => {
+    expect(
+      reserveNodePositions(
+        [{ ...note, position: { x: 360, y: 340 } }],
+        [note, { ...note, id: "note-2" }],
+        {
+          position: { x: 360, y: 340 },
+          collisionBehavior: "preserve-anchor",
+        },
+      ),
+    ).toEqual([
+      { x: 360, y: 340 },
+      { x: 360 + BOARD_CARD_WIDTH + BOARD_ITEM_GAP, y: 340 },
+    ]);
+  });
+
+  it("nudges an unmarked placement when its coordinate is occupied", () => {
     expect(
       reserveNodePositions([note], [{ ...note, id: "note-2" }], {
         position: { x: 0, y: 0 },

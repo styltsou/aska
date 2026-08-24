@@ -83,7 +83,8 @@ export function reserveNodePositions(
   newNodes: CollectionNode[],
   placement?: BoardPosition | BoardInsertionPlacement,
 ): BoardPosition[] {
-  const { position: requested } = normalizePlacement(placement);
+  const { position: requested, collisionBehavior } =
+    normalizePlacement(placement);
   const occupied = existingNodes.map((node, index) =>
     getNodeBounds(node, getInitialNodePosition(node, index)),
   );
@@ -98,6 +99,10 @@ export function reserveNodePositions(
     : newNodes.map((_, index) =>
         getFallbackPosition(existingNodes.length + index),
       );
+
+  if (requested && collisionBehavior === "preserve-anchor") {
+    return preferredPositions;
+  }
 
   return newNodes.map((node, index) => {
     const position = findLocalNudgePosition(

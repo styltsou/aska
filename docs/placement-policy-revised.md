@@ -5,56 +5,45 @@ everything that works, fixes two real inconsistencies in the current
 behavior, and closes the viewport-anchor bug caused by resolving
 unanchored placements server-side.
 
-Every creation or move resolves one placement context (PC), then uses the
-same card-footprint and 32-pixel-gutter collision rules. Positions are
+Every creation or move resolves one placement context (PC). Positions are
 persisted on collection nodes; viewports remain local browser state and are
-never a shared source of truth — the fix below is about respecting that
-constraint properly, not changing it.
+never a shared source of truth. Explicit spatial intent takes precedence over
+collision avoidance, while viewport-centred and composition-centred actions
+use the standard card-footprint and 32-pixel-gutter collision rules.
 
 ## Core principle
 
-**The server resolves collisions against an anchor it is given. It never
-infers an anchor on its own.** Any context that has spatial intent (a click,
-a drop, a pointer position) already produces a client-observed coordinate.
-Any context that lacks spatial intent must have its anchor computed
-client-side (viewport centre, composition centre) and passed into the
-placement request as data, exactly the way canvas paste already passes the
-last pointer position. This single rule is what fixes the "cards land at
-canvas origin instead of viewport centre" bug: that bug exists because
-header/palette/note-extraction currently ask the server to _decide_ an
-anchor it has no authority to compute, instead of _receiving_ one.
+**The client preserves an explicit spatial anchor; it never substitutes a
+collision-free position for one.** A click, drop, or pointer position already
+produces a client-observed coordinate and persists exactly as observed. Any
+context that lacks spatial intent computes its anchor client-side (viewport
+centre, composition centre) and applies collision avoidance locally. This
+prevents header, palette, and note-extraction actions from falling back to
+canvas origin while preserving the user's requested canvas location.
 
 ## Placement contexts
 
 | Context                                  | Anchor                                                   | Anchor resolved by                | Search area                    | Collision behavior                             |
 | ---------------------------------------- | -------------------------------------------------------- | --------------------------------- | ------------------------------ | ---------------------------------------------- |
-| Canvas context menu                      | Captured flow-space click                                | Client (has spatial intent)       | None                           | Bounded local nudge only                       |
-| Direct file drop                         | Actual flow-space drop event                             | Client (has spatial intent)       | None                           | Bounded local nudge only                       |
-| Canvas paste                             | Last pointer position on that canvas                     | Client (has spatial intent)       | None                           | Bounded local nudge only                       |
+| Canvas context menu                      | Captured flow-space click                                | Client (has spatial intent)       | None                           | Preserve exact anchor; overlap is allowed     |
+| Direct file drop                         | Actual flow-space drop event                             | Client (has spatial intent)       | None                           | Preserve exact anchor; overlap is allowed     |
+| Canvas paste                             | Last pointer position on that canvas                     | Client (has spatial intent)       | None                           | Preserve exact anchor; overlap is allowed     |
 | Header, command palette, note extraction | Current viewport centre, computed and sent by the client | **Client** (changed — see below)  | None                           | Bounded local nudge only                       |
 | Move into a folder                       | Destination composition centre                           | Server (no spatial intent exists) | Destination composition bounds | Bounded local nudge only (changed — see below) |
 
-Two things changed from the current policy, both discussed below:
-overlap is no longer allowed to pass silently, and folder moves no longer
+Spatially anchored placements may overlap by design; folder moves no longer
 run a full centre-outward search.
 
-### Why "bounded local nudge" everywhere, not full avoidance
+### Why explicit anchors may overlap
 
 An anchored action (right-click, drop, paste) carries explicit spatial
-intent from the user. If the resolver moves the card somewhere else to
-dodge a collision, it has overridden that intent, which reads as
-unpredictable rather than helpful. Conversely, doing _nothing_ about
-collision (today's behavior for header/palette/note-extraction, which
-places at centre "even if it overlaps") makes an action look like it
-silently failed, because the new card visually disappears under an
-existing one.
+intent from the user. Moving the card to dodge a collision overrides that
+intent and makes the placement feel unreliable. These actions therefore keep
+their exact anchor, including every generated cell of a multi-item drop.
 
-The fix is the same in both directions: a small, deterministic offset —
-e.g. one gutter-width in a fixed direction, repeated if still occupied,
-capped after a few steps — applied only when the target point is actually
-occupied. The card always appears where the user pointed (or where the
-viewport/composition centre was), just visibly nudged clear. No searching,
-no relocating to open space elsewhere on the canvas.
+Actions without a pointer-derived anchor still use bounded local nudges so a
+new card at the viewport or composition centre remains discoverable without
+moving it elsewhere on the canvas.
 
 ### Why folder moves no longer get a full composition search
 
@@ -83,6 +72,9 @@ per the table above) and use a fresh four-column grid. The horizontal and
 vertical gutter is the canvas-wide 32 pixels. A row advances by the
 tallest card in its row plus that gutter, so portrait images never overlap
 the next row. Batch state is not remembered between actions.
+
+For pointer-anchored batches, the whole grid is preserved exactly even when
+one or more cells overlap existing cards.
 
 When an import creates batch items sequentially, its placement context
 still carries the dimensions of the complete batch. Every item resolves

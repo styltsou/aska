@@ -61,7 +61,9 @@ export function BoardContextMenu({
   );
   const placement = useMemo(
     () =>
-      position ? { position } : getBoardViewportCenterPlacement(visibleBounds),
+      position
+        ? { position, collisionBehavior: "preserve-anchor" as const }
+        : getBoardViewportCenterPlacement(visibleBounds),
     [position, visibleBounds],
   );
   const { addClipboardAsset, isPending } = useBoardAssetActions({
