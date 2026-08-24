@@ -4,6 +4,7 @@ import {
   cropImage,
   deleteAsset,
   downloadAsset,
+  getPeekableAsset,
   getInboxContents,
   markInboxSeen,
   updateNote,
@@ -18,6 +19,7 @@ const assetRoutes = factory
   .post("/workspace/:workspaceSlug/inbox/seen", ...markInboxSeen)
   .post("/workspace/:workspaceSlug/inbox/notes", ...createInboxNote)
   .post("/workspace/:workspaceSlug/inbox/colors", ...createInboxColor)
+  .get("/workspace/:workspaceSlug/assets/:assetId", ...getPeekableAsset)
   .patch("/workspace/:workspaceSlug/assets/:assetId/note", ...updateNote)
   .patch("/workspace/:workspaceSlug/assets/:assetId/color", ...updateColor)
   .patch("/workspace/:workspaceSlug/assets/:assetId/image", ...updateImage)

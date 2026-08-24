@@ -23,7 +23,7 @@ import {
   WifiOffIcon,
   XIcon,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import { usePexelsSearch, type PexelsPhoto } from "@/api/pexels";
 import { useCreateRemoteImage } from "@/api/collection";
@@ -40,12 +40,20 @@ import {
   type PexelsPhotoDragData,
 } from "@/lib/pexels-dnd";
 import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
+import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { useSessionStore, getPexelsBrowserScope } from "@/store";
+import {
+  SIDE_PANEL_ANIMATE,
+  SIDE_PANEL_EXIT,
+  SIDE_PANEL_INITIAL,
+  SIDE_PANEL_TRANSITION,
+} from "@/components/app-shell/side-panel-motion";
+import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 
 const PEXELS_BROWSER_WIDTH_KEY = "pexels-browser-width";
 const PEXELS_BROWSER_MIN_WIDTH = 420;
-const PEXELS_BROWSER_MAX_WIDTH = 760;
+const PEXELS_BROWSER_MAX_WIDTH = 960;
 const DEFAULT_PEXELS_BROWSER_WIDTH = 520;
 
 const DOCK_THUMBNAIL_SIZE = 44;
@@ -357,6 +365,8 @@ export function PexelsBrowserPanel({
   collectionSlug: string;
   parentFolderPath?: string;
 }) {
+  const { closePeek } = useWorkspacePeek();
+  const reduceMotion = useReducedMotion();
   const scope = getPexelsBrowserScope(workspaceSlug, collectionSlug);
   const persistedState = useSessionStore(
     (state) => state.pexelsBrowserByScope[scope],
@@ -383,6 +393,10 @@ export function PexelsBrowserPanel({
   const createImage = useCreateRemoteImage(workspaceSlug, collectionSlug);
 
   widthRef.current = width;
+
+  useEffect(() => {
+    if (open) closePeek();
+  }, [closePeek, open]);
 
   useEffect(() => {
     setInput(savedQuery);
@@ -538,249 +552,285 @@ export function PexelsBrowserPanel({
     >
       <div
         className={cn(
-          "relative hidden w-(--pexels-browser-width) transition-[width] ease-linear group-data-[state=collapsed]/panel:w-0 md:block",
-          isResizing ? "duration-0" : "duration-120",
+          "relative hidden w-[calc(var(--pexels-browser-width)+var(--app-shell-inset))] transition-[width] ease-[cubic-bezier(0.16,1,0.3,1)] group-data-[state=collapsed]/panel:w-0 md:block",
+          isResizing ? "duration-0" : "duration-[160ms]",
         )}
       />
-      <div className="fixed inset-y-0 right-0 z-10 flex h-svh w-[min(var(--pexels-browser-width),100vw)] flex-col pr-2 transition-[right] duration-120 ease-linear group-data-[state=collapsed]/panel:-right-[min(var(--pexels-browser-width),100vw)] md:w-(--pexels-browser-width) md:group-data-[state=collapsed]/panel:-right-(--pexels-browser-width)">
-        <div className="relative flex size-full flex-col overflow-hidden bg-sidebar">
-          <div
-            aria-label="Resize Pexels browser"
-            aria-orientation="vertical"
-            className="absolute top-1/2 left-0 z-20 hidden h-16 w-2 -translate-x-1/2 -translate-y-1/2 cursor-col-resize rounded-full bg-sidebar-foreground/50 transition-[background-color,height] duration-200 ease-out before:absolute before:-inset-x-2 before:-inset-y-4 before:content-[''] hover:h-20 hover:bg-sidebar-foreground/60 active:h-20 active:bg-primary md:block"
-            role="separator"
-            onPointerDown={handleResizeStart}
-          />
-          <div className="flex h-14 shrink-0 items-center gap-2 px-2 transition-[height] duration-120 ease-linear group-has-[[data-slot=sidebar][data-state=collapsed]]/sidebar-wrapper:h-12">
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    aria-label="Close Pexels browser"
-                    className="shrink-0"
-                    size="icon"
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setSavedOpen(scope, false)}
-                  >
-                    <PanelRightCloseIcon />
-                    <span className="sr-only">Close Pexels browser</span>
-                  </Button>
-                }
-              />
-              <TooltipContent side="bottom">
-                <span>Close Pexels browser</span>
-              </TooltipContent>
-            </Tooltip>
-            <div className="relative min-w-0 flex-1">
-              {search.isFetching && !search.isFetchingNextPage ? (
-                <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground">
-                  <span className="block size-3.5 animate-spin rounded-full border-2 border-foreground/30 border-t-foreground/80" />
-                </span>
-              ) : (
-                <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              )}
-              <Input
-                aria-label="Search Pexels photos"
-                ref={searchInputRef}
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                placeholder="Search photos"
-                className="pt-0 pr-8 pb-0.5 pl-8 text-sm"
-              />
-              {input.length > 0 ? (
-                <Button
-                  aria-label="Clear search"
-                  className="absolute top-1/2 right-1 -translate-y-1/2"
-                  size="icon-xs"
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setInput("");
-                    searchInputRef.current?.focus();
-                  }}
-                >
-                  <XIcon className="size-3.5" />
-                </Button>
-              ) : null}
-            </div>
-          </div>
-          <div className="relative min-h-0 flex-1 pl-3">
-            <ScrollArea
-              className="size-full rounded-t-xl pr-2 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-sidebar-foreground/55 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
-              viewportRef={viewportRef}
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.aside
+            key="pexels-browser"
+            aria-label="Pexels browser"
+            className={cn(
+              GLASS_FRAME_CLASS,
+              "fixed inset-y-[var(--app-shell-inset)] right-[var(--app-shell-inset)] z-10 flex h-[calc(100dvh-var(--app-shell-inset)-var(--app-shell-inset))] w-[min(var(--pexels-browser-width),calc(100vw-var(--app-shell-inset)-var(--app-shell-inset)))] flex-col overflow-visible rounded-xl text-foreground shadow-none md:w-(--pexels-browser-width)",
+            )}
+            initial={reduceMotion ? false : SIDE_PANEL_INITIAL}
+            animate={SIDE_PANEL_ANIMATE}
+            exit={reduceMotion ? undefined : SIDE_PANEL_EXIT}
+            transition={{
+              ...SIDE_PANEL_TRANSITION,
+              duration: reduceMotion ? 0 : SIDE_PANEL_TRANSITION.duration,
+            }}
+          >
+            <div
+              aria-label="Resize Pexels browser"
+              aria-orientation="vertical"
+              className="group/resize absolute top-1/2 left-0 z-30 hidden h-20 w-6 -translate-x-1/2 -translate-y-1/2 cursor-col-resize touch-none md:block"
+              role="separator"
+              onPointerDown={handleResizeStart}
             >
-              <div className="pexels-results-container flex min-h-full flex-col pb-24">
-                {query.length === 0 ? (
-                  <PexelsBrowserEmptyState
-                    icon={ImagesIcon}
-                    title="Find photos to add"
-                    description="Search the Pexels library to start collecting photos for your board."
-                  />
-                ) : search.isLoading ? (
-                  <div className="pexels-results-grid columns-2 gap-2">
-                    {Array.from({ length: 6 }, (_, index) => (
-                      <div
-                        key={index}
-                        className="mb-2 aspect-[4/5] animate-pulse rounded-lg bg-muted"
-                      />
-                    ))}
-                  </div>
-                ) : photos && photos.length > 0 ? (
-                  <>
-                    <div
-                      className={cn(
-                        "pexels-results-grid columns-2 gap-2",
-                        search.isPlaceholderData &&
-                          "pointer-events-none opacity-50 transition-opacity",
-                      )}
-                    >
-                      {photos.map((photo) => (
-                        <PexelsPhotoTile
-                          key={photo.id}
-                          photo={photo}
-                          isSelected={selectedPhotoIds.has(photo.id)}
-                          selectedPhotos={selected}
-                          onToggle={togglePhoto}
-                        />
-                      ))}
-                    </div>
-                    {search.isError ? (
-                      <div className="flex flex-col items-center gap-2 py-4">
-                        <p className="text-xs text-muted-foreground">
-                          Couldn't load the rest of the results.
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => void search.refetch()}
-                        >
-                          <RefreshCwIcon className="size-3.5" />
-                          Retry
-                        </Button>
-                      </div>
-                    ) : search.hasNextPage ? (
-                      <div
-                        ref={sentinelRef}
-                        className="flex justify-center py-4"
-                      >
-                        {search.isFetchingNextPage ? (
-                          <div className="size-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
-                        ) : null}
-                      </div>
-                    ) : (
-                      <p className="py-4 text-center text-xs text-muted-foreground">
-                        End of results
-                      </p>
-                    )}
-                  </>
-                ) : search.isError ? (
-                  <PexelsBrowserEmptyState
-                    icon={WifiOffIcon}
-                    title="Search unavailable"
-                    description={
-                      search.error instanceof Error
-                        ? search.error.message
-                        : "Pexels search is unavailable."
-                    }
-                    action={
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void search.refetch()}
-                      >
-                        <RefreshCwIcon className="size-3.5" />
-                        Retry
-                      </Button>
-                    }
-                  />
-                ) : (
-                  <PexelsBrowserEmptyState
-                    icon={SearchXIcon}
-                    title="No results"
-                    description={`No photos found for “${query}”. Try a different keyword.`}
-                  />
-                )}
-              </div>
-            </ScrollArea>
-            <div className="pointer-events-none absolute right-0 bottom-0 left-3 z-10 flex justify-center pb-2">
-              <AnimatePresence>
-                {selected.length > 0 ? (
-                  <motion.div
-                    key="pexels-dock-cluster"
-                    layout="size"
-                    layoutDependency={dockLayoutRevision}
-                    initial={{ opacity: 0, scale: 0.98, y: 4 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{
-                      opacity: 0,
-                      scale: 0.98,
-                      y: 4,
-                      transition: {
-                        opacity: { duration: 0.1, ease: [0.8, 0, 1, 1] },
-                        scale: { duration: 0.1, ease: [0.8, 0, 1, 1] },
-                        y: { duration: 0.1, ease: [0.8, 0, 1, 1] },
-                      },
-                    }}
-                    transition={{
-                      opacity: { duration: 0.1, ease: [0, 0, 0.2, 1] },
-                      scale: { duration: 0.1, ease: [0, 0, 0.2, 1] },
-                      y: { duration: 0.1, ease: [0, 0, 0.2, 1] },
-                      layout: { duration: 0.18, ease: [0.16, 1, 0.3, 1] },
-                    }}
-                    className={`pointer-events-auto relative w-max max-w-[min(588px,calc(100%_-_16px))] rounded-xl bg-background/75 p-2 shadow-lg ring-1 ring-sidebar-foreground/10 backdrop-blur-md`}
-                    style={{ minWidth: DOCK_MIN_WIDTH }}
-                  >
-                    <SelectedPhotosDock
-                      selected={selected}
-                      onRemove={togglePhoto}
-                    />
-                    <div className="flex w-full items-center justify-between gap-4 px-0.5 pt-2">
-                      <div className="flex items-center gap-3">
-                        <Button
-                          aria-label="Clear selected photos"
-                          className="px-2.5"
-                          onClick={() => setSelected([])}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <XIcon />
-                          Clear
-                        </Button>
-                        <span className="text-xs font-medium whitespace-nowrap text-sidebar-foreground">
-                          <span className="font-mono tabular-nums">
-                            {selected.length}
-                          </span>{" "}
-                          selected
-                        </span>
-                      </div>
-                      <Button
-                        aria-label={
-                          createImage.isPending
-                            ? "Adding photos…"
-                            : "Add selected photos to board"
-                        }
-                        className="shrink-0 px-2.5"
-                        disabled={createImage.isPending}
-                        onClick={() => void addSelected()}
-                        variant="default"
-                        size="sm"
-                      >
-                        {createImage.isPending ? (
-                          <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        ) : (
-                          <ImportIcon />
-                        )}
-                        {createImage.isPending ? "Adding…" : "Import"}
-                      </Button>
-                    </div>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+              <span
+                aria-hidden
+                className="absolute top-1/2 left-1/2 h-16 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/35 transition-[background-color,height] duration-200 ease-out group-hover/resize:h-20 group-hover/resize:bg-foreground/50 group-active/resize:h-20 group-active/resize:bg-primary"
+                style={{ clipPath: "inset(0 50% 0 0)" }}
+              />
             </div>
-          </div>
-        </div>
-      </div>
+            <div className="relative flex size-full flex-col overflow-hidden rounded-xl">
+              <div
+                className={cn(
+                  GLASS_FRAME_CLASS,
+                  "flex h-12 shrink-0 items-center gap-2 rounded-t-xl rounded-b-none p-2 ring-0",
+                )}
+              >
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        aria-label="Close Pexels browser"
+                        className="shrink-0"
+                        size="icon"
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setSavedOpen(scope, false)}
+                      >
+                        <PanelRightCloseIcon />
+                        <span className="sr-only">Close Pexels browser</span>
+                      </Button>
+                    }
+                  />
+                  <TooltipContent side="bottom">
+                    <span>Close Pexels browser</span>
+                  </TooltipContent>
+                </Tooltip>
+                <div className="relative min-w-0 flex-1">
+                  {search.isFetching && !search.isFetchingNextPage ? (
+                    <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground">
+                      <span className="block size-3.5 animate-spin rounded-full border-2 border-foreground/30 border-t-foreground/80" />
+                    </span>
+                  ) : (
+                    <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  )}
+                  <Input
+                    aria-label="Search Pexels photos"
+                    ref={searchInputRef}
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    placeholder="Search photos"
+                    className="pt-0 pr-8 pb-0.5 pl-8 text-sm"
+                  />
+                  {input.length > 0 ? (
+                    <Button
+                      aria-label="Clear search"
+                      className="absolute top-1/2 right-1 -translate-y-1/2"
+                      size="icon-xs"
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setInput("");
+                        searchInputRef.current?.focus();
+                      }}
+                    >
+                      <XIcon className="size-3.5" />
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+              <div className="relative min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background p-[var(--app-shell-inset)]">
+                <ScrollArea
+                  className="size-full rounded-xl [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
+                  viewportRef={viewportRef}
+                >
+                  <div
+                    className={cn(
+                      "pexels-results-container flex min-h-full flex-col",
+                      selected.length > 0
+                        ? "pb-24"
+                        : "pb-[var(--app-shell-inset)]",
+                    )}
+                  >
+                    {query.length === 0 ? (
+                      <PexelsBrowserEmptyState
+                        icon={ImagesIcon}
+                        title="Find photos to add"
+                        description="Search the Pexels library to start collecting photos for your board."
+                      />
+                    ) : search.isLoading ? (
+                      <div className="pexels-results-grid columns-2 gap-2">
+                        {Array.from({ length: 6 }, (_, index) => (
+                          <div
+                            key={index}
+                            className="mb-2 aspect-[4/5] animate-pulse rounded-lg bg-muted"
+                          />
+                        ))}
+                      </div>
+                    ) : photos && photos.length > 0 ? (
+                      <>
+                        <div
+                          className={cn(
+                            "pexels-results-grid columns-2 gap-2",
+                            search.isPlaceholderData &&
+                              "pointer-events-none opacity-50 transition-opacity",
+                          )}
+                        >
+                          {photos.map((photo) => (
+                            <PexelsPhotoTile
+                              key={photo.id}
+                              photo={photo}
+                              isSelected={selectedPhotoIds.has(photo.id)}
+                              selectedPhotos={selected}
+                              onToggle={togglePhoto}
+                            />
+                          ))}
+                        </div>
+                        {search.isError ? (
+                          <div className="flex flex-col items-center gap-2 py-4">
+                            <p className="text-xs text-muted-foreground">
+                              Couldn't load the rest of the results.
+                            </p>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void search.refetch()}
+                            >
+                              <RefreshCwIcon className="size-3.5" />
+                              Retry
+                            </Button>
+                          </div>
+                        ) : search.hasNextPage ? (
+                          <div
+                            ref={sentinelRef}
+                            className="flex justify-center py-4"
+                          >
+                            {search.isFetchingNextPage ? (
+                              <div className="size-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
+                            ) : null}
+                          </div>
+                        ) : (
+                          <p className="py-4 text-center text-xs text-muted-foreground">
+                            End of results
+                          </p>
+                        )}
+                      </>
+                    ) : search.isError ? (
+                      <PexelsBrowserEmptyState
+                        icon={WifiOffIcon}
+                        title="Search unavailable"
+                        description={
+                          search.error instanceof Error
+                            ? search.error.message
+                            : "Pexels search is unavailable."
+                        }
+                        action={
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void search.refetch()}
+                          >
+                            <RefreshCwIcon className="size-3.5" />
+                            Retry
+                          </Button>
+                        }
+                      />
+                    ) : (
+                      <PexelsBrowserEmptyState
+                        icon={SearchXIcon}
+                        title="No results"
+                        description={`No photos found for “${query}”. Try a different keyword.`}
+                      />
+                    )}
+                  </div>
+                </ScrollArea>
+                <div className="pointer-events-none absolute right-[var(--app-shell-inset)] bottom-0 left-[var(--app-shell-inset)] z-10 flex justify-center pb-[var(--app-shell-inset)]">
+                  <AnimatePresence>
+                    {selected.length > 0 ? (
+                      <motion.div
+                        key="pexels-dock-cluster"
+                        layout="size"
+                        layoutDependency={dockLayoutRevision}
+                        initial={{ opacity: 0, scale: 0.98, y: 4 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{
+                          opacity: 0,
+                          scale: 0.98,
+                          y: 4,
+                          transition: {
+                            opacity: { duration: 0.1, ease: [0.8, 0, 1, 1] },
+                            scale: { duration: 0.1, ease: [0.8, 0, 1, 1] },
+                            y: { duration: 0.1, ease: [0.8, 0, 1, 1] },
+                          },
+                        }}
+                        transition={{
+                          opacity: { duration: 0.1, ease: [0, 0, 0.2, 1] },
+                          scale: { duration: 0.1, ease: [0, 0, 0.2, 1] },
+                          y: { duration: 0.1, ease: [0, 0, 0.2, 1] },
+                          layout: { duration: 0.18, ease: [0.16, 1, 0.3, 1] },
+                        }}
+                        className="pointer-events-auto relative w-max max-w-[min(588px,calc(100%_-_var(--app-shell-inset)_-_var(--app-shell-inset)))] rounded-xl bg-background/75 p-2 shadow-lg ring-1 ring-foreground/10 backdrop-blur-md"
+                        style={{ minWidth: DOCK_MIN_WIDTH }}
+                      >
+                        <SelectedPhotosDock
+                          selected={selected}
+                          onRemove={togglePhoto}
+                        />
+                        <div className="flex w-full items-center justify-between gap-4 px-0.5 pt-2">
+                          <div className="flex items-center gap-3">
+                            <Button
+                              aria-label="Clear selected photos"
+                              className="px-2.5"
+                              onClick={() => setSelected([])}
+                              size="sm"
+                              variant="outline"
+                            >
+                              <XIcon />
+                              Clear
+                            </Button>
+                            <span className="text-xs font-medium whitespace-nowrap text-sidebar-foreground">
+                              <span className="font-mono tabular-nums">
+                                {selected.length}
+                              </span>{" "}
+                              selected
+                            </span>
+                          </div>
+                          <Button
+                            aria-label={
+                              createImage.isPending
+                                ? "Adding photos…"
+                                : "Add selected photos to board"
+                            }
+                            className="shrink-0 px-2.5"
+                            disabled={createImage.isPending}
+                            onClick={() => void addSelected()}
+                            variant="default"
+                            size="sm"
+                          >
+                            {createImage.isPending ? (
+                              <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            ) : (
+                              <ImportIcon />
+                            )}
+                            {createImage.isPending ? "Adding…" : "Import"}
+                          </Button>
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </div>
+          </motion.aside>
+        ) : null}
+      </AnimatePresence>
     </aside>
   );
 }

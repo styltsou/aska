@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { motion, useReducedMotion } from "motion/react";
@@ -15,6 +16,20 @@ type NoteSection = {
 
 const SECTION_SCROLL_OFFSET = 72;
 const ACTIVE_SECTION_LINE = 0.28;
+const MIN_SCROLLBAR_WIDTH = 8;
+const PREVIEW_RAIL_GAP = 2;
+
+function getLayoutRight(element: HTMLElement) {
+  let right = element.offsetLeft + element.offsetWidth;
+  let parent = element.offsetParent;
+
+  while (parent instanceof HTMLElement) {
+    right += parent.offsetLeft;
+    parent = parent.offsetParent;
+  }
+
+  return right;
+}
 
 function readSections(editor: Editor): NoteSection[] {
   const sections: NoteSection[] = [];
@@ -82,6 +97,9 @@ export function NotePreviewRail({
   });
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [rightOffset, setRightOffset] = useState(
+    MIN_SCROLLBAR_WIDTH + PREVIEW_RAIL_GAP,
+  );
   const activeIdRef = useRef(activeId);
 
   activeIdRef.current = activeId;
@@ -91,6 +109,24 @@ export function NotePreviewRail({
     if (!container || sections.length === 0) return;
 
     let frame = 0;
+    const updateRailPosition = () => {
+      const scrollbarWidth = Math.max(
+        MIN_SCROLLBAR_WIDTH,
+        container.offsetWidth - container.clientWidth,
+      );
+      const nextOffset = Math.max(
+        scrollbarWidth + PREVIEW_RAIL_GAP,
+        Math.round(
+          window.innerWidth -
+            getLayoutRight(container) +
+            scrollbarWidth +
+            PREVIEW_RAIL_GAP,
+        ),
+      );
+      setRightOffset((current) =>
+        current === nextOffset ? current : nextOffset,
+      );
+    };
     const updateActiveSection = () => {
       frame = 0;
       const containerRect = container.getBoundingClientRect();
@@ -117,13 +153,19 @@ export function NotePreviewRail({
       if (!frame) frame = window.requestAnimationFrame(updateActiveSection);
     };
 
+    updateRailPosition();
     updateActiveSection();
     container.addEventListener("scroll", scheduleUpdate, { passive: true });
-    const resizeObserver = new ResizeObserver(scheduleUpdate);
+    window.addEventListener("resize", updateRailPosition);
+    const resizeObserver = new ResizeObserver(() => {
+      updateRailPosition();
+      scheduleUpdate();
+    });
     resizeObserver.observe(container);
 
     return () => {
       container.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", updateRailPosition);
       resizeObserver.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
     };
@@ -153,8 +195,11 @@ export function NotePreviewRail({
   }
 
   // Interaction adapted to Aska's note outline from beUI Preview Rail (MIT).
-  return (
-    <div className="fixed top-1/2 right-5 z-20 hidden -translate-y-1/2 items-center lg:flex">
+  const rail = (
+    <div
+      className="fixed top-1/2 z-[60] hidden -translate-y-1/2 items-center lg:flex"
+      style={{ right: rightOffset }}
+    >
       {previewSection ? (
         <motion.div
           key={previewSection.id}
@@ -235,4 +280,8 @@ export function NotePreviewRail({
       </nav>
     </div>
   );
+
+  return typeof document === "undefined"
+    ? rail
+    : createPortal(rail, document.body);
 }

@@ -422,14 +422,15 @@ export function ColorEditorDialog({
           GLASS_FRAME_CLASS,
           "rounded-xl! transition-[width,transform,height,opacity,filter] md:[--translate-x:-50%] md:data-[swipe-axis=y]:inset-x-auto md:data-[swipe-axis=y]:left-1/2",
           isGradient
-            ? "md:data-[swipe-axis=y]:w-[min(calc(100%-2rem),68rem)]"
-            : "md:data-[swipe-axis=y]:w-[min(calc(100%-2rem),44rem)]",
+            ? "md:data-[swipe-axis=y]:w-[min(calc(100%-1rem),68rem)]"
+            : "md:data-[swipe-axis=y]:w-[min(calc(100%-1rem),44rem)]",
         )}
         style={
           {
-            "--drawer-inset": "0.75rem",
+            "--drawer-inset": "var(--app-shell-inset)",
             "--bleed": "0",
-            "--drawer-content-max-height": "calc(100dvh - 1.5rem)",
+            "--drawer-content-max-height":
+              "calc(100dvh - var(--app-shell-inset) - var(--app-shell-inset))",
           } as unknown as CSSProperties
         }
       >

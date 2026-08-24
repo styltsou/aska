@@ -37,6 +37,7 @@ import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { gradientToCss } from "@/lib/color-gradient";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { ColorAsset, ImageAsset } from "@/types/asset";
+import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 
 const EMPTY_RESULTS: never[] = [];
 
@@ -57,6 +58,7 @@ export function ColorDetailDrawer({
   onEdit?: () => void;
   open?: boolean;
 }) {
+  const { peekColor } = useWorkspacePeek();
   const isMobile = useIsMobile();
   const [activeColor, setActiveColor] = useState<ColorAsset | undefined>(color);
   useEffect(() => {
@@ -117,11 +119,11 @@ export function ColorDetailDrawer({
     >
       {activeColor ? (
         <DrawerContent
-          className="max-h-[calc(100dvh-1.5rem)] gap-0 rounded-xl! border-0! bg-background! p-0 text-foreground! shadow-none ring-1 ring-foreground/10"
+          className="max-h-[calc(100dvh-var(--app-shell-inset)-var(--app-shell-inset))] gap-0 rounded-xl! border-0! bg-background! p-0 text-foreground! shadow-none ring-1 ring-foreground/10"
           style={
             {
               "--drawer-content-width": "34rem",
-              "--drawer-inset": "0.75rem",
+              "--drawer-inset": "var(--app-shell-inset)",
               "--bleed": "0",
             } as unknown as CSSProperties
           }
@@ -169,8 +171,12 @@ export function ColorDetailDrawer({
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Peek"
-                title="Peek — coming soon"
-                disabled
+                title="Peek color"
+                onClick={() => {
+                  if (!activeColor) return;
+                  peekColor(activeColor, effectiveScope);
+                  onClose();
+                }}
               >
                 <PanelRightIcon className="size-4" />
               </Button>

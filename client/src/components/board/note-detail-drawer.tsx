@@ -10,9 +10,11 @@ import {
 import {
   ArrowLeftIcon,
   CheckIcon,
+  CopyIcon,
   DotIcon,
   InfoIcon,
   LoaderCircleIcon,
+  PanelRightIcon,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
@@ -34,10 +36,15 @@ import {
 import { useBoardInsertionPlacement } from "@/components/canvas";
 import { Button } from "@/components/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { composeFrontMatter, parseFrontMatter } from "@/lib/front-matter";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import {
@@ -47,9 +54,11 @@ import {
 } from "@/lib/note-content";
 import { cn } from "@/lib/utils";
 import type { NoteAsset } from "@/types/asset";
+import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 
 const AUTOSAVE_DELAY_MS = 700;
 const SAVE_STATUS_VISIBLE_MS = 2_000;
+const COPIED_RESET_MS = 1_500;
 const NoteRichText = lazy(() =>
   import("@/components/board/note-rich-text").then((module) => ({
     default: module.NoteRichText,
@@ -79,21 +88,36 @@ export function NoteDetailDrawer({
   onNoteChange?: (note: NoteAsset) => void;
   onClose: () => void;
 }) {
+  const {
+    target: peekTarget,
+    peekNote,
+    setActiveNoteId,
+    syncPeekNote,
+    isResizing: isPeekResizing,
+  } = useWorkspacePeek();
+  const isPeekMirror =
+    peekTarget?.type === "note" && peekTarget.asset.id === note?.id;
   const noteContentRef = useRef<HTMLDivElement>(null);
   const richTextRef = useRef<NoteRichTextHandle>(null);
   const draftRef = useRef(note?.content ?? "");
   const closeAfterSaveRef = useRef(false);
+  const closeRequestedRef = useRef(false);
   const failedContentRef = useRef<string | undefined>(undefined);
-  const detailsCloseTimeoutRef = useRef<number | undefined>(undefined);
   const saveStatusHideTimeoutRef = useRef<number | undefined>(undefined);
   const extractionFeedbackTimeoutRef = useRef<number | undefined>(undefined);
+  const copiedResetTimeoutRef = useRef<number | undefined>(undefined);
   const hasObservedSaveStateRef = useRef(false);
   const [draft, setDraft] = useState(note?.content ?? "");
+  const [workspaceOpen, setWorkspaceOpen] = useState(note !== undefined);
   const [saveState, setSaveState] = useState<SaveState>("saved");
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [showSaveState, setShowSaveState] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [extractionFeedback, setExtractionFeedback] =
     useState<ExtractionFeedback>();
+  const closeWorkspace = useCallback(() => {
+    closeRequestedRef.current = true;
+    setWorkspaceOpen(false);
+  }, []);
   const frontMatter = useMemo(() => parseFrontMatter(draft), [draft]);
   const updateNote = useUpdateNote(workspaceSlug);
   const deleteAsset = useDeleteAsset(workspaceSlug);
@@ -115,6 +139,24 @@ export function NoteDetailDrawer({
   const noteContent = note?.content;
 
   draftRef.current = draft;
+
+  useEffect(() => {
+    if (note) {
+      setWorkspaceOpen(true);
+    } else {
+      closeRequestedRef.current = false;
+      setWorkspaceOpen(false);
+    }
+  }, [note?.id]);
+
+  useEffect(() => {
+    setActiveNoteId(note?.id);
+    return () => setActiveNoteId(undefined);
+  }, [note?.id, setActiveNoteId]);
+
+  useEffect(() => {
+    if (note) syncPeekNote(note);
+  }, [note, syncPeekNote]);
 
   useEffect(() => {
     if (saveStatusHideTimeoutRef.current !== undefined) {
@@ -140,6 +182,9 @@ export function NoteDetailDrawer({
     () => () => {
       if (extractionFeedbackTimeoutRef.current !== undefined) {
         window.clearTimeout(extractionFeedbackTimeoutRef.current);
+      }
+      if (copiedResetTimeoutRef.current !== undefined) {
+        window.clearTimeout(copiedResetTimeoutRef.current);
       }
     },
     [],
@@ -189,7 +234,7 @@ export function NoteDetailDrawer({
           clearEditDraft(noteId);
           setSaveState("saved");
         }
-        if (closeAfterSave) onClose();
+        if (closeAfterSave) closeWorkspace();
         return;
       }
 
@@ -222,7 +267,7 @@ export function NoteDetailDrawer({
                 window.setTimeout(() => persist(latestContent, true), 0);
                 return;
               }
-              onClose();
+              closeWorkspace();
             }
           },
           onError: (error) => {
@@ -236,7 +281,15 @@ export function NoteDetailDrawer({
         },
       );
     },
-    [isPending, mutate, note, noteContent, noteId, onClose, onNoteChange],
+    [
+      closeWorkspace,
+      isPending,
+      mutate,
+      note,
+      noteContent,
+      noteId,
+      onNoteChange,
+    ],
   );
 
   useEffect(() => {
@@ -328,24 +381,6 @@ export function NoteDetailDrawer({
     ],
   );
 
-  function openDetails() {
-    if (detailsCloseTimeoutRef.current !== undefined) {
-      window.clearTimeout(detailsCloseTimeoutRef.current);
-      detailsCloseTimeoutRef.current = undefined;
-    }
-    setDetailsOpen(true);
-  }
-
-  function closeDetailsSoon() {
-    if (detailsCloseTimeoutRef.current !== undefined) {
-      window.clearTimeout(detailsCloseTimeoutRef.current);
-    }
-    detailsCloseTimeoutRef.current = window.setTimeout(
-      () => setDetailsOpen(false),
-      120,
-    );
-  }
-
   function handleDraftChange(bodyContent: string) {
     if (!note) return;
     const content = composeFrontMatter(frontMatter, bodyContent);
@@ -363,7 +398,7 @@ export function NoteDetailDrawer({
       if (deleteAsset.isPending) return;
       setSaveState("deleting");
       deleteAsset.mutate(note.id, {
-        onSuccess: onClose,
+        onSuccess: closeWorkspace,
         onError: (error) => {
           setSaveState("error");
           toast.error(
@@ -373,7 +408,7 @@ export function NoteDetailDrawer({
       });
       return;
     }
-    if (content === note.content) return onClose();
+    if (content === note.content) return closeWorkspace();
     if (updateNote.isPending) {
       closeAfterSaveRef.current = true;
       return;
@@ -381,140 +416,238 @@ export function NoteDetailDrawer({
     persist(content, true);
   }
 
+  function copyNoteMarkdown() {
+    const markdown =
+      richTextRef.current?.getMarkdown() ??
+      parseFrontMatter(draftRef.current).body;
+    if (!markdown.trim()) {
+      toast.error("Nothing to copy yet.");
+      return;
+    }
+    if (typeof navigator.clipboard?.writeText !== "function") {
+      toast.error("Clipboard is not available.");
+      return;
+    }
+    void navigator.clipboard
+      .writeText(markdown)
+      .then(() => {
+        setCopied(true);
+        if (copiedResetTimeoutRef.current !== undefined) {
+          window.clearTimeout(copiedResetTimeoutRef.current);
+        }
+        copiedResetTimeoutRef.current = window.setTimeout(
+          () => setCopied(false),
+          COPIED_RESET_MS,
+        );
+      })
+      .catch(() => toast.error("Unable to copy note."));
+  }
+
   return (
     <NoteWorkspace
-      open={note !== undefined}
-      onOpenChange={(open) => !open && requestClose()}
+      open={workspaceOpen}
+      disablePointerDismissal={isPeekResizing}
+      onOpenChange={(open) => {
+        if (!open && isPeekResizing) return;
+        if (open) {
+          closeRequestedRef.current = false;
+          setWorkspaceOpen(true);
+        } else {
+          requestClose();
+        }
+      }}
+      onOpenChangeComplete={(open) => {
+        if (open || !closeRequestedRef.current) return;
+        closeRequestedRef.current = false;
+        onClose();
+      }}
     >
-      <NoteWorkspaceContent>
+      <NoteWorkspaceContent className="md:right-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--app-shell-inset))] md:w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--app-shell-inset))] md:transition-[right,width,opacity,scale,transform] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none">
         <NoteWorkspaceTitle>Note</NoteWorkspaceTitle>
-        <Button
-          className="absolute top-5 left-5 z-10 rounded-lg border border-transparent bg-transparent text-foreground shadow-none hover:bg-secondary focus-visible:border-border active:bg-foreground/[0.1]"
-          variant="ghost"
-          size="icon-lg"
-          onClick={requestClose}
-        >
-          <ArrowLeftIcon />
-          <span className="sr-only">Back to board</span>
-        </Button>
-        <AnimatePresence initial={false}>
-          {extractionFeedback ? (
-            <motion.div
-              key={extractionFeedback.status}
-              initial={{ opacity: 0, scale: 0.96, y: -4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: -4 }}
-              transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
-              role="status"
-              aria-live="polite"
-              className={cn(
-                "pointer-events-none absolute top-5 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full border bg-background/95 px-3 py-1.5 text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-xl",
-                extractionFeedback.status === "error" &&
-                  "border-destructive/30 bg-destructive/10 text-destructive",
-              )}
-            >
-              {extractionFeedback.status === "extracting" ? (
-                <LoaderCircleIcon className="size-3.5 animate-spin" />
-              ) : extractionFeedback.status === "success" ? (
-                <CheckIcon className="size-3.5" />
-              ) : null}
-              <span>
-                {extractionFeedback.status === "extracting"
-                  ? `Extracting to ${extractionFeedback.destination}…`
-                  : extractionFeedback.status === "success"
-                    ? `Extracted to ${extractionFeedback.destination}`
-                    : "Couldn’t extract note"}
-              </span>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-        <div className="absolute top-5 right-5 z-10 flex h-10 items-center rounded-lg pt-0 pr-0 pb-0 pl-3.5 text-xs font-medium text-muted-foreground">
-          <span
-            className={cn(
-              "inline-block w-24 text-right transition-opacity duration-100 ease-out motion-reduce:transition-none",
-              showSaveState ? "opacity-100" : "pointer-events-none opacity-0",
-            )}
-            aria-hidden={!showSaveState}
-          >
-            {saveStateLabel(saveState)}
-          </span>
-          {metrics ? (
-            <>
-              <span
+        <div className="relative z-20 mt-[var(--app-shell-inset)] flex shrink-0 items-center justify-between gap-3 rounded-t-xl rounded-b-none p-2 text-xs font-medium text-muted-foreground">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  className="ml-[var(--app-shell-inset)] size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Back to board"
+                  onClick={requestClose}
+                >
+                  <ArrowLeftIcon />
+                  <span className="sr-only">Back to board</span>
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">Back to board</TooltipContent>
+          </Tooltip>
+          <AnimatePresence initial={false}>
+            {extractionFeedback ? (
+              <motion.div
+                key={extractionFeedback.status}
+                initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: -4 }}
+                transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+                role="status"
+                aria-live="polite"
                 className={cn(
-                  "mx-3 hidden h-4 w-px bg-border transition-opacity duration-100 ease-out sm:block motion-reduce:transition-none",
-                  showSaveState ? "opacity-100" : "opacity-0",
+                  "pointer-events-none absolute top-5 left-1/2 z-10 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full border bg-background/95 px-3 py-1.5 text-xs font-medium whitespace-nowrap shadow-lg backdrop-blur-xl",
+                  extractionFeedback.status === "error" &&
+                    "border-destructive/30 bg-destructive/10 text-destructive",
                 )}
-                aria-hidden="true"
-              />
-              <span className="hidden sm:inline">{metrics.words}</span>
-              <DotIcon
-                className="mx-1.5 hidden size-3 sm:block"
-                aria-hidden="true"
-              />
-              <span className="hidden sm:inline">{metrics.readingTime}</span>
-            </>
-          ) : null}
-          {createdLabel || updatedLabel ? (
-            <>
-              {showSaveState || metrics ? (
+              >
+                {extractionFeedback.status === "extracting" ? (
+                  <LoaderCircleIcon className="size-3.5 animate-spin" />
+                ) : extractionFeedback.status === "success" ? (
+                  <CheckIcon className="size-3.5" />
+                ) : null}
+                <span>
+                  {extractionFeedback.status === "extracting"
+                    ? `Extracting to ${extractionFeedback.destination}…`
+                    : extractionFeedback.status === "success"
+                      ? `Extracted to ${extractionFeedback.destination}`
+                      : "Couldn’t extract note"}
+                </span>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+          <div className="flex min-w-0 items-center justify-end gap-0">
+            <span
+              className={cn(
+                "inline-block w-24 text-right transition-opacity duration-100 ease-out motion-reduce:transition-none",
+                showSaveState ? "opacity-100" : "pointer-events-none opacity-0",
+              )}
+              aria-hidden={!showSaveState}
+            >
+              {saveStateLabel(saveState)}
+            </span>
+            {metrics ? (
+              <>
                 <span
-                  className="mx-2 hidden h-4 w-px bg-border sm:block"
+                  className={cn(
+                    "mx-3 hidden h-4 w-px bg-border transition-opacity duration-100 ease-out sm:block motion-reduce:transition-none",
+                    showSaveState ? "opacity-100" : "opacity-0",
+                  )}
                   aria-hidden="true"
                 />
-              ) : null}
-              <Popover open={detailsOpen} onOpenChange={setDetailsOpen}>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground"
-                      aria-label="Note details"
-                      onMouseEnter={openDetails}
-                      onMouseLeave={closeDetailsSoon}
-                      onFocus={openDetails}
-                    />
-                  }
-                >
-                  <InfoIcon className="size-4" />
-                </PopoverTrigger>
-                <PopoverContent
-                  align="end"
-                  sideOffset={10}
-                  onMouseEnter={openDetails}
-                  onMouseLeave={closeDetailsSoon}
-                  className="w-fit min-w-0 border-border/60 bg-background/95 whitespace-nowrap shadow-2xl backdrop-blur-xl"
-                >
-                  <div className="flex flex-col gap-1 text-xs">
-                    {createdLabel ? (
-                      <div>
-                        <span className="text-muted-foreground">
-                          Created at{" "}
-                        </span>
-                        <span>{createdLabel}</span>
-                      </div>
-                    ) : null}
-                    {updatedLabel ? (
-                      <div>
-                        <span className="text-muted-foreground">
-                          Updated at{" "}
-                        </span>
-                        <span>{updatedLabel}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </>
-          ) : null}
+                <span className="hidden sm:inline">{metrics.words}</span>
+                <DotIcon
+                  className="mx-1.5 hidden size-3 sm:block"
+                  aria-hidden="true"
+                />
+                <span className="hidden sm:inline">{metrics.readingTime}</span>
+              </>
+            ) : null}
+            {showSaveState || metrics ? (
+              <span
+                className="mx-2 hidden h-4 w-px bg-border sm:block"
+                aria-hidden="true"
+              />
+            ) : null}
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground"
+                    aria-label={copied ? "Note copied" : "Copy note markdown"}
+                    onClick={copyNoteMarkdown}
+                  >
+                    {copied ? (
+                      <CheckIcon className="size-4" />
+                    ) : (
+                      <CopyIcon className="size-4" />
+                    )}
+                    <span className="sr-only">
+                      {copied ? "Copied" : "Copy note markdown"}
+                    </span>
+                  </Button>
+                }
+              />
+              <TooltipContent side="bottom">
+                {copied ? "Copied" : "Copy note markdown"}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    aria-label="Peek note"
+                    disabled={!note || isPeekMirror}
+                    onClick={() => {
+                      if (!note) return;
+                      peekNote(note);
+                      closeWorkspace();
+                    }}
+                  >
+                    <PanelRightIcon className="size-4" />
+                    <span className="sr-only">Peek note</span>
+                  </Button>
+                }
+              />
+              <TooltipContent side="bottom">Peek note</TooltipContent>
+            </Tooltip>
+            {createdLabel || updatedLabel ? (
+              <>
+                <HoverCard>
+                  <HoverCardTrigger
+                    delay={0}
+                    closeDelay={100}
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground"
+                        aria-label="Note details"
+                      >
+                        <InfoIcon className="size-4" />
+                      </Button>
+                    }
+                  ></HoverCardTrigger>
+                  <HoverCardContent
+                    align="end"
+                    sideOffset={10}
+                    className="w-fit min-w-0 border-border/60 bg-background/95 whitespace-nowrap shadow-2xl backdrop-blur-xl"
+                  >
+                    <div className="flex flex-col gap-1 text-xs">
+                      {createdLabel ? (
+                        <div>
+                          <span className="text-muted-foreground">
+                            Created at{" "}
+                          </span>
+                          <span>{createdLabel}</span>
+                        </div>
+                      ) : null}
+                      {updatedLabel ? (
+                        <div>
+                          <span className="text-muted-foreground">
+                            Updated at{" "}
+                          </span>
+                          <span>{updatedLabel}</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  </HoverCardContent>
+                </HoverCard>
+              </>
+            ) : null}
+          </div>
         </div>
         <div
           ref={noteContentRef}
           className="note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto"
         >
-          <div className="note-workspace-column">
+          <div className="note-workspace-column [&_.ProseMirror]:!pt-8">
             {note ? (
               <Suspense fallback={<NoteEditorLoading />}>
                 <NoteEditorErrorBoundary noteId={note.id}>

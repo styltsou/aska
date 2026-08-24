@@ -34,6 +34,12 @@ import {
 import { copyImageToClipboard } from "@/lib/clipboard";
 import { gradientToCss } from "@/lib/color-gradient";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
+import {
+  useWorkspacePeek,
+  type PeekColorScope,
+} from "@/components/app-shell/workspace-peek";
+import { useRouterState } from "@tanstack/react-router";
+import { getPexelsBrowserScope, useSessionStore } from "@/store";
 
 type ImagePrefetch = {
   controller: AbortController;
@@ -82,7 +88,11 @@ async function copyText(asset: NoteAsset) {
   toast.success("Copied note text.");
 }
 
-function noteActions(asset: NoteAsset, onEditNote?: () => void) {
+function noteActions(
+  asset: NoteAsset,
+  onEditNote?: () => void,
+  onPeek?: () => void,
+) {
   return (
     <>
       <ContextMenuItem onClick={() => void copyText(asset)}>
@@ -91,6 +101,7 @@ function noteActions(asset: NoteAsset, onEditNote?: () => void) {
       <ContextMenuItem disabled={!onEditNote} onClick={onEditNote}>
         Edit note
       </ContextMenuItem>
+      <ContextMenuItem onClick={onPeek}>Peek note</ContextMenuItem>
     </>
   );
 }
@@ -99,6 +110,7 @@ function colorActions(
   asset: ColorAsset,
   onOpen: () => void,
   onEdit: () => void,
+  onPeek?: () => void,
 ) {
   const copiedValue = asset.gradient
     ? gradientToCss(
@@ -116,6 +128,7 @@ function colorActions(
     <>
       <ContextMenuItem onClick={onOpen}>Open</ContextMenuItem>
       <ContextMenuItem onClick={onEdit}>Edit color</ContextMenuItem>
+      <ContextMenuItem onClick={onPeek}>Peek color</ContextMenuItem>
       <ContextMenuItem
         onClick={() => {
           void navigator.clipboard
@@ -202,6 +215,13 @@ export function AssetContextMenu({
   onOpenColor?: () => void;
   onEditNote?: () => void;
 }) {
+  const { peekNote, peekColor } = useWorkspacePeek();
+  const setPexelsBrowserOpen = useSessionStore(
+    (state) => state.setPexelsBrowserOpen,
+  );
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
@@ -243,6 +263,26 @@ export function AssetContextMenu({
           nodeIds: [asset.id],
         }
       : undefined;
+  const peekScope: PeekColorScope = (() => {
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments[1] !== "collections" || !segments[2]) return { type: "inbox" };
+    const [collectionSlug, ...folders] = segments.slice(2);
+    return {
+      type: "collection",
+      collectionSlug,
+      folderPath: folders.join("/") || undefined,
+      includeDescendants: false,
+    };
+  })();
+  const closePexels = () => {
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments[1] === "collections" && segments[0] && segments[2]) {
+      setPexelsBrowserOpen(
+        getPexelsBrowserScope(segments[0], segments[2]),
+        false,
+      );
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -381,8 +421,14 @@ export function AssetContextMenu({
             </>
           ) : asset.type === "color" ? (
             <>
-              {colorActions(asset, onOpenColor ?? (() => {}), () =>
-                setColorEditorOpen(true),
+              {colorActions(
+                asset,
+                onOpenColor ?? (() => {}),
+                () => setColorEditorOpen(true),
+                () => {
+                  closePexels();
+                  peekColor(asset, peekScope);
+                },
               )}
               <ContextMenuSeparator />
               <ContextMenuItem>
@@ -411,7 +457,10 @@ export function AssetContextMenu({
               {asset.type === "image"
                 ? imageActions(asset, handleCopyImage)
                 : asset.type === "note"
-                  ? noteActions(asset, onEditNote)
+                  ? noteActions(asset, onEditNote, () => {
+                      closePexels();
+                      peekNote(asset);
+                    })
                   : linkActions(asset, () => {
                       refreshLink.mutate(asset.id, {
                         onError: (error) =>

@@ -75,6 +75,10 @@ function sanitizeFilename(name: string): string {
 }
 
 export interface IAssetService {
+  getPeekableAsset(
+    orgId: string,
+    assetNodeId: string,
+  ): Promise<CollectionNoteNode | CollectionColorNode>;
   getInboxContents(
     orgId: string,
     types?: ContentTypeFilter[],
@@ -131,6 +135,83 @@ export class AssetService implements IAssetService {
   constructor({ objectStorageService, resourceLifecycle }: Deps) {
     this.objectStorageService = objectStorageService;
     this.resourceLifecycle = resourceLifecycle;
+  }
+
+  async getPeekableAsset(
+    orgId: string,
+    assetNodeId: string,
+  ): Promise<CollectionNoteNode | CollectionColorNode> {
+    const target = parseAssetNodeId(assetNodeId);
+    if (target.assetType !== "note" && target.assetType !== "color") {
+      throw new AppError(ErrorCode.NOT_FOUND, "Asset not found");
+    }
+    if (target.assetType === "note") {
+      const row = first(
+        await db
+          .select({
+            id: assets.id,
+            content: noteAssets.markdown,
+            color: noteAssets.color,
+            isFavorite: assets.isFavorite,
+            createdAt: assets.createdAt,
+            updatedAt: assets.updatedAt,
+          })
+          .from(assets)
+          .innerJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+          .where(
+            and(
+              eq(assets.organizationId, orgId),
+              eq(assets.id, target.entityId),
+              eq(assets.type, "note"),
+            ),
+          )
+          .limit(1),
+      );
+      if (!row) throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
+      return {
+        id: `note-${row.id}`,
+        type: "note",
+        content: row.content,
+        color: row.color,
+        isFavorite: row.isFavorite,
+        ...calculateNoteMetrics(row.content),
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+        position: null,
+      };
+    }
+    const row = first(
+      await db
+        .select({
+          id: assets.id,
+          hex: colorAssets.hex,
+          gradient: colorAssets.gradient,
+          title: assets.title,
+          isFavorite: assets.isFavorite,
+          createdAt: assets.createdAt,
+        })
+        .from(assets)
+        .innerJoin(colorAssets, eq(colorAssets.assetId, assets.id))
+        .where(
+          and(
+            eq(assets.organizationId, orgId),
+            eq(assets.id, target.entityId),
+            eq(assets.type, "color"),
+          ),
+        )
+        .limit(1),
+    );
+    if (!row) throw new AppError(ErrorCode.NOT_FOUND, "Color not found");
+    return {
+      id: `color-${row.id}`,
+      type: "color",
+      hex: row.hex,
+      gradient: row.gradient,
+      title: row.title,
+      isFavorite: row.isFavorite,
+      createdAt: row.createdAt.toISOString(),
+      position: null,
+    };
   }
 
   async getInboxContents(

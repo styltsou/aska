@@ -2016,7 +2016,7 @@ export function ImageAssetViewer({
           <aside
             className={cn(
               GLASS_FRAME_CLASS,
-              "pointer-events-none absolute top-[0.75rem] right-[0.75rem] bottom-[0.75rem] z-20 flex w-[min(20rem,calc(100%-1.5rem))] min-h-0 flex-col gap-1 overflow-hidden rounded-xl sm:w-80 lg:w-[25rem] lg:gap-0",
+              "pointer-events-none absolute top-[var(--app-shell-inset)] right-[var(--app-shell-inset)] bottom-[var(--app-shell-inset)] z-20 flex w-[min(20rem,calc(100%-1rem))] min-h-0 flex-col gap-1 overflow-hidden rounded-xl sm:w-80 lg:w-[25rem] lg:gap-0",
               "pointer-events-auto",
             )}
           >

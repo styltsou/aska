@@ -222,6 +222,10 @@ export type CreateNoteResponse = {
   note: CollectionNoteNode;
 };
 
+export type PeekableAssetResponse = {
+  asset: CollectionNoteNode | CollectionColorNode;
+};
+
 export type CreateColorInput = {
   hex: string;
   gradient?: ColorGradient;

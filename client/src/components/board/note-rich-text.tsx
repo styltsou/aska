@@ -1093,7 +1093,7 @@ export const NoteRichText = forwardRef<
           )}
         />
       </div>
-      {editable && scrollContainerRef ? (
+      {scrollContainerRef ? (
         <NotePreviewRail
           editor={editor}
           scrollContainerRef={scrollContainerRef}

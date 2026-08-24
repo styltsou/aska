@@ -36,7 +36,17 @@ import type {
   UpdateImageResponse,
   UpdateColorInput,
   UpdateColorResponse,
+  PeekableAssetResponse,
 } from "./types";
+
+export async function fetchPeekableAsset(
+  workspaceSlug: string,
+  assetId: string,
+): Promise<PeekableAssetResponse> {
+  return apiGet<PeekableAssetResponse>(
+    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}`,
+  );
+}
 
 export async function fetchCollections(slug: string): Promise<CollectionsData> {
   return apiGet<CollectionsData>(`/api/v1/workspace/${slug}/collections`);
