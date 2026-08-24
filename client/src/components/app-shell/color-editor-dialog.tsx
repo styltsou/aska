@@ -420,7 +420,7 @@ export function ColorEditorDialog({
       <DrawerContent
         className={cn(
           GLASS_FRAME_CLASS,
-          "rounded-xl! border border-border shadow-2xl transition-[width,transform,height,opacity,filter] md:[--translate-x:-50%] md:data-[swipe-axis=y]:inset-x-auto md:data-[swipe-axis=y]:left-1/2",
+          "rounded-xl! transition-[width,transform,height,opacity,filter] md:[--translate-x:-50%] md:data-[swipe-axis=y]:inset-x-auto md:data-[swipe-axis=y]:left-1/2",
           isGradient
             ? "md:data-[swipe-axis=y]:w-[min(calc(100%-2rem),68rem)]"
             : "md:data-[swipe-axis=y]:w-[min(calc(100%-2rem),44rem)]",

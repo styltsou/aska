@@ -308,7 +308,7 @@ export function BoardActionRail({
                     variant="ghost"
                     aria-label="Show actions dock"
                     className={cn(
-                      "h-12 w-4 rounded-l-none rounded-r-lg border border-l-0 border-border/80 text-muted-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80 hover:text-foreground",
+                      "h-12 w-4 rounded-l-none rounded-r-lg text-muted-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80 hover:text-foreground",
                       GLASS_FRAME_CLASS,
                     )}
                     onClick={() =>

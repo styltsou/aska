@@ -155,6 +155,7 @@ export function BoardContextMenu({
             <>
               <ContextMenuSeparator />
               <ContextMenuCheckboxItem
+                closeOnClick
                 checked={areAlignmentGuidesEnabled}
                 onCheckedChange={(enabled) =>
                   setWorkspaceAlignmentGuides(workspaceSlug, enabled === true)
@@ -163,6 +164,7 @@ export function BoardContextMenu({
                 Alignment guides
               </ContextMenuCheckboxItem>
               <ContextMenuCheckboxItem
+                closeOnClick
                 checked={isBoardActionRailVisible}
                 onCheckedChange={(visible) =>
                   setWorkspaceBoardActionRail(workspaceSlug, visible === true)

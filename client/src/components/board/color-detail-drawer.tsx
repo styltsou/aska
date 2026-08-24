@@ -32,6 +32,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { gradientToCss } from "@/lib/color-gradient";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -116,7 +117,7 @@ export function ColorDetailDrawer({
     >
       {activeColor ? (
         <DrawerContent
-          className="max-h-[calc(100dvh-1.5rem)] gap-0 rounded-xl! border border-border bg-background! p-0 text-foreground! shadow-2xl"
+          className="max-h-[calc(100dvh-1.5rem)] gap-0 rounded-xl! border-0! bg-background! p-0 text-foreground! shadow-none ring-1 ring-foreground/10"
           style={
             {
               "--drawer-content-width": "34rem",
@@ -156,7 +157,9 @@ export function ColorDetailDrawer({
                   {activeColor.title?.trim() || activeColor.hex.toUpperCase()}
                 </DrawerTitle>
                 <DrawerDescription className="font-mono text-xs">
-                  {hasGradient ? "Gradient" : activeColor.hex.toUpperCase()}
+                  {hasGradient
+                    ? `${activeColor.gradient?.type === "radial" ? "Radial" : "Linear"} gradient`
+                    : activeColor.hex.toUpperCase()}
                 </DrawerDescription>
               </div>
             </div>
@@ -194,11 +197,11 @@ export function ColorDetailDrawer({
           </DrawerHeader>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {scope.type === "collection" ? (
-              <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-                <span className="text-sm font-medium text-muted-foreground">
-                  Search in
-                </span>
+            <div className="flex items-center justify-between gap-3 px-4 py-4">
+              <span className="text-sm font-medium text-primary">
+                Relevant images
+              </span>
+              {scope.type === "collection" ? (
                 <Tabs
                   value={includeDescendants ? "collection" : "view"}
                   onValueChange={(value) =>
@@ -214,50 +217,55 @@ export function ColorDetailDrawer({
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
-              </div>
-            ) : null}
+              ) : null}
+            </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
-              {search.isLoading || search.isSearching ? (
-                <ColorResultsSkeleton />
-              ) : search.isError ? (
-                <ColorSearchError onRetry={() => void search.refetch()} />
-              ) : results.length === 0 ? (
-                <ColorSearchEmpty />
-              ) : (
-                <div className="columns-2 gap-3">
-                  {results.map((result) => {
-                    const location =
-                      result.location.type === "collection" &&
-                      result.location.folderNames.length > 0
-                        ? result.location.folderNames.join(" / ")
-                        : result.location.type === "collection"
-                          ? "Collection root"
-                          : "Inbox";
-                    return (
-                      <ImageResultTile
-                        key={result.image.id}
-                        image={result.image}
-                        label={location}
-                        onOpen={() => {
-                          onClose();
-                          onOpenImage({
-                            id: result.image.id,
-                            type: "image",
-                            url: result.image.url,
-                            width: result.image.width,
-                            height: result.image.height,
-                            title: result.image.title ?? undefined,
-                            alt: result.image.alt ?? undefined,
-                            blurDataURL: result.image.blurDataURL ?? undefined,
-                            dominantColors: result.image.dominantColors,
-                          });
-                        }}
-                      />
-                    );
-                  })}
+            <div className="relative min-h-0 flex-1">
+              <ScrollArea className="size-full [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-4 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-2 [&_[data-slot=scroll-area-thumb]]:bg-sidebar-foreground/55 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm">
+                <div className="min-h-full px-4 pt-0 pb-4">
+                  {search.isLoading || search.isSearching ? (
+                    <ColorResultsSkeleton />
+                  ) : search.isError ? (
+                    <ColorSearchError onRetry={() => void search.refetch()} />
+                  ) : results.length === 0 ? (
+                    <ColorSearchEmpty />
+                  ) : (
+                    <div className="columns-2 gap-3">
+                      {results.map((result) => {
+                        const location =
+                          result.location.type === "collection" &&
+                          result.location.folderNames.length > 0
+                            ? result.location.folderNames.join(" / ")
+                            : result.location.type === "collection"
+                              ? "Collection root"
+                              : "Inbox";
+                        return (
+                          <ImageResultTile
+                            key={result.image.id}
+                            image={result.image}
+                            label={location}
+                            onOpen={() => {
+                              onClose();
+                              onOpenImage({
+                                id: result.image.id,
+                                type: "image",
+                                url: result.image.url,
+                                width: result.image.width,
+                                height: result.image.height,
+                                title: result.image.title ?? undefined,
+                                alt: result.image.alt ?? undefined,
+                                blurDataURL:
+                                  result.image.blurDataURL ?? undefined,
+                                dominantColors: result.image.dominantColors,
+                              });
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
+              </ScrollArea>
             </div>
           </div>
         </DrawerContent>

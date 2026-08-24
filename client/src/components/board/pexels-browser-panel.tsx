@@ -16,6 +16,7 @@ import {
   CheckIcon,
   ImagesIcon,
   ImportIcon,
+  PanelRightCloseIcon,
   RefreshCwIcon,
   SearchIcon,
   SearchXIcon,
@@ -29,6 +30,11 @@ import { useCreateRemoteImage } from "@/api/collection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   PEXELS_PHOTO_DRAG_TYPE,
   type PexelsPhotoDragData,
@@ -361,6 +367,7 @@ export function PexelsBrowserPanel({
   const setSavedSelected = useSessionStore(
     (state) => state.setPexelsBrowserSelected,
   );
+  const setSavedOpen = useSessionStore((state) => state.setPexelsBrowserOpen);
   const [input, setInput] = useState(savedQuery);
   const [query, setQuery] = useState(savedQuery);
   const [selected, setSelected] = useState<PexelsPhoto[]>(savedSelected);
@@ -544,7 +551,27 @@ export function PexelsBrowserPanel({
             role="separator"
             onPointerDown={handleResizeStart}
           />
-          <div className="flex h-14 shrink-0 items-center gap-2 pr-0 pl-2 transition-[height] duration-120 ease-linear group-has-[[data-slot=sidebar][data-state=collapsed]]/sidebar-wrapper:h-12">
+          <div className="flex h-14 shrink-0 items-center gap-2 px-2 transition-[height] duration-120 ease-linear group-has-[[data-slot=sidebar][data-state=collapsed]]/sidebar-wrapper:h-12">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    aria-label="Close Pexels browser"
+                    className="shrink-0"
+                    size="icon"
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setSavedOpen(scope, false)}
+                  >
+                    <PanelRightCloseIcon />
+                    <span className="sr-only">Close Pexels browser</span>
+                  </Button>
+                }
+              />
+              <TooltipContent side="bottom">
+                <span>Close Pexels browser</span>
+              </TooltipContent>
+            </Tooltip>
             <div className="relative min-w-0 flex-1">
               {search.isFetching && !search.isFetchingNextPage ? (
                 <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-muted-foreground">
@@ -580,10 +607,10 @@ export function PexelsBrowserPanel({
           </div>
           <div className="relative min-h-0 flex-1 pl-3">
             <ScrollArea
-              className="size-full rounded-t-xl [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-4 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-2 [&_[data-slot=scroll-area-thumb]]:bg-sidebar-foreground/55 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
+              className="size-full rounded-t-xl pr-2 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-sidebar-foreground/55 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
               viewportRef={viewportRef}
             >
-              <div className="pexels-results-container flex min-h-full flex-col pr-0 pb-24">
+              <div className="pexels-results-container flex min-h-full flex-col pb-24">
                 {query.length === 0 ? (
                   <PexelsBrowserEmptyState
                     icon={ImagesIcon}
