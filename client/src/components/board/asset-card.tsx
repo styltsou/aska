@@ -80,21 +80,6 @@ export const AssetCard = memo(function AssetCard({
         asset={asset}
         deleteContext={deleteContext}
         inboxContext={inboxContext}
-        onOpenImage={
-          asset.type === "image" && onOpenImage
-            ? () => onOpenImage(asset)
-            : undefined
-        }
-        onOpenColor={
-          asset.type === "color" && onOpenColor
-            ? () => onOpenColor(asset)
-            : undefined
-        }
-        onEditNote={
-          asset.type === "note" && onOpenNote
-            ? () => onOpenNote(asset, "edit")
-            : undefined
-        }
       >
         {(isContextMenuOpen, displayAsset) => (
           <>

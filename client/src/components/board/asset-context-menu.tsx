@@ -88,18 +88,11 @@ async function copyText(asset: NoteAsset) {
   toast.success("Copied note text.");
 }
 
-function noteActions(
-  asset: NoteAsset,
-  onEditNote?: () => void,
-  onPeek?: () => void,
-) {
+function noteActions(asset: NoteAsset, onPeek?: () => void) {
   return (
     <>
       <ContextMenuItem onClick={() => void copyText(asset)}>
         Copy text
-      </ContextMenuItem>
-      <ContextMenuItem disabled={!onEditNote} onClick={onEditNote}>
-        Edit note
       </ContextMenuItem>
       <ContextMenuItem onClick={onPeek}>Peek note</ContextMenuItem>
     </>
@@ -108,7 +101,6 @@ function noteActions(
 
 function colorActions(
   asset: ColorAsset,
-  onOpen: () => void,
   onEdit: () => void,
   onPeek?: () => void,
 ) {
@@ -126,9 +118,6 @@ function colorActions(
 
   return (
     <>
-      <ContextMenuItem onClick={onOpen}>Open</ContextMenuItem>
-      <ContextMenuItem onClick={onEdit}>Edit color</ContextMenuItem>
-      <ContextMenuItem onClick={onPeek}>Peek color</ContextMenuItem>
       <ContextMenuItem
         onClick={() => {
           void navigator.clipboard
@@ -149,17 +138,14 @@ function colorActions(
       >
         {copyLabel}
       </ContextMenuItem>
+      <ContextMenuItem onClick={onEdit}>Edit color</ContextMenuItem>
+      <ContextMenuItem onClick={onPeek}>Peek color</ContextMenuItem>
     </>
   );
 }
 
 function folderActions() {
-  return (
-    <>
-      <ContextMenuItem>Open folder</ContextMenuItem>
-      <ContextMenuItem>Rename folder</ContextMenuItem>
-    </>
-  );
+  return <ContextMenuItem>Rename folder</ContextMenuItem>;
 }
 
 function linkActions(asset: LinkAsset, onRefresh: () => void) {
@@ -196,9 +182,6 @@ export function AssetContextMenu({
   children,
   deleteContext,
   inboxContext,
-  onOpenImage,
-  onOpenColor,
-  onEditNote,
 }: {
   asset: Asset;
   children: (isContextMenuOpen: boolean, asset: Asset) => React.ReactNode;
@@ -211,9 +194,6 @@ export function AssetContextMenu({
   inboxContext?: {
     workspaceSlug: string;
   };
-  onOpenImage?: () => void;
-  onOpenColor?: () => void;
-  onEditNote?: () => void;
 }) {
   const { peekNote, peekColor } = useWorkspacePeek();
   const setPexelsBrowserOpen = useSessionStore(
@@ -404,18 +384,18 @@ export function AssetContextMenu({
           {asset.type === "folder" ? (
             <>
               {folderActions()}
-              <ContextMenuItem>
-                {isFavorite ? "Remove from favorites" : "Add to favorites"}
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              {moveSource ? (
-                <ContextMenuItem onClick={() => setMoveDialogOpen(true)}>
-                  Move to...
-                </ContextMenuItem>
-              ) : null}
               {deleteContext ? (
                 <ContextMenuItem onClick={handleFlatten}>
                   Flatten folder
+                </ContextMenuItem>
+              ) : null}
+              <ContextMenuSeparator />
+              <ContextMenuItem>
+                {isFavorite ? "Remove from favorites" : "Add to favorites"}
+              </ContextMenuItem>
+              {moveSource ? (
+                <ContextMenuItem onClick={() => setMoveDialogOpen(true)}>
+                  Move to...
                 </ContextMenuItem>
               ) : null}
             </>
@@ -423,7 +403,6 @@ export function AssetContextMenu({
             <>
               {colorActions(
                 asset,
-                onOpenColor ?? (() => {}),
                 () => setColorEditorOpen(true),
                 () => {
                   closePexels();
@@ -442,9 +421,25 @@ export function AssetContextMenu({
             </>
           ) : (
             <>
-              {asset.type === "image" && onOpenImage ? (
-                <ContextMenuItem onClick={onOpenImage}>Open</ContextMenuItem>
-              ) : null}
+              {asset.type === "image"
+                ? imageActions(asset, handleCopyImage)
+                : asset.type === "note"
+                  ? noteActions(asset, () => {
+                      closePexels();
+                      peekNote(asset);
+                    })
+                  : linkActions(asset, () => {
+                      refreshLink.mutate(asset.id, {
+                        onError: (error) => {
+                          toast.error(
+                            error instanceof Error
+                              ? error.message
+                              : "Unable to refresh link.",
+                          );
+                        },
+                      });
+                    })}
+              <ContextMenuSeparator />
               <ContextMenuItem>
                 {isFavorite ? "Remove from favorites" : "Add to favorites"}
               </ContextMenuItem>
@@ -453,24 +448,6 @@ export function AssetContextMenu({
                   Move to...
                 </ContextMenuItem>
               ) : null}
-              <ContextMenuSeparator />
-              {asset.type === "image"
-                ? imageActions(asset, handleCopyImage)
-                : asset.type === "note"
-                  ? noteActions(asset, onEditNote, () => {
-                      closePexels();
-                      peekNote(asset);
-                    })
-                  : linkActions(asset, () => {
-                      refreshLink.mutate(asset.id, {
-                        onError: (error) =>
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : "Unable to refresh link.",
-                          ),
-                      });
-                    })}
             </>
           )}
           <ContextMenuSeparator />
