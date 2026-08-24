@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import {
   useCreateInboxNote,
   useCreateNote,
+  useDeleteAsset,
   useUpdateNote,
 } from "@/api/collection";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
@@ -38,7 +39,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { composeFrontMatter, parseFrontMatter } from "@/lib/front-matter";
-import { getSaveableNoteContent } from "@/lib/note-content";
+import { getUserFacingApiErrorMessage } from "@/lib/api";
+import {
+  getSaveableNoteContent,
+  isNoteContentTooLong,
+  NOTE_CONTENT_LIMIT_MESSAGE,
+} from "@/lib/note-content";
 import { cn } from "@/lib/utils";
 import type { NoteAsset } from "@/types/asset";
 
@@ -50,7 +56,7 @@ const NoteRichText = lazy(() =>
   })),
 );
 
-type SaveState = "saved" | "saving" | "error" | "empty";
+type SaveState = "saved" | "saving" | "deleting" | "error" | "empty";
 type ExtractionFeedback = {
   status: "extracting" | "success" | "error";
   destination: string;
@@ -90,6 +96,7 @@ export function NoteDetailDrawer({
     useState<ExtractionFeedback>();
   const frontMatter = useMemo(() => parseFrontMatter(draft), [draft]);
   const updateNote = useUpdateNote(workspaceSlug);
+  const deleteAsset = useDeleteAsset(workspaceSlug);
   const extractionCollectionSlug = noteExtractionTarget?.collectionSlug ?? "";
   const createExtractedCollectionNote = useCreateNote(
     workspaceSlug,
@@ -167,6 +174,14 @@ export function NoteDetailDrawer({
     (content: string, closeAfterSave = false) => {
       if (!noteId) return;
 
+      if (isNoteContentTooLong(content)) {
+        failedContentRef.current = content;
+        closeAfterSaveRef.current = false;
+        setSaveState("error");
+        toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
+        return;
+      }
+
       if (content === noteContent) {
         if (draftRef.current === content) {
           draftRef.current = content;
@@ -215,7 +230,7 @@ export function NoteDetailDrawer({
             closeAfterSaveRef.current = false;
             setSaveState("error");
             toast.error(
-              error instanceof Error ? error.message : "Could not save note.",
+              getUserFacingApiErrorMessage(error, "Could not save note."),
             );
           },
         },
@@ -264,6 +279,12 @@ export function NoteDetailDrawer({
           : noteExtractionTarget.parentFolderPath
             ? "this folder"
             : "this collection";
+
+      if (isNoteContentTooLong(content)) {
+        setExtractionFeedback({ status: "error", destination });
+        toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
+        return;
+      }
 
       if (extractionFeedbackTimeoutRef.current !== undefined) {
         window.clearTimeout(extractionFeedbackTimeoutRef.current);
@@ -338,7 +359,21 @@ export function NoteDetailDrawer({
   function requestClose() {
     if (!note) return onClose();
     const content = getSaveableNoteContent(draftRef.current);
-    if (!content || content === note.content) return onClose();
+    if (!content) {
+      if (deleteAsset.isPending) return;
+      setSaveState("deleting");
+      deleteAsset.mutate(note.id, {
+        onSuccess: onClose,
+        onError: (error) => {
+          setSaveState("error");
+          toast.error(
+            getUserFacingApiErrorMessage(error, "Could not delete note."),
+          );
+        },
+      });
+      return;
+    }
+    if (content === note.content) return onClose();
     if (updateNote.isPending) {
       closeAfterSaveRef.current = true;
       return;
@@ -518,6 +553,9 @@ export function NoteDetailDrawer({
         </div>
         {saveState === "error" ? (
           <p className="absolute right-4 bottom-4 left-4 z-10 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive backdrop-blur-sm sm:right-auto sm:left-6">
+            {isNoteContentTooLong(draft)
+              ? `${NOTE_CONTENT_LIMIT_MESSAGE} `
+              : ""}
             Changes are stored on this device. Keep editing to retry saving.
           </p>
         ) : null}
@@ -528,6 +566,7 @@ export function NoteDetailDrawer({
 
 function saveStateLabel(state: SaveState) {
   if (state === "saving") return "Saving…";
+  if (state === "deleting") return "Deleting…";
   if (state === "error") return "Save failed";
   if (state === "empty") return "Add text to save";
   return "Saved";

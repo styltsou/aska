@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { NOTE_CONTENT_MAX_LENGTH } from "@/constants";
+
 export const BoardPositionSchema = z.object({
   x: z.number().int().min(-2_147_483_648).max(2_147_483_647),
   y: z.number().int().min(-2_147_483_648).max(2_147_483_647),
@@ -62,7 +64,7 @@ export const CreateFolderSchema = z.object({
 export type CreateFolderInput = z.infer<typeof CreateFolderSchema>;
 
 export const CreateNoteSchema = z.object({
-  content: z.string().min(1).max(10_000),
+  content: z.string().min(1).max(NOTE_CONTENT_MAX_LENGTH),
   color: z.string().max(32).optional(),
   parentFolderPath: z.string().optional(),
   position: BoardPositionSchema.optional(),
@@ -134,7 +136,7 @@ export type UpdatedImage = {
 };
 
 export const UpdateNoteSchema = z.object({
-  content: z.string().min(1).max(10_000),
+  content: z.string().min(1).max(NOTE_CONTENT_MAX_LENGTH),
 });
 
 export type UpdateNoteInput = z.infer<typeof UpdateNoteSchema>;

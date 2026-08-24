@@ -1830,7 +1830,7 @@
           "content": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 10000,
+            "maxLength": 100000,
             "description": "Note content in markdown format."
           },
           "color": {
@@ -1855,7 +1855,7 @@
           "content": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 10000,
+            "maxLength": 100000,
             "description": "Complete replacement note content in Markdown format."
           }
         }

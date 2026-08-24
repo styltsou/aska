@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 
 import { useCreateInboxNote } from "@/api/collection";
+import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { useEventListener } from "@/hooks/use-event-listener";
@@ -12,6 +13,10 @@ import { useEventListener } from "@/hooks/use-event-listener";
 import { KEYBINDINGS } from "@/lib/keybindings";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
+import {
+  isNoteContentTooLong,
+  NOTE_CONTENT_LIMIT_MESSAGE,
+} from "@/lib/note-content";
 import { useTransientStore } from "@/store";
 
 const SCRATCHPAD_TRANSITION = {
@@ -134,6 +139,10 @@ export function GlobalScratchpad() {
     }
 
     const noteContent = trimmedContent;
+    if (isNoteContentTooLong(noteContent)) {
+      toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
+      return;
+    }
     setPhase("pill");
 
     createInboxNote.mutate(
@@ -141,7 +150,7 @@ export function GlobalScratchpad() {
       {
         onError: (err) => {
           toast.error(
-            err instanceof Error ? err.message : "Unable to save note.",
+            getUserFacingApiErrorMessage(err, "Unable to save note."),
           );
         },
       },

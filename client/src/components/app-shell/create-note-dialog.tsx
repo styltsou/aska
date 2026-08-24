@@ -34,6 +34,11 @@ import {
 } from "@/lib/create-note-draft";
 import { composeFrontMatter, parseFrontMatter } from "@/lib/front-matter";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
+import { getUserFacingApiErrorMessage } from "@/lib/api";
+import {
+  isNoteContentTooLong,
+  NOTE_CONTENT_LIMIT_MESSAGE,
+} from "@/lib/note-content";
 
 const CREATE_DELAY_MS = 700;
 const NoteRichText = lazy(() =>
@@ -134,6 +139,12 @@ export function CreateNoteDialog({
       ).trim() || content.trim(),
     ) => {
       if (!noteContent || isCreating) return;
+      if (isNoteContentTooLong(noteContent)) {
+        failedContentRef.current = noteContent;
+        setError(NOTE_CONTENT_LIMIT_MESSAGE);
+        toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
+        return;
+      }
       setError(null);
       const onSuccess = (data: { note: CollectionNoteNode }) => {
         clearCreateNoteDraft(draftId);
@@ -161,8 +172,10 @@ export function CreateNoteDialog({
         }
       };
       const onError = (reason: unknown) => {
-        const message =
-          reason instanceof Error ? reason.message : "Could not create note.";
+        const message = getUserFacingApiErrorMessage(
+          reason,
+          "Could not create note.",
+        );
         failedContentRef.current = noteContent;
         setError(message);
         toast.error(message);
@@ -250,9 +263,10 @@ export function CreateNoteDialog({
         </div>
         {error ? (
           <div className="absolute right-4 bottom-4 left-4 z-10 flex items-center justify-between gap-3 rounded-lg bg-destructive/10 px-3 py-2 backdrop-blur-sm sm:right-auto sm:left-6">
-            <p className="text-xs text-destructive">
-              Your draft is stored on this device.
-            </p>
+            <div className="text-xs text-destructive">
+              <p>{error}</p>
+              <p>Your draft is stored on this device.</p>
+            </div>
             <Button variant="outline" size="sm" onClick={() => create()}>
               <RotateCcwIcon />
               Retry

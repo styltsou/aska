@@ -14,10 +14,15 @@ import {
 import { useCreateInboxLink, useCreateLink } from "@/api/url-unfurl";
 import type { BoardInsertionPlacement } from "@/api/collection";
 import type { PexelsPhoto } from "@/api/pexels";
+import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
 import type { ClipboardAssetPayload } from "@/lib/clipboard";
 import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
 import { parseHttpUrl } from "@/lib/utils";
+import {
+  isNoteContentTooLong,
+  NOTE_CONTENT_LIMIT_MESSAGE,
+} from "@/lib/note-content";
 
 export type BoardAssetTarget = "collection" | "inbox";
 
@@ -218,6 +223,10 @@ export function useBoardAssetActions({
   const createTextNote = useCallback(
     async (content: string) => {
       if (!content.trim()) return;
+      if (isNoteContentTooLong(content)) {
+        toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
+        return;
+      }
 
       try {
         const insertionPlacement = getPlacement?.() ?? placement;
@@ -235,7 +244,7 @@ export function useBoardAssetActions({
         toast.success("Note created");
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "Unable to create note.",
+          getUserFacingApiErrorMessage(err, "Unable to create note."),
         );
       }
     },

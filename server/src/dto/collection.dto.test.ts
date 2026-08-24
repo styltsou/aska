@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { NOTE_CONTENT_MAX_LENGTH } from "@/constants";
 import {
   BoardPositionSchema,
   CollectionNodePathParamSchema,
@@ -45,14 +46,31 @@ describe("collection board position DTOs", () => {
     ).toEqual({ x: 72, y: 48 });
   });
 
-  it("requires non-empty bounded note updates", () => {
+  it("requires non-empty bounded note content", () => {
+    expect(
+      CreateNoteSchema.safeParse({
+        content: "x".repeat(NOTE_CONTENT_MAX_LENGTH),
+      }).success,
+    ).toBe(true);
+    expect(
+      CreateNoteSchema.safeParse({
+        content: "x".repeat(NOTE_CONTENT_MAX_LENGTH + 1),
+      }).success,
+    ).toBe(false);
     expect(UpdateNoteSchema.parse({ content: "A growing idea" })).toEqual({
       content: "A growing idea",
     });
     expect(UpdateNoteSchema.safeParse({ content: "" }).success).toBe(false);
     expect(
-      UpdateNoteSchema.safeParse({ content: "x".repeat(10_001) }).success,
+      UpdateNoteSchema.safeParse({
+        content: "x".repeat(NOTE_CONTENT_MAX_LENGTH + 1),
+      }).success,
     ).toBe(false);
+    expect(
+      UpdateNoteSchema.safeParse({
+        content: "x".repeat(NOTE_CONTENT_MAX_LENGTH),
+      }).success,
+    ).toBe(true);
   });
 
   it("requires a complete position update", () => {
