@@ -24,9 +24,9 @@ export function CollectionViewToggle({
           <PanelsTopLeftIcon />
           Canvas
         </TabsTrigger>
-        <TabsTrigger value="browse" className="px-2">
+        <TabsTrigger value="grid" className="px-2">
           <LayoutGridIcon />
-          Browse
+          Grid
         </TabsTrigger>
       </TabsList>
     </Tabs>

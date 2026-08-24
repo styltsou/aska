@@ -150,7 +150,7 @@ const COMMAND_GROUPS = [
       },
       {
         id: "toggle-collection-view",
-        label: "Toggle canvas / browse view",
+        label: "Toggle canvas / grid view",
         icon: PanelLeftIcon,
         shortcut: "⇧+V",
       },
@@ -377,7 +377,7 @@ export function CommandPalette() {
         setOpen(false);
         setCollectionView(
           collectionViewScope,
-          collectionView === "canvas" ? "browse" : "canvas",
+          collectionView === "canvas" ? "grid" : "canvas",
         );
         return;
       case "toggle-alignment-guides":
@@ -487,7 +487,7 @@ export function CommandPalette() {
                               : "Switch to dark mode"
                             : item.id === "toggle-collection-view"
                               ? collectionView === "canvas"
-                                ? "Switch to browse view"
+                                ? "Switch to grid view"
                                 : "Switch to canvas view"
                               : item.id === "toggle-board-action-rail"
                                 ? isBoardActionRailVisible

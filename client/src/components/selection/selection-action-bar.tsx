@@ -56,7 +56,7 @@ import { cn } from "@/lib/utils";
 
 type SelectionActionBarProps = {
   count: number;
-  surface: "inbox" | "canvas" | "browse";
+  surface: "inbox" | "canvas" | "grid";
   onClear: () => void;
   onMove?: () => void;
   onDelete?: () => void;

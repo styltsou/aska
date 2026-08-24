@@ -1,7 +1,7 @@
 import type { CollectionNode } from "@/api/collection";
 
 /**
- * Browse is a chronological projection, independent of the authored canvas
+ * Grid view is a chronological projection, independent of the authored canvas
  * positions. Keep the original order as a deterministic fallback for malformed
  * timestamps and as the tie-breaker for batch-created nodes.
  */

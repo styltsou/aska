@@ -26,7 +26,7 @@ import {
   makeBoardKey,
   Canvas,
   CanvasLoading,
-  BrowseLoading,
+  GridViewLoading,
   CollectionNotFound,
   FolderNotFound,
 } from "@/components/canvas";
@@ -34,7 +34,7 @@ import { ApiError } from "@/lib/api";
 import { getCollectionViewScope, useSessionStore } from "@/store";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { ResourceLoadError } from "@/components/resource-load-error";
-import { CollectionBrowseView } from "@/components/collection-browse-view";
+import { CollectionGridView } from "@/components/collection-grid-view";
 
 const EMPTY_COLOR_RESULTS: readonly [] = [];
 
@@ -229,7 +229,7 @@ function CollectionPage() {
         folderPath={parentFolderPath}
       />
     ) : (
-      <BrowseLoading />
+      <GridViewLoading />
     );
   }
 
@@ -341,7 +341,7 @@ function CollectionPage() {
                 />
               </>
             ) : (
-              <CollectionBrowseView
+              <CollectionGridView
                 key={boardKey}
                 boardKey={boardKey}
                 workspaceSlug={workspaceSlug}

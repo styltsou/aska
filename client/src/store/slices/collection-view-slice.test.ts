@@ -21,9 +21,9 @@ describe("collection view slice", () => {
     );
     const scope = getCollectionViewScope("studio", "references");
 
-    store.getState().setCollectionView(scope, "browse");
+    store.getState().setCollectionView(scope, "grid");
 
-    expect(store.getState().collectionViews[scope]).toBe("browse");
+    expect(store.getState().collectionViews[scope]).toBe("grid");
     expect(getCollectionViewScope("studio", "references")).toBe(scope);
     expect(getCollectionViewScope("studio", "archive")).not.toBe(scope);
   });

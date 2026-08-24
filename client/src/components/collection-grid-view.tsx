@@ -36,19 +36,19 @@ import { cn } from "@/lib/utils";
 import { useTransientStore } from "@/store";
 
 const ASSET_PAGE_SIZE = 40;
-const BROWSE_NODE_DRAG_TYPE = "browse-node";
-const BROWSE_FOLDER_DROP_PREFIX = "browse-folder:";
+const GRID_NODE_DRAG_TYPE = "grid-node";
+const GRID_FOLDER_DROP_PREFIX = "grid-folder:";
 
-type BrowseNodeDragData = {
+type GridNodeDragData = {
   primaryNodeId: string;
   nodeIds: string[];
 };
 
-type PendingFolderDrop = BrowseNodeDragData & {
+type PendingFolderDrop = GridNodeDragData & {
   targetFolderNodeId: string;
 };
 
-type CollectionBrowseViewProps = {
+type CollectionGridViewProps = {
   boardKey: string;
   workspaceSlug: string;
   collectionSlug: string;
@@ -70,7 +70,7 @@ type CollectionBrowseViewProps = {
   ) => void;
 };
 
-export function CollectionBrowseView({
+export function CollectionGridView({
   boardKey,
   workspaceSlug,
   collectionSlug,
@@ -87,13 +87,13 @@ export function CollectionBrowseView({
   onOpenImage,
   onOpenColor,
   onOpenNote,
-}: CollectionBrowseViewProps) {
+}: CollectionGridViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [visibleAssetCount, setVisibleAssetCount] = useState(ASSET_PAGE_SIZE);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const [activeDrag, setActiveDrag] = useState<BrowseNodeDragData>();
+  const [activeDrag, setActiveDrag] = useState<GridNodeDragData>();
   const [pendingFolderDrop, setPendingFolderDrop] =
     useState<PendingFolderDrop>();
   const dropTargetRectRef = useRef<DOMRect | undefined>(undefined);
@@ -162,29 +162,29 @@ export function CollectionBrowseView({
 
   useDragDropMonitor({
     onDragStart(event) {
-      if (event.operation.source?.type !== BROWSE_NODE_DRAG_TYPE) return;
-      setActiveDrag(event.operation.source.data as BrowseNodeDragData);
+      if (event.operation.source?.type !== GRID_NODE_DRAG_TYPE) return;
+      setActiveDrag(event.operation.source.data as GridNodeDragData);
     },
     onDragEnd(event) {
       const { operation } = event;
       setActiveDrag(undefined);
       if (
         event.canceled ||
-        operation.source?.type !== BROWSE_NODE_DRAG_TYPE ||
+        operation.source?.type !== GRID_NODE_DRAG_TYPE ||
         typeof operation.target?.id !== "string" ||
-        !operation.target.id.startsWith(BROWSE_FOLDER_DROP_PREFIX)
+        !operation.target.id.startsWith(GRID_FOLDER_DROP_PREFIX)
       ) {
         dropTargetRectRef.current = undefined;
         return;
       }
 
       const targetFolderNodeId = operation.target.id.slice(
-        BROWSE_FOLDER_DROP_PREFIX.length,
+        GRID_FOLDER_DROP_PREFIX.length,
       );
       dropTargetRectRef.current =
         operation.target.element?.getBoundingClientRect();
       const { primaryNodeId, nodeIds } = operation.source
-        .data as BrowseNodeDragData;
+        .data as GridNodeDragData;
       const movableNodeIds = nodeIds.filter(
         (nodeId) => nodeId !== targetFolderNodeId,
       );
@@ -253,7 +253,7 @@ export function CollectionBrowseView({
 
     const frame = requestAnimationFrame(() => {
       surfaceRef.current
-        ?.querySelector(`[data-browse-node-id="${focusedNodeId}"]`)
+        ?.querySelector(`[data-grid-node-id="${focusedNodeId}"]`)
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
     return () => cancelAnimationFrame(frame);
@@ -308,7 +308,7 @@ export function CollectionBrowseView({
   );
 
   const renderCard = (node: CollectionNode) => (
-    <BrowseNodeCard
+    <GridNodeCard
       key={node.type === "image" ? (node.clientId ?? node.id) : node.id}
       node={node}
       selectedNodeIds={selectedIds}
@@ -354,7 +354,7 @@ export function CollectionBrowseView({
           <div className="pointer-events-auto sticky top-5 z-20 mx-auto h-0 w-fit">
             <SelectionActionBar
               count={selectedIds.length}
-              surface="browse"
+              surface="grid"
               onClear={() => clearSelection(boardKey)}
               onMove={() => setMoveDialogOpen(true)}
               onDelete={() => {
@@ -378,10 +378,10 @@ export function CollectionBrowseView({
           ) : (
             <div className="w-full space-y-10">
               {folders.length > 0 ? (
-                <section aria-labelledby="browse-folders-title">
+                <section aria-labelledby="grid-folders-title">
                   <div className="mb-3 flex items-baseline gap-2">
                     <h2
-                      id="browse-folders-title"
+                      id="grid-folders-title"
                       className="text-xs font-semibold tracking-wide text-foreground/80 uppercase"
                     >
                       Folders
@@ -396,10 +396,10 @@ export function CollectionBrowseView({
                 </section>
               ) : null}
 
-              <section aria-labelledby="browse-assets-title">
+              <section aria-labelledby="grid-assets-title">
                 <div className="mb-3 flex items-baseline gap-2">
                   <h2
-                    id="browse-assets-title"
+                    id="grid-assets-title"
                     className="text-xs font-semibold tracking-wide text-foreground/80 uppercase"
                   >
                     Assets
@@ -455,7 +455,7 @@ export function CollectionBrowseView({
           <div className="absolute inset-0 z-10">{loadError}</div>
         ) : null}
       </ScrollArea>
-      <BrowseDragOverlay
+      <GridDragOverlay
         nodeById={nodeById}
         dropTargetRectRef={dropTargetRectRef}
       />
@@ -463,7 +463,7 @@ export function CollectionBrowseView({
   );
 }
 
-function BrowseNodeCard({
+function GridNodeCard({
   node,
   selectedNodeIds,
   isSelected,
@@ -482,7 +482,7 @@ function BrowseNodeCard({
   selectedNodeIds: readonly string[];
   isSelected: boolean;
   isFocused: boolean;
-  activeDrag?: BrowseNodeDragData;
+  activeDrag?: GridNodeDragData;
   pendingFolderDrop?: PendingFolderDrop;
   deleteContext: {
     workspaceSlug: string;
@@ -505,16 +505,16 @@ function BrowseNodeCard({
 }) {
   const draggableNodeIds = isSelected ? selectedNodeIds : [node.id];
   const isPartOfActiveDrag = activeDrag?.nodeIds.includes(node.id) === true;
-  const { ref: draggableRef, isDragging } = useDraggable<BrowseNodeDragData>({
-    id: `browse-node:${node.id}`,
-    type: BROWSE_NODE_DRAG_TYPE,
+  const { ref: draggableRef, isDragging } = useDraggable<GridNodeDragData>({
+    id: `grid-node:${node.id}`,
+    type: GRID_NODE_DRAG_TYPE,
     data: { primaryNodeId: node.id, nodeIds: [...draggableNodeIds] },
     disabled: !isPersistedSelectableAsset(node),
   });
   const { ref: droppableRef, isDropTarget } = useDroppable({
-    id: `${BROWSE_FOLDER_DROP_PREFIX}${node.id}`,
-    type: "browse-folder",
-    accept: BROWSE_NODE_DRAG_TYPE,
+    id: `${GRID_FOLDER_DROP_PREFIX}${node.id}`,
+    type: "grid-folder",
+    accept: GRID_NODE_DRAG_TYPE,
     disabled:
       node.type !== "folder" || activeDrag?.nodeIds.includes(node.id) === true,
   });
@@ -535,7 +535,7 @@ function BrowseNodeCard({
         draggableRef(element);
         droppableRef(element);
       }}
-      data-browse-node-id={node.id}
+      data-grid-node-id={node.id}
       aria-grabbed={isDragging || undefined}
       className={cn(
         "rounded-lg transition-opacity",
@@ -581,7 +581,7 @@ function BrowseNodeCard({
   );
 }
 
-function BrowseDragOverlay({
+function GridDragOverlay({
   nodeById,
   dropTargetRectRef,
 }: {
@@ -628,8 +628,8 @@ function BrowseDragOverlay({
       dropAnimation={animateDrop}
     >
       {(source) => {
-        if (source.type !== BROWSE_NODE_DRAG_TYPE) return null;
-        const { primaryNodeId, nodeIds } = source.data as BrowseNodeDragData;
+        if (source.type !== GRID_NODE_DRAG_TYPE) return null;
+        const { primaryNodeId, nodeIds } = source.data as GridNodeDragData;
         const draggedNodes = [primaryNodeId, ...nodeIds].flatMap(
           (nodeId, index) => {
             if (index > 0 && nodeId === primaryNodeId) return [];
