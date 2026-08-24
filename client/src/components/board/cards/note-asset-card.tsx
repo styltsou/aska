@@ -11,6 +11,7 @@ import {
   useState,
 } from "react";
 import { CopyIcon } from "lucide-react";
+import { motion } from "motion/react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { common, createLowlight } from "lowlight";
@@ -20,10 +21,31 @@ import { parseFrontMatter } from "@/lib/front-matter";
 import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
 import { remarkHighlight } from "@/lib/remark-highlight";
+import { getExpandedNoteIds, setNoteExpanded } from "@/lib/note-card-expansion";
 import type { NoteAsset } from "@/types/asset";
 
 const BARE_URL_RE = /(^|[^[(])(https?:\/\/[^\s<"'>)\]]+)/gi;
+const CARD_MAX_HEIGHT = 320;
+const EXPANSION_CONTROL_SPACE = 32;
+const EXPANDED_BOTTOM_GUTTER = 8;
 const lowlight = createLowlight(common);
+
+function getMeasuredContentHeight(content: HTMLDivElement): number {
+  let lastElement = content.lastElementChild;
+  let trailingMargin = 0;
+
+  while (lastElement) {
+    const marginBottom = Number.parseFloat(
+      getComputedStyle(lastElement).marginBottom,
+    );
+    if (Number.isFinite(marginBottom)) {
+      trailingMargin = Math.max(trailingMargin, marginBottom);
+    }
+    lastElement = lastElement.lastElementChild;
+  }
+
+  return content.scrollHeight + trailingMargin;
+}
 
 function linkifyBareUrls(text: string): string {
   return text.replace(
@@ -277,17 +299,35 @@ export function NoteMarkdown({
 
 export function NoteAssetCard({
   asset,
+  collectionSlug,
   onOpen,
   isContextMenuOpen = false,
 }: {
   asset: NoteAsset;
+  collectionSlug?: string;
   onOpen?: () => void;
   isContextMenuOpen?: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [hasOverflow, setHasOverflow] = useState(false);
+  const [isPillDismissed, setIsPillDismissed] = useState(false);
+  const [cardHeights, setCardHeights] = useState<{
+    collapsed: number;
+    expanded: number;
+  }>();
+  const [isExpanded, setIsExpanded] = useState(() =>
+    collectionSlug ? getExpandedNoteIds(collectionSlug).has(asset.id) : false,
+  );
   const effectiveOnOpen = onOpen;
+
+  const toggleExpanded = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    const next = !isExpanded;
+    setIsExpanded(next);
+    setIsPillDismissed(!next);
+    if (collectionSlug) setNoteExpanded(collectionSlug, asset.id, next);
+  };
 
   const updateOverflow = useCallback(() => {
     const card = cardRef.current;
@@ -298,21 +338,33 @@ export function NoteAssetCard({
     }
 
     const cardStyles = getComputedStyle(card);
-    const availableHeight =
-      card.clientHeight -
-      Number.parseFloat(cardStyles.paddingTop) -
+    const verticalPadding =
+      Number.parseFloat(cardStyles.paddingTop) +
       Number.parseFloat(cardStyles.paddingBottom);
-    const contentStyles = getComputedStyle(content);
-    const contentHeight =
-      content.scrollHeight -
-      Number.parseFloat(contentStyles.paddingTop) -
-      Number.parseFloat(contentStyles.paddingBottom);
+    const borderHeight =
+      Number.parseFloat(cardStyles.borderTopWidth) +
+      Number.parseFloat(cardStyles.borderBottomWidth);
+    const controlSpace =
+      hasOverflow && !isExpanded ? EXPANSION_CONTROL_SPACE : 0;
+    const expandedHeight =
+      getMeasuredContentHeight(content) -
+      controlSpace +
+      verticalPadding +
+      borderHeight +
+      (hasOverflow ? EXPANDED_BOTTOM_GUTTER : 0);
+    const collapsedHeight = Math.min(expandedHeight, CARD_MAX_HEIGHT);
 
     setHasOverflow((current) => {
-      const next = contentHeight > availableHeight + 1;
+      const next = expandedHeight > CARD_MAX_HEIGHT + 1;
       return current === next ? current : next;
     });
-  }, []);
+    setCardHeights((current) =>
+      current?.collapsed === collapsedHeight &&
+      current.expanded === expandedHeight
+        ? current
+        : { collapsed: collapsedHeight, expanded: expandedHeight },
+    );
+  }, [hasOverflow, isExpanded]);
 
   useLayoutEffect(() => {
     updateOverflow();
@@ -333,10 +385,25 @@ export function NoteAssetCard({
   }, [asset.content, updateOverflow]);
 
   return (
-    <div
+    <motion.div
       ref={cardRef}
+      animate={
+        cardHeights
+          ? {
+              height: isExpanded ? cardHeights.expanded : cardHeights.collapsed,
+            }
+          : undefined
+      }
+      transition={{
+        height: {
+          duration: 0.15,
+          ease: [0.4, 0, 0.2, 1],
+        },
+      }}
       className={cn(
-        "group bg-sidebar hover:border-sidebar-foreground/20 relative max-h-80 min-w-0 overflow-hidden rounded-lg border px-4 py-2.5 text-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "group bg-sidebar hover:border-sidebar-foreground/20 relative min-w-0 overflow-hidden rounded-lg border px-4 py-2.5 text-sm transition-[border-color,background-color,filter,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        !cardHeights && !isExpanded && "max-h-80",
+        isExpanded && "z-20",
         effectiveOnOpen && "cursor-pointer",
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}
@@ -359,26 +426,39 @@ export function NoteAssetCard({
         event.preventDefault();
         effectiveOnOpen();
       }}
+      onMouseEnter={() => setIsPillDismissed(false)}
     >
       <div
         ref={contentRef}
         className={cn(
           "note-rich-text-content min-w-0 break-words",
-          hasOverflow && "pb-8",
+          hasOverflow && !isExpanded && "pb-8",
         )}
       >
         <NoteMarkdown content={asset.content} className="min-w-0" />
       </div>
-      {hasOverflow ? (
+      {hasOverflow && !isExpanded ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-b from-sidebar/0 via-sidebar/85 to-sidebar transition-opacity duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-60" />
       ) : null}
       {hasOverflow ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-full justify-center px-2.5 pb-2.5 transition-transform duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:pointer-events-auto group-hover:translate-y-0">
-          <div className="inline-flex items-center gap-1.5 rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-sidebar-foreground/25">
-            <span>Expand</span>
-          </div>
+        <div
+          className={cn(
+            "absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5 transition-transform duration-100 ease-[cubic-bezier(0.4,0,0.2,1)]",
+            isPillDismissed
+              ? "pointer-events-none translate-y-full"
+              : "pointer-events-none translate-y-full group-hover:pointer-events-auto group-hover:translate-y-0",
+          )}
+        >
+          <button
+            type="button"
+            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 hover:bg-sidebar hover:ring-1 hover:ring-sidebar-foreground/25 focus-visible:border-sidebar-foreground/20 focus-visible:bg-sidebar focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            aria-expanded={isExpanded}
+            onClick={toggleExpanded}
+          >
+            <span>{isExpanded ? "Collapse" : "Expand"}</span>
+          </button>
         </div>
       ) : null}
-    </div>
+    </motion.div>
   );
 }
