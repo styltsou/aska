@@ -171,6 +171,11 @@ jobs:
           bun install --frozen-lockfile --cwd services/image-palette
           bun install --frozen-lockfile --cwd services/url-unfurl-shared
           bun install --frozen-lockfile --cwd services/url-resolution
+      # Targeted SST deploys still validate the static site's output, but do
+      # not run its builder. The full deploy below rebuilds it with its final
+      # SST-provided environment.
+      - name: Build client for targeted secret deployment
+        run: bun run --cwd client build
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
