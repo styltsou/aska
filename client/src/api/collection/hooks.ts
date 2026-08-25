@@ -35,6 +35,7 @@ import {
   updateColor,
 } from "./fetchers";
 import { makeMarkdownPreview } from "@/lib/markdown-preview";
+import { calculateNoteMetrics } from "@/lib/note-metrics";
 import type {
   BoardInsertionPlacement,
   CollectionContentsResponse,
@@ -764,8 +765,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         content: data.content,
         color: data.color ?? null,
         isFavorite: false,
-        wordCount: countWords(data.content),
-        readingTimeMinutes: 1,
+        ...calculateNoteMetrics(data.content),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         position: null,
@@ -803,8 +803,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         content: variables.content,
         color: variables.color ?? null,
         isFavorite: false,
-        wordCount: 0,
-        readingTimeMinutes: 1,
+        ...calculateNoteMetrics(variables.content),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         clientId: optimisticId,
@@ -1154,11 +1153,7 @@ export function useCreateInboxNote(workspaceSlug: string) {
         content: variables.content,
         color: variables.color ?? null,
         isFavorite: false,
-        wordCount: countWords(variables.content),
-        readingTimeMinutes: Math.max(
-          1,
-          Math.ceil(countWords(variables.content) / 200),
-        ),
+        ...calculateNoteMetrics(variables.content),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         position: null,
@@ -1333,6 +1328,36 @@ function applyUpdatedNoteToContents(
   };
 }
 
+function applyNoteDraftToContents(
+  current: CollectionContentsResponse | undefined,
+  draft: UpdateNoteInput & { assetId: string },
+): CollectionContentsResponse | undefined {
+  if (!current) return current;
+
+  const metrics = calculateNoteMetrics(draft.content);
+  const updatedAt = new Date().toISOString();
+
+  return {
+    ...current,
+    nodes: current.nodes.map((node) => {
+      if (node.type === "note" && node.id === draft.assetId) {
+        return { ...node, content: draft.content, ...metrics, updatedAt };
+      }
+
+      if (node.type !== "folder") return node;
+
+      return {
+        ...node,
+        previews: node.previews.map((preview) =>
+          preview.type === "note" && preview.assetId === draft.assetId
+            ? { ...preview, snippet: makeMarkdownPreview(draft.content) }
+            : preview,
+        ),
+      };
+    }),
+  };
+}
+
 function applyUpdatedColorToContents(
   current: CollectionContentsResponse | undefined,
   color: UpdatedColor,
@@ -1424,10 +1449,33 @@ function applyImageDraftToContents(
 
 export function useUpdateNote(workspaceSlug: string) {
   const queryClient = useQueryClient();
+  const contentsFilter = {
+    predicate: ({ queryKey }: { queryKey: readonly unknown[] }) =>
+      (queryKey[0] === "collectionContents" ||
+        queryKey[0] === "inboxContents") &&
+      queryKey[1] === workspaceSlug,
+  };
 
   return useMutation({
     mutationFn: ({ assetId, ...data }: UpdateNoteInput & { assetId: string }) =>
       updateNote(workspaceSlug, assetId, data),
+    onMutate: async (draft) => {
+      await queryClient.cancelQueries(contentsFilter);
+      const previousContents =
+        queryClient.getQueriesData<CollectionContentsResponse>(contentsFilter);
+
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        contentsFilter,
+        (current) => applyNoteDraftToContents(current, draft),
+      );
+
+      return { previousContents };
+    },
+    onError: (_error, _draft, context) => {
+      context?.previousContents.forEach(([queryKey, contents]) => {
+        queryClient.setQueryData(queryKey, contents);
+      });
+    },
     onSuccess: ({ note }) => {
       queryClient.setQueriesData<CollectionContentsResponse>(
         {
@@ -1544,10 +1592,6 @@ export function useUpdateImage(workspaceSlug: string) {
       );
     },
   });
-}
-
-function countWords(value: string): number {
-  return value.trim().split(/\s+/).filter(Boolean).length;
 }
 
 export function useUploadLocalImages(
