@@ -28,12 +28,14 @@ export function CreateCollectionDialog({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
   const createCollection = useCreateCollection(workspaceSlug);
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       setName("");
       setError(null);
+      setIsNavigating(false);
     }
     setOpen(nextOpen);
   }
@@ -42,23 +44,22 @@ export function CreateCollectionDialog({
     event.preventDefault();
     setError(null);
 
-    createCollection.mutate(
-      { name },
-      {
-        onSuccess: (data) => {
-          void navigate({
-            to: "/$workspaceSlug/collections/$",
-            params: { workspaceSlug, _splat: data.collection.slug },
-            search: {},
-            replace: true,
-          });
-          handleOpenChange(false);
-        },
-        onError: (err) => {
-          setError(err.message);
-        },
-      },
-    );
+    try {
+      const data = await createCollection.mutateAsync({ name });
+      setIsNavigating(true);
+
+      await navigate({
+        to: "/$workspaceSlug/collections/$",
+        params: { workspaceSlug, _splat: data.collection.slug },
+        search: {},
+      });
+      handleOpenChange(false);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to create collection.",
+      );
+      setIsNavigating(false);
+    }
   }
 
   return (
@@ -86,14 +87,26 @@ export function CreateCollectionDialog({
           </DialogBody>
           <DialogFooter>
             <DialogClose render={<Button variant="outline">Cancel</Button>} />
-            <Button disabled={createCollection.isPending} type="submit">
+            <Button
+              disabled={createCollection.isPending || isNavigating}
+              type="submit"
+            >
               {createCollection.isPending ? (
                 <>
                   <LoaderCircleIcon className="size-4 animate-spin" />
                   Creating
                 </>
               ) : (
-                "Create"
+                <>
+                  {isNavigating ? (
+                    <>
+                      <LoaderCircleIcon className="size-4 animate-spin" />
+                      Opening
+                    </>
+                  ) : (
+                    "Create"
+                  )}
+                </>
               )}
             </Button>
           </DialogFooter>
