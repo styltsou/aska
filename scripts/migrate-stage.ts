@@ -6,6 +6,7 @@ const databaseUrl = Resource.DatabaseUrl.value;
 if (!databaseUrl) {
   throw new Error("The linked DatabaseUrl secret is empty");
 }
+console.info(`Migrating database host: ${new URL(databaseUrl).hostname}`);
 
 const serverDirectory = fileURLToPath(new URL("../server/", import.meta.url));
 const migration = Bun.spawn(
