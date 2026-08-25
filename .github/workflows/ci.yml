@@ -145,6 +145,7 @@ jobs:
     needs: [quality, changes]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.changes.outputs.deploy == 'true'
     runs-on: ubuntu-latest
+    # Retrigger deployment after rotating the dev database secret.
     # The first media deployment provisions an ACM certificate and a new
     # CloudFront distribution, both of which can take longer than the normal
     # application-only update.
