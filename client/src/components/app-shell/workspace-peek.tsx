@@ -454,12 +454,17 @@ function PeekNote({
       latest.current = content;
       setDraft(content);
       if (timer.current) window.clearTimeout(timer.current);
+      if (saveStatusTimer.current) {
+        window.clearTimeout(saveStatusTimer.current);
+        saveStatusTimer.current = undefined;
+      }
+      setShowSaveState(false);
       if (!content.trim()) {
         setSaveState("saved");
         return;
       }
-      setSaveState("saving");
       timer.current = window.setTimeout(() => {
+        setSaveState("saving");
         update.mutate(
           { assetId: note.id, content },
           {
