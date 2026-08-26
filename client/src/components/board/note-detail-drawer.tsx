@@ -168,8 +168,9 @@ export function NoteDetailDrawer({
   );
   const closeWorkspace = useCallback(() => {
     closeRequestedRef.current = true;
+    setActiveNoteId(undefined);
     setWorkspaceOpen(false);
-  }, []);
+  }, [setActiveNoteId]);
   const frontMatter = useMemo(() => parseFrontMatter(draft), [draft]);
   const updateNote = useUpdateNote(workspaceSlug);
   const deleteAsset = useDeleteAsset(workspaceSlug);

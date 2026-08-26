@@ -264,6 +264,7 @@ export function WorkspacePeekProvider({
       activeNoteId,
       isResizing,
       peekNote: (asset) => {
+        setActiveNoteId(undefined);
         setIsRailReserved(true);
         setTarget({ type: "note", asset });
       },

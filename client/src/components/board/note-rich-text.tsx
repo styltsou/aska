@@ -117,13 +117,21 @@ function trailingEmptyParagraphPosition(editor: Editor): number | undefined {
 function focusFirstNewLine(editor: Editor) {
   let position = trailingEmptyParagraphPosition(editor);
   if (position === undefined) {
-    editor.commands.insertContentAt(
-      docEnd(editor),
-      { type: "paragraph" },
-      {
-        updateSelection: false,
-      },
-    );
+    editor
+      .chain()
+      .insertContentAt(
+        docEnd(editor),
+        { type: "paragraph" },
+        {
+          updateSelection: false,
+        },
+      )
+      .command(({ tr }) => {
+        // The paragraph only prepares the caret; it is not a user edit.
+        tr.setMeta("preventUpdate", true);
+        return true;
+      })
+      .run();
     position = trailingEmptyParagraphPosition(editor);
   }
   editor.commands.focus(position ?? "end", { scrollIntoView: false });
@@ -1005,7 +1013,7 @@ export const NoteRichText = forwardRef<
   });
 
   useEffect(() => {
-    editor?.setEditable(editable);
+    editor?.setEditable(editable, false);
     if (!editable || !autoFocus) return;
 
     const focusFrame = window.requestAnimationFrame(() => {
