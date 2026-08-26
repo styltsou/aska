@@ -45,7 +45,6 @@ import { usePersistedStore, useTransientStore } from "@/store";
 import { toast } from "sonner";
 
 import { formatPlatformShortcut } from "@/lib/platform";
-import { pruneExpandedNoteIds } from "@/lib/note-card-expansion";
 import { makeBoardKey } from "./canvas-key";
 import { onBatchPlacementCompleted } from "./batch-placement-completed";
 import {
@@ -599,13 +598,6 @@ function CanvasSurface({
   const [flowNodes, setFlowNodes] = useState<CanvasNode[]>(() =>
     nodes.map((node, index) => makeFlowNode(node, index, makeNodeData(node))),
   );
-
-  useEffect(() => {
-    pruneExpandedNoteIds(
-      collectionSlug,
-      nodes.flatMap((node) => (node.type === "note" ? [node.id] : [])),
-    );
-  }, [collectionSlug, nodes]);
 
   useEffect(() => {
     let timer: number | undefined;

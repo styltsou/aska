@@ -1,0 +1,1 @@
+ALTER TABLE "note_assets" ADD COLUMN "is_expanded" boolean DEFAULT false NOT NULL;

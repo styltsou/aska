@@ -22,6 +22,7 @@ import {
   useDeleteAsset,
   useDeleteCollectionNode,
   useFlattenFolder,
+  useUpdateNote,
 } from "@/api/collection";
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
 import type { Asset, ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
@@ -230,6 +231,7 @@ export function AssetContextMenu({
     deleteContext?.collectionSlug ?? "",
   );
   const refreshLink = useRefreshLink(workspaceSlug ?? "");
+  const updateNote = useUpdateNote(workspaceSlug ?? "");
   const moveSource: MoveToDialogSource | undefined = deleteContext
     ? {
         workspaceSlug: deleteContext.workspaceSlug,
@@ -421,24 +423,38 @@ export function AssetContextMenu({
             </>
           ) : (
             <>
-              {asset.type === "image"
-                ? imageActions(asset, handleCopyImage)
-                : asset.type === "note"
-                  ? noteActions(asset, () => {
-                      closePexels();
-                      peekNote(asset);
-                    })
-                  : linkActions(asset, () => {
-                      refreshLink.mutate(asset.id, {
-                        onError: (error) => {
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : "Unable to refresh link.",
-                          );
-                        },
-                      });
-                    })}
+              {asset.type === "image" ? (
+                imageActions(asset, handleCopyImage)
+              ) : asset.type === "note" ? (
+                <>
+                  <ContextMenuItem
+                    onClick={() =>
+                      updateNote.mutate({
+                        assetId: asset.id,
+                        isExpanded: !asset.isExpanded,
+                      })
+                    }
+                  >
+                    {asset.isExpanded ? "Collapse note" : "Expand note"}
+                  </ContextMenuItem>
+                  {noteActions(asset, () => {
+                    closePexels();
+                    peekNote(asset);
+                  })}
+                </>
+              ) : (
+                linkActions(asset, () => {
+                  refreshLink.mutate(asset.id, {
+                    onError: (error) => {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Unable to refresh link.",
+                      );
+                    },
+                  });
+                })
+              )}
               <ContextMenuSeparator />
               <ContextMenuItem>
                 {isFavorite ? "Remove from favorites" : "Add to favorites"}

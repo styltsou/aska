@@ -32,6 +32,7 @@ export interface NoteAsset {
   content: string;
   color?: string;
   isFavorite?: boolean;
+  isExpanded?: boolean;
   wordCount?: number;
   readingTimeMinutes?: number;
   createdAt?: string;

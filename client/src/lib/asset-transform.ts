@@ -87,6 +87,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
     content: node.content,
     color: node.color ?? undefined,
     isFavorite: node.isFavorite,
+    isExpanded: node.isExpanded,
     wordCount: node.wordCount,
     readingTimeMinutes: node.readingTimeMinutes,
     createdAt: node.createdAt,

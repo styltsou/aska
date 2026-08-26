@@ -136,7 +136,8 @@ export type UpdatedImage = {
 };
 
 export const UpdateNoteSchema = z.object({
-  content: z.string().min(1).max(NOTE_CONTENT_MAX_LENGTH),
+  content: z.string().min(1).max(NOTE_CONTENT_MAX_LENGTH).optional(),
+  isExpanded: z.boolean().optional(),
 });
 
 export type UpdateNoteInput = z.infer<typeof UpdateNoteSchema>;
@@ -147,6 +148,7 @@ export type UpdatedNote = {
   content: string;
   color: string | null;
   isFavorite: boolean;
+  isExpanded: boolean;
   wordCount: number;
   readingTimeMinutes: number;
   createdAt?: string;
@@ -209,6 +211,7 @@ export const CollectionNoteNodeSchema = z.object({
   content: z.string(),
   color: z.string().nullable(),
   isFavorite: z.boolean(),
+  isExpanded: z.boolean().optional(),
   wordCount: z.number(),
   readingTimeMinutes: z.number(),
   createdAt: z.string(),

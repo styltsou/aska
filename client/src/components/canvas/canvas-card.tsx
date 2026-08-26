@@ -77,7 +77,7 @@ export const CanvasCard = memo(function CanvasCard({
       {node.type === "note" && asset.type === "note" ? (
         <NoteAssetCard
           asset={asset}
-          collectionSlug={data.deleteContext.collectionSlug}
+          workspaceSlug={data.deleteContext.workspaceSlug}
           onOpen={isPending ? undefined : () => data.onOpenNote(node)}
           isContextMenuOpen={isContextMenuOpen}
         />

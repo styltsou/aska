@@ -115,7 +115,8 @@ export type CreateNoteInput = {
 };
 
 export type UpdateNoteInput = {
-  content: string;
+  content?: string;
+  isExpanded?: boolean;
 };
 
 export type UpdatedNote = {
@@ -124,6 +125,7 @@ export type UpdatedNote = {
   content: string;
   color: string | null;
   isFavorite: boolean;
+  isExpanded: boolean;
   wordCount: number;
   readingTimeMinutes: number;
   createdAt?: string;
@@ -170,6 +172,7 @@ export type CollectionNoteNode = {
   content: string;
   color: string | null;
   isFavorite: boolean;
+  isExpanded?: boolean;
   wordCount: number;
   readingTimeMinutes: number;
   createdAt: string;

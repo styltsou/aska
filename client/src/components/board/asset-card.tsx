@@ -93,6 +93,9 @@ export const AssetCard = memo(function AssetCard({
             {asset.type === "note" && (
               <NoteAssetCard
                 asset={asset}
+                workspaceSlug={
+                  deleteContext?.workspaceSlug ?? inboxContext?.workspaceSlug
+                }
                 onOpen={
                   onOpenNote ? () => onOpenNote(asset, "read") : undefined
                 }

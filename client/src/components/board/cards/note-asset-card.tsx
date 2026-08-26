@@ -21,7 +21,7 @@ import { parseFrontMatter } from "@/lib/front-matter";
 import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
 import { remarkHighlight } from "@/lib/remark-highlight";
-import { getExpandedNoteIds, setNoteExpanded } from "@/lib/note-card-expansion";
+import { useUpdateNote } from "@/api/collection/hooks";
 import type { NoteAsset } from "@/types/asset";
 
 const BARE_URL_RE = /(^|[^[(])(https?:\/\/[^\s<"'>)\]]+)/gi;
@@ -299,12 +299,12 @@ export function NoteMarkdown({
 
 export function NoteAssetCard({
   asset,
-  collectionSlug,
+  workspaceSlug,
   onOpen,
   isContextMenuOpen = false,
 }: {
   asset: NoteAsset;
-  collectionSlug?: string;
+  workspaceSlug?: string;
   onOpen?: () => void;
   isContextMenuOpen?: boolean;
 }) {
@@ -316,17 +316,18 @@ export function NoteAssetCard({
     collapsed: number;
     expanded: number;
   }>();
-  const [isExpanded, setIsExpanded] = useState(() =>
-    collectionSlug ? getExpandedNoteIds(collectionSlug).has(asset.id) : false,
-  );
+  const isExpanded = asset.isExpanded ?? false;
   const effectiveOnOpen = onOpen;
+
+  const updateNote = useUpdateNote(workspaceSlug ?? "");
 
   const toggleExpanded = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     const next = !isExpanded;
-    setIsExpanded(next);
     setIsPillDismissed(!next);
-    if (collectionSlug) setNoteExpanded(collectionSlug, asset.id, next);
+    if (workspaceSlug) {
+      updateNote.mutate({ assetId: asset.id, isExpanded: next });
+    }
   };
 
   const updateOverflow = useCallback(() => {

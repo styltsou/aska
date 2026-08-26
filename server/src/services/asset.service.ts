@@ -247,6 +247,7 @@ export class AssetService implements IAssetService {
         imageDominantColors: imageAssets.dominantColors,
         noteContent: noteAssets.markdown,
         noteColor: noteAssets.color,
+        noteIsExpanded: noteAssets.isExpanded,
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
         linkOriginalUrl: linkAssets.originalUrl,
@@ -487,27 +488,45 @@ export class AssetService implements IAssetService {
         throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
       }
 
+      const setValues: Partial<typeof noteAssets.$inferInsert> = {};
+      if (data.content !== undefined) {
+        setValues.markdown = data.content;
+      }
+      if (data.isExpanded !== undefined) {
+        setValues.isExpanded = data.isExpanded;
+      }
+
       const [note] = await tx
         .update(noteAssets)
-        .set({ markdown: data.content })
+        .set(setValues)
         .where(eq(noteAssets.assetId, asset.id))
-        .returning({ color: noteAssets.color });
+        .returning({
+          color: noteAssets.color,
+          isExpanded: noteAssets.isExpanded,
+          markdown: noteAssets.markdown,
+        });
 
       if (!note) {
         throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
       }
 
-      return { ...asset, color: note.color };
+      return {
+        ...asset,
+        color: note.color,
+        isExpanded: note.isExpanded,
+        markdown: note.markdown,
+      };
     });
 
-    const metrics = calculateNoteMetrics(data.content);
+    const metrics = calculateNoteMetrics(updated.markdown);
 
     return {
       id: `note-${updated.id}`,
       type: "note",
-      content: data.content,
+      content: updated.markdown,
       color: updated.color,
       isFavorite: updated.isFavorite,
+      isExpanded: updated.isExpanded,
       ...metrics,
       updatedAt: updated.updatedAt.toISOString(),
     };
@@ -782,6 +801,7 @@ export class AssetService implements IAssetService {
       imageDominantColors: string[] | null;
       noteContent: string | null;
       noteColor: string | null;
+      noteIsExpanded: boolean | null;
       colorHex: string | null;
       colorGradient: StoredColorGradient | null;
       linkOriginalUrl: string | null;
@@ -900,6 +920,7 @@ export class AssetService implements IAssetService {
         content,
         color: row.noteColor,
         isFavorite: row.isFavorite,
+        isExpanded: row.noteIsExpanded ?? false,
         wordCount,
         readingTimeMinutes,
         createdAt: row.createdAt.toISOString(),

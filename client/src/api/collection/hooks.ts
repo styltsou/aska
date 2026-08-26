@@ -1334,23 +1334,32 @@ function applyNoteDraftToContents(
 ): CollectionContentsResponse | undefined {
   if (!current) return current;
 
-  const metrics = calculateNoteMetrics(draft.content);
+  const hasContent = draft.content !== undefined;
+  const metrics = hasContent ? calculateNoteMetrics(draft.content!) : undefined;
   const updatedAt = new Date().toISOString();
 
   return {
     ...current,
     nodes: current.nodes.map((node) => {
       if (node.type === "note" && node.id === draft.assetId) {
-        return { ...node, content: draft.content, ...metrics, updatedAt };
+        return {
+          ...node,
+          ...(hasContent
+            ? { content: draft.content!, ...metrics, updatedAt }
+            : {}),
+          ...(draft.isExpanded !== undefined
+            ? { isExpanded: draft.isExpanded }
+            : {}),
+        };
       }
 
-      if (node.type !== "folder") return node;
+      if (node.type !== "folder" || !hasContent) return node;
 
       return {
         ...node,
         previews: node.previews.map((preview) =>
           preview.type === "note" && preview.assetId === draft.assetId
-            ? { ...preview, snippet: makeMarkdownPreview(draft.content) }
+            ? { ...preview, snippet: makeMarkdownPreview(draft.content!) }
             : preview,
         ),
       };
