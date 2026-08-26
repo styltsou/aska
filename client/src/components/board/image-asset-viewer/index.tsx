@@ -2178,6 +2178,7 @@ export function ImageAssetViewer({
                         <AutoResizeTextarea
                           ref={imageNoteRef}
                           id="image-note"
+                          spellCheck={false}
                           value={imageNote}
                           onChange={(event) =>
                             handleImageNoteChange(event.target.value)
