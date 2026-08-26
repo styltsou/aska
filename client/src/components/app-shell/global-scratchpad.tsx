@@ -171,6 +171,7 @@ export function GlobalScratchpad() {
                 <textarea
                   ref={inputRef}
                   rows={1}
+                  spellCheck={false}
                   className="block max-h-32 min-h-5 w-full resize-none overflow-y-auto rounded-md border-0 bg-transparent px-3 py-2 text-sm leading-5 outline-none placeholder:text-muted-foreground disabled:opacity-50"
                   disabled={createInboxNote.isPending}
                   placeholder="Capture to Inbox..."

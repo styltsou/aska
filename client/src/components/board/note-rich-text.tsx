@@ -980,6 +980,7 @@ export const NoteRichText = forwardRef<
     editorProps: {
       attributes: {
         class: "note-rich-text-content min-h-full outline-none",
+        spellcheck: "false",
       },
       handleKeyDown: (_view, event) => {
         if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
