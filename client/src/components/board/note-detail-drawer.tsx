@@ -51,6 +51,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { composeFrontMatter, parseFrontMatter } from "@/lib/front-matter";
+import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import {
@@ -606,9 +607,10 @@ export function NoteDetailDrawer({
   }
 
   function copyNoteMarkdown() {
-    const markdown =
+    const body =
       richTextRef.current?.getMarkdown() ??
       parseFrontMatter(draftRef.current).body;
+    const markdown = composeCopiedNoteMarkdown(activeNote?.content ?? "", body);
     if (!markdown.trim()) {
       toast.error("Nothing to copy yet.");
       return;

@@ -35,6 +35,8 @@ import { useUpdateNote } from "@/api/collection";
 import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import { gradientToCss } from "@/lib/color-gradient";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
+import { parseFrontMatter } from "@/lib/front-matter";
+import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
 import { useWeightedColorImageSearch } from "@/api/color-search";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
@@ -479,7 +481,11 @@ function PeekNote({
     [note.id, update],
   );
   const copyNote = useCallback(() => {
-    if (!draft.trim()) {
+    const markdown = composeCopiedNoteMarkdown(
+      note.content,
+      parseFrontMatter(draft).body,
+    );
+    if (!markdown.trim()) {
       toast.error("Nothing to copy yet.");
       return;
     }
@@ -488,14 +494,14 @@ function PeekNote({
       return;
     }
     void navigator.clipboard
-      .writeText(draft)
+      .writeText(markdown)
       .then(() => {
         setCopied(true);
         if (copiedTimer.current) window.clearTimeout(copiedTimer.current);
         copiedTimer.current = window.setTimeout(() => setCopied(false), 1_500);
       })
       .catch(() => toast.error("Unable to copy note."));
-  }, [draft]);
+  }, [draft, note.content]);
   const metrics = useMemo(() => {
     const words = draft.trim() ? draft.trim().split(/\s+/).length : 0;
     if (!words) return undefined;
