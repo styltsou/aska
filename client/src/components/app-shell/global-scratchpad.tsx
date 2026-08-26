@@ -7,10 +7,6 @@ import { toast } from "sonner";
 import { useCreateInboxNote } from "@/api/collection";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
-import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
-import { useEventListener } from "@/hooks/use-event-listener";
-
-import { KEYBINDINGS } from "@/lib/keybindings";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import {
@@ -59,10 +55,8 @@ export function GlobalScratchpad() {
   });
   const workspaceSlug = pathname.split("/")[1] || "";
   const createInboxNote = useCreateInboxNote(workspaceSlug);
-  const hasActiveModalLayer = useActiveModalLayer();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const open = useTransientStore((state) => state.scratchpadOpen);
-  const openScratchpad = useTransientStore((state) => state.openScratchpad);
   const closeScratchpadState = useTransientStore(
     (state) => state.closeScratchpad,
   );
@@ -106,22 +100,6 @@ export function GlobalScratchpad() {
     input.style.height = "0px";
     input.style.height = `${input.scrollHeight}px`;
   }, [content, open, phase]);
-
-  useEventListener("keydown", (event) => {
-    if (event.repeat || hasActiveModalLayer || open || !workspaceSlug) {
-      return;
-    }
-
-    const isShortcut =
-      event.shiftKey && event.code === KEYBINDINGS.SCRATCHPAD_OPEN.code;
-
-    if (!isShortcut) {
-      return;
-    }
-
-    event.preventDefault();
-    openScratchpad();
-  });
 
   function closeScratchpad({
     resetMutation = true,

@@ -753,7 +753,7 @@ export function NoteDetailDrawer({
                     variant="ghost"
                     size="icon"
                     className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground"
-                    aria-label={copied ? "Note copied" : "Copy note markdown"}
+                    aria-label={copied ? "Note copied" : "Copy markdown"}
                     onClick={copyNoteMarkdown}
                   >
                     {copied ? (
@@ -762,13 +762,13 @@ export function NoteDetailDrawer({
                       <CopyIcon className="size-4" />
                     )}
                     <span className="sr-only">
-                      {copied ? "Copied" : "Copy note markdown"}
+                      {copied ? "Copied" : "Copy markdown"}
                     </span>
                   </Button>
                 }
               />
               <TooltipContent side="bottom">
-                {copied ? "Copied" : "Copy note markdown"}
+                {copied ? "Copied" : "Copy markdown"}
               </TooltipContent>
             </Tooltip>
             <Tooltip>

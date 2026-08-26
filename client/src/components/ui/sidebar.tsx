@@ -3,7 +3,6 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 
-import { useEventListener } from "@/hooks/use-event-listener";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,6 @@ import { getPlatformModifier } from "@/lib/platform";
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
-import { KEYBINDINGS } from "@/lib/keybindings";
 import { usePersistedStore, useTransientStore } from "@/store";
 
 type SidebarState = "expanded" | "collapsed";
@@ -80,17 +78,8 @@ function SidebarProvider({
   children,
   ...props
 }: React.ComponentProps<"div">) {
-  // Adds a keyboard shortcut to toggle the sidebar.
-  const { toggleSidebar } = useSidebar();
-  useEventListener("keydown", (event) => {
-    if (
-      event.key === KEYBINDINGS.SIDEBAR_TOGGLE.key &&
-      (event.metaKey || event.ctrlKey)
-    ) {
-      event.preventDefault();
-      toggleSidebar();
-    }
-  });
+  // The sidebar toggle shortcut (⌘/Ctrl+B) is handled globally in the
+  // command palette's single keybinding listener.
 
   return (
     <div

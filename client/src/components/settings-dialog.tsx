@@ -25,13 +25,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
-import {
-  isSettingsOpen,
-  closeSettings,
-  openSettings,
-} from "@/lib/settings-dialog";
-import { useEventListener } from "@/hooks/use-event-listener";
-import { KEYBINDINGS } from "@/lib/keybindings";
+import { isSettingsOpen, closeSettings } from "@/lib/settings-dialog";
 
 const THEMES = [
   { value: "system", icon: MonitorIcon },
@@ -104,16 +98,6 @@ function GeneralSection() {
 
 export function SettingsDialog() {
   const [open, setOpen] = useState(isSettingsOpen);
-
-  useEventListener("keydown", (event) => {
-    if (event.repeat || open) return;
-    const isShortcut =
-      (event.ctrlKey || event.metaKey) &&
-      event.key === KEYBINDINGS.SETTINGS_OPEN.key;
-    if (!isShortcut) return;
-    event.preventDefault();
-    openSettings();
-  });
 
   useEffect(() => {
     function onUrlChange() {

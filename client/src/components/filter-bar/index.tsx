@@ -1,5 +1,3 @@
-import { KEYBINDINGS } from "@/lib/keybindings";
-import { useEventListener } from "@/hooks/use-event-listener";
 import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { Fragment, useState, type ComponentType, type ReactNode } from "react";
@@ -42,7 +40,6 @@ import {
   GLASS_ISLAND_CLASS,
 } from "@/lib/glass";
 import { cn } from "@/lib/utils";
-import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { useSessionStore } from "@/store";
 import {
   DEFAULT_FILTER_BAR_STATE,
@@ -147,13 +144,11 @@ export function FilterBar({
   const filterType = FILTER_TYPES.includes(filterBar.filterType)
     ? filterBar.filterType
     : "Color";
-  const toggle = useSessionStore((s) => s.toggleFilterBar);
   const toggleColor = useSessionStore((s) => s.toggleColor);
   const clearColors = useSessionStore((s) => s.clearColors);
   const toggleAssetType = useSessionStore((s) => s.toggleAssetType);
   const clearAssetTypes = useSessionStore((s) => s.clearAssetTypes);
   const setFilterType = useSessionStore((s) => s.setFilterType);
-  const hasActiveModal = useActiveModalLayer();
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const canAddColor = selectedColors.length < MAX_COLOR_FILTERS;
   const hasSearchableFilter =
@@ -183,15 +178,6 @@ export function FilterBar({
       document.querySelector<HTMLElement>('[data-slot="sidebar-inset"]'),
     );
   }, []);
-
-  useEventListener("keydown", (event) => {
-    if (event.repeat || hasActiveModal) return;
-
-    if (event.shiftKey && event.code === KEYBINDINGS.FILTER_BAR_TOGGLE.code) {
-      event.preventDefault();
-      toggle(scope);
-    }
-  });
 
   if (!portalTarget) return null;
 

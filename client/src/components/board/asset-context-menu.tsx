@@ -85,14 +85,14 @@ function imageActions(asset: ImageAsset, onCopy: () => void) {
 
 async function copyText(asset: NoteAsset) {
   await navigator.clipboard.writeText(asset.content);
-  toast.success("Copied note text.");
+  toast.success("Copied note markdown.");
 }
 
 function noteActions(asset: NoteAsset, onPeek?: () => void) {
   return (
     <>
       <ContextMenuItem onClick={() => void copyText(asset)}>
-        Copy text
+        Copy markdown
       </ContextMenuItem>
       <ContextMenuItem onClick={onPeek}>Peek note</ContextMenuItem>
     </>

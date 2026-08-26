@@ -46,7 +46,11 @@ import { useTheme } from "@/components/theme-provider";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { useEventListener } from "@/hooks/use-event-listener";
-import { KEYBINDINGS } from "@/lib/keybindings";
+import {
+  KEYBINDINGS,
+  isEditableTarget,
+  matchesKeybinding,
+} from "@/lib/keybindings";
 import { formatPlatformShortcut } from "@/lib/platform";
 import { openSettings } from "@/lib/settings-dialog";
 import {
@@ -111,13 +115,13 @@ const COMMAND_GROUPS = [
         id: "open-inbox",
         label: "Open Inbox",
         icon: InboxIcon,
-        shortcut: "⇧+I",
+        shortcut: undefined,
       },
       {
         id: "browse-collections",
         label: "Browse collections",
         icon: FolderOpenIcon,
-        shortcut: "⇧+C",
+        shortcut: undefined,
       },
       {
         id: "open-pexels-browser",
@@ -289,13 +293,10 @@ export function CommandPalette() {
       return;
     }
 
-    const isPaletteToggle =
-      event.ctrlKey &&
-      !event.metaKey &&
-      !event.altKey &&
-      event.key.toLowerCase() === KEYBINDINGS.COMMAND_PALETTE_TOGGLE.key;
-
-    if (isPaletteToggle) {
+    const paletteToggle = KEYBINDINGS.find(
+      (kb) => kb.command === "toggle-command-palette",
+    );
+    if (paletteToggle && matchesKeybinding(event, paletteToggle)) {
       event.preventDefault();
       setOpen((current) => !current);
       return;
@@ -305,39 +306,15 @@ export function CommandPalette() {
       return;
     }
 
-    if (event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
-      switch (event.code) {
-        case "KeyN":
-          if (!canCreateNote) return;
-          event.preventDefault();
-          runCommand("new-note");
-          return;
-        case "KeyD":
-          if (!canCreateFolder) return;
-          event.preventDefault();
-          runCommand("new-folder");
-          return;
-        case "KeyU":
-          if (!canCreateFolder) return;
-          event.preventDefault();
-          runCommand("upload-images");
-          return;
-        case "KeyI":
-          if (!workspaceSlug) return;
-          event.preventDefault();
-          runCommand("open-inbox");
-          return;
-        case "KeyC":
-          if (!workspaceSlug) return;
-          event.preventDefault();
-          runCommand("browse-collections");
-          return;
-        case "KeyV":
-          if (!canToggleCollectionView) return;
-          event.preventDefault();
-          runCommand("toggle-collection-view");
-          return;
+    for (const kb of KEYBINDINGS) {
+      if (kb.command === "toggle-command-palette") continue;
+      if (!matchesKeybinding(event, kb)) continue;
+      if (kb.shiftKey && isEditableTarget(event)) {
+        return;
       }
+      event.preventDefault();
+      runCommand(kb.command as CommandId);
+      return;
     }
   });
 

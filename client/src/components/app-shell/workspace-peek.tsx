@@ -370,8 +370,7 @@ function PeekHeader({
   return (
     <div
       className={cn(
-        GLASS_FRAME_CLASS,
-        "relative z-20 flex shrink-0 items-center justify-between gap-3 rounded-t-xl rounded-b-none p-2 ring-0",
+        "relative z-20 flex shrink-0 items-center justify-between gap-3 rounded-t-xl rounded-b-none bg-card p-2 ring-0",
       )}
     >
       <Tooltip>
@@ -601,7 +600,7 @@ function PeekNote({
                 variant="ghost"
                 size="icon"
                 className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
-                aria-label={copied ? "Note copied" : "Copy note markdown"}
+                aria-label={copied ? "Note copied" : "Copy markdown"}
                 onClick={copyNote}
               >
                 {copied ? (
@@ -610,13 +609,13 @@ function PeekNote({
                   <CopyIcon className="size-4" />
                 )}
                 <span className="sr-only">
-                  {copied ? "Copied" : "Copy note markdown"}
+                  {copied ? "Copied" : "Copy markdown"}
                 </span>
               </Button>
             }
           />
           <TooltipContent side="bottom">
-            {copied ? "Copied" : "Copy note markdown"}
+            {copied ? "Copied" : "Copy markdown"}
           </TooltipContent>
         </Tooltip>
         {hasDetails ? (

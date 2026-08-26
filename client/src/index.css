@@ -471,19 +471,19 @@
   }
 
   .note-rich-text-content code:not(pre code) {
-    @apply rounded bg-muted px-1 py-0.5 font-mono text-[0.8125rem] font-medium text-sidebar-foreground;
+    @apply rounded bg-card px-1 py-0.5 font-mono text-[0.8125rem] font-medium text-sidebar-foreground;
   }
 
   .note-rich-text-content pre {
-    @apply my-3 overflow-x-auto rounded-lg border border-sidebar-border bg-muted/65 p-3 font-mono text-xs leading-5 text-sidebar-foreground;
+    @apply my-3 overflow-x-auto rounded-lg border border-sidebar-border bg-card p-3 font-mono text-xs leading-5 text-sidebar-foreground;
   }
 
   .note-rich-text-content .note-code-block {
-    @apply my-3 overflow-hidden rounded-lg border border-sidebar-border bg-sidebar/45;
+    @apply my-3 overflow-hidden rounded-lg border border-sidebar-border bg-background;
   }
 
   .note-rich-text-content .note-code-block-header {
-    @apply flex items-center justify-between p-2;
+    @apply flex items-center justify-between bg-background p-2;
   }
 
   .note-rich-text-content .note-code-block-language {
@@ -554,7 +554,7 @@
   }
 
   .note-rich-text-content table {
-    @apply my-3 w-full overflow-hidden rounded-lg border border-sidebar-border bg-muted/65 text-sm;
+    @apply my-3 w-full overflow-hidden rounded-lg border border-sidebar-border bg-card text-sm;
     border-collapse: separate;
     border-spacing: 0;
   }
