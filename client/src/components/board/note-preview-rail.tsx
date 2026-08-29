@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
-import { useEditorState } from "@tiptap/react";
 import { motion, useReducedMotion } from "motion/react";
 
 import { cn } from "@/lib/utils";
@@ -16,8 +15,23 @@ type NoteSection = {
 
 const SECTION_SCROLL_OFFSET = 72;
 const ACTIVE_SECTION_LINE = 0.28;
-const MIN_SCROLLBAR_WIDTH = 8;
+const MIN_SCROLLBAR_WIDTH = 4;
 const PREVIEW_RAIL_GAP = 2;
+const MIN_PREVIEW_RAIL_SECTIONS = 2;
+const MIN_PREVIEW_RAIL_VIEWPORTS = 2;
+const PREVIEW_RAIL_VISIBLE_ATTRIBUTE = "data-note-preview-rail-visible";
+
+export function shouldShowNotePreviewRail(
+  sectionCount: number,
+  scrollHeight: number,
+  clientHeight: number,
+) {
+  return (
+    sectionCount >= MIN_PREVIEW_RAIL_SECTIONS &&
+    clientHeight > 0 &&
+    scrollHeight >= clientHeight * MIN_PREVIEW_RAIL_VIEWPORTS
+  );
+}
 
 function getLayoutRight(element: HTMLElement) {
   let right = element.offsetLeft + element.offsetWidth;
@@ -90,11 +104,8 @@ export function NotePreviewRail({
   scrollContainerRef: RefObject<HTMLDivElement | null>;
 }) {
   const shouldReduceMotion = useReducedMotion();
-  const sections = useEditorState({
-    editor,
-    selector: ({ editor: currentEditor }) => readSections(currentEditor),
-    equalityFn: sectionsAreEqual,
-  });
+  const [sections, setSections] = useState(() => readSections(editor));
+  const [isRailVisible, setIsRailVisible] = useState(false);
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [rightOffset, setRightOffset] = useState(
@@ -105,8 +116,62 @@ export function NotePreviewRail({
   activeIdRef.current = activeId;
 
   useEffect(() => {
+    const refreshSections = () => {
+      const nextSections = readSections(editor);
+      setSections((current) =>
+        sectionsAreEqual(current, nextSections) ? current : nextSections,
+      );
+    };
+
+    refreshSections();
+    editor.on("update", refreshSections);
+    return () => {
+      editor.off("update", refreshSections);
+    };
+  }, [editor]);
+
+  useEffect(() => {
     const container = scrollContainerRef.current;
-    if (!container || sections.length === 0) return;
+    if (!container) return;
+
+    let frame = 0;
+    const updateVisibility = () => {
+      frame = 0;
+      const nextIsVisible = shouldShowNotePreviewRail(
+        sections.length,
+        container.scrollHeight,
+        container.clientHeight,
+      );
+      setIsRailVisible((current) =>
+        current === nextIsVisible ? current : nextIsVisible,
+      );
+      if (nextIsVisible) {
+        container.setAttribute(PREVIEW_RAIL_VISIBLE_ATTRIBUTE, "true");
+      } else {
+        container.removeAttribute(PREVIEW_RAIL_VISIBLE_ATTRIBUTE);
+      }
+    };
+    const scheduleUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateVisibility);
+    };
+
+    updateVisibility();
+    editor.on("update", scheduleUpdate);
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
+    resizeObserver.observe(container);
+    resizeObserver.observe(editor.view.dom);
+
+    return () => {
+      editor.off("update", scheduleUpdate);
+      resizeObserver.disconnect();
+      container.removeAttribute(PREVIEW_RAIL_VISIBLE_ATTRIBUTE);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [editor, scrollContainerRef, sections.length]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !isRailVisible) return;
 
     let frame = 0;
     const updateRailPosition = () => {
@@ -169,9 +234,9 @@ export function NotePreviewRail({
       resizeObserver.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [editor, scrollContainerRef, sections]);
+  }, [editor, isRailVisible, scrollContainerRef, sections]);
 
-  if (sections.length < 2) return null;
+  if (!isRailVisible) return null;
 
   const previewSection =
     hoveredIndex === null ? undefined : sections[hoveredIndex];

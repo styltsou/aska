@@ -202,7 +202,7 @@
   }
 
   .note-workspace-scroll-container::-webkit-scrollbar {
-    width: 8px;
+    width: 4px;
   }
 
   .note-workspace-scroll-container::-webkit-scrollbar-track {
@@ -210,15 +210,22 @@
   }
 
   .note-workspace-scroll-container::-webkit-scrollbar-thumb {
-    border: 2px solid transparent;
-    border-radius: 999px;
+    border-radius: 999px 0 0 999px;
     background: transparent;
-    background-clip: padding-box;
   }
 
   .note-workspace-scroll-container:hover::-webkit-scrollbar-thumb {
     background: color-mix(in oklab, var(--sidebar-foreground) 28%, transparent);
-    background-clip: padding-box;
+  }
+
+  @media (min-width: 64rem) {
+    .note-workspace-scroll-container[data-note-preview-rail-visible="true"] {
+      scrollbar-width: none;
+    }
+
+    .note-workspace-scroll-container[data-note-preview-rail-visible="true"]::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   .button-control-primary {

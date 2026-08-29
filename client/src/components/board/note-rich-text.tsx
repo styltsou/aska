@@ -948,54 +948,42 @@ function InlineFormattingMenu({
     const url = href.trim();
     const selectionEnd = editor.state.selection.to;
     if (!url) {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .unsetLink()
+        .setTextSelection(selectionEnd)
+        .run();
     } else {
       editor
         .chain()
         .focus()
         .extendMarkRange("link")
         .setLink({ href: url })
+        .setTextSelection(selectionEnd)
         .run();
     }
     setLinkOpen(false);
-    editor.commands.setTextSelection(selectionEnd);
-    editor.commands.blur();
   }
 
   useEffect(() => {
+    if (!linkOpen) return;
+
     function handlePointerDown(event: PointerEvent) {
       const target = event.target;
       if (!(target instanceof Node)) return;
+      if (menuRef.current?.contains(target)) return;
 
-      if (
-        menuRef.current?.contains(target) ||
-        (target instanceof Element &&
-          target.closest(
-            '[data-slot="select-content"], [data-slot="popover-content"]',
-          ))
-      ) {
-        return;
-      }
-
-      if (linkOpen) {
-        // A popover owns the first outside interaction. Keep the editor range
-        // intact so closing it does not also dismiss the selection toolbar.
-        event.preventDefault();
-        setLinkOpen(false);
-        requestAnimationFrame(() => editor.commands.focus());
-        return;
-      }
-
-      if (!editor.view.dom.contains(target)) {
-        editor.commands.setTextSelection(editor.state.selection.to);
-        editor.commands.blur();
-      }
+      // Let the pointer event continue to its target. In particular, another
+      // open editor must be able to establish its own focus and selection.
+      setLinkOpen(false);
     }
 
     document.addEventListener("pointerdown", handlePointerDown, true);
     return () =>
       document.removeEventListener("pointerdown", handlePointerDown, true);
-  }, [editor, linkOpen]);
+  }, [linkOpen]);
 
   if (linkOpen) {
     return (
@@ -1351,6 +1339,8 @@ export const NoteRichText = forwardRef<
   const onHighlightModeChangeRef = useRef(onHighlightModeChange);
   const onHighlightSelectionChangeRef = useRef(onHighlightSelectionChange);
   const highlightPointerDownRef = useRef(false);
+  const editorInstanceRef = useRef<Editor | null>(null);
+  const initialMarkdownRef = useRef(markdown);
   onChangeRef.current = onChange;
   onSaveShortcutRef.current = onSaveShortcut;
   editableRef.current = editable;
@@ -1359,25 +1349,13 @@ export const NoteRichText = forwardRef<
   onHighlightModeChangeRef.current = onHighlightModeChange;
   onHighlightSelectionChangeRef.current = onHighlightSelectionChange;
 
-  const editor = useEditor({
-    extensions: NOTE_EXTENSIONS,
-    content: markdown,
-    contentType: "markdown",
-    editable,
-    autofocus: false,
-    // A restored drawer can mount during the initial page render, before its
-    // portal has a stable DOM surface. Creating Tiptap after that commit keeps
-    // its floating extensions from reading layout too early.
-    immediatelyRender: false,
-    onUpdate: ({ editor: currentEditor }) => {
-      onChangeRef.current?.(currentEditor.getMarkdown());
-    },
-    editorProps: {
+  const editorProps = useMemo(
+    () => ({
       attributes: {
         class: "note-rich-text-content min-h-full outline-none",
         spellcheck: "false",
       },
-      handleKeyDown: (_view, event) => {
+      handleKeyDown: (_view: unknown, event: KeyboardEvent) => {
         if (event.key === "Escape" && highlightModeRef.current) {
           event.preventDefault();
           highlightPointerDownRef.current = false;
@@ -1392,7 +1370,7 @@ export const NoteRichText = forwardRef<
         return false;
       },
       handleDOMEvents: {
-        mousedown: (_view, event) => {
+        mousedown: (_view: unknown, event: Event) => {
           if (
             editableRef.current &&
             highlightModeRef.current &&
@@ -1404,35 +1382,34 @@ export const NoteRichText = forwardRef<
           return false;
         },
         mouseup: () => {
+          const currentEditor = editorInstanceRef.current;
           if (
             !editableRef.current ||
             !highlightModeRef.current ||
             !highlightPointerDownRef.current ||
-            !editor
+            !currentEditor
           )
             return false;
 
           highlightPointerDownRef.current = false;
           window.requestAnimationFrame(() => {
             if (!highlightModeRef.current) return;
-            const { selection } = editor.state;
+            const { selection } = currentEditor.state;
             if (
               selection.empty ||
-              editor.isActive("codeBlock") ||
+              currentEditor.isActive("codeBlock") ||
               !highlightColorRef.current
             )
               return;
 
-            replaceHighlight(editor, highlightColorRef.current);
-            editor.commands.setTextSelection(selection.to);
+            replaceHighlight(currentEditor, highlightColorRef.current);
+            currentEditor.commands.setTextSelection(selection.to);
           });
           return false;
         },
       },
-      handleClick: (_view, _position, event) => {
-        if (editableRef.current) {
-          return false;
-        }
+      handleClick: (_view: unknown, _position: number, event: MouseEvent) => {
+        if (editableRef.current) return false;
         const target = event.target;
         const anchor =
           target instanceof Element ? target.closest("a[href]") : null;
@@ -1441,8 +1418,26 @@ export const NoteRichText = forwardRef<
         window.open(href, "_blank", "noopener,noreferrer");
         return true;
       },
+    }),
+    [],
+  );
+
+  const editor = useEditor({
+    extensions: NOTE_EXTENSIONS,
+    content: initialMarkdownRef.current,
+    contentType: "markdown",
+    editable,
+    autofocus: false,
+    // A restored drawer can mount during the initial page render, before its
+    // portal has a stable DOM surface. Creating Tiptap after that commit keeps
+    // its floating extensions from reading layout too early.
+    immediatelyRender: false,
+    onUpdate: ({ editor: currentEditor }) => {
+      onChangeRef.current?.(currentEditor.getMarkdown());
     },
+    editorProps,
   });
+  editorInstanceRef.current = editor;
 
   useEffect(() => {
     editor?.setEditable(editable, false);
@@ -1488,10 +1483,8 @@ export const NoteRichText = forwardRef<
     };
 
     notifyHighlightSelectionChange();
-    editor.on("selectionUpdate", notifyHighlightSelectionChange);
     editor.on("transaction", notifyHighlightSelectionChange);
     return () => {
-      editor.off("selectionUpdate", notifyHighlightSelectionChange);
       editor.off("transaction", notifyHighlightSelectionChange);
     };
   }, [editor]);
@@ -1548,6 +1541,12 @@ export const NoteRichText = forwardRef<
         className="note-rich-text-editor-shell min-h-[calc(100dvh-8.5rem)] cursor-text"
         onMouseDownCapture={(event) => {
           if (!editable || editor.isFocused) return;
+          if (
+            event.target instanceof Node &&
+            editor.view.dom.contains(event.target)
+          ) {
+            return;
+          }
           if (
             event.target instanceof Element &&
             event.target.closest(

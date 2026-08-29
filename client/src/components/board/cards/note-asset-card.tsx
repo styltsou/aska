@@ -310,6 +310,7 @@ export function NoteAssetCard({
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const initialHeightAppliedRef = useRef(false);
   const [hasOverflow, setHasOverflow] = useState(false);
   const [isPillDismissed, setIsPillDismissed] = useState(false);
   const [cardHeights, setCardHeights] = useState<{
@@ -355,6 +356,14 @@ export function NoteAssetCard({
       (hasOverflow ? EXPANDED_BOTTOM_GUTTER : 0);
     const collapsedHeight = Math.min(expandedHeight, CARD_MAX_HEIGHT);
 
+    // Install the first measured height before handing control to Motion. If
+    // we wait for Motion's animation frame, removing the temporary max-height
+    // lets the card briefly lay out at its natural (expanded) height.
+    if (!initialHeightAppliedRef.current) {
+      card.style.height = `${isExpanded ? expandedHeight : collapsedHeight}px`;
+      initialHeightAppliedRef.current = true;
+    }
+
     setHasOverflow((current) => {
       const next = expandedHeight > CARD_MAX_HEIGHT + 1;
       return current === next ? current : next;
@@ -385,15 +394,18 @@ export function NoteAssetCard({
     };
   }, [asset.content, updateOverflow]);
 
+  const measuredHeight = cardHeights
+    ? isExpanded
+      ? cardHeights.expanded
+      : cardHeights.collapsed
+    : undefined;
+
   return (
     <motion.div
       ref={cardRef}
+      initial={false}
       animate={
-        cardHeights
-          ? {
-              height: isExpanded ? cardHeights.expanded : cardHeights.collapsed,
-            }
-          : undefined
+        measuredHeight === undefined ? undefined : { height: measuredHeight }
       }
       transition={{
         height: {
@@ -404,7 +416,6 @@ export function NoteAssetCard({
       className={cn(
         "group bg-sidebar hover:border-sidebar-foreground/20 relative min-w-0 overflow-hidden rounded-lg border px-4 py-2.5 text-sm transition-[border-color,background-color,filter,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
         !cardHeights && !isExpanded && "max-h-80",
-        isExpanded && "z-20",
         effectiveOnOpen && "cursor-pointer",
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}

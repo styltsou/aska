@@ -811,7 +811,8 @@ export function NoteDetailDrawer({
   return (
     <NoteWorkspace
       open={workspaceOpen}
-      disablePointerDismissal={isPeekResizing}
+      modal={!peekTarget}
+      disablePointerDismissal={Boolean(peekTarget) || isPeekResizing}
       onOpenChange={(open) => {
         if (!open && isPeekResizing) return;
         if (open) {
@@ -834,7 +835,7 @@ export function NoteDetailDrawer({
       }}
     >
       {children ? <NoteWorkspaceTrigger render={children} /> : null}
-      <NoteWorkspaceContent className="md:right-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--app-shell-inset))] md:w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--app-shell-inset))] md:transition-[right,width,opacity,scale,transform] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none">
+      <NoteWorkspaceContent className="md:right-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--workspace-peek-stage-gap))] md:w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--workspace-peek-stage-gap))] md:transition-[right,width,opacity,scale,transform] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none">
         <NoteWorkspaceTitle>
           {activeNote ? "Note" : "New note"}
         </NoteWorkspaceTitle>
@@ -868,29 +869,31 @@ export function NoteDetailDrawer({
                 {hasPreviousNote ? "Back to previous note" : "Back to board"}
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    aria-label="Peek note"
-                    disabled={!activeNote || isPeekMirror}
-                    onClick={() => {
-                      if (!activeNote) return;
-                      peekNote(activeNote);
-                      closeWorkspace();
-                    }}
-                  >
-                    <PanelRightIcon className="size-4" />
-                    <span className="sr-only">Peek note</span>
-                  </Button>
-                }
-              />
-              <TooltipContent side="bottom">Peek note</TooltipContent>
-            </Tooltip>
+            {!isPeekMirror ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      aria-label="Peek note"
+                      disabled={!activeNote}
+                      onClick={() => {
+                        if (!activeNote) return;
+                        peekNote(activeNote);
+                        closeWorkspace();
+                      }}
+                    >
+                      <PanelRightIcon className="size-4" />
+                      <span className="sr-only">Peek note</span>
+                    </Button>
+                  }
+                />
+                <TooltipContent side="bottom">Peek note</TooltipContent>
+              </Tooltip>
+            ) : null}
           </div>
           <AnimatePresence initial={false}>
             {extractionFeedback ? (

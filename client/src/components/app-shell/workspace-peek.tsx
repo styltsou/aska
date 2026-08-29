@@ -393,7 +393,7 @@ function WorkspacePeekSwapButton({ target }: { target: PeekTarget }) {
             size="icon"
             aria-label="Swap notes"
             disabled={isSwapping}
-            className="fixed top-[calc(var(--app-shell-inset)+3.5rem)] right-[calc(var(--workspace-peek-panel-width)+var(--app-shell-inset))] z-[60] hidden size-8 translate-x-1/2 rounded-lg border border-border bg-background/95 text-muted-foreground shadow-none backdrop-blur-xl hover:bg-secondary hover:text-foreground md:flex"
+            className="fixed top-[calc(var(--app-shell-inset)+4rem)] right-[calc(var(--workspace-peek-panel-width)+var(--app-shell-inset))] z-[60] hidden size-8 translate-x-1/2 rounded-lg border border-border bg-background/95 text-muted-foreground shadow-none backdrop-blur-xl hover:bg-secondary hover:text-foreground md:flex"
             onClick={() => void handleSwap()}
           >
             <ArrowLeftRightIcon className="size-4" />
@@ -568,7 +568,6 @@ function PeekNote({
   const copiedTimer = useRef<number | undefined>(undefined);
   const saveStatusTimer = useRef<number | undefined>(undefined);
   const hasObservedSaveState = useRef(false);
-  const [draft, setDraft] = useState(note.content);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">(
     "saved",
   );
@@ -579,7 +578,6 @@ function PeekNote({
   const [canRemoveHighlight, setCanRemoveHighlight] = useState(false);
   useEffect(() => {
     latest.current = note.content;
-    setDraft(note.content);
     setSaveState("saved");
     setHighlightMode(false);
     setHighlightColor(undefined);
@@ -611,7 +609,6 @@ function PeekNote({
   const save = useCallback(
     (content: string) => {
       latest.current = content;
-      setDraft(content);
       if (timer.current) window.clearTimeout(timer.current);
       if (saveStatusTimer.current) {
         window.clearTimeout(saveStatusTimer.current);
@@ -639,10 +636,10 @@ function PeekNote({
     [note.id, update],
   );
   const copyNote = useCallback(() => {
-    const markdown = composeCopiedNoteMarkdown(
-      note.content,
-      parseFrontMatter(draft).body,
-    );
+    const body =
+      richTextRef.current?.getMarkdown() ??
+      parseFrontMatter(latest.current).body;
+    const markdown = composeCopiedNoteMarkdown(note.content, body);
     if (!markdown.trim()) {
       toast.error("Nothing to copy yet.");
       return;
@@ -659,7 +656,7 @@ function PeekNote({
         copiedTimer.current = window.setTimeout(() => setCopied(false), 1_500);
       })
       .catch(() => toast.error("Unable to copy note."));
-  }, [draft, note.content]);
+  }, [note.content]);
   const saveLabel =
     saveState === "saving"
       ? "Saving…"
@@ -808,10 +805,13 @@ function PeekNote({
             onHighlightSelectionChange={setCanRemoveHighlight}
             onChange={readOnly ? undefined : save}
             onSaveShortcut={() => {
-              if (!readOnly && latest.current.trim()) {
+              const content =
+                richTextRef.current?.getMarkdown() ?? latest.current;
+              if (!readOnly && content.trim()) {
+                latest.current = content;
                 setSaveState("saving");
                 update.mutate(
-                  { assetId: note.id, content: latest.current },
+                  { assetId: note.id, content },
                   {
                     onSuccess: () => setSaveState("saved"),
                     onError: () => {
