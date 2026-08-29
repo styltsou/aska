@@ -397,6 +397,7 @@ function CollectionPage() {
           collectionSlug,
           parentFolderPath,
         }}
+        onOpenReferencedColor={setDrawerColor}
         onClose={handleCloseNote}
       />
       <ColorDetailDrawer

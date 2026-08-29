@@ -53,8 +53,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
-  return request<T>(path);
+export async function apiGet<T>(
+  path: string,
+  options?: Omit<RequestInit, "method">,
+): Promise<T> {
+  return request<T>(path, options);
 }
 
 export async function apiGetBlob(

@@ -7,6 +7,7 @@ import { ImageUploadService } from "@/services/image-upload.service";
 import { ImageCropService } from "@/services/image-crop.service";
 import { LoggerService } from "@/services/logger.service";
 import { ObjectStorageService } from "@/services/object-storage.service";
+import { NoteMentionService } from "@/services/note-mention.service";
 import { PexelsService } from "@/services/pexels.service";
 import { TaskQueueService } from "@/services/task-queue.service";
 import { UrlUnfurlService } from "@/services/url-unfurl/url-unfurl.service";
@@ -46,6 +47,7 @@ export const container = {
     objectStorageService,
     loggerService,
   }),
+  noteMentionService: new NoteMentionService(),
 };
 
 export type Container = typeof container;

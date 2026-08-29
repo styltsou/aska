@@ -909,6 +909,92 @@
         }
       }
     },
+    "/api/v1/workspace/{workspaceSlug}/assets/mention-search": {
+      "get": {
+        "operationId": "searchNoteMentions",
+        "tags": ["Assets"],
+        "summary": "Search note and color mention targets",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": { "type": "string", "maxLength": 120 }
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["note", "color"] }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 10
+            }
+          },
+          {
+            "name": "sourceAssetId",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Mention targets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MentionTargetsResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/assets/mention-resolve": {
+      "post": {
+        "operationId": "resolveNoteMentions",
+        "tags": ["Assets"],
+        "summary": "Resolve note and color mention targets in one batch",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceSlug" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MentionResolveRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accessible mention targets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MentionTargetsResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}/assets/{assetId}": {
       "delete": {
         "operationId": "deleteAsset",
@@ -2959,6 +3045,72 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/ColorSearchPayload"
+          }
+        }
+      },
+      "MentionTargetIdentity": {
+        "type": "object",
+        "required": ["assetId", "assetType"],
+        "properties": {
+          "assetId": { "type": "integer", "minimum": 1 },
+          "assetType": { "type": "string", "enum": ["note", "color"] }
+        }
+      },
+      "MentionResolveRequest": {
+        "type": "object",
+        "required": ["targets"],
+        "properties": {
+          "sourceAssetId": { "type": "integer", "minimum": 1 },
+          "targets": {
+            "type": "array",
+            "maxItems": 100,
+            "items": { "$ref": "#/components/schemas/MentionTargetIdentity" }
+          }
+        }
+      },
+      "MentionTarget": {
+        "allOf": [
+          { "$ref": "#/components/schemas/MentionTargetIdentity" },
+          {
+            "type": "object",
+            "required": [
+              "label",
+              "title",
+              "noteColor",
+              "hex",
+              "gradient",
+              "snippet",
+              "locationLabel",
+              "collectionSlug",
+              "folderPath"
+            ],
+            "properties": {
+              "label": { "type": "string" },
+              "title": { "type": ["string", "null"] },
+              "noteColor": { "type": ["string", "null"] },
+              "hex": { "type": ["string", "null"] },
+              "gradient": { "type": ["object", "null"] },
+              "snippet": { "type": ["string", "null"] },
+              "locationLabel": { "type": "string" },
+              "collectionSlug": { "type": ["string", "null"] },
+              "folderPath": { "type": ["string", "null"] }
+            }
+          }
+        ]
+      },
+      "MentionTargetsResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["targets"],
+            "properties": {
+              "targets": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/MentionTarget" }
+              }
+            }
           }
         }
       },

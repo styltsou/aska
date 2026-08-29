@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useUpdateNote } from "@/api/collection";
 import { fetchPeekableAsset } from "@/api/collection/fetchers";
+import type { NoteMentionTarget } from "@/api/note-mentions/types";
 import { gradientToCss } from "@/lib/color-gradient";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { parseFrontMatter } from "@/lib/front-matter";
@@ -52,6 +53,7 @@ import { useWeightedColorImageSearch } from "@/api/color-search";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
+import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type { ColorAsset, NoteAsset } from "@/types/asset";
 import type { NoteHighlightColor } from "@/lib/note-highlights";
@@ -592,6 +594,7 @@ function PeekNote({
   onPromote?: () => Promise<void>;
   readOnly: boolean;
 }) {
+  const { peekNote, peekColor } = useWorkspacePeek();
   const update = useUpdateNote(workspaceSlug);
   const latest = useRef(note.content);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -654,6 +657,57 @@ function PeekNote({
       { onError: () => toast.error("Could not save peeked note.") },
     );
   }, [note.id, note.title, readOnly, title, update]);
+  const openMentionTarget = useCallback(
+    async (
+      identity: { assetId: number; assetType: "note" | "color" },
+      resolved?: NoteMentionTarget,
+    ) => {
+      try {
+        if (!readOnly) {
+          const content = richTextRef.current?.getMarkdown() ?? latest.current;
+          if (timer.current) window.clearTimeout(timer.current);
+          if (content !== note.content) {
+            setSaveState("saving");
+            await update.mutateAsync({ assetId: note.id, content });
+            setSaveState("saved");
+          }
+        }
+        const { asset } = await fetchPeekableAsset(
+          workspaceSlug,
+          `${identity.assetType}-${identity.assetId}`,
+        );
+        if (asset.type === "note") {
+          peekNote({ ...asset, color: asset.color ?? undefined });
+          return;
+        }
+        peekColor(
+          asset,
+          resolved?.collectionSlug
+            ? {
+                type: "collection",
+                collectionSlug: resolved.collectionSlug,
+                folderPath: resolved.folderPath ?? undefined,
+                includeDescendants: true,
+              }
+            : { type: "inbox" },
+        );
+      } catch (error) {
+        setSaveState("error");
+        toast.error(
+          getUserFacingApiErrorMessage(error, "Could not open this reference."),
+        );
+      }
+    },
+    [
+      note.content,
+      note.id,
+      peekColor,
+      peekNote,
+      readOnly,
+      update,
+      workspaceSlug,
+    ],
+  );
   const copyNote = useCallback(() => {
     const body =
       richTextRef.current?.getMarkdown() ??
@@ -812,6 +866,11 @@ function PeekNote({
             key={note.id}
             ref={richTextRef}
             markdown={note.content}
+            workspaceSlug={workspaceSlug}
+            sourceNoteId={note.id}
+            onOpenMention={(identity, resolved) =>
+              void openMentionTarget(identity, resolved)
+            }
             editable={!readOnly}
             scrollContainerRef={contentRef}
             highlightColor={highlightColor}

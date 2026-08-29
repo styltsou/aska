@@ -152,16 +152,11 @@ export function CollectionCard({
                               : {}),
                           }}
                         >
-                          {preview.snippet ? (
-                            <NoteMarkdown
-                              content={preview.snippet}
-                              previewScale={0.65}
-                            />
-                          ) : (
-                            <span className="text-[10px] font-medium text-sidebar-foreground/20">
-                              Note
-                            </span>
-                          )}
+                          <NoteMarkdown
+                            content={preview.snippet ?? ""}
+                            title={preview.title}
+                            previewScale={0.65}
+                          />
                         </div>
                       );
                     })()
@@ -257,16 +252,11 @@ export function CollectionCard({
                               : {}),
                           }}
                         >
-                          {preview.snippet ? (
-                            <NoteMarkdown
-                              content={preview.snippet}
-                              previewScale={0.65}
-                            />
-                          ) : (
-                            <span className="text-[10px] font-medium text-sidebar-foreground/20">
-                              Note
-                            </span>
-                          )}
+                          <NoteMarkdown
+                            content={preview.snippet ?? ""}
+                            title={preview.title}
+                            previewScale={0.65}
+                          />
                         </div>
                       );
                     })

@@ -143,6 +143,7 @@ function InboxPage() {
         hasPreviousNote={hasPreviousNote}
         workspaceSlug={workspaceSlug}
         noteExtractionTarget={{ target: "inbox" }}
+        onOpenReferencedColor={setDrawerColor}
         onClose={handleCloseNote}
       />
       <ColorDetailDrawer

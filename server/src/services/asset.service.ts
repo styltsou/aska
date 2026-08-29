@@ -49,6 +49,10 @@ import {
 } from "@/lib/color-gradient";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import { normalizeNoteTitle } from "@/lib/note-title";
+import {
+  reconcileNoteReferences,
+  rewriteReferencedTargetLabel,
+} from "@/services/note-mention.service";
 import { first } from "@/lib/query";
 import type { IObjectStorageService } from "@/services/object-storage.service";
 import {
@@ -433,23 +437,29 @@ export class AssetService implements IAssetService {
         throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create note");
       }
 
+      const markdown = await reconcileNoteReferences(
+        tx,
+        orgId,
+        insertedAsset.id,
+        data.content,
+      );
       await tx.insert(noteAssets).values({
         assetId: insertedAsset.id,
-        markdown: data.content,
+        markdown,
         color: data.color,
       });
 
-      return insertedAsset;
+      return { ...insertedAsset, markdown };
     });
 
     const { wordCount, readingTimeMinutes } = calculateNoteMetrics(
-      data.content,
+      note.markdown,
     );
 
     return {
       id: `note-${note.id}`,
       type: "note",
-      content: data.content,
+      content: note.markdown,
       title: normalizeNoteTitle(data.title),
       color: data.color ?? null,
       isFavorite: false,
@@ -499,9 +509,24 @@ export class AssetService implements IAssetService {
         throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
       }
 
+      if (data.title !== undefined) {
+        await rewriteReferencedTargetLabel(
+          tx,
+          orgId,
+          asset.id,
+          "note",
+          asset.title,
+        );
+      }
+
       const setValues: Partial<typeof noteAssets.$inferInsert> = {};
       if (data.content !== undefined) {
-        setValues.markdown = data.content;
+        setValues.markdown = await reconcileNoteReferences(
+          tx,
+          orgId,
+          asset.id,
+          data.content,
+        );
       }
       if (data.isExpanded !== undefined) {
         setValues.isExpanded = data.isExpanded;
@@ -585,12 +610,25 @@ export class AssetService implements IAssetService {
         throw new AppError(ErrorCode.NOT_FOUND, "Color not found");
       }
 
-      await tx
+      const [colorAsset] = await tx
         .update(colorAssets)
         .set({ hex, ...(gradient === undefined ? {} : { gradient }) })
-        .where(eq(colorAssets.assetId, asset.id));
+        .where(eq(colorAssets.assetId, asset.id))
+        .returning({ gradient: colorAssets.gradient });
 
-      return asset;
+      const effectiveGradient = colorAsset?.gradient ?? null;
+      await rewriteReferencedTargetLabel(
+        tx,
+        orgId,
+        asset.id,
+        "color",
+        title ??
+          (effectiveGradient
+            ? `${effectiveGradient.type === "radial" ? "Radial" : "Linear"} Gradient`
+            : hex),
+      );
+
+      return { ...asset, gradient: effectiveGradient };
     });
 
     return {
@@ -599,7 +637,7 @@ export class AssetService implements IAssetService {
       hex,
       title,
       isFavorite: updated.isFavorite,
-      gradient: gradient === undefined ? null : gradient,
+      gradient: updated.gradient,
     };
   }
 

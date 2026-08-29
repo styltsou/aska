@@ -12,7 +12,10 @@ import {
 } from "react";
 import { CopyIcon } from "lucide-react";
 import { motion } from "motion/react";
-import ReactMarkdown, { type Components } from "react-markdown";
+import ReactMarkdown, {
+  defaultUrlTransform,
+  type Components,
+} from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { common, createLowlight } from "lowlight";
 import type { RootContent } from "hast";
@@ -181,17 +184,34 @@ const MD_COMPONENTS: Components = {
       {...props}
     />
   ),
-  a: ({ className, ...props }) => (
-    <a
-      className={cn(
-        "text-primary hover:text-primary/75 font-medium break-words underline underline-offset-4 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        className,
-      )}
-      target="_blank"
-      rel="noopener noreferrer"
-      {...props}
-    />
-  ),
+  a: ({ className, href, children, ...props }) => {
+    const mention = /^(note|color):(\d+)$/.exec(href ?? "");
+    if (mention) {
+      return (
+        <span
+          className={cn("note-mention-chip cursor-inherit", className)}
+          data-asset-mention={mention[1]}
+        >
+          <span aria-hidden="true">@</span>
+          <span className="truncate">{children}</span>
+        </span>
+      );
+    }
+    return (
+      <a
+        className={cn(
+          "text-primary hover:text-primary/75 font-medium break-words underline underline-offset-4 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          className,
+        )}
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        {...props}
+      >
+        {children}
+      </a>
+    );
+  },
   blockquote: ({ className, ...props }) => (
     <blockquote
       className={cn("text-sidebar-foreground/65 my-3 pl-3 italic", className)}
@@ -260,14 +280,18 @@ const MD_COMPONENTS: Components = {
 
 export function NoteMarkdown({
   content,
+  title,
   className,
   previewScale,
 }: {
   content: string;
+  title?: string | null;
   className?: string;
   previewScale?: number;
 }) {
   const body = useMemo(() => parseFrontMatter(content).body, [content]);
+  const displayTitle = title?.trim() || "Untitled";
+  const isUntitled = !title?.trim();
 
   return (
     <div
@@ -287,9 +311,21 @@ export function NoteMarkdown({
             }
       }
     >
+      <h1
+        className={cn(
+          "note-card-preview-title",
+          isUntitled && "note-card-preview-title--placeholder",
+        )}
+        data-note-title-placeholder={isUntitled || undefined}
+      >
+        {displayTitle}
+      </h1>
       <ReactMarkdown
         components={MD_COMPONENTS}
         remarkPlugins={[remarkGfm, remarkHighlight]}
+        urlTransform={(url) =>
+          /^(?:note|color):\d+$/.test(url) ? url : defaultUrlTransform(url)
+        }
       >
         {linkifyBareUrls(body)}
       </ReactMarkdown>
@@ -447,7 +483,11 @@ export function NoteAssetCard({
           hasOverflow && !isExpanded && "pb-8",
         )}
       >
-        <NoteMarkdown content={asset.content} className="min-w-0" />
+        <NoteMarkdown
+          content={asset.content}
+          title={asset.title}
+          className="min-w-0"
+        />
       </div>
       {hasOverflow && !isExpanded ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-b from-sidebar/0 via-sidebar/85 to-sidebar transition-opacity duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-60" />

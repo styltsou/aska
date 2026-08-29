@@ -27,6 +27,7 @@ import { getColorName, normalizeHexColor } from "@/lib/color-names";
 import { normalizeColorGradient } from "@/lib/color-gradient";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import { normalizeNoteTitle } from "@/lib/note-title";
+import { reconcileNoteReferences } from "@/services/note-mention.service";
 import {
   getCollectionBySlug,
   resolveTargetInCollection,
@@ -182,9 +183,15 @@ export class CollectionMutationService {
         throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create note");
       }
 
+      const markdown = await reconcileNoteReferences(
+        tx,
+        orgId,
+        insertedAsset.id,
+        data.content,
+      );
       await tx.insert(noteAssets).values({
         assetId: insertedAsset.id,
-        markdown: data.content,
+        markdown,
         color: data.color,
       });
 
@@ -202,7 +209,7 @@ export class CollectionMutationService {
         pathFolderNames: parentTarget.pathFolderNames,
       });
 
-      return insertedAsset;
+      return { ...insertedAsset, markdown };
     });
 
     if (!note) {
@@ -210,13 +217,13 @@ export class CollectionMutationService {
     }
 
     const { wordCount, readingTimeMinutes } = calculateNoteMetrics(
-      data.content,
+      note.markdown,
     );
 
     return {
       id: `note-${note.id}`,
       type: "note",
-      content: data.content,
+      content: note.markdown,
       title: normalizeNoteTitle(data.title),
       color: data.color ?? null,
       isFavorite: false,

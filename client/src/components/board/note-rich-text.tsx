@@ -61,6 +61,13 @@ import Suggestion, {
 } from "@tiptap/suggestion";
 
 import { NotePreviewRail } from "@/components/board/note-preview-rail";
+import {
+  AssetMention,
+  NoteMentionProvider,
+  createMentionsExtension,
+  parseNumericAssetId,
+  type OpenNoteMentionTarget,
+} from "@/components/board/note-mentions";
 import { NoteSelectionMenuSurface } from "@/components/board/note-selection-actions";
 import { AskaTaskItem } from "@/components/board/task-item";
 import { Button } from "@/components/ui/button";
@@ -728,7 +735,7 @@ export const NoteHighlight = Highlight.extend({
   HTMLAttributes: { class: "note-highlight" },
 });
 
-const NOTE_EXTENSIONS = [
+const BASE_NOTE_EXTENSIONS = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3, 4] },
     link: {
@@ -1311,6 +1318,9 @@ export const NoteRichText = forwardRef<
     highlightMode?: boolean;
     onHighlightModeChange?: (active: boolean) => void;
     onHighlightSelectionChange?: (hasHighlight: boolean) => void;
+    workspaceSlug?: string;
+    sourceNoteId?: string;
+    onOpenMention?: OpenNoteMentionTarget;
   }
 >(function NoteRichText(
   {
@@ -1326,6 +1336,9 @@ export const NoteRichText = forwardRef<
     highlightMode = false,
     onHighlightModeChange,
     onHighlightSelectionChange,
+    workspaceSlug,
+    sourceNoteId,
+    onOpenMention,
   },
   ref,
 ) {
@@ -1348,6 +1361,17 @@ export const NoteRichText = forwardRef<
   highlightModeRef.current = highlightMode;
   onHighlightModeChangeRef.current = onHighlightModeChange;
   onHighlightSelectionChangeRef.current = onHighlightSelectionChange;
+  const sourceAssetId = parseNumericAssetId(sourceNoteId);
+  const noteExtensions = useMemo(
+    () => [
+      ...BASE_NOTE_EXTENSIONS,
+      AssetMention,
+      ...(workspaceSlug
+        ? [createMentionsExtension({ workspaceSlug, sourceAssetId })]
+        : []),
+    ],
+    [sourceAssetId, workspaceSlug],
+  );
 
   const editorProps = useMemo(
     () => ({
@@ -1423,7 +1447,7 @@ export const NoteRichText = forwardRef<
   );
 
   const editor = useEditor({
-    extensions: NOTE_EXTENSIONS,
+    extensions: noteExtensions,
     content: initialMarkdownRef.current,
     contentType: "markdown",
     editable,
@@ -1516,7 +1540,12 @@ export const NoteRichText = forwardRef<
   if (!editor) return null;
 
   return (
-    <>
+    <NoteMentionProvider
+      editor={editor}
+      workspaceSlug={workspaceSlug}
+      sourceAssetId={sourceAssetId}
+      onOpen={onOpenMention}
+    >
       {editable ? (
         <>
           <BubbleMenu
@@ -1574,6 +1603,6 @@ export const NoteRichText = forwardRef<
           scrollContainerRef={scrollContainerRef}
         />
       ) : null}
-    </>
+    </NoteMentionProvider>
   );
 });

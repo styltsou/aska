@@ -28,6 +28,8 @@ import type {
   BoardInsertionPlacement,
   CollectionNoteNode,
 } from "@/api/collection";
+import { fetchPeekableAsset } from "@/api/collection/fetchers";
+import type { NoteMentionTarget } from "@/api/note-mentions/types";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
 import { NoteEditorLoading } from "@/components/board/note-editor-loading";
@@ -73,8 +75,12 @@ import {
 } from "@/lib/note-content";
 import { cn } from "@/lib/utils";
 import type { NoteHighlightColor } from "@/lib/note-highlights";
-import type { NoteAsset } from "@/types/asset";
-import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
+import type { ColorAsset, NoteAsset } from "@/types/asset";
+import {
+  useWorkspacePeek,
+  type PeekColorScope,
+} from "@/components/app-shell/workspace-peek";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AUTOSAVE_DELAY_MS = 700;
 const COPIED_RESET_MS = 1_500;
@@ -97,6 +103,7 @@ export function NoteDetailDrawer({
   children,
   noteExtractionTarget,
   onNoteChange,
+  onOpenReferencedColor,
   onPromote,
   onSwap,
   onBack,
@@ -120,6 +127,7 @@ export function NoteDetailDrawer({
     parentFolderPath?: string;
   };
   onNoteChange?: (note: NoteAsset) => void;
+  onOpenReferencedColor?: (color: ColorAsset) => void;
   onPromote?: (note: NoteAsset, previousNote?: NoteAsset) => void;
   onSwap?: (note: NoteAsset) => void;
   onBack?: () => void;
@@ -136,12 +144,14 @@ export function NoteDetailDrawer({
   const {
     target: peekTarget,
     peekNote,
+    peekColor,
     setActiveNoteId,
     setNotePromotionHandler,
     setNoteSwapHandler,
     syncPeekNote,
     isResizing: isPeekResizing,
   } = useWorkspacePeek();
+  const isMobile = useIsMobile();
   const noteContentRef = useRef<HTMLDivElement>(null);
   const richTextRef = useRef<NoteRichTextHandle>(null);
   const draftRef = useRef(note?.content ?? "");
@@ -550,6 +560,51 @@ export function NoteDetailDrawer({
       noteContent,
       onNoteChange,
       onPromote,
+    ],
+  );
+
+  const openMentionTarget = useCallback(
+    async (
+      identity: { assetId: number; assetType: "note" | "color" },
+      resolved?: NoteMentionTarget,
+    ) => {
+      try {
+        const { asset } = await fetchPeekableAsset(
+          workspaceSlug,
+          `${identity.assetType}-${identity.assetId}`,
+        );
+        if (asset.type === "note") {
+          const noteAsset = { ...asset, color: asset.color ?? undefined };
+          if (isMobile) await promotePeekedNote(noteAsset);
+          else peekNote(noteAsset);
+          return;
+        }
+        if (isMobile) {
+          onOpenReferencedColor?.(asset);
+          return;
+        }
+        const scope: PeekColorScope = resolved?.collectionSlug
+          ? {
+              type: "collection",
+              collectionSlug: resolved.collectionSlug,
+              folderPath: resolved.folderPath ?? undefined,
+              includeDescendants: true,
+            }
+          : { type: "inbox" };
+        peekColor(asset, scope);
+      } catch (error) {
+        toast.error(
+          getUserFacingApiErrorMessage(error, "Could not open this reference."),
+        );
+      }
+    },
+    [
+      isMobile,
+      onOpenReferencedColor,
+      peekColor,
+      peekNote,
+      promotePeekedNote,
+      workspaceSlug,
     ],
   );
 
@@ -1075,6 +1130,11 @@ export function NoteDetailDrawer({
                     key={isCreateMode ? "create-note-editor" : activeNote?.id}
                     ref={richTextRef}
                     markdown={frontMatter.body}
+                    workspaceSlug={workspaceSlug}
+                    sourceNoteId={activeNote?.id}
+                    onOpenMention={(identity, resolved) =>
+                      void openMentionTarget(identity, resolved)
+                    }
                     editable
                     autoFocus={!isCreateMode}
                     scrollContainerRef={noteContentRef}

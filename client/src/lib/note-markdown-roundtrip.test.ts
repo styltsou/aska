@@ -6,6 +6,7 @@ import { TableKit } from "@tiptap/extension-table";
 import { MarkdownManager } from "@tiptap/markdown";
 import StarterKit from "@tiptap/starter-kit";
 import { NoteHighlight } from "@/components/board/note-rich-text";
+import { AssetMention } from "@/components/board/note-mentions";
 import { describe, expect, it } from "vitest";
 
 const markdown = new MarkdownManager({
@@ -25,6 +26,7 @@ const noteMarkdown = new MarkdownManager({
     TaskItem,
     NoteHighlight,
     TableKit,
+    AssetMention,
   ]),
 });
 
@@ -86,5 +88,16 @@ describe("note Markdown round trips", () => {
     expect(noteMarkdown.serialize(noteMarkdown.parse(serialized))).toBe(
       serialized,
     );
+  });
+
+  it("round-trips internal asset mentions without claiming normal links", () => {
+    const source =
+      "See [Project plan](note:12), [Ocean](color:7), and [docs](https://example.com).";
+    const parsed = noteMarkdown.parse(source);
+
+    expect(parsed.content?.[0]?.content?.map((node) => node.type)).toContain(
+      "assetMention",
+    );
+    expect(noteMarkdown.serialize(parsed)).toBe(source);
   });
 });

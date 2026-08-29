@@ -64,6 +64,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.organization.id,
       to: r.mediaCleanupJobs.organizationId,
     }),
+    noteReferences: r.many.noteReferences({
+      from: r.organization.id,
+      to: r.noteReferences.organizationId,
+    }),
     externalResources: r.many.externalResources({
       from: r.organization.id,
       to: r.externalResources.organizationId,
@@ -109,6 +113,16 @@ export const relations = defineRelations(schema, (r) => ({
     mediaCleanupJobs: r.many.mediaCleanupJobs({
       from: r.assets.id,
       to: r.mediaCleanupJobs.assetId,
+    }),
+    outgoingNoteReferences: r.many.noteReferences({
+      from: r.assets.id,
+      to: r.noteReferences.sourceAssetId,
+      alias: "note_reference_source",
+    }),
+    incomingNoteReferences: r.many.noteReferences({
+      from: r.assets.id,
+      to: r.noteReferences.targetAssetId,
+      alias: "note_reference_target",
     }),
   },
 

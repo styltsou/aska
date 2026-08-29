@@ -70,6 +70,7 @@ import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
 import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
 import { activeLinkRefetchInterval } from "@/api/url-unfurl/hooks";
+import { noteMentionQueryKeys } from "@/api/note-mentions/hooks";
 
 export { collectionQueryKeys } from "./query-keys";
 
@@ -1491,7 +1492,7 @@ export function useUpdateNote(workspaceSlug: string) {
         queryClient.setQueryData(queryKey, contents);
       });
     },
-    onSuccess: ({ note }) => {
+    onSuccess: ({ note }, variables) => {
       queryClient.setQueriesData<CollectionContentsResponse>(
         {
           predicate: ({ queryKey }) =>
@@ -1520,6 +1521,12 @@ export function useUpdateNote(workspaceSlug: string) {
               }
             : current,
       );
+      void queryClient.invalidateQueries({
+        queryKey: noteMentionQueryKeys.all(workspaceSlug),
+      });
+      if (variables.title !== undefined) {
+        void queryClient.invalidateQueries(contentsFilter);
+      }
     },
   });
 }
@@ -1564,6 +1571,10 @@ export function useUpdateColor(workspaceSlug: string) {
       void queryClient.invalidateQueries({
         queryKey: collectionQueryKeys.collections(workspaceSlug),
       });
+      void queryClient.invalidateQueries({
+        queryKey: noteMentionQueryKeys.all(workspaceSlug),
+      });
+      void queryClient.invalidateQueries(contentsFilter);
     },
   });
 }
@@ -2439,6 +2450,9 @@ export function useDeleteAsset(workspaceSlug: string) {
       });
       void queryClient.invalidateQueries({
         queryKey: ["workspace", workspaceSlug],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: noteMentionQueryKeys.all(workspaceSlug),
       });
     },
   });

@@ -592,6 +592,46 @@ export const noteAssets = pgTable("note_assets", {
   isExpanded: boolean("is_expanded").notNull().default(false),
 });
 
+export const noteReferences = pgTable(
+  "note_references",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    organizationId: text("organization_id").notNull(),
+    sourceAssetId: integer("source_asset_id").notNull(),
+    targetAssetId: integer("target_asset_id").notNull(),
+    targetType: assetTypeEnum("target_type").notNull(),
+    fallbackLabel: varchar("fallback_label", { length: 255 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "note_references_source_asset_org_fkey",
+      columns: [table.sourceAssetId, table.organizationId],
+      foreignColumns: [assets.id, assets.organizationId],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "note_references_target_asset_org_fkey",
+      columns: [table.targetAssetId, table.organizationId],
+      foreignColumns: [assets.id, assets.organizationId],
+    }).onDelete("cascade"),
+    index("note_references_organizationId_idx").on(table.organizationId),
+    index("note_references_sourceAssetId_idx").on(table.sourceAssetId),
+    index("note_references_targetAssetId_idx").on(table.targetAssetId),
+    uniqueIndex("note_references_source_target_uidx").on(
+      table.sourceAssetId,
+      table.targetAssetId,
+    ),
+    check(
+      "note_references_target_type_chk",
+      sql`${table.targetType} in ('note', 'color')`,
+    ),
+    check(
+      "note_references_no_self_reference_chk",
+      sql`${table.sourceAssetId} <> ${table.targetAssetId}`,
+    ),
+  ],
+);
+
 /**
  * A color swatch asset. `hex` is a normalized lowercase hex value: always
  * #rrggbb when opaque, #rrggbbaa only when transparency is present, so the
