@@ -20,10 +20,49 @@ describe("remarkHighlight", () => {
       { type: "text", value: "Keep " },
       {
         type: "emphasis",
-        data: { hName: "mark" },
+        data: {
+          hName: "mark",
+          hProperties: {
+            class: "note-highlight",
+            "data-highlight-color": "amber",
+          },
+        },
         children: [{ type: "text", value: "this idea" }],
       },
       { type: "text", value: " close." },
+    ]);
+  });
+
+  it("preserves the selected color for the colored note syntax", () => {
+    const tree = {
+      type: "root",
+      children: [
+        {
+          type: "paragraph",
+          children: [
+            {
+              type: "text",
+              value: '[highlight color="mint"]A calmer idea[/highlight]',
+            },
+          ],
+        },
+      ],
+    };
+
+    remarkHighlight()(tree);
+
+    expect(tree.children[0]?.children).toEqual([
+      {
+        type: "emphasis",
+        data: {
+          hName: "mark",
+          hProperties: {
+            class: "note-highlight",
+            "data-highlight-color": "mint",
+          },
+        },
+        children: [{ type: "text", value: "A calmer idea" }],
+      },
     ]);
   });
 

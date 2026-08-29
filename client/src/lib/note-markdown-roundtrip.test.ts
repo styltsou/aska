@@ -5,6 +5,7 @@ import TaskList from "@tiptap/extension-task-list";
 import { TableKit } from "@tiptap/extension-table";
 import { MarkdownManager } from "@tiptap/markdown";
 import StarterKit from "@tiptap/starter-kit";
+import { NoteHighlight } from "@/components/board/note-rich-text";
 import { describe, expect, it } from "vitest";
 
 const markdown = new MarkdownManager({
@@ -13,6 +14,16 @@ const markdown = new MarkdownManager({
     TaskList,
     TaskItem,
     Highlight,
+    TableKit,
+  ]),
+});
+
+const noteMarkdown = new MarkdownManager({
+  extensions: resolveExtensions([
+    StarterKit,
+    TaskList,
+    TaskItem,
+    NoteHighlight,
     TableKit,
   ]),
 });
@@ -63,5 +74,17 @@ describe("note Markdown round trips", () => {
       ].join("\n"),
     );
     expect(markdown.serialize(markdown.parse(serialized))).toBe(serialized);
+  });
+
+  it("persists non-default highlight colors and reads legacy highlights", () => {
+    const source =
+      'A ==legacy== idea and [highlight color="mint"]a calmer idea[/highlight].';
+
+    const serialized = noteMarkdown.serialize(noteMarkdown.parse(source));
+
+    expect(serialized).toBe(source);
+    expect(noteMarkdown.serialize(noteMarkdown.parse(serialized))).toBe(
+      serialized,
+    );
   });
 });

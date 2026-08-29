@@ -381,6 +381,7 @@ function CollectionPage() {
       <NoteDetailDrawer
         note={drawerNote}
         onNoteChange={updateDrawerNote}
+        onSwap={openDrawer}
         workspaceSlug={workspaceSlug}
         noteExtractionTarget={{
           collectionSlug,

@@ -116,6 +116,11 @@
   --code-string: #0a3069;
   --code-function: #8250df;
   --code-constant: #0550ae;
+  --note-highlight-amber: oklch(0.9 0.08 82);
+  --note-highlight-mint: oklch(0.9 0.06 160);
+  --note-highlight-sky: oklch(0.9 0.055 240);
+  --note-highlight-rose: oklch(0.91 0.055 20);
+  --note-highlight-lavender: oklch(0.9 0.05 300);
 }
 
 .dark {
@@ -170,6 +175,11 @@
   --code-string: #a5d6ff;
   --code-function: #d2a8ff;
   --code-constant: #79c0ff;
+  --note-highlight-amber: oklch(0.63 0.1 82 / 0.45);
+  --note-highlight-mint: oklch(0.62 0.08 160 / 0.45);
+  --note-highlight-sky: oklch(0.64 0.07 240 / 0.45);
+  --note-highlight-rose: oklch(0.65 0.07 20 / 0.45);
+  --note-highlight-lavender: oklch(0.64 0.06 300 / 0.45);
 }
 
 @layer components {
@@ -422,6 +432,10 @@
     @apply mt-5 mb-2 text-xl leading-snug font-semibold text-sidebar-foreground;
   }
 
+  .note-rich-text-content h4 {
+    @apply mt-4 mb-2 text-base leading-snug font-semibold text-sidebar-foreground;
+  }
+
   .note-rich-text-content ul:not([data-type="taskList"]) {
     @apply my-3 ml-4 list-disc space-y-1.5 marker:text-sidebar-foreground/35;
   }
@@ -550,7 +564,58 @@
   }
 
   .note-rich-text-content .note-highlight {
-    @apply rounded-[0.18em] bg-amber-200/75 box-decoration-clone px-[0.08em] text-inherit dark:bg-amber-400/30;
+    @apply rounded-[0.18em] box-decoration-clone px-[0.08em] text-inherit;
+  }
+
+  .note-rich-text-content .note-highlight:not([data-highlight-color]),
+  .note-rich-text-content .note-highlight[data-highlight-color="amber"] {
+    background: var(--note-highlight-amber);
+  }
+
+  .note-rich-text-content .note-highlight[data-highlight-color="mint"] {
+    background: var(--note-highlight-mint);
+  }
+
+  .note-rich-text-content .note-highlight[data-highlight-color="sky"] {
+    background: var(--note-highlight-sky);
+  }
+
+  .note-rich-text-content .note-highlight[data-highlight-color="rose"] {
+    background: var(--note-highlight-rose);
+  }
+
+  .note-rich-text-content .note-highlight[data-highlight-color="lavender"] {
+    background: var(--note-highlight-lavender);
+  }
+
+  .note-rich-text-content[data-highlight-preview="amber"]::selection,
+  .note-rich-text-content[data-highlight-preview="amber"] *::selection {
+    background: var(--note-highlight-amber);
+    color: inherit;
+  }
+
+  .note-rich-text-content[data-highlight-preview="mint"]::selection,
+  .note-rich-text-content[data-highlight-preview="mint"] *::selection {
+    background: var(--note-highlight-mint);
+    color: inherit;
+  }
+
+  .note-rich-text-content[data-highlight-preview="sky"]::selection,
+  .note-rich-text-content[data-highlight-preview="sky"] *::selection {
+    background: var(--note-highlight-sky);
+    color: inherit;
+  }
+
+  .note-rich-text-content[data-highlight-preview="rose"]::selection,
+  .note-rich-text-content[data-highlight-preview="rose"] *::selection {
+    background: var(--note-highlight-rose);
+    color: inherit;
+  }
+
+  .note-rich-text-content[data-highlight-preview="lavender"]::selection,
+  .note-rich-text-content[data-highlight-preview="lavender"] *::selection {
+    background: var(--note-highlight-lavender);
+    color: inherit;
   }
 
   .note-rich-text-content table {

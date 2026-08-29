@@ -130,6 +130,7 @@ function InboxPage() {
       <NoteDetailDrawer
         note={drawerNote}
         onNoteChange={updateDrawerNote}
+        onSwap={openDrawer}
         workspaceSlug={workspaceSlug}
         noteExtractionTarget={{ target: "inbox" }}
         onClose={handleCloseNote}

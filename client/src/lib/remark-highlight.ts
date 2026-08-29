@@ -2,10 +2,14 @@ type MarkdownNode = {
   type: string;
   value?: string;
   children?: MarkdownNode[];
-  data?: { hName?: string };
+  data?: {
+    hName?: string;
+    hProperties?: Record<string, string>;
+  };
 };
 
-const HIGHLIGHT_PATTERN = /==([^=\n]+)==/g;
+const HIGHLIGHT_PATTERN =
+  /==([^=\n]+)==|\[highlight\s+color="(amber|mint|sky|rose|lavender)"\]([^\n]*?)\[\/highlight\]/g;
 
 /** Renders Tiptap's `==highlight==` Markdown as semantic mark elements. */
 export function remarkHighlight() {
@@ -19,7 +23,10 @@ function visit(node: MarkdownNode) {
 
   const nextChildren: MarkdownNode[] = [];
   for (const child of node.children) {
-    if (child.type !== "text" || !child.value?.includes("==")) {
+    if (
+      child.type !== "text" ||
+      (!child.value?.includes("==") && !child.value?.includes("[highlight"))
+    ) {
       visit(child);
       nextChildren.push(child);
       continue;
@@ -37,8 +44,14 @@ function visit(node: MarkdownNode) {
       }
       nextChildren.push({
         type: "emphasis",
-        data: { hName: "mark" },
-        children: [{ type: "text", value: match[1] }],
+        data: {
+          hName: "mark",
+          hProperties: {
+            class: "note-highlight",
+            "data-highlight-color": match[2] ?? "amber",
+          },
+        },
+        children: [{ type: "text", value: match[1] ?? match[3] ?? "" }],
       });
       cursor = index + match[0].length;
     }

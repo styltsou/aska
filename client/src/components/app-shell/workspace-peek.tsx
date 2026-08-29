@@ -13,13 +13,15 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   CheckIcon,
   CopyIcon,
-  DotIcon,
   InfoIcon,
+  ArrowLeftRightIcon,
   PanelRightCloseIcon,
   TriangleAlertIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
+import { NoteHighlightControl } from "@/components/board/note-highlight-control";
 import { NoteRichText } from "@/components/board/note-rich-text";
 import {
   HoverCard,
@@ -43,6 +45,7 @@ import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect"
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import type { ColorAsset, NoteAsset } from "@/types/asset";
+import type { NoteHighlightColor } from "@/lib/note-highlights";
 import {
   SIDE_PANEL_ANIMATE,
   SIDE_PANEL_EXIT,
@@ -71,6 +74,8 @@ type WorkspacePeekContextValue = {
   peekColor: (color: ColorAsset, scope: PeekColorScope) => void;
   setActiveNoteId: (noteId?: string) => void;
   syncPeekNote: (note: NoteAsset) => void;
+  setNoteSwapHandler: (handler?: () => Promise<void>) => void;
+  swapNotes: () => Promise<void>;
   closePeek: () => void;
 };
 
@@ -116,6 +121,9 @@ export function WorkspacePeekProvider({
   const [width, setWidth] = useState(() => getPeekWidthBounds().defaultWidth);
   const widthRef = useRef(width);
   const targetRef = useRef(target);
+  const noteSwapHandlerRef = useRef<(() => Promise<void>) | undefined>(
+    undefined,
+  );
   const resizeEndTimeoutRef = useRef<number | undefined>(undefined);
   widthRef.current = width;
   targetRef.current = target;
@@ -276,6 +284,12 @@ export function WorkspacePeekProvider({
       },
       setActiveNoteId,
       syncPeekNote,
+      setNoteSwapHandler: (handler) => {
+        noteSwapHandlerRef.current = handler;
+      },
+      swapNotes: async () => {
+        await noteSwapHandlerRef.current?.();
+      },
       closePeek: () => {
         setIsRailReserved(false);
         setTarget(undefined);
@@ -287,6 +301,7 @@ export function WorkspacePeekProvider({
   return (
     <WorkspacePeekContext.Provider value={value}>
       {children}
+      {target ? <WorkspacePeekSwapButton target={target} /> : null}
       <AnimatePresence initial={false} onExitComplete={handleExitComplete}>
         {target ? (
           <WorkspacePeekPanel
@@ -297,6 +312,49 @@ export function WorkspacePeekProvider({
         ) : null}
       </AnimatePresence>
     </WorkspacePeekContext.Provider>
+  );
+}
+
+function WorkspacePeekSwapButton({ target }: { target: PeekTarget }) {
+  const { activeNoteId, swapNotes } = useWorkspacePeek();
+  const [isSwapping, setIsSwapping] = useState(false);
+  const canSwapNotes =
+    target.type === "note" &&
+    activeNoteId !== undefined &&
+    activeNoteId !== target.asset.id;
+
+  const handleSwap = useCallback(async () => {
+    if (isSwapping) return;
+    setIsSwapping(true);
+    try {
+      await swapNotes();
+    } finally {
+      setIsSwapping(false);
+    }
+  }, [isSwapping, swapNotes]);
+
+  if (!canSwapNotes) return null;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Swap notes"
+            disabled={isSwapping}
+            className="fixed top-[calc(var(--app-shell-inset)+3.5rem)] right-[calc(var(--workspace-peek-panel-width)+var(--app-shell-inset))] z-[60] hidden size-8 translate-x-1/2 rounded-lg border border-border bg-background/95 text-muted-foreground shadow-none backdrop-blur-xl hover:bg-secondary hover:text-foreground md:flex"
+            onClick={() => void handleSwap()}
+          >
+            <ArrowLeftRightIcon className="size-4" />
+            <span className="sr-only">Swap notes</span>
+          </Button>
+        }
+      />
+      <TooltipContent side="bottom">Swap notes</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -311,12 +369,13 @@ function WorkspacePeekPanel({
 }) {
   const { activeNoteId, closePeek } = useWorkspacePeek();
   const reduceMotion = useReducedMotion();
+
   return (
     <motion.aside
       aria-label="Peeked reference"
       className={cn(
         GLASS_FRAME_CLASS,
-        "fixed inset-y-[var(--app-shell-inset)] right-[var(--app-shell-inset)] z-40 hidden h-[calc(100dvh-var(--app-shell-inset)-var(--app-shell-inset))] w-(--workspace-peek-panel-width) overflow-visible rounded-xl text-foreground shadow-none ring-1 ring-foreground/10 md:flex md:flex-col",
+        "fixed inset-y-[var(--app-shell-inset)] right-[var(--app-shell-inset)] z-50 hidden h-[calc(100dvh-var(--app-shell-inset)-var(--app-shell-inset))] w-(--workspace-peek-panel-width) overflow-visible rounded-xl text-foreground shadow-none ring-1 ring-foreground/10 md:flex md:flex-col",
       )}
       initial={reduceMotion ? false : SIDE_PANEL_INITIAL}
       animate={SIDE_PANEL_ANIMATE}
@@ -394,7 +453,7 @@ function PeekHeader({
         <TooltipContent side="bottom">Close Peek</TooltipContent>
       </Tooltip>
       {children ? (
-        <div className="flex min-w-0 items-center justify-end gap-0">
+        <div className="flex min-w-0 items-center justify-end gap-2">
           {children}
         </div>
       ) : null}
@@ -416,6 +475,7 @@ function PeekNote({
   const update = useUpdateNote(workspaceSlug);
   const latest = useRef(note.content);
   const contentRef = useRef<HTMLDivElement>(null);
+  const richTextRef = useRef<NoteRichTextHandle>(null);
   const timer = useRef<number | undefined>(undefined);
   const copiedTimer = useRef<number | undefined>(undefined);
   const saveStatusTimer = useRef<number | undefined>(undefined);
@@ -426,16 +486,26 @@ function PeekNote({
   );
   const [showSaveState, setShowSaveState] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [highlightColor, setHighlightColor] = useState<NoteHighlightColor>();
+  const [highlightMode, setHighlightMode] = useState(false);
+  const [canRemoveHighlight, setCanRemoveHighlight] = useState(false);
   useEffect(() => {
     latest.current = note.content;
     setDraft(note.content);
     setSaveState("saved");
+    setHighlightMode(false);
+    setHighlightColor(undefined);
+    setCanRemoveHighlight(false);
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
       if (copiedTimer.current) window.clearTimeout(copiedTimer.current);
       if (saveStatusTimer.current) window.clearTimeout(saveStatusTimer.current);
     };
   }, [note.id, note.content]);
+  const handleHighlightModeChange = useCallback((active: boolean) => {
+    setHighlightMode(active);
+    if (!active) setHighlightColor(undefined);
+  }, []);
   useEffect(() => {
     if (saveStatusTimer.current) window.clearTimeout(saveStatusTimer.current);
     if (!hasObservedSaveState.current) {
@@ -502,15 +572,6 @@ function PeekNote({
       })
       .catch(() => toast.error("Unable to copy note."));
   }, [draft, note.content]);
-  const metrics = useMemo(() => {
-    const words = draft.trim() ? draft.trim().split(/\s+/).length : 0;
-    if (!words) return undefined;
-    const minutes = Math.max(1, Math.ceil(words / 200));
-    return {
-      words: `${words.toLocaleString()} words`,
-      readingTime: `${minutes} ${minutes === 1 ? "min" : "mins"} read`,
-    };
-  }, [draft]);
   const saveLabel =
     saveState === "saving"
       ? "Saving…"
@@ -553,15 +614,11 @@ function PeekNote({
                 </p>
               </HoverCardContent>
             </HoverCard>
-            <span
-              className="mx-2 hidden h-4 w-px bg-border sm:block"
-              aria-hidden="true"
-            />
           </>
         ) : (
           <span
             className={cn(
-              "inline-block w-24 text-right text-xs text-muted-foreground transition-opacity duration-100 ease-out motion-reduce:transition-none",
+              "inline-block w-24 shrink-0 overflow-hidden text-right text-xs text-muted-foreground whitespace-nowrap transition-opacity duration-150 ease-out motion-reduce:transition-none",
               showSaveState ? "opacity-100" : "pointer-events-none opacity-0",
             )}
             aria-hidden={!showSaveState}
@@ -569,33 +626,14 @@ function PeekNote({
             {saveLabel}
           </span>
         )}
-        {metrics ? (
-          <>
-            {!readOnly ? (
-              <span
-                className={cn(
-                  "mx-3 hidden h-4 w-px bg-border transition-opacity duration-100 ease-out motion-reduce:transition-none sm:block",
-                  showSaveState ? "opacity-100" : "opacity-0",
-                )}
-                aria-hidden="true"
-              />
-            ) : null}
-            <span className="hidden text-xs text-muted-foreground sm:inline">
-              {metrics.words}
-            </span>
-            <DotIcon
-              className="mx-1.5 hidden size-3 text-muted-foreground sm:block"
-              aria-hidden="true"
-            />
-            <span className="hidden text-xs text-muted-foreground sm:inline">
-              {metrics.readingTime}
-            </span>
-          </>
-        ) : null}
-        {metrics ? (
-          <span
-            className="mx-2 hidden h-4 w-px bg-border sm:block"
-            aria-hidden="true"
+        {!readOnly ? (
+          <NoteHighlightControl
+            editorRef={richTextRef}
+            color={highlightColor}
+            isHighlighting={highlightMode}
+            canRemoveHighlight={canRemoveHighlight}
+            onColorChange={setHighlightColor}
+            onHighlightingChange={handleHighlightModeChange}
           />
         ) : null}
         <Tooltip>
@@ -672,9 +710,14 @@ function PeekNote({
         <div className="mx-auto w-full max-w-3xl px-10 pt-0 pb-10 [&_.ProseMirror]:!pt-8">
           <NoteRichText
             key={note.id}
+            ref={richTextRef}
             markdown={note.content}
             editable={!readOnly}
             scrollContainerRef={contentRef}
+            highlightColor={highlightColor}
+            highlightMode={highlightMode}
+            onHighlightModeChange={handleHighlightModeChange}
+            onHighlightSelectionChange={setCanRemoveHighlight}
             onChange={readOnly ? undefined : save}
             onSaveShortcut={() => {
               if (!readOnly && latest.current.trim()) {

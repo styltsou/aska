@@ -144,7 +144,7 @@ export function GlobalScratchpad() {
           animate={{ opacity: phase === "leaving" ? 0 : 1 }}
           exit={{ opacity: 0 }}
           transition={SCRATCHPAD_TRANSITION}
-          className="fixed inset-0 z-50 bg-black/10 px-3 pt-[18vh] supports-backdrop-filter:backdrop-blur-xs"
+          className="fixed inset-0 z-[100] bg-black/10 px-3 pt-[18vh] supports-backdrop-filter:backdrop-blur-xs"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
               closeScratchpad();

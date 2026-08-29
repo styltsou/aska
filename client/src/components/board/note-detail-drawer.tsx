@@ -11,7 +11,6 @@ import {
   ArrowLeftIcon,
   CheckIcon,
   CopyIcon,
-  DotIcon,
   InfoIcon,
   LoaderCircleIcon,
   PanelRightIcon,
@@ -32,6 +31,7 @@ import type {
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
 import { NoteEditorLoading } from "@/components/board/note-editor-loading";
+import { NoteHighlightControl } from "@/components/board/note-highlight-control";
 import {
   NoteWorkspace,
   NoteWorkspaceContent,
@@ -60,13 +60,13 @@ import {
   loadCreateNoteDraft,
   saveCreateNoteDraft,
 } from "@/lib/create-note-draft";
-import { calculateNoteMetrics } from "@/lib/note-metrics";
 import {
   getSaveableNoteContent,
   isNoteContentTooLong,
   NOTE_CONTENT_LIMIT_MESSAGE,
 } from "@/lib/note-content";
 import { cn } from "@/lib/utils";
+import type { NoteHighlightColor } from "@/lib/note-highlights";
 import type { NoteAsset } from "@/types/asset";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 
@@ -92,6 +92,7 @@ export function NoteDetailDrawer({
   children,
   noteExtractionTarget,
   onNoteChange,
+  onSwap,
   onClose,
 }: {
   note: NoteAsset | undefined;
@@ -111,6 +112,7 @@ export function NoteDetailDrawer({
     parentFolderPath?: string;
   };
   onNoteChange?: (note: NoteAsset) => void;
+  onSwap?: (note: NoteAsset) => void;
   onClose: () => void;
 }) {
   const isCreateMode = createOptions !== undefined;
@@ -124,6 +126,7 @@ export function NoteDetailDrawer({
     target: peekTarget,
     peekNote,
     setActiveNoteId,
+    setNoteSwapHandler,
     syncPeekNote,
     isResizing: isPeekResizing,
   } = useWorkspacePeek();
@@ -147,11 +150,23 @@ export function NoteDetailDrawer({
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [showSaveState, setShowSaveState] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [highlightColor, setHighlightColor] = useState<NoteHighlightColor>();
+  const [highlightMode, setHighlightMode] = useState(false);
+  const [canRemoveHighlight, setCanRemoveHighlight] = useState(false);
   const [extractionFeedback, setExtractionFeedback] =
     useState<ExtractionFeedback>();
   const activeNote = createdNote ?? note;
   const isPeekMirror =
     peekTarget?.type === "note" && peekTarget.asset.id === activeNote?.id;
+  useEffect(() => {
+    setHighlightMode(false);
+    setHighlightColor(undefined);
+    setCanRemoveHighlight(false);
+  }, [activeNote?.id, isCreateMode]);
+  const handleHighlightModeChange = useCallback((active: boolean) => {
+    setHighlightMode(active);
+    if (!active) setHighlightColor(undefined);
+  }, []);
   const createNote = useCreateNote(workspaceSlug, collectionSlug);
   const createInboxNote = useCreateInboxNote(workspaceSlug);
   const createCollectionPath = createOptions?.collectionPath ?? "";
@@ -188,7 +203,7 @@ export function NoteDetailDrawer({
       .join("/"),
   );
   const extractionPosition = extractionPlacement?.position;
-  const { isPending, mutate, reset } = updateNote;
+  const { isPending, mutate, mutateAsync, reset } = updateNote;
   const noteId = activeNote?.id;
   const noteContent = activeNote?.content;
   const isCreating = createNote.isPending || createInboxNote.isPending;
@@ -455,6 +470,92 @@ export function NoteDetailDrawer({
     ],
   );
 
+  const swapWithPeekedNote = useCallback(async () => {
+    if (
+      !activeNote ||
+      !onSwap ||
+      isCreateMode ||
+      isPending ||
+      peekTarget?.type !== "note" ||
+      peekTarget.asset.id === activeNote.id
+    )
+      return;
+
+    const nextMainNote = peekTarget.asset;
+    const content = getSaveableNoteContent(draftRef.current);
+    if (!content) {
+      toast.error("Add some content before swapping notes.");
+      return;
+    }
+    if (isNoteContentTooLong(content)) {
+      failedContentRef.current = content;
+      setSaveState("error");
+      toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
+      return;
+    }
+
+    let currentMainNote = activeNote;
+    if (content !== noteContent) {
+      setSaveState("saving");
+      try {
+        const { note: updatedNote } = await mutateAsync({
+          assetId: activeNote.id,
+          content,
+        });
+        currentMainNote = {
+          ...activeNote,
+          ...updatedNote,
+          color: updatedNote.color ?? undefined,
+        };
+        onNoteChange?.(currentMainNote);
+        clearEditDraft(activeNote.id);
+        setSaveState("saved");
+      } catch (error) {
+        failedContentRef.current = content;
+        setSaveState("error");
+        toast.error(
+          getUserFacingApiErrorMessage(error, "Could not save note."),
+        );
+        return;
+      }
+    }
+
+    peekNote(currentMainNote);
+    onSwap(nextMainNote);
+  }, [
+    activeNote,
+    isCreateMode,
+    isPending,
+    mutateAsync,
+    noteContent,
+    onNoteChange,
+    onSwap,
+    peekNote,
+    peekTarget,
+  ]);
+
+  useEffect(() => {
+    if (
+      !activeNote ||
+      !onSwap ||
+      isCreateMode ||
+      peekTarget?.type !== "note" ||
+      peekTarget.asset.id === activeNote.id
+    ) {
+      setNoteSwapHandler(undefined);
+      return;
+    }
+    setNoteSwapHandler(swapWithPeekedNote);
+    return () => setNoteSwapHandler(undefined);
+  }, [
+    activeNote,
+    isCreateMode,
+    onSwap,
+    peekTarget,
+    setNoteSwapHandler,
+    swapWithPeekedNote,
+  ]);
+
   useEffect(() => {
     if (isCreateMode && !activeNote) {
       const content = getSaveableNoteContent(draft);
@@ -492,11 +593,6 @@ export function NoteDetailDrawer({
     persist,
   ]);
 
-  const liveMetrics = calculateNoteMetrics(draft);
-  const metrics = {
-    words: `${liveMetrics.wordCount.toLocaleString()} words`,
-    readingTime: `${liveMetrics.readingTimeMinutes.toLocaleString()} ${liveMetrics.readingTimeMinutes === 1 ? "min" : "mins"} read`,
-  };
   const createdLabel = activeNote?.createdAt
     ? formatNoteDate(activeNote.createdAt)
     : undefined;
@@ -714,39 +810,24 @@ export function NoteDetailDrawer({
               </motion.div>
             ) : null}
           </AnimatePresence>
-          <div className="flex min-w-0 items-center justify-end gap-0">
+          <div className="flex min-w-0 items-center justify-end gap-2">
             <span
               className={cn(
-                "inline-block w-24 text-right transition-opacity duration-100 ease-out motion-reduce:transition-none",
+                "inline-block w-24 shrink-0 overflow-hidden text-right whitespace-nowrap transition-opacity duration-150 ease-out motion-reduce:transition-none",
                 showSaveState ? "opacity-100" : "pointer-events-none opacity-0",
               )}
               aria-hidden={!showSaveState}
             >
               {saveStateLabel(saveState)}
             </span>
-            {metrics ? (
-              <>
-                <span
-                  className={cn(
-                    "mx-3 hidden h-4 w-px bg-border transition-opacity duration-100 ease-out sm:block motion-reduce:transition-none",
-                    showSaveState ? "opacity-100" : "opacity-0",
-                  )}
-                  aria-hidden="true"
-                />
-                <span className="hidden sm:inline">{metrics.words}</span>
-                <DotIcon
-                  className="mx-1.5 hidden size-3 sm:block"
-                  aria-hidden="true"
-                />
-                <span className="hidden sm:inline">{metrics.readingTime}</span>
-              </>
-            ) : null}
-            {showSaveState || metrics ? (
-              <span
-                className="mx-2 hidden h-4 w-px bg-border sm:block"
-                aria-hidden="true"
-              />
-            ) : null}
+            <NoteHighlightControl
+              editorRef={richTextRef}
+              color={highlightColor}
+              isHighlighting={highlightMode}
+              canRemoveHighlight={canRemoveHighlight}
+              onColorChange={setHighlightColor}
+              onHighlightingChange={handleHighlightModeChange}
+            />
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -861,18 +942,10 @@ export function NoteDetailDrawer({
                     onExtractSelection={
                       noteExtractionTarget ? extractSelection : undefined
                     }
-                    onHighlightSelection={
-                      noteExtractionTarget
-                        ? (content) =>
-                            persist(
-                              composeFrontMatter(
-                                parseFrontMatter(draftRef.current),
-                                content,
-                              ),
-                            )
-                        : undefined
-                    }
-                    isHighlighting={saveState === "saving"}
+                    highlightColor={highlightColor}
+                    highlightMode={highlightMode}
+                    onHighlightModeChange={handleHighlightModeChange}
+                    onHighlightSelectionChange={setCanRemoveHighlight}
                     onChange={handleDraftChange}
                     onSaveShortcut={() => {
                       const content = getSaveableNoteContent(draftRef.current);
