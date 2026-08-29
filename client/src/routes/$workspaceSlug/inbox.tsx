@@ -39,8 +39,15 @@ function InboxPage() {
   );
   const selectedAssetTypes =
     filterBar.filterType === "Type" ? (filterBar.selectedAssetTypes ?? []) : [];
-  const { drawerNote, openDrawer, closeDrawer, updateDrawerNote } =
-    usePersistedNoteDrawer(`aska.note-drawer:inbox:${workspaceSlug}`);
+  const {
+    drawerNote,
+    hasPreviousNote,
+    openDrawer,
+    promoteDrawer,
+    goBack,
+    closeDrawer,
+    updateDrawerNote,
+  } = usePersistedNoteDrawer(`aska.note-drawer:inbox:${workspaceSlug}`);
   const { viewerImage, openViewer, closeViewer } = usePersistedImageViewer(
     `aska.image-viewer:inbox:${workspaceSlug}`,
   );
@@ -130,7 +137,10 @@ function InboxPage() {
       <NoteDetailDrawer
         note={drawerNote}
         onNoteChange={updateDrawerNote}
+        onPromote={promoteDrawer}
         onSwap={openDrawer}
+        onBack={goBack}
+        hasPreviousNote={hasPreviousNote}
         workspaceSlug={workspaceSlug}
         noteExtractionTarget={{ target: "inbox" }}
         onClose={handleCloseNote}

@@ -5,6 +5,7 @@ import type { NoteAsset } from "@/types/asset";
 type DrawerState = {
   storageKey: string;
   note: NoteAsset | undefined;
+  previousNote: NoteAsset | undefined;
 };
 
 export function persistNoteDrawer(storageKey: string, note: NoteAsset) {
@@ -20,12 +21,17 @@ export function usePersistedNoteDrawer(storageKey: string) {
   const [state, setState] = useState<DrawerState>(() => ({
     storageKey,
     note: readStoredNote(storageKey),
+    previousNote: undefined,
   }));
   const drawerNote = state.storageKey === storageKey ? state.note : undefined;
 
   useEffect(() => {
     if (state.storageKey === storageKey) return;
-    setState({ storageKey, note: readStoredNote(storageKey) });
+    setState({
+      storageKey,
+      note: readStoredNote(storageKey),
+      previousNote: undefined,
+    });
   }, [state.storageKey, storageKey]);
 
   useEffect(() => {
@@ -42,15 +48,42 @@ export function usePersistedNoteDrawer(storageKey: string) {
   }, [state, storageKey]);
 
   const openDrawer = useCallback(
-    (note: NoteAsset) => setState({ storageKey, note }),
+    (note: NoteAsset) =>
+      setState({ storageKey, note, previousNote: undefined }),
+    [storageKey],
+  );
+  const promoteDrawer = useCallback(
+    (note: NoteAsset, previousNote?: NoteAsset) =>
+      setState({ storageKey, note, previousNote }),
     [storageKey],
   );
   const closeDrawer = useCallback(
-    () => setState({ storageKey, note: undefined }),
+    () => setState({ storageKey, note: undefined, previousNote: undefined }),
     [storageKey],
   );
+  const goBack = useCallback(() => {
+    setState((current) => {
+      if (current.storageKey !== storageKey || !current.previousNote) {
+        return { storageKey, note: undefined, previousNote: undefined };
+      }
+      return {
+        storageKey,
+        note: current.previousNote,
+        previousNote: undefined,
+      };
+    });
+  }, [storageKey]);
 
-  return { drawerNote, openDrawer, closeDrawer, updateDrawerNote: openDrawer };
+  return {
+    drawerNote,
+    hasPreviousNote:
+      state.storageKey === storageKey && state.previousNote !== undefined,
+    openDrawer,
+    promoteDrawer,
+    goBack,
+    closeDrawer,
+    updateDrawerNote: openDrawer,
+  };
 }
 
 function readStoredNote(storageKey: string): NoteAsset | undefined {

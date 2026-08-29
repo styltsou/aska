@@ -92,7 +92,10 @@ export function NoteDetailDrawer({
   children,
   noteExtractionTarget,
   onNoteChange,
+  onPromote,
   onSwap,
+  onBack,
+  hasPreviousNote = false,
   onClose,
 }: {
   note: NoteAsset | undefined;
@@ -112,7 +115,10 @@ export function NoteDetailDrawer({
     parentFolderPath?: string;
   };
   onNoteChange?: (note: NoteAsset) => void;
+  onPromote?: (note: NoteAsset, previousNote?: NoteAsset) => void;
   onSwap?: (note: NoteAsset) => void;
+  onBack?: () => void;
+  hasPreviousNote?: boolean;
   onClose: () => void;
 }) {
   const isCreateMode = createOptions !== undefined;
@@ -126,6 +132,7 @@ export function NoteDetailDrawer({
     target: peekTarget,
     peekNote,
     setActiveNoteId,
+    setNotePromotionHandler,
     setNoteSwapHandler,
     syncPeekNote,
     isResizing: isPeekResizing,
@@ -470,6 +477,77 @@ export function NoteDetailDrawer({
     ],
   );
 
+  const promotePeekedNote = useCallback(
+    async (nextMainNote: NoteAsset) => {
+      if (isCreateMode || isPending || !onPromote) return false;
+
+      if (!activeNote) {
+        onPromote(nextMainNote);
+        return true;
+      }
+      if (nextMainNote.id === activeNote.id) return false;
+
+      const content = getSaveableNoteContent(draftRef.current);
+      if (!content) {
+        toast.error("Add some content before opening another note.");
+        return false;
+      }
+      if (isNoteContentTooLong(content)) {
+        failedContentRef.current = content;
+        setSaveState("error");
+        toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
+        return false;
+      }
+
+      let currentMainNote = activeNote;
+      if (content !== noteContent) {
+        setSaveState("saving");
+        try {
+          const { note: updatedNote } = await mutateAsync({
+            assetId: activeNote.id,
+            content,
+          });
+          currentMainNote = {
+            ...activeNote,
+            ...updatedNote,
+            color: updatedNote.color ?? undefined,
+          };
+          onNoteChange?.(currentMainNote);
+          clearEditDraft(activeNote.id);
+          setSaveState("saved");
+        } catch (error) {
+          failedContentRef.current = content;
+          setSaveState("error");
+          toast.error(
+            getUserFacingApiErrorMessage(error, "Could not save note."),
+          );
+          return false;
+        }
+      }
+
+      onPromote(nextMainNote, currentMainNote);
+      return true;
+    },
+    [
+      activeNote,
+      isCreateMode,
+      isPending,
+      mutateAsync,
+      noteContent,
+      onNoteChange,
+      onPromote,
+    ],
+  );
+
+  useEffect(() => {
+    if (!onPromote || isCreateMode) {
+      setNotePromotionHandler(undefined);
+      return;
+    }
+    setNotePromotionHandler(promotePeekedNote);
+    return () => setNotePromotionHandler(undefined);
+  }, [isCreateMode, onPromote, promotePeekedNote, setNotePromotionHandler]);
+
   const swapWithPeekedNote = useCallback(async () => {
     if (
       !activeNote ||
@@ -761,24 +839,59 @@ export function NoteDetailDrawer({
           {activeNote ? "Note" : "New note"}
         </NoteWorkspaceTitle>
         <div className="relative z-20 mt-[var(--app-shell-inset)] flex shrink-0 items-center justify-between gap-3 rounded-t-xl rounded-b-none p-2 text-xs font-medium text-muted-foreground">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  className="ml-[var(--app-shell-inset)] size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Back to board"
-                  onClick={requestClose}
-                >
-                  <ArrowLeftIcon />
-                  <span className="sr-only">Back to board</span>
-                </Button>
-              }
-            />
-            <TooltipContent side="bottom">Back to board</TooltipContent>
-          </Tooltip>
+          <div className="ml-[var(--app-shell-inset)] flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={
+                      hasPreviousNote
+                        ? "Back to previous note"
+                        : "Back to board"
+                    }
+                    onClick={onBack ?? requestClose}
+                  >
+                    <ArrowLeftIcon />
+                    <span className="sr-only">
+                      {hasPreviousNote
+                        ? "Back to previous note"
+                        : "Back to board"}
+                    </span>
+                  </Button>
+                }
+              />
+              <TooltipContent side="bottom">
+                {hasPreviousNote ? "Back to previous note" : "Back to board"}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    aria-label="Peek note"
+                    disabled={!activeNote || isPeekMirror}
+                    onClick={() => {
+                      if (!activeNote) return;
+                      peekNote(activeNote);
+                      closeWorkspace();
+                    }}
+                  >
+                    <PanelRightIcon className="size-4" />
+                    <span className="sr-only">Peek note</span>
+                  </Button>
+                }
+              />
+              <TooltipContent side="bottom">Peek note</TooltipContent>
+            </Tooltip>
+          </div>
           <AnimatePresence initial={false}>
             {extractionFeedback ? (
               <motion.div
@@ -853,29 +966,6 @@ export function NoteDetailDrawer({
               <TooltipContent side="bottom">
                 {copied ? "Copied" : "Copy markdown"}
               </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    aria-label="Peek note"
-                    disabled={!activeNote || isPeekMirror}
-                    onClick={() => {
-                      if (!activeNote) return;
-                      peekNote(activeNote);
-                      closeWorkspace();
-                    }}
-                  >
-                    <PanelRightIcon className="size-4" />
-                    <span className="sr-only">Peek note</span>
-                  </Button>
-                }
-              />
-              <TooltipContent side="bottom">Peek note</TooltipContent>
             </Tooltip>
             {createdLabel || updatedLabel ? (
               <>

@@ -15,6 +15,7 @@ import {
   CopyIcon,
   InfoIcon,
   ArrowLeftRightIcon,
+  Maximize2Icon,
   PanelRightCloseIcon,
   TriangleAlertIcon,
 } from "lucide-react";
@@ -74,6 +75,10 @@ type WorkspacePeekContextValue = {
   peekColor: (color: ColorAsset, scope: PeekColorScope) => void;
   setActiveNoteId: (noteId?: string) => void;
   syncPeekNote: (note: NoteAsset) => void;
+  setNotePromotionHandler: (
+    handler?: (note: NoteAsset) => Promise<boolean>,
+  ) => void;
+  promoteNote: () => Promise<void>;
   setNoteSwapHandler: (handler?: () => Promise<void>) => void;
   swapNotes: () => Promise<void>;
   closePeek: () => void;
@@ -121,6 +126,9 @@ export function WorkspacePeekProvider({
   const [width, setWidth] = useState(() => getPeekWidthBounds().defaultWidth);
   const widthRef = useRef(width);
   const targetRef = useRef(target);
+  const notePromotionHandlerRef = useRef<
+    ((note: NoteAsset) => Promise<boolean>) | undefined
+  >(undefined);
   const noteSwapHandlerRef = useRef<(() => Promise<void>) | undefined>(
     undefined,
   );
@@ -284,6 +292,17 @@ export function WorkspacePeekProvider({
       },
       setActiveNoteId,
       syncPeekNote,
+      setNotePromotionHandler: (handler) => {
+        notePromotionHandlerRef.current = handler;
+      },
+      promoteNote: async () => {
+        if (target?.type !== "note") return;
+        const promoted = await notePromotionHandlerRef.current?.(target.asset);
+        if (promoted) {
+          setIsRailReserved(false);
+          setTarget(undefined);
+        }
+      },
       setNoteSwapHandler: (handler) => {
         noteSwapHandlerRef.current = handler;
       },
@@ -367,7 +386,7 @@ function WorkspacePeekPanel({
   workspaceSlug: string;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }) {
-  const { activeNoteId, closePeek } = useWorkspacePeek();
+  const { activeNoteId, closePeek, promoteNote } = useWorkspacePeek();
   const reduceMotion = useReducedMotion();
 
   return (
@@ -404,6 +423,9 @@ function WorkspacePeekPanel({
             note={target.asset}
             workspaceSlug={workspaceSlug}
             onClose={closePeek}
+            onPromote={
+              activeNoteId !== target.asset.id ? promoteNote : undefined
+            }
             readOnly={activeNoteId === target.asset.id}
           />
         ) : (
@@ -423,35 +445,70 @@ function WorkspacePeekPanel({
 
 function PeekHeader({
   onClose,
+  onPromote,
   children,
 }: {
   onClose: () => void;
+  onPromote?: () => Promise<void>;
   children?: ReactNode;
 }) {
+  const [isPromoting, setIsPromoting] = useState(false);
+  const handlePromote = useCallback(async () => {
+    if (!onPromote || isPromoting) return;
+    setIsPromoting(true);
+    try {
+      await onPromote();
+    } finally {
+      setIsPromoting(false);
+    }
+  }, [isPromoting, onPromote]);
   return (
     <div
       className={cn(
         "relative z-20 flex shrink-0 items-center justify-between gap-3 rounded-t-xl rounded-b-none bg-card p-2 ring-0",
       )}
     >
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Close Peek"
-              className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
-              onClick={onClose}
-            >
-              <PanelRightCloseIcon className="size-4" />
-              <span className="sr-only">Close Peek</span>
-            </Button>
-          }
-        />
-        <TooltipContent side="bottom">Close Peek</TooltipContent>
-      </Tooltip>
+      <div className="flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Close Peek"
+                className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                onClick={onClose}
+              >
+                <PanelRightCloseIcon className="size-4" />
+                <span className="sr-only">Close Peek</span>
+              </Button>
+            }
+          />
+          <TooltipContent side="bottom">Close Peek</TooltipContent>
+        </Tooltip>
+        {onPromote ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Open in main editor"
+                  disabled={isPromoting}
+                  className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  onClick={() => void handlePromote()}
+                >
+                  <Maximize2Icon className="size-3.5" />
+                  <span className="sr-only">Open in main editor</span>
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">Open in main editor</TooltipContent>
+          </Tooltip>
+        ) : null}
+      </div>
       {children ? (
         <div className="flex min-w-0 items-center justify-end gap-2">
           {children}
@@ -465,11 +522,13 @@ function PeekNote({
   note,
   workspaceSlug,
   onClose,
+  onPromote,
   readOnly,
 }: {
   note: NoteAsset;
   workspaceSlug: string;
   onClose: () => void;
+  onPromote?: () => Promise<void>;
   readOnly: boolean;
 }) {
   const update = useUpdateNote(workspaceSlug);
@@ -581,7 +640,7 @@ function PeekNote({
   const hasDetails = Boolean(note.createdAt || note.updatedAt);
   return (
     <>
-      <PeekHeader onClose={onClose}>
+      <PeekHeader onClose={onClose} onPromote={onPromote}>
         {readOnly ? (
           <>
             <HoverCard>

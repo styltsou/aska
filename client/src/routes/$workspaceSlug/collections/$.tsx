@@ -51,10 +51,17 @@ function CollectionPage() {
   const { workspaceSlug, _splat } = Route.useParams();
   const navigate = useNavigate({ from: Route.fullPath });
   const collectionPath = _splat ?? "";
-  const { drawerNote, openDrawer, closeDrawer, updateDrawerNote } =
-    usePersistedNoteDrawer(
-      `aska.note-drawer:collection:${workspaceSlug}:${collectionPath}`,
-    );
+  const {
+    drawerNote,
+    hasPreviousNote,
+    openDrawer,
+    promoteDrawer,
+    goBack,
+    closeDrawer,
+    updateDrawerNote,
+  } = usePersistedNoteDrawer(
+    `aska.note-drawer:collection:${workspaceSlug}:${collectionPath}`,
+  );
   const { viewerImage, openViewer, closeViewer } = usePersistedImageViewer(
     `aska.image-viewer:collection:${workspaceSlug}:${collectionPath}`,
   );
@@ -381,7 +388,10 @@ function CollectionPage() {
       <NoteDetailDrawer
         note={drawerNote}
         onNoteChange={updateDrawerNote}
+        onPromote={promoteDrawer}
         onSwap={openDrawer}
+        onBack={goBack}
+        hasPreviousNote={hasPreviousNote}
         workspaceSlug={workspaceSlug}
         noteExtractionTarget={{
           collectionSlug,
