@@ -23,6 +23,7 @@ import {
   isNoteContentTooLong,
   NOTE_CONTENT_LIMIT_MESSAGE,
 } from "@/lib/note-content";
+import { extractPastedNoteTitle } from "@/lib/note-title";
 
 export type BoardAssetTarget = "collection" | "inbox";
 
@@ -223,7 +224,8 @@ export function useBoardAssetActions({
   const createTextNote = useCallback(
     async (content: string) => {
       if (!content.trim()) return;
-      if (isNoteContentTooLong(content)) {
+      const note = extractPastedNoteTitle(content);
+      if (isNoteContentTooLong(note.content)) {
         toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
         return;
       }
@@ -232,11 +234,13 @@ export function useBoardAssetActions({
         const insertionPlacement = getPlacement?.() ?? placement;
         if (target === "inbox") {
           await createInboxNote.mutateAsync({
-            content,
+            content: note.content,
+            title: note.title,
           });
         } else {
           await createNote.mutateAsync({
-            content,
+            content: note.content,
+            title: note.title,
             parentFolderPath,
             placement: insertionPlacement,
           });

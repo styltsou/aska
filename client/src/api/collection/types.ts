@@ -109,6 +109,7 @@ export type CreateFolderResponse = {
 
 export type CreateNoteInput = {
   content: string;
+  title?: string | null;
   color?: string;
   parentFolderPath?: string;
   position?: BoardPosition;
@@ -116,6 +117,7 @@ export type CreateNoteInput = {
 
 export type UpdateNoteInput = {
   content?: string;
+  title?: string | null;
   isExpanded?: boolean;
 };
 
@@ -123,6 +125,7 @@ export type UpdatedNote = {
   id: string;
   type: "note";
   content: string;
+  title?: string | null;
   color: string | null;
   isFavorite: boolean;
   isExpanded: boolean;
@@ -170,6 +173,7 @@ export type CollectionNoteNode = {
   id: string;
   type: "note";
   content: string;
+  title?: string | null;
   color: string | null;
   isFavorite: boolean;
   isExpanded?: boolean;

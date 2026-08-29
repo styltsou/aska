@@ -763,6 +763,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         id: "note-pending",
         type: "note",
         content: data.content,
+        title: data.title?.trim() || null,
         color: data.color ?? null,
         isFavorite: false,
         ...calculateNoteMetrics(data.content),
@@ -801,6 +802,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         id: optimisticId,
         type: "note",
         content: variables.content,
+        title: variables.title?.trim() || null,
         color: variables.color ?? null,
         isFavorite: false,
         ...calculateNoteMetrics(variables.content),
@@ -1151,6 +1153,7 @@ export function useCreateInboxNote(workspaceSlug: string) {
         id: optimisticId,
         type: "note" as const,
         content: variables.content,
+        title: variables.title?.trim() || null,
         color: variables.color ?? null,
         isFavorite: false,
         ...calculateNoteMetrics(variables.content),
@@ -1344,6 +1347,9 @@ function applyNoteDraftToContents(
       if (node.type === "note" && node.id === draft.assetId) {
         return {
           ...node,
+          ...(draft.title !== undefined
+            ? { title: draft.title?.trim() || null, updatedAt }
+            : {}),
           ...(hasContent
             ? { content: draft.content!, ...metrics, updatedAt }
             : {}),

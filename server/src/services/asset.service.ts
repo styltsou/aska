@@ -48,6 +48,7 @@ import {
   type StoredColorGradient,
 } from "@/lib/color-gradient";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
+import { normalizeNoteTitle } from "@/lib/note-title";
 import { first } from "@/lib/query";
 import type { IObjectStorageService } from "@/services/object-storage.service";
 import {
@@ -151,6 +152,7 @@ export class AssetService implements IAssetService {
           .select({
             id: assets.id,
             content: noteAssets.markdown,
+            title: assets.title,
             color: noteAssets.color,
             isFavorite: assets.isFavorite,
             createdAt: assets.createdAt,
@@ -172,6 +174,7 @@ export class AssetService implements IAssetService {
         id: `note-${row.id}`,
         type: "note",
         content: row.content,
+        title: row.title,
         color: row.color,
         isFavorite: row.isFavorite,
         ...calculateNoteMetrics(row.content),
@@ -419,6 +422,7 @@ export class AssetService implements IAssetService {
         .values({
           organizationId: orgId,
           type: "note",
+          title: normalizeNoteTitle(data.title),
           lastAddedToInboxAt: new Date(),
           createdByUserId: userId,
           updatedByUserId: userId,
@@ -446,6 +450,7 @@ export class AssetService implements IAssetService {
       id: `note-${note.id}`,
       type: "note",
       content: data.content,
+      title: normalizeNoteTitle(data.title),
       color: data.color ?? null,
       isFavorite: false,
       wordCount,
@@ -470,7 +475,12 @@ export class AssetService implements IAssetService {
     const updated = await db.transaction(async (tx) => {
       const [asset] = await tx
         .update(assets)
-        .set({ updatedByUserId: userId })
+        .set({
+          updatedByUserId: userId,
+          ...(data.title !== undefined
+            ? { title: normalizeNoteTitle(data.title) }
+            : {}),
+        })
         .where(
           and(
             eq(assets.id, target.entityId),
@@ -480,6 +490,7 @@ export class AssetService implements IAssetService {
         )
         .returning({
           id: assets.id,
+          title: assets.title,
           isFavorite: assets.isFavorite,
           updatedAt: assets.updatedAt,
         });
@@ -496,15 +507,22 @@ export class AssetService implements IAssetService {
         setValues.isExpanded = data.isExpanded;
       }
 
-      const [note] = await tx
-        .update(noteAssets)
-        .set(setValues)
-        .where(eq(noteAssets.assetId, asset.id))
-        .returning({
-          color: noteAssets.color,
-          isExpanded: noteAssets.isExpanded,
-          markdown: noteAssets.markdown,
-        });
+      const noteSelection = {
+        color: noteAssets.color,
+        isExpanded: noteAssets.isExpanded,
+        markdown: noteAssets.markdown,
+      };
+      const [note] =
+        Object.keys(setValues).length > 0
+          ? await tx
+              .update(noteAssets)
+              .set(setValues)
+              .where(eq(noteAssets.assetId, asset.id))
+              .returning(noteSelection)
+          : await tx
+              .select(noteSelection)
+              .from(noteAssets)
+              .where(eq(noteAssets.assetId, asset.id));
 
       if (!note) {
         throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
@@ -524,6 +542,7 @@ export class AssetService implements IAssetService {
       id: `note-${updated.id}`,
       type: "note",
       content: updated.markdown,
+      title: updated.title,
       color: updated.color,
       isFavorite: updated.isFavorite,
       isExpanded: updated.isExpanded,
@@ -918,6 +937,7 @@ export class AssetService implements IAssetService {
         id: `note-${row.assetId}`,
         type: "note",
         content,
+        title: row.title,
         color: row.noteColor,
         isFavorite: row.isFavorite,
         isExpanded: row.noteIsExpanded ?? false,

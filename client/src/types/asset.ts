@@ -30,6 +30,7 @@ export interface NoteAsset {
   id: string;
   type: "note";
   content: string;
+  title?: string | null;
   color?: string;
   isFavorite?: boolean;
   isExpanded?: boolean;

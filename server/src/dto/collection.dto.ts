@@ -63,12 +63,18 @@ export const CreateFolderSchema = z.object({
 
 export type CreateFolderInput = z.infer<typeof CreateFolderSchema>;
 
-export const CreateNoteSchema = z.object({
-  content: z.string().min(1).max(NOTE_CONTENT_MAX_LENGTH),
-  color: z.string().max(32).optional(),
-  parentFolderPath: z.string().optional(),
-  position: BoardPositionSchema.optional(),
-});
+export const CreateNoteSchema = z
+  .object({
+    content: z.string().max(NOTE_CONTENT_MAX_LENGTH).default(""),
+    title: z.string().max(255).nullable().optional(),
+    color: z.string().max(32).optional(),
+    parentFolderPath: z.string().optional(),
+    position: BoardPositionSchema.optional(),
+  })
+  .refine(
+    ({ content, title }) => Boolean(content.trim() || title?.trim()),
+    "A note needs a title or content",
+  );
 
 export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
 
@@ -136,7 +142,8 @@ export type UpdatedImage = {
 };
 
 export const UpdateNoteSchema = z.object({
-  content: z.string().min(1).max(NOTE_CONTENT_MAX_LENGTH).optional(),
+  content: z.string().max(NOTE_CONTENT_MAX_LENGTH).optional(),
+  title: z.string().max(255).nullable().optional(),
   isExpanded: z.boolean().optional(),
 });
 
@@ -146,6 +153,7 @@ export type UpdatedNote = {
   id: string;
   type: "note";
   content: string;
+  title: string | null;
   color: string | null;
   isFavorite: boolean;
   isExpanded: boolean;
@@ -209,6 +217,7 @@ export const CollectionNoteNodeSchema = z.object({
   id: z.string(),
   type: z.literal("note"),
   content: z.string(),
+  title: z.string().nullable(),
   color: z.string().nullable(),
   isFavorite: z.boolean(),
   isExpanded: z.boolean().optional(),

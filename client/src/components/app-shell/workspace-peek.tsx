@@ -23,12 +23,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
+import { NoteTitleField } from "@/components/board/note-title-field";
 import { NoteRichText } from "@/components/board/note-rich-text";
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Tooltip,
   TooltipContent,
@@ -39,7 +41,12 @@ import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import { gradientToCss } from "@/lib/color-gradient";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { parseFrontMatter } from "@/lib/front-matter";
+import {
+  matchesKeybinding,
+  OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT,
+} from "@/lib/keybindings";
 import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
+import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
 import { useWeightedColorImageSearch } from "@/api/color-search";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
@@ -417,6 +424,20 @@ function WorkspacePeekPanel({
 }) {
   const { activeNoteId, closePeek, promoteNote } = useWorkspacePeek();
   const reduceMotion = useReducedMotion();
+  const canPromote = target.type === "note" && activeNoteId !== target.asset.id;
+
+  useEffect(() => {
+    if (!canPromote) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      if (!matchesKeybinding(event, OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void promoteNote();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canPromote, promoteNote]);
 
   return (
     <motion.aside
@@ -452,9 +473,7 @@ function WorkspacePeekPanel({
             note={target.asset}
             workspaceSlug={workspaceSlug}
             onClose={closePeek}
-            onPromote={
-              activeNoteId !== target.asset.id ? promoteNote : undefined
-            }
+            onPromote={canPromote ? promoteNote : undefined}
             readOnly={activeNoteId === target.asset.id}
           />
         ) : (
@@ -534,7 +553,20 @@ function PeekHeader({
                 </Button>
               }
             />
-            <TooltipContent side="bottom">Open in main editor</TooltipContent>
+            <TooltipContent side="bottom">
+              <span>Open in main editor</span>
+              <KbdGroup className="gap-0.5">
+                <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+                  {getPlatformAlt()}
+                </Kbd>
+                <span>+</span>
+                <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+                  {getPlatformShift()}
+                </Kbd>
+                <span>+</span>
+                <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">O</Kbd>
+              </KbdGroup>
+            </TooltipContent>
           </Tooltip>
         ) : null}
       </div>
@@ -573,11 +605,13 @@ function PeekNote({
   );
   const [showSaveState, setShowSaveState] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [title, setTitle] = useState(note.title ?? "");
   const [highlightColor, setHighlightColor] = useState<NoteHighlightColor>();
   const [highlightMode, setHighlightMode] = useState(false);
   const [canRemoveHighlight, setCanRemoveHighlight] = useState(false);
   useEffect(() => {
     latest.current = note.content;
+    setTitle(note.title ?? "");
     setSaveState("saved");
     setHighlightMode(false);
     setHighlightColor(undefined);
@@ -635,6 +669,14 @@ function PeekNote({
     },
     [note.id, update],
   );
+  const saveTitle = useCallback(() => {
+    const nextTitle = title.trim() || null;
+    if (nextTitle === (note.title ?? null) || readOnly) return;
+    update.mutate(
+      { assetId: note.id, title: nextTitle },
+      { onError: () => toast.error("Could not save peeked note.") },
+    );
+  }, [note.id, note.title, readOnly, title, update]);
   const copyNote = useCallback(() => {
     const body =
       richTextRef.current?.getMarkdown() ??
@@ -793,6 +835,13 @@ function PeekNote({
         className="note-workspace-scroll-container relative z-10 min-h-0 flex-1 overflow-y-auto rounded-t-xl border-t border-foreground/10 bg-background"
       >
         <div className="mx-auto w-full max-w-3xl px-10 pt-0 pb-10 [&_.ProseMirror]:!pt-8">
+          <NoteTitleField
+            value={title}
+            onChange={setTitle}
+            onBlur={saveTitle}
+            readOnly={readOnly}
+            className="pt-8"
+          />
           <NoteRichText
             key={note.id}
             ref={richTextRef}

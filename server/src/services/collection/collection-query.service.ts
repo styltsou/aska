@@ -558,6 +558,7 @@ export class CollectionQueryService {
         id: `note-${child.assetId}`,
         type: "note" as const,
         content: child.noteContent!,
+        title: child.title,
         color: child.noteColor,
         isFavorite: child.isFavorite ?? false,
         isExpanded: child.noteIsExpanded ?? false,

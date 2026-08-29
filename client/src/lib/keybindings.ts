@@ -32,9 +32,23 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "open-settings", key: ",", metaOrCtrl: true },
 ];
 
+export type Shortcut = Omit<Keybinding, "command">;
+
+export const PEEK_NOTE_SHORTCUT: Shortcut = {
+  code: "KeyP",
+  altKey: true,
+  shiftKey: true,
+};
+
+export const OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT: Shortcut = {
+  code: "KeyO",
+  altKey: true,
+  shiftKey: true,
+};
+
 export function matchesKeybinding(
   event: KeyboardEvent,
-  kb: Keybinding,
+  kb: Keybinding | Shortcut,
 ): boolean {
   if (kb.code !== undefined) {
     if (event.code !== kb.code) return false;
@@ -44,11 +58,20 @@ export function matchesKeybinding(
     return false;
   }
 
-  if (kb.shiftKey && !event.shiftKey) return false;
-  if (kb.ctrlKey && !event.ctrlKey) return false;
-  if (kb.metaKey && !event.metaKey) return false;
-  if (kb.metaOrCtrl && !(event.metaKey || event.ctrlKey)) return false;
-  if (kb.altKey && !event.altKey) return false;
+  if (kb.shiftKey === true && !event.shiftKey) return false;
+  if (kb.shiftKey === undefined && event.shiftKey) return false;
+
+  if (kb.altKey === true && !event.altKey) return false;
+  if (kb.altKey === undefined && event.altKey) return false;
+
+  if (kb.metaOrCtrl) {
+    if (!(event.metaKey || event.ctrlKey)) return false;
+  } else {
+    if (kb.ctrlKey === true && !event.ctrlKey) return false;
+    if (kb.ctrlKey === undefined && event.ctrlKey) return false;
+    if (kb.metaKey === true && !event.metaKey) return false;
+    if (kb.metaKey === undefined && event.metaKey) return false;
+  }
 
   return true;
 }

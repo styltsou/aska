@@ -12,3 +12,7 @@ export function isNoteContentTooLong(content: string): boolean {
 export function getSaveableNoteContent(content: string): string | undefined {
   return parseFrontMatter(content).body.trim().length > 0 ? content : undefined;
 }
+
+export function hasSaveableNote(title: string, content: string): boolean {
+  return Boolean(title.trim() || getSaveableNoteContent(content));
+}

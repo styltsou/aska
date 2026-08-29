@@ -26,6 +26,7 @@ import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import { getColorName, normalizeHexColor } from "@/lib/color-names";
 import { normalizeColorGradient } from "@/lib/color-gradient";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
+import { normalizeNoteTitle } from "@/lib/note-title";
 import {
   getCollectionBySlug,
   resolveTargetInCollection,
@@ -171,6 +172,7 @@ export class CollectionMutationService {
         .values({
           organizationId: orgId,
           type: "note",
+          title: normalizeNoteTitle(data.title),
           createdByUserId: userId,
           updatedByUserId: userId,
         })
@@ -215,6 +217,7 @@ export class CollectionMutationService {
       id: `note-${note.id}`,
       type: "note",
       content: data.content,
+      title: normalizeNoteTitle(data.title),
       color: data.color ?? null,
       isFavorite: false,
       wordCount,

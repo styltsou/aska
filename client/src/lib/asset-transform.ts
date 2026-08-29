@@ -85,6 +85,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
     id: node.id,
     type: "note",
     content: node.content,
+    title: node.title,
     color: node.color ?? undefined,
     isFavorite: node.isFavorite,
     isExpanded: node.isExpanded,

@@ -8,6 +8,16 @@ export function getPlatformModifier(): string {
   return "Ctrl";
 }
 
+export function getPlatformAlt(): string {
+  if (
+    typeof navigator !== "undefined" &&
+    navigator.platform.toLowerCase().includes("mac")
+  ) {
+    return "⌥";
+  }
+  return "Alt";
+}
+
 export function getPlatformShift(): string {
   if (
     typeof navigator !== "undefined" &&

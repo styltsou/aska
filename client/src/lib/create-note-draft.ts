@@ -3,6 +3,7 @@ const MAX_DRAFT_AGE_MS = 30 * 60 * 1_000;
 
 export type CreateNoteDraft = {
   content: string;
+  title?: string;
   open: boolean;
   updatedAt: number;
 };
@@ -81,6 +82,7 @@ function isValidDraft(value: unknown): value is CreateNoteDraft {
   const draft = value as Partial<CreateNoteDraft>;
   return (
     typeof draft.content === "string" &&
+    (draft.title === undefined || typeof draft.title === "string") &&
     typeof draft.open === "boolean" &&
     typeof draft.updatedAt === "number"
   );

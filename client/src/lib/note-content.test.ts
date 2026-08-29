@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getSaveableNoteContent,
+  hasSaveableNote,
   isNoteContentTooLong,
   MAX_NOTE_CONTENT_LENGTH,
 } from "@/lib/note-content";
@@ -17,6 +18,13 @@ describe("getSaveableNoteContent", () => {
 
   it("rejects front matter without a note body", () => {
     expect(getSaveableNoteContent("---\ntags: [idea]\n---\n")).toBeUndefined();
+  });
+});
+
+describe("hasSaveableNote", () => {
+  it("accepts a title-only note but not an empty note", () => {
+    expect(hasSaveableNote("A title", "")).toBe(true);
+    expect(hasSaveableNote("  ", "\n")).toBe(false);
   });
 });
 

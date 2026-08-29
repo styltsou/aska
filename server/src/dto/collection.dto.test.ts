@@ -46,7 +46,7 @@ describe("collection board position DTOs", () => {
     ).toEqual({ x: 72, y: 48 });
   });
 
-  it("requires non-empty bounded note content", () => {
+  it("accepts a title-only note and enforces bounded note fields", () => {
     expect(
       CreateNoteSchema.safeParse({
         content: "x".repeat(NOTE_CONTENT_MAX_LENGTH),
@@ -60,7 +60,11 @@ describe("collection board position DTOs", () => {
     expect(UpdateNoteSchema.parse({ content: "A growing idea" })).toEqual({
       content: "A growing idea",
     });
-    expect(UpdateNoteSchema.safeParse({ content: "" }).success).toBe(false);
+    expect(CreateNoteSchema.parse({ title: "Idea" })).toMatchObject({
+      content: "",
+      title: "Idea",
+    });
+    expect(UpdateNoteSchema.safeParse({ content: "" }).success).toBe(true);
     expect(
       UpdateNoteSchema.safeParse({
         content: "x".repeat(NOTE_CONTENT_MAX_LENGTH + 1),
@@ -71,6 +75,9 @@ describe("collection board position DTOs", () => {
         content: "x".repeat(NOTE_CONTENT_MAX_LENGTH),
       }).success,
     ).toBe(true);
+    expect(
+      CreateNoteSchema.safeParse({ content: "", title: "  " }).success,
+    ).toBe(false);
   });
 
   it("requires a complete position update", () => {

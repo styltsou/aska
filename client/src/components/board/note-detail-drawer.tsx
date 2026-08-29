@@ -32,6 +32,7 @@ import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
 import { NoteEditorLoading } from "@/components/board/note-editor-loading";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
+import { NoteTitleField } from "@/components/board/note-title-field";
 import {
   NoteWorkspace,
   NoteWorkspaceContent,
@@ -45,6 +46,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Tooltip,
   TooltipContent,
@@ -54,6 +56,8 @@ import { composeFrontMatter, parseFrontMatter } from "@/lib/front-matter";
 import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
+import { matchesKeybinding, PEEK_NOTE_SHORTCUT } from "@/lib/keybindings";
+import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
 import {
   clearCreateNoteDraft,
   getCreateNoteDraftId,
@@ -62,6 +66,7 @@ import {
 } from "@/lib/create-note-draft";
 import {
   getSaveableNoteContent,
+  hasSaveableNote,
   isNoteContentTooLong,
   NOTE_CONTENT_LIMIT_MESSAGE,
 } from "@/lib/note-content";
@@ -150,6 +155,7 @@ export function NoteDetailDrawer({
   const copiedResetTimeoutRef = useRef<number | undefined>(undefined);
   const hasObservedSaveStateRef = useRef(false);
   const [draft, setDraft] = useState(note?.content ?? "");
+  const [title, setTitle] = useState(note?.title ?? "");
   const [createdNote, setCreatedNote] = useState<NoteAsset>();
   const [workspaceOpen, setWorkspaceOpen] = useState(
     note !== undefined || Boolean(createOptions?.open),
@@ -233,6 +239,7 @@ export function NoteDetailDrawer({
       createOptions.initialContent || storedDraft?.content || "";
     draftRef.current = nextDraft;
     setDraft(nextDraft);
+    setTitle(storedDraft?.title ?? "");
     setSaveState("saved");
     failedContentRef.current = undefined;
   }, [
@@ -258,6 +265,7 @@ export function NoteDetailDrawer({
     if (!storedDraft?.open) return;
     draftRef.current = storedDraft.content;
     setDraft(storedDraft.content);
+    setTitle(storedDraft.title ?? "");
     setWorkspaceOpen(true);
   }, [
     createDraftId,
@@ -272,16 +280,30 @@ export function NoteDetailDrawer({
       activeNote ||
       !createDraftId ||
       !workspaceOpen ||
-      !draft
+      !hasSaveableNote(title, draft)
     )
       return;
-    saveCreateNoteDraft(createDraftId, { content: draft, open: true });
-  }, [activeNote, createDraftId, draft, isCreateMode, workspaceOpen]);
+    saveCreateNoteDraft(createDraftId, { content: draft, title, open: true });
+  }, [activeNote, createDraftId, draft, isCreateMode, title, workspaceOpen]);
 
   useEffect(() => {
     setActiveNoteId(activeNote?.id);
     return () => setActiveNoteId(undefined);
   }, [activeNote?.id, setActiveNoteId]);
+
+  useEffect(() => {
+    if (!workspaceOpen || !activeNote || isPeekMirror) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      if (!matchesKeybinding(event, PEEK_NOTE_SHORTCUT)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      peekNote(activeNote);
+      closeWorkspace();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeNote, closeWorkspace, isPeekMirror, peekNote, workspaceOpen]);
 
   useEffect(() => {
     if (activeNote) syncPeekNote(activeNote);
@@ -323,11 +345,16 @@ export function NoteDetailDrawer({
     if (!noteId || noteContent === undefined) return;
     if (isCreateMode && createdNote?.id === noteId) return;
     const recoveredDraft = loadEditDraft(noteId);
-    const nextDraft = recoveredDraft ?? noteContent;
+    const nextDraft = recoveredDraft?.content ?? noteContent;
     draftRef.current = nextDraft;
     setDraft(nextDraft);
+    setTitle(recoveredDraft?.title ?? activeNote?.title ?? "");
     setSaveState(
-      recoveredDraft && recoveredDraft !== noteContent ? "saving" : "saved",
+      recoveredDraft &&
+        (recoveredDraft.content !== noteContent ||
+          recoveredDraft.title !== (activeNote?.title ?? ""))
+        ? "saving"
+        : "saved",
     );
     failedContentRef.current = undefined;
     reset();
@@ -346,7 +373,7 @@ export function NoteDetailDrawer({
   }, [draft, noteContent, noteId]);
 
   const create = useCallback(
-    (content: string) => {
+    (content: string, nextTitle = title) => {
       if (!isCreateMode || activeNote || isCreating) return;
       if (isNoteContentTooLong(content)) {
         failedContentRef.current = content;
@@ -363,6 +390,7 @@ export function NoteDetailDrawer({
         setCreatedNote(nextNote);
         draftRef.current = content;
         setDraft(content);
+        setTitle(nextTitle);
         failedContentRef.current = undefined;
         setSaveState("saved");
       };
@@ -375,11 +403,15 @@ export function NoteDetailDrawer({
       };
 
       if (createOptions.target === "inbox") {
-        createInboxNote.mutate({ content }, { onSuccess, onError });
+        createInboxNote.mutate(
+          { content, title: nextTitle },
+          { onSuccess, onError },
+        );
       } else {
         createNote.mutate(
           {
             content,
+            title: nextTitle,
             parentFolderPath,
             placement: createOptions.placement,
           },
@@ -397,11 +429,12 @@ export function NoteDetailDrawer({
       isCreateMode,
       isCreating,
       parentFolderPath,
+      title,
     ],
   );
 
   const persist = useCallback(
-    (content: string, closeAfterSave = false) => {
+    (content: string, closeAfterSave = false, nextTitle = title) => {
       if (!noteId) return;
 
       if (isNoteContentTooLong(content)) {
@@ -412,7 +445,10 @@ export function NoteDetailDrawer({
         return;
       }
 
-      if (content === noteContent) {
+      if (
+        content === noteContent &&
+        (nextTitle.trim() || null) === (activeNote?.title ?? null)
+      ) {
         if (draftRef.current === content) {
           draftRef.current = content;
           setDraft(content);
@@ -428,7 +464,7 @@ export function NoteDetailDrawer({
       closeAfterSaveRef.current ||= closeAfterSave;
       setSaveState("saving");
       mutate(
-        { assetId: noteId, content },
+        { assetId: noteId, content, title: nextTitle.trim() || null },
         {
           onSuccess: ({ note: updatedNote }) => {
             failedContentRef.current = undefined;
@@ -449,7 +485,7 @@ export function NoteDetailDrawer({
               closeAfterSaveRef.current = false;
               const latestContent = getSaveableNoteContent(draftRef.current);
               if (latestContent && latestContent !== content) {
-                window.setTimeout(() => persist(latestContent, true), 0);
+                window.setTimeout(() => persist(latestContent, true, title), 0);
                 return;
               }
               closeWorkspace();
@@ -474,6 +510,7 @@ export function NoteDetailDrawer({
       noteContent,
       noteId,
       onNoteChange,
+      title,
     ],
   );
 
@@ -636,33 +673,36 @@ export function NoteDetailDrawer({
 
   useEffect(() => {
     if (isCreateMode && !activeNote) {
-      const content = getSaveableNoteContent(draft);
-      if (!content || isCreating || failedContentRef.current === content) {
-        if (!content && draft.trim()) setSaveState("empty");
+      if (!hasSaveableNote(title, draft) || isCreating) {
+        if (!hasSaveableNote(title, draft) && (title.trim() || draft.trim()))
+          setSaveState("empty");
         return;
       }
       const timeout = window.setTimeout(
-        () => create(content),
+        () => create(draft, title),
         AUTOSAVE_DELAY_MS,
       );
       return () => window.clearTimeout(timeout);
     }
-    if (!noteId || draft === noteContent || isPending) return;
+    if (!noteId || isPending) return;
+    const titleChanged = (title.trim() || null) !== (activeNote?.title ?? null);
+    if (draft === noteContent && !titleChanged) return;
     const content = getSaveableNoteContent(draft);
-    if (!content) {
+    if (!hasSaveableNote(title, draft)) {
       setSaveState("empty");
       return;
     }
     if (failedContentRef.current === content) return;
-    const timeout = window.setTimeout(
-      () => persist(content),
-      AUTOSAVE_DELAY_MS,
-    );
+    const timeout = window.setTimeout(() => {
+      if (content) persist(content, false, title);
+      else mutate({ assetId: noteId, title: title.trim() || null });
+    }, AUTOSAVE_DELAY_MS);
     return () => window.clearTimeout(timeout);
   }, [
     activeNote,
     create,
     draft,
+    title,
     isCreateMode,
     isCreating,
     isPending,
@@ -744,14 +784,28 @@ export function NoteDetailDrawer({
     setDraft(content);
     failedContentRef.current = undefined;
     if (activeNote) {
-      if (content === activeNote.content) clearEditDraft(activeNote.id);
-      else saveEditDraft(activeNote.id, content);
+      if (content === activeNote.content && title === (activeNote.title ?? ""))
+        clearEditDraft(activeNote.id);
+      else saveEditDraft(activeNote.id, content, title);
     } else if (createDraftId) {
       if (content.trim()) {
-        saveCreateNoteDraft(createDraftId, { content, open: true });
+        saveCreateNoteDraft(createDraftId, { content, title, open: true });
       } else {
         clearCreateNoteDraft(createDraftId);
       }
+    }
+  }
+
+  function handleTitleChange(nextTitle: string) {
+    setTitle(nextTitle);
+    if (activeNote) {
+      saveEditDraft(activeNote.id, draftRef.current, nextTitle);
+    } else if (createDraftId) {
+      saveCreateNoteDraft(createDraftId, {
+        content: draftRef.current,
+        title: nextTitle,
+        open: true,
+      });
     }
   }
 
@@ -761,7 +815,7 @@ export function NoteDetailDrawer({
       return;
     }
     const content = getSaveableNoteContent(draftRef.current);
-    if (!content) {
+    if (!hasSaveableNote(title, draftRef.current)) {
       if (deleteAsset.isPending) return;
       setSaveState("deleting");
       closeWorkspace();
@@ -772,12 +826,16 @@ export function NoteDetailDrawer({
       });
       return;
     }
-    if (content === activeNote.content) return closeWorkspace();
+    if (
+      content === activeNote.content &&
+      (title.trim() || null) === (activeNote.title ?? null)
+    )
+      return closeWorkspace();
     if (updateNote.isPending) {
       closeAfterSaveRef.current = true;
       return;
     }
-    persist(content, true);
+    persist(content ?? "", true, title);
   }
 
   function copyNoteMarkdown() {
@@ -891,7 +949,20 @@ export function NoteDetailDrawer({
                     </Button>
                   }
                 />
-                <TooltipContent side="bottom">Peek note</TooltipContent>
+                <TooltipContent side="bottom">
+                  <span>Peek note</span>
+                  <KbdGroup className="gap-0.5">
+                    <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+                      {getPlatformAlt()}
+                    </Kbd>
+                    <span>+</span>
+                    <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+                      {getPlatformShift()}
+                    </Kbd>
+                    <span>+</span>
+                    <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">P</Kbd>
+                  </KbdGroup>
+                </TooltipContent>
               </Tooltip>
             ) : null}
           </div>
@@ -1025,12 +1096,18 @@ export function NoteDetailDrawer({
             {isCreateMode || activeNote ? (
               <Suspense fallback={<NoteEditorLoading />}>
                 <NoteEditorErrorBoundary noteId={activeNote?.id ?? "new-note"}>
+                  <NoteTitleField
+                    value={title}
+                    onChange={handleTitleChange}
+                    autoFocus={isCreateMode}
+                    className="pt-8"
+                  />
                   <NoteRichText
                     key={isCreateMode ? "create-note-editor" : activeNote?.id}
                     ref={richTextRef}
                     markdown={frontMatter.body}
                     editable
-                    autoFocus
+                    autoFocus={!isCreateMode}
                     scrollContainerRef={noteContentRef}
                     onExtractSelection={
                       noteExtractionTarget ? extractSelection : undefined
@@ -1043,8 +1120,8 @@ export function NoteDetailDrawer({
                     onSaveShortcut={() => {
                       const content = getSaveableNoteContent(draftRef.current);
                       if (!content) return;
-                      if (isCreateMode && !activeNote) create(content);
-                      else persist(content);
+                      if (isCreateMode && !activeNote) create(content, title);
+                      else persist(content, false, title);
                     }}
                   />
                 </NoteEditorErrorBoundary>
@@ -1109,17 +1186,33 @@ function editDraftKey(noteId: string) {
   return `aska.edit-note-draft:${noteId}`;
 }
 
-function loadEditDraft(noteId: string): string | undefined {
+type EditNoteDraft = { content: string; title: string };
+
+function loadEditDraft(noteId: string): EditNoteDraft | undefined {
   try {
-    return localStorage.getItem(editDraftKey(noteId)) ?? undefined;
+    const value = localStorage.getItem(editDraftKey(noteId));
+    if (!value) return undefined;
+    const parsed: unknown = JSON.parse(value);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      typeof (parsed as Partial<EditNoteDraft>).content === "string" &&
+      typeof (parsed as Partial<EditNoteDraft>).title === "string"
+    ) {
+      return parsed as EditNoteDraft;
+    }
+    return { content: value, title: "" };
   } catch {
     return undefined;
   }
 }
 
-function saveEditDraft(noteId: string, content: string) {
+function saveEditDraft(noteId: string, content: string, title: string) {
   try {
-    localStorage.setItem(editDraftKey(noteId), content);
+    localStorage.setItem(
+      editDraftKey(noteId),
+      JSON.stringify({ content, title }),
+    );
   } catch {}
 }
 
