@@ -77,6 +77,11 @@ import {
   type CanvasDropStackStyle,
 } from "./canvas-drop-stack";
 import {
+  getCanvasInteractionZIndex,
+  getCanvasRestingZIndex,
+  updateExpandedNoteOrder,
+} from "./canvas-node-stacking";
+import {
   CanvasCard,
   type CanvasNode,
   type CanvasNodeData,
@@ -85,7 +90,6 @@ import {
 const DEFAULT_VIEWPORT = { x: 40, y: 40, zoom: 1.1 };
 const BOARD_VIEWPORT_INSET = 24;
 const BOARD_CONTROLS_CLEARANCE = 72;
-const DRAGGING_NODE_Z_INDEX = 1;
 const nodeTypes: NodeTypes = { asset: CanvasCard };
 
 type CanvasProps = {
@@ -223,6 +227,7 @@ function CanvasSurface({
   const alignmentBypassRef = useRef(false);
   const dragVersionRef = useRef(new Map<string, number>());
   const pendingNodePositionsRef = useRef(new Map<string, XYPosition>());
+  const expandedNoteOrderRef = useRef(updateExpandedNoteOrder([], nodes));
   const persistPositionRef = useRef<
     (save: QueuedPositionSave) => Promise<void>
   >(async () => {});
@@ -596,7 +601,14 @@ function CanvasSurface({
   );
 
   const [flowNodes, setFlowNodes] = useState<CanvasNode[]>(() =>
-    nodes.map((node, index) => makeFlowNode(node, index, makeNodeData(node))),
+    nodes.map((node, index) =>
+      makeFlowNode(
+        node,
+        index,
+        makeNodeData(node),
+        expandedNoteOrderRef.current,
+      ),
+    ),
   );
 
   useEffect(() => {
@@ -711,6 +723,12 @@ function CanvasSurface({
       .then(() => undefined);
 
   useEffect(() => {
+    const expandedNoteOrder = updateExpandedNoteOrder(
+      expandedNoteOrderRef.current,
+      nodes,
+    );
+    expandedNoteOrderRef.current = expandedNoteOrder;
+
     setFlowNodes((current) => {
       const currentById = new Map(current.map((node) => [node.id, node]));
       const currentByClientId = new Map(
@@ -725,6 +743,7 @@ function CanvasSurface({
           node,
           index,
           makeNodeData(node),
+          expandedNoteOrder,
           currentById.get(node.id) ??
             currentByClientId.get(getNodeClientId(node) ?? ""),
         ),
@@ -1024,7 +1043,7 @@ function CanvasSurface({
           setFlowNodes((current) =>
             current.map((flowNode) =>
               draggedNodeIds.has(flowNode.id)
-                ? { ...flowNode, zIndex: DRAGGING_NODE_Z_INDEX }
+                ? { ...flowNode, zIndex: getCanvasInteractionZIndex() }
                 : flowNode,
             ),
           );
@@ -1065,7 +1084,13 @@ function CanvasSurface({
           setFlowNodes((current) =>
             current.map((flowNode) =>
               draggedNodeIds.has(flowNode.id)
-                ? { ...flowNode, zIndex: 0 }
+                ? {
+                    ...flowNode,
+                    zIndex: getCanvasRestingZIndex(
+                      flowNode.data.collectionNode,
+                      expandedNoteOrderRef.current,
+                    ),
+                  }
                 : flowNode,
             ),
           );
@@ -1297,6 +1322,7 @@ function makeFlowNode(
   collectionNode: CollectionNode,
   index: number,
   data: CanvasNodeData,
+  expandedNoteOrder: readonly string[],
   current?: CanvasNode,
 ): CanvasNode {
   return {
@@ -1308,13 +1334,13 @@ function makeFlowNode(
     data,
     draggable: data.isColorDimmed ? false : undefined,
     selectable: false,
-    // Resting cards share one layer. This also clears any transient drag layer
-    // when server data refreshes after a drag has completed.
+    // Expanded notes float above resting cards. Drag and drop-stack layers
+    // remain above them while an interaction is active.
     zIndex: data.dropStackStyle
-      ? DRAGGING_NODE_Z_INDEX + data.dropStackStyle.stackOrder
+      ? getCanvasInteractionZIndex(data.dropStackStyle.stackOrder)
       : current?.dragging
-        ? DRAGGING_NODE_Z_INDEX
-        : 0,
+        ? getCanvasInteractionZIndex()
+        : getCanvasRestingZIndex(collectionNode, expandedNoteOrder),
     style: { width: BOARD_CARD_WIDTH },
   };
 }
