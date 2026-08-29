@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
+import { NoteSaveStatus } from "@/components/board/note-save-status";
 import { NoteTitleField } from "@/components/board/note-title-field";
 import { NoteRichText } from "@/components/board/note-rich-text";
 import {
@@ -96,7 +97,6 @@ const WorkspacePeekContext = createContext<WorkspacePeekContextValue | null>(
 );
 const PEEK_MIN_WIDTH = 720;
 const PEEK_WIDTH = 960;
-const PEEK_SAVE_STATUS_VISIBLE_MS = 2_000;
 
 function getPeekWidthBounds() {
   const viewportMax =
@@ -598,12 +598,9 @@ function PeekNote({
   const richTextRef = useRef<NoteRichTextHandle>(null);
   const timer = useRef<number | undefined>(undefined);
   const copiedTimer = useRef<number | undefined>(undefined);
-  const saveStatusTimer = useRef<number | undefined>(undefined);
-  const hasObservedSaveState = useRef(false);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">(
     "saved",
   );
-  const [showSaveState, setShowSaveState] = useState(false);
   const [copied, setCopied] = useState(false);
   const [title, setTitle] = useState(note.title ?? "");
   const [highlightColor, setHighlightColor] = useState<NoteHighlightColor>();
@@ -619,36 +616,16 @@ function PeekNote({
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
       if (copiedTimer.current) window.clearTimeout(copiedTimer.current);
-      if (saveStatusTimer.current) window.clearTimeout(saveStatusTimer.current);
     };
   }, [note.id, note.content]);
   const handleHighlightModeChange = useCallback((active: boolean) => {
     setHighlightMode(active);
     if (!active) setHighlightColor(undefined);
   }, []);
-  useEffect(() => {
-    if (saveStatusTimer.current) window.clearTimeout(saveStatusTimer.current);
-    if (!hasObservedSaveState.current) {
-      hasObservedSaveState.current = true;
-      return;
-    }
-    setShowSaveState(true);
-    if (saveState === "saved") {
-      saveStatusTimer.current = window.setTimeout(
-        () => setShowSaveState(false),
-        PEEK_SAVE_STATUS_VISIBLE_MS,
-      );
-    }
-  }, [saveState]);
   const save = useCallback(
     (content: string) => {
       latest.current = content;
       if (timer.current) window.clearTimeout(timer.current);
-      if (saveStatusTimer.current) {
-        window.clearTimeout(saveStatusTimer.current);
-        saveStatusTimer.current = undefined;
-      }
-      setShowSaveState(false);
       if (!content.trim()) {
         setSaveState("saved");
         return;
@@ -699,12 +676,6 @@ function PeekNote({
       })
       .catch(() => toast.error("Unable to copy note."));
   }, [note.content]);
-  const saveLabel =
-    saveState === "saving"
-      ? "Saving…"
-      : saveState === "error"
-        ? "Save failed"
-        : "Saved";
   const hasDetails = Boolean(note.createdAt || note.updatedAt);
   return (
     <>
@@ -743,15 +714,10 @@ function PeekNote({
             </HoverCard>
           </>
         ) : (
-          <span
-            className={cn(
-              "inline-block w-24 shrink-0 overflow-hidden text-right text-xs text-muted-foreground whitespace-nowrap transition-opacity duration-150 ease-out motion-reduce:transition-none",
-              showSaveState ? "opacity-100" : "pointer-events-none opacity-0",
-            )}
-            aria-hidden={!showSaveState}
-          >
-            {saveLabel}
-          </span>
+          <NoteSaveStatus
+            state={saveState}
+            updatedAt={note.updatedAt ?? note.createdAt}
+          />
         )}
         {!readOnly ? (
           <NoteHighlightControl

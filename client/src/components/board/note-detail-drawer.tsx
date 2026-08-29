@@ -32,6 +32,7 @@ import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
 import { NoteEditorLoading } from "@/components/board/note-editor-loading";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
+import { NoteSaveStatus } from "@/components/board/note-save-status";
 import { NoteTitleField } from "@/components/board/note-title-field";
 import {
   NoteWorkspace,
@@ -76,7 +77,6 @@ import type { NoteAsset } from "@/types/asset";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 
 const AUTOSAVE_DELAY_MS = 700;
-const SAVE_STATUS_VISIBLE_MS = 2_000;
 const COPIED_RESET_MS = 1_500;
 const NoteRichText = lazy(() =>
   import("@/components/board/note-rich-text").then((module) => ({
@@ -150,10 +150,8 @@ export function NoteDetailDrawer({
   const hasRestoredCreateOpenRef = useRef(false);
   const isInitialPageReloadRef = useRef(isPageReload());
   const failedContentRef = useRef<string | undefined>(undefined);
-  const saveStatusHideTimeoutRef = useRef<number | undefined>(undefined);
   const extractionFeedbackTimeoutRef = useRef<number | undefined>(undefined);
   const copiedResetTimeoutRef = useRef<number | undefined>(undefined);
-  const hasObservedSaveStateRef = useRef(false);
   const [draft, setDraft] = useState(note?.content ?? "");
   const [title, setTitle] = useState(note?.title ?? "");
   const [createdNote, setCreatedNote] = useState<NoteAsset>();
@@ -161,7 +159,6 @@ export function NoteDetailDrawer({
     note !== undefined || Boolean(createOptions?.open),
   );
   const [saveState, setSaveState] = useState<SaveState>("saved");
-  const [showSaveState, setShowSaveState] = useState(false);
   const [copied, setCopied] = useState(false);
   const [highlightColor, setHighlightColor] = useState<NoteHighlightColor>();
   const [highlightMode, setHighlightMode] = useState(false);
@@ -308,26 +305,6 @@ export function NoteDetailDrawer({
   useEffect(() => {
     if (activeNote) syncPeekNote(activeNote);
   }, [activeNote, syncPeekNote]);
-
-  useEffect(() => {
-    if (saveStatusHideTimeoutRef.current !== undefined) {
-      window.clearTimeout(saveStatusHideTimeoutRef.current);
-      saveStatusHideTimeoutRef.current = undefined;
-    }
-
-    if (!hasObservedSaveStateRef.current) {
-      hasObservedSaveStateRef.current = true;
-      return;
-    }
-
-    setShowSaveState(true);
-    if (saveState === "saved") {
-      saveStatusHideTimeoutRef.current = window.setTimeout(
-        () => setShowSaveState(false),
-        SAVE_STATUS_VISIBLE_MS,
-      );
-    }
-  }, [saveState]);
 
   useEffect(
     () => () => {
@@ -998,15 +975,7 @@ export function NoteDetailDrawer({
             ) : null}
           </AnimatePresence>
           <div className="flex min-w-0 items-center justify-end gap-2">
-            <span
-              className={cn(
-                "inline-block w-24 shrink-0 overflow-hidden text-right whitespace-nowrap transition-opacity duration-150 ease-out motion-reduce:transition-none",
-                showSaveState ? "opacity-100" : "pointer-events-none opacity-0",
-              )}
-              aria-hidden={!showSaveState}
-            >
-              {saveStateLabel(saveState)}
-            </span>
+            <NoteSaveStatus state={saveState} updatedAt={updatedTimestamp} />
             <NoteHighlightControl
               editorRef={richTextRef}
               color={highlightColor}
@@ -1140,14 +1109,6 @@ export function NoteDetailDrawer({
       </NoteWorkspaceContent>
     </NoteWorkspace>
   );
-}
-
-function saveStateLabel(state: SaveState) {
-  if (state === "saving") return "Saving…";
-  if (state === "deleting") return "Deleting…";
-  if (state === "error") return "Save failed";
-  if (state === "empty") return "Add text to save";
-  return "Saved";
 }
 
 const NOTE_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
