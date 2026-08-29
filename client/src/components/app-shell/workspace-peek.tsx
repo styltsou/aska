@@ -100,6 +100,33 @@ function getPeekWidthBounds() {
 }
 const storageKey = (workspaceSlug: string) =>
   `aska.workspace-peek:v1:${workspaceSlug}`;
+const widthStorageKey = (workspaceSlug: string) =>
+  `aska.workspace-peek-width:v1:${workspaceSlug}`;
+
+function clampPeekWidth(width: number) {
+  const { min, max } = getPeekWidthBounds();
+  return Math.min(Math.max(width, min), max);
+}
+
+function readPeekWidth(workspaceSlug: string) {
+  const { defaultWidth } = getPeekWidthBounds();
+  if (typeof window === "undefined") return defaultWidth;
+
+  try {
+    const storedValue = localStorage.getItem(widthStorageKey(workspaceSlug));
+    if (storedValue === null) return defaultWidth;
+    const storedWidth = Number(storedValue);
+    if (Number.isFinite(storedWidth)) return clampPeekWidth(storedWidth);
+  } catch {}
+
+  return defaultWidth;
+}
+
+function persistPeekWidth(workspaceSlug: string, width: number) {
+  try {
+    localStorage.setItem(widthStorageKey(workspaceSlug), String(width));
+  } catch {}
+}
 
 export function useWorkspacePeek() {
   const value = useContext(WorkspacePeekContext);
@@ -123,7 +150,7 @@ export function WorkspacePeekProvider({
   const [isRailReserved, setIsRailReserved] = useState(() => Boolean(target));
   const [activeNoteId, setActiveNoteId] = useState<string>();
   const [isResizing, setIsResizing] = useState(false);
-  const [width, setWidth] = useState(() => getPeekWidthBounds().defaultWidth);
+  const [width, setWidth] = useState(() => readPeekWidth(workspaceSlug));
   const widthRef = useRef(width);
   const targetRef = useRef(target);
   const notePromotionHandlerRef = useRef<
@@ -140,7 +167,7 @@ export function WorkspacePeekProvider({
     const restoredTarget = readTarget(workspaceSlug);
     setTarget(restoredTarget);
     setIsRailReserved(Boolean(restoredTarget));
-    setWidth(getPeekWidthBounds().defaultWidth);
+    setWidth(readPeekWidth(workspaceSlug));
   }, [workspaceSlug]);
   useEffect(() => {
     if (!target) return;
@@ -238,7 +265,9 @@ export function WorkspacePeekProvider({
         );
       };
       const finishResize = (deferDismissalRestore: boolean) => {
-        setWidth(widthRef.current);
+        const nextWidth = widthRef.current;
+        setWidth(nextWidth);
+        persistPeekWidth(workspaceSlug, nextWidth);
         window.removeEventListener("pointermove", handlePointerMove);
         window.removeEventListener("pointerup", handlePointerUp);
         window.removeEventListener("pointercancel", handlePointerCancel);
@@ -263,7 +292,7 @@ export function WorkspacePeekProvider({
       });
       window.addEventListener("blur", handlePointerCancel, { once: true });
     },
-    [],
+    [workspaceSlug],
   );
   const syncPeekNote = useCallback((asset: NoteAsset) => {
     setTarget((current) =>
