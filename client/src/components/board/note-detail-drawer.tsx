@@ -587,14 +587,16 @@ export function NoteDetailDrawer({
       try {
         const { asset } = await fetchPeekableAsset(workspaceSlug, assetId);
         if (asset.type !== "note") return;
-        await promotePeekedNote({ ...asset, color: asset.color ?? undefined });
+        const noteAsset = { ...asset, color: asset.color ?? undefined };
+        if (isMobile) await promotePeekedNote(noteAsset);
+        else peekNote(noteAsset);
       } catch (error) {
         toast.error(
           getUserFacingApiErrorMessage(error, "Could not open this reference."),
         );
       }
     },
-    [promotePeekedNote, workspaceSlug],
+    [isMobile, peekNote, promotePeekedNote, workspaceSlug],
   );
 
   const openMentionTarget = useCallback(

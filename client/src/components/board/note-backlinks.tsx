@@ -60,7 +60,9 @@ export function NoteBacklinks({
             open && "rotate-90",
           )}
         />
-        <span>Referenced by {count}</span>
+        <span>
+          Referenced by {count} {count === 1 ? "note" : "notes"}
+        </span>
       </button>
       <AnimatePresence initial={false}>
         {open ? (
