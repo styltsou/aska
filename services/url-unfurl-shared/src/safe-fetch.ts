@@ -1,12 +1,14 @@
 import dns from "node:dns/promises";
 import http from "node:http";
 import https from "node:https";
-import { isIP } from "node:net";
+import { isIP, type LookupFunction } from "node:net";
 
 import ipaddr from "ipaddr.js";
 
 const MAX_REDIRECTS = 5;
 const ALLOWED_IP_RANGES = new Set(["unicast"]);
+
+export type PinnedAddress = { address: string; family: 4 | 6 };
 
 export class SafeFetchError extends Error {
   constructor(
@@ -168,7 +170,9 @@ export function isPublicAddress(address: string): boolean {
   }
 }
 
-async function resolvePublicAddress(hostname: string) {
+async function resolvePublicAddresses(
+  hostname: string,
+): Promise<PinnedAddress[]> {
   if (isIP(hostname)) {
     if (!isPublicAddress(hostname))
       throw new SafeFetchError(
@@ -176,7 +180,7 @@ async function resolvePublicAddress(hostname: string) {
         "Host resolves to a non-public address",
         false,
       );
-    return { address: hostname, family: isIP(hostname) as 4 | 6 };
+    return [{ address: hostname, family: isIP(hostname) as 4 | 6 }];
   }
   let addresses: Array<{ address: string; family: number }>;
   try {
@@ -194,7 +198,22 @@ async function resolvePublicAddress(hostname: string) {
       false,
     );
   }
-  return addresses[0]!;
+  return addresses.map((entry) => ({
+    address: entry.address,
+    family: isIP(entry.address) as 4 | 6,
+  }));
+}
+
+/** Pins Node's single- and multi-address lookup modes to prevalidated DNS results. */
+export function createPinnedLookup(addresses: PinnedAddress[]): LookupFunction {
+  return (_hostname, lookupOptions, callback) => {
+    if (lookupOptions.all) {
+      callback(null, addresses);
+      return;
+    }
+    const address = addresses[0]!;
+    callback(null, address.address, address.family);
+  };
 }
 
 async function requestPinned(
@@ -206,7 +225,7 @@ async function requestPinned(
   headers: http.IncomingHttpHeaders;
   stream: http.IncomingMessage;
 }> {
-  const address = await resolvePublicAddress(url.hostname);
+  const addresses = await resolvePublicAddresses(url.hostname);
   const transport = url.protocol === "https:" ? https : http;
 
   return new Promise((resolve, reject) => {
@@ -222,9 +241,7 @@ async function requestPinned(
           referer: "",
         },
         servername: url.hostname,
-        lookup: (_hostname, _lookupOptions, callback) => {
-          callback(null, address.address, address.family);
-        },
+        lookup: createPinnedLookup(addresses),
       },
       (response) => {
         const status = response.statusCode ?? 0;

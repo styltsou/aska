@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { and, count, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS } from "../../../../services/image-shared/src/task-timing";
+
 import { db } from "@/db";
 import {
   externalResources,
@@ -214,6 +216,112 @@ describe("UrlUnfurlService integration", () => {
       resolutionStatus: "partial",
       previewImage: null,
     });
+  });
+
+  it("projects a completed Open Graph preview and reaches ready", async () => {
+    const link = await service.createInboxLink(
+      fixture.organizationId,
+      fixture.userId,
+      { url: "https://example.com/with-preview" },
+    );
+    const task = resolutionTasks[0]!;
+    await service.claimResolution(task.id, task.generation);
+    await service.handleResolutionResult({
+      event: "resource.metadata.completed",
+      id: task.id,
+      generation: task.generation,
+      resolverKey: "generic-html",
+      resolverVersion: "1",
+      finalUrl: "https://example.com/with-preview",
+      canonicalUrl: null,
+      title: "Preview article",
+      description: null,
+      siteName: "Example",
+      resourceKind: "article",
+      fieldProvenance: {
+        title: { resolver: "generic-html", source: "og:title" },
+      },
+      providerExtensions: {},
+      media: [
+        {
+          role: "preview",
+          sourceUrl: "https://cdn.example.com/preview.jpg",
+          sourceMetadata: "og:image",
+          processingProfile: "link-preview-v1",
+          alt: "Preview alt",
+        },
+      ],
+    });
+
+    const media = mediaTasks[0]!;
+    await service.handleResourceMediaResult({
+      event: "resource.media.completed",
+      id: media.id,
+      generation: media.generation,
+      width: 1200,
+      height: 630,
+      format: "jpeg",
+      sizeBytes: 42_000,
+      blurDataURL: "data:image/webp;base64,dGVzdA==",
+      variants: {
+        master: {
+          objectKey: `${fixture.organizationId}/preview/master.webp`,
+          width: 1200,
+          height: 630,
+          contentType: "image/webp",
+          sizeBytes: 32_000,
+        },
+        display: {
+          objectKey: `${fixture.organizationId}/preview/display.webp`,
+          width: 960,
+          height: 504,
+          contentType: "image/webp",
+          sizeBytes: 20_000,
+        },
+      },
+    });
+
+    await expect(
+      service.getLinkNode(
+        fixture.organizationId,
+        Number(link.id.slice("link-".length)),
+        null,
+      ),
+    ).resolves.toMatchObject({
+      resolutionStatus: "ready",
+      previewImage: {
+        url: `https://media.test/${fixture.organizationId}/preview/display.webp`,
+        width: 960,
+        height: 504,
+        alt: "Preview alt",
+      },
+    });
+  });
+
+  it("allows an SQS retry to reclaim a processing resolution", async () => {
+    await service.createInboxLink(fixture.organizationId, fixture.userId, {
+      url: "https://example.com/retry",
+    });
+    const task = resolutionTasks[0]!;
+    await expect(
+      service.claimResolution(task.id, task.generation),
+    ).resolves.toMatchObject({ ignored: false });
+    await expect(
+      service.claimResolution(task.id, task.generation),
+    ).resolves.toEqual({ ignored: true });
+
+    await db
+      .update(resourceResolutionAttempts)
+      .set({
+        processingStartedAt: new Date(
+          Date.now() - TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS * 1_000,
+        ),
+      })
+      .where(eq(resourceResolutionAttempts.id, task.id));
+
+    await expect(
+      service.claimResolution(task.id, task.generation),
+    ).resolves.toMatchObject({ ignored: false });
   });
 
   it("ignores an old generation after refresh", async () => {

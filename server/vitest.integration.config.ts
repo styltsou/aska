@@ -20,6 +20,7 @@ export default defineConfig({
   test: {
     include: ["src/**/*.integration.test.ts"],
     fileParallelism: false,
+    setupFiles: ["./vitest.integration.setup.ts"],
     testTimeout: 15_000,
     hookTimeout: 15_000,
   },

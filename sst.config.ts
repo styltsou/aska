@@ -1,6 +1,11 @@
 // oxlint-disable-next-line typescript/triple-slash-reference
 /// <reference path="./.sst/platform/config.d.ts" />
 
+import {
+  TASK_DLQ_RECEIVE_LIMIT,
+  TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS,
+} from "./services/image-shared/src/task-timing";
+
 export default $config({
   app(input) {
     return {
@@ -92,11 +97,14 @@ export default $config({
         },
       });
       const queue = new sst.aws.Queue(name, {
-        visibilityTimeout: "180 seconds",
+        visibilityTimeout: `${TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS} seconds`,
         // The worker reports a terminal task status on receive five. Keep one
         // additional receive for a failed terminal callback before preserving
         // the message in the DLQ.
-        dlq: { queue: deadLetterQueue.arn, retry: 6 },
+        dlq: {
+          queue: deadLetterQueue.arn,
+          retry: TASK_DLQ_RECEIVE_LIMIT,
+        },
       });
       return { queue, deadLetterQueue };
     };

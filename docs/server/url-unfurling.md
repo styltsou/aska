@@ -213,11 +213,13 @@ verifies that the row is current, referenced, and claimable. Results use the
 same signed raw-body contract.
 
 Generation checks make callbacks idempotent and reject out-of-order results.
-Leases permit work stuck in `processing` for five minutes to be reclaimed.
-The scheduled maintenance Lambda requeues stale queued/processing work,
-identifies resources with no remaining link assets, and deletes resources after
-a seven-day grace period. Deleting the last card while work runs makes future
-claims no-ops; cascades remove rows and cleanup jobs remove stored objects.
+The 150-second processing lease expires before the queue's 180-second
+visibility timeout, so a retry can reclaim the same task and preserve its SQS
+receive count. The scheduled maintenance Lambda requeues work still stale after
+five minutes, identifies resources with no remaining link assets, and deletes
+resources after a seven-day grace period. Deleting the last card while work runs
+makes future claims no-ops; cascades remove rows and cleanup jobs remove stored
+objects.
 Multiple cards for one URL share the resource and media while retaining their
 own original URL and placement.
 

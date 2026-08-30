@@ -46,10 +46,13 @@ import {
   normalizeDiscoveredUrl,
   normalizeExternalUrl,
 } from "./url-normalization";
+import {
+  TASK_CLAIM_LEASE_MS,
+  TASK_MAINTENANCE_REQUEUE_AFTER_MS,
+} from "../../../../services/image-shared/src/task-timing";
 
 const RESOLVER_KEY = "generic-html";
 const RESOLVER_VERSION = "1";
-const ACTIVE_LEASE_MS = 5 * 60 * 1000;
 const MAX_ATTEMPTS_PER_WORKSPACE_PER_HOUR = 60;
 const ORPHAN_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -384,7 +387,7 @@ export class UrlUnfurlService {
     attemptId: number,
     generation: number,
   ): Promise<ResolutionClaim> {
-    const staleBefore = new Date(Date.now() - ACTIVE_LEASE_MS);
+    const staleBefore = new Date(Date.now() - TASK_CLAIM_LEASE_MS);
     const row = first(
       await db
         .select({
@@ -675,7 +678,7 @@ export class UrlUnfurlService {
     mediaId: number,
     generation: number,
   ): Promise<MediaClaim> {
-    const staleBefore = new Date(Date.now() - ACTIVE_LEASE_MS);
+    const staleBefore = new Date(Date.now() - TASK_CLAIM_LEASE_MS);
     const row = first(
       await db
         .select({
@@ -827,7 +830,9 @@ export class UrlUnfurlService {
     mediaRequeued: number;
     resourcesDeleted: number;
   }> {
-    const dispatchBefore = new Date(Date.now() - 5 * 60 * 1000);
+    const dispatchBefore = new Date(
+      Date.now() - TASK_MAINTENANCE_REQUEUE_AFTER_MS,
+    );
     const attempts = await db
       .select({
         id: resourceResolutionAttempts.id,

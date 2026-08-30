@@ -7,6 +7,7 @@ import {
   recordMessageDuration,
   runWithSpan,
 } from "./observability";
+import { TASK_MAX_PROCESSING_ATTEMPTS } from "./task-timing";
 
 /** Applies the common at-least-once retry and terminal-callback contract. */
 export function createTaskHandler<T>(input: {
@@ -16,6 +17,7 @@ export function createTaskHandler<T>(input: {
   reportTerminalFailure(task: T, error: unknown): Promise<void>;
   maxAttempts?: number;
 }) {
+  const maxAttempts = input.maxAttempts ?? TASK_MAX_PROCESSING_ATTEMPTS;
   const handle = async (event: SQSEvent): Promise<SQSBatchResponse> => {
     const batchItemFailures: SQSBatchResponse["batchItemFailures"] = [];
     for (const record of event.Records) {
@@ -39,7 +41,7 @@ export function createTaskHandler<T>(input: {
         recordMessageDuration(input.pipeline, "error", Date.now() - startedAt);
         continue;
       }
-      if (attempts > (input.maxAttempts ?? 5)) {
+      if (attempts > maxAttempts) {
         try {
           await input.reportTerminalFailure(
             task,
@@ -87,7 +89,7 @@ export function createTaskHandler<T>(input: {
         });
         recordMessageDuration(input.pipeline, "error", Date.now() - startedAt);
         const terminal =
-          attempts >= (input.maxAttempts ?? 5) ||
+          attempts >= maxAttempts ||
           (error instanceof Error &&
             "retryable" in error &&
             error.retryable === false);
