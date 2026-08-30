@@ -71,6 +71,11 @@ import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
 import { activeLinkRefetchInterval } from "@/api/url-unfurl/hooks";
 import { noteMentionQueryKeys } from "@/api/note-mentions/hooks";
+import type {
+  NoteBacklink,
+  NoteBacklinkSummaryResponse,
+  NoteBacklinksResponse,
+} from "@/api/note-mentions/types";
 
 export { collectionQueryKeys } from "./query-keys";
 
@@ -1463,6 +1468,199 @@ function applyImageDraftToContents(
   };
 }
 
+type NoteMentionCacheSnapshot = Array<[readonly unknown[], unknown]>;
+
+const noteMentionQueriesFilter = (workspaceSlug: string) => ({
+  predicate: ({ queryKey }: { queryKey: readonly unknown[] }) =>
+    queryKey[0] === "note-mentions" && queryKey[1] === workspaceSlug,
+});
+
+function backlinkTargetIdFromQueryKey(
+  queryKey: readonly unknown[],
+  kind: "list" | "summary",
+) {
+  if (
+    queryKey[0] !== "note-mentions" ||
+    queryKey[2] !== "backlinks" ||
+    typeof queryKey[3] !== "string" ||
+    (kind === "summary" ? queryKey[4] !== "summary" : queryKey[4] !== undefined)
+  ) {
+    return undefined;
+  }
+
+  return queryKey[3];
+}
+
+function noteIdFromAssetId(assetId: string) {
+  const match = /^note-(\d+)$/.exec(assetId);
+  return match?.[1];
+}
+
+function hasNoteReference(content: string, targetAssetId: string) {
+  const targetId = noteIdFromAssetId(targetAssetId);
+  return targetId ? content.includes(`(note:${targetId})`) : true;
+}
+
+function extractNoteReferenceIds(content: string) {
+  const ids = new Set<string>();
+  const pattern = /\]\(note:(\d+)\)/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(content))) {
+    ids.add(`note-${match[1]}`);
+  }
+  return ids;
+}
+
+function findCachedNote(
+  previousContents: Array<
+    [readonly unknown[], CollectionContentsResponse | undefined]
+  >,
+  assetId: string,
+) {
+  for (const [, contents] of previousContents) {
+    if (!contents) continue;
+    const note = contents.nodes.find(
+      (node): node is Extract<CollectionNode, { type: "note" }> =>
+        node.type === "note" && node.id === assetId,
+    );
+    if (note) {
+      return {
+        content: note.content,
+        title: note.title?.trim() || "Untitled",
+        locationLabel:
+          contents.breadcrumbs.at(-1)?.name ?? contents.collection.name,
+      };
+    }
+
+    for (const folder of contents.nodes) {
+      if (folder.type !== "folder") continue;
+      const preview = folder.previews.find(
+        (item) => item.type === "note" && item.assetId === assetId,
+      );
+      if (preview) {
+        return {
+          content: undefined,
+          title: preview.title?.trim() || "Untitled",
+          locationLabel: folder.name,
+        };
+      }
+    }
+  }
+  return undefined;
+}
+
+function updateBacklinkRows(
+  backlinks: NoteBacklink[],
+  draft: UpdateNoteInput & { assetId: string },
+  targetAssetId: string,
+) {
+  const sourceStillReferencesTarget =
+    draft.content === undefined ||
+    hasNoteReference(draft.content, targetAssetId);
+  const nextTitle =
+    draft.title === undefined ? undefined : draft.title?.trim() || "Untitled";
+
+  return backlinks.flatMap((backlink) => {
+    if (backlink.assetId !== draft.assetId) return [backlink];
+    if (!sourceStillReferencesTarget) return [];
+    return [
+      nextTitle === undefined ? backlink : { ...backlink, title: nextTitle },
+    ];
+  });
+}
+
+function optimisticallyUpdateBacklinkQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  workspaceSlug: string,
+  draft: UpdateNoteInput & { assetId: string },
+  previousContents: Array<
+    [readonly unknown[], CollectionContentsResponse | undefined]
+  >,
+) {
+  const filter = noteMentionQueriesFilter(workspaceSlug);
+  const cachedSource = findCachedNote(previousContents, draft.assetId);
+  const previousReferences = cachedSource?.content
+    ? extractNoteReferenceIds(cachedSource.content)
+    : undefined;
+  const nextReferences =
+    draft.content === undefined
+      ? undefined
+      : extractNoteReferenceIds(draft.content);
+  const optimisticSource = {
+    assetId: draft.assetId,
+    title:
+      draft.title === undefined
+        ? cachedSource?.title || "Untitled"
+        : draft.title?.trim() || "Untitled",
+    locationLabel: cachedSource?.locationLabel ?? "Inbox",
+    updatedAt: new Date().toISOString(),
+  } satisfies NoteBacklink;
+
+  const backlinkQueries =
+    queryClient.getQueriesData<NoteBacklinksResponse>(filter);
+  backlinkQueries.forEach(([queryKey, current]) => {
+    const targetAssetId = backlinkTargetIdFromQueryKey(queryKey, "list");
+    if (!targetAssetId || !current) return;
+    const sourceWasReferencingTarget = previousReferences?.has(targetAssetId);
+    const sourceReferencesTarget =
+      draft.content === undefined ||
+      nextReferences?.has(targetAssetId) === true;
+    const sourceWasAdded =
+      sourceReferencesTarget && sourceWasReferencingTarget === false;
+    const sourceWasRemoved =
+      !sourceReferencesTarget &&
+      (sourceWasReferencingTarget === true ||
+        current.backlinks.some(
+          (backlink) => backlink.assetId === draft.assetId,
+        ));
+    const updatedRows = updateBacklinkRows(
+      current.backlinks,
+      draft,
+      targetAssetId,
+    );
+    const hasSourceRow = current.backlinks.some(
+      (backlink) => backlink.assetId === draft.assetId,
+    );
+    const nextBacklinks =
+      sourceWasAdded && !hasSourceRow
+        ? [optimisticSource, ...updatedRows]
+        : sourceWasRemoved
+          ? updatedRows.filter((backlink) => backlink.assetId !== draft.assetId)
+          : updatedRows;
+    queryClient.setQueryData<NoteBacklinksResponse>(queryKey, {
+      ...current,
+      backlinks: nextBacklinks,
+    });
+  });
+
+  if (draft.content === undefined) return;
+  const summaryQueries =
+    queryClient.getQueriesData<NoteBacklinkSummaryResponse>(filter);
+  summaryQueries.forEach(([queryKey, current]) => {
+    const targetAssetId = backlinkTargetIdFromQueryKey(queryKey, "summary");
+    if (!targetAssetId || !current) return;
+    const backlinks = queryClient.getQueryData<NoteBacklinksResponse>(
+      noteMentionQueryKeys.backlinks(workspaceSlug, targetAssetId),
+    );
+    if (backlinks) {
+      queryClient.setQueryData<NoteBacklinkSummaryResponse>(queryKey, {
+        ...current,
+        count: backlinks.backlinks.length,
+      });
+      return;
+    }
+
+    const sourceWasReferencingTarget = previousReferences?.has(targetAssetId);
+    const sourceReferencesTarget = nextReferences?.has(targetAssetId);
+    if (sourceWasReferencingTarget === undefined) return;
+    if (sourceWasReferencingTarget === sourceReferencesTarget) return;
+    queryClient.setQueryData<NoteBacklinkSummaryResponse>(queryKey, {
+      ...current,
+      count: Math.max(0, current.count + (sourceReferencesTarget ? 1 : -1)),
+    });
+  });
+}
+
 export function useUpdateNote(workspaceSlug: string) {
   const queryClient = useQueryClient();
   const contentsFilter = {
@@ -1471,25 +1669,40 @@ export function useUpdateNote(workspaceSlug: string) {
         queryKey[0] === "inboxContents") &&
       queryKey[1] === workspaceSlug,
   };
+  const mentionFilter = noteMentionQueriesFilter(workspaceSlug);
 
   return useMutation({
     mutationFn: ({ assetId, ...data }: UpdateNoteInput & { assetId: string }) =>
       updateNote(workspaceSlug, assetId, data),
     onMutate: async (draft) => {
-      await queryClient.cancelQueries(contentsFilter);
+      await Promise.all([
+        queryClient.cancelQueries(contentsFilter),
+        queryClient.cancelQueries(mentionFilter),
+      ]);
       const previousContents =
         queryClient.getQueriesData<CollectionContentsResponse>(contentsFilter);
+      const previousMentionQueries: NoteMentionCacheSnapshot =
+        queryClient.getQueriesData(mentionFilter);
 
       queryClient.setQueriesData<CollectionContentsResponse>(
         contentsFilter,
         (current) => applyNoteDraftToContents(current, draft),
       );
+      optimisticallyUpdateBacklinkQueries(
+        queryClient,
+        workspaceSlug,
+        draft,
+        previousContents,
+      );
 
-      return { previousContents };
+      return { previousContents, previousMentionQueries };
     },
     onError: (_error, _draft, context) => {
       context?.previousContents.forEach(([queryKey, contents]) => {
         queryClient.setQueryData(queryKey, contents);
+      });
+      context?.previousMentionQueries.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
       });
     },
     onSuccess: ({ note }, variables) => {

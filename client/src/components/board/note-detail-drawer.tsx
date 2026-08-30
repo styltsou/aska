@@ -1168,33 +1168,40 @@ export function NoteDetailDrawer({
                       onOpen={openBacklink}
                     />
                   ) : null}
-                  <NoteRichText
-                    key={isCreateMode ? "create-note-editor" : activeNote?.id}
-                    ref={richTextRef}
-                    markdown={frontMatter.body}
-                    workspaceSlug={workspaceSlug}
-                    sourceNoteId={activeNote?.id}
-                    onOpenMention={(identity, resolved) =>
-                      void openMentionTarget(identity, resolved)
-                    }
-                    editable
-                    autoFocus={!isCreateMode}
-                    scrollContainerRef={noteContentRef}
-                    onExtractSelection={
-                      noteExtractionTarget ? extractSelection : undefined
-                    }
-                    highlightColor={highlightColor}
-                    highlightMode={highlightMode}
-                    onHighlightModeChange={handleHighlightModeChange}
-                    onHighlightSelectionChange={setCanRemoveHighlight}
-                    onChange={handleDraftChange}
-                    onSaveShortcut={() => {
-                      const content = getSaveableNoteContent(draftRef.current);
-                      if (!content) return;
-                      if (isCreateMode && !activeNote) create(content, title);
-                      else persist(content, false, title);
-                    }}
-                  />
+                  <motion.div
+                    layout="position"
+                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <NoteRichText
+                      key={isCreateMode ? "create-note-editor" : activeNote?.id}
+                      ref={richTextRef}
+                      markdown={frontMatter.body}
+                      workspaceSlug={workspaceSlug}
+                      sourceNoteId={activeNote?.id}
+                      onOpenMention={(identity, resolved) =>
+                        void openMentionTarget(identity, resolved)
+                      }
+                      editable
+                      autoFocus={!isCreateMode}
+                      scrollContainerRef={noteContentRef}
+                      onExtractSelection={
+                        noteExtractionTarget ? extractSelection : undefined
+                      }
+                      highlightColor={highlightColor}
+                      highlightMode={highlightMode}
+                      onHighlightModeChange={handleHighlightModeChange}
+                      onHighlightSelectionChange={setCanRemoveHighlight}
+                      onChange={handleDraftChange}
+                      onSaveShortcut={() => {
+                        const content = getSaveableNoteContent(
+                          draftRef.current,
+                        );
+                        if (!content) return;
+                        if (isCreateMode && !activeNote) create(content, title);
+                        else persist(content, false, title);
+                      }}
+                    />
+                  </motion.div>
                 </NoteEditorErrorBoundary>
               </Suspense>
             ) : null}
