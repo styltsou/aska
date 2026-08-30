@@ -1,6 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { resolveNoteMentions } from "./fetchers";
+import {
+  fetchNoteBacklinks,
+  fetchNoteBacklinkSummary,
+  resolveNoteMentions,
+} from "./fetchers";
 import type { NoteMentionTarget, NoteMentionType } from "./types";
 
 const RESOLVE_BATCH_SIZE = 100;
@@ -18,7 +22,49 @@ export const noteMentionQueryKeys = {
       sourceAssetId ?? null,
       signature,
     ] as const,
+  backlinkSummary: (workspaceSlug: string, assetId: string) =>
+    [
+      ...noteMentionQueryKeys.all(workspaceSlug),
+      "backlinks",
+      assetId,
+      "summary",
+    ] as const,
+  backlinks: (workspaceSlug: string, assetId: string) =>
+    [...noteMentionQueryKeys.all(workspaceSlug), "backlinks", assetId] as const,
 };
+
+export function useNoteBacklinkSummary(
+  workspaceSlug: string | undefined,
+  assetId: string | undefined,
+) {
+  return useQuery({
+    queryKey: noteMentionQueryKeys.backlinkSummary(
+      workspaceSlug ?? "",
+      assetId ?? "",
+    ),
+    queryFn: ({ signal }) =>
+      fetchNoteBacklinkSummary(workspaceSlug!, assetId!, signal),
+    enabled: Boolean(workspaceSlug && assetId),
+    staleTime: 30_000,
+  });
+}
+
+export function useNoteBacklinks(
+  workspaceSlug: string | undefined,
+  assetId: string | undefined,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: noteMentionQueryKeys.backlinks(
+      workspaceSlug ?? "",
+      assetId ?? "",
+    ),
+    queryFn: ({ signal }) =>
+      fetchNoteBacklinks(workspaceSlug!, assetId!, signal),
+    enabled: Boolean(workspaceSlug && assetId && enabled),
+    staleTime: 30_000,
+  });
+}
 
 export function useResolvedNoteMentions(
   workspaceSlug: string | undefined,

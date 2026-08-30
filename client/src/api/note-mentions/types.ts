@@ -22,6 +22,16 @@ export type NoteMentionTarget = {
 
 export type NoteMentionTargetsResponse = { targets: NoteMentionTarget[] };
 
+export type NoteBacklink = {
+  assetId: string;
+  title: string;
+  locationLabel: string;
+  updatedAt: string;
+};
+
+export type NoteBacklinkSummaryResponse = { count: number };
+export type NoteBacklinksResponse = { backlinks: NoteBacklink[] };
+
 export type MentionSearchInput = {
   q: string;
   types?: readonly NoteMentionType[];

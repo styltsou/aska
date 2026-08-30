@@ -1,6 +1,7 @@
 import { container } from "@/container";
 import { WorkspaceParamSchema } from "@/dto/collection.dto";
 import {
+  NoteBacklinksPathParamSchema,
   MentionResolveSchema,
   MentionSearchQuerySchema,
 } from "@/dto/note-mention.dto";
@@ -46,6 +47,38 @@ export const resolveNoteMentions = factory.createHandlers(
       success(
         await noteMentionService.resolve(workspace.id, c.req.valid("json")),
       ),
+    );
+  },
+);
+
+export const getNoteBacklinkSummary = factory.createHandlers(
+  authMiddleware,
+  validate.param(NoteBacklinksPathParamSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      c.get("userId"),
+    );
+    return c.json(
+      success(
+        await noteMentionService.getBacklinkSummary(workspace.id, assetId),
+      ),
+    );
+  },
+);
+
+export const listNoteBacklinks = factory.createHandlers(
+  authMiddleware,
+  validate.param(NoteBacklinksPathParamSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      c.get("userId"),
+    );
+    return c.json(
+      success(await noteMentionService.listBacklinks(workspace.id, assetId)),
     );
   },
 );

@@ -1,4 +1,6 @@
 import {
+  getNoteBacklinkSummary,
+  listNoteBacklinks,
   resolveNoteMentions,
   searchNoteMentions,
 } from "@/controllers/note-mention.controller";
@@ -10,6 +12,14 @@ const noteMentionRoutes = factory
   .post(
     "/workspace/:workspaceSlug/assets/mention-resolve",
     ...resolveNoteMentions,
+  )
+  .get(
+    "/workspace/:workspaceSlug/assets/:assetId/backlinks/summary",
+    ...getNoteBacklinkSummary,
+  )
+  .get(
+    "/workspace/:workspaceSlug/assets/:assetId/backlinks",
+    ...listNoteBacklinks,
   );
 
 export default noteMentionRoutes;

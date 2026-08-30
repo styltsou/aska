@@ -1,6 +1,7 @@
 import {
   and,
   asc,
+  count,
   desc,
   eq,
   ilike,
@@ -21,12 +22,16 @@ import {
   noteReferences,
 } from "@/db/schema";
 import type {
+  NoteBacklink,
+  NoteBacklinksResponse,
+  NoteBacklinkSummaryResponse,
   MentionResolveInput,
   MentionSearchQuery,
   MentionTarget,
   MentionTargetsResponse,
   MentionType,
 } from "@/dto/note-mention.dto";
+import { parseAssetNodeId } from "@/lib/collection-node-id";
 import {
   escapeMentionLabel,
   extractNoteMentions,
@@ -61,6 +66,14 @@ export interface INoteMentionService {
     orgId: string,
     input: MentionResolveInput,
   ): Promise<MentionTargetsResponse>;
+  getBacklinkSummary(
+    orgId: string,
+    targetAssetNodeId: string,
+  ): Promise<NoteBacklinkSummaryResponse>;
+  listBacklinks(
+    orgId: string,
+    targetAssetNodeId: string,
+  ): Promise<NoteBacklinksResponse>;
 }
 
 export class NoteMentionService implements INoteMentionService {
@@ -127,6 +140,79 @@ export class NoteMentionService implements INoteMentionService {
         .map(toTarget),
     };
   }
+
+  async getBacklinkSummary(
+    orgId: string,
+    targetAssetNodeId: string,
+  ): Promise<NoteBacklinkSummaryResponse> {
+    const targetAssetId = noteAssetId(targetAssetNodeId);
+    const [result] = await db
+      .select({ count: count() })
+      .from(noteReferences)
+      .where(
+        and(
+          eq(noteReferences.organizationId, orgId),
+          eq(noteReferences.targetAssetId, targetAssetId),
+        ),
+      );
+    return { count: result?.count ?? 0 };
+  }
+
+  async listBacklinks(
+    orgId: string,
+    targetAssetNodeId: string,
+  ): Promise<NoteBacklinksResponse> {
+    const targetAssetId = noteAssetId(targetAssetNodeId);
+    const rows = await db
+      .select({
+        assetId: assets.id,
+        title: assets.title,
+        updatedAt: assets.updatedAt,
+        collectionName: collectionsTable.name,
+        pathFolderNames: collectionNodes.pathFolderNames,
+      })
+      .from(noteReferences)
+      .innerJoin(
+        assets,
+        and(
+          eq(assets.id, noteReferences.sourceAssetId),
+          eq(assets.organizationId, noteReferences.organizationId),
+        ),
+      )
+      .leftJoin(collectionNodes, eq(collectionNodes.assetId, assets.id))
+      .leftJoin(
+        collectionsTable,
+        eq(collectionsTable.id, collectionNodes.collectionId),
+      )
+      .where(
+        and(
+          eq(noteReferences.organizationId, orgId),
+          eq(noteReferences.targetAssetId, targetAssetId),
+          eq(assets.type, "note"),
+        ),
+      )
+      .orderBy(desc(assets.updatedAt), asc(assets.id));
+
+    return {
+      backlinks: rows.map(
+        (row): NoteBacklink => ({
+          assetId: `note-${row.assetId}`,
+          title: row.title?.trim() || "Untitled",
+          locationLabel:
+            row.pathFolderNames?.at(-1) ?? row.collectionName ?? "Inbox",
+          updatedAt: row.updatedAt.toISOString(),
+        }),
+      ),
+    };
+  }
+}
+
+function noteAssetId(assetNodeId: string) {
+  const target = parseAssetNodeId(assetNodeId);
+  if (target.assetType !== "note") {
+    throw new Error("Backlinks are only available for notes");
+  }
+  return target.entityId;
 }
 
 export async function reconcileNoteReferences(

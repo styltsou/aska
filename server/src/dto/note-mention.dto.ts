@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const MentionTypeSchema = z.enum(["note", "color"]);
+const NoteAssetIdSchema = z.string().regex(/^note-\d+$/);
 const MentionTargetSchema = z.object({
   assetId: z.number().int().positive(),
   assetType: MentionTypeSchema,
@@ -22,9 +23,24 @@ export const MentionResolveSchema = z.object({
   targets: z.array(MentionTargetSchema).max(100),
 });
 
+export const NoteBacklinksPathParamSchema = z.object({
+  workspaceSlug: z.string(),
+  assetId: NoteAssetIdSchema,
+});
+
 export type MentionType = z.infer<typeof MentionTypeSchema>;
 export type MentionSearchQuery = z.infer<typeof MentionSearchQuerySchema>;
 export type MentionResolveInput = z.infer<typeof MentionResolveSchema>;
+
+export type NoteBacklink = {
+  assetId: string;
+  title: string;
+  locationLabel: string;
+  updatedAt: string;
+};
+
+export type NoteBacklinkSummaryResponse = { count: number };
+export type NoteBacklinksResponse = { backlinks: NoteBacklink[] };
 
 export type MentionTarget = {
   assetId: number;

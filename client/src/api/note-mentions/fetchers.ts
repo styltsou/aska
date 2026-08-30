@@ -1,10 +1,34 @@
 import { apiGet, apiPost } from "@/lib/api";
 
 import type {
+  NoteBacklinksResponse,
+  NoteBacklinkSummaryResponse,
   MentionResolveInput,
   MentionSearchInput,
   NoteMentionTargetsResponse,
 } from "./types";
+
+export function fetchNoteBacklinkSummary(
+  workspaceSlug: string,
+  assetId: string,
+  signal?: AbortSignal,
+): Promise<NoteBacklinkSummaryResponse> {
+  return apiGet(
+    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/backlinks/summary`,
+    { signal },
+  );
+}
+
+export function fetchNoteBacklinks(
+  workspaceSlug: string,
+  assetId: string,
+  signal?: AbortSignal,
+): Promise<NoteBacklinksResponse> {
+  return apiGet(
+    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/backlinks`,
+    { signal },
+  );
+}
 
 export function searchNoteMentions(
   workspaceSlug: string,

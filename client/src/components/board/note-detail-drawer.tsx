@@ -34,6 +34,7 @@ import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
 import { NoteEditorLoading } from "@/components/board/note-editor-loading";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
+import { NoteBacklinks } from "@/components/board/note-backlinks";
 import { NoteSaveStatus } from "@/components/board/note-save-status";
 import { NoteTitleField } from "@/components/board/note-title-field";
 import {
@@ -538,12 +539,15 @@ export function NoteDetailDrawer({
       }
 
       let currentMainNote = activeNote;
-      if (content !== noteContent) {
+      const nextTitle = title.trim() || null;
+      const titleChanged = nextTitle !== (activeNote.title ?? null);
+      if (content !== noteContent || titleChanged) {
         setSaveState("saving");
         try {
           const { note: updatedNote } = await mutateAsync({
             assetId: activeNote.id,
             content,
+            title: nextTitle,
           });
           currentMainNote = {
             ...activeNote,
@@ -574,7 +578,23 @@ export function NoteDetailDrawer({
       noteContent,
       onNoteChange,
       onPromote,
+      title,
     ],
+  );
+
+  const openBacklink = useCallback(
+    async (assetId: string) => {
+      try {
+        const { asset } = await fetchPeekableAsset(workspaceSlug, assetId);
+        if (asset.type !== "note") return;
+        await promotePeekedNote({ ...asset, color: asset.color ?? undefined });
+      } catch (error) {
+        toast.error(
+          getUserFacingApiErrorMessage(error, "Could not open this reference."),
+        );
+      }
+    },
+    [promotePeekedNote, workspaceSlug],
   );
 
   const openMentionTarget = useCallback(
@@ -1141,6 +1161,13 @@ export function NoteDetailDrawer({
                     autoFocus={isCreateMode}
                     className="pt-8"
                   />
+                  {!isCreateMode ? (
+                    <NoteBacklinks
+                      workspaceSlug={workspaceSlug}
+                      assetId={activeNote?.id}
+                      onOpen={openBacklink}
+                    />
+                  ) : null}
                   <NoteRichText
                     key={isCreateMode ? "create-note-editor" : activeNote?.id}
                     ref={richTextRef}
