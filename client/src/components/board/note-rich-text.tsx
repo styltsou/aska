@@ -1571,7 +1571,7 @@ export const NoteRichText = forwardRef<
         </>
       ) : null}
       <div
-        className="note-rich-text-editor-shell min-h-[calc(100dvh-8.5rem)] cursor-text"
+        className="note-rich-text-editor-shell cursor-text"
         onMouseDownCapture={(event) => {
           if (!editable || editor.isFocused) return;
           if (

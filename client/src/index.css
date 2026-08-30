@@ -728,7 +728,7 @@
   }
 
   .note-rich-text-editable .ProseMirror {
-    @apply min-h-[calc(100dvh-8.5rem)] cursor-text pt-20 pb-10 text-base leading-7 sm:pb-14;
+    @apply cursor-text pt-20 pb-10 text-base leading-7 sm:pb-14;
   }
 
   .note-rich-text-editable .ProseMirror-focused p.is-empty::before,
