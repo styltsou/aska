@@ -153,6 +153,7 @@ export function NoteDetailDrawer({
   } = useWorkspacePeek();
   const isMobile = useIsMobile();
   const noteContentRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const richTextRef = useRef<NoteRichTextHandle>(null);
   const draftRef = useRef(note?.content ?? "");
   const closeAfterSaveRef = useRef(false);
@@ -238,6 +239,19 @@ export function NoteDetailDrawer({
       setWorkspaceOpen(isCreateMode && Boolean(createOptions?.open));
     }
   }, [activeNote, createOptions?.open, isCreateMode]);
+
+  useEffect(() => {
+    if (!isCreateMode || activeNote || !workspaceOpen) return;
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      const input = titleInputRef.current;
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
+
+    return () => window.cancelAnimationFrame(focusFrame);
+  }, [activeNote, isCreateMode, workspaceOpen]);
 
   useEffect(() => {
     if (!isCreateMode || !createDraftId || !workspaceOpen) return;
@@ -1121,6 +1135,7 @@ export function NoteDetailDrawer({
               <Suspense fallback={<NoteEditorLoading />}>
                 <NoteEditorErrorBoundary noteId={activeNote?.id ?? "new-note"}>
                   <NoteTitleField
+                    ref={titleInputRef}
                     value={title}
                     onChange={handleTitleChange}
                     autoFocus={isCreateMode}

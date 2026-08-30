@@ -159,6 +159,7 @@ export function WorkspacePeekProvider({
   const [isRailReserved, setIsRailReserved] = useState(() => Boolean(target));
   const [activeNoteId, setActiveNoteId] = useState<string>();
   const [isResizing, setIsResizing] = useState(false);
+  const [peekFocusRequest, setPeekFocusRequest] = useState(0);
   const [width, setWidth] = useState(() => readPeekWidth(workspaceSlug));
   const widthRef = useRef(width);
   const targetRef = useRef(target);
@@ -174,6 +175,7 @@ export function WorkspacePeekProvider({
 
   useEffect(() => {
     const restoredTarget = readTarget(workspaceSlug);
+    setPeekFocusRequest(0);
     setTarget(restoredTarget);
     setIsRailReserved(Boolean(restoredTarget));
     setWidth(readPeekWidth(workspaceSlug));
@@ -320,11 +322,13 @@ export function WorkspacePeekProvider({
       activeNoteId,
       isResizing,
       peekNote: (asset) => {
+        setPeekFocusRequest((request) => request + 1);
         setActiveNoteId(undefined);
         setIsRailReserved(true);
         setTarget({ type: "note", asset });
       },
       peekColor: (asset, scope) => {
+        setPeekFocusRequest((request) => request + 1);
         setIsRailReserved(true);
         setTarget({ type: "color", asset, scope });
       },
@@ -364,6 +368,7 @@ export function WorkspacePeekProvider({
           <WorkspacePeekPanel
             target={target}
             workspaceSlug={workspaceSlug}
+            focusRequest={peekFocusRequest}
             onResizeStart={handleResizeStart}
           />
         ) : null}
@@ -418,10 +423,12 @@ function WorkspacePeekSwapButton({ target }: { target: PeekTarget }) {
 function WorkspacePeekPanel({
   target,
   workspaceSlug,
+  focusRequest,
   onResizeStart,
 }: {
   target: PeekTarget;
   workspaceSlug: string;
+  focusRequest: number;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }) {
   const { activeNoteId, closePeek, promoteNote } = useWorkspacePeek();
@@ -474,6 +481,7 @@ function WorkspacePeekPanel({
           <PeekNote
             note={target.asset}
             workspaceSlug={workspaceSlug}
+            focusRequest={focusRequest}
             onClose={closePeek}
             onPromote={canPromote ? promoteNote : undefined}
             readOnly={activeNoteId === target.asset.id}
@@ -584,12 +592,14 @@ function PeekHeader({
 function PeekNote({
   note,
   workspaceSlug,
+  focusRequest,
   onClose,
   onPromote,
   readOnly,
 }: {
   note: NoteAsset;
   workspaceSlug: string;
+  focusRequest: number;
   onClose: () => void;
   onPromote?: () => Promise<void>;
   readOnly: boolean;
@@ -872,6 +882,7 @@ function PeekNote({
               void openMentionTarget(identity, resolved)
             }
             editable={!readOnly}
+            autoFocus={focusRequest > 0}
             scrollContainerRef={contentRef}
             highlightColor={highlightColor}
             highlightMode={highlightMode}

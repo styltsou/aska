@@ -9,8 +9,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { MapPinIcon, PaletteIcon, StickyNoteIcon } from "lucide-react";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CornerDownLeftIcon,
+  FileTextIcon,
+} from "lucide-react";
 import { Extension, Node, type Editor, type Range } from "@tiptap/core";
+import { PluginKey } from "@tiptap/pm/state";
 import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
@@ -34,7 +40,9 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { gradientToCss } from "@/lib/color-gradient";
+import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 
 export type OpenNoteMentionTarget = (
@@ -52,6 +60,7 @@ const MentionContext = createContext<MentionContextValue>({
   targets: new Map(),
   resolutionComplete: false,
 });
+const mentionSuggestionPluginKey = new PluginKey("assetMentionSuggestion");
 
 export const AssetMention = Node.create({
   name: "assetMention",
@@ -127,7 +136,8 @@ export function NoteMentionProvider({
     useEditorState({
       editor,
       selector: ({ editor: currentEditor }) => {
-        if (!currentEditor) return "";
+        if (!currentEditor || currentEditor.isDestroyed || !currentEditor.state)
+          return "";
 
         const targets = new Map<
           string,
@@ -241,7 +251,7 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
           }}
         />
       ) : null}
-      <span className="max-w-56 truncate">{label}</span>
+      <span className="max-w-64 truncate">{label}</span>
     </button>
   );
 
@@ -256,31 +266,28 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
             sideOffset={8}
             className="w-80 overflow-hidden border-border/60 bg-background/95 p-0 shadow-2xl backdrop-blur-xl"
           >
-            <div
-              className="h-1 w-full"
-              style={{
-                backgroundColor: resolved.noteColor ?? "var(--primary)",
-              }}
-            />
+            {resolved.noteColor ? (
+              <div
+                className="h-1 w-full"
+                style={{ backgroundColor: resolved.noteColor }}
+              />
+            ) : null}
             <div className="p-3.5">
-              <div className="flex items-start gap-2.5">
-                <StickyNoteIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-foreground">
-                    {resolved.label}
-                  </p>
-                  <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <MapPinIcon className="size-3" />
-                    <span className="truncate">{resolved.locationLabel}</span>
-                  </p>
-                </div>
+              <p className="truncate text-sm font-semibold text-foreground">
+                {resolved.label}
+              </p>
+              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                {resolved.locationLabel}
+              </p>
+              <div className="relative mt-3 h-10 overflow-hidden">
+                <p className="text-xs leading-5 text-muted-foreground">
+                  {resolved.snippet || "No note preview yet."}
+                </p>
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-b from-transparent to-background/95"
+                />
               </div>
-              <p className="mt-3 line-clamp-3 text-xs leading-5 text-muted-foreground">
-                {resolved.snippet || "No note preview yet."}
-              </p>
-              <p className="mt-2 text-[10px] font-medium tracking-wide text-muted-foreground/70 uppercase">
-                Click to open in Peek
-              </p>
             </div>
           </HoverCardContent>
         </HoverCard>
@@ -311,6 +318,15 @@ const MentionMenu = forwardRef<
       flatItems: [...nextNotes, ...nextColors],
     };
   }, [items]);
+  const showScopeControls = notes.length > 0 && colors.length > 0;
+  const showGroupLabels = notes.length > 0 && colors.length > 0;
+  const emptyLabel = query
+    ? parsed.scope === "note"
+      ? "No notes match"
+      : parsed.scope === "color"
+        ? "No colors match"
+        : "No mentions match"
+    : "No notes or colors to mention yet";
 
   useEffect(() => setSelectedIndex(0), [flatItems]);
   useEffect(() => {
@@ -323,7 +339,7 @@ const MentionMenu = forwardRef<
   }
 
   function setScope(scope?: NoteMentionType) {
-    const next = `@${scope ? `${scope} ` : ""}${parsed.search}`;
+    const next = createMentionScopeQuery(scope, query);
     editor.chain().focus().insertContentAt(range, next).run();
   }
 
@@ -347,52 +363,105 @@ const MentionMenu = forwardRef<
   }));
 
   return (
-    <div className="w-[26rem] overflow-hidden rounded-xl border border-border/70 bg-popover/98 text-popover-foreground shadow-2xl backdrop-blur-xl">
-      <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
-        {([undefined, "note", "color"] as const).map((scope) => (
-          <button
-            key={scope ?? "all"}
-            type="button"
-            className={cn(
-              "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-              parsed.scope === scope && "bg-accent text-foreground",
-            )}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => setScope(scope)}
-          >
-            {scope === "note" ? "Notes" : scope === "color" ? "Colors" : "All"}
-          </button>
-        ))}
+    <div
+      className={cn(
+        "w-[26rem] overflow-hidden rounded-lg text-popover-foreground shadow-2xl",
+        GLASS_FRAME_CLASS,
+      )}
+    >
+      <div className="relative z-10 overflow-hidden rounded-b-lg border-b border-border bg-background">
+        {showScopeControls ? (
+          <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
+            {([undefined, "note", "color"] as const).map((scope) => (
+              <button
+                key={scope ?? "all"}
+                type="button"
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                  parsed.scope === scope && "bg-accent text-foreground",
+                )}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => setScope(scope)}
+              >
+                {scope === "note"
+                  ? "Notes"
+                  : scope === "color"
+                    ? "Colors"
+                    : "All"}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <div
+          className="max-h-80 [scrollbar-width:none] overflow-y-auto p-1.5 [&::-webkit-scrollbar]:hidden"
+          role="listbox"
+          aria-label="Mention an asset"
+        >
+          {notes.length > 0 && parsed.scope !== "color" ? (
+            <MentionGroup
+              label="Notes"
+              showLabel={showGroupLabels}
+              items={notes}
+              startIndex={0}
+              selectedIndex={selectedIndex}
+              itemRefs={itemRefs}
+              onSelect={select}
+              onHover={setSelectedIndex}
+            />
+          ) : null}
+          {colors.length > 0 && parsed.scope !== "note" ? (
+            <MentionGroup
+              label="Colors"
+              showLabel={showGroupLabels}
+              items={colors}
+              startIndex={parsed.scope === "color" ? 0 : notes.length}
+              selectedIndex={selectedIndex}
+              itemRefs={itemRefs}
+              onSelect={select}
+              onHover={setSelectedIndex}
+            />
+          ) : null}
+          {flatItems.length === 0 ? (
+            <p className="px-2 py-4 text-center text-xs text-muted-foreground/75">
+              {emptyLabel}
+            </p>
+          ) : null}
+        </div>
       </div>
-      <div
-        className="max-h-80 [scrollbar-width:none] overflow-y-auto p-1.5 [&::-webkit-scrollbar]:hidden"
-        role="listbox"
-        aria-label="Mention an asset"
-      >
-        {parsed.scope !== "color" ? (
-          <MentionGroup
-            label="Notes"
-            items={notes}
-            emptyLabel={query ? "No notes match" : "Add a title to link a note"}
-            startIndex={0}
-            selectedIndex={selectedIndex}
-            itemRefs={itemRefs}
-            onSelect={select}
-            onHover={setSelectedIndex}
-          />
-        ) : null}
-        {parsed.scope !== "note" ? (
-          <MentionGroup
-            label="Colors"
-            items={colors}
-            emptyLabel={query ? "No colors match" : "No colors yet"}
-            startIndex={parsed.scope === "color" ? 0 : notes.length}
-            selectedIndex={selectedIndex}
-            itemRefs={itemRefs}
-            onSelect={select}
-            onHover={setSelectedIndex}
-          />
-        ) : null}
+      <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+            @note
+          </Kbd>
+          <span>or</span>
+          <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+            @color
+          </Kbd>
+          <span>to filter</span>
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <KbdGroup className="gap-0.5">
+            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+              <ArrowUpIcon />
+            </Kbd>
+            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+              <ArrowDownIcon />
+            </Kbd>
+          </KbdGroup>
+          <span>navigate</span>
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+            <CornerDownLeftIcon />
+          </Kbd>
+          <span>insert</span>
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+            Esc
+          </Kbd>
+          <span>close</span>
+        </span>
       </div>
     </div>
   );
@@ -400,8 +469,8 @@ const MentionMenu = forwardRef<
 
 function MentionGroup({
   label,
+  showLabel,
   items,
-  emptyLabel,
   startIndex,
   selectedIndex,
   itemRefs,
@@ -409,8 +478,8 @@ function MentionGroup({
   onHover,
 }: {
   label: string;
+  showLabel: boolean;
   items: NoteMentionTarget[];
-  emptyLabel: string;
   startIndex: number;
   selectedIndex: number;
   itemRefs: React.RefObject<Map<number, HTMLButtonElement>>;
@@ -419,80 +488,75 @@ function MentionGroup({
 }) {
   return (
     <div>
-      <p className="px-2 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase first:pt-1">
-        {label}
-      </p>
-      {items.length === 0 ? (
-        <p className="px-2 py-2 text-xs text-muted-foreground/75">
-          {emptyLabel}
+      {showLabel ? (
+        <p className="px-2 pt-2 pb-1 text-[11px] font-medium text-muted-foreground first:pt-1">
+          {label}
         </p>
-      ) : (
-        items.map((item, offset) => {
-          const index = startIndex + offset;
-          const Icon = item.assetType === "note" ? StickyNoteIcon : PaletteIcon;
-          return (
-            <button
-              key={`${item.assetType}:${item.assetId}`}
-              ref={(element) => {
-                if (element) itemRefs.current?.set(index, element);
-                else itemRefs.current?.delete(index);
-              }}
-              type="button"
-              role="option"
-              aria-selected={selectedIndex === index}
-              className={cn(
-                "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left",
-                selectedIndex === index ? "bg-accent" : "hover:bg-accent/60",
-              )}
-              onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => onHover(index)}
-              onClick={() => onSelect(index)}
-            >
-              {item.assetType === "color" ? (
-                <span
-                  className="size-5 shrink-0 rounded-md border border-foreground/10"
-                  style={{
-                    background: item.gradient
-                      ? gradientToCss(
-                          item.gradient.stops ?? [
-                            { color: item.gradient.from, position: 0 },
-                            { color: item.gradient.to, position: 100 },
-                          ],
-                          item.gradient.type ?? "linear",
-                          item.gradient.angle,
-                        )
-                      : (item.hex ?? "var(--muted)"),
-                  }}
-                />
-              ) : (
-                <span
-                  className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted"
-                  style={
-                    item.noteColor
-                      ? { backgroundColor: item.noteColor }
-                      : undefined
-                  }
-                >
-                  <Icon className="size-3" />
-                </span>
-              )}
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                  {item.label}
-                </span>
-                {item.snippet ? (
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {item.snippet}
-                  </span>
-                ) : null}
+      ) : null}
+      {items.map((item, offset) => {
+        const index = startIndex + offset;
+        return (
+          <button
+            key={`${item.assetType}:${item.assetId}`}
+            ref={(element) => {
+              if (element) itemRefs.current?.set(index, element);
+              else itemRefs.current?.delete(index);
+            }}
+            type="button"
+            role="option"
+            aria-selected={selectedIndex === index}
+            className={cn(
+              "grid w-full grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,7rem)] items-center gap-x-3 rounded-lg px-2 py-2 text-left",
+              selectedIndex === index ? "bg-accent" : "hover:bg-accent/60",
+            )}
+            onMouseDown={(event) => event.preventDefault()}
+            onMouseEnter={() => onHover(index)}
+            onClick={() => onSelect(index)}
+          >
+            {item.assetType === "color" ? (
+              <span
+                className="size-7 rounded-md"
+                style={{
+                  background: item.gradient
+                    ? gradientToCss(
+                        item.gradient.stops ?? [
+                          { color: item.gradient.from, position: 0 },
+                          { color: item.gradient.to, position: 100 },
+                        ],
+                        item.gradient.type ?? "linear",
+                        item.gradient.angle,
+                      )
+                    : (item.hex ?? "var(--muted)"),
+                }}
+              />
+            ) : (
+              <span
+                className="flex size-7 items-center justify-center rounded-md bg-muted"
+                style={
+                  item.noteColor
+                    ? { backgroundColor: item.noteColor }
+                    : undefined
+                }
+              >
+                <FileTextIcon className="size-5 text-foreground/80" />
               </span>
-              <span className="max-w-28 truncate text-[11px] text-muted-foreground/75">
-                {item.locationLabel}
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">
+                {item.label}
               </span>
-            </button>
-          );
-        })
-      )}
+              {item.snippet ? (
+                <span className="block truncate text-xs text-muted-foreground">
+                  {item.snippet}
+                </span>
+              ) : null}
+            </span>
+            <span className="justify-self-end truncate text-right text-[11px] text-muted-foreground/75">
+              {item.locationLabel}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -513,6 +577,7 @@ export function createMentionsExtension({
       return [
         Suggestion<NoteMentionTarget, NoteMentionTarget>({
           editor: this.editor,
+          pluginKey: mentionSuggestionPluginKey,
           char: "@",
           allowSpaces: true,
           startOfLine: false,
@@ -617,6 +682,14 @@ export function parseMentionQuery(query: string): {
     scope: match[1]!.toLowerCase() as NoteMentionType,
     search: (match[2] ?? "").trim(),
   };
+}
+
+export function createMentionScopeQuery(
+  scope: NoteMentionType | undefined,
+  query: string,
+): string {
+  const { search } = parseMentionQuery(query);
+  return `@${scope ? `${scope} ` : ""}${search}`;
 }
 
 export function parseNumericAssetId(assetId?: string): number | undefined {

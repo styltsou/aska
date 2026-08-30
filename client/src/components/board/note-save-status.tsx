@@ -30,7 +30,7 @@ export function NoteSaveStatus({
   return (
     <span
       className={cn(
-        "inline-block shrink-0 overflow-hidden text-right text-xs whitespace-nowrap text-muted-foreground/60",
+        "inline-block shrink-0 overflow-hidden px-2 text-right text-xs whitespace-nowrap text-muted-foreground/60",
         state === "error" && "text-destructive",
         className,
       )}

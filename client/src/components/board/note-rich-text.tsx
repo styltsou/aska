@@ -40,7 +40,6 @@ import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
-import Underline from "@tiptap/extension-underline";
 import { TableKit } from "@tiptap/extension-table";
 import { Markdown } from "@tiptap/markdown";
 import {
@@ -738,6 +737,7 @@ export const NoteHighlight = Highlight.extend({
 const BASE_NOTE_EXTENSIONS = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3, 4] },
+    underline: false,
     link: {
       autolink: true,
       openOnClick: false,
@@ -745,7 +745,6 @@ const BASE_NOTE_EXTENSIONS = [
     },
     codeBlock: false,
   }),
-  Underline,
   CodeBlockLowlight.extend({
     addNodeView() {
       return ReactNodeViewRenderer(NoteCodeBlock);
@@ -768,7 +767,7 @@ const BASE_NOTE_EXTENSIONS = [
       if (node.type.name === "heading") {
         return `Heading ${node.attrs.level}`;
       }
-      return "Type '/' for blocks…";
+      return "Type '/' for blocks or '@' for mentions…";
     },
   }),
   Markdown.configure({
@@ -1465,10 +1464,15 @@ export const NoteRichText = forwardRef<
 
   useEffect(() => {
     editor?.setEditable(editable, false);
-    if (!editable || !autoFocus) return;
+    if (!autoFocus) return;
 
     const focusFrame = window.requestAnimationFrame(() => {
-      if (editor) focusFirstNewLine(editor);
+      if (!editor) return;
+      if (editable) {
+        focusFirstNewLine(editor);
+      } else {
+        editor.commands.focus("end", { scrollIntoView: false });
+      }
     });
 
     return () => {
