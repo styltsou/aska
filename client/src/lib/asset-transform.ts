@@ -65,6 +65,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
           }
         : undefined,
       favicon: node.favicon ?? undefined,
+      video: node.video ?? undefined,
       clientId: node.clientId,
     };
   }

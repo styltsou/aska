@@ -16,7 +16,7 @@ export const securityHeaders = createMiddleware(async (c, next) => {
     "Content-Security-Policy",
     isDocsRoute
       ? "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self'; img-src 'self' data: https:"
-      : "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: https:",
+      : "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data: https:; frame-src https://www.youtube-nocookie.com",
   );
 
   await next();

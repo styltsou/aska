@@ -24,6 +24,7 @@ import {
 } from "react";
 
 import type { CollectionNode } from "@/api/collection";
+import type { LinkAsset } from "@/types/asset";
 import {
   useBulkDelete,
   useMoveCollectionNodesToFolder,
@@ -107,6 +108,7 @@ type CanvasProps = {
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
   onOpenColor: (node: Extract<CollectionNode, { type: "color" }>) => void;
+  onOpenVideo: (asset: LinkAsset) => void;
   onOpenNote: (
     node: Extract<CollectionNode, { type: "note" }>,
     mode?: "read" | "edit",
@@ -115,7 +117,7 @@ type CanvasProps = {
 
 type ActionRefs = Pick<
   CanvasProps,
-  "onOpenFolder" | "onOpenImage" | "onOpenColor" | "onOpenNote"
+  "onOpenFolder" | "onOpenImage" | "onOpenColor" | "onOpenNote" | "onOpenVideo"
 >;
 
 type QueuedPositionSave = {
@@ -166,6 +168,7 @@ function CanvasSurface({
   onOpenImage,
   onOpenColor,
   onOpenNote,
+  onOpenVideo,
 }: CanvasProps) {
   const boardKey = makeBoardKey(workspaceSlug, collectionSlug, folderPath);
   const storedViewport = usePersistedStore(
@@ -247,8 +250,15 @@ function CanvasSurface({
     onOpenImage,
     onOpenColor,
     onOpenNote,
+    onOpenVideo,
   });
-  actionRefs.current = { onOpenFolder, onOpenImage, onOpenColor, onOpenNote };
+  actionRefs.current = {
+    onOpenFolder,
+    onOpenImage,
+    onOpenColor,
+    onOpenNote,
+    onOpenVideo,
+  };
   const selectedIds = useMemo(
     () => selectionIdsForScope(selection, boardKey),
     [boardKey, selection],
@@ -556,6 +566,7 @@ function CanvasSurface({
         onOpenImage: openImage,
         onOpenColor: openColor,
         onOpenNote: openNote,
+        onOpenVideo: actionRefs.current.onOpenVideo,
         onCardClick: handleCardClick,
         suppressClick,
         isColorDimmed:

@@ -3,6 +3,37 @@ import { describe, expect, it } from "vitest";
 import { collectionNodeToAsset } from "./asset-transform";
 
 describe("collectionNodeToAsset", () => {
+  it("keeps allowlisted video data when converting a link node", () => {
+    const video = {
+      provider: "youtube" as const,
+      videoId: "dQw4w9WgXcQ",
+      channelName: "A channel",
+      channelUrl: "https://www.youtube.com/@channel",
+    };
+    const asset = collectionNodeToAsset({
+      id: "link-1",
+      type: "link",
+      originalUrl: "https://youtu.be/dQw4w9WgXcQ",
+      canonicalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      hostname: "youtu.be",
+      title: "A video",
+      description: null,
+      siteName: "YouTube",
+      resourceKind: "video",
+      resolutionStatus: "ready",
+      failureCategory: null,
+      resolvedAt: "2026-08-31T12:00:00.000Z",
+      staleAt: null,
+      previewImage: null,
+      favicon: null,
+      video,
+      createdAt: "2026-08-31T11:00:00.000Z",
+      position: null,
+    });
+
+    expect(asset).toMatchObject({ type: "link", video });
+  });
+
   it("keeps a color gradient when converting a collection node for a card", () => {
     const asset = collectionNodeToAsset({
       id: "color-1",

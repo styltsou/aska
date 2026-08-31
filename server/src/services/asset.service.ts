@@ -265,6 +265,8 @@ export class AssetService implements IAssetService {
         linkDescription: externalResources.description,
         linkSiteName: externalResources.siteName,
         linkResourceKind: externalResources.resourceKind,
+        linkResolverKey: externalResources.resolverKey,
+        linkProviderExtensions: externalResources.providerExtensions,
         linkResolutionStatus: externalResources.resolutionStatus,
         linkFailureCategory: externalResources.failureCategory,
         linkResolvedAt: externalResources.resolvedAt,
@@ -869,6 +871,8 @@ export class AssetService implements IAssetService {
       linkDescription: string | null;
       linkSiteName: string | null;
       linkResourceKind: string | null;
+      linkResolverKey: string | null;
+      linkProviderExtensions: Record<string, unknown> | null;
       linkResolutionStatus: CollectionLinkNode["resolutionStatus"] | null;
       linkFailureCategory: string | null;
       linkResolvedAt: Date | null;
@@ -942,6 +946,8 @@ export class AssetService implements IAssetService {
               description: row.linkDescription,
               siteName: row.linkSiteName,
               resourceKind: row.linkResourceKind ?? "web_page",
+              resolverKey: row.linkResolverKey ?? "generic-html",
+              providerExtensions: row.linkProviderExtensions ?? {},
               resolutionStatus: row.linkResolutionStatus,
               failureCategory: row.linkFailureCategory,
               resolvedAt: row.linkResolvedAt,

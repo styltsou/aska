@@ -435,6 +435,11 @@ export default $config({
       // React Router is a client-side router, so unknown application routes
       // must serve the SPA entry point rather than CloudFront's 404 page.
       errorPage: "index.html",
+      edge: {
+        viewerResponse: {
+          injection: `event.response.headers["content-security-policy"] = { value: "frame-src https://www.youtube-nocookie.com" };`,
+        },
+      },
       ...(stableCloudDomains
         ? {
             domain: {

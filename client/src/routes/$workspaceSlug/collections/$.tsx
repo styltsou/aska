@@ -19,8 +19,9 @@ import {
 } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
-import type { ColorAsset, ImageAsset } from "@/types/asset";
+import type { ColorAsset, ImageAsset, LinkAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
+import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
 import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
 import {
   makeBoardKey,
@@ -68,6 +69,7 @@ function CollectionPage() {
   const [drawerColor, setDrawerColor] = useState<ColorAsset>();
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const [editingColor, setEditingColor] = useState<ColorAsset>();
+  const [viewerVideo, setViewerVideo] = useState<LinkAsset>();
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
     .filter(Boolean);
@@ -344,6 +346,7 @@ function CollectionPage() {
                   onOpenNote={handleOpenNote}
                   onOpenImage={handleOpenImage}
                   onOpenColor={handleOpenColor}
+                  onOpenVideo={setViewerVideo}
                   onOpenFolder={handleOpenFolder}
                 />
               </>
@@ -379,6 +382,7 @@ function CollectionPage() {
                 onOpenNote={handleOpenNote}
                 onOpenImage={handleOpenImage}
                 onOpenColor={handleOpenColor}
+                onOpenVideo={setViewerVideo}
                 onOpenFolder={handleOpenFolder}
               />
             )}
@@ -431,6 +435,10 @@ function CollectionPage() {
         onOpenChange={(open) => {
           if (!open) handleCloseImage();
         }}
+      />
+      <YouTubeVideoViewer
+        asset={viewerVideo}
+        onClose={() => setViewerVideo(undefined)}
       />
       {(assets.length > 0 || selectedAssetTypes.length > 0) && (
         <FilterBar

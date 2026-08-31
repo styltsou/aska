@@ -3,6 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { externalResourceMedia, type ResourceMediaVariants } from "@/db/schema";
 import type { CollectionLinkNode } from "@/dto/collection.dto";
+import { LinkVideoSchema } from "@/dto/collection.dto";
 import type { IObjectStorageService } from "@/services/object-storage.service";
 
 export type LinkProjectionRow = {
@@ -15,6 +16,8 @@ export type LinkProjectionRow = {
   description: string | null;
   siteName: string | null;
   resourceKind: string;
+  resolverKey: string;
+  providerExtensions: Record<string, unknown>;
   resolutionStatus: CollectionLinkNode["resolutionStatus"];
   failureCategory: string | null;
   resolvedAt: Date | null;
@@ -109,9 +112,23 @@ export function projectLinkNode(
     staleAt: row.staleAt?.toISOString() ?? null,
     previewImage: media?.previewImage ?? null,
     favicon: media?.favicon ?? null,
+    video: projectLinkVideo(row),
     createdAt: row.createdAt.toISOString(),
     position,
   };
+}
+
+function projectLinkVideo(row: LinkProjectionRow) {
+  if (row.resolverKey !== "youtube-oembed" || row.resourceKind !== "video")
+    return null;
+  const extension = row.providerExtensions.youtube;
+  if (!extension || typeof extension !== "object" || Array.isArray(extension))
+    return null;
+  const parsed = LinkVideoSchema.safeParse({
+    provider: "youtube",
+    ...extension,
+  });
+  return parsed.success ? parsed.data : null;
 }
 
 function preferredRendition(variants: ResourceMediaVariants, icon: boolean) {

@@ -988,6 +988,8 @@ export class UrlUnfurlService {
           description: externalResources.description,
           siteName: externalResources.siteName,
           resourceKind: externalResources.resourceKind,
+          resolverKey: externalResources.resolverKey,
+          providerExtensions: externalResources.providerExtensions,
           resolutionStatus: externalResources.resolutionStatus,
           failureCategory: externalResources.failureCategory,
           resolvedAt: externalResources.resolvedAt,

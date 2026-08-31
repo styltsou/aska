@@ -25,6 +25,7 @@ export const AssetCard = memo(function AssetCard({
   onOpenImage,
   onOpenNote,
   onOpenColor,
+  onOpenVideo,
   deleteContext,
   inboxContext,
   isSelected = false,
@@ -37,6 +38,7 @@ export const AssetCard = memo(function AssetCard({
   onOpenImage?: (asset: ImageAsset) => void;
   onOpenNote?: (asset: NoteAsset, mode?: "read" | "edit") => void;
   onOpenColor?: (asset: ColorAsset) => void;
+  onOpenVideo?: (asset: Extract<Asset, { type: "link" }>) => void;
   deleteContext?: {
     workspaceSlug: string;
     collectionSlug: string;
@@ -80,6 +82,7 @@ export const AssetCard = memo(function AssetCard({
         asset={asset}
         deleteContext={deleteContext}
         inboxContext={inboxContext}
+        onOpenVideo={onOpenVideo}
       >
         {(isContextMenuOpen, displayAsset) => (
           <>
@@ -105,6 +108,11 @@ export const AssetCard = memo(function AssetCard({
             {asset.type === "link" && (
               <LinkAssetCard
                 asset={asset}
+                onOpen={
+                  asset.video && onOpenVideo
+                    ? () => onOpenVideo(asset)
+                    : undefined
+                }
                 isContextMenuOpen={isContextMenuOpen}
               />
             )}

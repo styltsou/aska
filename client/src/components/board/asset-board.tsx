@@ -41,6 +41,7 @@ export function AssetBoard({
   onOpenNote,
   onOpenImage,
   onOpenColor,
+  onOpenVideo,
 }: {
   assets: Asset[];
   emptyTitle: string;
@@ -52,6 +53,7 @@ export function AssetBoard({
   onOpenNote?: (note: NoteAsset, mode?: "read" | "edit") => void;
   onOpenImage?: (image: ImageAsset) => void;
   onOpenColor?: (color: ColorAsset) => void;
+  onOpenVideo?: (link: Extract<Asset, { type: "link" }>) => void;
 }) {
   const scopeKey = inboxContext
     ? `inbox:${inboxContext.workspaceSlug}`
@@ -214,6 +216,7 @@ export function AssetBoard({
               onOpenImage={onOpenImage}
               onOpenNote={onOpenNote}
               onOpenColor={onOpenColor}
+              onOpenVideo={onOpenVideo}
             />
           ))}
         </Masonry>

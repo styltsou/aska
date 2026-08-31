@@ -17,8 +17,14 @@ import { FilterBar } from "@/components/filter-bar";
 import { MasonryGridSkeleton } from "@/components/masonry-grid-skeleton";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { useSessionStore } from "@/store";
-import type { ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
+import type {
+  ColorAsset,
+  ImageAsset,
+  LinkAsset,
+  NoteAsset,
+} from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
+import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
 import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
 import { ResourceLoadError } from "@/components/resource-load-error";
 
@@ -54,6 +60,7 @@ function InboxPage() {
   const [drawerColor, setDrawerColor] = useState<ColorAsset>();
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const [editingColor, setEditingColor] = useState<ColorAsset>();
+  const [viewerVideo, setViewerVideo] = useState<LinkAsset>();
   const { data, isLoading, isFetching, isError, refetch } = useInboxContents(
     workspaceSlug,
     selectedAssetTypes,
@@ -120,6 +127,7 @@ function InboxPage() {
           onOpenNote={handleOpenNote}
           onOpenImage={handleOpenImage}
           onOpenColor={setDrawerColor}
+          onOpenVideo={setViewerVideo}
           emptyTitle={
             hasResolvedColorSearch || isTypeFilterActive
               ? "No matching assets"
@@ -176,6 +184,10 @@ function InboxPage() {
         onOpenChange={(open) => {
           if (!open) handleCloseImage();
         }}
+      />
+      <YouTubeVideoViewer
+        asset={viewerVideo}
+        onClose={() => setViewerVideo(undefined)}
       />
       {(assets.length > 0 || selectedAssetTypes.length > 0) && (
         <FilterBar

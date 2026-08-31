@@ -236,6 +236,30 @@ export const LinkResolutionStatusSchema = z.enum([
   "failed",
 ]);
 
+const YouTubeChannelUrlSchema = z.url().refine((value) => {
+  const url = new URL(value);
+  return (
+    url.protocol === "https:" &&
+    !url.username &&
+    !url.password &&
+    [
+      "youtube.com",
+      "www.youtube.com",
+      "m.youtube.com",
+      "music.youtube.com",
+    ].includes(url.hostname.toLowerCase())
+  );
+});
+
+export const LinkVideoSchema = z.object({
+  provider: z.literal("youtube"),
+  videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
+  channelName: z.string().max(255).nullable(),
+  channelUrl: YouTubeChannelUrlSchema.nullable(),
+});
+
+export type LinkVideo = z.infer<typeof LinkVideoSchema>;
+
 export const CollectionLinkNodeSchema = z.object({
   id: z.string(),
   type: z.literal("link"),
@@ -266,6 +290,7 @@ export const CollectionLinkNodeSchema = z.object({
       height: z.number().int().positive(),
     })
     .nullable(),
+  video: LinkVideoSchema.nullable(),
   createdAt: z.string(),
   position: BoardPositionSchema.nullable(),
 });

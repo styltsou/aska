@@ -62,6 +62,12 @@ export interface LinkAsset {
     alt?: string;
   };
   favicon?: { url: string; width: number; height: number };
+  video?: {
+    provider: "youtube";
+    videoId: string;
+    channelName: string | null;
+    channelUrl: string | null;
+  };
   clientId?: string;
   isFavorite?: boolean;
 }

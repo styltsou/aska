@@ -149,18 +149,27 @@ function folderActions() {
   return <ContextMenuItem>Rename folder</ContextMenuItem>;
 }
 
-function linkActions(asset: LinkAsset, onRefresh: () => void) {
+function linkActions(
+  asset: LinkAsset,
+  onRefresh: () => void,
+  onOpenVideo?: (asset: LinkAsset) => void,
+) {
   const refreshAllowed =
     asset.failureCategory !== "credentials" &&
     asset.failureCategory !== "sensitive_query";
   return (
     <>
+      {asset.video && onOpenVideo ? (
+        <ContextMenuItem onClick={() => onOpenVideo(asset)}>
+          View video
+        </ContextMenuItem>
+      ) : null}
       <ContextMenuItem
         onClick={() =>
           window.open(asset.originalUrl, "_blank", "noopener,noreferrer")
         }
       >
-        Open link
+        {asset.video ? "Open on YouTube" : "Open link"}
       </ContextMenuItem>
       <ContextMenuItem
         onClick={() => {
@@ -183,6 +192,7 @@ export function AssetContextMenu({
   children,
   deleteContext,
   inboxContext,
+  onOpenVideo,
 }: {
   asset: Asset;
   children: (isContextMenuOpen: boolean, asset: Asset) => React.ReactNode;
@@ -195,6 +205,7 @@ export function AssetContextMenu({
   inboxContext?: {
     workspaceSlug: string;
   };
+  onOpenVideo?: (asset: LinkAsset) => void;
 }) {
   const { peekNote, peekColor } = useWorkspacePeek();
   const setPexelsBrowserOpen = useSessionStore(
@@ -443,17 +454,21 @@ export function AssetContextMenu({
                   })}
                 </>
               ) : (
-                linkActions(asset, () => {
-                  refreshLink.mutate(asset.id, {
-                    onError: (error) => {
-                      toast.error(
-                        error instanceof Error
-                          ? error.message
-                          : "Unable to refresh link.",
-                      );
-                    },
-                  });
-                })
+                linkActions(
+                  asset,
+                  () => {
+                    refreshLink.mutate(asset.id, {
+                      onError: (error) => {
+                        toast.error(
+                          error instanceof Error
+                            ? error.message
+                            : "Unable to refresh link.",
+                        );
+                      },
+                    });
+                  },
+                  onOpenVideo,
+                )
               )}
               <ContextMenuSeparator />
               <ContextMenuItem>

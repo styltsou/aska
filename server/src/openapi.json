@@ -2177,6 +2177,7 @@
           "staleAt",
           "previewImage",
           "favicon",
+          "video",
           "createdAt",
           "position"
         ],
@@ -2212,8 +2213,27 @@
               { "type": "null" }
             ]
           },
+          "video": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/LinkVideo" },
+              { "type": "null" }
+            ]
+          },
           "createdAt": { "type": "string", "format": "date-time" },
           "position": { "$ref": "#/components/schemas/NullableBoardPosition" }
+        }
+      },
+      "LinkVideo": {
+        "type": "object",
+        "required": ["provider", "videoId", "channelName", "channelUrl"],
+        "properties": {
+          "provider": { "type": "string", "enum": ["youtube"] },
+          "videoId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "channelName": { "type": ["string", "null"] },
+          "channelUrl": { "type": ["string", "null"], "format": "uri" }
         }
       },
       "LinkMediaVariant": {

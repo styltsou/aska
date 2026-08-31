@@ -192,6 +192,13 @@ export type LinkResolutionStatus =
   | "ready"
   | "failed";
 
+export type LinkVideo = {
+  provider: "youtube";
+  videoId: string;
+  channelName: string | null;
+  channelUrl: string | null;
+};
+
 export type CollectionLinkNode = {
   id: string;
   type: "link";
@@ -218,6 +225,7 @@ export type CollectionLinkNode = {
     width: number;
     height: number;
   } | null;
+  video: LinkVideo | null;
   createdAt: string;
   clientId?: string;
   position: BoardPosition | null;

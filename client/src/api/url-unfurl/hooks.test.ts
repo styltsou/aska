@@ -18,6 +18,7 @@ describe("createOptimisticLink", () => {
       resolutionStatus: "queued",
       previewImage: null,
       favicon: null,
+      video: null,
     });
   });
 });

@@ -12,6 +12,7 @@ import { LinkAssetCard } from "@/components/board/cards/link-asset-card";
 import { ColorAssetCard } from "@/components/board/cards/color-asset-card";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { cn } from "@/lib/utils";
+import type { LinkAsset } from "@/types/asset";
 
 import type { CanvasDropStackStyle } from "./canvas-drop-stack";
 
@@ -26,6 +27,7 @@ export type CanvasNodeData = {
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
   onOpenColor: (node: Extract<CollectionNode, { type: "color" }>) => void;
+  onOpenVideo: (asset: LinkAsset) => void;
   onOpenNote: (
     node: Extract<CollectionNode, { type: "note" }>,
     mode?: "read" | "edit",
@@ -83,7 +85,11 @@ export const CanvasCard = memo(function CanvasCard({
         />
       ) : null}
       {node.type === "link" && asset.type === "link" ? (
-        <LinkAssetCard asset={asset} isContextMenuOpen={isContextMenuOpen} />
+        <LinkAssetCard
+          asset={asset}
+          onOpen={asset.video ? () => data.onOpenVideo(asset) : undefined}
+          isContextMenuOpen={isContextMenuOpen}
+        />
       ) : null}
       {node.type === "color" && displayAsset.type === "color" ? (
         <ColorAssetCard
@@ -159,7 +165,11 @@ export const CanvasCard = memo(function CanvasCard({
       {isPending ? (
         card()
       ) : (
-        <AssetContextMenu asset={asset} deleteContext={data.deleteContext}>
+        <AssetContextMenu
+          asset={asset}
+          deleteContext={data.deleteContext}
+          onOpenVideo={data.onOpenVideo}
+        >
           {card}
         </AssetContextMenu>
       )}

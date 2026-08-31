@@ -23,7 +23,9 @@ does not introduce a second card system.
 and state transitions. `server/src/services/url-unfurl/projection.ts` is the
 only place that projects resources and stored media into `CollectionLinkNode`.
 Provider-specific fields stay in `external_resources.provider_extensions` and
-must not leak into the generic card contract.
+must not leak into the generic card contract. Rich provider UI receives only
+explicitly validated, allowlisted projection fields; YouTube currently exposes
+its video ID and optional channel identity through the nullable `video` field.
 
 ## Optimistic paste-to-ready flow
 

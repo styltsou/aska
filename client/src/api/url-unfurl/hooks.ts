@@ -40,6 +40,7 @@ export function createOptimisticLink(
     staleAt: null,
     previewImage: null,
     favicon: null,
+    video: null,
     createdAt: new Date().toISOString(),
     clientId: id,
     position: null,
