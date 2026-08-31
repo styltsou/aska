@@ -112,7 +112,9 @@ generation path. Broad scheduled refresh is deliberately excluded.
 ## Resolution and provenance
 
 `services/url-resolution/src/types.ts` defines an ordered resolver registry.
-Specialized resolvers will be registered before the generic resolver. A
+Specialized resolvers are registered before the generic resolver. The current
+YouTube resolver uses the provider's oEmbed endpoint for supported video URLs,
+which avoids fetching large watch-page HTML. A
 resolver can return a partial enrichment and set `continueAfterResolve`; later
 matching resolvers fill missing fields. Exceptions also fall through, allowing
 generic resolution after provider failure, rate limiting, or unsupported

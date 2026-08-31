@@ -132,4 +132,36 @@ describe("resolver registry", () => {
       resolveWithRegistry(new URL("https://example.com"), [failing, generic]),
     ).resolves.toEqual(result);
   });
+
+  it("keeps a successful specialized result when generic fallback fails", async () => {
+    const specialized: UrlResolver = {
+      key: "specialized",
+      version: "1",
+      matches: () => true,
+      continueAfterResolve: true,
+      resolve: async () => ({
+        ...result,
+        resolverKey: "specialized",
+        title: "Provider title",
+      }),
+    };
+    const generic: UrlResolver = {
+      key: "generic",
+      version: "1",
+      matches: () => true,
+      resolve: async () => {
+        throw new Error("response too large");
+      },
+    };
+
+    await expect(
+      resolveWithRegistry(new URL("https://example.com"), [
+        specialized,
+        generic,
+      ]),
+    ).resolves.toMatchObject({
+      resolverKey: "specialized",
+      title: "Provider title",
+    });
+  });
 });

@@ -5,6 +5,7 @@ import { parseUrlResolutionJob } from "../../url-unfurl-shared/src/resolution-jo
 import { SafeFetchError } from "../../url-unfurl-shared/src/safe-fetch";
 import { GenericHtmlResolver } from "./generic-resolver";
 import { resolveWithRegistry } from "./types";
+import { YouTubeOEmbedResolver } from "./youtube-resolver";
 
 initializeSentry("url-resolution");
 
@@ -20,7 +21,10 @@ type Claim =
       resolverVersion: string;
     };
 
-const resolvers = [new GenericHtmlResolver()] as const;
+const resolvers = [
+  new YouTubeOEmbedResolver(),
+  new GenericHtmlResolver(),
+] as const;
 
 function parseTask(body: string): Task {
   return parseUrlResolutionJob(JSON.parse(body));
