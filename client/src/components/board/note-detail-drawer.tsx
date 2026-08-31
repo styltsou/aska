@@ -34,6 +34,7 @@ import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
 import { NoteEditorLoading } from "@/components/board/note-editor-loading";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
+import { NoteColorControl } from "@/components/board/note-color-control";
 import { NoteBacklinks } from "@/components/board/note-backlinks";
 import { NoteSaveStatus } from "@/components/board/note-save-status";
 import { NoteTitleField } from "@/components/board/note-title-field";
@@ -167,6 +168,7 @@ export function NoteDetailDrawer({
   const copiedResetTimeoutRef = useRef<number | undefined>(undefined);
   const [draft, setDraft] = useState(note?.content ?? "");
   const [title, setTitle] = useState(note?.title ?? "");
+  const [noteColor, setNoteColor] = useState(note?.color);
   const [createdNote, setCreatedNote] = useState<NoteAsset>();
   const [workspaceOpen, setWorkspaceOpen] = useState(
     note !== undefined || Boolean(createOptions?.open),
@@ -179,6 +181,8 @@ export function NoteDetailDrawer({
   const [extractionFeedback, setExtractionFeedback] =
     useState<ExtractionFeedback>();
   const activeNote = createdNote ?? note;
+  const activeNoteColorRef = useRef(activeNote?.color);
+  activeNoteColorRef.current = activeNote?.color;
   const isPeekMirror =
     peekTarget?.type === "note" && peekTarget.asset.id === activeNote?.id;
   useEffect(() => {
@@ -352,6 +356,7 @@ export function NoteDetailDrawer({
     draftRef.current = nextDraft;
     setDraft(nextDraft);
     setTitle(recoveredDraft?.title ?? activeNote?.title ?? "");
+    setNoteColor(activeNoteColorRef.current);
     setSaveState(
       recoveredDraft &&
         (recoveredDraft.content !== noteContent ||
@@ -376,7 +381,7 @@ export function NoteDetailDrawer({
   }, [draft, noteContent, noteId]);
 
   const create = useCallback(
-    (content: string, nextTitle = title) => {
+    (content: string, nextTitle = title, nextColor = noteColor) => {
       if (!isCreateMode || activeNote || isCreating) return;
       if (isNoteContentTooLong(content)) {
         failedContentRef.current = content;
@@ -407,7 +412,7 @@ export function NoteDetailDrawer({
 
       if (createOptions.target === "inbox") {
         createInboxNote.mutate(
-          { content, title: nextTitle },
+          { content, title: nextTitle, color: nextColor },
           { onSuccess, onError },
         );
       } else {
@@ -417,6 +422,7 @@ export function NoteDetailDrawer({
             title: nextTitle,
             parentFolderPath,
             placement: createOptions.placement,
+            color: nextColor,
           },
           { onSuccess, onError },
         );
@@ -431,13 +437,19 @@ export function NoteDetailDrawer({
       createOptions?.target,
       isCreateMode,
       isCreating,
+      noteColor,
       parentFolderPath,
       title,
     ],
   );
 
   const persist = useCallback(
-    (content: string, closeAfterSave = false, nextTitle = title) => {
+    (
+      content: string,
+      closeAfterSave = false,
+      nextTitle = title,
+      nextColor = noteColor,
+    ) => {
       if (!noteId) return;
 
       if (isNoteContentTooLong(content)) {
@@ -450,7 +462,8 @@ export function NoteDetailDrawer({
 
       if (
         content === noteContent &&
-        (nextTitle.trim() || null) === (activeNote?.title ?? null)
+        (nextTitle.trim() || null) === (activeNote?.title ?? null) &&
+        nextColor === activeNote?.color
       ) {
         if (draftRef.current === content) {
           draftRef.current = content;
@@ -467,7 +480,14 @@ export function NoteDetailDrawer({
       closeAfterSaveRef.current ||= closeAfterSave;
       setSaveState("saving");
       mutate(
-        { assetId: noteId, content, title: nextTitle.trim() || null },
+        {
+          assetId: noteId,
+          content,
+          title: nextTitle.trim() || null,
+          ...(nextColor !== activeNote?.color
+            ? { color: nextColor ?? null }
+            : {}),
+        },
         {
           onSuccess: ({ note: updatedNote }) => {
             failedContentRef.current = undefined;
@@ -510,11 +530,27 @@ export function NoteDetailDrawer({
       isPending,
       mutate,
       activeNote,
+      noteColor,
       noteContent,
       noteId,
       onNoteChange,
       title,
     ],
+  );
+
+  const handleColorChange = useCallback(
+    (nextColor?: string) => {
+      if (nextColor === noteColor) return;
+      setNoteColor(nextColor);
+      if (isCreateMode && !activeNote) return;
+      persist(
+        getSaveableNoteContent(draftRef.current) ?? "",
+        false,
+        title,
+        nextColor,
+      );
+    },
+    [activeNote, isCreateMode, noteColor, persist, title],
   );
 
   const promotePeekedNote = useCallback(
@@ -1068,6 +1104,11 @@ export function NoteDetailDrawer({
           </AnimatePresence>
           <div className="flex min-w-0 items-center justify-end gap-2">
             <NoteSaveStatus state={saveState} updatedAt={updatedTimestamp} />
+            <NoteColorControl
+              color={noteColor}
+              disabled={isPending || isCreating}
+              onColorChange={handleColorChange}
+            />
             <NoteHighlightControl
               editorRef={richTextRef}
               color={highlightColor}

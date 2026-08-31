@@ -542,6 +542,9 @@ export class AssetService implements IAssetService {
       if (data.isExpanded !== undefined) {
         setValues.isExpanded = data.isExpanded;
       }
+      if (data.color !== undefined) {
+        setValues.color = data.color;
+      }
 
       const noteSelection = {
         color: noteAssets.color,

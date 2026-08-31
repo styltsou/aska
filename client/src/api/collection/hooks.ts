@@ -1362,6 +1362,9 @@ function applyNoteDraftToContents(
           ...(hasContent
             ? { content: draft.content!, ...metrics, updatedAt }
             : {}),
+          ...(draft.color !== undefined
+            ? { color: draft.color, updatedAt }
+            : {}),
           ...(draft.isExpanded !== undefined
             ? { isExpanded: draft.isExpanded }
             : {}),

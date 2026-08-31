@@ -118,6 +118,7 @@ export type CreateNoteInput = {
 export type UpdateNoteInput = {
   content?: string;
   title?: string | null;
+  color?: string | null;
   isExpanded?: boolean;
 };
 

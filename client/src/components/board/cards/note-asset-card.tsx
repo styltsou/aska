@@ -476,6 +476,13 @@ export function NoteAssetCard({
       }}
       onMouseEnter={() => setIsPillDismissed(false)}
     >
+      {asset.color ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-1"
+          style={{ backgroundColor: asset.color }}
+          aria-hidden="true"
+        />
+      ) : null}
       <div
         ref={contentRef}
         className={cn(

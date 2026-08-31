@@ -158,6 +158,7 @@ export type UpdatedLink = {
 export const UpdateNoteSchema = z.object({
   content: z.string().max(NOTE_CONTENT_MAX_LENGTH).optional(),
   title: z.string().max(255).nullable().optional(),
+  color: HexColorSchema.nullable().optional(),
   isExpanded: z.boolean().optional(),
 });
 
