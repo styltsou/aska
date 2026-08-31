@@ -31,6 +31,8 @@ describe("LinkAssetCard", () => {
     expect(html).toContain('role="button"');
     expect(html).toContain('aria-label="Open video details: A video"');
     expect(html).toContain('aria-label="Open on YouTube in a new tab"');
+    expect(html).toContain("bg-popover/85");
+    expect(html).toContain("text-popover-foreground");
     expect(html).toContain(`href="${asset.originalUrl}"`);
   });
 

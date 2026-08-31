@@ -51,7 +51,7 @@ export function LinkAssetCard({
         ) : null}
         {onOpen ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <span className="flex size-11 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white shadow-lg backdrop-blur-sm transition-transform duration-150 group-hover:scale-105 motion-reduce:transition-none">
+            <span className="flex size-11 items-center justify-center rounded-full border border-border/70 bg-popover/85 text-popover-foreground shadow-lg ring-1 ring-border/30 backdrop-blur-sm transition-[background-color,transform] duration-150 group-hover:scale-105 group-hover:bg-popover motion-reduce:transition-none">
               <PlayIcon className="ml-0.5 size-4 fill-current" />
             </span>
           </div>
@@ -128,7 +128,7 @@ export function LinkAssetCard({
         href={asset.originalUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="absolute top-2 right-2 z-10 flex size-7 items-center justify-center rounded-lg border border-white/10 bg-black/50 text-white opacity-100 shadow-sm backdrop-blur-sm transition-[background-color,opacity] hover:bg-black/70 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none sm:opacity-0 sm:group-hover:opacity-100"
+        className="absolute top-2 right-2 z-10 flex size-7 items-center justify-center rounded-lg border border-border/70 bg-popover/85 text-popover-foreground opacity-100 shadow-sm backdrop-blur-sm transition-[background-color,opacity] hover:bg-popover focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:opacity-0 sm:group-hover:opacity-100"
         onClick={(event) => event.stopPropagation()}
         aria-label="Open on YouTube in a new tab"
       >
