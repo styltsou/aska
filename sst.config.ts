@@ -1,11 +1,6 @@
 // oxlint-disable-next-line typescript/triple-slash-reference
 /// <reference path="./.sst/platform/config.d.ts" />
 
-import {
-  TASK_DLQ_RECEIVE_LIMIT,
-  TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS,
-} from "./services/image-shared/src/task-timing";
-
 export default $config({
   app(input) {
     return {
@@ -30,6 +25,8 @@ export default $config({
     };
   },
   async run() {
+    const { TASK_DLQ_RECEIVE_LIMIT, TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS } =
+      await import("./services/image-shared/src/task-timing");
     const clientOrigins = {
       // Personal hybrid development: local Vite -> Live API Lambda -> AWS.
       hybrid: ["http://localhost:5173"],
