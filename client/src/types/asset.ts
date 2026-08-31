@@ -48,6 +48,7 @@ export interface LinkAsset {
   hostname: string;
   title: string;
   description?: string;
+  note?: string | null;
   siteName?: string;
   resourceKind: string;
   resolutionStatus: "queued" | "resolving" | "partial" | "ready" | "failed";

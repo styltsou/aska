@@ -16,8 +16,8 @@ import {
   InfoIcon,
   ArrowLeftRightIcon,
   Maximize2Icon,
-  PanelRightCloseIcon,
   TriangleAlertIcon,
+  XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -539,7 +539,7 @@ function PeekHeader({
                 className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
                 onClick={onClose}
               >
-                <PanelRightCloseIcon className="size-4" />
+                <XIcon className="size-4" />
                 <span className="sr-only">Close Peek</span>
               </Button>
             }

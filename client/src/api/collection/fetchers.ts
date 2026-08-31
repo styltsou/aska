@@ -34,6 +34,8 @@ import type {
   UpdateNoteResponse,
   UpdateImageInput,
   UpdateImageResponse,
+  UpdateLinkInput,
+  UpdateLinkResponse,
   UpdateColorInput,
   UpdateColorResponse,
   PeekableAssetResponse,
@@ -220,6 +222,17 @@ export async function updateImage(
 ): Promise<UpdateImageResponse> {
   return apiPatch<UpdateImageResponse>(
     `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/image`,
+    data,
+  );
+}
+
+export async function updateLink(
+  workspaceSlug: string,
+  assetId: string,
+  data: UpdateLinkInput,
+): Promise<UpdateLinkResponse> {
+  return apiPatch<UpdateLinkResponse>(
+    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/link`,
     data,
   );
 }

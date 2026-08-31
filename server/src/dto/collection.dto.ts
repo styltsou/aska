@@ -141,6 +141,20 @@ export type UpdatedImage = {
   updatedAt: string;
 };
 
+export const UpdateLinkSchema = z.object({
+  note: z.string().max(10_000).nullable(),
+});
+
+export type UpdateLinkInput = z.infer<typeof UpdateLinkSchema>;
+
+export type UpdatedLink = {
+  id: string;
+  type: "link";
+  note: string | null;
+  isFavorite: boolean;
+  updatedAt: string;
+};
+
 export const UpdateNoteSchema = z.object({
   content: z.string().max(NOTE_CONTENT_MAX_LENGTH).optional(),
   title: z.string().max(255).nullable().optional(),
@@ -268,6 +282,7 @@ export const CollectionLinkNodeSchema = z.object({
   hostname: z.string(),
   title: z.string(),
   description: z.string().nullable(),
+  note: z.string().nullable(),
   siteName: z.string().nullable(),
   resourceKind: z.string(),
   resolutionStatus: LinkResolutionStatusSchema,

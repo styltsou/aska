@@ -986,6 +986,7 @@ export class UrlUnfurlService {
           canonicalUrl: externalResources.canonicalUrl,
           resourceTitle: externalResources.title,
           description: externalResources.description,
+          note: linkAssets.note,
           siteName: externalResources.siteName,
           resourceKind: externalResources.resourceKind,
           resolverKey: externalResources.resolverKey,

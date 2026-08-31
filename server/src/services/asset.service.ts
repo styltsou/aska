@@ -36,6 +36,8 @@ import type {
   UpdateNoteInput,
   UpdatedImage,
   UpdateImageInput,
+  UpdatedLink,
+  UpdateLinkInput,
   UpdateColorInput,
   UpdatedColor,
 } from "@/dto/collection.dto";
@@ -121,6 +123,12 @@ export interface IAssetService {
     assetNodeId: string,
     data: UpdateImageInput,
   ): Promise<UpdatedImage>;
+  updateLink(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    data: UpdateLinkInput,
+  ): Promise<UpdatedLink>;
   deleteAsset(
     orgId: string,
     assetNodeId: string,
@@ -258,6 +266,7 @@ export class AssetService implements IAssetService {
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
         linkOriginalUrl: linkAssets.originalUrl,
+        linkNote: linkAssets.note,
         linkResourceId: externalResources.id,
         linkHostname: externalResources.hostname,
         linkCanonicalUrl: externalResources.canonicalUrl,
@@ -698,6 +707,61 @@ export class AssetService implements IAssetService {
     };
   }
 
+  async updateLink(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    data: UpdateLinkInput,
+  ): Promise<UpdatedLink> {
+    const target = parseAssetNodeId(assetNodeId);
+    if (target.assetType !== "link") {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, "Asset is not a link");
+    }
+
+    const note = data.note?.trim() ? data.note : null;
+    const updated = await db.transaction(async (tx) => {
+      const [asset] = await tx
+        .update(assets)
+        .set({ updatedByUserId: userId })
+        .where(
+          and(
+            eq(assets.id, target.entityId),
+            eq(assets.organizationId, orgId),
+            eq(assets.type, "link"),
+          ),
+        )
+        .returning({
+          id: assets.id,
+          isFavorite: assets.isFavorite,
+          updatedAt: assets.updatedAt,
+        });
+
+      if (!asset) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Link not found");
+      }
+
+      const [link] = await tx
+        .update(linkAssets)
+        .set({ note })
+        .where(eq(linkAssets.assetId, asset.id))
+        .returning({ note: linkAssets.note });
+
+      if (!link) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Link not found");
+      }
+
+      return { ...asset, note: link.note };
+    });
+
+    return {
+      id: `link-${updated.id}`,
+      type: "link",
+      note: updated.note,
+      isFavorite: updated.isFavorite,
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  }
+
   async deleteAsset(
     orgId: string,
     assetNodeId: string,
@@ -864,6 +928,7 @@ export class AssetService implements IAssetService {
       colorHex: string | null;
       colorGradient: StoredColorGradient | null;
       linkOriginalUrl: string | null;
+      linkNote: string | null;
       linkResourceId: number | null;
       linkHostname: string | null;
       linkCanonicalUrl: string | null;
@@ -944,6 +1009,7 @@ export class AssetService implements IAssetService {
               canonicalUrl: row.linkCanonicalUrl,
               resourceTitle: row.linkTitle,
               description: row.linkDescription,
+              note: row.linkNote,
               siteName: row.linkSiteName,
               resourceKind: row.linkResourceKind ?? "web_page",
               resolverKey: row.linkResolverKey ?? "generic-html",

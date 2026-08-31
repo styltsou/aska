@@ -1,18 +1,24 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
-import { ExternalLinkIcon, PlayIcon, XIcon } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { ExternalLinkIcon } from "lucide-react";
+import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { useUpdateLink } from "@/api/collection";
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import {
   Dialog,
   DialogBody,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerTitle,
@@ -23,12 +29,61 @@ import type { LinkAsset } from "@/types/asset";
 
 type VideoLinkAsset = LinkAsset & { video: NonNullable<LinkAsset["video"]> };
 
+const LINK_NOTE_AUTOSAVE_DELAY_MS = 350;
+const LINK_NOTE_STORAGE_KEY = "aska:link-note:v1:";
+
+function linkNoteStorageKey(workspaceSlug: string, assetId: string) {
+  return `${LINK_NOTE_STORAGE_KEY}${JSON.stringify([workspaceSlug, assetId])}`;
+}
+
+function readLinkNoteDraft(
+  workspaceSlug: string,
+  assetId: string,
+  hasServerNote: boolean,
+): string | undefined {
+  if (hasServerNote) return undefined;
+
+  try {
+    return (
+      window.localStorage.getItem(linkNoteStorageKey(workspaceSlug, assetId)) ??
+      undefined
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+function saveLinkNoteDraft(
+  workspaceSlug: string,
+  assetId: string,
+  note: string,
+) {
+  try {
+    window.localStorage.setItem(
+      linkNoteStorageKey(workspaceSlug, assetId),
+      note,
+    );
+  } catch {
+    // Recovery is best effort when storage is unavailable.
+  }
+}
+
+function clearLinkNoteDraft(workspaceSlug: string, assetId: string) {
+  try {
+    window.localStorage.removeItem(linkNoteStorageKey(workspaceSlug, assetId));
+  } catch {
+    // Recovery cleanup is best effort when storage is unavailable.
+  }
+}
+
 export function YouTubeVideoViewer({
   asset,
   onClose,
+  workspaceSlug,
 }: {
   asset?: LinkAsset;
   onClose: () => void;
+  workspaceSlug: string;
 }) {
   const isMobile = useIsMobile();
   const [activeAsset, setActiveAsset] = useState<VideoLinkAsset>();
@@ -68,21 +123,8 @@ export function YouTubeVideoViewer({
           <VideoViewerContent
             key={displayedAsset.video.videoId}
             asset={displayedAsset}
-            closeControl={
-              <DrawerClose
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="border-white/10 bg-black/45 text-white backdrop-blur-md hover:bg-black/65 hover:text-white"
-                    aria-label="Close video"
-                  />
-                }
-              >
-                <XIcon />
-              </DrawerClose>
-            }
+            open={open}
+            workspaceSlug={workspaceSlug}
           />
         </DrawerContent>
       </Drawer>
@@ -103,21 +145,8 @@ export function YouTubeVideoViewer({
           <VideoViewerContent
             key={displayedAsset.video.videoId}
             asset={displayedAsset}
-            closeControl={
-              <DialogClose
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="border-white/10 bg-black/45 text-white backdrop-blur-md hover:bg-black/65 hover:text-white"
-                    aria-label="Close video"
-                  />
-                }
-              >
-                <XIcon />
-              </DialogClose>
-            }
+            open={open}
+            workspaceSlug={workspaceSlug}
           />
         </DialogBody>
       </DialogContent>
@@ -127,17 +156,19 @@ export function YouTubeVideoViewer({
 
 function VideoViewerContent({
   asset,
-  closeControl,
+  open,
+  workspaceSlug,
 }: {
   asset: VideoLinkAsset;
-  closeControl: ReactNode;
+  open: boolean;
+  workspaceSlug: string;
 }) {
   const [playerLoaded, setPlayerLoaded] = useState(false);
   const embedUrl = youtubeEmbedUrl(asset.video.videoId);
 
   return (
     <div className="flex min-h-0 flex-col">
-      <div className="relative isolate aspect-video shrink-0 overflow-hidden bg-neutral-950">
+      <div className="relative isolate m-2 aspect-video shrink-0 overflow-hidden rounded-md bg-background sm:m-3">
         {asset.previewImage ? (
           <>
             <img
@@ -168,39 +199,13 @@ function VideoViewerContent({
           allowFullScreen
           onLoad={() => setPlayerLoaded(true)}
           className={cn(
-            "absolute inset-0 size-full border-0 transition-opacity duration-300 motion-reduce:transition-none",
+            "absolute inset-0 block size-full rounded-md border-none outline-none ring-0 transition-opacity duration-300 motion-reduce:transition-none",
             playerLoaded ? "opacity-100" : "opacity-0",
           )}
         />
-
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 bg-gradient-to-b from-black/55 to-transparent p-3 sm:p-4">
-          <div className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-white/10 bg-black/35 px-2.5 text-xs font-medium text-white/90 backdrop-blur-md">
-            <PlayIcon className="size-3.5 fill-red-500 text-red-500" />
-            YouTube
-          </div>
-          <div className="pointer-events-auto flex items-center gap-1.5">
-            <Button
-              render={
-                <a
-                  href={asset.originalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Open on YouTube in a new tab"
-                />
-              }
-              variant="ghost"
-              size="sm"
-              className="border-white/10 bg-black/45 text-white backdrop-blur-md hover:bg-black/65 hover:text-white"
-            >
-              Open on YouTube
-              <ExternalLinkIcon data-icon="inline-end" />
-            </Button>
-            {closeControl}
-          </div>
-        </div>
       </div>
 
-      <div className="space-y-3 border-t border-border/70 bg-background px-4 py-4 sm:px-5 sm:py-5">
+      <div className="space-y-1 bg-background px-4 pt-0 pb-4 sm:px-5 sm:pb-5">
         <h2 className="font-heading text-lg leading-snug font-medium text-balance sm:text-xl">
           {asset.title}
         </h2>
@@ -227,7 +232,176 @@ function VideoViewerContent({
             {asset.description}
           </p>
         ) : null}
+        <VideoLinkNoteEditor
+          asset={asset}
+          open={open}
+          workspaceSlug={workspaceSlug}
+        />
       </div>
+    </div>
+  );
+}
+
+function VideoLinkNoteEditor({
+  asset,
+  open,
+  workspaceSlug,
+}: {
+  asset: VideoLinkAsset;
+  open: boolean;
+  workspaceSlug: string;
+}) {
+  const { mutateAsync: updateLinkAsync } = useUpdateLink(workspaceSlug);
+  const [note, setNote] = useState("");
+  const assetIdRef = useRef<string | undefined>(undefined);
+  const assetNoteRef = useRef(asset.note);
+  const draftRef = useRef("");
+  const savedRef = useRef(new Map<string, string>());
+  const timerRef = useRef<number | undefined>(undefined);
+  const requestRef = useRef<Promise<void> | null>(null);
+  const queuedRef = useRef(new Map<string, string>());
+
+  assetNoteRef.current = asset.note;
+
+  const persistNote = useCallback(
+    (assetId: string, draft: string) => {
+      const nextNote = draft.trim() ? draft : null;
+      const saved = savedRef.current.get(assetId) ?? null;
+      if (nextNote === saved) {
+        clearLinkNoteDraft(workspaceSlug, assetId);
+        return;
+      }
+
+      if (requestRef.current) {
+        queuedRef.current.set(assetId, draft);
+        return;
+      }
+
+      const request = updateLinkAsync({ assetId, note: nextNote })
+        .then(({ link }) => {
+          const savedNote = link.note ?? "";
+          savedRef.current.set(assetId, savedNote);
+
+          if (assetIdRef.current === assetId) {
+            if (draftRef.current === draft) {
+              draftRef.current = savedNote;
+              setNote(savedNote);
+              clearLinkNoteDraft(workspaceSlug, assetId);
+            } else {
+              queuedRef.current.set(assetId, draftRef.current);
+            }
+          } else {
+            clearLinkNoteDraft(workspaceSlug, assetId);
+          }
+        })
+        .catch((error: unknown) => {
+          saveLinkNoteDraft(workspaceSlug, assetId, draft);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Could not save link note.",
+          );
+        })
+        .finally(() => {
+          requestRef.current = null;
+          const queued = queuedRef.current.get(assetId);
+          if (queued !== undefined) {
+            queuedRef.current.delete(assetId);
+            persistNote(assetId, queued);
+            return;
+          }
+
+          const nextQueued = queuedRef.current.entries().next().value;
+          if (nextQueued) {
+            const [nextAssetId, nextDraft] = nextQueued;
+            queuedRef.current.delete(nextAssetId);
+            persistNote(nextAssetId, nextDraft);
+          }
+        });
+
+      requestRef.current = request;
+    },
+    [updateLinkAsync, workspaceSlug],
+  );
+
+  const flushNote = useCallback(() => {
+    if (timerRef.current !== undefined) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = undefined;
+    }
+
+    const assetId = assetIdRef.current;
+    if (assetId) persistNote(assetId, draftRef.current);
+  }, [persistNote]);
+
+  useEffect(() => {
+    flushNote();
+
+    const assetId = asset.id;
+    const serverNote = assetNoteRef.current ?? "";
+    const recoveredDraft = readLinkNoteDraft(
+      workspaceSlug,
+      assetId,
+      Boolean(serverNote),
+    );
+    const nextDraft = recoveredDraft ?? serverNote;
+
+    assetIdRef.current = assetId;
+    savedRef.current.set(assetId, serverNote);
+    draftRef.current = nextDraft;
+    setNote(nextDraft);
+
+    if (recoveredDraft !== undefined && recoveredDraft !== serverNote) {
+      timerRef.current = window.setTimeout(() => {
+        timerRef.current = undefined;
+        persistNote(assetId, recoveredDraft);
+      }, LINK_NOTE_AUTOSAVE_DELAY_MS);
+    }
+  }, [asset.id, flushNote, persistNote, workspaceSlug]);
+
+  useEffect(() => {
+    if (!open) flushNote();
+  }, [flushNote, open]);
+
+  useEffect(() => () => flushNote(), [flushNote]);
+
+  const handleChange = useCallback(
+    (value: string) => {
+      const assetId = assetIdRef.current;
+      if (!assetId) return;
+
+      draftRef.current = value;
+      setNote(value);
+      saveLinkNoteDraft(workspaceSlug, assetId, value);
+
+      if (timerRef.current !== undefined) {
+        window.clearTimeout(timerRef.current);
+      }
+      timerRef.current = window.setTimeout(() => {
+        timerRef.current = undefined;
+        persistNote(assetId, draftRef.current);
+      }, LINK_NOTE_AUTOSAVE_DELAY_MS);
+    },
+    [persistNote, workspaceSlug],
+  );
+
+  return (
+    <div className="pt-3">
+      <label
+        htmlFor={`link-note-${asset.id}`}
+        className="text-xs font-medium text-muted-foreground"
+      >
+        Notes
+      </label>
+      <AutoResizeTextarea
+        id={`link-note-${asset.id}`}
+        spellCheck={false}
+        value={note}
+        onChange={(event) => handleChange(event.target.value)}
+        placeholder="Add a note"
+        rows={1}
+        className="mt-1 block min-h-6 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
+      />
     </div>
   );
 }

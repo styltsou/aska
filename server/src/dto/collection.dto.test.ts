@@ -13,6 +13,7 @@ import {
   UpdateNodePositionsSchema,
   UpdateNoteSchema,
   UpdateImageSchema,
+  UpdateLinkSchema,
   MoveCollectionNodesParentSchema,
 } from "./collection.dto";
 
@@ -220,6 +221,18 @@ describe("image note DTOs", () => {
     expect(UpdateImageSchema.parse({ note: null })).toEqual({ note: null });
     expect(
       UpdateImageSchema.safeParse({ note: "x".repeat(10_001) }).success,
+    ).toBe(false);
+  });
+});
+
+describe("link note DTOs", () => {
+  it("accepts bounded text and clearing a link note", () => {
+    expect(
+      UpdateLinkSchema.parse({ note: "Watch with the design team" }),
+    ).toEqual({ note: "Watch with the design team" });
+    expect(UpdateLinkSchema.parse({ note: null })).toEqual({ note: null });
+    expect(
+      UpdateLinkSchema.safeParse({ note: "x".repeat(10_001) }).success,
     ).toBe(false);
   });
 });

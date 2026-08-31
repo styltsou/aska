@@ -1,0 +1,1 @@
+ALTER TABLE "link_assets" ADD COLUMN "note" text;

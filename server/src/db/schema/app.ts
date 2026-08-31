@@ -308,6 +308,7 @@ export const linkAssets = pgTable(
     organizationId: text("organization_id").notNull(),
     resourceId: integer("resource_id").notNull(),
     originalUrl: text("original_url").notNull(),
+    note: text(),
   },
   (table) => [
     foreignKey({

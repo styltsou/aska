@@ -14,6 +14,7 @@ export type LinkProjectionRow = {
   canonicalUrl: string | null;
   resourceTitle: string | null;
   description: string | null;
+  note: string | null;
   siteName: string | null;
   resourceKind: string;
   resolverKey: string;
@@ -104,6 +105,7 @@ export function projectLinkNode(
     hostname: row.hostname,
     title: row.resourceTitle?.trim() || row.hostname,
     description: row.description,
+    note: row.note,
     siteName: row.siteName,
     resourceKind: row.resourceKind,
     resolutionStatus: row.resolutionStatus,

@@ -19,10 +19,11 @@ import {
 } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
-import type { ColorAsset, ImageAsset, LinkAsset } from "@/types/asset";
+import type { ColorAsset, ImageAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
 import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
 import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
+import { usePersistedYouTubeVideoViewer } from "@/components/board/use-persisted-youtube-video-viewer";
 import {
   makeBoardKey,
   Canvas,
@@ -66,10 +67,16 @@ function CollectionPage() {
   const { viewerImage, openViewer, closeViewer } = usePersistedImageViewer(
     `aska.image-viewer:collection:${workspaceSlug}:${collectionPath}`,
   );
+  const {
+    viewerVideo,
+    openViewer: openVideoViewer,
+    closeViewer: closeVideoViewer,
+  } = usePersistedYouTubeVideoViewer(
+    `aska.youtube-video-viewer:collection:${workspaceSlug}:${collectionPath}`,
+  );
   const [drawerColor, setDrawerColor] = useState<ColorAsset>();
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const [editingColor, setEditingColor] = useState<ColorAsset>();
-  const [viewerVideo, setViewerVideo] = useState<LinkAsset>();
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
     .filter(Boolean);
@@ -346,7 +353,7 @@ function CollectionPage() {
                   onOpenNote={handleOpenNote}
                   onOpenImage={handleOpenImage}
                   onOpenColor={handleOpenColor}
-                  onOpenVideo={setViewerVideo}
+                  onOpenVideo={openVideoViewer}
                   onOpenFolder={handleOpenFolder}
                 />
               </>
@@ -382,7 +389,7 @@ function CollectionPage() {
                 onOpenNote={handleOpenNote}
                 onOpenImage={handleOpenImage}
                 onOpenColor={handleOpenColor}
-                onOpenVideo={setViewerVideo}
+                onOpenVideo={openVideoViewer}
                 onOpenFolder={handleOpenFolder}
               />
             )}
@@ -438,7 +445,8 @@ function CollectionPage() {
       />
       <YouTubeVideoViewer
         asset={viewerVideo}
-        onClose={() => setViewerVideo(undefined)}
+        onClose={closeVideoViewer}
+        workspaceSlug={workspaceSlug}
       />
       {(assets.length > 0 || selectedAssetTypes.length > 0) && (
         <FilterBar

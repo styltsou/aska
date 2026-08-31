@@ -207,6 +207,7 @@ export type CollectionLinkNode = {
   hostname: string;
   title: string;
   description: string | null;
+  note: string | null;
   siteName: string | null;
   resourceKind: string;
   resolutionStatus: LinkResolutionStatus;
@@ -293,6 +294,20 @@ export type UpdatedImage = {
 };
 
 export type UpdateImageResponse = { image: UpdatedImage };
+
+export type UpdateLinkInput = {
+  note: string | null;
+};
+
+export type UpdatedLink = {
+  id: string;
+  type: "link";
+  note: string | null;
+  isFavorite: boolean;
+  updatedAt: string;
+};
+
+export type UpdateLinkResponse = { link: UpdatedLink };
 
 export type ColorGradient = {
   from: string;

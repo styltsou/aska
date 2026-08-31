@@ -17,15 +17,11 @@ import { FilterBar } from "@/components/filter-bar";
 import { MasonryGridSkeleton } from "@/components/masonry-grid-skeleton";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { useSessionStore } from "@/store";
-import type {
-  ColorAsset,
-  ImageAsset,
-  LinkAsset,
-  NoteAsset,
-} from "@/types/asset";
+import type { ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
 import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
 import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
+import { usePersistedYouTubeVideoViewer } from "@/components/board/use-persisted-youtube-video-viewer";
 import { ResourceLoadError } from "@/components/resource-load-error";
 
 export const Route = createFileRoute("/$workspaceSlug/inbox")({
@@ -57,10 +53,16 @@ function InboxPage() {
   const { viewerImage, openViewer, closeViewer } = usePersistedImageViewer(
     `aska.image-viewer:inbox:${workspaceSlug}`,
   );
+  const {
+    viewerVideo,
+    openViewer: openVideoViewer,
+    closeViewer: closeVideoViewer,
+  } = usePersistedYouTubeVideoViewer(
+    `aska.youtube-video-viewer:inbox:${workspaceSlug}`,
+  );
   const [drawerColor, setDrawerColor] = useState<ColorAsset>();
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const [editingColor, setEditingColor] = useState<ColorAsset>();
-  const [viewerVideo, setViewerVideo] = useState<LinkAsset>();
   const { data, isLoading, isFetching, isError, refetch } = useInboxContents(
     workspaceSlug,
     selectedAssetTypes,
@@ -127,7 +129,7 @@ function InboxPage() {
           onOpenNote={handleOpenNote}
           onOpenImage={handleOpenImage}
           onOpenColor={setDrawerColor}
-          onOpenVideo={setViewerVideo}
+          onOpenVideo={openVideoViewer}
           emptyTitle={
             hasResolvedColorSearch || isTypeFilterActive
               ? "No matching assets"
@@ -187,7 +189,8 @@ function InboxPage() {
       />
       <YouTubeVideoViewer
         asset={viewerVideo}
-        onClose={() => setViewerVideo(undefined)}
+        onClose={closeVideoViewer}
+        workspaceSlug={workspaceSlug}
       />
       {(assets.length > 0 || selectedAssetTypes.length > 0) && (
         <FilterBar

@@ -1122,6 +1122,46 @@
         }
       }
     },
+    "/api/v1/workspace/{workspaceSlug}/assets/{assetId}/link": {
+      "patch": {
+        "operationId": "updateLink",
+        "tags": ["Assets"],
+        "summary": "Update link notes",
+        "description": "Replaces the plain-text note stored on an individual link asset.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "description": "Link asset identifier, e.g. `link-17`.",
+            "schema": { "type": "string", "pattern": "^link-\\d+$" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateLinkRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The link note was updated.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UpdateLinkResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/images/uploads": {
       "post": {
         "operationId": "createDirectImageUpload",
@@ -1958,6 +1998,18 @@
           }
         }
       },
+      "UpdateLinkRequest": {
+        "type": "object",
+        "required": ["note"],
+        "properties": {
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 10000,
+            "description": "Complete replacement link note, or null to clear it."
+          }
+        }
+      },
       "CreateLinkRequest": {
         "type": "object",
         "required": ["url"],
@@ -2169,6 +2221,7 @@
           "hostname",
           "title",
           "description",
+          "note",
           "siteName",
           "resourceKind",
           "resolutionStatus",
@@ -2189,6 +2242,7 @@
           "hostname": { "type": "string" },
           "title": { "type": "string" },
           "description": { "type": ["string", "null"] },
+          "note": { "type": ["string", "null"] },
           "siteName": { "type": ["string", "null"] },
           "resourceKind": { "type": "string" },
           "resolutionStatus": {
@@ -2400,6 +2454,30 @@
             "required": ["image"],
             "properties": {
               "image": { "$ref": "#/components/schemas/UpdatedImage" }
+            }
+          }
+        }
+      },
+      "UpdatedLink": {
+        "type": "object",
+        "required": ["id", "type", "note", "isFavorite", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^link-\\d+$" },
+          "type": { "type": "string", "enum": ["link"] },
+          "note": { "type": "string", "nullable": true },
+          "isFavorite": { "type": "boolean" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UpdateLinkResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["link"],
+            "properties": {
+              "link": { "$ref": "#/components/schemas/UpdatedLink" }
             }
           }
         }

@@ -32,6 +32,7 @@ import {
   updateCollectionNodePositions,
   updateNote,
   updateImage,
+  updateLink,
   updateColor,
 } from "./fetchers";
 import { makeMarkdownPreview } from "@/lib/markdown-preview";
@@ -58,6 +59,8 @@ import type {
   UpdateNoteInput,
   UpdatedImage,
   UpdateImageInput,
+  UpdatedLink,
+  UpdateLinkInput,
   UpdatedColor,
   UpdateColorInput,
 } from "./types";
@@ -1468,6 +1471,38 @@ function applyImageDraftToContents(
   };
 }
 
+function applyUpdatedLinkToContents(
+  current: CollectionContentsResponse | undefined,
+  link: UpdatedLink,
+): CollectionContentsResponse | undefined {
+  if (!current) return current;
+
+  return {
+    ...current,
+    nodes: current.nodes.map((node) =>
+      node.type === "link" && node.id === link.id
+        ? { ...node, note: link.note }
+        : node,
+    ),
+  };
+}
+
+function applyLinkDraftToContents(
+  current: CollectionContentsResponse | undefined,
+  draft: UpdateLinkInput & { assetId: string },
+): CollectionContentsResponse | undefined {
+  if (!current) return current;
+
+  return {
+    ...current,
+    nodes: current.nodes.map((node) =>
+      node.type === "link" && node.id === draft.assetId
+        ? { ...node, note: draft.note }
+        : node,
+    ),
+  };
+}
+
 type NoteMentionCacheSnapshot = Array<[readonly unknown[], unknown]>;
 
 const noteMentionQueriesFilter = (workspaceSlug: string) => ({
@@ -1828,6 +1863,44 @@ export function useUpdateImage(workspaceSlug: string) {
       queryClient.setQueriesData<CollectionContentsResponse>(
         contentsFilter,
         (current) => applyUpdatedImageToContents(current, image),
+      );
+    },
+  });
+}
+
+export function useUpdateLink(workspaceSlug: string) {
+  const queryClient = useQueryClient();
+  const contentsFilter = {
+    predicate: ({ queryKey }: { queryKey: readonly unknown[] }) =>
+      (queryKey[0] === "collectionContents" ||
+        queryKey[0] === "inboxContents") &&
+      queryKey[1] === workspaceSlug,
+  };
+
+  return useMutation({
+    mutationFn: ({ assetId, ...data }: UpdateLinkInput & { assetId: string }) =>
+      updateLink(workspaceSlug, assetId, data),
+    onMutate: async (draft) => {
+      await queryClient.cancelQueries(contentsFilter);
+      const previousContents =
+        queryClient.getQueriesData<CollectionContentsResponse>(contentsFilter);
+
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        contentsFilter,
+        (current) => applyLinkDraftToContents(current, draft),
+      );
+
+      return { previousContents };
+    },
+    onError: (_error, _draft, context) => {
+      context?.previousContents.forEach(([queryKey, contents]) => {
+        queryClient.setQueryData(queryKey, contents);
+      });
+    },
+    onSuccess: ({ link }) => {
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        contentsFilter,
+        (current) => applyUpdatedLinkToContents(current, link),
       );
     },
   });

@@ -10,6 +10,7 @@ import {
   updateNote,
   updateColor,
   updateImage,
+  updateLink,
 } from "@/controllers/asset.controller";
 import { factory } from "@/factory";
 
@@ -23,6 +24,7 @@ const assetRoutes = factory
   .patch("/workspace/:workspaceSlug/assets/:assetId/note", ...updateNote)
   .patch("/workspace/:workspaceSlug/assets/:assetId/color", ...updateColor)
   .patch("/workspace/:workspaceSlug/assets/:assetId/image", ...updateImage)
+  .patch("/workspace/:workspaceSlug/assets/:assetId/link", ...updateLink)
   .post("/workspace/:workspaceSlug/images/:assetId/crop", ...cropImage)
   .delete("/workspace/:workspaceSlug/assets/:assetId", ...deleteAsset)
   .get("/workspace/:workspaceSlug/assets/:assetId/download", ...downloadAsset);

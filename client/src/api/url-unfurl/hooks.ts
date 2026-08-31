@@ -32,6 +32,7 @@ export function createOptimisticLink(
     hostname: parsed.hostname,
     title: parsed.hostname,
     description: null,
+    note: null,
     siteName: null,
     resourceKind: "web_page",
     resolutionStatus: "queued",

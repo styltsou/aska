@@ -6,6 +6,7 @@ import {
   CreateColorSchema,
   ImageCropPathParamSchema,
   UpdateImageSchema,
+  UpdateLinkSchema,
   UpdateNoteSchema,
   UpdateColorSchema,
   WorkspaceParamSchema,
@@ -165,6 +166,28 @@ export const updateImage = factory.createHandlers(
       data,
     );
     return c.json(success({ image }));
+  },
+);
+
+export const updateLink = factory.createHandlers(
+  authMiddleware,
+  validate.param(AssetPathParamSchema),
+  validate.body(UpdateLinkSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const link = await assetService.updateLink(
+      workspace.id,
+      userId,
+      assetId,
+      data,
+    );
+    return c.json(success({ link }));
   },
 );
 

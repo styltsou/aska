@@ -51,6 +51,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
       hostname: node.hostname,
       title: node.title,
       description: node.description ?? undefined,
+      note: node.note,
       siteName: node.siteName ?? undefined,
       resourceKind: node.resourceKind,
       resolutionStatus: node.resolutionStatus,

@@ -18,6 +18,7 @@ describe("collectionNodeToAsset", () => {
       hostname: "youtu.be",
       title: "A video",
       description: null,
+      note: "Watch with the design team",
       siteName: "YouTube",
       resourceKind: "video",
       resolutionStatus: "ready",
@@ -31,7 +32,11 @@ describe("collectionNodeToAsset", () => {
       position: null,
     });
 
-    expect(asset).toMatchObject({ type: "link", video });
+    expect(asset).toMatchObject({
+      type: "link",
+      video,
+      note: "Watch with the design team",
+    });
   });
 
   it("keeps a color gradient when converting a collection node for a card", () => {

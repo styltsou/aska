@@ -10,6 +10,7 @@ const baseRow: LinkProjectionRow = {
   canonicalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
   resourceTitle: "A video",
   description: null,
+  note: "Watch with the design team",
   siteName: "YouTube",
   resourceKind: "video",
   resolverKey: "youtube-oembed",
@@ -37,7 +38,21 @@ describe("link projection", () => {
       channelName: "A channel",
       channelUrl: "https://www.youtube.com/@channel",
     });
+    expect(projected.note).toBe("Watch with the design team");
     expect(projected).not.toHaveProperty("providerExtensions");
+  });
+
+  it("keeps notes scoped to the saved link asset", () => {
+    expect(projectLinkNode(baseRow, undefined, null).note).toBe(
+      "Watch with the design team",
+    );
+    expect(
+      projectLinkNode(
+        { ...baseRow, assetId: 8, note: "Review the editing style" },
+        undefined,
+        null,
+      ).note,
+    ).toBe("Review the editing style");
   });
 
   it.each([

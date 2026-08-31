@@ -16,6 +16,7 @@ describe("createOptimisticLink", () => {
       hostname: "example.com",
       title: "example.com",
       resolutionStatus: "queued",
+      note: null,
       previewImage: null,
       favicon: null,
       video: null,
