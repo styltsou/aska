@@ -48,6 +48,7 @@ import {
   OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT,
 } from "@/lib/keybindings";
 import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
+import { formatNoteMetadataDateTime } from "@/lib/note-date-format";
 import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
 import { useWeightedColorImageSearch } from "@/api/color-search";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
@@ -846,13 +847,13 @@ function PeekNote({
                 {note.createdAt ? (
                   <div>
                     <span className="text-muted-foreground">Created at </span>
-                    <span>{formatPeekDate(note.createdAt)}</span>
+                    <span>{formatNoteMetadataDateTime(note.createdAt)}</span>
                   </div>
                 ) : null}
                 {note.updatedAt ? (
                   <div>
-                    <span className="text-muted-foreground">Updated </span>
-                    <span>{formatPeekRelativeTime(note.updatedAt)}</span>
+                    <span className="text-muted-foreground">Edited </span>
+                    <span>{formatNoteMetadataDateTime(note.updatedAt)}</span>
                   </div>
                 ) : null}
               </div>
@@ -912,37 +913,6 @@ function PeekNote({
       </div>
     </>
   );
-}
-
-const PEEK_NOTE_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-});
-const PEEK_NOTE_DATE_WITH_YEAR_FORMAT = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
-
-function formatPeekDate(iso: string) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.getFullYear() === new Date().getFullYear()
-    ? PEEK_NOTE_DATE_FORMAT.format(date)
-    : PEEK_NOTE_DATE_WITH_YEAR_FORMAT.format(date);
-}
-
-function formatPeekRelativeTime(iso: string) {
-  const elapsedMs = Date.now() - new Date(iso).getTime();
-  if (!Number.isFinite(elapsedMs)) return "";
-  if (elapsedMs < 60_000) return "just now";
-  const minutes = Math.floor(elapsedMs / 60_000);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return formatPeekDate(iso);
 }
 
 function PeekColor({
