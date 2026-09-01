@@ -149,14 +149,20 @@ function folderActions() {
   return <ContextMenuItem>Rename folder</ContextMenuItem>;
 }
 
+export function shouldShowLinkPreviewRefresh(asset: LinkAsset): boolean {
+  return (
+    asset.resolutionStatus === "failed" &&
+    asset.failureCategory !== "credentials" &&
+    asset.failureCategory !== "sensitive_query"
+  );
+}
+
 function linkActions(
   asset: LinkAsset,
   onRefresh: () => void,
   onOpenVideo?: (asset: LinkAsset) => void,
 ) {
-  const refreshAllowed =
-    asset.failureCategory !== "credentials" &&
-    asset.failureCategory !== "sensitive_query";
+  const refreshAllowed = shouldShowLinkPreviewRefresh(asset);
   return (
     <>
       {asset.video && onOpenVideo ? (

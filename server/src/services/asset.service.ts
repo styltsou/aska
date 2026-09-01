@@ -494,27 +494,39 @@ export class AssetService implements IAssetService {
     }
 
     const updated = await db.transaction(async (tx) => {
-      const [asset] = await tx
-        .update(assets)
-        .set({
-          updatedByUserId: userId,
-          ...(data.title !== undefined
-            ? { title: normalizeNoteTitle(data.title) }
-            : {}),
-        })
-        .where(
-          and(
-            eq(assets.id, target.entityId),
-            eq(assets.organizationId, orgId),
-            eq(assets.type, "note"),
-          ),
-        )
-        .returning({
-          id: assets.id,
-          title: assets.title,
-          isFavorite: assets.isFavorite,
-          updatedAt: assets.updatedAt,
-        });
+      const assetSelection = {
+        id: assets.id,
+        title: assets.title,
+        isFavorite: assets.isFavorite,
+        updatedAt: assets.updatedAt,
+      };
+      const assetCondition = and(
+        eq(assets.id, target.entityId),
+        eq(assets.organizationId, orgId),
+        eq(assets.type, "note"),
+      );
+      const touchesEditedAt =
+        data.content !== undefined || data.title !== undefined;
+      const asset = touchesEditedAt
+        ? first(
+            await tx
+              .update(assets)
+              .set({
+                updatedByUserId: userId,
+                ...(data.title !== undefined
+                  ? { title: normalizeNoteTitle(data.title) }
+                  : {}),
+              })
+              .where(assetCondition)
+              .returning(assetSelection),
+          )
+        : first(
+            await tx
+              .select(assetSelection)
+              .from(assets)
+              .where(assetCondition)
+              .limit(1),
+          );
 
       if (!asset) {
         throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
@@ -551,17 +563,22 @@ export class AssetService implements IAssetService {
         isExpanded: noteAssets.isExpanded,
         markdown: noteAssets.markdown,
       };
-      const [note] =
+      const note =
         Object.keys(setValues).length > 0
-          ? await tx
-              .update(noteAssets)
-              .set(setValues)
-              .where(eq(noteAssets.assetId, asset.id))
-              .returning(noteSelection)
-          : await tx
-              .select(noteSelection)
-              .from(noteAssets)
-              .where(eq(noteAssets.assetId, asset.id));
+          ? first(
+              await tx
+                .update(noteAssets)
+                .set(setValues)
+                .where(eq(noteAssets.assetId, asset.id))
+                .returning(noteSelection),
+            )
+          : first(
+              await tx
+                .select(noteSelection)
+                .from(noteAssets)
+                .where(eq(noteAssets.assetId, asset.id))
+                .limit(1),
+            );
 
       if (!note) {
         throw new AppError(ErrorCode.NOT_FOUND, "Note not found");

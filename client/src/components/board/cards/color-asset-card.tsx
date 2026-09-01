@@ -82,7 +82,7 @@ export function ColorAssetCard({
           }}
         />
       ) : null}
-      <div className="p-2 pb-0">
+      <div className="p-3">
         <div
           className={cn(
             "group/surface pointer-events-none relative z-10 aspect-square w-full overflow-hidden rounded-sm",
@@ -117,7 +117,7 @@ export function ColorAssetCard({
           </AnimatePresence>
         </div>
       </div>
-      <div className="pointer-events-none relative z-10 flex min-w-0 items-center gap-3 bg-sidebar px-4 py-3">
+      <div className="pointer-events-none relative z-10 flex min-w-0 items-center gap-3 bg-sidebar px-3 pb-3">
         <span
           className={cn(
             "truncate font-medium",

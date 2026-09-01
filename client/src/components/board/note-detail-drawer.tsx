@@ -543,14 +543,38 @@ export function NoteDetailDrawer({
       if (nextColor === noteColor) return;
       setNoteColor(nextColor);
       if (isCreateMode && !activeNote) return;
-      persist(
-        getSaveableNoteContent(draftRef.current) ?? "",
-        false,
-        title,
-        nextColor,
+      if (!noteId || isPending) return;
+
+      mutate(
+        { assetId: noteId, color: nextColor ?? null },
+        {
+          onSuccess: ({ note: updatedNote }) => {
+            if (activeNote && onNoteChange) {
+              onNoteChange({
+                ...activeNote,
+                ...updatedNote,
+                color: updatedNote.color ?? undefined,
+              });
+            }
+          },
+          onError: (error) => {
+            setNoteColor(activeNote?.color);
+            toast.error(
+              getUserFacingApiErrorMessage(error, "Could not save note color."),
+            );
+          },
+        },
       );
     },
-    [activeNote, isCreateMode, noteColor, persist, title],
+    [
+      activeNote,
+      isCreateMode,
+      isPending,
+      mutate,
+      noteColor,
+      noteId,
+      onNoteChange,
+    ],
   );
 
   const promotePeekedNote = useCallback(
@@ -1104,11 +1128,6 @@ export function NoteDetailDrawer({
           </AnimatePresence>
           <div className="flex min-w-0 items-center justify-end gap-2">
             <NoteSaveStatus state={saveState} updatedAt={updatedTimestamp} />
-            <NoteColorControl
-              color={noteColor}
-              disabled={isPending || isCreating}
-              onColorChange={handleColorChange}
-            />
             <NoteHighlightControl
               editorRef={richTextRef}
               color={highlightColor}
@@ -1143,6 +1162,11 @@ export function NoteDetailDrawer({
                 {copied ? "Copied" : "Copy markdown"}
               </TooltipContent>
             </Tooltip>
+            <NoteColorControl
+              color={noteColor}
+              disabled={isPending || isCreating}
+              onColorChange={handleColorChange}
+            />
             {createdLabel || updatedLabel ? (
               <>
                 <HoverCard>
