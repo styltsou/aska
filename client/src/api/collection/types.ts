@@ -3,7 +3,6 @@ export type FolderChildPreview = {
   type: "image" | "note" | "link" | "color";
   url?: string;
   blurDataURL?: string | null;
-  color?: string;
   snippet?: string;
   hostname?: string;
   title?: string | null;
@@ -110,7 +109,6 @@ export type CreateFolderResponse = {
 export type CreateNoteInput = {
   content: string;
   title?: string | null;
-  color?: string;
   parentFolderPath?: string;
   position?: BoardPosition;
 };
@@ -118,7 +116,6 @@ export type CreateNoteInput = {
 export type UpdateNoteInput = {
   content?: string;
   title?: string | null;
-  color?: string | null;
   isExpanded?: boolean;
 };
 
@@ -127,7 +124,6 @@ export type UpdatedNote = {
   type: "note";
   content: string;
   title?: string | null;
-  color: string | null;
   isFavorite: boolean;
   isExpanded: boolean;
   wordCount: number;
@@ -175,7 +171,6 @@ export type CollectionNoteNode = {
   type: "note";
   content: string;
   title?: string | null;
-  color: string | null;
   isFavorite: boolean;
   isExpanded?: boolean;
   wordCount: number;

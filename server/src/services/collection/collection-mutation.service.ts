@@ -192,7 +192,6 @@ export class CollectionMutationService {
       await tx.insert(noteAssets).values({
         assetId: insertedAsset.id,
         markdown,
-        color: data.color,
       });
 
       await tx.insert(collectionNodes).values({
@@ -225,7 +224,6 @@ export class CollectionMutationService {
       type: "note",
       content: note.markdown,
       title: normalizeNoteTitle(data.title),
-      color: data.color ?? null,
       isFavorite: false,
       wordCount,
       readingTimeMinutes,

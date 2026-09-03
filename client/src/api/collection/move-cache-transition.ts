@@ -63,7 +63,6 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
   return {
     assetId: node.id,
     type: "note",
-    color: node.color ?? undefined,
     snippet: makeMarkdownPreview(node.content),
   };
 }

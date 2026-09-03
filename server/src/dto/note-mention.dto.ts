@@ -47,7 +47,6 @@ export type MentionTarget = {
   assetType: MentionType;
   label: string;
   title: string | null;
-  noteColor: string | null;
   hex: string | null;
   gradient: {
     from: string;

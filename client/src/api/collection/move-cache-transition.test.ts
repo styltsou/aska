@@ -22,7 +22,6 @@ const movedNote: Extract<CollectionNode, { type: "note" }> = {
   id: "note-1",
   type: "note",
   content: "Move this note",
-  color: "#f0b",
   isFavorite: false,
   wordCount: 3,
   readingTimeMinutes: 1,

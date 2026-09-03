@@ -223,11 +223,6 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
         selected && "note-mention-chip--selected",
         unavailable && "note-mention-chip--unavailable",
       )}
-      style={
-        assetType === "note" && resolved?.noteColor
-          ? ({ "--mention-tint": resolved.noteColor } as React.CSSProperties)
-          : undefined
-      }
       aria-label={`${unavailable ? "Unavailable reference" : "Open reference"}: ${label}`}
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => onOpen?.({ assetId, assetType }, resolved)}
@@ -266,12 +261,6 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
             sideOffset={8}
             className="w-80 overflow-hidden border-border/60 bg-background/95 p-0 shadow-2xl backdrop-blur-xl"
           >
-            {resolved.noteColor ? (
-              <div
-                className="h-1 w-full"
-                style={{ backgroundColor: resolved.noteColor }}
-              />
-            ) : null}
             <div className="p-3.5">
               <p className="truncate text-sm font-semibold text-foreground">
                 {resolved.label}
@@ -530,14 +519,7 @@ function MentionGroup({
                 }}
               />
             ) : (
-              <span
-                className="flex size-7 items-center justify-center rounded-md bg-muted"
-                style={
-                  item.noteColor
-                    ? { backgroundColor: item.noteColor }
-                    : undefined
-                }
-              >
+              <span className="flex size-7 items-center justify-center rounded-md bg-muted">
                 <FileTextIcon className="size-5 text-foreground/80" />
               </span>
             )}

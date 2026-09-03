@@ -191,7 +191,7 @@ export function WorkspacePeekProvider({
           current?.type === "note" && asset.type === "note"
             ? {
                 type: "note",
-                asset: { ...asset, color: asset.color ?? undefined },
+                asset,
               }
             : current?.type === "color" && asset.type === "color"
               ? { ...current, asset }
@@ -688,7 +688,7 @@ function PeekNote({
           `${identity.assetType}-${identity.assetId}`,
         );
         if (asset.type === "note") {
-          peekNote({ ...asset, color: asset.color ?? undefined });
+          peekNote(asset);
           return;
         }
         peekColor(

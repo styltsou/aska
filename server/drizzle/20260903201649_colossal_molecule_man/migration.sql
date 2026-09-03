@@ -1,0 +1,1 @@
+ALTER TABLE "note_assets" DROP COLUMN "color";

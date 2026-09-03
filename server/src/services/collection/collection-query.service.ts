@@ -147,7 +147,6 @@ export class CollectionQueryService {
         assetId: assets.id,
         assetType: assets.type,
         assetTitle: assets.title,
-        noteColor: noteAssets.color,
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
         noteContent: noteAssets.markdown,
@@ -205,7 +204,6 @@ export class CollectionQueryService {
         preview = {
           assetId: `note-${row.assetId}`,
           type: "note",
-          color: row.noteColor ?? undefined,
           snippet,
         };
       } else if (row.assetType === "link" && row.linkHostname) {
@@ -292,7 +290,6 @@ export class CollectionQueryService {
         imagePaletteStatus: imageAssets.paletteStatus,
         createdAt: collectionNodes.createdAt,
         noteContent: noteAssets.markdown,
-        noteColor: noteAssets.color,
         noteIsExpanded: noteAssets.isExpanded,
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
@@ -391,7 +388,6 @@ export class CollectionQueryService {
           assetType: assets.type,
           assetId: assets.id,
           assetTitle: assets.title,
-          color: noteAssets.color,
           hex: colorAssets.hex,
           content: noteAssets.markdown,
           resourceId: externalResources.id,
@@ -565,7 +561,6 @@ export class CollectionQueryService {
         type: "note" as const,
         content: child.noteContent!,
         title: child.title,
-        color: child.noteColor,
         isFavorite: child.isFavorite ?? false,
         isExpanded: child.noteIsExpanded ?? false,
         wordCount,

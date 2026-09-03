@@ -31,7 +31,6 @@ export interface NoteAsset {
   type: "note";
   content: string;
   title?: string | null;
-  color?: string;
   isFavorite?: boolean;
   isExpanded?: boolean;
   wordCount?: number;
@@ -94,7 +93,6 @@ export interface FolderAssetPreview {
   type: "image" | "note" | "link" | "color";
   url?: string;
   blurDataURL?: string | null;
-  color?: string;
   snippet?: string;
   hostname?: string;
   title?: string | null;

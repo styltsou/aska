@@ -165,7 +165,6 @@ export class AssetService implements IAssetService {
             id: assets.id,
             content: noteAssets.markdown,
             title: assets.title,
-            color: noteAssets.color,
             isFavorite: assets.isFavorite,
             createdAt: assets.createdAt,
             updatedAt: assets.updatedAt,
@@ -187,7 +186,6 @@ export class AssetService implements IAssetService {
         type: "note",
         content: row.content,
         title: row.title,
-        color: row.color,
         isFavorite: row.isFavorite,
         ...calculateNoteMetrics(row.content),
         createdAt: row.createdAt.toISOString(),
@@ -261,7 +259,6 @@ export class AssetService implements IAssetService {
         imageBlurDataURL: imageAssets.blurDataURL,
         imageDominantColors: imageAssets.dominantColors,
         noteContent: noteAssets.markdown,
-        noteColor: noteAssets.color,
         noteIsExpanded: noteAssets.isExpanded,
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
@@ -457,7 +454,6 @@ export class AssetService implements IAssetService {
       await tx.insert(noteAssets).values({
         assetId: insertedAsset.id,
         markdown,
-        color: data.color,
       });
 
       return { ...insertedAsset, markdown };
@@ -472,7 +468,6 @@ export class AssetService implements IAssetService {
       type: "note",
       content: note.markdown,
       title: normalizeNoteTitle(data.title),
-      color: data.color ?? null,
       isFavorite: false,
       wordCount,
       readingTimeMinutes,
@@ -554,12 +549,7 @@ export class AssetService implements IAssetService {
       if (data.isExpanded !== undefined) {
         setValues.isExpanded = data.isExpanded;
       }
-      if (data.color !== undefined) {
-        setValues.color = data.color;
-      }
-
       const noteSelection = {
-        color: noteAssets.color,
         isExpanded: noteAssets.isExpanded,
         markdown: noteAssets.markdown,
       };
@@ -586,7 +576,6 @@ export class AssetService implements IAssetService {
 
       return {
         ...asset,
-        color: note.color,
         isExpanded: note.isExpanded,
         markdown: note.markdown,
       };
@@ -599,7 +588,6 @@ export class AssetService implements IAssetService {
       type: "note",
       content: updated.markdown,
       title: updated.title,
-      color: updated.color,
       isFavorite: updated.isFavorite,
       isExpanded: updated.isExpanded,
       ...metrics,
@@ -943,7 +931,6 @@ export class AssetService implements IAssetService {
       imageBlurDataURL: string | null;
       imageDominantColors: string[] | null;
       noteContent: string | null;
-      noteColor: string | null;
       noteIsExpanded: boolean | null;
       colorHex: string | null;
       colorGradient: StoredColorGradient | null;
@@ -1068,7 +1055,6 @@ export class AssetService implements IAssetService {
         type: "note",
         content,
         title: row.title,
-        color: row.noteColor,
         isFavorite: row.isFavorite,
         isExpanded: row.noteIsExpanded ?? false,
         wordCount,

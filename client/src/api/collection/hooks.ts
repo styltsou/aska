@@ -773,7 +773,6 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         type: "note",
         content: data.content,
         title: data.title?.trim() || null,
-        color: data.color ?? null,
         isFavorite: false,
         ...calculateNoteMetrics(data.content),
         createdAt: new Date().toISOString(),
@@ -812,7 +811,6 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
         type: "note",
         content: variables.content,
         title: variables.title?.trim() || null,
-        color: variables.color ?? null,
         isFavorite: false,
         ...calculateNoteMetrics(variables.content),
         createdAt: new Date().toISOString(),
@@ -914,7 +912,6 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
       const preview: FolderChildPreview = {
         assetId: data.note.id,
         type: "note",
-        color: data.note.color ?? undefined,
         snippet: makeMarkdownPreview(data.note.content),
       };
       addPreviewToCollection(
@@ -1163,7 +1160,6 @@ export function useCreateInboxNote(workspaceSlug: string) {
         type: "note" as const,
         content: variables.content,
         title: variables.title?.trim() || null,
-        color: variables.color ?? null,
         isFavorite: false,
         ...calculateNoteMetrics(variables.content),
         createdAt: new Date().toISOString(),
@@ -1362,7 +1358,6 @@ function applyNoteDraftToContents(
           ...(hasContent
             ? { content: draft.content!, ...metrics, updatedAt }
             : {}),
-          ...(draft.color !== undefined ? { color: draft.color } : {}),
           ...(draft.isExpanded !== undefined
             ? { isExpanded: draft.isExpanded }
             : {}),

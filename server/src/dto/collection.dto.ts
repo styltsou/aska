@@ -23,7 +23,6 @@ export const FolderChildPreviewSchema = z.object({
   type: z.enum(["image", "note", "link", "color"]),
   url: z.string().optional(),
   blurDataURL: z.string().nullable().optional(),
-  color: z.string().optional(),
   hex: z.string().optional(),
   snippet: z.string().optional(),
   hostname: z.string().optional(),
@@ -67,7 +66,6 @@ export const CreateNoteSchema = z
   .object({
     content: z.string().max(NOTE_CONTENT_MAX_LENGTH).default(""),
     title: z.string().max(255).nullable().optional(),
-    color: z.string().max(32).optional(),
     parentFolderPath: z.string().optional(),
     position: BoardPositionSchema.optional(),
   })
@@ -158,7 +156,6 @@ export type UpdatedLink = {
 export const UpdateNoteSchema = z.object({
   content: z.string().max(NOTE_CONTENT_MAX_LENGTH).optional(),
   title: z.string().max(255).nullable().optional(),
-  color: HexColorSchema.nullable().optional(),
   isExpanded: z.boolean().optional(),
 });
 
@@ -169,7 +166,6 @@ export type UpdatedNote = {
   type: "note";
   content: string;
   title: string | null;
-  color: string | null;
   isFavorite: boolean;
   isExpanded: boolean;
   wordCount: number;
@@ -233,7 +229,6 @@ export const CollectionNoteNodeSchema = z.object({
   type: z.literal("note"),
   content: z.string(),
   title: z.string().nullable(),
-  color: z.string().nullable(),
   isFavorite: z.boolean(),
   isExpanded: z.boolean().optional(),
   wordCount: z.number(),

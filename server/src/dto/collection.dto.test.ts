@@ -81,14 +81,6 @@ describe("collection board position DTOs", () => {
     ).toBe(false);
   });
 
-  it("accepts hex note colors and permits clearing a color", () => {
-    expect(UpdateNoteSchema.parse({ color: "#67b7ff" })).toEqual({
-      color: "#67b7ff",
-    });
-    expect(UpdateNoteSchema.parse({ color: null })).toEqual({ color: null });
-    expect(UpdateNoteSchema.safeParse({ color: "sky" }).success).toBe(false);
-  });
-
   it("requires a complete position update", () => {
     expect(
       UpdateNodePositionSchema.safeParse({

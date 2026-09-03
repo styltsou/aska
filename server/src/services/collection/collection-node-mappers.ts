@@ -15,7 +15,6 @@ export type FolderPreviewRow = {
   folderId: number | null;
   assetType: string | null;
   assetId: number | null;
-  color: string | null;
   hex?: string | null;
   content: string | null;
   resourceId?: number | null;
@@ -69,7 +68,6 @@ export function toFolderPreview(
   return {
     assetId: `note-${row.assetId}`,
     type: "note",
-    color: row.color ?? undefined,
     snippet: row.content ? makeSnippet(row.content) : undefined,
   };
 }

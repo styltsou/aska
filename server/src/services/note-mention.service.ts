@@ -47,7 +47,6 @@ type MentionRow = {
   assetType: "image" | "note" | "link" | "color";
   title: string | null;
   updatedAt: Date;
-  noteColor: string | null;
   markdown: string | null;
   hex: string | null;
   gradient: typeof colorAssets.$inferSelect.gradient | null;
@@ -382,7 +381,6 @@ function selectMentionRows(executor: Executor) {
       assetType: assets.type,
       title: assets.title,
       updatedAt: assets.updatedAt,
-      noteColor: noteAssets.color,
       markdown: noteAssets.markdown,
       hex: colorAssets.hex,
       gradient: colorAssets.gradient,
@@ -467,7 +465,6 @@ function toTarget(row: MentionRow): MentionTarget {
     assetType: row.assetType as MentionType,
     label: mentionLabel(row),
     title: row.title,
-    noteColor: row.noteColor,
     hex: row.hex,
     gradient: row.gradient,
     snippet: row.assetType === "note" ? noteSnippet(row.markdown ?? "") : null,

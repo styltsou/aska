@@ -52,7 +52,6 @@ describe("collection node mappers", () => {
           folderId: 1,
           assetType: "image",
           assetId: 7,
-          color: null,
           content: null,
         },
         imageVariants,
@@ -68,7 +67,6 @@ describe("collection node mappers", () => {
           folderId: 1,
           assetType: "note",
           assetId: 8,
-          color: "yellow",
           content: "One\n two",
         },
         imageVariants,
@@ -76,7 +74,6 @@ describe("collection node mappers", () => {
     ).toEqual({
       assetId: "note-8",
       type: "note",
-      color: "yellow",
       snippet: "One\n two",
     });
     expect(
@@ -85,7 +82,6 @@ describe("collection node mappers", () => {
           folderId: 1,
           assetType: "link",
           assetId: 9,
-          color: null,
           content: null,
           hostname: "example.com",
           title: "Example link",
@@ -123,7 +119,6 @@ describe("collection node mappers", () => {
           folderId: 1,
           assetType: "image",
           assetId: 7,
-          color: null,
           content: null,
         },
         imageVariants,

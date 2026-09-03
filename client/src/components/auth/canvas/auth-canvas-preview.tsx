@@ -94,14 +94,12 @@ const COLOUR_NOTE: NoteAsset = {
   type: "note",
   content:
     "### Colour as structure\n\nA saturated mark can do more work than a page of explanation.",
-  color: "#c77c55",
 };
 
 const RHYTHM_NOTE: NoteAsset = {
   id: "auth-rhythm-note",
   type: "note",
   content: "### Rhythm\n\nRepeat the spacing, not the idea.",
-  color: "#b9c7c2",
 };
 
 const EDGE_NOTE: NoteAsset = {
@@ -114,7 +112,6 @@ const LIGHT_NOTE: NoteAsset = {
   id: "auth-light-note",
   type: "note",
   content: "### Light\n\nUse contrast to describe form, not decorate it.",
-  color: "#d9d4c8",
 };
 
 const EDIT_NOTE: NoteAsset = {
@@ -138,7 +135,6 @@ const SURFACE_NOTE: NoteAsset = {
   type: "note",
   content:
     "### Surface\n\nTexture belongs where it helps the eye measure depth.",
-  color: "#b9c7c2",
 };
 
 const PALETTE_NOTE: NoteAsset = {
@@ -153,7 +149,6 @@ const FOCUS_NOTE: NoteAsset = {
   type: "note",
   content:
     "### Focus\n\nThe strongest reference is often the most specific one.",
-  color: "#d9d4c8",
 };
 
 const BALANCE_NOTE: NoteAsset = {
@@ -167,7 +162,6 @@ const DETAIL_NOTE: NoteAsset = {
   type: "note",
   content:
     "### Detail\n\nA small material change can carry the whole composition.",
-  color: "#c77c55",
 };
 
 const INDEX_STUDY: ImageAsset = {
@@ -201,7 +195,6 @@ const PAUSE_NOTE: NoteAsset = {
   id: "auth-pause-note",
   type: "note",
   content: "### Pause\n\nMake room for the next useful connection.",
-  color: "#b9c7c2",
 };
 
 const REFERENCE_PREVIEW_URLS = [
@@ -242,7 +235,6 @@ const REFERENCES_FOLDER: FolderAsset = {
     {
       assetId: "auth-references-folder-note-preview",
       type: "note",
-      color: "#c77c55",
       snippet: "Reference set\n\nA small selection for the next pass.",
     },
     {
@@ -277,7 +269,6 @@ const MATERIALS_FOLDER: FolderAsset = {
     {
       assetId: "auth-materials-folder-note-preview",
       type: "note",
-      color: "#b9c7c2",
       snippet: "Surface samples\n\nColour, grain, and edge quality.",
     },
   ],

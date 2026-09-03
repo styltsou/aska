@@ -5,7 +5,6 @@ export type NoteMentionTarget = {
   assetType: NoteMentionType;
   label: string;
   title: string | null;
-  noteColor: string | null;
   hex: string | null;
   gradient: {
     from: string;

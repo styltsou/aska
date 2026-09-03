@@ -345,7 +345,6 @@ export function NoteAssetCard({
   isContextMenuOpen?: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const surfaceRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const initialHeightAppliedRef = useRef(false);
   const [hasOverflow, setHasOverflow] = useState(false);
@@ -370,14 +369,13 @@ export function NoteAssetCard({
 
   const updateOverflow = useCallback(() => {
     const card = cardRef.current;
-    const surface = surfaceRef.current;
     const content = contentRef.current;
 
-    if (!card || !surface || !content) {
+    if (!card || !content) {
       return;
     }
 
-    const cardStyles = getComputedStyle(surface);
+    const cardStyles = getComputedStyle(card);
     const verticalPadding =
       Number.parseFloat(cardStyles.paddingTop) +
       Number.parseFloat(cardStyles.paddingBottom);
@@ -391,7 +389,6 @@ export function NoteAssetCard({
       controlSpace +
       verticalPadding +
       borderHeight +
-      (asset.color ? 12 : 0) +
       (hasOverflow ? EXPANDED_BOTTOM_GUTTER : 0);
     const collapsedHeight = Math.min(expandedHeight, CARD_MAX_HEIGHT);
 
@@ -413,7 +410,7 @@ export function NoteAssetCard({
         ? current
         : { collapsed: collapsedHeight, expanded: expandedHeight },
     );
-  }, [asset.color, hasOverflow, isExpanded]);
+  }, [hasOverflow, isExpanded]);
 
   useLayoutEffect(() => {
     updateOverflow();
@@ -453,8 +450,7 @@ export function NoteAssetCard({
         },
       }}
       className={cn(
-        "group hover:border-sidebar-foreground/20 relative min-w-0 overflow-hidden rounded-lg border text-sm transition-[border-color,background-color,filter,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        !asset.color && "bg-sidebar",
+        "group hover:border-sidebar-foreground/20 relative min-w-0 overflow-hidden rounded-lg border bg-sidebar px-4 py-2.5 text-sm transition-[border-color,background-color,filter,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
         !cardHeights && !isExpanded && "max-h-80",
         effectiveOnOpen && "cursor-pointer",
         isContextMenuOpen && "border-sidebar-foreground/20",
@@ -479,15 +475,8 @@ export function NoteAssetCard({
         effectiveOnOpen();
       }}
       onMouseEnter={() => setIsPillDismissed(false)}
-      style={asset.color ? { backgroundColor: asset.color } : undefined}
     >
-      <div
-        ref={surfaceRef}
-        className={cn(
-          "relative min-w-0 rounded-lg bg-sidebar px-4 py-2.5",
-          asset.color && "mt-3 border border-sidebar-foreground/10",
-        )}
-      >
+      <div className="relative min-w-0">
         <div
           ref={contentRef}
           className={cn(

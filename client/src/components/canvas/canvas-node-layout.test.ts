@@ -16,7 +16,6 @@ const note: CollectionNode = {
   id: "note-1",
   type: "note",
   content: "Reference",
-  color: null,
   isFavorite: false,
   wordCount: 1,
   readingTimeMinutes: 1,

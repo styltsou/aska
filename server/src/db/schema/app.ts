@@ -589,7 +589,6 @@ export const noteAssets = pgTable("note_assets", {
     .primaryKey()
     .references(() => assets.id, { onDelete: "cascade" }),
   markdown: text().notNull(),
-  color: varchar({ length: 32 }),
   isExpanded: boolean("is_expanded").notNull().default(false),
 });
 

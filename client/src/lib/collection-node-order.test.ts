@@ -9,7 +9,6 @@ function node(id: string, createdAt: string): CollectionNode {
     id,
     type: "note",
     content: id,
-    color: null,
     isFavorite: false,
     wordCount: 1,
     readingTimeMinutes: 1,

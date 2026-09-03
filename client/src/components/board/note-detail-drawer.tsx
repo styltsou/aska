@@ -34,7 +34,6 @@ import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
 import { NoteEditorLoading } from "@/components/board/note-editor-loading";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
-import { NoteColorControl } from "@/components/board/note-color-control";
 import { NoteBacklinks } from "@/components/board/note-backlinks";
 import { NoteSaveStatus } from "@/components/board/note-save-status";
 import { NoteTitleField } from "@/components/board/note-title-field";
@@ -168,7 +167,6 @@ export function NoteDetailDrawer({
   const copiedResetTimeoutRef = useRef<number | undefined>(undefined);
   const [draft, setDraft] = useState(note?.content ?? "");
   const [title, setTitle] = useState(note?.title ?? "");
-  const [noteColor, setNoteColor] = useState(note?.color);
   const [createdNote, setCreatedNote] = useState<NoteAsset>();
   const [workspaceOpen, setWorkspaceOpen] = useState(
     note !== undefined || Boolean(createOptions?.open),
@@ -181,8 +179,6 @@ export function NoteDetailDrawer({
   const [extractionFeedback, setExtractionFeedback] =
     useState<ExtractionFeedback>();
   const activeNote = createdNote ?? note;
-  const activeNoteColorRef = useRef(activeNote?.color);
-  activeNoteColorRef.current = activeNote?.color;
   const isPeekMirror =
     peekTarget?.type === "note" && peekTarget.asset.id === activeNote?.id;
   useEffect(() => {
@@ -356,7 +352,6 @@ export function NoteDetailDrawer({
     draftRef.current = nextDraft;
     setDraft(nextDraft);
     setTitle(recoveredDraft?.title ?? activeNote?.title ?? "");
-    setNoteColor(activeNoteColorRef.current);
     setSaveState(
       recoveredDraft &&
         (recoveredDraft.content !== noteContent ||
@@ -381,7 +376,7 @@ export function NoteDetailDrawer({
   }, [draft, noteContent, noteId]);
 
   const create = useCallback(
-    (content: string, nextTitle = title, nextColor = noteColor) => {
+    (content: string, nextTitle = title) => {
       if (!isCreateMode || activeNote || isCreating) return;
       if (isNoteContentTooLong(content)) {
         failedContentRef.current = content;
@@ -412,7 +407,7 @@ export function NoteDetailDrawer({
 
       if (createOptions.target === "inbox") {
         createInboxNote.mutate(
-          { content, title: nextTitle, color: nextColor },
+          { content, title: nextTitle },
           { onSuccess, onError },
         );
       } else {
@@ -422,7 +417,6 @@ export function NoteDetailDrawer({
             title: nextTitle,
             parentFolderPath,
             placement: createOptions.placement,
-            color: nextColor,
           },
           { onSuccess, onError },
         );
@@ -437,19 +431,13 @@ export function NoteDetailDrawer({
       createOptions?.target,
       isCreateMode,
       isCreating,
-      noteColor,
       parentFolderPath,
       title,
     ],
   );
 
   const persist = useCallback(
-    (
-      content: string,
-      closeAfterSave = false,
-      nextTitle = title,
-      nextColor = noteColor,
-    ) => {
+    (content: string, closeAfterSave = false, nextTitle = title) => {
       if (!noteId) return;
 
       if (isNoteContentTooLong(content)) {
@@ -462,8 +450,7 @@ export function NoteDetailDrawer({
 
       if (
         content === noteContent &&
-        (nextTitle.trim() || null) === (activeNote?.title ?? null) &&
-        nextColor === activeNote?.color
+        (nextTitle.trim() || null) === (activeNote?.title ?? null)
       ) {
         if (draftRef.current === content) {
           draftRef.current = content;
@@ -484,9 +471,6 @@ export function NoteDetailDrawer({
           assetId: noteId,
           content,
           title: nextTitle.trim() || null,
-          ...(nextColor !== activeNote?.color
-            ? { color: nextColor ?? null }
-            : {}),
         },
         {
           onSuccess: ({ note: updatedNote }) => {
@@ -495,7 +479,6 @@ export function NoteDetailDrawer({
               onNoteChange({
                 ...activeNote,
                 ...updatedNote,
-                color: updatedNote.color ?? undefined,
               });
             }
             if (draftRef.current === content) {
@@ -530,50 +513,10 @@ export function NoteDetailDrawer({
       isPending,
       mutate,
       activeNote,
-      noteColor,
       noteContent,
       noteId,
       onNoteChange,
       title,
-    ],
-  );
-
-  const handleColorChange = useCallback(
-    (nextColor?: string) => {
-      if (nextColor === noteColor) return;
-      setNoteColor(nextColor);
-      if (isCreateMode && !activeNote) return;
-      if (!noteId || isPending) return;
-
-      mutate(
-        { assetId: noteId, color: nextColor ?? null },
-        {
-          onSuccess: ({ note: updatedNote }) => {
-            if (activeNote && onNoteChange) {
-              onNoteChange({
-                ...activeNote,
-                ...updatedNote,
-                color: updatedNote.color ?? undefined,
-              });
-            }
-          },
-          onError: (error) => {
-            setNoteColor(activeNote?.color);
-            toast.error(
-              getUserFacingApiErrorMessage(error, "Could not save note color."),
-            );
-          },
-        },
-      );
-    },
-    [
-      activeNote,
-      isCreateMode,
-      isPending,
-      mutate,
-      noteColor,
-      noteId,
-      onNoteChange,
     ],
   );
 
@@ -613,7 +556,6 @@ export function NoteDetailDrawer({
           currentMainNote = {
             ...activeNote,
             ...updatedNote,
-            color: updatedNote.color ?? undefined,
           };
           onNoteChange?.(currentMainNote);
           clearEditDraft(activeNote.id);
@@ -648,9 +590,8 @@ export function NoteDetailDrawer({
       try {
         const { asset } = await fetchPeekableAsset(workspaceSlug, assetId);
         if (asset.type !== "note") return;
-        const noteAsset = { ...asset, color: asset.color ?? undefined };
-        if (isMobile) await promotePeekedNote(noteAsset);
-        else peekNote(noteAsset);
+        if (isMobile) await promotePeekedNote(asset);
+        else peekNote(asset);
       } catch (error) {
         toast.error(
           getUserFacingApiErrorMessage(error, "Could not open this reference."),
@@ -671,9 +612,8 @@ export function NoteDetailDrawer({
           `${identity.assetType}-${identity.assetId}`,
         );
         if (asset.type === "note") {
-          const noteAsset = { ...asset, color: asset.color ?? undefined };
-          if (isMobile) await promotePeekedNote(noteAsset);
-          else peekNote(noteAsset);
+          if (isMobile) await promotePeekedNote(asset);
+          else peekNote(asset);
           return;
         }
         if (isMobile) {
@@ -749,7 +689,6 @@ export function NoteDetailDrawer({
         currentMainNote = {
           ...activeNote,
           ...updatedNote,
-          color: updatedNote.color ?? undefined,
         };
         onNoteChange?.(currentMainNote);
         clearEditDraft(activeNote.id);
@@ -1162,11 +1101,6 @@ export function NoteDetailDrawer({
                 {copied ? "Copied" : "Copy markdown"}
               </TooltipContent>
             </Tooltip>
-            <NoteColorControl
-              color={noteColor}
-              disabled={isPending || isCreating}
-              onColorChange={handleColorChange}
-            />
             {createdLabel || updatedLabel ? (
               <>
                 <HoverCard>
