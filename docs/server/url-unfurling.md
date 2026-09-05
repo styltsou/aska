@@ -123,8 +123,13 @@ generic resolution after provider failure, rate limiting, or unsupported
 content. Earlier values and media roles win; generic resolution fills only
 fields and roles the specialized resolver did not provide.
 
-The generic resolver in `generic-resolver.ts` retrieves at most 1 MiB of HTML
-without executing JavaScript. `html-metadata.ts` applies per-field precedence:
+The generic resolver in `generic-resolver.ts` retrieves only the HTML head,
+bounded to at most 1 MiB, without executing JavaScript. Once a complete closing
+`</head>` tag is received, the resolver terminates the response stream rather
+than downloading the page body. The full document may therefore advertise a
+larger `Content-Length`; malformed pages whose head alone exceeds the limit are
+still rejected. Other `safeFetch` callers retain strict full-body limits.
+`html-metadata.ts` applies per-field precedence:
 
 1. Open Graph;
 2. Twitter Card;
@@ -175,7 +180,9 @@ All external HTML and media retrieval uses
 - redirects are resolved and revalidated one at a time, with a limit of five;
 - connection/request and total deadlines are enforced;
 - `Accept-Encoding: identity` avoids compressed-body expansion attacks;
-- declared and streamed byte limits are both enforced;
+- declared and streamed byte limits are both enforced for full-body reads;
+- metadata-only HTML reads enforce their byte limit on the retained head and
+  deliberately leave the page body unread;
 - allowlisted content types are required before parsing;
 - response bodies, headers, query strings, credentials, and discovered URLs
   are not written to application logs.

@@ -18,6 +18,9 @@ export class GenericHtmlResolver implements UrlResolver {
       allowedContentTypes: ["text/html", "application/xhtml+xml"],
       maxBytes: MAX_HTML_BYTES,
       totalTimeoutMs: 10_000,
+      // Link metadata belongs in <head>. Stopping there lets us handle modern
+      // body-heavy pages without raising the security and memory budget.
+      bodyMode: "html-head",
     });
     const finalUrl = new URL(response.finalUrl);
     const metadata = parseHtmlMetadata(

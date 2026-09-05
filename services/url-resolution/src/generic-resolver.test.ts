@@ -30,6 +30,13 @@ describe("generic HTML resolver", () => {
       new URL("https://example.com/article"),
     );
 
+    expect(safeFetchMock).toHaveBeenCalledWith(
+      new URL("https://example.com/article"),
+      expect.objectContaining({
+        maxBytes: 1024 * 1024,
+        bodyMode: "html-head",
+      }),
+    );
     expect(result.title).toBe("Resolved title");
     expect(result.media).toEqual([
       {

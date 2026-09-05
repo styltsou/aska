@@ -1,10 +1,13 @@
 import dns from "node:dns/promises";
+import { Readable } from "node:stream";
+import type http from "node:http";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   createPinnedLookup,
   isPublicAddress,
+  readBoundedBody,
   safeFetch,
   validateNetworkUrl,
 } from "./safe-fetch";
@@ -85,5 +88,73 @@ describe("safe remote fetch address policy", () => {
         totalTimeoutMs: 1_000,
       }),
     ).rejects.toMatchObject({ category: "unsafe_url", retryable: false });
+  });
+});
+
+describe("bounded response bodies", () => {
+  const signal = new AbortController().signal;
+  const response = (...chunks: string[]) =>
+    Readable.from(
+      chunks.map((chunk) => Buffer.from(chunk)),
+    ) as http.IncomingMessage;
+
+  it("returns only a complete HTML head and ignores the remaining body", async () => {
+    const stream = response(
+      "<html><head><title>Useful metadata</title>",
+      "</he",
+      "ad><body>",
+      "x".repeat(2_000),
+      "</body></html>",
+    );
+
+    await expect(
+      readBoundedBody(stream, 1_024, signal, "html-head"),
+    ).resolves.toEqual(
+      Buffer.from("<html><head><title>Useful metadata</title></head>"),
+    );
+  });
+
+  it("recognizes mixed-case closing tags with HTML whitespace", async () => {
+    await expect(
+      readBoundedBody(
+        response("<HTML><HEAD><title>Title</title></HeAd \n><body>ignored"),
+        1_024,
+        signal,
+        "html-head",
+      ),
+    ).resolves.toEqual(
+      Buffer.from("<HTML><HEAD><title>Title</title></HeAd \n>"),
+    );
+  });
+
+  it("keeps small malformed or headless documents compatible", async () => {
+    const document = "<meta name=description content=test><body>content</body>";
+
+    await expect(
+      readBoundedBody(response(document), 1_024, signal, "html-head"),
+    ).resolves.toEqual(Buffer.from(document));
+  });
+
+  it("rejects an HTML head that exceeds its byte budget", async () => {
+    await expect(
+      readBoundedBody(
+        response(`<head>${"x".repeat(1_024)}</head>`),
+        256,
+        signal,
+        "html-head",
+      ),
+    ).rejects.toMatchObject({
+      category: "response_too_large",
+      retryable: false,
+    });
+  });
+
+  it("retains strict full-body limits for existing callers", async () => {
+    await expect(
+      readBoundedBody(response("x".repeat(257)), 256, signal),
+    ).rejects.toMatchObject({
+      category: "response_too_large",
+      retryable: false,
+    });
   });
 });

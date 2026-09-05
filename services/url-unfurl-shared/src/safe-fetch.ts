@@ -38,6 +38,13 @@ export type SafeFetchOptions = {
   totalTimeoutMs: number;
   requestTimeoutMs?: number;
   userAgent?: string;
+  /**
+   * `full` protects callers that need the complete resource. `html-head` is an
+   * explicit metadata-only mode: it returns through `</head>` and leaves the
+   * potentially much larger page body unread. In both modes, `maxBytes` is a
+   * hard cap on the bytes retained by this process.
+   */
+  bodyMode?: "full" | "html-head";
 };
 
 export type SafeFetchResult = {
@@ -111,6 +118,7 @@ export async function safeFetch(
         response.stream,
         options.maxBytes,
         controller.signal,
+        options.bodyMode,
       );
       if (body.byteLength === 0)
         throw new SafeFetchError(
@@ -246,7 +254,13 @@ async function requestPinned(
       (response) => {
         const status = response.statusCode ?? 0;
         const contentLength = Number(response.headers["content-length"] ?? 0);
-        if (contentLength > options.maxBytes) {
+        // A page may declare a large full-document size while its metadata
+        // head is small. Head-only callers enforce maxBytes while streaming,
+        // so the unread body must not cause a preflight rejection.
+        if (
+          (options.bodyMode ?? "full") === "full" &&
+          contentLength > options.maxBytes
+        ) {
           response.destroy();
           reject(
             new SafeFetchError(
@@ -282,10 +296,12 @@ async function requestPinned(
   });
 }
 
-async function readBoundedBody(
+/** @internal Exported so the byte-boundary behavior can be tested directly. */
+export async function readBoundedBody(
   stream: http.IncomingMessage,
   maxBytes: number,
   signal: AbortSignal,
+  bodyMode: SafeFetchOptions["bodyMode"] = "full",
 ): Promise<Uint8Array> {
   const chunks: Buffer[] = [];
   let total = 0;
@@ -293,8 +309,25 @@ async function readBoundedBody(
     if (signal.aborted)
       throw new SafeFetchError("timeout", "Remote request timed out", true);
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    total += bytes.length;
-    if (total > maxBytes) {
+    const remaining = maxBytes - total;
+    const retained = bytes.subarray(0, Math.max(remaining, 0));
+    if (retained.length > 0) {
+      chunks.push(retained);
+      total += retained.length;
+    }
+
+    if (bodyMode === "html-head") {
+      const body = Buffer.concat(chunks, total);
+      const headEnd = findHtmlHeadEnd(body);
+      if (headEnd !== undefined) {
+        // Destroying the response here is intentional: metadata is complete,
+        // and consuming the body would waste bandwidth and defeat the cap.
+        stream.destroy();
+        return body.subarray(0, headEnd);
+      }
+    }
+
+    if (bytes.length > remaining) {
       stream.destroy();
       throw new SafeFetchError(
         "response_too_large",
@@ -302,9 +335,18 @@ async function readBoundedBody(
         false,
       );
     }
-    chunks.push(bytes);
   }
   return Buffer.concat(chunks, total);
+}
+
+/**
+ * HTML tag names and their delimiters are ASCII even when the document text
+ * uses another encoding. latin1 preserves a one-character-per-byte mapping,
+ * which lets the returned offset safely slice the original Buffer.
+ */
+function findHtmlHeadEnd(body: Buffer): number | undefined {
+  const match = /<\/head[\t\n\f\r ]*>/i.exec(body.toString("latin1"));
+  return match ? match.index + match[0].length : undefined;
 }
 
 function normalizeContentType(
