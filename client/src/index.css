@@ -933,10 +933,31 @@
   }
 }
 
+.link-preview-shimmer {
+  background: linear-gradient(
+    110deg,
+    var(--muted) 18%,
+    color-mix(in oklch, var(--muted) 88%, var(--foreground)) 46%,
+    var(--muted) 74%
+  );
+  background-size: 220% 100%;
+  animation: link-preview-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes link-preview-shimmer {
+  to {
+    background-position: -120% 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .note-editor-loading-label {
     background: none;
     color: var(--muted-foreground);
+    animation: none;
+  }
+
+  .link-preview-shimmer {
     animation: none;
   }
 }

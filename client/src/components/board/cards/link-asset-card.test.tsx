@@ -33,7 +33,7 @@ describe("LinkAssetCard", () => {
     expect(html).toContain('aria-label="Open video details: A video"');
     expect(html).toContain('aria-label="Open on YouTube in a new tab"');
     expect(html).toContain("aspect-video w-full");
-    expect(html).not.toContain("aspect-square w-full");
+    expect(html).not.toContain("aspect-square");
     expect(html).toContain("bg-sidebar");
     expect(html).toContain('class="min-h-0 p-3"');
     expect(html).toContain("space-y-1 bg-sidebar px-3 pb-3");
@@ -48,7 +48,9 @@ describe("LinkAssetCard", () => {
       <LinkAssetCard
         asset={{
           ...asset,
+          originalUrl: "https://example.com/article",
           video: undefined,
+          hostname: "example.com",
           previewImage: {
             url: "https://example.com/preview.jpg",
             width: 1200,
@@ -58,9 +60,10 @@ describe("LinkAssetCard", () => {
       />,
     );
 
-    expect(html.startsWith(`<a href="${asset.originalUrl}"`)).toBe(true);
+    expect(html.startsWith('<a href="https://example.com/article"')).toBe(true);
     expect(html).not.toContain("Open video details");
-    expect(html).toContain("aspect-square");
+    expect(html).toContain("group relative block w-full");
+    expect(html).toContain("aspect-video w-full");
     expect(html).toContain("bg-sidebar");
     expect(html).toContain("group-hover:scale-[1.05]");
     expect(html).toContain("!transition-all duration-150 ease-out");
@@ -71,7 +74,7 @@ describe("LinkAssetCard", () => {
     );
   });
 
-  it("uses a hostname placeholder until an OG image has loaded", () => {
+  it("uses a 16:9 shimmer placeholder while a generic preview resolves", () => {
     const html = renderToStaticMarkup(
       <LinkAssetCard
         asset={{
@@ -83,9 +86,22 @@ describe("LinkAssetCard", () => {
       />,
     );
 
-    expect(html).toContain("example.com");
-    expect(html).toContain("Finding preview…");
+    expect(html).toContain("aspect-video w-full");
     expect(html).toContain('data-slot="optimistic-link-preview"');
+    expect(html).toContain("link-preview-shimmer");
+    expect(html).not.toContain("Resolving");
+  });
+
+  it("reserves a 16:9 frame for a pending YouTube URL before it resolves", () => {
+    const html = renderToStaticMarkup(
+      <LinkAssetCard
+        asset={{ ...asset, video: undefined, resolutionStatus: "queued" }}
+      />,
+    );
+
+    expect(html).toContain("aspect-video w-full");
+    expect(html).toContain("link-preview-shimmer");
+    expect(html).not.toContain("group-hover:scale-[1.05]");
   });
 
   it("offers preview refresh only after an unfurl failure", () => {

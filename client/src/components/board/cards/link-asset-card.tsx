@@ -1,14 +1,10 @@
-import {
-  ExternalLinkIcon,
-  Globe2Icon,
-  LoaderCircleIcon,
-  PlayIcon,
-} from "lucide-react";
+import { ExternalLinkIcon, Globe2Icon, PlayIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { hasSelectionModifier } from "@/lib/selection";
+import { isYouTubeVideoUrl } from "@/lib/youtube-url";
 import { cn } from "@/lib/utils";
 import type { LinkAsset } from "@/types/asset";
 
@@ -22,28 +18,20 @@ export function LinkAssetCard({
   isContextMenuOpen?: boolean;
 }) {
   const [loadedPreviewUrl, setLoadedPreviewUrl] = useState<string | null>(null);
-  const active =
-    asset.resolutionStatus === "queued" ||
-    asset.resolutionStatus === "resolving";
-  const isYoutube = asset.video?.provider === "youtube";
+  const isYoutube =
+    asset.video?.provider === "youtube" || isYouTubeVideoUrl(asset.originalUrl);
 
   const previewLoaded = loadedPreviewUrl === asset.previewImage?.url;
 
   const className = cn(
-    "group relative grid w-full grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-lg border bg-sidebar text-left text-sidebar-foreground transition-colors hover:border-sidebar-foreground/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
-    !isYoutube && "aspect-square",
+    "group relative block w-full overflow-hidden rounded-lg border bg-sidebar text-left text-sidebar-foreground transition-colors hover:border-sidebar-foreground/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
     onOpen && "cursor-pointer",
     isContextMenuOpen && "border-sidebar-foreground/20",
   );
   const contents = (
     <>
       <div className="min-h-0 p-3">
-        <div
-          className={cn(
-            "relative min-h-0 overflow-hidden rounded-sm bg-muted/40",
-            isYoutube ? "aspect-video w-full" : "size-full",
-          )}
-        >
+        <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-muted/40">
           {asset.previewImage ? (
             <ProgressiveImage
               src={asset.previewImage.url}
@@ -62,34 +50,16 @@ export function LinkAssetCard({
           <AnimatePresence initial={false}>
             {(!asset.previewImage || !previewLoaded) && (
               <motion.div
-                key="optimistic-preview"
+                key="link-preview-placeholder"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
                 data-slot="optimistic-link-preview"
-                className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[radial-gradient(circle_at_top_left,var(--color-muted),transparent_70%)] p-4 text-center"
-              >
-                <span className="flex size-11 items-center justify-center rounded-lg bg-sidebar/70 text-sidebar-foreground/50 shadow-sm ring-1 ring-sidebar-foreground/10 backdrop-blur-sm">
-                  <Globe2Icon className="size-5" />
-                </span>
-                <span className="max-w-full truncate text-xs font-medium text-sidebar-foreground/70">
-                  {asset.hostname}
-                </span>
-                {active ? (
-                  <span className="text-[10px] text-sidebar-foreground/45">
-                    Finding preview…
-                  </span>
-                ) : null}
-              </motion.div>
+                className="link-preview-shimmer pointer-events-none absolute inset-0 z-10"
+              />
             )}
           </AnimatePresence>
-          {active ? (
-            <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-background/85 px-2 py-1 text-[10px] font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
-              <LoaderCircleIcon className="size-3 animate-spin" />
-              Resolving
-            </div>
-          ) : null}
           {onOpen ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <span className="flex size-11 items-center justify-center rounded-full border border-border/70 bg-popover/85 text-popover-foreground shadow-lg ring-1 ring-border/30 backdrop-blur-sm transition-[background-color,transform] duration-150 group-hover:scale-105 group-hover:bg-popover motion-reduce:transition-none">
