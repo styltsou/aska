@@ -68,8 +68,8 @@ export function NoteHighlightControl({
                   variant="ghost"
                   size="default"
                   className={cn(
-                    "relative h-8 rounded-lg p-0 text-muted-foreground transition-[width,margin-left,background-color,color] duration-150 ease-out hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground",
-                    isMarkerActive ? "-ml-5 w-13" : "w-8",
+                    "relative h-8 rounded-lg p-0 text-muted-foreground transition-[width,background-color,color] duration-150 ease-out hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground",
+                    isMarkerActive ? "w-13" : "w-8",
                     isHighlighting && "bg-secondary text-foreground",
                   )}
                   aria-label={
@@ -80,22 +80,24 @@ export function NoteHighlightControl({
                   aria-pressed={isHighlighting}
                   onMouseDown={(event) => event.preventDefault()}
                 >
-                  <AnimatePresence initial={false}>
-                    {isMarkerActive ? (
-                      <motion.span
-                        initial={{ opacity: 0, scale: 0.65, x: -3 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.65, x: -19 }}
-                        transition={{ duration: 0.15, ease: "easeOut" }}
-                        className="absolute left-2 size-4 rounded-[3px]"
-                        style={{
-                          backgroundColor: `var(--note-highlight-${color})`,
-                        }}
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                  </AnimatePresence>
-                  <HighlighterIcon className="absolute right-2 size-4" />
+                  <span className="absolute inset-y-0 right-2 flex items-center gap-1">
+                    <AnimatePresence initial={false}>
+                      {isMarkerActive ? (
+                        <motion.span
+                          initial={{ opacity: 0, scale: 0.65, x: -3 }}
+                          animate={{ opacity: 1, scale: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.65, x: -19 }}
+                          transition={{ duration: 0.15, ease: "easeOut" }}
+                          className="size-4 shrink-0 rounded-[3px]"
+                          style={{
+                            backgroundColor: `var(--note-highlight-${color})`,
+                          }}
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                    </AnimatePresence>
+                    <HighlighterIcon className="size-4" />
+                  </span>
                 </Button>
               }
             />
