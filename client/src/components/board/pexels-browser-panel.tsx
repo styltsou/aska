@@ -16,7 +16,6 @@ import {
   CheckIcon,
   ImagesIcon,
   ImportIcon,
-  PanelRightCloseIcon,
   RefreshCwIcon,
   SearchIcon,
   SearchXIcon,
@@ -587,24 +586,19 @@ export function PexelsBrowserPanel({
               />
             </div>
             <div className="relative flex size-full flex-col overflow-hidden rounded-xl">
-              <div
-                className={cn(
-                  GLASS_FRAME_CLASS,
-                  "flex h-12 shrink-0 items-center gap-2 rounded-t-xl rounded-b-none p-2 ring-0",
-                )}
-              >
+              <div className="relative z-20 flex h-12 shrink-0 items-center gap-2 rounded-t-xl rounded-b-none bg-card p-2 ring-0">
                 <Tooltip>
                   <TooltipTrigger
                     render={
                       <Button
                         aria-label="Close Pexels browser"
-                        className="shrink-0"
+                        className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
                         size="icon"
                         type="button"
                         variant="ghost"
                         onClick={() => setSavedOpen(scope, false)}
                       >
-                        <PanelRightCloseIcon />
+                        <XIcon className="size-4" />
                         <span className="sr-only">Close Pexels browser</span>
                       </Button>
                     }

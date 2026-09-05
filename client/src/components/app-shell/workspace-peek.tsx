@@ -948,7 +948,7 @@ function PeekColor({
       .catch(() => toast.error("Unable to copy color."));
   const results = search.data?.results ?? [];
   return (
-    <div className="note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto">
+    <div className="note-workspace-scroll-container relative z-10 min-h-0 flex-1 overflow-y-auto rounded-t-xl border-t border-foreground/10 bg-background">
       <div className="mx-auto w-full max-w-4xl px-8 pt-16 pb-8">
         <div
           className="h-52 rounded-xl ring-1 ring-black/8"
