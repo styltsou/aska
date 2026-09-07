@@ -241,7 +241,7 @@ export function FilterBar({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="text-muted-foreground transition-all duration-100 hover:bg-foreground/5 hover:text-foreground active:scale-95 data-popup-open:bg-foreground/5 data-popup-open:text-foreground"
+                              className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground data-popup-open:bg-foreground/5 data-popup-open:text-foreground"
                               aria-label="Pick a custom color"
                             />
                           }
@@ -284,7 +284,7 @@ export function FilterBar({
                           </div>
                         </PopoverContent>
                       </Popover>
-                      <ButtonGroupSeparator className="bg-border/60 data-vertical:my-0" />
+                      <ButtonGroupSeparator className="data-vertical:my-0" />
                       <div className="flex h-8 items-center gap-2 px-2">
                         {FILTER_COLORS.map(({ value, label }) => {
                           const active = selectedColors.includes(value);
@@ -329,14 +329,16 @@ export function FilterBar({
                 <AnimatePresence initial={false}>
                   {hasActiveFilter ? (
                     <AnimatedFilterIsland key="clear-filter">
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
                         onClick={clearActiveFilter}
                         aria-label="Clear all filters"
-                        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-all duration-100 hover:bg-foreground/5 hover:text-foreground active:scale-95"
+                        className="rounded-md text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
                       >
                         <XIcon className="size-3.5" />
-                      </button>
+                      </Button>
                     </AnimatedFilterIsland>
                   ) : null}
                 </AnimatePresence>
@@ -387,24 +389,28 @@ function FilterSearchStatusIsland({ status }: { status: FilterSearchStatus }) {
       </span>
       {supportsNavigation && hasResults ? (
         <>
-          <button
+          <Button
             type="button"
-            className="flex size-6 items-center justify-center rounded-[min(var(--radius-md),10px)] transition-colors hover:bg-foreground/5 hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
+            variant="ghost"
+            size="icon-xs"
+            className="hover:bg-foreground/5 hover:text-foreground disabled:opacity-35"
             aria-label="Previous match"
             onClick={() => status.onPrevious?.()}
             disabled={status.resultCount === 1}
           >
             <ChevronLeftIcon className="size-3.5" />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="flex size-6 items-center justify-center rounded-[min(var(--radius-md),10px)] transition-colors hover:bg-foreground/5 hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
+            variant="ghost"
+            size="icon-xs"
+            className="hover:bg-foreground/5 hover:text-foreground disabled:opacity-35"
             aria-label="Next match"
             onClick={() => status.onNext?.()}
             disabled={status.resultCount === 1}
           >
             <ChevronRightIcon className="size-3.5" />
-          </button>
+          </Button>
         </>
       ) : null}
     </div>
@@ -446,9 +452,7 @@ function AssetTypeFilterControl({
 
         return (
           <Fragment key={type}>
-            {index > 0 ? (
-              <ButtonGroupSeparator className="bg-border/70" />
-            ) : null}
+            {index > 0 ? <ButtonGroupSeparator /> : null}
             <Button
               type="button"
               variant="ghost"

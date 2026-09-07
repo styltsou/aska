@@ -1119,10 +1119,11 @@ function InlineFormattingMenu({
                   <Tooltip key={control.label}>
                     <TooltipTrigger
                       render={
-                        <button
-                          data-slot="button"
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
                           className={cn(
-                            "flex size-7 items-center justify-center rounded-md text-foreground hover:bg-accent hover:text-foreground",
+                            "rounded-md text-foreground hover:bg-accent hover:text-foreground",
                             control.active && "bg-accent text-foreground",
                           )}
                           type="button"
@@ -1132,7 +1133,7 @@ function InlineFormattingMenu({
                           onClick={control.action}
                         >
                           <Icon className="size-3.5" />
-                        </button>
+                        </Button>
                       }
                     />
                     <TooltipContent>{control.label}</TooltipContent>
@@ -1152,15 +1153,16 @@ function InlineFormattingMenu({
                     render={
                       <PopoverTrigger
                         render={
-                          <button
-                            data-slot="button"
-                            className="flex size-7 items-center justify-center rounded-md text-foreground hover:bg-accent hover:text-foreground data-popup-open:bg-accent data-popup-open:text-foreground"
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="rounded-md text-foreground hover:bg-accent hover:text-foreground data-popup-open:bg-accent data-popup-open:text-foreground"
                             type="button"
                             aria-label="Highlight selection"
                             onMouseDown={(event) => event.preventDefault()}
                           >
                             <HighlighterIcon className="size-3.5" />
-                          </button>
+                          </Button>
                         }
                       />
                     }
@@ -1245,16 +1247,17 @@ function InlineFormattingMenu({
                 <Tooltip>
                   <TooltipTrigger
                     render={
-                      <button
-                        data-slot="button"
-                        className="flex size-7 items-center justify-center rounded-md text-foreground hover:bg-accent hover:text-foreground"
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="rounded-md text-foreground hover:bg-accent hover:text-foreground"
                         type="button"
                         aria-label="Extract note"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={extractSelection}
                       >
                         <PackagePlusIcon className="size-3.5" />
-                      </button>
+                      </Button>
                     }
                   />
                   <TooltipContent>Extract note</TooltipContent>

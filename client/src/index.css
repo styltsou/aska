@@ -238,18 +238,14 @@
     background-clip: border-box;
     color: var(--control-primary-foreground);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 18%),
-      0 1px 2px rgb(0 0 0 / 16%);
-    transition:
-      background 100ms ease,
-      color 100ms ease,
-      box-shadow 100ms ease;
+      inset 0 1px 0 rgb(255 255 255 / 12%),
+      0 1px 2px rgb(0 0 0 / 12%);
   }
 
   .dark .button-control-primary {
     box-shadow:
-      0 1px 0 #a8a8a8,
-      0 2px 4px rgb(0 0 0 / 32%);
+      inset 0 1px 0 rgb(255 255 255 / 10%),
+      0 1px 2px rgb(0 0 0 / 20%);
   }
 
   .button-control-primary:hover {
@@ -269,12 +265,8 @@
     );
     color: var(--primary-foreground);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 18%),
-      0 1px 2px rgb(0 0 0 / 16%);
-    transition:
-      background 100ms ease,
-      color 100ms ease,
-      box-shadow 100ms ease;
+      inset 0 1px 0 rgb(255 255 255 / 12%),
+      0 1px 2px rgb(0 0 0 / 12%);
   }
 
   .button-control-destructive:hover {
@@ -287,19 +279,15 @@
 
   .dark .button-control-destructive {
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 22%),
-      0 1px 2px rgb(0 0 0 / 28%);
+      inset 0 1px 0 rgb(255 255 255 / 10%),
+      0 1px 2px rgb(0 0 0 / 20%);
   }
 
   .button-control-outline,
   .button-control-secondary {
     background: var(--control-surface);
     color: var(--foreground);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
-    transition:
-      background 100ms ease,
-      color 100ms ease,
-      box-shadow 100ms ease;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
   }
 
   .button-control-outline {
@@ -314,15 +302,15 @@
     --control-surface-hover: var(--control-secondary-hover);
 
     border-color: var(--control-secondary-edge);
-    box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
+    box-shadow: 0 1px 1px rgb(0 0 0 / 4%);
   }
 
   .dark .button-control-outline {
-    box-shadow: 0 1px 2px rgb(0 0 0 / 22%);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 14%);
   }
 
   .dark .button-control-secondary {
-    box-shadow: 0 1px 2px rgb(0 0 0 / 14%);
+    box-shadow: 0 1px 1px rgb(0 0 0 / 10%);
   }
 
   .button-control-outline:hover,
@@ -330,6 +318,27 @@
   .button-control-secondary:hover,
   .button-control-secondary[aria-expanded="true"] {
     background: var(--control-surface-hover);
+  }
+
+  .button-control-primary:active:not(:disabled),
+  .button-control-destructive:active:not(:disabled) {
+    box-shadow: inset 0 1px 1px rgb(0 0 0 / 12%);
+  }
+
+  .button-control-outline:active:not(:disabled),
+  .button-control-secondary:active:not(:disabled) {
+    background: var(--control-surface-hover);
+    box-shadow: inset 0 1px 1px rgb(0 0 0 / 6%);
+  }
+
+  .dark .button-control-primary:active:not(:disabled),
+  .dark .button-control-destructive:active:not(:disabled) {
+    box-shadow: inset 0 1px 1px rgb(0 0 0 / 20%);
+  }
+
+  .dark .button-control-outline:active:not(:disabled),
+  .dark .button-control-secondary:active:not(:disabled) {
+    box-shadow: inset 0 1px 1px rgb(0 0 0 / 12%);
   }
 }
 

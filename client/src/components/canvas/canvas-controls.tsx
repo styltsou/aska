@@ -45,10 +45,7 @@ export function CanvasControls({
           >
             <PlusIcon />
           </ControlButton>
-          <ButtonGroupSeparator
-            orientation="horizontal"
-            className="bg-border/70"
-          />
+          <ButtonGroupSeparator orientation="horizontal" />
           <ControlButton
             ariaLabel="Zoom out"
             tooltip="Zoom out"
@@ -58,10 +55,7 @@ export function CanvasControls({
           >
             <MinusIcon />
           </ControlButton>
-          <ButtonGroupSeparator
-            orientation="horizontal"
-            className="bg-border/70"
-          />
+          <ButtonGroupSeparator orientation="horizontal" />
           <ControlButton
             ariaLabel="Fit collection"
             tooltip="Fit collection"
@@ -75,10 +69,7 @@ export function CanvasControls({
           >
             <ScanIcon />
           </ControlButton>
-          <ButtonGroupSeparator
-            orientation="horizontal"
-            className="bg-border/70"
-          />
+          <ButtonGroupSeparator orientation="horizontal" />
           <ControlButton
             ariaLabel={isCanvasLocked ? "Unlock canvas" : "Lock canvas"}
             tooltip={isCanvasLocked ? "Unlock canvas" : "Lock canvas"}
@@ -115,7 +106,7 @@ function ControlButton({
             variant="ghost"
             size="sm"
             className={cn(
-              "transition-all duration-100 hover:bg-foreground/5 active:scale-95",
+              "hover:bg-foreground/5",
               isActive && "bg-foreground/8",
             )}
             aria-label={ariaLabel}

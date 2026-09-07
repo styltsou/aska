@@ -1768,11 +1768,11 @@ export function ImageAssetViewer({
                         </TooltipTrigger>
                         <TooltipContent>Previous image</TooltipContent>
                       </Tooltip>
-                      <ButtonGroupSeparator className="bg-border/70" />
+                      <ButtonGroupSeparator />
                       <span className="flex h-7 min-w-10 items-center justify-center px-1 text-xs font-medium text-muted-foreground tabular-nums">
                         {currentAssetIndex + 1} / {assets.length}
                       </span>
-                      <ButtonGroupSeparator className="bg-border/70" />
+                      <ButtonGroupSeparator />
                       <Tooltip>
                         <TooltipTrigger
                           render={

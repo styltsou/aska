@@ -69,7 +69,7 @@ export function CropToolbar({
             </TooltipTrigger>
             <TooltipContent>Rotate 90° counterclockwise</TooltipContent>
           </Tooltip>
-          <ButtonGroupSeparator className="bg-border/70" />
+          <ButtonGroupSeparator />
           <Tooltip>
             <TooltipTrigger
               render={
@@ -86,7 +86,7 @@ export function CropToolbar({
             </TooltipTrigger>
             <TooltipContent>Rotate 90° clockwise</TooltipContent>
           </Tooltip>
-          <ButtonGroupSeparator className="bg-border/70" />
+          <ButtonGroupSeparator />
           <Tooltip>
             <TooltipTrigger
               render={
@@ -104,7 +104,7 @@ export function CropToolbar({
             </TooltipTrigger>
             <TooltipContent>Mirror horizontally</TooltipContent>
           </Tooltip>
-          <ButtonGroupSeparator className="bg-border/70" />
+          <ButtonGroupSeparator />
           <Tooltip>
             <TooltipTrigger
               render={
@@ -140,7 +140,7 @@ export function CropToolbar({
             </TooltipTrigger>
             <TooltipContent>Undo · Coming soon</TooltipContent>
           </Tooltip>
-          <ButtonGroupSeparator className="bg-border/70" />
+          <ButtonGroupSeparator />
           <Tooltip>
             <TooltipTrigger
               render={

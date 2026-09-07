@@ -151,11 +151,11 @@ export function SelectionActionBar({
                           <FolderInputIcon />
                         </PlaceholderAction>
                       )}
-                      <ButtonGroupSeparator className="bg-border/70" />
+                      <ButtonGroupSeparator />
                       <PlaceholderAction label="Favorite">
                         <HeartIcon />
                       </PlaceholderAction>
-                      <ButtonGroupSeparator className="bg-border/70" />
+                      <ButtonGroupSeparator />
                       {onDelete ? (
                         <Tooltip>
                           <TooltipTrigger
@@ -206,10 +206,7 @@ export function SelectionActionBar({
                               </TooltipTrigger>
                               <TooltipContent>Arrange in grid</TooltipContent>
                             </Tooltip>
-                            <ButtonGroupSeparator
-                              orientation="vertical"
-                              className="bg-border/70"
-                            />
+                            <ButtonGroupSeparator orientation="vertical" />
                             <Tooltip>
                               <TooltipTrigger
                                 render={
@@ -227,10 +224,7 @@ export function SelectionActionBar({
                                 Compact into columns
                               </TooltipContent>
                             </Tooltip>
-                            <ButtonGroupSeparator
-                              orientation="vertical"
-                              className="bg-border/70"
-                            />
+                            <ButtonGroupSeparator orientation="vertical" />
                             <LayoutActionsMenu
                               onMakeRow={onMakeRow}
                               onMakeColumn={onMakeColumn}

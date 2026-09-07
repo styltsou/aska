@@ -140,10 +140,7 @@ export function BoardActionRail({
                       <RailShortcut keys="U" />
                     </TooltipContent>
                   </Tooltip>
-                  <ButtonGroupSeparator
-                    orientation="horizontal"
-                    className="bg-border/70"
-                  />
+                  <ButtonGroupSeparator orientation="horizontal" />
                   <Tooltip>
                     <CreateNoteDialog
                       workspaceSlug={workspaceSlug}
@@ -170,10 +167,7 @@ export function BoardActionRail({
                       <RailShortcut keys="N" />
                     </TooltipContent>
                   </Tooltip>
-                  <ButtonGroupSeparator
-                    orientation="horizontal"
-                    className="bg-border/70"
-                  />
+                  <ButtonGroupSeparator orientation="horizontal" />
                   <Tooltip>
                     <ColorEditorDialog
                       workspaceSlug={workspaceSlug}
@@ -196,10 +190,7 @@ export function BoardActionRail({
                     </ColorEditorDialog>
                     <TooltipContent side="right">New color</TooltipContent>
                   </Tooltip>
-                  <ButtonGroupSeparator
-                    orientation="horizontal"
-                    className="bg-border/70"
-                  />
+                  <ButtonGroupSeparator orientation="horizontal" />
                   <Tooltip>
                     <CreateFolderDialog
                       workspaceSlug={workspaceSlug}
