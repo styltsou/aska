@@ -502,6 +502,18 @@
     @apply mb-0;
   }
 
+  .note-rich-text-content
+    ul[data-type="taskList"]
+    li[data-type="taskItem"][data-checked="true"]
+    > div {
+    @apply text-sidebar-foreground/50 line-through;
+  }
+
+  .note-rich-text-content
+    li.task-list-item:has(> input[type="checkbox"]:checked) {
+    @apply text-sidebar-foreground/50 line-through;
+  }
+
   .note-rich-text-content blockquote {
     @apply my-3 border-l-2 border-sidebar-border pl-3 text-sidebar-foreground/65 italic;
   }
