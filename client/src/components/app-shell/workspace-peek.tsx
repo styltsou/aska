@@ -477,7 +477,7 @@ function WorkspacePeekPanel({
           style={{ clipPath: "inset(0 50% 0 0)" }}
         />
       </div>
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card">
         {target.type === "note" ? (
           <PeekNote
             note={target.asset}
