@@ -107,13 +107,24 @@ export function MoveToDialog({
     !destination.isLoading &&
     !destination.isStale &&
     !destination.isError;
+  const folderIdsInBatch = useMemo(
+    () => new Set(nodeIds.filter((id) => id.startsWith("folder-"))),
+    [nodeIds],
+  );
+  // A lone folder move hides the selected folder itself (it cannot be a
+  // target); a multi-item batch keeps the moved folders visible but disabled
+  // with a tooltip so users can see exactly which folders are moving.
+  const hideMovedFolders =
+    nodeIds.length === 1 && nodeIds[0].startsWith("folder-");
   const selectedFolderIds = useMemo(
     () =>
       sourceCollectionSlug && sourceCollectionSlug === targetCollectionSlug
-        ? new Set(nodeIds.filter((id) => id.startsWith("folder-")))
+        ? folderIdsInBatch
         : EMPTY_IDS,
-    [sourceCollectionSlug, nodeIds, targetCollectionSlug],
+    [sourceCollectionSlug, targetCollectionSlug, folderIdsInBatch],
   );
+  const hiddenFolderIds = hideMovedFolders ? selectedFolderIds : EMPTY_IDS;
+  const disabledFolderIds = hideMovedFolders ? EMPTY_IDS : selectedFolderIds;
 
   function handleMove() {
     if (!canMove) return;
@@ -191,7 +202,8 @@ export function MoveToDialog({
         isLoading: destination.isLoading || collectionsLoading,
       }}
       destinationPath={destinationPath}
-      disabledFolderIds={selectedFolderIds}
+      excludedFolderIds={hiddenFolderIds}
+      disabledFolderIds={disabledFolderIds}
       onDestinationPathChange={setDestinationPath}
       canMove={canMove}
       disabledReason={disabledReason}

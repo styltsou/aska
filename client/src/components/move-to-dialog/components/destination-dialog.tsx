@@ -47,6 +47,7 @@ export function DestinationDialog({
   controls,
   destination,
   destinationPath,
+  excludedFolderIds,
   disabledFolderIds,
   onDestinationPathChange,
   canMove,
@@ -66,6 +67,7 @@ export function DestinationDialog({
   controls?: React.ReactNode;
   destination: FolderDestination;
   destinationPath?: string;
+  excludedFolderIds: ReadonlySet<string>;
   disabledFolderIds: ReadonlySet<string>;
   onDestinationPathChange: (path: string | undefined) => void;
   canMove: boolean;
@@ -330,52 +332,54 @@ export function DestinationDialog({
                 </p>
               ) : (
                 <>
-                  {destination.folders.map((folder) => {
-                    const folderPath = joinPath(destinationPath, folder.slug);
-                    const isDisabled = disabledFolderIds.has(folder.id);
-                    return (
-                      <button
-                        key={folder.id}
-                        type="button"
-                        className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm transition-colors duration-75 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45"
-                        disabled={isDisabled || isPending}
-                        title={
-                          isDisabled
-                            ? "A folder cannot be moved into itself."
-                            : undefined
-                        }
-                        onPointerEnter={() => {
-                          if (!isDisabled) destination.prefetch(folderPath);
-                        }}
-                        onFocus={() => {
-                          if (!isDisabled) destination.prefetch(folderPath);
-                        }}
-                        onClick={() =>
-                          navigateTo(folderPath, [
-                            ...displayedCrumbs,
-                            {
-                              id: folder.id,
-                              name: folder.name,
-                              slug: folder.slug,
-                            },
-                          ])
-                        }
-                      >
-                        <FolderPreviewRow previews={folder.previews} />
-                        <span className="min-w-0 flex-1 truncate font-medium">
-                          {folder.name}
-                        </span>
-                        {folder.folderCount > 0 ? (
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {folder.folderCount === 1
-                              ? "1 folder"
-                              : `${folder.folderCount} folders`}
+                  {destination.folders
+                    .filter((folder) => !excludedFolderIds.has(folder.id))
+                    .map((folder) => {
+                      const folderPath = joinPath(destinationPath, folder.slug);
+                      const isDisabled = disabledFolderIds.has(folder.id);
+                      return (
+                        <button
+                          key={folder.id}
+                          type="button"
+                          className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-sm transition-colors duration-75 hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45"
+                          disabled={isDisabled || isPending}
+                          title={
+                            isDisabled
+                              ? "The selected folder cannot be moved into itself."
+                              : undefined
+                          }
+                          onPointerEnter={() => {
+                            if (!isDisabled) destination.prefetch(folderPath);
+                          }}
+                          onFocus={() => {
+                            if (!isDisabled) destination.prefetch(folderPath);
+                          }}
+                          onClick={() =>
+                            navigateTo(folderPath, [
+                              ...displayedCrumbs,
+                              {
+                                id: folder.id,
+                                name: folder.name,
+                                slug: folder.slug,
+                              },
+                            ])
+                          }
+                        >
+                          <FolderPreviewRow previews={folder.previews} />
+                          <span className="min-w-0 flex-1 truncate font-medium">
+                            {folder.name}
                           </span>
-                        ) : null}
-                        <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground/60" />
-                      </button>
-                    );
-                  })}
+                          {folder.folderCount > 0 ? (
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {folder.folderCount === 1
+                                ? "1 folder"
+                                : `${folder.folderCount} folders`}
+                            </span>
+                          ) : null}
+                          <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground/60" />
+                        </button>
+                      );
+                    })}
                   <FolderComposer
                     open={composerOpen}
                     onOpenChange={setComposerOpen}
