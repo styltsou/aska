@@ -61,6 +61,23 @@ export const getPeekableAsset = factory.createHandlers(
   },
 );
 
+export const getAssetLocation = factory.createHandlers(
+  authMiddleware,
+  validate.param(AssetPathParamSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      c.get("userId"),
+    );
+    return c.json(
+      success({
+        location: await assetService.getAssetLocation(workspace.id, assetId),
+      }),
+    );
+  },
+);
+
 export const createInboxNote = factory.createHandlers(
   authMiddleware,
   validate.param(WorkspaceParamSchema),

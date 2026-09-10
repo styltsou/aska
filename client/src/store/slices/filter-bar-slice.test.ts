@@ -62,4 +62,24 @@ describe("color filter selection", () => {
       selectedAssetTypes: [],
     });
   });
+
+  it("clears every active filter while keeping the filter bar open", () => {
+    const store = createTestStore();
+    const scope = "collection:personal/reference";
+
+    store.getState().setFilterBarOpen(scope, true);
+    store.getState().toggleColor(scope, "#111111");
+    store.getState().toggleAssetType(scope, "note");
+    store.getState().setFilterType(scope, "Type");
+
+    store.getState().clearFilters(scope);
+
+    expect(store.getState().filterBars[scope]).toMatchObject({
+      open: true,
+      selectedColors: [],
+      selectedTags: [],
+      selectedAssetTypes: [],
+      filterType: "Color",
+    });
+  });
 });

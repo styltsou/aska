@@ -966,7 +966,7 @@ export function NoteDetailDrawer({
           {activeNote ? "Note" : "New note"}
         </NoteWorkspaceTitle>
         <div className="relative z-20 mt-[var(--app-shell-inset)] flex shrink-0 items-center justify-between gap-3 rounded-t-xl rounded-b-none p-2 text-xs font-medium text-muted-foreground">
-          <div className="ml-[var(--app-shell-inset)] flex items-center gap-1">
+          <div className="ml-[var(--app-shell-inset)] flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -1065,7 +1065,7 @@ export function NoteDetailDrawer({
               </motion.div>
             ) : null}
           </AnimatePresence>
-          <div className="flex min-w-0 items-center justify-end gap-2">
+          <div className="mr-[var(--app-shell-inset)] flex min-w-0 items-center justify-end gap-0.5">
             <NoteSaveStatus state={saveState} updatedAt={updatedTimestamp} />
             <NoteHighlightControl
               editorRef={richTextRef}

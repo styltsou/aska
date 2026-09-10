@@ -42,6 +42,7 @@ export function AssetBoard({
   onOpenImage,
   onOpenColor,
   onOpenVideo,
+  focusedAssetId,
 }: {
   assets: Asset[];
   emptyTitle: string;
@@ -54,6 +55,7 @@ export function AssetBoard({
   onOpenImage?: (image: ImageAsset) => void;
   onOpenColor?: (color: ColorAsset) => void;
   onOpenVideo?: (link: Extract<Asset, { type: "link" }>) => void;
+  focusedAssetId?: string;
 }) {
   const scopeKey = inboxContext
     ? `inbox:${inboxContext.workspaceSlug}`
@@ -116,6 +118,22 @@ export function AssetBoard({
     if (!scopeKey) return;
     activateSelectionScope(scopeKey);
   }, [activateSelectionScope, scopeKey]);
+
+  useEffect(() => {
+    if (
+      !focusedAssetId ||
+      !assets.some((asset) => asset.id === focusedAssetId)
+    ) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      surfaceRef.current
+        ?.querySelector(`[data-selection-node-id="${focusedAssetId}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [assets, focusedAssetId]);
 
   useEffect(() => {
     if (!scopeKey || selection.scopeKey !== scopeKey) return;

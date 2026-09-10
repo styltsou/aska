@@ -13,6 +13,7 @@ import { db } from "@/db";
 import {
   assets,
   colorAssets,
+  collectionsTable,
   collectionNodes,
   externalResources,
   imageAssets,
@@ -75,6 +76,10 @@ export type AssetDownload = {
   filename: string;
 };
 
+export type AssetLocation =
+  | { type: "inbox" }
+  | { type: "collection"; collectionSlug: string; folderPath?: string };
+
 function sanitizeFilename(name: string): string {
   const trimmed = name.trim().replace(/["\r\n;]/g, "");
   const safe = trimmed.replace(/[^\p{L}\p{N}._ -]/gu, "_").slice(0, 100);
@@ -86,6 +91,7 @@ export interface IAssetService {
     orgId: string,
     assetNodeId: string,
   ): Promise<CollectionNoteNode | CollectionColorNode>;
+  getAssetLocation(orgId: string, assetNodeId: string): Promise<AssetLocation>;
   getInboxContents(
     orgId: string,
     types?: ContentTypeFilter[],
@@ -224,6 +230,55 @@ export class AssetService implements IAssetService {
       isFavorite: row.isFavorite,
       createdAt: row.createdAt.toISOString(),
       position: null,
+    };
+  }
+
+  async getAssetLocation(
+    orgId: string,
+    assetNodeId: string,
+  ): Promise<AssetLocation> {
+    const target = parseAssetNodeId(assetNodeId);
+    const asset = first(
+      await db
+        .select({ id: assets.id })
+        .from(assets)
+        .where(
+          and(
+            eq(assets.organizationId, orgId),
+            eq(assets.id, target.entityId),
+            eq(assets.type, target.assetType),
+          ),
+        )
+        .limit(1),
+    );
+    if (!asset) throw new AppError(ErrorCode.NOT_FOUND, "Asset not found");
+
+    const node = first(
+      await db
+        .select({
+          collectionSlug: collectionsTable.slug,
+          pathFolderSlugs: collectionNodes.pathFolderSlugs,
+        })
+        .from(collectionNodes)
+        .innerJoin(
+          collectionsTable,
+          eq(collectionsTable.id, collectionNodes.collectionId),
+        )
+        .where(
+          and(
+            eq(collectionNodes.organizationId, orgId),
+            eq(collectionNodes.assetId, asset.id),
+          ),
+        )
+        .limit(1),
+    );
+    if (!node) return { type: "inbox" };
+
+    const folderPath = node.pathFolderSlugs.join("/");
+    return {
+      type: "collection",
+      collectionSlug: node.collectionSlug,
+      ...(folderPath ? { folderPath } : {}),
     };
   }
 

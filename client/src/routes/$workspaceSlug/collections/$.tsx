@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { collectionQueryKeys } from "@/api/collection/query-keys";
 import {
@@ -34,7 +35,11 @@ import {
   FolderNotFound,
 } from "@/components/canvas";
 import { ApiError } from "@/lib/api";
-import { getCollectionViewScope, useSessionStore } from "@/store";
+import {
+  getCollectionViewScope,
+  useSessionStore,
+  useTransientStore,
+} from "@/store";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { ResourceLoadError } from "@/components/resource-load-error";
 import { CollectionGridView } from "@/components/collection-grid-view";
@@ -42,7 +47,11 @@ import { CollectionGridView } from "@/components/collection-grid-view";
 const EMPTY_COLOR_RESULTS: readonly [] = [];
 
 export const Route = createFileRoute("/$workspaceSlug/collections/$")({
-  validateSearch: (_search: Record<string, unknown>) => ({}),
+  validateSearch: (search: Record<string, unknown>): { reveal?: string } => {
+    const reveal =
+      typeof search.reveal === "string" ? search.reveal : undefined;
+    return reveal ? { reveal } : {};
+  },
   head: () => ({
     meta: [{ title: "Collection | Aska" }],
   }),
@@ -52,6 +61,7 @@ export const Route = createFileRoute("/$workspaceSlug/collections/$")({
 
 function CollectionPage() {
   const { workspaceSlug, _splat } = Route.useParams();
+  const { reveal } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const collectionPath = _splat ?? "";
   const {
@@ -90,6 +100,8 @@ function CollectionPage() {
     .filter(Boolean);
   const folderPath = folderSegments.join("/");
   const queryClient = useQueryClient();
+  const replaceSelection = useTransientStore((state) => state.replaceSelection);
+  const [focusedRevealNodeId, setFocusedRevealNodeId] = useState<string>();
   const filterScope = `collection:${workspaceSlug}/${collectionPath}`;
   const filterBar = useSessionStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
@@ -219,6 +231,32 @@ function CollectionPage() {
   const boardView = useSessionStore(
     (state) => state.collectionViews[collectionViewScope] ?? "canvas",
   );
+
+  useEffect(() => {
+    if (!reveal || !data || hasStaleRoutePlaceholder) return;
+    if (!nodes.some((node) => node.id === reveal)) {
+      if (isFetching || isPlaceholderData) return;
+      toast.error("This note is no longer at that location.");
+      void navigate({ search: {}, replace: true });
+      return;
+    }
+
+    replaceSelection(boardKey, [reveal]);
+    setFocusedRevealNodeId(reveal);
+    void navigate({ search: {}, replace: true });
+  }, [
+    boardKey,
+    data,
+    hasStaleRoutePlaceholder,
+    isFetching,
+    isPlaceholderData,
+    navigate,
+    nodes,
+    replaceSelection,
+    reveal,
+  ]);
+
+  const focusedNodeId = focusedRevealNodeId ?? focusedColorNodeId;
 
   const isNotFound =
     error instanceof ApiError &&
@@ -350,7 +388,7 @@ function CollectionPage() {
                   nodes={nodes}
                   isColorFilterActive={hasResolvedColorSearch}
                   colorMatchNodeIds={colorMatchNodeIds}
-                  focusedNodeId={focusedColorNodeId}
+                  focusedNodeId={focusedNodeId}
                   loadError={loadError}
                   emptyTitle={
                     isTypeFilterActive
@@ -386,7 +424,7 @@ function CollectionPage() {
                 nodes={nodes}
                 isColorFilterActive={hasResolvedColorSearch}
                 colorMatchNodeIds={colorMatchNodeIds}
-                focusedNodeId={focusedColorNodeId}
+                focusedNodeId={focusedNodeId}
                 loadError={loadError}
                 emptyTitle={
                   isTypeFilterActive

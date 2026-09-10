@@ -15,6 +15,7 @@ import {
   CopyIcon,
   InfoIcon,
   ArrowLeftRightIcon,
+  LocateFixedIcon,
   Maximize2Icon,
   TriangleAlertIcon,
   XIcon,
@@ -38,7 +39,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useUpdateNote } from "@/api/collection";
-import { fetchPeekableAsset } from "@/api/collection/fetchers";
+import {
+  fetchAssetLocation,
+  fetchPeekableAsset,
+} from "@/api/collection/fetchers";
 import type { NoteMentionTarget } from "@/api/note-mentions/types";
 import { gradientToCss } from "@/lib/color-gradient";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
@@ -56,6 +60,8 @@ import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect"
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useSessionStore } from "@/store";
+import { useNavigate } from "@tanstack/react-router";
 import type { ColorAsset, NoteAsset } from "@/types/asset";
 import type { NoteHighlightColor } from "@/lib/note-highlights";
 import {
@@ -90,6 +96,7 @@ type WorkspacePeekContextValue = {
     handler?: (note: NoteAsset) => Promise<boolean>,
   ) => void;
   promoteNote: () => Promise<void>;
+  revealPeekedAsset: () => Promise<void>;
   setNoteSwapHandler: (handler?: () => Promise<void>) => void;
   swapNotes: () => Promise<void>;
   closePeek: () => void;
@@ -154,6 +161,7 @@ export function WorkspacePeekProvider({
   workspaceSlug: string;
   children: React.ReactNode;
 }) {
+  const navigate = useNavigate();
   const [target, setTarget] = useState<PeekTarget | undefined>(() =>
     readTarget(workspaceSlug),
   );
@@ -316,6 +324,51 @@ export function WorkspacePeekProvider({
   const handleExitComplete = useCallback(() => {
     if (!targetRef.current) setIsRailReserved(false);
   }, []);
+  const revealPeekedAsset = useCallback(async () => {
+    if (!target) return;
+
+    try {
+      const { location } = await fetchAssetLocation(
+        workspaceSlug,
+        target.asset.id,
+      );
+      const focusNodeId = target.asset.id;
+      const filterScope =
+        location.type === "inbox"
+          ? `inbox:${workspaceSlug}`
+          : `collection:${workspaceSlug}/${[
+              location.collectionSlug,
+              location.folderPath,
+            ]
+              .filter(Boolean)
+              .join("/")}`;
+      useSessionStore.getState().clearFilters(filterScope);
+
+      if (location.type === "inbox") {
+        await navigate({
+          to: "/$workspaceSlug/inbox",
+          params: { workspaceSlug },
+          search: { reveal: focusNodeId },
+        });
+        return;
+      }
+
+      await navigate({
+        to: "/$workspaceSlug/collections/$",
+        params: {
+          workspaceSlug,
+          _splat: [location.collectionSlug, location.folderPath]
+            .filter(Boolean)
+            .join("/"),
+        },
+        search: { reveal: focusNodeId },
+      });
+    } catch (error) {
+      toast.error(
+        getUserFacingApiErrorMessage(error, "Unable to reveal asset."),
+      );
+    }
+  }, [navigate, target, workspaceSlug]);
 
   const value = useMemo<WorkspacePeekContextValue>(
     () => ({
@@ -346,6 +399,7 @@ export function WorkspacePeekProvider({
           setTarget(undefined);
         }
       },
+      revealPeekedAsset,
       setNoteSwapHandler: (handler) => {
         noteSwapHandlerRef.current = handler;
       },
@@ -357,7 +411,7 @@ export function WorkspacePeekProvider({
         setTarget(undefined);
       },
     }),
-    [activeNoteId, isResizing, syncPeekNote, target],
+    [activeNoteId, isResizing, revealPeekedAsset, syncPeekNote, target],
   );
 
   return (
@@ -432,7 +486,8 @@ function WorkspacePeekPanel({
   focusRequest: number;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }) {
-  const { activeNoteId, closePeek, promoteNote } = useWorkspacePeek();
+  const { activeNoteId, closePeek, promoteNote, revealPeekedAsset } =
+    useWorkspacePeek();
   const reduceMotion = useReducedMotion();
   const canPromote = target.type === "note" && activeNoteId !== target.asset.id;
 
@@ -485,11 +540,12 @@ function WorkspacePeekPanel({
             focusRequest={focusRequest}
             onClose={closePeek}
             onPromote={canPromote ? promoteNote : undefined}
+            onReveal={revealPeekedAsset}
             readOnly={activeNoteId === target.asset.id}
           />
         ) : (
           <>
-            <PeekHeader onClose={closePeek} />
+            <PeekHeader onClose={closePeek} onReveal={revealPeekedAsset} />
             <PeekColor
               color={target.asset}
               scope={target.scope}
@@ -505,13 +561,16 @@ function WorkspacePeekPanel({
 function PeekHeader({
   onClose,
   onPromote,
+  onReveal,
   children,
 }: {
   onClose: () => void;
   onPromote?: () => Promise<void>;
+  onReveal?: () => Promise<void>;
   children?: ReactNode;
 }) {
   const [isPromoting, setIsPromoting] = useState(false);
+  const [isRevealing, setIsRevealing] = useState(false);
   const handlePromote = useCallback(async () => {
     if (!onPromote || isPromoting) return;
     setIsPromoting(true);
@@ -521,13 +580,22 @@ function PeekHeader({
       setIsPromoting(false);
     }
   }, [isPromoting, onPromote]);
+  const handleReveal = useCallback(async () => {
+    if (!onReveal || isRevealing) return;
+    setIsRevealing(true);
+    try {
+      await onReveal();
+    } finally {
+      setIsRevealing(false);
+    }
+  }, [isRevealing, onReveal]);
   return (
     <div
       className={cn(
         "relative z-20 flex shrink-0 items-center justify-between gap-3 rounded-t-xl rounded-b-none bg-card p-2 ring-0",
       )}
     >
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <Tooltip>
           <TooltipTrigger
             render={
@@ -580,9 +648,30 @@ function PeekHeader({
             </TooltipContent>
           </Tooltip>
         ) : null}
+        {onReveal ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  aria-label="Reveal on board"
+                  disabled={isRevealing}
+                  onClick={() => void handleReveal()}
+                >
+                  <LocateFixedIcon className="size-4" />
+                  <span className="sr-only">Reveal on board</span>
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom">Reveal on board</TooltipContent>
+          </Tooltip>
+        ) : null}
       </div>
       {children ? (
-        <div className="flex min-w-0 items-center justify-end gap-2">
+        <div className="flex min-w-0 items-center justify-end gap-0.5">
           {children}
         </div>
       ) : null}
@@ -596,6 +685,7 @@ function PeekNote({
   focusRequest,
   onClose,
   onPromote,
+  onReveal,
   readOnly,
 }: {
   note: NoteAsset;
@@ -603,6 +693,7 @@ function PeekNote({
   focusRequest: number;
   onClose: () => void;
   onPromote?: () => Promise<void>;
+  onReveal: () => Promise<void>;
   readOnly: boolean;
 }) {
   const { peekNote, peekColor } = useWorkspacePeek();
@@ -744,7 +835,7 @@ function PeekNote({
   const hasDetails = Boolean(note.createdAt || note.updatedAt);
   return (
     <>
-      <PeekHeader onClose={onClose} onPromote={onPromote}>
+      <PeekHeader onClose={onClose} onPromote={onPromote} onReveal={onReveal}>
         {readOnly ? (
           <>
             <HoverCard>

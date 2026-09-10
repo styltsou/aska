@@ -23,6 +23,7 @@ export interface FilterBarSlice {
   clearColors: (scope: string) => void;
   toggleAssetType: (scope: string, type: AssetFilterType) => void;
   clearAssetTypes: (scope: string) => void;
+  clearFilters: (scope: string) => void;
   setFilterType: (scope: string, type: FilterType) => void;
 }
 
@@ -94,6 +95,14 @@ export const createFilterBarSlice: StateCreator<
     set((state) => {
       state.filterBars[scope] ??= createFilterBarState();
       state.filterBars[scope].selectedAssetTypes = [];
+    }),
+  clearFilters: (scope) =>
+    set((state) => {
+      const filterBar = (state.filterBars[scope] ??= createFilterBarState());
+      filterBar.selectedColors = [];
+      filterBar.selectedTags = [];
+      filterBar.selectedAssetTypes = [];
+      filterBar.filterType = "Color";
     }),
   setFilterType: (scope, filterType) =>
     set((state) => {

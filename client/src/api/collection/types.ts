@@ -244,6 +244,14 @@ export type PeekableAssetResponse = {
   asset: CollectionNoteNode | CollectionColorNode;
 };
 
+export type AssetLocation =
+  | { type: "inbox" }
+  | { type: "collection"; collectionSlug: string; folderPath?: string };
+
+export type AssetLocationResponse = {
+  location: AssetLocation;
+};
+
 export type CreateColorInput = {
   hex: string;
   gradient?: ColorGradient;

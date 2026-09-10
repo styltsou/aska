@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { useInboxContents, useMarkInboxSeen } from "@/api/collection";
 import {
@@ -17,7 +18,7 @@ import { BoardContextMenu, BoardUploadZone } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
 import { MasonryGridSkeleton } from "@/components/masonry-grid-skeleton";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
-import { useSessionStore } from "@/store";
+import { useSessionStore, useTransientStore } from "@/store";
 import type { ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
 import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
@@ -26,7 +27,11 @@ import { usePersistedYouTubeVideoViewer } from "@/components/board/use-persisted
 import { ResourceLoadError } from "@/components/resource-load-error";
 
 export const Route = createFileRoute("/$workspaceSlug/inbox")({
-  validateSearch: (_search: Record<string, unknown>) => ({}),
+  validateSearch: (search: Record<string, unknown>): { reveal?: string } => {
+    const reveal =
+      typeof search.reveal === "string" ? search.reveal : undefined;
+    return reveal ? { reveal } : {};
+  },
   head: () => ({
     meta: [{ title: "Inbox | Aska" }],
   }),
@@ -36,6 +41,8 @@ export const Route = createFileRoute("/$workspaceSlug/inbox")({
 
 function InboxPage() {
   const { workspaceSlug } = Route.useParams();
+  const { reveal } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
   const filterScope = `inbox:${workspaceSlug}`;
   const filterBar = useSessionStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
@@ -76,6 +83,8 @@ function InboxPage() {
     selectedAssetTypes,
   );
   const { mutate: markInboxSeen } = useMarkInboxSeen(workspaceSlug);
+  const replaceSelection = useTransientStore((state) => state.replaceSelection);
+  const [focusedRevealNodeId, setFocusedRevealNodeId] = useState<string>();
   const selectedColorHexes =
     filterBar.filterType === "Color" ? filterBar.selectedColors : [];
   const isTypeFilterActive = selectedAssetTypes.length > 0;
@@ -95,6 +104,20 @@ function InboxPage() {
   const displayAssets = hasResolvedColorSearch
     ? colorSearch.data.results.map(colorSearchResultToImageAsset)
     : assets;
+
+  useEffect(() => {
+    if (!reveal || !data) return;
+    if (!data.nodes.some((node) => node.id === reveal)) {
+      if (isFetching) return;
+      toast.error("This note is no longer at that location.");
+      void navigate({ search: {}, replace: true });
+      return;
+    }
+
+    replaceSelection(filterScope, [reveal]);
+    setFocusedRevealNodeId(reveal);
+    void navigate({ search: {}, replace: true });
+  }, [data, filterScope, isFetching, navigate, replaceSelection, reveal]);
 
   if (isLoading) return <MasonryGridSkeleton />;
 
@@ -142,6 +165,7 @@ function InboxPage() {
         <AssetBoard
           assets={displayAssets}
           inboxContext={{ workspaceSlug }}
+          focusedAssetId={focusedRevealNodeId}
           onOpenNote={handleOpenNote}
           onOpenImage={handleOpenImage}
           onOpenColor={openColor}
