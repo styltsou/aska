@@ -15,6 +15,8 @@ export const COLOR_SEARCH_DEBOUNCE_MS = 200;
 
 export const colorSearchQueryKeys = {
   all: ["color-search"] as const,
+  workspace: (workspaceSlug: string) =>
+    [...colorSearchQueryKeys.all, workspaceSlug] as const,
   search: (
     workspaceSlug: string,
     scopeKey: string,
@@ -22,8 +24,7 @@ export const colorSearchQueryKeys = {
     matchMode: ColorSearchMatchMode,
   ) =>
     [
-      ...colorSearchQueryKeys.all,
-      workspaceSlug,
+      ...colorSearchQueryKeys.workspace(workspaceSlug),
       scopeKey,
       colorSignature,
       matchMode,

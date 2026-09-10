@@ -73,6 +73,7 @@ import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
 import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
 import { activeLinkRefetchInterval } from "@/api/url-unfurl/hooks";
+import { colorSearchQueryKeys } from "@/api/color-search/hooks";
 import { noteMentionQueryKeys } from "@/api/note-mentions/hooks";
 import type {
   NoteBacklink,
@@ -2736,6 +2737,9 @@ export function useDeleteAsset(workspaceSlug: string) {
       void queryClient.invalidateQueries({
         queryKey: noteMentionQueryKeys.all(workspaceSlug),
       });
+      void queryClient.invalidateQueries({
+        queryKey: colorSearchQueryKeys.workspace(workspaceSlug),
+      });
     },
   });
 }
@@ -2862,6 +2866,9 @@ export function useDeleteCollectionNode(
         void queryClient.invalidateQueries({
           queryKey: collectionQueryKeys.inbox(workspaceSlug),
         });
+        void queryClient.invalidateQueries({
+          queryKey: colorSearchQueryKeys.workspace(workspaceSlug),
+        });
       }
       reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
     },
@@ -2907,6 +2914,11 @@ export function useDeleteCollection(workspaceSlug: string) {
           data.deletedCollectionSlug,
         ),
       });
+      if (data.deletedAssetCount > 0) {
+        void queryClient.invalidateQueries({
+          queryKey: colorSearchQueryKeys.workspace(workspaceSlug),
+        });
+      }
     },
   });
 }
@@ -2965,7 +2977,7 @@ export function useBulkDelete(workspaceSlug: string) {
       nodeIds: string[];
       collectionSlug?: string;
     }) => bulkDeleteNodes(workspaceSlug, nodeIds, collectionSlug),
-    onSuccess: () => {
+    onSuccess: (data) => {
       void queryClient.invalidateQueries({
         queryKey: ["collectionContents", workspaceSlug],
       });
@@ -2978,6 +2990,11 @@ export function useBulkDelete(workspaceSlug: string) {
       void queryClient.invalidateQueries({
         queryKey: ["workspace", workspaceSlug],
       });
+      if (data.deletedAssetCount > 0) {
+        void queryClient.invalidateQueries({
+          queryKey: colorSearchQueryKeys.workspace(workspaceSlug),
+        });
+      }
     },
   });
 }
