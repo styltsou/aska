@@ -1,5 +1,6 @@
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import {
+  CirclePlusIcon,
+  CircleXIcon,
   FileTextIcon,
   FolderPlusIcon,
   ImageIcon,
@@ -37,11 +38,11 @@ import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
 
 const RAIL_BUTTON_CLASS =
-  "rounded-lg text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80";
+  "rounded-[calc(var(--radius-md)-1px)] text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80";
 
 const RAIL_TRANSITION = {
-  duration: 0.12,
-  ease: [0.16, 1, 0.3, 1],
+  duration: 0.22,
+  ease: [0.22, 1, 0.36, 1],
 } as const;
 
 function RailShortcut({ keys }: { keys: string }) {
@@ -80,241 +81,275 @@ export function BoardActionRail({
   );
   const reduceMotion = useReducedMotion();
   const transition = reduceMotion ? { duration: 0 } : RAIL_TRANSITION;
+  const dockTransition = reduceMotion
+    ? { duration: 0 }
+    : { ...RAIL_TRANSITION, delay: isRailVisible ? 0 : 0.04 };
 
   return (
-    <AnimatePresence initial={false} mode="wait">
-      {isRailVisible ? (
-        <motion.div
-          key="actions-dock"
-          initial={
-            reduceMotion
-              ? false
-              : { opacity: 0, x: -28, scale: 0.78, rotate: -3 }
-          }
-          animate={{ opacity: 1, x: 0, scale: 1, rotate: 0 }}
-          exit={
-            reduceMotion
-              ? undefined
-              : { opacity: 0, x: -20, scale: 0.86, rotate: -1 }
-          }
-          transition={transition}
-          className="absolute top-1/2 left-3 z-20 hidden origin-left lg:block"
-        >
-          <div
-            className={cn(
-              "relative -translate-y-1/2",
-              FLOATING_GLASS_BACKDROP_CLASS,
-            )}
-          >
-            <div
-              className={cn(
-                "flex flex-col items-center gap-1 rounded-lg p-1",
-                GLASS_FRAME_CLASS,
-              )}
+    <div className="absolute inset-y-0 left-3 z-20 hidden items-center lg:flex">
+      <div className="relative isolate flex flex-col items-center rounded-lg p-1">
+        <AnimatePresence initial={false}>
+          {isRailVisible ? (
+            <motion.div
+              key="actions-dock-surface"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reduceMotion ? undefined : { opacity: 0 }}
+              transition={dockTransition}
+              className="pointer-events-none absolute inset-0 z-0"
             >
-              <div className={GLASS_ISLAND_CLASS}>
-                <ButtonGroup orientation="vertical">
-                  <Tooltip>
-                    <UploadImagesDialog
-                      workspaceSlug={workspaceSlug}
-                      collectionPath={collectionPath}
-                      restoreOpen
-                      placement={placement}
-                    >
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            aria-label="Upload images"
-                            className={RAIL_BUTTON_CLASS}
-                          >
-                            <UploadIcon />
-                          </Button>
-                        }
-                      />
-                    </UploadImagesDialog>
-                    <TooltipContent side="right">
-                      <span>Upload images</span>
-                      <RailShortcut keys="U" />
-                    </TooltipContent>
-                  </Tooltip>
-                  <ButtonGroupSeparator orientation="horizontal" />
-                  <Tooltip>
-                    <CreateNoteDialog
-                      workspaceSlug={workspaceSlug}
-                      collectionPath={collectionPath}
-                      restoreOpen
-                      placement={placement}
-                    >
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            aria-label="New note"
-                            className={RAIL_BUTTON_CLASS}
-                          >
-                            <FileTextIcon />
-                          </Button>
-                        }
-                      />
-                    </CreateNoteDialog>
-                    <TooltipContent side="right">
-                      <span>New note</span>
-                      <RailShortcut keys="N" />
-                    </TooltipContent>
-                  </Tooltip>
-                  <ButtonGroupSeparator orientation="horizontal" />
-                  <Tooltip>
-                    <ColorEditorDialog
-                      workspaceSlug={workspaceSlug}
-                      collectionPath={collectionPath}
-                      placement={placement}
-                    >
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            aria-label="New color"
-                            className={RAIL_BUTTON_CLASS}
-                          >
-                            <PaletteIcon />
-                          </Button>
-                        }
-                      />
-                    </ColorEditorDialog>
-                    <TooltipContent side="right">New color</TooltipContent>
-                  </Tooltip>
-                  <ButtonGroupSeparator orientation="horizontal" />
-                  <Tooltip>
-                    <CreateFolderDialog
-                      workspaceSlug={workspaceSlug}
-                      collectionPath={collectionPath}
-                      placement={placement}
-                    >
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            aria-label="New folder"
-                            className={RAIL_BUTTON_CLASS}
-                          >
-                            <FolderPlusIcon />
-                          </Button>
-                        }
-                      />
-                    </CreateFolderDialog>
-                    <TooltipContent side="right">
-                      <span>New folder</span>
-                      <RailShortcut keys="D" />
-                    </TooltipContent>
-                  </Tooltip>
-                </ButtonGroup>
-              </div>
-              <div className={GLASS_ISLAND_CLASS}>
-                <ButtonGroup orientation="vertical">
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          aria-label={
-                            pexelsBrowserOpen
-                              ? "Close Pexels photos"
-                              : "Browse Pexels photos"
-                          }
-                          aria-expanded={pexelsBrowserOpen}
-                          aria-pressed={pexelsBrowserOpen}
-                          data-active={pexelsBrowserOpen || undefined}
-                          className={cn(
-                            RAIL_BUTTON_CLASS,
-                            pexelsBrowserOpen &&
-                              "bg-sidebar-active text-sidebar-accent-foreground",
-                          )}
-                          onClick={() =>
-                            openPexelsBrowser(pexelsScope, !pexelsBrowserOpen)
-                          }
-                        >
-                          <ImageIcon />
-                        </Button>
-                      }
-                    />
-                    <TooltipContent side="right">
-                      {pexelsBrowserOpen
-                        ? "Close Pexels photos"
-                        : "Browse Pexels photos"}
-                    </TooltipContent>
-                  </Tooltip>
-                </ButtonGroup>
-              </div>
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <div className={GLASS_ISLAND_CLASS}>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Hide actions dock"
-                        className={RAIL_BUTTON_CLASS}
-                        onClick={() =>
-                          setWorkspaceBoardActionRail(workspaceSlug, false)
-                        }
-                      >
-                        <ChevronLeftIcon />
-                      </Button>
-                    </div>
-                  }
+              <div
+                className={cn(
+                  "relative size-full",
+                  FLOATING_GLASS_BACKDROP_CLASS,
+                )}
+              >
+                <div
+                  className={cn(
+                    "relative z-10 size-full rounded-lg",
+                    GLASS_FRAME_CLASS,
+                  )}
                 />
-                <TooltipContent side="right">Hide actions dock</TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        </motion.div>
-      ) : (
-        <motion.div
-          key="actions-dock-trigger"
-          initial={reduceMotion ? false : { opacity: 0, x: -18, scaleX: 0.55 }}
-          animate={{ opacity: 1, x: 0, scaleX: 1 }}
-          exit={reduceMotion ? undefined : { opacity: 0, x: -12, scaleX: 0.75 }}
-          transition={transition}
-          className="absolute top-1/2 left-0 z-20 hidden origin-left lg:block"
-        >
-          <div className="-translate-y-1/2">
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Show actions dock"
-                    className={cn(
-                      "h-12 w-4 rounded-l-none rounded-r-lg text-muted-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80 hover:text-foreground",
-                      GLASS_FRAME_CLASS,
-                    )}
-                    onClick={() =>
-                      setWorkspaceBoardActionRail(workspaceSlug, true)
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+        <AnimatePresence initial={false}>
+          {isRailVisible ? (
+            <motion.div
+              key="actions-dock"
+              initial={
+                reduceMotion
+                  ? false
+                  : {
+                      opacity: 0,
+                      height: 0,
+                      marginBottom: 0,
                     }
-                  >
-                    <ChevronRightIcon />
-                  </Button>
-                }
-              />
-              <TooltipContent side="right">Show actions dock</TooltipContent>
-            </Tooltip>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+              }
+              animate={{
+                opacity: 1,
+                height: "auto",
+                marginBottom: 4,
+              }}
+              exit={
+                reduceMotion
+                  ? undefined
+                  : {
+                      opacity: 0,
+                      height: 0,
+                      marginBottom: 0,
+                    }
+              }
+              transition={dockTransition}
+              className="relative z-10 overflow-hidden"
+            >
+              <motion.div
+                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: 6 }}
+                transition={transition}
+                className="flex flex-col items-center gap-1"
+              >
+                <div className={GLASS_ISLAND_CLASS}>
+                  <ButtonGroup orientation="vertical">
+                    <Tooltip>
+                      <UploadImagesDialog
+                        workspaceSlug={workspaceSlug}
+                        collectionPath={collectionPath}
+                        restoreOpen
+                        placement={placement}
+                      >
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="Upload images"
+                              className={RAIL_BUTTON_CLASS}
+                            >
+                              <UploadIcon />
+                            </Button>
+                          }
+                        />
+                      </UploadImagesDialog>
+                      <TooltipContent side="right">
+                        <span>Upload images</span>
+                        <RailShortcut keys="U" />
+                      </TooltipContent>
+                    </Tooltip>
+                    <ButtonGroupSeparator orientation="horizontal" />
+                    <Tooltip>
+                      <CreateNoteDialog
+                        workspaceSlug={workspaceSlug}
+                        collectionPath={collectionPath}
+                        restoreOpen
+                        placement={placement}
+                      >
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="New note"
+                              className={RAIL_BUTTON_CLASS}
+                            >
+                              <FileTextIcon />
+                            </Button>
+                          }
+                        />
+                      </CreateNoteDialog>
+                      <TooltipContent side="right">
+                        <span>New note</span>
+                        <RailShortcut keys="N" />
+                      </TooltipContent>
+                    </Tooltip>
+                    <ButtonGroupSeparator orientation="horizontal" />
+                    <Tooltip>
+                      <ColorEditorDialog
+                        workspaceSlug={workspaceSlug}
+                        collectionPath={collectionPath}
+                        placement={placement}
+                      >
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="New color"
+                              className={RAIL_BUTTON_CLASS}
+                            >
+                              <PaletteIcon />
+                            </Button>
+                          }
+                        />
+                      </ColorEditorDialog>
+                      <TooltipContent side="right">New color</TooltipContent>
+                    </Tooltip>
+                    <ButtonGroupSeparator orientation="horizontal" />
+                    <Tooltip>
+                      <CreateFolderDialog
+                        workspaceSlug={workspaceSlug}
+                        collectionPath={collectionPath}
+                        placement={placement}
+                      >
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              aria-label="New folder"
+                              className={RAIL_BUTTON_CLASS}
+                            >
+                              <FolderPlusIcon />
+                            </Button>
+                          }
+                        />
+                      </CreateFolderDialog>
+                      <TooltipContent side="right">
+                        <span>New folder</span>
+                        <RailShortcut keys="D" />
+                      </TooltipContent>
+                    </Tooltip>
+                  </ButtonGroup>
+                </div>
+                <div className={GLASS_ISLAND_CLASS}>
+                  <ButtonGroup orientation="vertical">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label={
+                              pexelsBrowserOpen
+                                ? "Close Pexels photos"
+                                : "Browse Pexels photos"
+                            }
+                            aria-expanded={pexelsBrowserOpen}
+                            aria-pressed={pexelsBrowserOpen}
+                            data-active={pexelsBrowserOpen || undefined}
+                            className={cn(
+                              RAIL_BUTTON_CLASS,
+                              pexelsBrowserOpen &&
+                                "bg-sidebar-active text-sidebar-accent-foreground",
+                            )}
+                            onClick={() =>
+                              openPexelsBrowser(pexelsScope, !pexelsBrowserOpen)
+                            }
+                          >
+                            <ImageIcon />
+                          </Button>
+                        }
+                      />
+                      <TooltipContent side="right">
+                        {pexelsBrowserOpen
+                          ? "Close Pexels photos"
+                          : "Browse Pexels photos"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </ButtonGroup>
+                </div>
+              </motion.div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+        <div className={cn("relative z-10", GLASS_ISLAND_CLASS)}>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={
+                    isRailVisible ? "Hide actions dock" : "Show actions dock"
+                  }
+                  aria-expanded={isRailVisible}
+                  className={cn(
+                    RAIL_BUTTON_CLASS,
+                    "aria-expanded:bg-transparent! aria-expanded:hover:bg-muted/80!",
+                  )}
+                  onClick={() =>
+                    setWorkspaceBoardActionRail(workspaceSlug, !isRailVisible)
+                  }
+                >
+                  <span className="relative size-4">
+                    <AnimatePresence initial={false} mode="popLayout">
+                      <motion.span
+                        key={isRailVisible ? "close" : "open"}
+                        initial={
+                          reduceMotion
+                            ? false
+                            : { opacity: 0, rotate: -45, scale: 0.75 }
+                        }
+                        animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                        exit={
+                          reduceMotion
+                            ? undefined
+                            : { opacity: 0, rotate: 45, scale: 0.75 }
+                        }
+                        transition={transition}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        {isRailVisible ? <CircleXIcon /> : <CirclePlusIcon />}
+                      </motion.span>
+                    </AnimatePresence>
+                  </span>
+                </Button>
+              }
+            />
+            <TooltipContent side="right">
+              {isRailVisible ? "Hide actions dock" : "Show actions dock"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+    </div>
   );
 }
