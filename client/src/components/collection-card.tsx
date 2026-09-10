@@ -1,7 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
-import { cn } from "@/lib/utils";
 
 import { NoteMarkdown } from "./board/cards/note-asset-card";
 import { useDeleteCollection } from "@/api/collection";
@@ -138,18 +137,12 @@ export function CollectionCard({
                       }
                       return (
                         <div
-                          className={cn(
-                            "ring-sidebar-foreground/5 absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl px-3 pt-3 pb-0 shadow-md ring-1",
-                            !preview.color && "bg-card",
-                          )}
+                          className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
                           style={{
                             ...PREVIEW_POSITION,
                             zIndex: 0,
                             transform: `rotate(-3deg) scale(${hovered ? 1.02 : 1})`,
                             transition: PREVIEW_TRANSITION,
-                            ...(preview.color
-                              ? { backgroundColor: preview.color }
-                              : {}),
                           }}
                         >
                           <NoteMarkdown
@@ -235,10 +228,7 @@ export function CollectionCard({
                       return (
                         <div
                           key={preview.assetId}
-                          className={cn(
-                            "ring-sidebar-foreground/5 absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl px-3 pt-3 pb-0 shadow-md ring-1",
-                            !preview.color && "bg-card",
-                          )}
+                          className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
                           style={{
                             ...PREVIEW_POSITION,
                             zIndex: z,
@@ -247,9 +237,6 @@ export function CollectionCard({
                             transitionDelay: hovered
                               ? `${(count - 1 - z) * 10}ms`
                               : `${z * 10}ms`,
-                            ...(preview.color
-                              ? { backgroundColor: preview.color }
-                              : {}),
                           }}
                         >
                           <NoteMarkdown

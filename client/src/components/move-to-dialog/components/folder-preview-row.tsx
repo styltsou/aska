@@ -52,10 +52,7 @@ export function FolderPreviewRow({
         ) : (
           <div
             key={preview.assetId}
-            className="size-8 shrink-0 overflow-hidden rounded-[3px] border p-1 text-[5px] leading-tight text-foreground/45"
-            style={
-              preview.color ? { backgroundColor: preview.color } : undefined
-            }
+            className="size-8 shrink-0 overflow-hidden rounded-[3px] border bg-card p-1 text-[5px] leading-tight text-foreground/45"
           >
             {preview.snippet?.slice(0, 42)}
           </div>

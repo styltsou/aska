@@ -159,15 +159,7 @@ export function FolderAssetCard({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.94 }}
                   transition={previewTransition}
-                  className={cn(
-                    "ring-sidebar-foreground/5 flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-sm p-2 ring-1",
-                    !preview.color && "bg-card",
-                  )}
-                  style={
-                    preview.color
-                      ? { backgroundColor: preview.color }
-                      : undefined
-                  }
+                  className="flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-sm bg-card p-2 ring-1 ring-sidebar-foreground/5"
                 >
                   <NoteMarkdown
                     content={preview.snippet ?? ""}
