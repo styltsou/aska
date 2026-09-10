@@ -2,6 +2,7 @@ import * as React from "react";
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 
 import { cn } from "@/lib/utils";
+import { useCoordinatedModalOpen } from "@/hooks/use-modal-escape-layer";
 
 type DrawerContextProps = {
   hasSnapPoints: boolean;
@@ -24,6 +25,9 @@ function useDrawer() {
 }
 
 function Drawer({
+  open: controlledOpen,
+  defaultOpen,
+  onOpenChange,
   modal = true,
   showSwipeHandle = false,
   fast = false,
@@ -34,6 +38,11 @@ function Drawer({
   showSwipeHandle?: boolean;
   fast?: boolean;
 }) {
+  const coordinatedOpen = useCoordinatedModalOpen(
+    controlledOpen,
+    defaultOpen,
+    onOpenChange,
+  );
   const hasSnapPoints = snapPoints != null && snapPoints.length > 0;
   const contextValue = React.useMemo(
     () => ({ hasSnapPoints, modal, showSwipeHandle, fast, swipeDirection }),
@@ -44,6 +53,8 @@ function Drawer({
     <DrawerContext.Provider value={contextValue}>
       <DrawerPrimitive.Root
         data-slot="drawer"
+        open={coordinatedOpen.open}
+        onOpenChange={coordinatedOpen.handleOpenChange}
         modal={modal}
         snapPoints={snapPoints}
         swipeDirection={swipeDirection}

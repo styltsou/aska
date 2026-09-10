@@ -6,9 +6,28 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
+import { useCoordinatedModalOpen } from "@/hooks/use-modal-escape-layer";
 
-function Sheet({ ...props }: SheetPrimitive.Root.Props) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />;
+function Sheet({
+  open: controlledOpen,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: SheetPrimitive.Root.Props) {
+  const modal = useCoordinatedModalOpen(
+    controlledOpen,
+    defaultOpen,
+    onOpenChange,
+  );
+
+  return (
+    <SheetPrimitive.Root
+      data-slot="sheet"
+      {...props}
+      open={modal.open}
+      onOpenChange={modal.handleOpenChange}
+    />
+  );
 }
 
 function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {

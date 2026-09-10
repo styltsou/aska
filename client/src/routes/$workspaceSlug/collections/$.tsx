@@ -12,6 +12,7 @@ import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
 import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
+import { useColorDrilldown } from "@/components/board/use-color-drilldown";
 import {
   BoardActionRail,
   BoardContextMenu,
@@ -74,7 +75,14 @@ function CollectionPage() {
   } = usePersistedYouTubeVideoViewer(
     `aska.youtube-video-viewer:collection:${workspaceSlug}:${collectionPath}`,
   );
-  const [drawerColor, setDrawerColor] = useState<ColorAsset>();
+  const {
+    color: drawerColor,
+    isImageDrilldown,
+    openColor,
+    closeColor,
+    openImageFromColor,
+    returnToColor,
+  } = useColorDrilldown();
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const [editingColor, setEditingColor] = useState<ColorAsset>();
   const [collectionSlug = "", ...folderSegments] = collectionPath
@@ -259,9 +267,17 @@ function CollectionPage() {
 
   const handleCloseNote = () => closeDrawer();
 
-  const handleCloseImage = () => closeViewer();
+  const handleCloseImage = () => {
+    closeViewer();
+    if (isImageDrilldown) returnToColor();
+  };
 
   const handleSelectViewerImage = (image: ImageAsset) => {
+    openViewer(image);
+  };
+
+  const handleOpenImageFromColor = (image: ImageAsset) => {
+    openImageFromColor();
     openViewer(image);
   };
 
@@ -276,7 +292,7 @@ function CollectionPage() {
     color: Extract<(typeof nodes)[number], { type: "color" }>,
   ) => {
     const asset = collectionNodeToAsset(color);
-    if (asset.type === "color") setDrawerColor(asset);
+    if (asset.type === "color") openColor(asset);
   };
 
   const handleOpenFolder = (
@@ -408,7 +424,7 @@ function CollectionPage() {
           collectionSlug,
           parentFolderPath,
         }}
-        onOpenReferencedColor={setDrawerColor}
+        onOpenReferencedColor={openColor}
         onClose={handleCloseNote}
       />
       <ColorDetailDrawer
@@ -416,8 +432,8 @@ function CollectionPage() {
         open={drawerColor !== undefined}
         workspaceSlug={workspaceSlug}
         scope={colorSearchScope}
-        onClose={() => setDrawerColor(undefined)}
-        onOpenImage={handleSelectViewerImage}
+        onClose={closeColor}
+        onOpenImage={handleOpenImageFromColor}
         onEdit={() => {
           setEditingColor(drawerColor);
           setColorEditorOpen(true);
@@ -438,6 +454,8 @@ function CollectionPage() {
         )}
         open={viewerImage !== undefined}
         workspaceSlug={workspaceSlug}
+        onBack={isImageDrilldown ? handleCloseImage : undefined}
+        backLabel={isImageDrilldown ? "Back to color" : "Back to board"}
         onAssetChange={handleSelectViewerImage}
         onOpenChange={(open) => {
           if (!open) handleCloseImage();

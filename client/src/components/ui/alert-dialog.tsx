@@ -4,9 +4,28 @@ import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog
 import { cn } from "@/lib/utils";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { Button } from "@/components/ui/button";
+import { useCoordinatedModalOpen } from "@/hooks/use-modal-escape-layer";
 
-function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
-  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
+function AlertDialog({
+  open: controlledOpen,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: AlertDialogPrimitive.Root.Props) {
+  const modal = useCoordinatedModalOpen(
+    controlledOpen,
+    defaultOpen,
+    onOpenChange,
+  );
+
+  return (
+    <AlertDialogPrimitive.Root
+      data-slot="alert-dialog"
+      {...props}
+      open={modal.open}
+      onOpenChange={modal.handleOpenChange}
+    />
+  );
 }
 
 function AlertDialogTrigger({ ...props }: AlertDialogPrimitive.Trigger.Props) {

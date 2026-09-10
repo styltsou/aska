@@ -1,9 +1,28 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 
 import { cn } from "@/lib/utils";
+import { useCoordinatedModalOpen } from "@/hooks/use-modal-escape-layer";
 
-export function NoteWorkspace({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="note-workspace" {...props} />;
+export function NoteWorkspace({
+  open: controlledOpen,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: DialogPrimitive.Root.Props) {
+  const modal = useCoordinatedModalOpen(
+    controlledOpen,
+    defaultOpen,
+    onOpenChange,
+  );
+
+  return (
+    <DialogPrimitive.Root
+      data-slot="note-workspace"
+      {...props}
+      open={modal.open}
+      onOpenChange={modal.handleOpenChange}
+    />
+  );
 }
 
 export function NoteWorkspaceTrigger({

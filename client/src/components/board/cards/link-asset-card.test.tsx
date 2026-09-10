@@ -1,9 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { LinkAsset } from "@/types/asset";
 import { shouldShowLinkPreviewRefresh } from "../asset-context-menu";
-import { LinkAssetCard } from "./link-asset-card";
+import {
+  handleLinkCardNavigationClick,
+  LinkAssetCard,
+} from "./link-asset-card";
 
 const asset: LinkAsset = {
   id: "link-7",
@@ -24,6 +27,36 @@ const asset: LinkAsset = {
 };
 
 describe("LinkAssetCard", () => {
+  it("lets modifier-click bubble for card selection without navigating", () => {
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    handleLinkCardNavigationClick({
+      ctrlKey: true,
+      metaKey: false,
+      preventDefault,
+      stopPropagation,
+    });
+
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(stopPropagation).not.toHaveBeenCalled();
+  });
+
+  it("keeps ordinary clicks isolated so the anchor can navigate", () => {
+    const preventDefault = vi.fn();
+    const stopPropagation = vi.fn();
+
+    handleLinkCardNavigationClick({
+      ctrlKey: false,
+      metaKey: false,
+      preventDefault,
+      stopPropagation,
+    });
+
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(stopPropagation).toHaveBeenCalledOnce();
+  });
+
   it("turns a resolved YouTube card into a video-details action", () => {
     const html = renderToStaticMarkup(
       <LinkAssetCard asset={asset} onOpen={() => undefined} />,

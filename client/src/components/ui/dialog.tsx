@@ -5,9 +5,28 @@ import { cn } from "@/lib/utils";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
+import { useCoordinatedModalOpen } from "@/hooks/use-modal-escape-layer";
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+function Dialog({
+  open: controlledOpen,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: DialogPrimitive.Root.Props) {
+  const modal = useCoordinatedModalOpen(
+    controlledOpen,
+    defaultOpen,
+    onOpenChange,
+  );
+
+  return (
+    <DialogPrimitive.Root
+      data-slot="dialog"
+      {...props}
+      open={modal.open}
+      onOpenChange={modal.handleOpenChange}
+    />
+  );
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {

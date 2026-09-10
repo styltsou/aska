@@ -11,6 +11,7 @@ import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
 import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
+import { useColorDrilldown } from "@/components/board/use-color-drilldown";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { BoardContextMenu, BoardUploadZone } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
@@ -60,7 +61,14 @@ function InboxPage() {
   } = usePersistedYouTubeVideoViewer(
     `aska.youtube-video-viewer:inbox:${workspaceSlug}`,
   );
-  const [drawerColor, setDrawerColor] = useState<ColorAsset>();
+  const {
+    color: drawerColor,
+    isImageDrilldown,
+    openColor,
+    closeColor,
+    openImageFromColor,
+    returnToColor,
+  } = useColorDrilldown();
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const [editingColor, setEditingColor] = useState<ColorAsset>();
   const { data, isLoading, isFetching, isError, refetch } = useInboxContents(
@@ -110,7 +118,15 @@ function InboxPage() {
     openViewer(image);
   };
 
-  const handleCloseImage = () => closeViewer();
+  const handleCloseImage = () => {
+    closeViewer();
+    if (isImageDrilldown) returnToColor();
+  };
+
+  const handleOpenImageFromColor = (image: ImageAsset) => {
+    openImageFromColor();
+    openViewer(image);
+  };
 
   return (
     <BoardContextMenu
@@ -128,7 +144,7 @@ function InboxPage() {
           inboxContext={{ workspaceSlug }}
           onOpenNote={handleOpenNote}
           onOpenImage={handleOpenImage}
-          onOpenColor={setDrawerColor}
+          onOpenColor={openColor}
           onOpenVideo={openVideoViewer}
           emptyTitle={
             hasResolvedColorSearch || isTypeFilterActive
@@ -153,7 +169,7 @@ function InboxPage() {
         hasPreviousNote={hasPreviousNote}
         workspaceSlug={workspaceSlug}
         noteExtractionTarget={{ target: "inbox" }}
-        onOpenReferencedColor={setDrawerColor}
+        onOpenReferencedColor={openColor}
         onClose={handleCloseNote}
       />
       <ColorDetailDrawer
@@ -161,8 +177,8 @@ function InboxPage() {
         open={drawerColor !== undefined}
         workspaceSlug={workspaceSlug}
         scope={{ type: "inbox" }}
-        onClose={() => setDrawerColor(undefined)}
-        onOpenImage={handleOpenImage}
+        onClose={closeColor}
+        onOpenImage={handleOpenImageFromColor}
         onEdit={() => {
           setEditingColor(drawerColor);
           setColorEditorOpen(true);
@@ -182,6 +198,8 @@ function InboxPage() {
         )}
         open={viewerImage !== undefined}
         workspaceSlug={workspaceSlug}
+        onBack={isImageDrilldown ? handleCloseImage : undefined}
+        backLabel={isImageDrilldown ? "Back to color" : "Back to board"}
         onAssetChange={handleOpenImage}
         onOpenChange={(open) => {
           if (!open) handleCloseImage();

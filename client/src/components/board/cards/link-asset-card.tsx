@@ -1,12 +1,25 @@
 import { ExternalLinkIcon, Globe2Icon, PlayIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { hasSelectionModifier } from "@/lib/selection";
 import { isYouTubeVideoUrl } from "@/lib/youtube-url";
 import { cn } from "@/lib/utils";
 import type { LinkAsset } from "@/types/asset";
+
+export function handleLinkCardNavigationClick(
+  event: Pick<
+    MouseEvent<HTMLAnchorElement>,
+    "ctrlKey" | "metaKey" | "preventDefault" | "stopPropagation"
+  >,
+) {
+  if (hasSelectionModifier(event)) {
+    event.preventDefault();
+    return;
+  }
+  event.stopPropagation();
+}
 
 export function LinkAssetCard({
   asset,
@@ -124,7 +137,7 @@ export function LinkAssetCard({
         target="_blank"
         rel="noopener noreferrer"
         className={className}
-        onClick={(event) => event.stopPropagation()}
+        onClick={handleLinkCardNavigationClick}
         aria-label={`Open ${asset.title}`}
       >
         {contents}

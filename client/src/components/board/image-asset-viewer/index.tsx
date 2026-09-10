@@ -1,7 +1,6 @@
 import {
   Dialog,
   DialogBody,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
@@ -902,6 +901,8 @@ export function ImageAssetViewer({
   assets = [],
   open,
   onOpenChange,
+  onBack,
+  backLabel = "Back to board",
   onAssetChange,
   workspaceSlug,
 }: {
@@ -909,6 +910,8 @@ export function ImageAssetViewer({
   assets?: ImageAsset[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onBack?: () => void;
+  backLabel?: string;
   onAssetChange?: (asset: ImageAsset) => void;
   workspaceSlug: string;
 }) {
@@ -1171,9 +1174,13 @@ export function ImageAssetViewer({
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (!nextOpen) flushImageNote();
+      if (!nextOpen && onBack) {
+        onBack();
+        return;
+      }
       onOpenChange(nextOpen);
     },
-    [flushImageNote, onOpenChange],
+    [flushImageNote, onBack, onOpenChange],
   );
 
   useEffect(() => {
@@ -1728,21 +1735,19 @@ export function ImageAssetViewer({
                     <Tooltip>
                       <TooltipTrigger
                         render={
-                          <DialogClose
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                className="hover:bg-secondary active:bg-foreground/[0.1]"
-                              />
-                            }
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="hover:bg-secondary active:bg-foreground/[0.1]"
+                            onClick={() => handleOpenChange(false)}
                           />
                         }
                       >
                         <ArrowLeftIcon />
-                        <span className="sr-only">Back to board</span>
+                        <span className="sr-only">{backLabel}</span>
                       </TooltipTrigger>
-                      <TooltipContent>Back to board</TooltipContent>
+                      <TooltipContent>{backLabel}</TooltipContent>
                     </Tooltip>
                   </ButtonGroup>
                 </div>

@@ -32,6 +32,11 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { gradientToCss } from "@/lib/color-gradient";
@@ -191,14 +196,25 @@ export function ColorDetailDrawer({
                   <PencilIcon className="size-4" />
                 </Button>
               ) : null}
-              <DrawerClose
-                render={
-                  <Button variant="ghost" size="icon-sm" aria-label="Close" />
-                }
-              >
-                <XIcon className="size-4" />
-                <span className="sr-only">Close</span>
-              </DrawerClose>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <DrawerClose
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label="Close"
+                        />
+                      }
+                    />
+                  }
+                >
+                  <XIcon className="size-4" />
+                  <span className="sr-only">Close</span>
+                </TooltipTrigger>
+                <TooltipContent>Close</TooltipContent>
+              </Tooltip>
             </div>
           </DrawerHeader>
 
@@ -251,7 +267,6 @@ export function ColorDetailDrawer({
                             image={result.image}
                             label={location}
                             onOpen={() => {
-                              onClose();
                               onOpenImage({
                                 id: result.image.id,
                                 type: "image",
