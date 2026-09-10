@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -18,20 +18,19 @@ import { BoardContextMenu, BoardUploadZone } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
 import { MasonryGridSkeleton } from "@/components/masonry-grid-skeleton";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
-import { useSessionStore, useTransientStore } from "@/store";
+import { useSessionStore } from "@/store";
 import type { ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
 import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
 import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
 import { usePersistedYouTubeVideoViewer } from "@/components/board/use-persisted-youtube-video-viewer";
 import { ResourceLoadError } from "@/components/resource-load-error";
+import {
+  useWorkspacePeek,
+  type BoardShowRequest,
+} from "@/components/app-shell/workspace-peek";
 
 export const Route = createFileRoute("/$workspaceSlug/inbox")({
-  validateSearch: (search: Record<string, unknown>): { reveal?: string } => {
-    const reveal =
-      typeof search.reveal === "string" ? search.reveal : undefined;
-    return reveal ? { reveal } : {};
-  },
   head: () => ({
     meta: [{ title: "Inbox | Aska" }],
   }),
@@ -41,9 +40,8 @@ export const Route = createFileRoute("/$workspaceSlug/inbox")({
 
 function InboxPage() {
   const { workspaceSlug } = Route.useParams();
-  const { reveal } = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
   const filterScope = `inbox:${workspaceSlug}`;
+  const { showRequest, consumeShowRequest } = useWorkspacePeek();
   const filterBar = useSessionStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
   );
@@ -83,8 +81,8 @@ function InboxPage() {
     selectedAssetTypes,
   );
   const { mutate: markInboxSeen } = useMarkInboxSeen(workspaceSlug);
-  const replaceSelection = useTransientStore((state) => state.replaceSelection);
-  const [focusedRevealNodeId, setFocusedRevealNodeId] = useState<string>();
+  const [focusedShowRequest, setFocusedShowRequest] =
+    useState<BoardShowRequest>();
   const selectedColorHexes =
     filterBar.filterType === "Color" ? filterBar.selectedColors : [];
   const isTypeFilterActive = selectedAssetTypes.length > 0;
@@ -106,18 +104,17 @@ function InboxPage() {
     : assets;
 
   useEffect(() => {
-    if (!reveal || !data) return;
-    if (!data.nodes.some((node) => node.id === reveal)) {
+    if (!showRequest || showRequest.scopeKey !== filterScope || !data) return;
+    if (!data.nodes.some((node) => node.id === showRequest.assetId)) {
       if (isFetching) return;
-      toast.error("This note is no longer at that location.");
-      void navigate({ search: {}, replace: true });
+      toast.error("This asset is no longer at that location.");
+      consumeShowRequest(showRequest.id);
       return;
     }
 
-    replaceSelection(filterScope, [reveal]);
-    setFocusedRevealNodeId(reveal);
-    void navigate({ search: {}, replace: true });
-  }, [data, filterScope, isFetching, navigate, replaceSelection, reveal]);
+    setFocusedShowRequest(showRequest);
+    consumeShowRequest(showRequest.id);
+  }, [consumeShowRequest, data, filterScope, isFetching, showRequest]);
 
   if (isLoading) return <MasonryGridSkeleton />;
 
@@ -165,7 +162,9 @@ function InboxPage() {
         <AssetBoard
           assets={displayAssets}
           inboxContext={{ workspaceSlug }}
-          focusedAssetId={focusedRevealNodeId}
+          focusedAssetId={focusedShowRequest?.assetId}
+          focusRequestId={focusedShowRequest?.id}
+          onDismissFocusedAsset={() => setFocusedShowRequest(undefined)}
           onOpenNote={handleOpenNote}
           onOpenImage={handleOpenImage}
           onOpenColor={openColor}
@@ -186,6 +185,7 @@ function InboxPage() {
       </BoardUploadZone>
       <NoteDetailDrawer
         note={drawerNote}
+        location={{ type: "inbox" }}
         onNoteChange={updateDrawerNote}
         onPromote={promoteDrawer}
         onSwap={openDrawer}

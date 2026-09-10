@@ -102,6 +102,8 @@ type CanvasProps = {
   isColorFilterActive?: boolean;
   colorMatchNodeIds?: ReadonlySet<string>;
   focusedNodeId?: string;
+  focusRequestId?: number;
+  onDismissFocusedNode?: () => void;
   loadError?: React.ReactNode;
   emptyTitle: string;
   emptyDescription: string;
@@ -161,6 +163,8 @@ function CanvasSurface({
   isColorFilterActive = false,
   colorMatchNodeIds,
   focusedNodeId,
+  focusRequestId,
+  onDismissFocusedNode,
   loadError,
   emptyTitle,
   emptyDescription,
@@ -810,7 +814,7 @@ function CanvasSurface({
       maxZoom: 1.15,
       duration: 150,
     });
-  }, [fitView, focusedNodeId, getNode]);
+  }, [fitView, focusRequestId, focusedNodeId, getNode]);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange<CanvasNode>[]) => {
@@ -954,7 +958,10 @@ function CanvasSurface({
     <div
       ref={boardRef}
       className="relative h-full min-h-0 w-full bg-transparent"
-      onPointerDownCapture={marquee.onPointerDownCapture}
+      onPointerDownCapture={(event) => {
+        if (focusRequestId !== undefined) onDismissFocusedNode?.();
+        marquee.onPointerDownCapture(event);
+      }}
       onPointerMoveCapture={(event) => {
         marquee.onPointerMoveCapture(event);
         alignmentBypassRef.current = event.altKey;

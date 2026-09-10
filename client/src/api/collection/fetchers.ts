@@ -38,7 +38,6 @@ import type {
   UpdateLinkResponse,
   UpdateColorInput,
   UpdateColorResponse,
-  AssetLocationResponse,
   PeekableAssetResponse,
 } from "./types";
 
@@ -48,15 +47,6 @@ export async function fetchPeekableAsset(
 ): Promise<PeekableAssetResponse> {
   return apiGet<PeekableAssetResponse>(
     `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}`,
-  );
-}
-
-export async function fetchAssetLocation(
-  workspaceSlug: string,
-  assetId: string,
-): Promise<AssetLocationResponse> {
-  return apiGet<AssetLocationResponse>(
-    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/location`,
   );
 }
 

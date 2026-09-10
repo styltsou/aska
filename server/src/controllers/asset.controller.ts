@@ -53,26 +53,14 @@ export const getPeekableAsset = factory.createHandlers(
       workspaceSlug,
       c.get("userId"),
     );
+    const [asset, location] = await Promise.all([
+      assetService.getPeekableAsset(workspace.id, assetId),
+      assetService.getAssetLocation(workspace.id, assetId),
+    ]);
     return c.json(
       success({
-        asset: await assetService.getPeekableAsset(workspace.id, assetId),
-      }),
-    );
-  },
-);
-
-export const getAssetLocation = factory.createHandlers(
-  authMiddleware,
-  validate.param(AssetPathParamSchema),
-  async (c) => {
-    const { workspaceSlug, assetId } = c.req.valid("param");
-    const workspace = await collectionService.getWorkspaceBySlug(
-      workspaceSlug,
-      c.get("userId"),
-    );
-    return c.json(
-      success({
-        location: await assetService.getAssetLocation(workspace.id, assetId),
+        asset,
+        location,
       }),
     );
   },

@@ -25,6 +25,7 @@ import {
   useUpdateNote,
 } from "@/api/collection";
 import type {
+  AssetLocation,
   BoardInsertionPlacement,
   CollectionNoteNode,
 } from "@/api/collection";
@@ -101,6 +102,7 @@ type ExtractionFeedback = {
 export function NoteDetailDrawer({
   note,
   workspaceSlug,
+  location,
   createOptions,
   children,
   noteExtractionTarget,
@@ -114,6 +116,7 @@ export function NoteDetailDrawer({
 }: {
   note: NoteAsset | undefined;
   workspaceSlug: string;
+  location: AssetLocation;
   createOptions?: {
     collectionPath: string;
     target?: "collection" | "inbox";
@@ -321,12 +324,19 @@ export function NoteDetailDrawer({
       if (!matchesKeybinding(event, PEEK_NOTE_SHORTCUT)) return;
       event.preventDefault();
       event.stopPropagation();
-      peekNote(activeNote);
+      peekNote(activeNote, location);
       closeWorkspace();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeNote, closeWorkspace, isPeekMirror, peekNote, workspaceOpen]);
+  }, [
+    activeNote,
+    closeWorkspace,
+    isPeekMirror,
+    location,
+    peekNote,
+    workspaceOpen,
+  ]);
 
   useEffect(() => {
     if (activeNote) syncPeekNote(activeNote);
@@ -588,10 +598,13 @@ export function NoteDetailDrawer({
   const openBacklink = useCallback(
     async (assetId: string) => {
       try {
-        const { asset } = await fetchPeekableAsset(workspaceSlug, assetId);
+        const { asset, location: assetLocation } = await fetchPeekableAsset(
+          workspaceSlug,
+          assetId,
+        );
         if (asset.type !== "note") return;
         if (isMobile) await promotePeekedNote(asset);
-        else peekNote(asset);
+        else peekNote(asset, assetLocation);
       } catch (error) {
         toast.error(
           getUserFacingApiErrorMessage(error, "Could not open this reference."),
@@ -607,13 +620,13 @@ export function NoteDetailDrawer({
       resolved?: NoteMentionTarget,
     ) => {
       try {
-        const { asset } = await fetchPeekableAsset(
+        const { asset, location: assetLocation } = await fetchPeekableAsset(
           workspaceSlug,
           `${identity.assetType}-${identity.assetId}`,
         );
         if (asset.type === "note") {
           if (isMobile) await promotePeekedNote(asset);
-          else peekNote(asset);
+          else peekNote(asset, assetLocation);
           return;
         }
         if (isMobile) {
@@ -703,12 +716,13 @@ export function NoteDetailDrawer({
       }
     }
 
-    peekNote(currentMainNote);
+    peekNote(currentMainNote, location);
     onSwap(nextMainNote);
   }, [
     activeNote,
     isCreateMode,
     isPending,
+    location,
     mutateAsync,
     noteContent,
     onNoteChange,
@@ -1008,7 +1022,7 @@ export function NoteDetailDrawer({
                       disabled={!activeNote}
                       onClick={() => {
                         if (!activeNote) return;
-                        peekNote(activeNote);
+                        peekNote(activeNote, location);
                         closeWorkspace();
                       }}
                     >

@@ -242,15 +242,12 @@ export type CreateNoteResponse = {
 
 export type PeekableAssetResponse = {
   asset: CollectionNoteNode | CollectionColorNode;
+  location: AssetLocation;
 };
 
 export type AssetLocation =
   | { type: "inbox" }
   | { type: "collection"; collectionSlug: string; folderPath?: string };
-
-export type AssetLocationResponse = {
-  location: AssetLocation;
-};
 
 export type CreateColorInput = {
   hex: string;

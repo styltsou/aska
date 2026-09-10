@@ -38,11 +38,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useUpdateNote } from "@/api/collection";
-import {
-  fetchAssetLocation,
-  fetchPeekableAsset,
-} from "@/api/collection/fetchers";
+import { useUpdateNote, type AssetLocation } from "@/api/collection";
+import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import type { NoteMentionTarget } from "@/api/note-mentions/types";
 import { gradientToCss } from "@/lib/color-gradient";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
@@ -61,7 +58,7 @@ import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/store";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ColorAsset, NoteAsset } from "@/types/asset";
 import type { NoteHighlightColor } from "@/lib/note-highlights";
 import {
@@ -70,6 +67,7 @@ import {
   SIDE_PANEL_INITIAL,
   SIDE_PANEL_TRANSITION,
 } from "./side-panel-motion";
+import { getSidebarCollectionLocation } from "./sidebar-collection-navigation";
 
 export type PeekColorScope =
   | { type: "inbox" }
@@ -81,14 +79,62 @@ export type PeekColorScope =
     };
 
 type PeekTarget =
-  | { type: "note"; asset: NoteAsset }
-  | { type: "color"; asset: ColorAsset; scope: PeekColorScope };
+  | { type: "note"; asset: NoteAsset; location?: AssetLocation }
+  | {
+      type: "color";
+      asset: ColorAsset;
+      scope: PeekColorScope;
+      location?: AssetLocation;
+    };
+
+export type BoardShowRequest = {
+  id: number;
+  assetId: string;
+  scopeKey: string;
+};
+
+export function getAssetLocationScopeKey(
+  workspaceSlug: string,
+  location: AssetLocation,
+): string {
+  if (location.type === "inbox") return `inbox:${workspaceSlug}`;
+  return `collection:${workspaceSlug}/${[
+    location.collectionSlug,
+    location.folderPath,
+  ]
+    .filter(Boolean)
+    .join("/")}`;
+}
+
+function getCurrentBoardScopeKey(pathname: string): string | undefined {
+  const location = getSidebarCollectionLocation(pathname);
+  if (pathname === `/${location.workspaceSlug}/inbox`) {
+    return `inbox:${location.workspaceSlug}`;
+  }
+  if (!location.collectionSlug) return undefined;
+  return getAssetLocationScopeKey(location.workspaceSlug, {
+    type: "collection",
+    collectionSlug: location.collectionSlug,
+    folderPath: location.folderPath,
+  });
+}
+
+function getLocationFromColorScope(scope: PeekColorScope): AssetLocation {
+  return scope.type === "inbox"
+    ? { type: "inbox" }
+    : {
+        type: "collection",
+        collectionSlug: scope.collectionSlug,
+        folderPath: scope.folderPath,
+      };
+}
 
 type WorkspacePeekContextValue = {
   target?: PeekTarget;
+  showRequest?: BoardShowRequest;
   activeNoteId?: string;
   isResizing: boolean;
-  peekNote: (note: NoteAsset) => void;
+  peekNote: (note: NoteAsset, location: AssetLocation) => void;
   peekColor: (color: ColorAsset, scope: PeekColorScope) => void;
   setActiveNoteId: (noteId?: string) => void;
   syncPeekNote: (note: NoteAsset) => void;
@@ -96,7 +142,8 @@ type WorkspacePeekContextValue = {
     handler?: (note: NoteAsset) => Promise<boolean>,
   ) => void;
   promoteNote: () => Promise<void>;
-  revealPeekedAsset: () => Promise<void>;
+  showPeekedAsset: () => Promise<void>;
+  consumeShowRequest: (requestId: number) => void;
   setNoteSwapHandler: (handler?: () => Promise<void>) => void;
   swapNotes: () => Promise<void>;
   closePeek: () => void;
@@ -162,9 +209,13 @@ export function WorkspacePeekProvider({
   children: React.ReactNode;
 }) {
   const navigate = useNavigate();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const [target, setTarget] = useState<PeekTarget | undefined>(() =>
     readTarget(workspaceSlug),
   );
+  const [showRequest, setShowRequest] = useState<BoardShowRequest>();
   const [isRailReserved, setIsRailReserved] = useState(() => Boolean(target));
   const [activeNoteId, setActiveNoteId] = useState<string>();
   const [isResizing, setIsResizing] = useState(false);
@@ -172,6 +223,7 @@ export function WorkspacePeekProvider({
   const [width, setWidth] = useState(() => readPeekWidth(workspaceSlug));
   const widthRef = useRef(width);
   const targetRef = useRef(target);
+  const showRequestIdRef = useRef(0);
   const notePromotionHandlerRef = useRef<
     ((note: NoteAsset) => Promise<boolean>) | undefined
   >(undefined);
@@ -181,28 +233,32 @@ export function WorkspacePeekProvider({
   const resizeEndTimeoutRef = useRef<number | undefined>(undefined);
   widthRef.current = width;
   targetRef.current = target;
+  const targetAssetId = target?.asset.id;
+  const targetType = target?.type;
 
   useEffect(() => {
     const restoredTarget = readTarget(workspaceSlug);
     setPeekFocusRequest(0);
+    setShowRequest(undefined);
     setTarget(restoredTarget);
     setIsRailReserved(Boolean(restoredTarget));
     setWidth(readPeekWidth(workspaceSlug));
   }, [workspaceSlug]);
   useEffect(() => {
-    if (!target) return;
+    if (!targetAssetId || !targetType) return;
     let active = true;
-    void fetchPeekableAsset(workspaceSlug, target.asset.id)
-      .then(({ asset }) => {
-        if (!active || asset.type !== target.type) return;
+    void fetchPeekableAsset(workspaceSlug, targetAssetId)
+      .then(({ asset, location }) => {
+        if (!active || asset.type !== targetType) return;
         setTarget((current) =>
           current?.type === "note" && asset.type === "note"
             ? {
                 type: "note",
                 asset,
+                location,
               }
             : current?.type === "color" && asset.type === "color"
-              ? { ...current, asset }
+              ? { ...current, asset, location }
               : current,
         );
       })
@@ -212,7 +268,7 @@ export function WorkspacePeekProvider({
     return () => {
       active = false;
     };
-  }, [target?.asset.id, target?.type, workspaceSlug]);
+  }, [targetAssetId, targetType, workspaceSlug]);
   useIsomorphicLayoutEffect(() => {
     document.documentElement.style.setProperty(
       "--workspace-peek-rail-width",
@@ -317,38 +373,33 @@ export function WorkspacePeekProvider({
   const syncPeekNote = useCallback((asset: NoteAsset) => {
     setTarget((current) =>
       current?.type === "note" && current.asset.id === asset.id
-        ? { type: "note", asset }
+        ? { ...current, asset }
         : current,
     );
   }, []);
   const handleExitComplete = useCallback(() => {
     if (!targetRef.current) setIsRailReserved(false);
   }, []);
-  const revealPeekedAsset = useCallback(async () => {
-    if (!target) return;
+  const showPeekedAsset = useCallback(async () => {
+    if (!target?.location) return;
 
     try {
-      const { location } = await fetchAssetLocation(
-        workspaceSlug,
-        target.asset.id,
-      );
-      const focusNodeId = target.asset.id;
-      const filterScope =
-        location.type === "inbox"
-          ? `inbox:${workspaceSlug}`
-          : `collection:${workspaceSlug}/${[
-              location.collectionSlug,
-              location.folderPath,
-            ]
-              .filter(Boolean)
-              .join("/")}`;
-      useSessionStore.getState().clearFilters(filterScope);
+      const location = target.location;
+      const scopeKey = getAssetLocationScopeKey(workspaceSlug, location);
+      useSessionStore.getState().clearFilters(scopeKey);
+      const request = {
+        id: ++showRequestIdRef.current,
+        assetId: target.asset.id,
+        scopeKey,
+      };
+      setShowRequest(request);
+
+      if (getCurrentBoardScopeKey(pathname) === scopeKey) return;
 
       if (location.type === "inbox") {
         await navigate({
           to: "/$workspaceSlug/inbox",
           params: { workspaceSlug },
-          search: { reveal: focusNodeId },
         });
         return;
       }
@@ -361,30 +412,42 @@ export function WorkspacePeekProvider({
             .filter(Boolean)
             .join("/"),
         },
-        search: { reveal: focusNodeId },
       });
     } catch (error) {
+      setShowRequest(undefined);
       toast.error(
-        getUserFacingApiErrorMessage(error, "Unable to reveal asset."),
+        getUserFacingApiErrorMessage(error, "Unable to show asset in board."),
       );
     }
-  }, [navigate, target, workspaceSlug]);
+  }, [navigate, pathname, target, workspaceSlug]);
+
+  const consumeShowRequest = useCallback((requestId: number) => {
+    setShowRequest((current) =>
+      current?.id === requestId ? undefined : current,
+    );
+  }, []);
 
   const value = useMemo<WorkspacePeekContextValue>(
     () => ({
       target,
+      showRequest,
       activeNoteId,
       isResizing,
-      peekNote: (asset) => {
+      peekNote: (asset, location) => {
         setPeekFocusRequest((request) => request + 1);
         setActiveNoteId(undefined);
         setIsRailReserved(true);
-        setTarget({ type: "note", asset });
+        setTarget({ type: "note", asset, location });
       },
       peekColor: (asset, scope) => {
         setPeekFocusRequest((request) => request + 1);
         setIsRailReserved(true);
-        setTarget({ type: "color", asset, scope });
+        setTarget({
+          type: "color",
+          asset,
+          scope,
+          location: getLocationFromColorScope(scope),
+        });
       },
       setActiveNoteId,
       syncPeekNote,
@@ -399,7 +462,8 @@ export function WorkspacePeekProvider({
           setTarget(undefined);
         }
       },
-      revealPeekedAsset,
+      showPeekedAsset,
+      consumeShowRequest,
       setNoteSwapHandler: (handler) => {
         noteSwapHandlerRef.current = handler;
       },
@@ -411,7 +475,15 @@ export function WorkspacePeekProvider({
         setTarget(undefined);
       },
     }),
-    [activeNoteId, isResizing, revealPeekedAsset, syncPeekNote, target],
+    [
+      activeNoteId,
+      consumeShowRequest,
+      isResizing,
+      showPeekedAsset,
+      showRequest,
+      syncPeekNote,
+      target,
+    ],
   );
 
   return (
@@ -486,7 +558,7 @@ function WorkspacePeekPanel({
   focusRequest: number;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }) {
-  const { activeNoteId, closePeek, promoteNote, revealPeekedAsset } =
+  const { activeNoteId, closePeek, promoteNote, showPeekedAsset } =
     useWorkspacePeek();
   const reduceMotion = useReducedMotion();
   const canPromote = target.type === "note" && activeNoteId !== target.asset.id;
@@ -540,12 +612,17 @@ function WorkspacePeekPanel({
             focusRequest={focusRequest}
             onClose={closePeek}
             onPromote={canPromote ? promoteNote : undefined}
-            onReveal={revealPeekedAsset}
+            onShow={showPeekedAsset}
+            showEnabled={target.location !== undefined}
             readOnly={activeNoteId === target.asset.id}
           />
         ) : (
           <>
-            <PeekHeader onClose={closePeek} onReveal={revealPeekedAsset} />
+            <PeekHeader
+              onClose={closePeek}
+              onShow={showPeekedAsset}
+              showEnabled={target.location !== undefined}
+            />
             <PeekColor
               color={target.asset}
               scope={target.scope}
@@ -561,16 +638,18 @@ function WorkspacePeekPanel({
 function PeekHeader({
   onClose,
   onPromote,
-  onReveal,
+  onShow,
+  showEnabled = true,
   children,
 }: {
   onClose: () => void;
   onPromote?: () => Promise<void>;
-  onReveal?: () => Promise<void>;
+  onShow?: () => Promise<void>;
+  showEnabled?: boolean;
   children?: ReactNode;
 }) {
   const [isPromoting, setIsPromoting] = useState(false);
-  const [isRevealing, setIsRevealing] = useState(false);
+  const [isShowing, setIsShowing] = useState(false);
   const handlePromote = useCallback(async () => {
     if (!onPromote || isPromoting) return;
     setIsPromoting(true);
@@ -580,15 +659,15 @@ function PeekHeader({
       setIsPromoting(false);
     }
   }, [isPromoting, onPromote]);
-  const handleReveal = useCallback(async () => {
-    if (!onReveal || isRevealing) return;
-    setIsRevealing(true);
+  const handleShow = useCallback(async () => {
+    if (!onShow || !showEnabled || isShowing) return;
+    setIsShowing(true);
     try {
-      await onReveal();
+      await onShow();
     } finally {
-      setIsRevealing(false);
+      setIsShowing(false);
     }
-  }, [isRevealing, onReveal]);
+  }, [isShowing, onShow, showEnabled]);
   return (
     <div
       className={cn(
@@ -648,7 +727,7 @@ function PeekHeader({
             </TooltipContent>
           </Tooltip>
         ) : null}
-        {onReveal ? (
+        {onShow ? (
           <Tooltip>
             <TooltipTrigger
               render={
@@ -657,16 +736,16 @@ function PeekHeader({
                   variant="ghost"
                   size="icon"
                   className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  aria-label="Reveal on board"
-                  disabled={isRevealing}
-                  onClick={() => void handleReveal()}
+                  aria-label="Show in board"
+                  disabled={!showEnabled || isShowing}
+                  onClick={() => void handleShow()}
                 >
                   <LocateFixedIcon className="size-4" />
-                  <span className="sr-only">Reveal on board</span>
+                  <span className="sr-only">Show in board</span>
                 </Button>
               }
             />
-            <TooltipContent side="bottom">Reveal on board</TooltipContent>
+            <TooltipContent side="bottom">Show in board</TooltipContent>
           </Tooltip>
         ) : null}
       </div>
@@ -685,7 +764,8 @@ function PeekNote({
   focusRequest,
   onClose,
   onPromote,
-  onReveal,
+  onShow,
+  showEnabled,
   readOnly,
 }: {
   note: NoteAsset;
@@ -693,7 +773,8 @@ function PeekNote({
   focusRequest: number;
   onClose: () => void;
   onPromote?: () => Promise<void>;
-  onReveal: () => Promise<void>;
+  onShow: () => Promise<void>;
+  showEnabled: boolean;
   readOnly: boolean;
 }) {
   const { peekNote, peekColor } = useWorkspacePeek();
@@ -774,12 +855,12 @@ function PeekNote({
             setSaveState("saved");
           }
         }
-        const { asset } = await fetchPeekableAsset(
+        const { asset, location } = await fetchPeekableAsset(
           workspaceSlug,
           `${identity.assetType}-${identity.assetId}`,
         );
         if (asset.type === "note") {
-          peekNote(asset);
+          peekNote(asset, location);
           return;
         }
         peekColor(
@@ -835,7 +916,12 @@ function PeekNote({
   const hasDetails = Boolean(note.createdAt || note.updatedAt);
   return (
     <>
-      <PeekHeader onClose={onClose} onPromote={onPromote} onReveal={onReveal}>
+      <PeekHeader
+        onClose={onClose}
+        onPromote={onPromote}
+        onShow={onShow}
+        showEnabled={showEnabled}
+      >
         {readOnly ? (
           <>
             <HoverCard>

@@ -66,7 +66,6 @@ export type {
   BoardPosition,
   BoardVisibleBounds,
   AssetLocation,
-  AssetLocationResponse,
   MoveCollectionNodeToFolderResponse,
   MoveCollectionNodesToFolderInput,
   MoveCollectionNodesToFolderResponse,

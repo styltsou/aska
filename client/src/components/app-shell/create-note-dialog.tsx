@@ -24,10 +24,23 @@ export function CreateNoteDialog({
   target?: "collection" | "inbox";
   placement?: BoardInsertionPlacement;
 }) {
+  const [collectionSlug = "", ...folderSegments] = collectionPath
+    .split("/")
+    .filter(Boolean);
+  const location =
+    target === "inbox"
+      ? ({ type: "inbox" } as const)
+      : ({
+          type: "collection",
+          collectionSlug,
+          folderPath: folderSegments.join("/") || undefined,
+        } as const);
+
   return (
     <NoteDetailDrawer
       note={undefined}
       workspaceSlug={workspaceSlug}
+      location={location}
       createOptions={{
         collectionPath,
         target,

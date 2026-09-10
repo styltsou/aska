@@ -24,6 +24,7 @@ import {
   useFlattenFolder,
   useUpdateNote,
 } from "@/api/collection";
+import type { AssetLocation } from "@/api/collection";
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
 import type { Asset, ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import type { LinkAsset } from "@/types/asset";
@@ -273,6 +274,21 @@ export function AssetContextMenu({
       includeDescendants: false,
     };
   })();
+  const peekLocation: AssetLocation = deleteContext
+    ? {
+        type: "collection",
+        collectionSlug: deleteContext.collectionSlug,
+        folderPath: deleteContext.folderPath,
+      }
+    : inboxContext
+      ? { type: "inbox" }
+      : peekScope.type === "inbox"
+        ? { type: "inbox" }
+        : {
+            type: "collection",
+            collectionSlug: peekScope.collectionSlug,
+            folderPath: peekScope.folderPath,
+          };
   const closePexels = () => {
     const segments = pathname.split("/").filter(Boolean);
     if (segments[1] === "collections" && segments[0] && segments[2]) {
@@ -456,7 +472,7 @@ export function AssetContextMenu({
                   </ContextMenuItem>
                   {noteActions(asset, () => {
                     closePexels();
-                    peekNote(asset);
+                    peekNote(asset, peekLocation);
                   })}
                 </>
               ) : (

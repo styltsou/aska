@@ -35,23 +35,18 @@ import {
   FolderNotFound,
 } from "@/components/canvas";
 import { ApiError } from "@/lib/api";
-import {
-  getCollectionViewScope,
-  useSessionStore,
-  useTransientStore,
-} from "@/store";
+import { getCollectionViewScope, useSessionStore } from "@/store";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { ResourceLoadError } from "@/components/resource-load-error";
 import { CollectionGridView } from "@/components/collection-grid-view";
+import {
+  useWorkspacePeek,
+  type BoardShowRequest,
+} from "@/components/app-shell/workspace-peek";
 
 const EMPTY_COLOR_RESULTS: readonly [] = [];
 
 export const Route = createFileRoute("/$workspaceSlug/collections/$")({
-  validateSearch: (search: Record<string, unknown>): { reveal?: string } => {
-    const reveal =
-      typeof search.reveal === "string" ? search.reveal : undefined;
-    return reveal ? { reveal } : {};
-  },
   head: () => ({
     meta: [{ title: "Collection | Aska" }],
   }),
@@ -61,8 +56,8 @@ export const Route = createFileRoute("/$workspaceSlug/collections/$")({
 
 function CollectionPage() {
   const { workspaceSlug, _splat } = Route.useParams();
-  const { reveal } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
+  const { showRequest, consumeShowRequest } = useWorkspacePeek();
   const collectionPath = _splat ?? "";
   const {
     drawerNote,
@@ -100,8 +95,8 @@ function CollectionPage() {
     .filter(Boolean);
   const folderPath = folderSegments.join("/");
   const queryClient = useQueryClient();
-  const replaceSelection = useTransientStore((state) => state.replaceSelection);
-  const [focusedRevealNodeId, setFocusedRevealNodeId] = useState<string>();
+  const [focusedShowRequest, setFocusedShowRequest] =
+    useState<BoardShowRequest>();
   const filterScope = `collection:${workspaceSlug}/${collectionPath}`;
   const filterBar = useSessionStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
@@ -233,30 +228,34 @@ function CollectionPage() {
   );
 
   useEffect(() => {
-    if (!reveal || !data || hasStaleRoutePlaceholder) return;
-    if (!nodes.some((node) => node.id === reveal)) {
+    if (
+      !showRequest ||
+      showRequest.scopeKey !== filterScope ||
+      !data ||
+      hasStaleRoutePlaceholder
+    ) {
+      return;
+    }
+    if (!data.nodes.some((node) => node.id === showRequest.assetId)) {
       if (isFetching || isPlaceholderData) return;
-      toast.error("This note is no longer at that location.");
-      void navigate({ search: {}, replace: true });
+      toast.error("This asset is no longer at that location.");
+      consumeShowRequest(showRequest.id);
       return;
     }
 
-    replaceSelection(boardKey, [reveal]);
-    setFocusedRevealNodeId(reveal);
-    void navigate({ search: {}, replace: true });
+    setFocusedShowRequest(showRequest);
+    consumeShowRequest(showRequest.id);
   }, [
-    boardKey,
+    consumeShowRequest,
     data,
+    filterScope,
     hasStaleRoutePlaceholder,
     isFetching,
     isPlaceholderData,
-    navigate,
-    nodes,
-    replaceSelection,
-    reveal,
+    showRequest,
   ]);
 
-  const focusedNodeId = focusedRevealNodeId ?? focusedColorNodeId;
+  const focusedNodeId = focusedShowRequest?.assetId ?? focusedColorNodeId;
 
   const isNotFound =
     error instanceof ApiError &&
@@ -389,6 +388,8 @@ function CollectionPage() {
                   isColorFilterActive={hasResolvedColorSearch}
                   colorMatchNodeIds={colorMatchNodeIds}
                   focusedNodeId={focusedNodeId}
+                  focusRequestId={focusedShowRequest?.id}
+                  onDismissFocusedNode={() => setFocusedShowRequest(undefined)}
                   loadError={loadError}
                   emptyTitle={
                     isTypeFilterActive
@@ -425,6 +426,8 @@ function CollectionPage() {
                 isColorFilterActive={hasResolvedColorSearch}
                 colorMatchNodeIds={colorMatchNodeIds}
                 focusedNodeId={focusedNodeId}
+                focusRequestId={focusedShowRequest?.id}
+                onDismissFocusedNode={() => setFocusedShowRequest(undefined)}
                 loadError={loadError}
                 emptyTitle={
                   isTypeFilterActive
@@ -452,6 +455,11 @@ function CollectionPage() {
       </BoardContextMenu>
       <NoteDetailDrawer
         note={drawerNote}
+        location={{
+          type: "collection",
+          collectionSlug,
+          folderPath: parentFolderPath,
+        }}
         onNoteChange={updateDrawerNote}
         onPromote={promoteDrawer}
         onSwap={openDrawer}

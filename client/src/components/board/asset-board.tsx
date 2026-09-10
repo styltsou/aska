@@ -43,6 +43,8 @@ export function AssetBoard({
   onOpenColor,
   onOpenVideo,
   focusedAssetId,
+  focusRequestId,
+  onDismissFocusedAsset,
 }: {
   assets: Asset[];
   emptyTitle: string;
@@ -56,6 +58,8 @@ export function AssetBoard({
   onOpenColor?: (color: ColorAsset) => void;
   onOpenVideo?: (link: Extract<Asset, { type: "link" }>) => void;
   focusedAssetId?: string;
+  focusRequestId?: number;
+  onDismissFocusedAsset?: () => void;
 }) {
   const scopeKey = inboxContext
     ? `inbox:${inboxContext.workspaceSlug}`
@@ -133,7 +137,7 @@ export function AssetBoard({
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [assets, focusedAssetId]);
+  }, [assets, focusedAssetId, focusRequestId]);
 
   useEffect(() => {
     if (!scopeKey || selection.scopeKey !== scopeKey) return;
@@ -182,7 +186,10 @@ export function AssetBoard({
     <div
       ref={surfaceRef}
       className="relative min-h-0"
-      onPointerDownCapture={marquee.onPointerDownCapture}
+      onPointerDownCapture={(event) => {
+        if (focusRequestId !== undefined) onDismissFocusedAsset?.();
+        marquee.onPointerDownCapture(event);
+      }}
       onPointerMoveCapture={marquee.onPointerMoveCapture}
       onPointerUpCapture={marquee.onPointerUpCapture}
       onPointerCancelCapture={marquee.onPointerCancelCapture}
@@ -223,6 +230,7 @@ export function AssetBoard({
                   : asset.id
               }
               asset={asset}
+              isFocused={focusedAssetId === asset.id}
               deleteContext={deleteContext}
               inboxContext={inboxContext}
               isSelected={selectedIdSet.has(asset.id)}

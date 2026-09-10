@@ -29,6 +29,7 @@ export const AssetCard = memo(function AssetCard({
   deleteContext,
   inboxContext,
   isSelected = false,
+  isFocused = false,
   onToggleSelection,
   onSelectionContextMenu,
   folderDropState,
@@ -49,6 +50,7 @@ export const AssetCard = memo(function AssetCard({
     workspaceSlug: string;
   };
   isSelected?: boolean;
+  isFocused?: boolean;
   onToggleSelection?: (assetId: string) => void;
   onSelectionContextMenu?: (
     assetId: string,
@@ -139,6 +141,12 @@ export const AssetCard = memo(function AssetCard({
         )}
       </AssetContextMenu>
       {isSelected ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-background"
+        />
+      ) : null}
+      {!isSelected && isFocused ? (
         <span
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-background"

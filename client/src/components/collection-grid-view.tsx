@@ -59,6 +59,8 @@ type CollectionGridViewProps = {
   isColorFilterActive?: boolean;
   colorMatchNodeIds?: ReadonlySet<string>;
   focusedNodeId?: string;
+  focusRequestId?: number;
+  onDismissFocusedNode?: () => void;
   loadError?: React.ReactNode;
   emptyTitle: string;
   emptyDescription: string;
@@ -82,6 +84,8 @@ export function CollectionGridView({
   isColorFilterActive = false,
   colorMatchNodeIds,
   focusedNodeId,
+  focusRequestId,
+  onDismissFocusedNode,
   loadError,
   emptyTitle,
   emptyDescription,
@@ -260,7 +264,7 @@ export function CollectionGridView({
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
     return () => cancelAnimationFrame(frame);
-  }, [assets, focusedNodeId, visibleAssetCount]);
+  }, [assets, focusRequestId, focusedNodeId, visibleAssetCount]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -346,7 +350,10 @@ export function CollectionGridView({
         <div
           ref={surfaceRef}
           className="relative min-h-full w-full p-5 pb-20"
-          onPointerDownCapture={marquee.onPointerDownCapture}
+          onPointerDownCapture={(event) => {
+            if (focusRequestId !== undefined) onDismissFocusedNode?.();
+            marquee.onPointerDownCapture(event);
+          }}
           onPointerMoveCapture={marquee.onPointerMoveCapture}
           onPointerUpCapture={marquee.onPointerUpCapture}
           onPointerCancelCapture={marquee.onPointerCancelCapture}
