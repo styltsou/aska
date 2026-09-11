@@ -11,8 +11,6 @@ import {
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
-  CheckIcon,
-  CopyIcon,
   InfoIcon,
   ArrowLeftRightIcon,
   LocateFixedIcon,
@@ -22,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
 import { NoteSaveStatus } from "@/components/board/note-save-status";
@@ -534,7 +533,7 @@ function WorkspacePeekSwapButton({ target }: { target: PeekTarget }) {
             size="icon"
             aria-label="Swap notes"
             disabled={isSwapping}
-            className="fixed top-[calc(var(--app-shell-inset)+4rem)] right-[calc(var(--workspace-peek-panel-width)+var(--app-shell-inset))] z-[60] hidden size-8 translate-x-1/2 rounded-lg border border-border bg-background/95 text-muted-foreground shadow-none backdrop-blur-xl hover:bg-secondary hover:text-foreground md:flex"
+            className="fixed top-[calc(var(--app-shell-inset)+4rem)] right-[calc(var(--workspace-peek-panel-width)+var(--app-shell-inset))] z-[60] hidden size-8 translate-x-1/2 rounded-lg border border-border bg-background/95 shadow-none backdrop-blur-xl md:flex"
             onClick={() => void handleSwap()}
           >
             <ArrowLeftRightIcon className="size-4" />
@@ -683,7 +682,7 @@ function PeekHeader({
                 variant="ghost"
                 size="icon"
                 aria-label="Close Peek"
-                className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className="size-8 rounded-lg"
                 onClick={onClose}
               >
                 <XIcon className="size-4" />
@@ -703,7 +702,7 @@ function PeekHeader({
                   size="icon"
                   aria-label="Open in main editor"
                   disabled={isPromoting}
-                  className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  className="size-8 rounded-lg"
                   onClick={() => void handlePromote()}
                 >
                   <Maximize2Icon className="size-3.5" />
@@ -735,7 +734,7 @@ function PeekHeader({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  className="size-8 rounded-lg"
                   aria-label="Show in board"
                   disabled={!showEnabled || isShowing}
                   onClick={() => void handleShow()}
@@ -978,15 +977,11 @@ function PeekNote({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                className="size-8 rounded-lg"
                 aria-label={copied ? "Note copied" : "Copy markdown"}
                 onClick={copyNote}
               >
-                {copied ? (
-                  <CheckIcon className="size-4" />
-                ) : (
-                  <CopyIcon className="size-4" />
-                )}
+                <CopyFeedbackIcon copied={copied} className="size-4" />
                 <span className="sr-only">
                   {copied ? "Copied" : "Copy markdown"}
                 </span>
@@ -1007,7 +1002,7 @@ function PeekNote({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground"
+                  className="size-8 rounded-lg"
                   aria-label="Note details"
                 >
                   <InfoIcon className="size-4" />

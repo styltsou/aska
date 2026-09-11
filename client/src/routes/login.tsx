@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { EyeIcon, EyeOffIcon, LoaderCircleIcon, LogInIcon } from "lucide-react";
+import { Eye, EyeOff } from "lucide";
+import { LoaderCircleIcon, LogInIcon } from "lucide-react";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { Button } from "@/components/ui/button";
+import { MorphStateIcon } from "@/components/ui/morph-state-icon";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -128,11 +130,10 @@ function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? (
-                    <EyeOffIcon className="size-4" />
-                  ) : (
-                    <EyeIcon className="size-4" />
-                  )}
+                  <MorphStateIcon
+                    icon={showPassword ? EyeOff : Eye}
+                    className="size-4"
+                  />
                 </button>
               </InputGroupAddon>
             </InputGroup>

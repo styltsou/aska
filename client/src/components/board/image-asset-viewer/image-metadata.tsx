@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { CheckIcon, CopyIcon, LoaderCircleIcon } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { LoaderCircleIcon } from "lucide-react";
 import type { ImageAsset } from "@/types/asset";
+import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import { cn } from "@/lib/utils";
 
 function formatSize(bytes: number): string {
@@ -65,7 +65,6 @@ function ColorRow({
 }) {
   const [isCopied, setIsCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     return () => {
@@ -103,21 +102,7 @@ function ColorRow({
           isCopied && "opacity-100",
         )}
       >
-        <AnimatePresence initial={false} mode="wait">
-          <motion.span
-            key={isCopied ? "copied" : "copy"}
-            initial={reduceMotion ? false : { opacity: 0, scale: 0.7 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={reduceMotion ? undefined : { opacity: 0, scale: 0.7 }}
-            transition={{ duration: reduceMotion ? 0 : 0.08 }}
-          >
-            {isCopied ? (
-              <CheckIcon className="size-4" />
-            ) : (
-              <CopyIcon className="size-4" />
-            )}
-          </motion.span>
-        </AnimatePresence>
+        <CopyFeedbackIcon copied={isCopied} className="size-4" />
       </span>
     </button>
   );

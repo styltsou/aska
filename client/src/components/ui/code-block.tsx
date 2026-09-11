@@ -1,4 +1,3 @@
-import { CheckIcon, CopyIcon } from "lucide-react";
 import {
   type ComponentProps,
   createContext,
@@ -10,6 +9,7 @@ import {
 } from "react";
 import { type BundledLanguage, codeToHtml, type ShikiTransformer } from "shiki";
 import { Button } from "./button";
+import { CopyFeedbackIcon } from "./copy-feedback-icon";
 import { ScrollArea } from "./scroll-area";
 import { cn } from "@/lib/utils";
 
@@ -175,8 +175,6 @@ export const CodeBlockCopyButton = ({
     }
   };
 
-  const Icon = isCopied ? CheckIcon : CopyIcon;
-
   return (
     <Button
       className={cn("shrink-0", className)}
@@ -185,7 +183,7 @@ export const CodeBlockCopyButton = ({
       variant="ghost"
       {...props}
     >
-      {children ?? <Icon size={14} />}
+      {children ?? <CopyFeedbackIcon copied={isCopied} size={14} />}
     </Button>
   );
 };

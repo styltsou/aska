@@ -10,7 +10,6 @@ import {
 import {
   ArrowLeftIcon,
   CheckIcon,
-  CopyIcon,
   InfoIcon,
   LoaderCircleIcon,
   PanelRightIcon,
@@ -32,6 +31,7 @@ import type {
 import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import type { NoteMentionTarget } from "@/api/note-mentions/types";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
+import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
 import { NoteEditorLoading } from "@/components/board/note-editor-loading";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
@@ -986,7 +986,7 @@ export function NoteDetailDrawer({
                 render={
                   <Button
                     type="button"
-                    className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    className="size-8 rounded-lg"
                     variant="ghost"
                     size="icon"
                     aria-label={
@@ -1017,7 +1017,7 @@ export function NoteDetailDrawer({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      className="size-8 rounded-lg"
                       aria-label="Peek note"
                       disabled={!activeNote}
                       onClick={() => {
@@ -1096,15 +1096,11 @@ export function NoteDetailDrawer({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground"
+                    className="size-8 rounded-lg"
                     aria-label={copied ? "Note copied" : "Copy markdown"}
                     onClick={copyNoteMarkdown}
                   >
-                    {copied ? (
-                      <CheckIcon className="size-4" />
-                    ) : (
-                      <CopyIcon className="size-4" />
-                    )}
+                    <CopyFeedbackIcon copied={copied} className="size-4" />
                     <span className="sr-only">
                       {copied ? "Copied" : "Copy markdown"}
                     </span>
@@ -1126,7 +1122,7 @@ export function NoteDetailDrawer({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="size-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground"
+                        className="size-8 rounded-lg"
                         aria-label="Note details"
                       >
                         <InfoIcon className="size-4" />

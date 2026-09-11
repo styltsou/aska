@@ -7,8 +7,6 @@ import {
 } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  CheckIcon,
-  CopyIcon,
   ImageIcon,
   LoaderCircleIcon,
   PanelRightIcon,
@@ -16,6 +14,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 
 import {
@@ -152,11 +151,7 @@ export function ColorDetailDrawer({
                   aria-hidden
                   className="absolute inset-0 flex items-center justify-center rounded-[inherit] bg-black/0 text-white opacity-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)] transition-[background-color,opacity] duration-75 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover/swatch:bg-black/25 group-hover/swatch:opacity-100 focus-visible:bg-black/25 focus-visible:opacity-100"
                 >
-                  {copied ? (
-                    <CheckIcon className="size-4" />
-                  ) : (
-                    <CopyIcon className="size-4" />
-                  )}
+                  <CopyFeedbackIcon copied={copied} className="size-4" />
                 </span>
               </button>
               <div className="min-w-0">

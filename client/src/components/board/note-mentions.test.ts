@@ -14,6 +14,7 @@ import {
   createMentionsExtension,
   parseMentionQuery,
   parseNumericAssetId,
+  shouldShowMentionSuggestion,
 } from "./note-mentions";
 
 describe("mention query parsing", () => {
@@ -30,6 +31,12 @@ describe("mention query parsing", () => {
 
   it("keeps ordinary queries unscoped", () => {
     expect(parseMentionQuery("noteworthy")).toEqual({ search: "noteworthy" });
+  });
+
+  it("dismisses a blank mention trigger but keeps multi-word searches open", () => {
+    expect(shouldShowMentionSuggestion(" ")).toBe(false);
+    expect(shouldShowMentionSuggestion("hello world")).toBe(true);
+    expect(shouldShowMentionSuggestion("note project plan")).toBe(true);
   });
 
   it("builds the supported syntax when a scope chip is selected", () => {

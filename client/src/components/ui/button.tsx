@@ -12,7 +12,7 @@ const buttonVariants = cva(
         outline: "button-control-outline",
         secondary: "button-control-secondary",
         ghost:
-          "border-transparent hover:bg-muted hover:text-foreground active:bg-muted/80 aria-expanded:bg-muted aria-expanded:text-foreground aria-pressed:bg-muted aria-pressed:text-foreground dark:hover:bg-muted/50 dark:active:bg-muted/40 dark:aria-pressed:bg-muted/50",
+          "border-transparent text-foreground hover:bg-secondary hover:text-foreground active:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-foreground aria-pressed:bg-secondary aria-pressed:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground dark:hover:bg-secondary/50 dark:active:bg-secondary/40 dark:aria-pressed:bg-secondary/50",
         destructive:
           "border-transparent bg-destructive/10 text-destructive hover:bg-destructive/20 active:bg-destructive/25 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:active:bg-destructive/35 dark:focus-visible:ring-destructive/40",
         "destructive-primary": "button-control-destructive font-semibold",

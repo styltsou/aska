@@ -68,7 +68,7 @@ export function NoteHighlightControl({
                   variant="ghost"
                   size="default"
                   className={cn(
-                    "relative h-8 rounded-lg p-0 text-muted-foreground transition-[width,background-color,color] duration-150 ease-out hover:bg-secondary hover:text-foreground data-popup-open:bg-secondary data-popup-open:text-foreground",
+                    "relative h-8 rounded-lg p-0 transition-[width,background-color,color] duration-150 ease-out",
                     isMarkerActive ? "w-13" : "w-8",
                     isHighlighting && "bg-secondary text-foreground",
                   )}

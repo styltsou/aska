@@ -7,7 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { CheckIcon, CopyIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -19,6 +19,7 @@ import {
   type BoardInsertionPlacement,
 } from "@/api/collection";
 import { Button } from "@/components/ui/button";
+import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import { SimpleColorPicker } from "@/components/ui/color-picker";
 import {
   Drawer,
@@ -594,12 +595,15 @@ export function ColorEditorDialog({
                         >
                           {copiedPreview === "gradient" ? (
                             <>
-                              <CheckIcon className="size-4" />
+                              <CopyFeedbackIcon copied className="size-4" />
                               Copied
                             </>
                           ) : (
                             <>
-                              <CopyIcon className="size-4" />
+                              <CopyFeedbackIcon
+                                copied={false}
+                                className="size-4"
+                              />
                               Copy CSS
                             </>
                           )}
@@ -840,12 +844,12 @@ export function ColorEditorDialog({
                     >
                       {copiedPreview === "solid" ? (
                         <>
-                          <CheckIcon className="size-4" />
+                          <CopyFeedbackIcon copied className="size-4" />
                           Copied
                         </>
                       ) : (
                         <>
-                          <CopyIcon className="size-4" />
+                          <CopyFeedbackIcon copied={false} className="size-4" />
                           Copy hex
                         </>
                       )}

@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/hover-card";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { gradientToCss } from "@/lib/color-gradient";
-import { GLASS_FRAME_CLASS } from "@/lib/glass";
+import { FLOATING_GLASS_BACKDROP_CLASS, GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 
 export type OpenNoteMentionTarget = (
@@ -334,6 +334,13 @@ const MentionMenu = forwardRef<
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }) => {
+      if (event.key === "Escape") {
+        // The suggestion plugin clears its own state after this callback. Stop
+        // the native event here so an enclosing note workspace does not treat
+        // the same Escape as a request to close the note.
+        event.stopPropagation();
+        return false;
+      }
       if (event.key === "ArrowUp" || event.key === "ArrowDown") {
         event.preventDefault();
         setSelectedIndex((index) => {
@@ -352,105 +359,107 @@ const MentionMenu = forwardRef<
   }));
 
   return (
-    <div
-      className={cn(
-        "w-[26rem] overflow-hidden rounded-lg text-popover-foreground shadow-2xl",
-        GLASS_FRAME_CLASS,
-      )}
-    >
-      <div className="relative z-10 overflow-hidden rounded-b-lg border-b border-border bg-background">
-        {showScopeControls ? (
-          <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
-            {([undefined, "note", "color"] as const).map((scope) => (
-              <button
-                key={scope ?? "all"}
-                type="button"
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                  parsed.scope === scope && "bg-accent text-foreground",
-                )}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => setScope(scope)}
-              >
-                {scope === "note"
-                  ? "Notes"
-                  : scope === "color"
-                    ? "Colors"
-                    : "All"}
-              </button>
-            ))}
+    <div className={cn("relative w-[26rem]", FLOATING_GLASS_BACKDROP_CLASS)}>
+      <div
+        className={cn(
+          "relative z-10 overflow-hidden rounded-lg text-popover-foreground shadow-2xl",
+          GLASS_FRAME_CLASS,
+        )}
+      >
+        <div className="relative z-10 overflow-hidden rounded-b-lg border-b border-border bg-background">
+          {showScopeControls ? (
+            <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
+              {([undefined, "note", "color"] as const).map((scope) => (
+                <button
+                  key={scope ?? "all"}
+                  type="button"
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                    parsed.scope === scope && "bg-accent text-foreground",
+                  )}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => setScope(scope)}
+                >
+                  {scope === "note"
+                    ? "Notes"
+                    : scope === "color"
+                      ? "Colors"
+                      : "All"}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div
+            className="max-h-80 [scrollbar-width:none] overflow-y-auto p-1.5 [&::-webkit-scrollbar]:hidden"
+            role="listbox"
+            aria-label="Mention an asset"
+          >
+            {notes.length > 0 && parsed.scope !== "color" ? (
+              <MentionGroup
+                label="Notes"
+                showLabel={showGroupLabels}
+                items={notes}
+                startIndex={0}
+                selectedIndex={selectedIndex}
+                itemRefs={itemRefs}
+                onSelect={select}
+                onHover={setSelectedIndex}
+              />
+            ) : null}
+            {colors.length > 0 && parsed.scope !== "note" ? (
+              <MentionGroup
+                label="Colors"
+                showLabel={showGroupLabels}
+                items={colors}
+                startIndex={parsed.scope === "color" ? 0 : notes.length}
+                selectedIndex={selectedIndex}
+                itemRefs={itemRefs}
+                onSelect={select}
+                onHover={setSelectedIndex}
+              />
+            ) : null}
+            {flatItems.length === 0 ? (
+              <p className="px-2 py-4 text-center text-xs text-muted-foreground/75">
+                {emptyLabel}
+              </p>
+            ) : null}
           </div>
-        ) : null}
-        <div
-          className="max-h-80 [scrollbar-width:none] overflow-y-auto p-1.5 [&::-webkit-scrollbar]:hidden"
-          role="listbox"
-          aria-label="Mention an asset"
-        >
-          {notes.length > 0 && parsed.scope !== "color" ? (
-            <MentionGroup
-              label="Notes"
-              showLabel={showGroupLabels}
-              items={notes}
-              startIndex={0}
-              selectedIndex={selectedIndex}
-              itemRefs={itemRefs}
-              onSelect={select}
-              onHover={setSelectedIndex}
-            />
-          ) : null}
-          {colors.length > 0 && parsed.scope !== "note" ? (
-            <MentionGroup
-              label="Colors"
-              showLabel={showGroupLabels}
-              items={colors}
-              startIndex={parsed.scope === "color" ? 0 : notes.length}
-              selectedIndex={selectedIndex}
-              itemRefs={itemRefs}
-              onSelect={select}
-              onHover={setSelectedIndex}
-            />
-          ) : null}
-          {flatItems.length === 0 ? (
-            <p className="px-2 py-4 text-center text-xs text-muted-foreground/75">
-              {emptyLabel}
-            </p>
-          ) : null}
         </div>
-      </div>
-      <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-            @note
-          </Kbd>
-          <span>or</span>
-          <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-            @color
-          </Kbd>
-          <span>to filter</span>
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <KbdGroup className="gap-0.5">
-            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-              <ArrowUpIcon />
+        <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+              @note
             </Kbd>
-            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-              <ArrowDownIcon />
+            <span>or</span>
+            <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+              @color
             </Kbd>
-          </KbdGroup>
-          <span>navigate</span>
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-            <CornerDownLeftIcon />
-          </Kbd>
-          <span>insert</span>
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-            Esc
-          </Kbd>
-          <span>close</span>
-        </span>
+            <span>to filter</span>
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <KbdGroup className="gap-0.5">
+              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                <ArrowUpIcon />
+              </Kbd>
+              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                <ArrowDownIcon />
+              </Kbd>
+            </KbdGroup>
+            <span>navigate</span>
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+              <CornerDownLeftIcon />
+            </Kbd>
+            <span>insert</span>
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+              Esc
+            </Kbd>
+            <span>close</span>
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -567,6 +576,7 @@ export function createMentionsExtension({
             const $from = state.doc.resolve(mentionRange.from);
             return !$from.parent.type.spec.code;
           },
+          shouldShow: ({ query }) => shouldShowMentionSuggestion(query),
           items: async ({ query }) => {
             const parsed = parseMentionQuery(query);
             const cacheKey = parsed.scope ?? "all";
@@ -629,6 +639,10 @@ export function createMentionsExtension({
       ];
     },
   });
+}
+
+export function shouldShowMentionSuggestion(query: string) {
+  return !query.startsWith(" ");
 }
 
 function insertMention(

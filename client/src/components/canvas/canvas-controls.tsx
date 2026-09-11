@@ -1,13 +1,9 @@
 import { Panel, useReactFlow } from "@xyflow/react";
-import {
-  LockIcon,
-  MinusIcon,
-  PlusIcon,
-  ScanIcon,
-  UnlockIcon,
-} from "lucide-react";
+import { Lock, Unlock } from "lucide";
+import { MinusIcon, PlusIcon, ScanIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { MorphStateIcon } from "@/components/ui/morph-state-icon";
 import {
   ButtonGroup,
   ButtonGroupSeparator,
@@ -76,7 +72,7 @@ export function CanvasControls({
             onClick={() => onCanvasLockChange(!isCanvasLocked)}
             isActive={isCanvasLocked}
           >
-            {isCanvasLocked ? <LockIcon /> : <UnlockIcon />}
+            <MorphStateIcon icon={isCanvasLocked ? Lock : Unlock} />
           </ControlButton>
         </ButtonGroup>
       </div>

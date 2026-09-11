@@ -16,12 +16,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import {
   ArrowLeftIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CopyIcon,
   DownloadIcon,
   ExternalLinkIcon,
   PencilIcon,
@@ -1874,7 +1874,7 @@ export function ImageAssetViewer({
                           />
                         }
                       >
-                        {hasCopiedImage ? <CheckIcon /> : <CopyIcon />}
+                        <CopyFeedbackIcon copied={hasCopiedImage} />
                         <span className="sr-only">
                           {hasCopiedImage ? "Copied image" : "Copy image"}
                         </span>

@@ -39,7 +39,7 @@ describe("Button interaction styling", () => {
     );
 
     expect(linkHtml).not.toContain("active:scale");
-    expect(groupHtml).toContain("aria-pressed:bg-muted");
+    expect(groupHtml).toContain("aria-pressed:bg-secondary");
     expect(groupHtml).toContain("bg-border/60");
   });
 });
