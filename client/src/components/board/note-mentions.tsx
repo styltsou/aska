@@ -425,7 +425,7 @@ const MentionMenu = forwardRef<
             ) : null}
           </div>
         </div>
-        <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground">
+        <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-1.5 text-[10px] leading-4 text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
               @note
@@ -436,29 +436,25 @@ const MentionMenu = forwardRef<
             </Kbd>
             <span>to filter</span>
           </span>
-          <span className="inline-flex items-center gap-1">
-            <KbdGroup className="gap-0.5">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
+            <span className="inline-flex items-center gap-1">
+              <KbdGroup className="gap-0.5">
+                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                  <ArrowUpIcon />
+                </Kbd>
+                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                  <ArrowDownIcon />
+                </Kbd>
+              </KbdGroup>
+              <span>to navigate</span>
+            </span>
+            <span className="ml-3 inline-flex items-center gap-1">
               <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                <ArrowUpIcon />
+                <CornerDownLeftIcon />
               </Kbd>
-              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                <ArrowDownIcon />
-              </Kbd>
-            </KbdGroup>
-            <span>navigate</span>
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-              <CornerDownLeftIcon />
-            </Kbd>
-            <span>insert</span>
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-              Esc
-            </Kbd>
-            <span>close</span>
-          </span>
+              <span>to insert</span>
+            </span>
+          </div>
         </div>
       </div>
     </div>

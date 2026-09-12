@@ -2,6 +2,7 @@ import {
   forwardRef,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -9,10 +10,13 @@ import {
 } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   BoldIcon,
   BracesIcon,
   CaseSensitiveIcon,
   CheckSquareIcon,
+  CornerDownLeftIcon,
   CheckIcon,
   ChevronDownIcon,
   CodeIcon,
@@ -97,9 +101,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
 import { markdownFromSelection } from "@/lib/markdown";
-import { GLASS_ISLAND_CLASS } from "@/lib/glass";
+import {
+  FLOATING_GLASS_BACKDROP_CLASS,
+  GLASS_FRAME_CLASS,
+  GLASS_ISLAND_CLASS,
+} from "@/lib/glass";
+import {
+  getSlashMenuScrollTop,
+  type SlashMenuNavigationDirection,
+} from "@/components/board/slash-menu-scroll";
 import {
   isNoteHighlightColor,
   NOTE_HIGHLIGHT_COLORS,
@@ -368,33 +381,71 @@ const SlashMenu = forwardRef<
     return starts;
   }, [items]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef(new Map<number, HTMLButtonElement>());
-
-  useEffect(() => setSelectedIndex(0), [flatItems]);
+  const navigationDirectionRef = useRef<SlashMenuNavigationDirection | null>(
+    null,
+  );
 
   useEffect(() => {
-    itemRefs.current.get(selectedIndex)?.scrollIntoView({ block: "nearest" });
-  }, [selectedIndex]);
+    navigationDirectionRef.current = null;
+    setSelectedIndex(0);
+    if (listRef.current) listRef.current.scrollTop = 0;
+  }, [flatItems]);
+
+  useLayoutEffect(() => {
+    const direction = navigationDirectionRef.current;
+    const list = listRef.current;
+    const item = itemRefs.current.get(selectedIndex);
+    navigationDirectionRef.current = null;
+    if (!direction || !list || !item) return;
+
+    const listRect = list.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    const nextScrollTop = getSlashMenuScrollTop({
+      direction,
+      selectedIndex,
+      itemCount: flatItems.length,
+      itemTop: itemRect.top - listRect.top + list.scrollTop,
+      itemHeight: itemRect.height,
+      scrollTop: list.scrollTop,
+      clientHeight: list.clientHeight,
+      scrollHeight: list.scrollHeight,
+    });
+    list.scrollTop = nextScrollTop;
+  }, [flatItems.length, selectedIndex]);
 
   function select(index: number) {
     const item = flatItems[index];
     if (item) command(item);
   }
 
+  function moveSelection(direction: SlashMenuNavigationDirection) {
+    setSelectedIndex((index) => {
+      if (flatItems.length === 0) return 0;
+      const nextIndex =
+        direction === "up"
+          ? (index + flatItems.length - 1) % flatItems.length
+          : (index + 1) % flatItems.length;
+      if (nextIndex !== index) navigationDirectionRef.current = direction;
+      return nextIndex;
+    });
+  }
+
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }) => {
+      if (event.key === "Escape") {
+        // Let the suggestion plugin dismiss the menu without allowing the
+        // enclosing note workspace to handle the same Escape key.
+        event.stopPropagation();
+        return false;
+      }
       if (event.key === "ArrowUp") {
-        setSelectedIndex((index) =>
-          flatItems.length === 0
-            ? 0
-            : (index + flatItems.length - 1) % flatItems.length,
-        );
+        moveSelection("up");
         return true;
       }
       if (event.key === "ArrowDown") {
-        setSelectedIndex((index) =>
-          flatItems.length === 0 ? 0 : (index + 1) % flatItems.length,
-        );
+        moveSelection("down");
         return true;
       }
       if (event.key === "Enter") {
@@ -416,64 +467,96 @@ const SlashMenu = forwardRef<
   }
 
   return (
-    <div className="w-64 overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
+    <div className={cn("relative w-64", FLOATING_GLASS_BACKDROP_CLASS)}>
       <div
-        className="max-h-72 [scrollbar-width:none] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden"
-        role="listbox"
-        aria-label="Insert block"
+        className={cn(
+          "relative z-10 overflow-hidden rounded-lg text-popover-foreground shadow-2xl",
+          GLASS_FRAME_CLASS,
+        )}
       >
-        {items.map((group) => {
-          const groupStart = groupStarts.get(group.label) ?? 0;
-          return (
-            <div key={group.label}>
-              <p className="px-2 pt-2.5 pb-1 text-xs font-medium text-muted-foreground first:pt-1">
-                {group.label}
-              </p>
-              {group.items.map((item, itemIndex) => {
-                const index = groupStart + itemIndex;
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.title}
-                    ref={(element) => {
-                      if (element) itemRefs.current.set(index, element);
-                      else itemRefs.current.delete(index);
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
-                      index === selectedIndex
-                        ? "bg-accent"
-                        : "hover:bg-accent/60",
-                    )}
-                    type="button"
-                    role="option"
-                    aria-selected={index === selectedIndex}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => select(index)}
-                    onMouseEnter={() => setSelectedIndex(index)}
-                  >
-                    <Icon className="size-4 shrink-0 text-current" />
-                    <span className="min-w-0 truncate font-medium">
-                      {item.title}
-                    </span>
-                    {item.syntax ? (
-                      <span
+        <div className="relative z-10 overflow-hidden rounded-b-lg border-b border-border bg-background">
+          <div
+            ref={listRef}
+            className="max-h-72 [scrollbar-width:none] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden"
+            role="listbox"
+            aria-label="Insert block"
+          >
+            {items.map((group) => {
+              const groupStart = groupStarts.get(group.label) ?? 0;
+              return (
+                <div key={group.label}>
+                  <p className="px-2 pt-2.5 pb-1 text-xs font-medium text-muted-foreground first:pt-1">
+                    {group.label}
+                  </p>
+                  {group.items.map((item, itemIndex) => {
+                    const index = groupStart + itemIndex;
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.title}
+                        ref={(element) => {
+                          if (element) itemRefs.current.set(index, element);
+                          else itemRefs.current.delete(index);
+                        }}
                         className={cn(
-                          "ml-auto shrink-0 font-mono text-xs tracking-normal",
+                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
                           index === selectedIndex
-                            ? "text-foreground"
-                            : "text-muted-foreground",
+                            ? "bg-accent"
+                            : "hover:bg-accent/60",
                         )}
+                        type="button"
+                        role="option"
+                        aria-selected={index === selectedIndex}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => select(index)}
+                        onMouseEnter={() => {
+                          navigationDirectionRef.current = null;
+                          setSelectedIndex(index);
+                        }}
                       >
-                        {item.syntax}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })}
+                        <Icon className="size-4 shrink-0 text-current" />
+                        <span className="min-w-0 truncate font-medium">
+                          {item.title}
+                        </span>
+                        {item.syntax ? (
+                          <span
+                            className={cn(
+                              "ml-auto shrink-0 font-mono text-xs tracking-normal",
+                              index === selectedIndex
+                                ? "text-foreground"
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            {item.syntax}
+                          </span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="relative z-0 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 px-3 py-1.5 text-[10px] leading-4 text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <KbdGroup className="gap-0.5">
+              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                <ArrowUpIcon />
+              </Kbd>
+              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                <ArrowDownIcon />
+              </Kbd>
+            </KbdGroup>
+            <span>to navigate</span>
+          </span>
+          <span className="ml-3 inline-flex items-center gap-1">
+            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+              <CornerDownLeftIcon />
+            </Kbd>
+            <span>to insert</span>
+          </span>
+        </div>
       </div>
     </div>
   );
