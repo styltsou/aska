@@ -5,11 +5,17 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { ExternalLinkIcon } from "lucide-react";
+import { ExternalLinkIcon, LocateFixedIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useUpdateLink } from "@/api/collection";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogBody,
@@ -79,10 +85,12 @@ function clearLinkNoteDraft(workspaceSlug: string, assetId: string) {
 export function YouTubeVideoViewer({
   asset,
   onClose,
+  onShowInBoard,
   workspaceSlug,
 }: {
   asset?: LinkAsset;
   onClose: () => void;
+  onShowInBoard?: () => void;
   workspaceSlug: string;
 }) {
   const isMobile = useIsMobile();
@@ -125,6 +133,7 @@ export function YouTubeVideoViewer({
             asset={displayedAsset}
             open={open}
             workspaceSlug={workspaceSlug}
+            onShowInBoard={onShowInBoard}
           />
         </DrawerContent>
       </Drawer>
@@ -147,6 +156,7 @@ export function YouTubeVideoViewer({
             asset={displayedAsset}
             open={open}
             workspaceSlug={workspaceSlug}
+            onShowInBoard={onShowInBoard}
           />
         </DialogBody>
       </DialogContent>
@@ -158,16 +168,39 @@ function VideoViewerContent({
   asset,
   open,
   workspaceSlug,
+  onShowInBoard,
 }: {
   asset: VideoLinkAsset;
   open: boolean;
   workspaceSlug: string;
+  onShowInBoard?: () => void;
 }) {
   const [playerLoaded, setPlayerLoaded] = useState(false);
   const embedUrl = youtubeEmbedUrl(asset.video.videoId);
 
   return (
-    <div className="flex min-h-0 flex-col">
+    <div className="relative flex min-h-0 flex-col">
+      {onShowInBoard ? (
+        <div className="absolute top-4 right-4 z-20">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon-sm"
+                  aria-label="Show in board"
+                  onClick={onShowInBoard}
+                />
+              }
+            >
+              <LocateFixedIcon className="size-4" />
+              <span className="sr-only">Show in board</span>
+            </TooltipTrigger>
+            <TooltipContent>Show in board</TooltipContent>
+          </Tooltip>
+        </div>
+      ) : null}
       <div className="relative isolate m-2 aspect-video shrink-0 overflow-hidden rounded-md bg-background sm:m-3">
         {asset.previewImage ? (
           <>

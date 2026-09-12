@@ -105,7 +105,7 @@ export function getAssetLocationScopeKey(
     .join("/")}`;
 }
 
-function getCurrentBoardScopeKey(pathname: string): string | undefined {
+export function getCurrentBoardScopeKey(pathname: string): string | undefined {
   const location = getSidebarCollectionLocation(pathname);
   if (pathname === `/${location.workspaceSlug}/inbox`) {
     return `inbox:${location.workspaceSlug}`;
@@ -142,6 +142,7 @@ type WorkspacePeekContextValue = {
   ) => void;
   promoteNote: () => Promise<void>;
   showPeekedAsset: () => Promise<void>;
+  showAssetInBoard: (assetId: string, location: AssetLocation) => Promise<void>;
   consumeShowRequest: (requestId: number) => void;
   setNoteSwapHandler: (handler?: () => Promise<void>) => void;
   swapNotes: () => Promise<void>;
@@ -379,46 +380,51 @@ export function WorkspacePeekProvider({
   const handleExitComplete = useCallback(() => {
     if (!targetRef.current) setIsRailReserved(false);
   }, []);
+  const showAssetInBoard = useCallback(
+    async (assetId: string, location: AssetLocation) => {
+      try {
+        const scopeKey = getAssetLocationScopeKey(workspaceSlug, location);
+        useSessionStore.getState().clearFilters(scopeKey);
+        const request = {
+          id: ++showRequestIdRef.current,
+          assetId,
+          scopeKey,
+        };
+        setShowRequest(request);
+
+        if (getCurrentBoardScopeKey(pathname) === scopeKey) return;
+
+        if (location.type === "inbox") {
+          await navigate({
+            to: "/$workspaceSlug/inbox",
+            params: { workspaceSlug },
+          });
+          return;
+        }
+
+        await navigate({
+          to: "/$workspaceSlug/collections/$",
+          params: {
+            workspaceSlug,
+            _splat: [location.collectionSlug, location.folderPath]
+              .filter(Boolean)
+              .join("/"),
+          },
+        });
+      } catch (error) {
+        setShowRequest(undefined);
+        toast.error(
+          getUserFacingApiErrorMessage(error, "Unable to show asset in board."),
+        );
+      }
+    },
+    [navigate, pathname, workspaceSlug],
+  );
+
   const showPeekedAsset = useCallback(async () => {
     if (!target?.location) return;
-
-    try {
-      const location = target.location;
-      const scopeKey = getAssetLocationScopeKey(workspaceSlug, location);
-      useSessionStore.getState().clearFilters(scopeKey);
-      const request = {
-        id: ++showRequestIdRef.current,
-        assetId: target.asset.id,
-        scopeKey,
-      };
-      setShowRequest(request);
-
-      if (getCurrentBoardScopeKey(pathname) === scopeKey) return;
-
-      if (location.type === "inbox") {
-        await navigate({
-          to: "/$workspaceSlug/inbox",
-          params: { workspaceSlug },
-        });
-        return;
-      }
-
-      await navigate({
-        to: "/$workspaceSlug/collections/$",
-        params: {
-          workspaceSlug,
-          _splat: [location.collectionSlug, location.folderPath]
-            .filter(Boolean)
-            .join("/"),
-        },
-      });
-    } catch (error) {
-      setShowRequest(undefined);
-      toast.error(
-        getUserFacingApiErrorMessage(error, "Unable to show asset in board."),
-      );
-    }
-  }, [navigate, pathname, target, workspaceSlug]);
+    await showAssetInBoard(target.asset.id, target.location);
+  }, [showAssetInBoard, target]);
 
   const consumeShowRequest = useCallback((requestId: number) => {
     setShowRequest((current) =>
@@ -462,6 +468,7 @@ export function WorkspacePeekProvider({
         }
       },
       showPeekedAsset,
+      showAssetInBoard,
       consumeShowRequest,
       setNoteSwapHandler: (handler) => {
         noteSwapHandlerRef.current = handler;
@@ -478,6 +485,7 @@ export function WorkspacePeekProvider({
       activeNoteId,
       consumeShowRequest,
       isResizing,
+      showAssetInBoard,
       showPeekedAsset,
       showRequest,
       syncPeekNote,
@@ -862,6 +870,7 @@ function PeekNote({
           peekNote(asset, location);
           return;
         }
+        if (asset.type !== "color") return;
         peekColor(
           asset,
           resolved?.collectionSlug

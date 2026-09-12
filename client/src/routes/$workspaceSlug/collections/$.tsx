@@ -4,28 +4,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { collectionQueryKeys } from "@/api/collection/query-keys";
-import {
-  type CollectionNoteNode,
-  useCollectionContents,
-} from "@/api/collection";
+import { useCollectionContents } from "@/api/collection";
 import { type ColorSearchScope, useColorImageSearch } from "@/api/color-search";
-import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
-import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
-import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
-import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
-import { useColorDrilldown } from "@/components/board/use-color-drilldown";
 import {
   BoardActionRail,
   BoardContextMenu,
   BoardUploadZone,
 } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
-import { collectionNodeToAsset } from "@/lib/asset-transform";
-import type { ColorAsset, ImageAsset } from "@/types/asset";
-import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
-import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
-import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
-import { usePersistedYouTubeVideoViewer } from "@/components/board/use-persisted-youtube-video-viewer";
 import {
   makeBoardKey,
   Canvas,
@@ -43,6 +29,7 @@ import {
   useWorkspacePeek,
   type BoardShowRequest,
 } from "@/components/app-shell/workspace-peek";
+import { useWorkspaceAssetView } from "@/components/app-shell/workspace-asset-view";
 
 const EMPTY_COLOR_RESULTS: readonly [] = [];
 
@@ -58,38 +45,8 @@ function CollectionPage() {
   const { workspaceSlug, _splat } = Route.useParams();
   const navigate = useNavigate({ from: Route.fullPath });
   const { showRequest, consumeShowRequest } = useWorkspacePeek();
+  const { openAsset } = useWorkspaceAssetView();
   const collectionPath = _splat ?? "";
-  const {
-    drawerNote,
-    hasPreviousNote,
-    openDrawer,
-    promoteDrawer,
-    goBack,
-    closeDrawer,
-    updateDrawerNote,
-  } = usePersistedNoteDrawer(
-    `aska.note-drawer:collection:${workspaceSlug}:${collectionPath}`,
-  );
-  const { viewerImage, openViewer, closeViewer } = usePersistedImageViewer(
-    `aska.image-viewer:collection:${workspaceSlug}:${collectionPath}`,
-  );
-  const {
-    viewerVideo,
-    openViewer: openVideoViewer,
-    closeViewer: closeVideoViewer,
-  } = usePersistedYouTubeVideoViewer(
-    `aska.youtube-video-viewer:collection:${workspaceSlug}:${collectionPath}`,
-  );
-  const {
-    color: drawerColor,
-    isImageDrilldown,
-    openColor,
-    closeColor,
-    openImageFromColor,
-    returnToColor,
-  } = useColorDrilldown();
-  const [colorEditorOpen, setColorEditorOpen] = useState(false);
-  const [editingColor, setEditingColor] = useState<ColorAsset>();
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
     .filter(Boolean);
@@ -145,7 +102,6 @@ function CollectionPage() {
     }
   }, [data, cachedCollectionName]);
 
-  const assets = data?.nodes.map(collectionNodeToAsset) ?? [];
   const nodes = data?.nodes ?? [];
   const activeFolder = data?.breadcrumbs.at(-1);
   const resolvedFolderPath = data?.breadcrumbs
@@ -294,48 +250,9 @@ function CollectionPage() {
     );
   }
 
-  const handleOpenNote = (
-    note: CollectionNoteNode,
-    _mode: "read" | "edit" = "read",
-  ) => {
-    const asset = collectionNodeToAsset(note);
-    if (asset.type === "note") openDrawer(asset);
-  };
-
-  const handleCloseNote = () => closeDrawer();
-
-  const handleCloseImage = () => {
-    closeViewer();
-    if (isImageDrilldown) returnToColor();
-  };
-
-  const handleSelectViewerImage = (image: ImageAsset) => {
-    openViewer(image);
-  };
-
-  const handleOpenImageFromColor = (image: ImageAsset) => {
-    openImageFromColor();
-    openViewer(image);
-  };
-
-  const handleOpenImage = (
-    image: Extract<(typeof nodes)[number], { type: "image" }>,
-  ) => {
-    const asset = collectionNodeToAsset(image);
-    if (asset.type === "image") handleSelectViewerImage(asset);
-  };
-
-  const handleOpenColor = (
-    color: Extract<(typeof nodes)[number], { type: "color" }>,
-  ) => {
-    const asset = collectionNodeToAsset(color);
-    if (asset.type === "color") openColor(asset);
-  };
-
   const handleOpenFolder = (
     folder: Extract<(typeof nodes)[number], { type: "folder" }>,
   ) => {
-    closeDrawer();
     void navigate({
       to: "/$workspaceSlug/collections/$",
       params: {
@@ -405,10 +322,10 @@ function CollectionPage() {
                         ? "Add images, notes, links, or folders to start arranging this board."
                         : "Add images, notes, links, or folders to start arranging this collection."
                   }
-                  onOpenNote={handleOpenNote}
-                  onOpenImage={handleOpenImage}
-                  onOpenColor={handleOpenColor}
-                  onOpenVideo={openVideoViewer}
+                  onOpenNote={(note) => openAsset(note.id)}
+                  onOpenImage={(image) => openAsset(image.id)}
+                  onOpenColor={(color) => openAsset(color.id)}
+                  onOpenVideo={(video) => openAsset(video.id)}
                   onOpenFolder={handleOpenFolder}
                 />
               </>
@@ -443,76 +360,17 @@ function CollectionPage() {
                       ? "Add images, notes, links, or folders to this folder."
                       : "Add images, notes, links, or folders to this collection."
                 }
-                onOpenNote={handleOpenNote}
-                onOpenImage={handleOpenImage}
-                onOpenColor={handleOpenColor}
-                onOpenVideo={openVideoViewer}
+                onOpenNote={(note) => openAsset(note.id)}
+                onOpenImage={(image) => openAsset(image.id)}
+                onOpenColor={(color) => openAsset(color.id)}
+                onOpenVideo={(video) => openAsset(video.id)}
                 onOpenFolder={handleOpenFolder}
               />
             )}
           </div>
         </BoardUploadZone>
       </BoardContextMenu>
-      <NoteDetailDrawer
-        note={drawerNote}
-        location={{
-          type: "collection",
-          collectionSlug,
-          folderPath: parentFolderPath,
-        }}
-        onNoteChange={updateDrawerNote}
-        onPromote={promoteDrawer}
-        onSwap={openDrawer}
-        onBack={goBack}
-        hasPreviousNote={hasPreviousNote}
-        workspaceSlug={workspaceSlug}
-        noteExtractionTarget={{
-          collectionSlug,
-          parentFolderPath,
-        }}
-        onOpenReferencedColor={openColor}
-        onClose={handleCloseNote}
-      />
-      <ColorDetailDrawer
-        color={drawerColor}
-        open={drawerColor !== undefined}
-        workspaceSlug={workspaceSlug}
-        scope={colorSearchScope}
-        onClose={closeColor}
-        onOpenImage={handleOpenImageFromColor}
-        onEdit={() => {
-          setEditingColor(drawerColor);
-          setColorEditorOpen(true);
-        }}
-      />
-      <ColorEditorDialog
-        workspaceSlug={workspaceSlug}
-        target="collection"
-        collectionPath={collectionPath}
-        color={editingColor}
-        open={colorEditorOpen}
-        onOpenChange={setColorEditorOpen}
-      />
-      <ImageAssetViewer
-        asset={viewerImage}
-        assets={assets.filter(
-          (asset): asset is ImageAsset => asset.type === "image",
-        )}
-        open={viewerImage !== undefined}
-        workspaceSlug={workspaceSlug}
-        onBack={isImageDrilldown ? handleCloseImage : undefined}
-        backLabel={isImageDrilldown ? "Back to color" : "Back to board"}
-        onAssetChange={handleSelectViewerImage}
-        onOpenChange={(open) => {
-          if (!open) handleCloseImage();
-        }}
-      />
-      <YouTubeVideoViewer
-        asset={viewerVideo}
-        onClose={closeVideoViewer}
-        workspaceSlug={workspaceSlug}
-      />
-      {(assets.length > 0 || selectedAssetTypes.length > 0) && (
+      {(nodes.length > 0 || selectedAssetTypes.length > 0) && (
         <FilterBar
           scope={filterScope}
           searchStatus={{

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { DragDropProvider } from "@dnd-kit/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { AppHeader } from "@/components/app-shell/app-header";
@@ -13,8 +14,12 @@ import { cn } from "@/lib/utils";
 import { getSidebarCollectionLocation } from "./sidebar-collection-navigation";
 import { getPexelsBrowserScope, useSessionStore } from "@/store";
 import { WorkspacePeekProvider } from "./workspace-peek";
+import { WorkspaceAssetViewProvider } from "./workspace-asset-view";
+import { workspaceSearchQueryOptions } from "@/api/workspace-search";
+import { getRecentWorkspaceAssetIds } from "@/lib/workspace-recent-assets";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const isBoardView = useRouterState({
     select: (state) => {
       const segments = state.location.pathname.split("/").filter(Boolean);
@@ -38,44 +43,57 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     void pruneExpiredUploadImagesDrafts().catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    if (!workspaceSlug) return;
+    void queryClient.prefetchQuery(
+      workspaceSearchQueryOptions(
+        workspaceSlug,
+        "",
+        getRecentWorkspaceAssetIds(workspaceSlug),
+      ),
+    );
+  }, [queryClient, workspaceSlug]);
+
   return (
     <WorkspacePeekProvider workspaceSlug={workspaceSlug}>
-      <DragDropProvider>
-        <SidebarProvider>
-          <AppSidebar />
-          <GlobalScratchpad />
-          <SettingsDialog />
-          <CommandPalette />
-          <SidebarInset
-            className={cn(
-              "min-h-0 md:mb-[var(--app-shell-inset)]",
-              isBoardView && "h-[calc(100svh-0.5rem)] overflow-hidden",
-              isBoardView && pexelsBrowserOpen ? "md:mr-0" : "md:mr-2",
-              "md:mr-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--app-shell-inset))] md:transition-[margin-right] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none",
-            )}
-          >
-            <AppHeader />
-            <div
+      <WorkspaceAssetViewProvider workspaceSlug={workspaceSlug}>
+        <DragDropProvider>
+          <SidebarProvider>
+            <AppSidebar />
+            <GlobalScratchpad />
+            <SettingsDialog />
+            <CommandPalette />
+            <SidebarInset
               className={cn(
-                "flex min-w-0 flex-1 flex-col",
-                isBoardView
-                  ? "min-h-0 overflow-hidden rounded-xl bg-card"
-                  : "gap-4 rounded-xl bg-card p-3 shadow-sm",
+                "min-h-0 md:mb-[var(--app-shell-inset)]",
+                isBoardView && "h-[calc(100svh-0.5rem)] overflow-hidden",
+                isBoardView && pexelsBrowserOpen ? "md:mr-0" : "md:mr-2",
+                "md:mr-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--app-shell-inset))] md:transition-[margin-right] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none",
               )}
             >
-              {children}
-            </div>
-          </SidebarInset>
-          {collectionSlug ? (
-            <PexelsBrowserPanel
-              open={pexelsBrowserOpen}
-              workspaceSlug={workspaceSlug}
-              collectionSlug={collectionSlug}
-              parentFolderPath={folderPath}
-            />
-          ) : null}
-        </SidebarProvider>
-      </DragDropProvider>
+              <AppHeader />
+              <div
+                className={cn(
+                  "flex min-w-0 flex-1 flex-col",
+                  isBoardView
+                    ? "min-h-0 overflow-hidden rounded-xl bg-card"
+                    : "gap-4 rounded-xl bg-card p-3 shadow-sm",
+                )}
+              >
+                {children}
+              </div>
+            </SidebarInset>
+            {collectionSlug ? (
+              <PexelsBrowserPanel
+                open={pexelsBrowserOpen}
+                workspaceSlug={workspaceSlug}
+                collectionSlug={collectionSlug}
+                parentFolderPath={folderPath}
+              />
+            ) : null}
+          </SidebarProvider>
+        </DragDropProvider>
+      </WorkspaceAssetViewProvider>
     </WorkspacePeekProvider>
   );
 }

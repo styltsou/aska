@@ -24,6 +24,7 @@ import {
   ChevronRightIcon,
   DownloadIcon,
   ExternalLinkIcon,
+  LocateFixedIcon,
   PencilIcon,
   PipetteIcon,
   RotateCcwIcon,
@@ -904,6 +905,7 @@ export function ImageAssetViewer({
   onBack,
   backLabel = "Back to board",
   onAssetChange,
+  onShowInBoard,
   workspaceSlug,
 }: {
   asset?: ImageAsset;
@@ -913,6 +915,7 @@ export function ImageAssetViewer({
   onBack?: () => void;
   backLabel?: string;
   onAssetChange?: (asset: ImageAsset) => void;
+  onShowInBoard?: () => void;
   workspaceSlug: string;
 }) {
   const retainedAssetRef = useRef(selectedAsset);
@@ -1794,6 +1797,29 @@ export function ImageAssetViewer({
                           <span className="sr-only">Next image</span>
                         </TooltipTrigger>
                         <TooltipContent>Next image</TooltipContent>
+                      </Tooltip>
+                    </ButtonGroup>
+                  </div>
+                ) : null}
+                {onShowInBoard ? (
+                  <div className={VIEWER_BUTTON_GROUP_SURFACE_CLASS}>
+                    <ButtonGroup>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label="Show in board"
+                              onClick={onShowInBoard}
+                            />
+                          }
+                        >
+                          <LocateFixedIcon />
+                          <span className="sr-only">Show in board</span>
+                        </TooltipTrigger>
+                        <TooltipContent>Show in board</TooltipContent>
                       </Tooltip>
                     </ButtonGroup>
                   </div>

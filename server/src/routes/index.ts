@@ -10,12 +10,14 @@ import pexelsRoutes from "./pexels.routes";
 import resourcePipelineRoutes from "./resource-pipeline.routes";
 import urlUnfurlRoutes from "./url-unfurl.routes";
 import noteMentionRoutes from "./note-mention.routes";
+import workspaceSearchRoutes from "./workspace-search.routes";
 
 export const apiRoutes = factory
   .createApp()
   .route("/", sessionRoutes)
   .route("/", collectionRoutes)
   .route("/", noteMentionRoutes)
+  .route("/", workspaceSearchRoutes)
   .route("/", assetRoutes)
   .route("/", colorSearchRoutes)
   .route("/", imageUploadRoutes)

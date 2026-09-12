@@ -241,7 +241,11 @@ export type CreateNoteResponse = {
 };
 
 export type PeekableAssetResponse = {
-  asset: CollectionNoteNode | CollectionColorNode;
+  asset:
+    | CollectionImageNode
+    | CollectionNoteNode
+    | CollectionLinkNode
+    | CollectionColorNode;
   location: AssetLocation;
 };
 

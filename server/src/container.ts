@@ -11,6 +11,7 @@ import { NoteMentionService } from "@/services/note-mention.service";
 import { PexelsService } from "@/services/pexels.service";
 import { TaskQueueService } from "@/services/task-queue.service";
 import { UrlUnfurlService } from "@/services/url-unfurl/url-unfurl.service";
+import { WorkspaceSearchService } from "@/services/workspace-search.service";
 
 const loggerService = new LoggerService();
 const objectStorageService = new ObjectStorageService();
@@ -48,6 +49,7 @@ export const container = {
     loggerService,
   }),
   noteMentionService: new NoteMentionService(),
+  workspaceSearchService: new WorkspaceSearchService(),
 };
 
 export type Container = typeof container;

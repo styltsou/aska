@@ -90,7 +90,12 @@ export interface IAssetService {
   getPeekableAsset(
     orgId: string,
     assetNodeId: string,
-  ): Promise<CollectionNoteNode | CollectionColorNode>;
+  ): Promise<
+    | CollectionImageNode
+    | CollectionNoteNode
+    | CollectionLinkNode
+    | CollectionColorNode
+  >;
   getAssetLocation(orgId: string, assetNodeId: string): Promise<AssetLocation>;
   getInboxContents(
     orgId: string,
@@ -159,78 +164,70 @@ export class AssetService implements IAssetService {
   async getPeekableAsset(
     orgId: string,
     assetNodeId: string,
-  ): Promise<CollectionNoteNode | CollectionColorNode> {
+  ): Promise<
+    | CollectionImageNode
+    | CollectionNoteNode
+    | CollectionLinkNode
+    | CollectionColorNode
+  > {
     const target = parseAssetNodeId(assetNodeId);
-    if (target.assetType !== "note" && target.assetType !== "color") {
+    const rows = await db
+      .select({
+        assetId: assets.id,
+        assetType: assets.type,
+        title: assets.title,
+        isFavorite: assets.isFavorite,
+        createdAt: assets.createdAt,
+        updatedAt: assets.updatedAt,
+        imageAlt: imageAssets.alt,
+        imageNote: imageAssets.note,
+        sourceLabel: imageAssets.sourceLabel,
+        sourceUrl: imageAssets.sourceUrl,
+        imageVariants: imageAssets.variants,
+        imageBlurDataURL: imageAssets.blurDataURL,
+        imageDominantColors: imageAssets.dominantColors,
+        noteContent: noteAssets.markdown,
+        noteIsExpanded: noteAssets.isExpanded,
+        colorHex: colorAssets.hex,
+        colorGradient: colorAssets.gradient,
+        linkOriginalUrl: linkAssets.originalUrl,
+        linkNote: linkAssets.note,
+        linkResourceId: externalResources.id,
+        linkHostname: externalResources.hostname,
+        linkCanonicalUrl: externalResources.canonicalUrl,
+        linkTitle: externalResources.title,
+        linkDescription: externalResources.description,
+        linkSiteName: externalResources.siteName,
+        linkResourceKind: externalResources.resourceKind,
+        linkResolverKey: externalResources.resolverKey,
+        linkProviderExtensions: externalResources.providerExtensions,
+        linkResolutionStatus: externalResources.resolutionStatus,
+        linkFailureCategory: externalResources.failureCategory,
+        linkResolvedAt: externalResources.resolvedAt,
+        linkStaleAt: externalResources.staleAt,
+      })
+      .from(assets)
+      .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+      .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+      .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
+      .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
+      .leftJoin(
+        externalResources,
+        eq(externalResources.id, linkAssets.resourceId),
+      )
+      .where(
+        and(
+          eq(assets.organizationId, orgId),
+          eq(assets.id, target.entityId),
+          eq(assets.type, target.assetType),
+        ),
+      )
+      .limit(1);
+    const [asset] = await this.rowsToAssetNodes(rows);
+    if (!asset || asset.type === "folder") {
       throw new AppError(ErrorCode.NOT_FOUND, "Asset not found");
     }
-    if (target.assetType === "note") {
-      const row = first(
-        await db
-          .select({
-            id: assets.id,
-            content: noteAssets.markdown,
-            title: assets.title,
-            isFavorite: assets.isFavorite,
-            createdAt: assets.createdAt,
-            updatedAt: assets.updatedAt,
-          })
-          .from(assets)
-          .innerJoin(noteAssets, eq(noteAssets.assetId, assets.id))
-          .where(
-            and(
-              eq(assets.organizationId, orgId),
-              eq(assets.id, target.entityId),
-              eq(assets.type, "note"),
-            ),
-          )
-          .limit(1),
-      );
-      if (!row) throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
-      return {
-        id: `note-${row.id}`,
-        type: "note",
-        content: row.content,
-        title: row.title,
-        isFavorite: row.isFavorite,
-        ...calculateNoteMetrics(row.content),
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-        position: null,
-      };
-    }
-    const row = first(
-      await db
-        .select({
-          id: assets.id,
-          hex: colorAssets.hex,
-          gradient: colorAssets.gradient,
-          title: assets.title,
-          isFavorite: assets.isFavorite,
-          createdAt: assets.createdAt,
-        })
-        .from(assets)
-        .innerJoin(colorAssets, eq(colorAssets.assetId, assets.id))
-        .where(
-          and(
-            eq(assets.organizationId, orgId),
-            eq(assets.id, target.entityId),
-            eq(assets.type, "color"),
-          ),
-        )
-        .limit(1),
-    );
-    if (!row) throw new AppError(ErrorCode.NOT_FOUND, "Color not found");
-    return {
-      id: `color-${row.id}`,
-      type: "color",
-      hex: row.hex,
-      gradient: row.gradient,
-      title: row.title,
-      isFavorite: row.isFavorite,
-      createdAt: row.createdAt.toISOString(),
-      position: null,
-    };
+    return asset;
   }
 
   async getAssetLocation(

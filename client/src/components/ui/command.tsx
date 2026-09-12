@@ -34,6 +34,7 @@ function CommandDialog({
   description = "Search for a command to run...",
   children,
   className,
+  contentStyle,
   overlayClassName,
   showCloseButton = false,
   ...props
@@ -41,6 +42,7 @@ function CommandDialog({
   title?: string;
   description?: string;
   className?: string;
+  contentStyle?: React.CSSProperties;
   overlayClassName?: string;
   showCloseButton?: boolean;
   children: React.ReactNode;
@@ -55,6 +57,7 @@ function CommandDialog({
         className={cn("top-[18vh] translate-y-0", className)}
         overlayClassName={overlayClassName}
         showCloseButton={showCloseButton}
+        style={contentStyle}
       >
         {children}
       </DialogContent>
@@ -64,20 +67,36 @@ function CommandDialog({
 
 function CommandInput({
   className,
+  startAddon,
+  startAddonClassName,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+}: React.ComponentProps<typeof CommandPrimitive.Input> & {
+  startAddon?: React.ReactNode;
+  startAddonClassName?: string;
+}) {
   return (
     <div data-slot="command-input-wrapper">
-      <InputGroup className="relative z-10 h-10! rounded-none! border-0 border-b border-border/40 bg-transparent! pb-1.5 shadow-none ring-0 backdrop-blur-none focus-within:border-border/60! focus-within:ring-0! *:data-[slot=input-group-addon]:pr-2! *:data-[slot=input-group-addon]:pl-2! dark:bg-transparent!">
+      <InputGroup className="relative z-10 h-10! rounded-none! border-0 border-b border-border/40 bg-transparent! pb-1.5 shadow-none ring-0 backdrop-blur-none focus-within:border-border/60! focus-within:ring-0! dark:bg-transparent!">
+        {startAddon ? (
+          <InputGroupAddon
+            className={cn(
+              "min-w-0 shrink-0 overflow-hidden py-0 pr-1 pl-2 transition-[width] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+              startAddonClassName,
+            )}
+          >
+            {startAddon}
+          </InputGroupAddon>
+        ) : null}
         <CommandPrimitive.Input
           data-slot="command-input"
           className={cn(
-            "block h-9! min-w-0 flex-1 rounded-md border-0 bg-transparent px-3 py-2 text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+            "block h-9! min-w-0 flex-1 rounded-md border-0 bg-transparent py-2 pr-3 text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+            startAddon ? "pl-1.5" : "pl-3",
             className,
           )}
           {...props}
         />
-        <InputGroupAddon>
+        <InputGroupAddon className="px-2">
           <Kbd>Esc</Kbd>
         </InputGroupAddon>
       </InputGroup>

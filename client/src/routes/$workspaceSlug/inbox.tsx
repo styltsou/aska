@@ -8,27 +8,19 @@ import {
   useColorImageSearch,
 } from "@/api/color-search";
 import { AssetBoard } from "@/components/board/asset-board";
-import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
-import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
-import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
-import { usePersistedNoteDrawer } from "@/components/board/use-persisted-note-drawer";
-import { useColorDrilldown } from "@/components/board/use-color-drilldown";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { BoardContextMenu, BoardUploadZone } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
 import { MasonryGridSkeleton } from "@/components/masonry-grid-skeleton";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { useSessionStore } from "@/store";
-import type { ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
-import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
-import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
-import { usePersistedImageViewer } from "@/components/board/use-persisted-image-viewer";
-import { usePersistedYouTubeVideoViewer } from "@/components/board/use-persisted-youtube-video-viewer";
+import type { ImageAsset } from "@/types/asset";
 import { ResourceLoadError } from "@/components/resource-load-error";
 import {
   useWorkspacePeek,
   type BoardShowRequest,
 } from "@/components/app-shell/workspace-peek";
+import { useWorkspaceAssetView } from "@/components/app-shell/workspace-asset-view";
 
 export const Route = createFileRoute("/$workspaceSlug/inbox")({
   head: () => ({
@@ -42,40 +34,12 @@ function InboxPage() {
   const { workspaceSlug } = Route.useParams();
   const filterScope = `inbox:${workspaceSlug}`;
   const { showRequest, consumeShowRequest } = useWorkspacePeek();
+  const { openAsset } = useWorkspaceAssetView();
   const filterBar = useSessionStore(
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
   );
   const selectedAssetTypes =
     filterBar.filterType === "Type" ? (filterBar.selectedAssetTypes ?? []) : [];
-  const {
-    drawerNote,
-    hasPreviousNote,
-    openDrawer,
-    promoteDrawer,
-    goBack,
-    closeDrawer,
-    updateDrawerNote,
-  } = usePersistedNoteDrawer(`aska.note-drawer:inbox:${workspaceSlug}`);
-  const { viewerImage, openViewer, closeViewer } = usePersistedImageViewer(
-    `aska.image-viewer:inbox:${workspaceSlug}`,
-  );
-  const {
-    viewerVideo,
-    openViewer: openVideoViewer,
-    closeViewer: closeVideoViewer,
-  } = usePersistedYouTubeVideoViewer(
-    `aska.youtube-video-viewer:inbox:${workspaceSlug}`,
-  );
-  const {
-    color: drawerColor,
-    isImageDrilldown,
-    openColor,
-    closeColor,
-    openImageFromColor,
-    returnToColor,
-  } = useColorDrilldown();
-  const [colorEditorOpen, setColorEditorOpen] = useState(false);
-  const [editingColor, setEditingColor] = useState<ColorAsset>();
   const { data, isLoading, isFetching, isError, refetch } = useInboxContents(
     workspaceSlug,
     selectedAssetTypes,
@@ -128,26 +92,6 @@ function InboxPage() {
     );
   }
 
-  const handleOpenNote = (note: NoteAsset, _mode: "read" | "edit" = "read") => {
-    openDrawer(note);
-  };
-
-  const handleCloseNote = () => closeDrawer();
-
-  const handleOpenImage = (image: ImageAsset) => {
-    openViewer(image);
-  };
-
-  const handleCloseImage = () => {
-    closeViewer();
-    if (isImageDrilldown) returnToColor();
-  };
-
-  const handleOpenImageFromColor = (image: ImageAsset) => {
-    openImageFromColor();
-    openViewer(image);
-  };
-
   return (
     <BoardContextMenu
       workspaceSlug={workspaceSlug}
@@ -165,10 +109,10 @@ function InboxPage() {
           focusedAssetId={focusedShowRequest?.assetId}
           focusRequestId={focusedShowRequest?.id}
           onDismissFocusedAsset={() => setFocusedShowRequest(undefined)}
-          onOpenNote={handleOpenNote}
-          onOpenImage={handleOpenImage}
-          onOpenColor={openColor}
-          onOpenVideo={openVideoViewer}
+          onOpenNote={(note) => openAsset(note.id)}
+          onOpenImage={(image) => openAsset(image.id)}
+          onOpenColor={(color) => openAsset(color.id)}
+          onOpenVideo={(video) => openAsset(video.id)}
           emptyTitle={
             hasResolvedColorSearch || isTypeFilterActive
               ? "No matching assets"
@@ -183,57 +127,6 @@ function InboxPage() {
           }
         />
       </BoardUploadZone>
-      <NoteDetailDrawer
-        note={drawerNote}
-        location={{ type: "inbox" }}
-        onNoteChange={updateDrawerNote}
-        onPromote={promoteDrawer}
-        onSwap={openDrawer}
-        onBack={goBack}
-        hasPreviousNote={hasPreviousNote}
-        workspaceSlug={workspaceSlug}
-        noteExtractionTarget={{ target: "inbox" }}
-        onOpenReferencedColor={openColor}
-        onClose={handleCloseNote}
-      />
-      <ColorDetailDrawer
-        color={drawerColor}
-        open={drawerColor !== undefined}
-        workspaceSlug={workspaceSlug}
-        scope={{ type: "inbox" }}
-        onClose={closeColor}
-        onOpenImage={handleOpenImageFromColor}
-        onEdit={() => {
-          setEditingColor(drawerColor);
-          setColorEditorOpen(true);
-        }}
-      />
-      <ColorEditorDialog
-        workspaceSlug={workspaceSlug}
-        target="inbox"
-        color={editingColor}
-        open={colorEditorOpen}
-        onOpenChange={setColorEditorOpen}
-      />
-      <ImageAssetViewer
-        asset={viewerImage}
-        assets={displayAssets.filter(
-          (asset): asset is ImageAsset => asset.type === "image",
-        )}
-        open={viewerImage !== undefined}
-        workspaceSlug={workspaceSlug}
-        onBack={isImageDrilldown ? handleCloseImage : undefined}
-        backLabel={isImageDrilldown ? "Back to color" : "Back to board"}
-        onAssetChange={handleOpenImage}
-        onOpenChange={(open) => {
-          if (!open) handleCloseImage();
-        }}
-      />
-      <YouTubeVideoViewer
-        asset={viewerVideo}
-        onClose={closeVideoViewer}
-        workspaceSlug={workspaceSlug}
-      />
       {(assets.length > 0 || selectedAssetTypes.length > 0) && (
         <FilterBar
           scope={filterScope}

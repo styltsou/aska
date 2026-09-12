@@ -44,9 +44,11 @@ import type {
 export async function fetchPeekableAsset(
   workspaceSlug: string,
   assetId: string,
+  signal?: AbortSignal,
 ): Promise<PeekableAssetResponse> {
   return apiGet<PeekableAssetResponse>(
     `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}`,
+    { signal },
   );
 }
 

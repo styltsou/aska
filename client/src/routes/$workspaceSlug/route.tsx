@@ -1,7 +1,15 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { requireWorkspace } from "@/lib/auth-flow";
+import { parseWorkspaceAssetId } from "@/lib/workspace-asset-url";
+
+export type WorkspaceRouteSearch = {
+  asset?: string;
+};
 
 export const Route = createFileRoute("/$workspaceSlug")({
+  validateSearch: (search): WorkspaceRouteSearch => ({
+    asset: parseWorkspaceAssetId(search.asset),
+  }),
   beforeLoad: async ({ location, params }) => {
     return requireWorkspace(location, params.workspaceSlug);
   },

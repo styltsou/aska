@@ -11,6 +11,7 @@ import {
   ArrowLeftIcon,
   CheckIcon,
   InfoIcon,
+  LocateFixedIcon,
   LoaderCircleIcon,
   PanelRightIcon,
 } from "lucide-react";
@@ -117,6 +118,7 @@ export function NoteDetailDrawer({
   onSwap,
   onBack,
   hasPreviousNote = false,
+  onShowInBoard,
   onClose,
 }: {
   note: NoteAsset | undefined;
@@ -142,6 +144,7 @@ export function NoteDetailDrawer({
   onSwap?: (note: NoteAsset) => void;
   onBack?: () => void;
   hasPreviousNote?: boolean;
+  onShowInBoard?: () => void;
   onClose: () => void;
 }) {
   const isCreateMode = createOptions !== undefined;
@@ -795,6 +798,7 @@ export function NoteDetailDrawer({
           else peekNote(asset, assetLocation);
           return;
         }
+        if (asset.type !== "color") return;
         if (isMobile) {
           onOpenReferencedColor?.(asset);
           return;
@@ -1298,6 +1302,26 @@ export function NoteDetailDrawer({
                     <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">P</Kbd>
                   </KbdGroup>
                 </TooltipContent>
+              </Tooltip>
+            ) : null}
+            {onShowInBoard ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 rounded-lg"
+                      aria-label="Show in board"
+                      onClick={onShowInBoard}
+                    />
+                  }
+                >
+                  <LocateFixedIcon className="size-4" />
+                  <span className="sr-only">Show in board</span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Show in board</TooltipContent>
               </Tooltip>
             ) : null}
           </div>

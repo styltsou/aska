@@ -8,6 +8,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import {
   ImageIcon,
+  LocateFixedIcon,
   LoaderCircleIcon,
   PanelRightIcon,
   PencilIcon,
@@ -52,6 +53,7 @@ export function ColorDetailDrawer({
   onClose,
   onOpenImage,
   onEdit,
+  onShowInBoard,
   open = color !== undefined,
 }: {
   color?: ColorAsset;
@@ -60,6 +62,7 @@ export function ColorDetailDrawer({
   onClose: () => void;
   onOpenImage: (image: ImageAsset) => void;
   onEdit?: () => void;
+  onShowInBoard?: () => void;
   open?: boolean;
 }) {
   const { peekColor } = useWorkspacePeek();
@@ -180,6 +183,25 @@ export function ColorDetailDrawer({
               >
                 <PanelRightIcon className="size-4" />
               </Button>
+              {onShowInBoard ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Show in board"
+                        onClick={onShowInBoard}
+                      />
+                    }
+                  >
+                    <LocateFixedIcon className="size-4" />
+                    <span className="sr-only">Show in board</span>
+                  </TooltipTrigger>
+                  <TooltipContent>Show in board</TooltipContent>
+                </Tooltip>
+              ) : null}
               {onEdit ? (
                 <Button
                   type="button"

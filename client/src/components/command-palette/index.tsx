@@ -11,14 +11,24 @@ import {
   LayoutGridIcon,
   MoonIcon,
   CornerDownLeftIcon,
+  ExternalLinkIcon,
   NotebookPenIcon,
   PanelLeftIcon,
   PanelsTopLeftIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
   SquarePlusIcon,
+  PipetteIcon,
+  SearchIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -61,6 +71,19 @@ import {
   getCollectionViewScope,
 } from "@/store";
 import { makeBoardKey, useBoardInsertionPlacement } from "@/components/canvas";
+import {
+  useWorkspaceSearch,
+  type WorkspaceSearchResult,
+} from "@/api/workspace-search";
+import { useWorkspaceAssetView } from "@/components/app-shell/workspace-asset-view";
+import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
+import { fetchPeekableAsset } from "@/api/collection/fetchers";
+import { collectionNodeToAsset } from "@/lib/asset-transform";
+import { getUserFacingApiErrorMessage } from "@/lib/api";
+import { getRecentWorkspaceAssetIds } from "@/lib/workspace-recent-assets";
+import { toast } from "sonner";
+
+type PaletteMode = "search" | "commands";
 
 type CommandId =
   | "new-note"
@@ -196,6 +219,12 @@ const COMMAND_ID_BY_LABEL: ReadonlyMap<string, CommandId> = new Map(
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<PaletteMode>("search");
+  const [query, setQuery] = useState("");
+  const [paletteBodyContentHeight, setPaletteBodyContentHeight] =
+    useState<number>();
+  const [paletteFooterHeight, setPaletteFooterHeight] = useState<number>();
+  const [activeSearchResultId, setActiveSearchResultId] = useState<string>();
   const [activeCommandId, setActiveCommandId] = useState<CommandId>();
   const [createNoteOpen, setCreateNoteOpen] = useState(false);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
@@ -203,6 +232,8 @@ export function CommandPalette() {
   const hasActiveModalLayer = useActiveModalLayer();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { openAsset } = useWorkspaceAssetView();
+  const { peekNote, peekColor } = useWorkspacePeek();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -269,6 +300,107 @@ export function CommandPalette() {
   const canToggleBoardActionRail =
     collectionView === "canvas" && Boolean(boardKey);
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
+  const recentAssetIds = workspaceSlug
+    ? getRecentWorkspaceAssetIds(workspaceSlug)
+    : [];
+  const workspaceSearch = useWorkspaceSearch(
+    workspaceSlug,
+    query,
+    open && mode === "search",
+    recentAssetIds,
+  );
+  const searchResults =
+    workspaceSearch.data?.query === query.trim()
+      ? workspaceSearch.data.results
+      : [];
+  const paletteBodyHeight =
+    paletteBodyContentHeight === undefined
+      ? undefined
+      : paletteBodyContentHeight + 1;
+  const paletteHeight =
+    paletteBodyHeight === undefined || paletteFooterHeight === undefined
+      ? undefined
+      : paletteBodyHeight + paletteFooterHeight;
+
+  function changeMode(nextMode: PaletteMode) {
+    setMode(nextMode);
+    setQuery("");
+    setActiveCommandId(undefined);
+    setActiveSearchResultId(undefined);
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setMode("search");
+      setQuery("");
+      setActiveSearchResultId(undefined);
+      setActiveCommandId(undefined);
+    }
+  }
+
+  function runSearchResult(result: WorkspaceSearchResult) {
+    handleOpenChange(false);
+    if (result.action.type === "open-asset") {
+      openAsset(result.id);
+      return;
+    }
+    if (result.action.type === "external") {
+      window.open(result.action.url, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (result.location.type === "inbox") {
+      void navigate({
+        to: "/$workspaceSlug/inbox",
+        params: { workspaceSlug },
+        search: {},
+      });
+      return;
+    }
+    void navigate({
+      to: "/$workspaceSlug/collections/$",
+      params: {
+        workspaceSlug,
+        _splat: [result.location.collectionSlug, result.location.folderPath]
+          .filter(Boolean)
+          .join("/"),
+      },
+      search: {},
+    });
+  }
+
+  async function peekSearchResult(result: WorkspaceSearchResult) {
+    if (result.type !== "note" && result.type !== "color") {
+      runSearchResult(result);
+      return;
+    }
+    handleOpenChange(false);
+    try {
+      const response = await fetchPeekableAsset(workspaceSlug, result.id);
+      const asset = collectionNodeToAsset(response.asset);
+      if (asset.type === "note") {
+        peekNote(asset, response.location);
+        return;
+      }
+      if (asset.type === "color") {
+        peekColor(
+          asset,
+          response.location.type === "inbox"
+            ? { type: "inbox" }
+            : {
+                type: "collection",
+                collectionSlug: response.location.collectionSlug,
+                folderPath: response.location.folderPath,
+                includeDescendants: false,
+              },
+        );
+      }
+    } catch (error) {
+      toast.error(
+        getUserFacingApiErrorMessage(error, "Could not peek this asset."),
+      );
+    }
+  }
 
   useEffect(() => {
     if (!open || !workspaceSlug) {
@@ -298,7 +430,8 @@ export function CommandPalette() {
     );
     if (paletteToggle && matchesKeybinding(event, paletteToggle)) {
       event.preventDefault();
-      setOpen((current) => !current);
+      if (open) handleOpenChange(false);
+      else setOpen(true);
       return;
     }
 
@@ -322,36 +455,36 @@ export function CommandPalette() {
     switch (commandId) {
       case "new-note":
         if (!canCreateNote) return;
-        setOpen(false);
+        handleOpenChange(false);
         setCreateNoteOpen(true);
         return;
       case "new-folder":
         if (!canCreateFolder) return;
-        setOpen(false);
+        handleOpenChange(false);
         setCreateFolderOpen(true);
         return;
       case "upload-images":
         if (!canCreateFolder) return;
-        setOpen(false);
+        handleOpenChange(false);
         setUploadImagesOpen(true);
         return;
       case "open-scratchpad":
         if (!workspaceSlug) return;
-        setOpen(false);
+        handleOpenChange(false);
         openScratchpad();
         return;
       case "toggle-filter-bar":
         if (!filterScope) return;
-        setOpen(false);
+        handleOpenChange(false);
         toggleFilterBar(filterScope);
         return;
       case "toggle-sidebar":
-        setOpen(false);
+        handleOpenChange(false);
         toggleSidebar();
         return;
       case "toggle-collection-view":
         if (!collectionViewScope || !collectionView) return;
-        setOpen(false);
+        handleOpenChange(false);
         setCollectionView(
           collectionViewScope,
           collectionView === "canvas" ? "grid" : "canvas",
@@ -359,16 +492,16 @@ export function CommandPalette() {
         return;
       case "toggle-alignment-guides":
         if (!boardKey || !workspaceSlug) return;
-        setOpen(false);
+        handleOpenChange(false);
         setWorkspaceAlignmentGuides(workspaceSlug, !areAlignmentGuidesEnabled);
         return;
       case "toggle-board-action-rail":
         if (!boardKey || !workspaceSlug) return;
-        setOpen(false);
+        handleOpenChange(false);
         setWorkspaceBoardActionRail(workspaceSlug, !isBoardActionRailVisible);
         return;
       case "change-theme":
-        setOpen(false);
+        handleOpenChange(false);
         setTheme(
           theme === "dark"
             ? "light"
@@ -380,12 +513,12 @@ export function CommandPalette() {
         );
         return;
       case "open-settings":
-        setOpen(false);
+        handleOpenChange(false);
         openSettings();
         return;
       case "open-inbox":
         if (!workspaceSlug) return;
-        setOpen(false);
+        handleOpenChange(false);
         void navigate({
           to: "/$workspaceSlug/inbox",
           params: { workspaceSlug },
@@ -394,7 +527,7 @@ export function CommandPalette() {
         return;
       case "browse-collections":
         if (!workspaceSlug) return;
-        setOpen(false);
+        handleOpenChange(false);
         void navigate({
           to: "/$workspaceSlug",
           params: { workspaceSlug },
@@ -402,7 +535,7 @@ export function CommandPalette() {
         return;
       case "open-pexels-browser":
         if (!canCreateFolder || !pexelsScope) return;
-        setOpen(false);
+        handleOpenChange(false);
         openPexelsBrowser(pexelsScope, true);
         return;
       default:
@@ -414,112 +547,231 @@ export function CommandPalette() {
     <>
       <CommandDialog
         open={open}
-        onOpenChange={setOpen}
-        title="Command Palette"
-        description="Search app commands and destinations."
-        className="top-[18vh] max-w-lg"
+        onOpenChange={handleOpenChange}
+        title={mode === "search" ? "Search workspace" : "Command Palette"}
+        description={
+          mode === "search"
+            ? "Search assets, folders, and collections."
+            : "Search app commands and destinations."
+        }
+        className="top-[18vh] max-w-lg transition-[height,opacity,transform] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+        contentStyle={
+          paletteHeight === undefined ? undefined : { height: paletteHeight }
+        }
       >
-        <DialogBody className="overflow-hidden p-1.5">
-          <Command
-            onValueChange={(value) => {
-              setActiveCommandId(COMMAND_ID_BY_LABEL.get(value));
-            }}
+        <DialogBody
+          className="overflow-hidden p-0 transition-[height] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+          style={
+            paletteBodyHeight === undefined
+              ? undefined
+              : { height: paletteBodyHeight }
+          }
+        >
+          <MeasuredCommandPaletteSection
+            className="p-1.5"
+            onHeightChange={setPaletteBodyContentHeight}
           >
-            <CommandInput placeholder="Type a command or search..." />
-            <CommandList className="max-h-80">
-              <CommandEmpty>No commands found.</CommandEmpty>
-              {COMMAND_GROUPS.map((group) => ({
-                heading: group.heading,
-                items: group.items.filter(
-                  (item) =>
-                    (item.id !== "toggle-filter-bar" || Boolean(filterScope)) &&
-                    (item.id !== "new-note" || canCreateNote) &&
-                    (item.id !== "new-folder" || canCreateFolder) &&
-                    (item.id !== "upload-images" || canCreateFolder) &&
-                    (item.id !== "toggle-collection-view" ||
-                      canToggleCollectionView) &&
-                    (item.id !== "toggle-alignment-guides" ||
-                      canToggleAlignmentGuides) &&
-                    (item.id !== "toggle-board-action-rail" ||
-                      canToggleBoardActionRail) &&
-                    (item.id !== "open-pexels-browser" || canCreateFolder),
-                ),
-              }))
-                .filter((group) => group.items.length > 0)
-                .map((group, index) => (
-                  <div key={group.heading}>
-                    {index > 0 ? <CommandSeparator /> : null}
-                    <CommandGroup heading={group.heading}>
-                      {group.items.map((item) => {
-                        const Icon =
-                          item.id === "toggle-collection-view"
-                            ? collectionView === "canvas"
-                              ? LayoutGridIcon
-                              : PanelsTopLeftIcon
-                            : item.icon;
-                        const label =
-                          item.id === "change-theme"
-                            ? theme === "dark"
-                              ? "Switch to light mode"
-                              : "Switch to dark mode"
-                            : item.id === "toggle-collection-view"
-                              ? collectionView === "canvas"
-                                ? "Switch to grid view"
-                                : "Switch to canvas view"
-                              : item.id === "toggle-board-action-rail"
-                                ? isBoardActionRailVisible
-                                  ? "Hide actions dock"
-                                  : "Show actions dock"
-                                : item.label;
+            <Command
+              shouldFilter={mode === "commands"}
+              onKeyDown={(event) => {
+                if (event.key === "Tab" && query.length === 0) {
+                  event.preventDefault();
+                  changeMode(mode === "search" ? "commands" : "search");
+                  return;
+                }
+                if (
+                  event.key === "Backspace" &&
+                  mode === "commands" &&
+                  query.length === 0
+                ) {
+                  event.preventDefault();
+                  changeMode("search");
+                  return;
+                }
+                if (
+                  event.key === "Enter" &&
+                  event.shiftKey &&
+                  mode === "search"
+                ) {
+                  const result = searchResults.find(
+                    (candidate) => candidate.id === activeSearchResultId,
+                  );
+                  if (result?.type === "note" || result?.type === "color") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void peekSearchResult(result);
+                  }
+                }
+              }}
+              onValueChange={(value) => {
+                if (mode === "commands") {
+                  setActiveCommandId(COMMAND_ID_BY_LABEL.get(value));
+                  return;
+                }
+                setActiveSearchResultId(
+                  searchResults.find(
+                    (result) => searchResultValue(result) === value,
+                  )?.id,
+                );
+              }}
+            >
+              <CommandInput
+                value={query}
+                onValueChange={setQuery}
+                maxLength={120}
+                startAddon={
+                  <CommandInputLeadingContent
+                    mode={mode}
+                    isSearching={workspaceSearch.isSearching}
+                  />
+                }
+                startAddonClassName={mode === "commands" ? "w-[70px]" : "w-7"}
+                placeholder={
+                  mode === "search"
+                    ? "Search notes, images, links, colors…"
+                    : "Search actions…"
+                }
+              />
+              <CommandList className="max-h-80">
+                {mode === "search" ? (
+                  <WorkspaceSearchResults
+                    query={query}
+                    results={searchResults}
+                    isLoading={
+                      workspaceSearch.isLoading || workspaceSearch.isSearching
+                    }
+                    isError={workspaceSearch.isError}
+                    onSelect={runSearchResult}
+                  />
+                ) : (
+                  <>
+                    <CommandEmpty>No commands found.</CommandEmpty>
+                    {COMMAND_GROUPS.map((group) => ({
+                      heading: group.heading,
+                      items: group.items.filter(
+                        (item) =>
+                          (item.id !== "toggle-filter-bar" ||
+                            Boolean(filterScope)) &&
+                          (item.id !== "new-note" || canCreateNote) &&
+                          (item.id !== "new-folder" || canCreateFolder) &&
+                          (item.id !== "upload-images" || canCreateFolder) &&
+                          (item.id !== "toggle-collection-view" ||
+                            canToggleCollectionView) &&
+                          (item.id !== "toggle-alignment-guides" ||
+                            canToggleAlignmentGuides) &&
+                          (item.id !== "toggle-board-action-rail" ||
+                            canToggleBoardActionRail) &&
+                          (item.id !== "open-pexels-browser" ||
+                            canCreateFolder),
+                      ),
+                    }))
+                      .filter((group) => group.items.length > 0)
+                      .map((group, index) => (
+                        <div key={group.heading}>
+                          {index > 0 ? <CommandSeparator /> : null}
+                          <CommandGroup heading={group.heading}>
+                            {group.items.map((item) => {
+                              const Icon =
+                                item.id === "toggle-collection-view"
+                                  ? collectionView === "canvas"
+                                    ? LayoutGridIcon
+                                    : PanelsTopLeftIcon
+                                  : item.icon;
+                              const label =
+                                item.id === "change-theme"
+                                  ? theme === "dark"
+                                    ? "Switch to light mode"
+                                    : "Switch to dark mode"
+                                  : item.id === "toggle-collection-view"
+                                    ? collectionView === "canvas"
+                                      ? "Switch to grid view"
+                                      : "Switch to canvas view"
+                                    : item.id === "toggle-board-action-rail"
+                                      ? isBoardActionRailVisible
+                                        ? "Hide actions dock"
+                                        : "Show actions dock"
+                                      : item.label;
 
-                        return (
-                          <CommandItem
-                            key={item.id}
-                            value={item.label}
-                            data-checked={
-                              item.id === "toggle-alignment-guides"
-                                ? areAlignmentGuidesEnabled
-                                : item.id === "toggle-board-action-rail"
-                                  ? isBoardActionRailVisible
-                                  : undefined
-                            }
-                            onSelect={() => runCommand(item.id)}
-                          >
-                            <Icon className="size-4 text-muted-foreground" />
-                            <span>{label}</span>
-                            {item.shortcut ? (
-                              <CommandShortcut>
-                                {formatPlatformShortcut(item.shortcut)}
-                              </CommandShortcut>
-                            ) : null}
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </div>
-                ))}
-            </CommandList>
-          </Command>
+                              return (
+                                <CommandItem
+                                  key={item.id}
+                                  value={item.label}
+                                  data-checked={
+                                    item.id === "toggle-alignment-guides"
+                                      ? areAlignmentGuidesEnabled
+                                      : item.id === "toggle-board-action-rail"
+                                        ? isBoardActionRailVisible
+                                        : undefined
+                                  }
+                                  onSelect={() => runCommand(item.id)}
+                                >
+                                  <Icon className="size-4 text-muted-foreground" />
+                                  <span>{label}</span>
+                                  {item.shortcut ? (
+                                    <CommandShortcut>
+                                      {formatPlatformShortcut(item.shortcut)}
+                                    </CommandShortcut>
+                                  ) : null}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </div>
+                      ))}
+                  </>
+                )}
+              </CommandList>
+            </Command>
+          </MeasuredCommandPaletteSection>
         </DialogBody>
-        <div className="relative z-0 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground sm:pr-[18px]">
-          <span className="inline-flex items-center gap-1">
-            <KbdGroup className="gap-0.5">
+        <MeasuredCommandPaletteSection onHeightChange={setPaletteFooterHeight}>
+          <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground sm:pr-[18px]">
+            {mode === "search" ? (
+              <span className="inline-flex items-center gap-1">
+                <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                  Tab
+                </Kbd>
+                <span>for actions</span>
+              </span>
+            ) : query.length === 0 ? (
+              <span className="inline-flex items-center gap-1">
+                <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                  Tab
+                </Kbd>
+                <span>or</span>
+                <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                  ⌫
+                </Kbd>
+                <span>to search</span>
+              </span>
+            ) : null}
+            {mode === "search" ? (
+              <span className="inline-flex items-center gap-1">
+                <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                  ⇧ ↵
+                </Kbd>
+                <span>to peek notes or colors</span>
+              </span>
+            ) : null}
+            <span className="ml-auto inline-flex items-center gap-1">
+              <KbdGroup className="gap-0.5">
+                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                  <ArrowUpIcon />
+                </Kbd>
+                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                  <ArrowDownIcon />
+                </Kbd>
+              </KbdGroup>
+              <span>to navigate</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
               <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                <ArrowUpIcon />
+                <CornerDownLeftIcon />
               </Kbd>
-              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                <ArrowDownIcon />
-              </Kbd>
-            </KbdGroup>
-            <span>to navigate</span>
-          </span>
-          <span className="ml-3 inline-flex items-center gap-1">
-            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-              <CornerDownLeftIcon />
-            </Kbd>
-            <span>to select</span>
-          </span>
-        </div>
+              <span>to select</span>
+            </span>
+          </div>
+        </MeasuredCommandPaletteSection>
       </CommandDialog>
       <CreateNoteDialog
         workspaceSlug={workspaceSlug ?? ""}
@@ -545,4 +797,217 @@ export function CommandPalette() {
       />
     </>
   );
+}
+
+function ActionsModePill() {
+  return (
+    <span
+      aria-label="Actions mode. Press Backspace with an empty query to search your workspace."
+      className="inline-flex h-6 shrink-0 items-center rounded-md border border-border/70 bg-muted/70 px-2 text-xs font-medium text-foreground shadow-xs"
+    >
+      Actions
+    </span>
+  );
+}
+
+function CommandInputLeadingContent({
+  mode,
+  isSearching,
+}: {
+  mode: PaletteMode;
+  isSearching: boolean;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+  const transition = shouldReduceMotion
+    ? { duration: 0 }
+    : { duration: 0.12, ease: [0.16, 1, 0.3, 1] as const };
+
+  return (
+    <AnimatePresence initial={false} mode="wait">
+      {mode === "commands" ? (
+        <motion.span
+          key="actions"
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -2 }}
+          initial={{ opacity: 0, x: -2 }}
+          transition={transition}
+        >
+          <ActionsModePill />
+        </motion.span>
+      ) : (
+        <span
+          key="search"
+          className="flex size-3.5 items-center justify-center"
+        >
+          <WorkspaceSearchInputIndicator isSearching={isSearching} />
+        </span>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function WorkspaceSearchInputIndicator({
+  isSearching,
+}: {
+  isSearching: boolean;
+}) {
+  return isSearching ? (
+    <span
+      aria-label="Searching workspace"
+      className="block size-3.5 animate-spin rounded-full border-2 border-foreground/30 border-t-foreground/80"
+    />
+  ) : (
+    <SearchIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
+  );
+}
+
+function MeasuredCommandPaletteSection({
+  children,
+  onHeightChange,
+  className,
+}: {
+  children: ReactNode;
+  onHeightChange: React.Dispatch<React.SetStateAction<number | undefined>>;
+  className?: string;
+}) {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+
+    const updateHeight = () => {
+      const nextHeight = content.offsetHeight;
+      onHeightChange((currentHeight) =>
+        currentHeight === nextHeight ? currentHeight : nextHeight,
+      );
+    };
+    updateHeight();
+
+    if (!("ResizeObserver" in window)) return;
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [onHeightChange]);
+
+  return (
+    <div ref={contentRef} className={className}>
+      {children}
+    </div>
+  );
+}
+
+function WorkspaceSearchResults({
+  query,
+  results,
+  isLoading,
+  isError,
+  onSelect,
+}: {
+  query: string;
+  results: WorkspaceSearchResult[];
+  isLoading: boolean;
+  isError: boolean;
+  onSelect: (result: WorkspaceSearchResult) => void;
+}) {
+  if (isLoading && results.length === 0) {
+    return (
+      <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+        Searching your workspace…
+      </p>
+    );
+  }
+
+  if (isError) {
+    return (
+      <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+        Could not search this workspace. Try again.
+      </p>
+    );
+  }
+
+  if (results.length === 0) {
+    return (
+      <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+        {query.trim()
+          ? "No assets, folders, or collections match."
+          : "Your recent workspace items will appear here."}
+      </p>
+    );
+  }
+
+  return (
+    <CommandGroup heading={query.trim() ? "Results" : "Recent"}>
+      {results.map((result) => (
+        <CommandItem
+          key={`${result.type}:${result.id}`}
+          value={searchResultValue(result)}
+          className="items-center gap-3 py-2"
+          onSelect={() => onSelect(result)}
+        >
+          <SearchResultPreview result={result} />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium">
+              {result.label}
+            </span>
+            {result.snippet ? (
+              <span className="block truncate text-xs text-muted-foreground">
+                {result.snippet}
+              </span>
+            ) : null}
+          </span>
+          <span className="max-w-28 shrink-0 truncate text-right text-[11px] text-muted-foreground/75">
+            {result.locationLabel}
+          </span>
+        </CommandItem>
+      ))}
+    </CommandGroup>
+  );
+}
+
+function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
+  if (result.type === "color" && result.preview?.hex) {
+    return (
+      <span
+        aria-hidden="true"
+        className="size-8 shrink-0 rounded-md border border-border/60 shadow-sm"
+        style={{ background: result.preview.hex }}
+      />
+    );
+  }
+
+  if (result.type === "image" && result.preview?.blurDataURL) {
+    return (
+      <img
+        src={result.preview.blurDataURL}
+        alt=""
+        className="size-8 shrink-0 rounded-md object-cover"
+      />
+    );
+  }
+
+  const Icon =
+    result.type === "note"
+      ? FileTextIcon
+      : result.type === "image"
+        ? ImageIcon
+        : result.type === "link"
+          ? ExternalLinkIcon
+          : result.type === "color"
+            ? PipetteIcon
+            : result.type === "collection"
+              ? PanelsTopLeftIcon
+              : FolderOpenIcon;
+
+  return (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      <Icon className="size-4" />
+    </span>
+  );
+}
+
+function searchResultValue(result: WorkspaceSearchResult) {
+  return [result.id, result.label, result.snippet, result.locationLabel]
+    .filter(Boolean)
+    .join(" ");
 }
