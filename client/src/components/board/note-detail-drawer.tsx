@@ -37,6 +37,11 @@ import { NoteEditorLoading } from "@/components/board/note-editor-loading";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
 import { NoteBacklinks } from "@/components/board/note-backlinks";
 import { NoteSaveStatus } from "@/components/board/note-save-status";
+import {
+  isSameSaveSnapshot,
+  resolveNoteSaveCompletion,
+  type NoteSaveSnapshot,
+} from "@/components/board/note-save-reconciliation";
 import { NoteTitleField } from "@/components/board/note-title-field";
 import {
   NoteWorkspace,
@@ -161,11 +166,17 @@ export function NoteDetailDrawer({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const richTextRef = useRef<NoteRichTextHandle>(null);
   const draftRef = useRef(note?.content ?? "");
+  const titleRef = useRef(note?.title ?? "");
+  const editRevisionRef = useRef(0);
+  const activeSaveSnapshotRef = useRef<NoteSaveSnapshot | undefined>(undefined);
+  const queuedSaveSnapshotRef = useRef<NoteSaveSnapshot | undefined>(undefined);
+  const hasLocalEditRef = useRef(false);
+  const syncedNoteIdRef = useRef<string | undefined>(undefined);
   const closeAfterSaveRef = useRef(false);
   const closeRequestedRef = useRef(false);
   const hasRestoredCreateOpenRef = useRef(false);
   const isInitialPageReloadRef = useRef(isPageReload());
-  const failedContentRef = useRef<string | undefined>(undefined);
+  const failedSaveSnapshotRef = useRef<NoteSaveSnapshot | undefined>(undefined);
   const extractionFeedbackTimeoutRef = useRef<number | undefined>(undefined);
   const copiedResetTimeoutRef = useRef<number | undefined>(undefined);
   const [draft, setDraft] = useState(note?.content ?? "");
@@ -235,6 +246,16 @@ export function NoteDetailDrawer({
   const isCreating = createNote.isPending || createInboxNote.isPending;
 
   draftRef.current = draft;
+  titleRef.current = title;
+
+  const getLatestSaveSnapshot = useCallback(
+    (): NoteSaveSnapshot => ({
+      content: draftRef.current,
+      title: titleRef.current,
+      revision: editRevisionRef.current,
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (activeNote) {
@@ -263,11 +284,14 @@ export function NoteDetailDrawer({
     const storedDraft = loadCreateNoteDraft(createDraftId);
     const nextDraft =
       createOptions.initialContent || storedDraft?.content || "";
+    const nextTitle = storedDraft?.title ?? "";
     draftRef.current = nextDraft;
+    titleRef.current = nextTitle;
+    editRevisionRef.current += 1;
     setDraft(nextDraft);
-    setTitle(storedDraft?.title ?? "");
+    setTitle(nextTitle);
     setSaveState("saved");
-    failedContentRef.current = undefined;
+    failedSaveSnapshotRef.current = undefined;
   }, [
     createDraftId,
     createOptions?.initialContent,
@@ -290,6 +314,8 @@ export function NoteDetailDrawer({
       : undefined;
     if (!storedDraft?.open) return;
     draftRef.current = storedDraft.content;
+    titleRef.current = storedDraft.title ?? "";
+    editRevisionRef.current += 1;
     setDraft(storedDraft.content);
     setTitle(storedDraft.title ?? "");
     setWorkspaceOpen(true);
@@ -357,21 +383,38 @@ export function NoteDetailDrawer({
   useEffect(() => {
     if (!noteId || noteContent === undefined) return;
     if (isCreateMode && createdNote?.id === noteId) return;
+    const noteChanged = syncedNoteIdRef.current !== noteId;
+    if (
+      !noteChanged &&
+      (hasLocalEditRef.current || activeSaveSnapshotRef.current)
+    )
+      return;
     const recoveredDraft = loadEditDraft(noteId);
     const nextDraft = recoveredDraft?.content ?? noteContent;
-    draftRef.current = nextDraft;
-    setDraft(nextDraft);
-    setTitle(recoveredDraft?.title ?? activeNote?.title ?? "");
-    setSaveState(
+    const nextTitle = recoveredDraft?.title ?? activeNote?.title ?? "";
+    const hasRecoveredChanges = Boolean(
       recoveredDraft &&
-        (recoveredDraft.content !== noteContent ||
-          recoveredDraft.title !== (activeNote?.title ?? ""))
-        ? "saving"
-        : "saved",
+      (recoveredDraft.content !== noteContent ||
+        recoveredDraft.title !== (activeNote?.title ?? "")),
     );
-    failedContentRef.current = undefined;
-    reset();
-  }, [createdNote?.id, isCreateMode, noteContent, noteId, reset]);
+    syncedNoteIdRef.current = noteId;
+    draftRef.current = nextDraft;
+    titleRef.current = nextTitle;
+    editRevisionRef.current += 1;
+    hasLocalEditRef.current = hasRecoveredChanges;
+    setDraft(nextDraft);
+    setTitle(nextTitle);
+    setSaveState(hasRecoveredChanges ? "saving" : "saved");
+    failedSaveSnapshotRef.current = undefined;
+    if (noteChanged) reset();
+  }, [
+    activeNote?.title,
+    createdNote?.id,
+    isCreateMode,
+    noteContent,
+    noteId,
+    reset,
+  ]);
 
   useEffect(() => {
     const container = noteContentRef.current;
@@ -379,36 +422,85 @@ export function NoteDetailDrawer({
   }, [noteId]);
 
   useEffect(() => {
-    if (!noteId || draft !== noteContent) return;
+    if (
+      !noteId ||
+      activeSaveSnapshotRef.current ||
+      hasLocalEditRef.current ||
+      draft !== noteContent ||
+      (title.trim() || null) !== (activeNote?.title ?? null)
+    )
+      return;
     clearEditDraft(noteId);
-    failedContentRef.current = undefined;
-    setSaveState("saved");
-  }, [draft, noteContent, noteId]);
+    failedSaveSnapshotRef.current = undefined;
+    setSaveState(hasSaveableNote(title, draft) ? "saved" : "empty");
+  }, [activeNote?.title, draft, noteContent, noteId, title]);
 
   const create = useCallback(
     (content: string, nextTitle = title) => {
       if (!isCreateMode || activeNote || isCreating) return;
+      const submittedSnapshot: NoteSaveSnapshot = {
+        content,
+        title: nextTitle,
+        revision: editRevisionRef.current,
+      };
       if (isNoteContentTooLong(content)) {
-        failedContentRef.current = content;
+        failedSaveSnapshotRef.current = submittedSnapshot;
         setSaveState("error");
         toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
         return;
       }
 
+      activeSaveSnapshotRef.current = submittedSnapshot;
       setSaveState("saving");
       const onSuccess = (data: { note: CollectionNoteNode }) => {
         const nextNote = collectionNodeToAsset(data.note);
+        activeSaveSnapshotRef.current = undefined;
         if (nextNote.type !== "note") return;
         clearCreateNoteDraft(createDraftId ?? null);
         setCreatedNote(nextNote);
-        draftRef.current = content;
-        setDraft(content);
-        setTitle(nextTitle);
-        failedContentRef.current = undefined;
-        setSaveState("saved");
+        syncedNoteIdRef.current = nextNote.id;
+        const latestSnapshot = getLatestSaveSnapshot();
+        const completion = resolveNoteSaveCompletion(
+          submittedSnapshot,
+          latestSnapshot,
+        );
+        if (completion.status === "acknowledged") {
+          queuedSaveSnapshotRef.current = undefined;
+          hasLocalEditRef.current = false;
+          clearEditDraft(nextNote.id);
+          failedSaveSnapshotRef.current = undefined;
+          setSaveState(
+            hasSaveableNote(latestSnapshot.title, latestSnapshot.content)
+              ? "saved"
+              : "empty",
+          );
+          return;
+        }
+
+        queuedSaveSnapshotRef.current = completion.snapshot;
+        hasLocalEditRef.current = true;
+        saveEditDraft(
+          nextNote.id,
+          completion.snapshot.content,
+          completion.snapshot.title,
+        );
+        failedSaveSnapshotRef.current = undefined;
+        setSaveState("saving");
       };
       const onError = (reason: unknown) => {
-        failedContentRef.current = content;
+        activeSaveSnapshotRef.current = undefined;
+        const latestSnapshot = getLatestSaveSnapshot();
+        if (!isSameSaveSnapshot(submittedSnapshot, latestSnapshot)) {
+          queuedSaveSnapshotRef.current = undefined;
+          failedSaveSnapshotRef.current = undefined;
+          setSaveState(
+            hasSaveableNote(latestSnapshot.title, latestSnapshot.content)
+              ? "saving"
+              : "empty",
+          );
+          return;
+        }
+        failedSaveSnapshotRef.current = submittedSnapshot;
         setSaveState("error");
         toast.error(
           getUserFacingApiErrorMessage(reason, "Could not create note."),
@@ -439,6 +531,7 @@ export function NoteDetailDrawer({
       createDraftId,
       createOptions?.placement,
       createOptions?.target,
+      getLatestSaveSnapshot,
       isCreateMode,
       isCreating,
       parentFolderPath,
@@ -447,11 +540,21 @@ export function NoteDetailDrawer({
   );
 
   const persist = useCallback(
-    (content: string, closeAfterSave = false, nextTitle = title) => {
+    (
+      content: string,
+      closeAfterSave = false,
+      nextTitle = title,
+      force = false,
+    ) => {
       if (!noteId) return;
+      const submittedSnapshot: NoteSaveSnapshot = {
+        content,
+        title: nextTitle,
+        revision: editRevisionRef.current,
+      };
 
       if (isNoteContentTooLong(content)) {
-        failedContentRef.current = content;
+        failedSaveSnapshotRef.current = submittedSnapshot;
         closeAfterSaveRef.current = false;
         setSaveState("error");
         toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
@@ -459,22 +562,28 @@ export function NoteDetailDrawer({
       }
 
       if (
+        !force &&
         content === noteContent &&
         (nextTitle.trim() || null) === (activeNote?.title ?? null)
       ) {
-        if (draftRef.current === content) {
-          draftRef.current = content;
-          setDraft(content);
+        if (isSameSaveSnapshot(submittedSnapshot, getLatestSaveSnapshot())) {
+          hasLocalEditRef.current = false;
+          queuedSaveSnapshotRef.current = undefined;
           clearEditDraft(noteId);
-          setSaveState("saved");
+          setSaveState(hasSaveableNote(nextTitle, content) ? "saved" : "empty");
         }
         if (closeAfterSave) closeWorkspace();
         return;
       }
 
-      if (isPending) return;
+      if (activeSaveSnapshotRef.current || isPending) {
+        queuedSaveSnapshotRef.current = submittedSnapshot;
+        closeAfterSaveRef.current ||= closeAfterSave;
+        return;
+      }
 
       closeAfterSaveRef.current ||= closeAfterSave;
+      activeSaveSnapshotRef.current = submittedSnapshot;
       setSaveState("saving");
       mutate(
         {
@@ -484,31 +593,61 @@ export function NoteDetailDrawer({
         },
         {
           onSuccess: ({ note: updatedNote }) => {
-            failedContentRef.current = undefined;
+            activeSaveSnapshotRef.current = undefined;
+            setCreatedNote((current) =>
+              current?.id === updatedNote.id
+                ? { ...current, ...updatedNote }
+                : current,
+            );
             if (activeNote && onNoteChange) {
               onNoteChange({
                 ...activeNote,
                 ...updatedNote,
               });
             }
-            if (draftRef.current === content) {
-              draftRef.current = content;
-              setDraft(content);
+            const latestSnapshot = getLatestSaveSnapshot();
+            const completion = resolveNoteSaveCompletion(
+              submittedSnapshot,
+              latestSnapshot,
+            );
+            if (completion.status === "acknowledged") {
+              hasLocalEditRef.current = false;
+              queuedSaveSnapshotRef.current = undefined;
               clearEditDraft(noteId);
-              setSaveState("saved");
-            }
-            if (closeAfterSaveRef.current) {
-              closeAfterSaveRef.current = false;
-              const latestContent = getSaveableNoteContent(draftRef.current);
-              if (latestContent && latestContent !== content) {
-                window.setTimeout(() => persist(latestContent, true, title), 0);
-                return;
+              failedSaveSnapshotRef.current = undefined;
+              setSaveState(
+                hasSaveableNote(latestSnapshot.title, latestSnapshot.content)
+                  ? "saved"
+                  : "empty",
+              );
+              if (closeAfterSaveRef.current) {
+                closeAfterSaveRef.current = false;
+                closeWorkspace();
               }
-              closeWorkspace();
+              return;
             }
+
+            queuedSaveSnapshotRef.current = completion.snapshot;
+            hasLocalEditRef.current = true;
+            saveEditDraft(
+              noteId,
+              completion.snapshot.content,
+              completion.snapshot.title,
+            );
+            failedSaveSnapshotRef.current = undefined;
+            setSaveState("saving");
           },
           onError: (error) => {
-            failedContentRef.current = content;
+            activeSaveSnapshotRef.current = undefined;
+            const latestSnapshot = getLatestSaveSnapshot();
+            if (!isSameSaveSnapshot(submittedSnapshot, latestSnapshot)) {
+              queuedSaveSnapshotRef.current = latestSnapshot;
+              hasLocalEditRef.current = true;
+              failedSaveSnapshotRef.current = undefined;
+              setSaveState("saving");
+              return;
+            }
+            failedSaveSnapshotRef.current = submittedSnapshot;
             closeAfterSaveRef.current = false;
             setSaveState("error");
             toast.error(
@@ -523,6 +662,7 @@ export function NoteDetailDrawer({
       isPending,
       mutate,
       activeNote,
+      getLatestSaveSnapshot,
       noteContent,
       noteId,
       onNoteChange,
@@ -545,8 +685,9 @@ export function NoteDetailDrawer({
         toast.error("Add some content before opening another note.");
         return false;
       }
+      const submittedSnapshot = getLatestSaveSnapshot();
       if (isNoteContentTooLong(content)) {
-        failedContentRef.current = content;
+        failedSaveSnapshotRef.current = submittedSnapshot;
         setSaveState("error");
         toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
         return false;
@@ -556,6 +697,7 @@ export function NoteDetailDrawer({
       const nextTitle = title.trim() || null;
       const titleChanged = nextTitle !== (activeNote.title ?? null);
       if (content !== noteContent || titleChanged) {
+        activeSaveSnapshotRef.current = submittedSnapshot;
         setSaveState("saving");
         try {
           const { note: updatedNote } = await mutateAsync({
@@ -567,11 +709,34 @@ export function NoteDetailDrawer({
             ...activeNote,
             ...updatedNote,
           };
+          activeSaveSnapshotRef.current = undefined;
           onNoteChange?.(currentMainNote);
+          if (!isSameSaveSnapshot(submittedSnapshot, getLatestSaveSnapshot())) {
+            const latestSnapshot = getLatestSaveSnapshot();
+            queuedSaveSnapshotRef.current = latestSnapshot;
+            hasLocalEditRef.current = true;
+            saveEditDraft(
+              activeNote.id,
+              latestSnapshot.content,
+              latestSnapshot.title,
+            );
+            setSaveState("saving");
+            return false;
+          }
+          hasLocalEditRef.current = false;
           clearEditDraft(activeNote.id);
           setSaveState("saved");
         } catch (error) {
-          failedContentRef.current = content;
+          activeSaveSnapshotRef.current = undefined;
+          const latestSnapshot = getLatestSaveSnapshot();
+          if (!isSameSaveSnapshot(submittedSnapshot, latestSnapshot)) {
+            queuedSaveSnapshotRef.current = latestSnapshot;
+            hasLocalEditRef.current = true;
+            failedSaveSnapshotRef.current = undefined;
+            setSaveState("saving");
+            return false;
+          }
+          failedSaveSnapshotRef.current = submittedSnapshot;
           setSaveState("error");
           toast.error(
             getUserFacingApiErrorMessage(error, "Could not save note."),
@@ -585,6 +750,7 @@ export function NoteDetailDrawer({
     },
     [
       activeNote,
+      getLatestSaveSnapshot,
       isCreateMode,
       isPending,
       mutateAsync,
@@ -684,8 +850,9 @@ export function NoteDetailDrawer({
       toast.error("Add some content before swapping notes.");
       return;
     }
+    const submittedSnapshot = getLatestSaveSnapshot();
     if (isNoteContentTooLong(content)) {
-      failedContentRef.current = content;
+      failedSaveSnapshotRef.current = submittedSnapshot;
       setSaveState("error");
       toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
       return;
@@ -693,6 +860,7 @@ export function NoteDetailDrawer({
 
     let currentMainNote = activeNote;
     if (content !== noteContent) {
+      activeSaveSnapshotRef.current = submittedSnapshot;
       setSaveState("saving");
       try {
         const { note: updatedNote } = await mutateAsync({
@@ -703,11 +871,34 @@ export function NoteDetailDrawer({
           ...activeNote,
           ...updatedNote,
         };
+        activeSaveSnapshotRef.current = undefined;
         onNoteChange?.(currentMainNote);
+        if (!isSameSaveSnapshot(submittedSnapshot, getLatestSaveSnapshot())) {
+          const latestSnapshot = getLatestSaveSnapshot();
+          queuedSaveSnapshotRef.current = latestSnapshot;
+          hasLocalEditRef.current = true;
+          saveEditDraft(
+            activeNote.id,
+            latestSnapshot.content,
+            latestSnapshot.title,
+          );
+          setSaveState("saving");
+          return;
+        }
+        hasLocalEditRef.current = false;
         clearEditDraft(activeNote.id);
         setSaveState("saved");
       } catch (error) {
-        failedContentRef.current = content;
+        activeSaveSnapshotRef.current = undefined;
+        const latestSnapshot = getLatestSaveSnapshot();
+        if (!isSameSaveSnapshot(submittedSnapshot, latestSnapshot)) {
+          queuedSaveSnapshotRef.current = latestSnapshot;
+          hasLocalEditRef.current = true;
+          failedSaveSnapshotRef.current = undefined;
+          setSaveState("saving");
+          return;
+        }
+        failedSaveSnapshotRef.current = submittedSnapshot;
         setSaveState("error");
         toast.error(
           getUserFacingApiErrorMessage(error, "Could not save note."),
@@ -720,6 +911,7 @@ export function NoteDetailDrawer({
     onSwap(nextMainNote);
   }, [
     activeNote,
+    getLatestSaveSnapshot,
     isCreateMode,
     isPending,
     location,
@@ -760,25 +952,37 @@ export function NoteDetailDrawer({
           setSaveState("empty");
         return;
       }
+      const latestSnapshot = getLatestSaveSnapshot();
+      if (isSameSaveSnapshot(failedSaveSnapshotRef.current, latestSnapshot))
+        return;
       const timeout = window.setTimeout(
         () => create(draft, title),
         AUTOSAVE_DELAY_MS,
       );
       return () => window.clearTimeout(timeout);
     }
-    if (!noteId || isPending) return;
+    if (!noteId || isPending || activeSaveSnapshotRef.current) return;
+    const latestSnapshot = getLatestSaveSnapshot();
+    const queuedSnapshot = queuedSaveSnapshotRef.current;
+    const forceReconciliation = isSameSaveSnapshot(
+      queuedSnapshot,
+      latestSnapshot,
+    );
     const titleChanged = (title.trim() || null) !== (activeNote?.title ?? null);
-    if (draft === noteContent && !titleChanged) return;
-    const content = getSaveableNoteContent(draft);
-    if (!hasSaveableNote(title, draft)) {
+    if (draft === noteContent && !titleChanged && !forceReconciliation) return;
+    if (!hasSaveableNote(title, draft) && !forceReconciliation) {
       setSaveState("empty");
       return;
     }
-    if (failedContentRef.current === content) return;
-    const timeout = window.setTimeout(() => {
-      if (content) persist(content, false, title);
-      else mutate({ assetId: noteId, title: title.trim() || null });
-    }, AUTOSAVE_DELAY_MS);
+    if (isSameSaveSnapshot(failedSaveSnapshotRef.current, latestSnapshot))
+      return;
+    const timeout = window.setTimeout(
+      () => {
+        if (forceReconciliation) queuedSaveSnapshotRef.current = undefined;
+        persist(draft, false, title, forceReconciliation);
+      },
+      forceReconciliation ? 0 : AUTOSAVE_DELAY_MS,
+    );
     return () => window.clearTimeout(timeout);
   }, [
     activeNote,
@@ -788,6 +992,7 @@ export function NoteDetailDrawer({
     isCreateMode,
     isCreating,
     isPending,
+    getLatestSaveSnapshot,
     noteContent,
     noteId,
     persist,
@@ -862,16 +1067,36 @@ export function NoteDetailDrawer({
 
   function handleDraftChange(bodyContent: string) {
     const content = composeFrontMatter(frontMatter, bodyContent);
+    editRevisionRef.current += 1;
     draftRef.current = content;
     setDraft(content);
-    failedContentRef.current = undefined;
+    failedSaveSnapshotRef.current = undefined;
+    const latestSnapshot = getLatestSaveSnapshot();
+    const saveIsActive = Boolean(
+      activeSaveSnapshotRef.current || isPending || isCreating,
+    );
     if (activeNote) {
-      if (content === activeNote.content && title === (activeNote.title ?? ""))
+      if (
+        !saveIsActive &&
+        content === activeNote.content &&
+        titleRef.current === (activeNote.title ?? "")
+      ) {
+        hasLocalEditRef.current = false;
+        queuedSaveSnapshotRef.current = undefined;
         clearEditDraft(activeNote.id);
-      else saveEditDraft(activeNote.id, content, title);
+      } else {
+        hasLocalEditRef.current = true;
+        saveEditDraft(activeNote.id, content, titleRef.current);
+        if (saveIsActive || queuedSaveSnapshotRef.current)
+          queuedSaveSnapshotRef.current = latestSnapshot;
+      }
     } else if (createDraftId) {
-      if (content.trim()) {
-        saveCreateNoteDraft(createDraftId, { content, title, open: true });
+      if (hasSaveableNote(titleRef.current, content) || saveIsActive) {
+        saveCreateNoteDraft(createDraftId, {
+          content,
+          title: titleRef.current,
+          open: true,
+        });
       } else {
         clearCreateNoteDraft(createDraftId);
       }
@@ -879,9 +1104,29 @@ export function NoteDetailDrawer({
   }
 
   function handleTitleChange(nextTitle: string) {
+    editRevisionRef.current += 1;
+    titleRef.current = nextTitle;
     setTitle(nextTitle);
+    failedSaveSnapshotRef.current = undefined;
+    const latestSnapshot = getLatestSaveSnapshot();
+    const saveIsActive = Boolean(
+      activeSaveSnapshotRef.current || isPending || isCreating,
+    );
     if (activeNote) {
-      saveEditDraft(activeNote.id, draftRef.current, nextTitle);
+      if (
+        !saveIsActive &&
+        draftRef.current === activeNote.content &&
+        nextTitle === (activeNote.title ?? "")
+      ) {
+        hasLocalEditRef.current = false;
+        queuedSaveSnapshotRef.current = undefined;
+        clearEditDraft(activeNote.id);
+      } else {
+        hasLocalEditRef.current = true;
+        saveEditDraft(activeNote.id, draftRef.current, nextTitle);
+        if (saveIsActive || queuedSaveSnapshotRef.current)
+          queuedSaveSnapshotRef.current = latestSnapshot;
+      }
     } else if (createDraftId) {
       saveCreateNoteDraft(createDraftId, {
         content: draftRef.current,
@@ -968,7 +1213,15 @@ export function NoteDetailDrawer({
         if (isCreateMode) {
           setCreatedNote(undefined);
           setDraft("");
+          setTitle("");
           draftRef.current = "";
+          titleRef.current = "";
+          editRevisionRef.current += 1;
+          activeSaveSnapshotRef.current = undefined;
+          queuedSaveSnapshotRef.current = undefined;
+          failedSaveSnapshotRef.current = undefined;
+          hasLocalEditRef.current = false;
+          syncedNoteIdRef.current = undefined;
           setSaveState("saved");
         }
         onClose();
@@ -1178,10 +1431,7 @@ export function NoteDetailDrawer({
                       onOpen={openBacklink}
                     />
                   ) : null}
-                  <motion.div
-                    layout="position"
-                    transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                  >
+                  <div>
                     <NoteRichText
                       key={isCreateMode ? "create-note-editor" : activeNote?.id}
                       ref={richTextRef}
@@ -1211,7 +1461,7 @@ export function NoteDetailDrawer({
                         else persist(content, false, title);
                       }}
                     />
-                  </motion.div>
+                  </div>
                 </NoteEditorErrorBoundary>
               </Suspense>
             ) : null}

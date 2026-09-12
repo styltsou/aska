@@ -1,13 +1,27 @@
-import { useQuery } from "@tanstack/react-query";
+import {
+  queryOptions,
+  type QueryClient,
+  type QueryKey,
+  useQuery,
+} from "@tanstack/react-query";
 
 import {
   fetchNoteBacklinks,
   fetchNoteBacklinkSummary,
   resolveNoteMentions,
+  searchNoteMentions,
 } from "./fetchers";
-import type { NoteMentionTarget, NoteMentionType } from "./types";
+import type {
+  MentionSearchInput,
+  NoteMentionTarget,
+  NoteMentionType,
+} from "./types";
 
 const RESOLVE_BATCH_SIZE = 100;
+const MENTION_SEARCH_STALE_TIME = 30_000;
+const MENTION_SEARCH_GC_TIME = 5 * 60_000;
+export const RECENT_MENTION_LIMIT = 15;
+export const MENTION_SEARCH_LIMIT = 10;
 
 export const noteMentionQueryKeys = {
   all: (workspaceSlug: string) => ["note-mentions", workspaceSlug] as const,
@@ -31,7 +45,57 @@ export const noteMentionQueryKeys = {
     ] as const,
   backlinks: (workspaceSlug: string, assetId: string) =>
     [...noteMentionQueryKeys.all(workspaceSlug), "backlinks", assetId] as const,
+  search: (
+    workspaceSlug: string,
+    sourceAssetId: number | undefined,
+    input: MentionSearchInput,
+  ) =>
+    [
+      ...noteMentionQueryKeys.all(workspaceSlug),
+      "search",
+      sourceAssetId ?? null,
+      input.q.trim().toLowerCase(),
+      input.types ? [...input.types].sort().join(",") : "all",
+      input.limit ?? MENTION_SEARCH_LIMIT,
+    ] as const,
 };
+
+export function mentionSearchQueryOptions(
+  workspaceSlug: string,
+  input: MentionSearchInput,
+) {
+  return queryOptions({
+    queryKey: noteMentionQueryKeys.search(
+      workspaceSlug,
+      input.sourceAssetId,
+      input,
+    ),
+    queryFn: ({ signal }) => searchNoteMentions(workspaceSlug, input, signal),
+    staleTime: MENTION_SEARCH_STALE_TIME,
+    gcTime: MENTION_SEARCH_GC_TIME,
+  });
+}
+
+export function isMentionSearchCacheFresh(
+  queryClient: QueryClient,
+  queryKey: QueryKey,
+) {
+  const state = queryClient.getQueryState(queryKey);
+  return Boolean(
+    state?.dataUpdatedAt &&
+    !state.isInvalidated &&
+    Date.now() - state.dataUpdatedAt < MENTION_SEARCH_STALE_TIME,
+  );
+}
+
+export function invalidateMentionSuggestionQueries(
+  queryClient: QueryClient,
+  workspaceSlug: string,
+) {
+  return queryClient.invalidateQueries({
+    queryKey: noteMentionQueryKeys.all(workspaceSlug),
+  });
+}
 
 export function useNoteBacklinkSummary(
   workspaceSlug: string | undefined,

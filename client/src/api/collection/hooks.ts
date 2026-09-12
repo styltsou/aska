@@ -74,7 +74,10 @@ import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
 import { activeLinkRefetchInterval } from "@/api/url-unfurl/hooks";
 import { colorSearchQueryKeys } from "@/api/color-search/hooks";
-import { noteMentionQueryKeys } from "@/api/note-mentions/hooks";
+import {
+  invalidateMentionSuggestionQueries,
+  noteMentionQueryKeys,
+} from "@/api/note-mentions/hooks";
 import type {
   NoteBacklink,
   NoteBacklinkSummaryResponse,
@@ -444,6 +447,7 @@ function reconcileCollectionCaches(
   workspaceSlug: string,
   collectionSlug: string,
 ) {
+  void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
   reconcileCollectionMetadata(queryClient, workspaceSlug);
   void queryClient.invalidateQueries({
     queryKey: collectionQueryKeys.contentScope(workspaceSlug, collectionSlug),
@@ -1224,6 +1228,7 @@ export function useCreateInboxNote(workspaceSlug: string) {
           };
         },
       );
+      void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
     },
   });
 }
@@ -1306,6 +1311,7 @@ export function useCreateInboxColor(workspaceSlug: string) {
           };
         },
       );
+      void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
     },
   });
 }
@@ -1766,9 +1772,7 @@ export function useUpdateNote(workspaceSlug: string) {
               }
             : current,
       );
-      void queryClient.invalidateQueries({
-        queryKey: noteMentionQueryKeys.all(workspaceSlug),
-      });
+      void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
       if (variables.title !== undefined) {
         void queryClient.invalidateQueries(contentsFilter);
       }
@@ -1816,9 +1820,7 @@ export function useUpdateColor(workspaceSlug: string) {
       void queryClient.invalidateQueries({
         queryKey: collectionQueryKeys.collections(workspaceSlug),
       });
-      void queryClient.invalidateQueries({
-        queryKey: noteMentionQueryKeys.all(workspaceSlug),
-      });
+      void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
       void queryClient.invalidateQueries(contentsFilter);
     },
   });
@@ -2734,9 +2736,7 @@ export function useDeleteAsset(workspaceSlug: string) {
       void queryClient.invalidateQueries({
         queryKey: ["workspace", workspaceSlug],
       });
-      void queryClient.invalidateQueries({
-        queryKey: noteMentionQueryKeys.all(workspaceSlug),
-      });
+      void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
       void queryClient.invalidateQueries({
         queryKey: colorSearchQueryKeys.workspace(workspaceSlug),
       });
@@ -2915,6 +2915,7 @@ export function useDeleteCollection(workspaceSlug: string) {
         ),
       });
       if (data.deletedAssetCount > 0) {
+        void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
         void queryClient.invalidateQueries({
           queryKey: colorSearchQueryKeys.workspace(workspaceSlug),
         });
@@ -2991,6 +2992,7 @@ export function useBulkDelete(workspaceSlug: string) {
         queryKey: ["workspace", workspaceSlug],
       });
       if (data.deletedAssetCount > 0) {
+        void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
         void queryClient.invalidateQueries({
           queryKey: colorSearchQueryKeys.workspace(workspaceSlug),
         });

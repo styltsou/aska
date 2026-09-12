@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -113,6 +114,15 @@ import {
   getSlashMenuScrollTop,
   type SlashMenuNavigationDirection,
 } from "@/components/board/slash-menu-scroll";
+import {
+  SuggestionMenuTransition,
+  SUGGESTION_MENU_EXIT_FALLBACK_MS,
+  type SuggestionMenuTransitionProps,
+} from "@/components/board/suggestion-menu-transition";
+import {
+  mentionSearchQueryOptions,
+  RECENT_MENTION_LIMIT,
+} from "@/api/note-mentions/hooks";
 import {
   isNoteHighlightColor,
   NOTE_HIGHLIGHT_COLORS,
@@ -363,204 +373,216 @@ type SlashMenuHandle = {
   onKeyDown: (props: SuggestionKeyDownProps) => boolean;
 };
 
-const SlashMenu = forwardRef<
-  SlashMenuHandle,
-  SuggestionProps<SlashCommandGroup, SlashCommandItem>
->(function SlashMenu({ items, query, command }, ref) {
-  const flatItems = useMemo(
-    () => items.flatMap((group) => group.items),
-    [items],
-  );
-  const groupStarts = useMemo(() => {
-    const starts = new Map<string, number>();
-    let count = 0;
-    for (const group of items) {
-      starts.set(group.label, count);
-      count += group.items.length;
-    }
-    return starts;
-  }, [items]);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const listRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef(new Map<number, HTMLButtonElement>());
-  const navigationDirectionRef = useRef<SlashMenuNavigationDirection | null>(
-    null,
-  );
+type SlashMenuProps = SuggestionProps<SlashCommandGroup, SlashCommandItem> &
+  Pick<SuggestionMenuTransitionProps, "exiting" | "onExitComplete">;
 
-  useEffect(() => {
-    navigationDirectionRef.current = null;
-    setSelectedIndex(0);
-    if (listRef.current) listRef.current.scrollTop = 0;
-  }, [flatItems]);
-
-  useLayoutEffect(() => {
-    const direction = navigationDirectionRef.current;
-    const list = listRef.current;
-    const item = itemRefs.current.get(selectedIndex);
-    navigationDirectionRef.current = null;
-    if (!direction || !list || !item) return;
-
-    const listRect = list.getBoundingClientRect();
-    const itemRect = item.getBoundingClientRect();
-    const nextScrollTop = getSlashMenuScrollTop({
-      direction,
-      selectedIndex,
-      itemCount: flatItems.length,
-      itemTop: itemRect.top - listRect.top + list.scrollTop,
-      itemHeight: itemRect.height,
-      scrollTop: list.scrollTop,
-      clientHeight: list.clientHeight,
-      scrollHeight: list.scrollHeight,
-    });
-    list.scrollTop = nextScrollTop;
-  }, [flatItems.length, selectedIndex]);
-
-  function select(index: number) {
-    const item = flatItems[index];
-    if (item) command(item);
-  }
-
-  function moveSelection(direction: SlashMenuNavigationDirection) {
-    setSelectedIndex((index) => {
-      if (flatItems.length === 0) return 0;
-      const nextIndex =
-        direction === "up"
-          ? (index + flatItems.length - 1) % flatItems.length
-          : (index + 1) % flatItems.length;
-      if (nextIndex !== index) navigationDirectionRef.current = direction;
-      return nextIndex;
-    });
-  }
-
-  useImperativeHandle(ref, () => ({
-    onKeyDown: ({ event }) => {
-      if (event.key === "Escape") {
-        // Let the suggestion plugin dismiss the menu without allowing the
-        // enclosing note workspace to handle the same Escape key.
-        event.stopPropagation();
-        return false;
-      }
-      if (event.key === "ArrowUp") {
-        moveSelection("up");
-        return true;
-      }
-      if (event.key === "ArrowDown") {
-        moveSelection("down");
-        return true;
-      }
-      if (event.key === "Enter") {
-        select(selectedIndex);
-        return true;
-      }
-      return false;
-    },
-  }));
-
-  if (flatItems.length === 0) {
-    return (
-      <div className="w-64 overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
-        <p className="px-3 py-2.5 text-xs text-muted-foreground">
-          No blocks match “{query}”
-        </p>
-      </div>
+const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
+  function SlashMenu({ items, query, command, exiting, onExitComplete }, ref) {
+    const flatItems = useMemo(
+      () => items.flatMap((group) => group.items),
+      [items],
     );
-  }
+    const groupStarts = useMemo(() => {
+      const starts = new Map<string, number>();
+      let count = 0;
+      for (const group of items) {
+        starts.set(group.label, count);
+        count += group.items.length;
+      }
+      return starts;
+    }, [items]);
+    const [selectedIndex, setSelectedIndex] = useState(0);
+    const listRef = useRef<HTMLDivElement>(null);
+    const itemRefs = useRef(new Map<number, HTMLButtonElement>());
+    const navigationDirectionRef = useRef<SlashMenuNavigationDirection | null>(
+      null,
+    );
 
-  return (
-    <div className={cn("relative w-64", FLOATING_GLASS_BACKDROP_CLASS)}>
-      <div
-        className={cn(
-          "relative z-10 overflow-hidden rounded-lg text-popover-foreground shadow-2xl",
-          GLASS_FRAME_CLASS,
-        )}
+    useEffect(() => {
+      navigationDirectionRef.current = null;
+      setSelectedIndex(0);
+      if (listRef.current) listRef.current.scrollTop = 0;
+    }, [flatItems]);
+
+    useLayoutEffect(() => {
+      const direction = navigationDirectionRef.current;
+      const list = listRef.current;
+      const item = itemRefs.current.get(selectedIndex);
+      navigationDirectionRef.current = null;
+      if (!direction || !list || !item) return;
+
+      const listRect = list.getBoundingClientRect();
+      const itemRect = item.getBoundingClientRect();
+      const nextScrollTop = getSlashMenuScrollTop({
+        direction,
+        selectedIndex,
+        itemCount: flatItems.length,
+        itemTop: itemRect.top - listRect.top + list.scrollTop,
+        itemHeight: itemRect.height,
+        scrollTop: list.scrollTop,
+        clientHeight: list.clientHeight,
+        scrollHeight: list.scrollHeight,
+      });
+      list.scrollTop = nextScrollTop;
+    }, [flatItems.length, selectedIndex]);
+
+    function select(index: number) {
+      const item = flatItems[index];
+      if (item) command(item);
+    }
+
+    function moveSelection(direction: SlashMenuNavigationDirection) {
+      setSelectedIndex((index) => {
+        if (flatItems.length === 0) return 0;
+        const nextIndex =
+          direction === "up"
+            ? (index + flatItems.length - 1) % flatItems.length
+            : (index + 1) % flatItems.length;
+        if (nextIndex !== index) navigationDirectionRef.current = direction;
+        return nextIndex;
+      });
+    }
+
+    useImperativeHandle(ref, () => ({
+      onKeyDown: ({ event }) => {
+        if (event.key === "Escape") {
+          // Let the suggestion plugin dismiss the menu without allowing the
+          // enclosing note workspace to handle the same Escape key.
+          event.stopPropagation();
+          return false;
+        }
+        if (event.key === "ArrowUp") {
+          moveSelection("up");
+          return true;
+        }
+        if (event.key === "ArrowDown") {
+          moveSelection("down");
+          return true;
+        }
+        if (event.key === "Enter") {
+          select(selectedIndex);
+          return true;
+        }
+        return false;
+      },
+    }));
+
+    if (flatItems.length === 0) {
+      return (
+        <SuggestionMenuTransition
+          className="w-64"
+          exiting={exiting}
+          onExitComplete={onExitComplete}
+        >
+          <div className="overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
+            <p className="px-3 py-2.5 text-xs text-muted-foreground">
+              No blocks match “{query}”
+            </p>
+          </div>
+        </SuggestionMenuTransition>
+      );
+    }
+
+    return (
+      <SuggestionMenuTransition
+        className={cn("relative w-64", FLOATING_GLASS_BACKDROP_CLASS)}
+        exiting={exiting}
+        onExitComplete={onExitComplete}
       >
-        <div className="relative z-10 overflow-hidden rounded-b-lg border-b border-border bg-background">
-          <div
-            ref={listRef}
-            className="max-h-72 [scrollbar-width:none] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden"
-            role="listbox"
-            aria-label="Insert block"
-          >
-            {items.map((group) => {
-              const groupStart = groupStarts.get(group.label) ?? 0;
-              return (
-                <div key={group.label}>
-                  <p className="px-2 pt-2.5 pb-1 text-xs font-medium text-muted-foreground first:pt-1">
-                    {group.label}
-                  </p>
-                  {group.items.map((item, itemIndex) => {
-                    const index = groupStart + itemIndex;
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        key={item.title}
-                        ref={(element) => {
-                          if (element) itemRefs.current.set(index, element);
-                          else itemRefs.current.delete(index);
-                        }}
-                        className={cn(
-                          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
-                          index === selectedIndex
-                            ? "bg-accent"
-                            : "hover:bg-accent/60",
-                        )}
-                        type="button"
-                        role="option"
-                        aria-selected={index === selectedIndex}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => select(index)}
-                        onMouseEnter={() => {
-                          navigationDirectionRef.current = null;
-                          setSelectedIndex(index);
-                        }}
-                      >
-                        <Icon className="size-4 shrink-0 text-current" />
-                        <span className="min-w-0 truncate font-medium">
-                          {item.title}
-                        </span>
-                        {item.syntax ? (
-                          <span
-                            className={cn(
-                              "ml-auto shrink-0 font-mono text-xs tracking-normal",
-                              index === selectedIndex
-                                ? "text-foreground"
-                                : "text-muted-foreground",
-                            )}
-                          >
-                            {item.syntax}
+        <div
+          className={cn(
+            "relative z-10 overflow-hidden rounded-lg text-popover-foreground shadow-2xl",
+            GLASS_FRAME_CLASS,
+          )}
+        >
+          <div className="relative z-10 overflow-hidden rounded-b-lg border-b border-border bg-background">
+            <div
+              ref={listRef}
+              className="max-h-72 [scrollbar-width:none] overflow-y-auto p-1 [&::-webkit-scrollbar]:hidden"
+              role="listbox"
+              aria-label="Insert block"
+            >
+              {items.map((group) => {
+                const groupStart = groupStarts.get(group.label) ?? 0;
+                return (
+                  <div key={group.label}>
+                    <p className="px-2 pt-2.5 pb-1 text-xs font-medium text-muted-foreground first:pt-1">
+                      {group.label}
+                    </p>
+                    {group.items.map((item, itemIndex) => {
+                      const index = groupStart + itemIndex;
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.title}
+                          ref={(element) => {
+                            if (element) itemRefs.current.set(index, element);
+                            else itemRefs.current.delete(index);
+                          }}
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm",
+                            index === selectedIndex
+                              ? "bg-accent"
+                              : "hover:bg-accent/60",
+                          )}
+                          type="button"
+                          role="option"
+                          aria-selected={index === selectedIndex}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => select(index)}
+                          onMouseEnter={() => {
+                            navigationDirectionRef.current = null;
+                            setSelectedIndex(index);
+                          }}
+                        >
+                          <Icon className="size-4 shrink-0 text-current" />
+                          <span className="min-w-0 truncate font-medium">
+                            {item.title}
                           </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
+                          {item.syntax ? (
+                            <span
+                              className={cn(
+                                "ml-auto shrink-0 font-mono text-xs tracking-normal",
+                                index === selectedIndex
+                                  ? "text-foreground"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {item.syntax}
+                            </span>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="relative z-0 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 px-3 py-1.5 text-[10px] leading-4 text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <KbdGroup className="gap-0.5">
+                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                  <ArrowUpIcon />
+                </Kbd>
+                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                  <ArrowDownIcon />
+                </Kbd>
+              </KbdGroup>
+              <span>to navigate</span>
+            </span>
+            <span className="ml-3 inline-flex items-center gap-1">
+              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                <CornerDownLeftIcon />
+              </Kbd>
+              <span>to insert</span>
+            </span>
           </div>
         </div>
-        <div className="relative z-0 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 px-3 py-1.5 text-[10px] leading-4 text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <KbdGroup className="gap-0.5">
-              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                <ArrowUpIcon />
-              </Kbd>
-              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                <ArrowDownIcon />
-              </Kbd>
-            </KbdGroup>
-            <span>to navigate</span>
-          </span>
-          <span className="ml-3 inline-flex items-center gap-1">
-            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-              <CornerDownLeftIcon />
-            </Kbd>
-            <span>to insert</span>
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-});
+      </SuggestionMenuTransition>
+    );
+  },
+);
 
 const SlashCommands = Extension.create({
   name: "slashCommands",
@@ -577,31 +599,57 @@ const SlashCommands = Extension.create({
         },
         render: () => {
           let renderer:
-            | ReactRenderer<
-                SlashMenuHandle,
-                SuggestionProps<SlashCommandGroup, SlashCommandItem>
-              >
+            | ReactRenderer<SlashMenuHandle, SlashMenuProps>
             | undefined;
           let unmount: (() => void) | undefined;
+          let latestProps: SlashMenuProps | undefined;
+          let exitTimer: number | undefined;
+
+          const cleanup = () => {
+            if (exitTimer !== undefined) window.clearTimeout(exitTimer);
+            exitTimer = undefined;
+            unmount?.();
+            renderer?.destroy();
+            renderer = undefined;
+            unmount = undefined;
+            latestProps = undefined;
+          };
 
           return {
             onStart: (props) => {
+              cleanup();
+              latestProps = {
+                ...props,
+                exiting: false,
+                onExitComplete: cleanup,
+              };
               renderer = new ReactRenderer(SlashMenu, {
                 editor: props.editor,
-                props,
+                props: latestProps,
               });
               // Suggestions mount under document.body. Keep the menu above the
               // full-screen note workspace instead of behind its dialog layer.
               renderer.element.style.zIndex = "70";
               unmount = props.mount(renderer.element);
             },
-            onUpdate: (props) => renderer?.updateProps(props),
+            onUpdate: (props) => {
+              if (!renderer) return;
+              latestProps = {
+                ...props,
+                exiting: false,
+                onExitComplete: cleanup,
+              };
+              renderer.updateProps(latestProps);
+            },
             onKeyDown: (props) => renderer?.ref?.onKeyDown(props) ?? false,
             onExit: () => {
-              unmount?.();
-              renderer?.destroy();
-              renderer = undefined;
-              unmount = undefined;
+              if (!renderer || !latestProps || latestProps.exiting) return;
+              latestProps = { ...latestProps, exiting: true };
+              renderer.updateProps(latestProps);
+              exitTimer = window.setTimeout(
+                cleanup,
+                SUGGESTION_MENU_EXIT_FALLBACK_MS,
+              );
             },
           };
         },
@@ -1820,16 +1868,34 @@ export const NoteRichText = forwardRef<
   onHighlightModeChangeRef.current = onHighlightModeChange;
   onHighlightSelectionChangeRef.current = onHighlightSelectionChange;
   const sourceAssetId = parseNumericAssetId(sourceNoteId);
+  const queryClient = useQueryClient();
   const noteExtensions = useMemo(
     () => [
       ...BASE_NOTE_EXTENSIONS,
       AssetMention,
       ...(workspaceSlug
-        ? [createMentionsExtension({ workspaceSlug, sourceAssetId })]
+        ? [
+            createMentionsExtension({
+              workspaceSlug,
+              sourceAssetId,
+              queryClient,
+            }),
+          ]
         : []),
     ],
-    [sourceAssetId, workspaceSlug],
+    [queryClient, sourceAssetId, workspaceSlug],
   );
+
+  useEffect(() => {
+    if (!workspaceSlug) return;
+    void queryClient.prefetchQuery(
+      mentionSearchQueryOptions(workspaceSlug, {
+        q: "",
+        limit: RECENT_MENTION_LIMIT,
+        sourceAssetId,
+      }),
+    );
+  }, [queryClient, sourceAssetId, workspaceSlug]);
 
   const editorProps = useMemo(
     () => ({

@@ -185,6 +185,11 @@ export const assets = pgTable(
       table.organizationId,
       table.lastAddedToInboxAt,
     ),
+    index("assets_organizationId_type_updatedAt_idx").on(
+      table.organizationId,
+      table.type,
+      table.updatedAt,
+    ),
     index("assets_type_idx").on(table.type),
     index("assets_createdAt_idx").on(table.createdAt),
     uniqueIndex("assets_id_organizationId_uidx").on(

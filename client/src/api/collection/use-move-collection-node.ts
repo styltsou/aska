@@ -10,6 +10,7 @@ import {
   type CollectionContentsCacheEntry,
 } from "./move-cache-transition";
 import { collectionQueryKeys } from "./query-keys";
+import { invalidateMentionSuggestionQueries } from "@/api/note-mentions/hooks";
 import type {
   CollectionContentsResponse,
   CollectionsData,
@@ -308,6 +309,11 @@ export function useMoveCollectionNodesToFolder(
               variables.sourceCollectionSlug,
             ),
           }),
+        );
+      }
+      if (!_error) {
+        invalidations.push(
+          invalidateMentionSuggestionQueries(queryClient, workspaceSlug),
         );
       }
       void Promise.all(invalidations);
