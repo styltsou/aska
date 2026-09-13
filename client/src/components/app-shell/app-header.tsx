@@ -16,7 +16,8 @@ import { useWorkspace } from "@/api/workspace";
 import { useCollectionContents } from "@/api/collection";
 import { titleFromSlug } from "@/lib/slug";
 import { getCollectionViewScope, useSessionStore } from "@/store";
-import { CollectionViewToggle } from "@/components/collection-view-toggle";
+import { makeBoardKey } from "@/components/canvas/canvas-key";
+import { CollectionViewMenu } from "@/components/collection-view-menu";
 
 function AppBreadcrumbs() {
   const pathname = useRouterState({
@@ -117,6 +118,7 @@ export function AppHeader() {
   const isBoardView =
     collectionsSegment === "collections" && pathSegments.length > 0;
   const collectionSlug = pathSegments[0] ?? "";
+  const folderPath = pathSegments.slice(1).join("/");
   const collectionViewScope = getCollectionViewScope(
     workspaceSlug,
     collectionSlug,
@@ -140,8 +142,14 @@ export function AppHeader() {
           </CreateCollectionDialog>
         ) : null}
         {isBoardView ? (
-          <CollectionViewToggle
+          <CollectionViewMenu
+            boardKey={makeBoardKey(
+              workspaceSlug,
+              collectionSlug,
+              folderPath || undefined,
+            )}
             value={boardView}
+            workspaceSlug={workspaceSlug}
             onChange={(view) => setCollectionView(collectionViewScope, view)}
           />
         ) : null}

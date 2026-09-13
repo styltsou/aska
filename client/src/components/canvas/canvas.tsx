@@ -54,6 +54,10 @@ import {
   setBoardViewportZoomReader,
 } from "./board-pointer-position";
 import {
+  getCanvasViewShortcutAction,
+  setCanvasViewActions,
+} from "./canvas-view-actions";
+import {
   BOARD_CARD_WIDTH,
   arrangeNodesInGrid,
   compactNodesInMasonry,
@@ -64,7 +68,6 @@ import {
   getInitialNodePosition,
 } from "./canvas-node-layout";
 import { createLatestValueQueue } from "./latest-value-queue";
-import { CanvasControls } from "./canvas-controls";
 import {
   getCanvasAlignmentBounds,
   getCanvasAlignmentSnap,
@@ -90,7 +93,10 @@ import {
 
 const DEFAULT_VIEWPORT = { x: 40, y: 40, zoom: 1.1 };
 const BOARD_VIEWPORT_INSET = 24;
-const BOARD_CONTROLS_CLEARANCE = 72;
+const FIT_VIEW_MAX_ZOOM = 1.1;
+const VIEWPORT_ANIMATION_DURATION = 150;
+const CANVAS_MIN_ZOOM = 0.15;
+const CANVAS_MAX_ZOOM = 2;
 const nodeTypes: NodeTypes = { asset: CanvasCard };
 
 type CanvasProps = {
@@ -190,7 +196,6 @@ function CanvasSurface({
   const setBoardVisibleBounds = useTransientStore(
     (state) => state.setBoardVisibleBounds,
   );
-  const setCanvasLock = usePersistedStore((state) => state.setBoardLock);
   const setInsertionPosition = useTransientStore(
     (state) => state.setInsertionPosition,
   );
@@ -224,6 +229,7 @@ function CanvasSurface({
     getNodes,
     getViewport,
     screenToFlowPosition,
+    zoomTo,
   } = useReactFlow<CanvasNode>();
   const boardRef = useRef<HTMLDivElement>(null);
   const boardSizeRef = useRef({ width: 0, height: 0 });
@@ -324,8 +330,8 @@ function CanvasSurface({
       setBoardVisibleBounds(boardKey, {
         left: (BOARD_VIEWPORT_INSET - x) / zoom,
         top: (BOARD_VIEWPORT_INSET - y) / zoom,
-        right: (width - BOARD_CONTROLS_CLEARANCE - x) / zoom,
-        bottom: (height - BOARD_CONTROLS_CLEARANCE - y) / zoom,
+        right: (width - BOARD_VIEWPORT_INSET - x) / zoom,
+        bottom: (height - BOARD_VIEWPORT_INSET - y) / zoom,
       });
     },
     [boardKey, setBoardVisibleBounds],
@@ -472,6 +478,54 @@ function CanvasSurface({
   useEffect(
     () => setBoardViewportZoomReader(boardKey, () => getViewport().zoom),
     [boardKey, getViewport],
+  );
+
+  const zoomInCanvas = useCallback(() => {
+    const viewport = getViewport();
+    const zoom = Math.min(
+      CANVAS_MAX_ZOOM,
+      (Math.round(viewport.zoom * 100) + 10) / 100,
+    );
+    void zoomTo(zoom);
+  }, [getViewport, zoomTo]);
+
+  const zoomOutCanvas = useCallback(() => {
+    const viewport = getViewport();
+    const zoom = Math.max(
+      CANVAS_MIN_ZOOM,
+      (Math.round(viewport.zoom * 100) - 10) / 100,
+    );
+    void zoomTo(zoom);
+  }, [getViewport, zoomTo]);
+
+  const setZoomCanvas = useCallback(
+    (nextZoom: number) => {
+      const zoom = Math.min(
+        CANVAS_MAX_ZOOM,
+        Math.max(CANVAS_MIN_ZOOM, nextZoom),
+      );
+      void zoomTo(zoom);
+    },
+    [zoomTo],
+  );
+
+  const fitCanvasView = useCallback(() => {
+    void fitView({
+      padding: 0.18,
+      maxZoom: FIT_VIEW_MAX_ZOOM,
+      duration: VIEWPORT_ANIMATION_DURATION,
+    });
+  }, [fitView]);
+
+  useEffect(
+    () =>
+      setCanvasViewActions(boardKey, {
+        "zoom-in": zoomInCanvas,
+        "zoom-out": zoomOutCanvas,
+        "set-zoom": setZoomCanvas,
+        "fit-view": fitCanvasView,
+      }),
+    [boardKey, fitCanvasView, setZoomCanvas, zoomInCanvas, zoomOutCanvas],
   );
 
   const openFolder = useCallback(
@@ -702,6 +756,14 @@ function CanvasSurface({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isSelectionShortcutBlocked(event.target)) return;
+      const canvasAction = getCanvasViewShortcutAction(event);
+      if (canvasAction) {
+        event.preventDefault();
+        if (canvasAction === "zoom-in") zoomInCanvas();
+        if (canvasAction === "zoom-out") zoomOutCanvas();
+        if (canvasAction === "fit-view") fitCanvasView();
+        return;
+      }
       if (event.key === "Escape") {
         clearSelection(boardKey);
         return;
@@ -713,7 +775,15 @@ function CanvasSurface({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [boardKey, clearSelection, eligibleNodeIds, replaceSelection]);
+  }, [
+    boardKey,
+    clearSelection,
+    eligibleNodeIds,
+    fitCanvasView,
+    replaceSelection,
+    zoomInCanvas,
+    zoomOutCanvas,
+  ]);
 
   persistPositionRef.current = (save) =>
     updatePosition
@@ -1264,10 +1334,6 @@ function CanvasSurface({
         <CanvasAlignmentGuideLines
           guides={alignmentGuides}
           zoom={getViewport().zoom}
-        />
-        <CanvasControls
-          isCanvasLocked={isCanvasLocked}
-          onCanvasLockChange={(locked) => setCanvasLock(boardKey, locked)}
         />
         <Panel position="top-center" className="m-3">
           <SelectionActionBar

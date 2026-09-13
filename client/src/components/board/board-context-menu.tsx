@@ -8,7 +8,6 @@ import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { readClipboardAssetPayload } from "@/lib/clipboard";
 import { useBoardAssetActions } from "./use-board-asset-actions";
 import {
-  usePersistedStore,
   useTransientStore,
   useSessionStore,
   getPexelsBrowserScope,
@@ -18,7 +17,6 @@ import { formatPlatformShortcut } from "@/lib/platform";
 import { getBoardViewportCenterPlacement } from "@/components/canvas/board-pointer-position";
 import {
   ContextMenu,
-  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
@@ -31,30 +29,16 @@ export function BoardContextMenu({
   collectionPath,
   target = "collection",
   boardKey,
-  showCanvasControls = false,
   children,
 }: {
   workspaceSlug: string;
   collectionPath: string;
   target?: "collection" | "inbox";
   boardKey?: string;
-  showCanvasControls?: boolean;
   children: React.ReactNode;
 }) {
   const position = useTransientStore((state) =>
     boardKey ? state.insertionPositions[boardKey] : undefined,
-  );
-  const areAlignmentGuidesEnabled = usePersistedStore(
-    (state) => state.workspaceAlignmentGuides[workspaceSlug] ?? true,
-  );
-  const setWorkspaceAlignmentGuides = usePersistedStore(
-    (state) => state.setWorkspaceAlignmentGuides,
-  );
-  const isBoardActionRailVisible = usePersistedStore(
-    (state) => state.workspaceBoardActionRails?.[workspaceSlug] ?? true,
-  );
-  const setWorkspaceBoardActionRail = usePersistedStore(
-    (state) => state.setWorkspaceBoardActionRail,
   );
   const visibleBounds = useTransientStore((state) =>
     boardKey ? state.boardVisibleBounds[boardKey] : undefined,
@@ -153,29 +137,6 @@ export function BoardContextMenu({
               {formatPlatformShortcut("⌘+V")}
             </ContextMenuShortcut>
           </ContextMenuItem>
-          {showCanvasControls && boardKey ? (
-            <>
-              <ContextMenuSeparator />
-              <ContextMenuCheckboxItem
-                closeOnClick
-                checked={areAlignmentGuidesEnabled}
-                onCheckedChange={(enabled) =>
-                  setWorkspaceAlignmentGuides(workspaceSlug, enabled === true)
-                }
-              >
-                Alignment guides
-              </ContextMenuCheckboxItem>
-              <ContextMenuCheckboxItem
-                closeOnClick
-                checked={isBoardActionRailVisible}
-                onCheckedChange={(visible) =>
-                  setWorkspaceBoardActionRail(workspaceSlug, visible === true)
-                }
-              >
-                Actions dock
-              </ContextMenuCheckboxItem>
-            </>
-          ) : null}
         </ContextMenuContent>
       </ContextMenu>
       <CreateFolderDialog
