@@ -53,11 +53,7 @@ import { collectionQueryKeys } from "@/api/collection/query-keys";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { copyImageToClipboard } from "@/lib/clipboard";
-import {
-  FLOATING_GLASS_BACKDROP_CLASS,
-  GLASS_FRAME_CLASS,
-  GLASS_SURFACE_CLASS,
-} from "@/lib/glass";
+import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -147,15 +143,12 @@ const FLOATING_ISLAND_SURFACE_CLASS = cn(
   "border border-foreground/10 bg-background shadow-none",
 );
 
-const VIEWER_BUTTON_GROUP_SURFACE_CLASS = cn(
-  "relative z-10 rounded-md",
-  GLASS_SURFACE_CLASS,
-);
+const VIEWER_BUTTON_GROUP_CLASS = "relative z-10 rounded-md";
 
-const VIEWER_CONTROL_FRAME_CLASS = cn(
-  "relative rounded-lg p-1",
-  GLASS_FRAME_CLASS,
-);
+const VIEWER_CONTROL_FRAME_CLASS = "relative rounded-lg p-1";
+
+const VIEWER_BUTTON_CLASS =
+  "rounded-[calc(var(--radius-md)-1px)] bg-secondary text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:!bg-muted/80 active:!bg-muted/70";
 
 const COLOR_PICKER_SURFACE_CLASS = cn(
   "flex items-center gap-2 rounded-md border border-border/80 p-1.5",
@@ -1723,16 +1716,9 @@ export function ImageAssetViewer({
           </DialogDescription>
 
           <div className="pointer-events-none absolute top-5 left-5 z-30 flex items-center gap-1">
-            <div
-              className={cn("relative w-fit", FLOATING_GLASS_BACKDROP_CLASS)}
-            >
-              <div
-                className={cn(
-                  "pointer-events-auto flex items-center gap-1",
-                  VIEWER_CONTROL_FRAME_CLASS,
-                )}
-              >
-                <div className={VIEWER_BUTTON_GROUP_SURFACE_CLASS}>
+            <div className={VIEWER_CONTROL_FRAME_CLASS}>
+              <div className="pointer-events-auto flex items-center gap-1">
+                <div className={VIEWER_BUTTON_GROUP_CLASS}>
                   <ButtonGroup>
                     <Tooltip>
                       <TooltipTrigger
@@ -1741,7 +1727,7 @@ export function ImageAssetViewer({
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            className="hover:bg-secondary active:bg-foreground/[0.1]"
+                            className={VIEWER_BUTTON_CLASS}
                             onClick={() => handleOpenChange(false)}
                           />
                         }
@@ -1754,7 +1740,7 @@ export function ImageAssetViewer({
                   </ButtonGroup>
                 </div>
                 {hasImageNavigation ? (
-                  <div className={VIEWER_BUTTON_GROUP_SURFACE_CLASS}>
+                  <div className={VIEWER_BUTTON_GROUP_CLASS}>
                     <ButtonGroup>
                       <Tooltip>
                         <TooltipTrigger
@@ -1762,6 +1748,7 @@ export function ImageAssetViewer({
                             <Button
                               variant="ghost"
                               size="icon-sm"
+                              className={VIEWER_BUTTON_CLASS}
                               disabled={!previousAsset}
                               onClick={() =>
                                 previousAsset &&
@@ -1776,7 +1763,7 @@ export function ImageAssetViewer({
                         <TooltipContent>Previous image</TooltipContent>
                       </Tooltip>
                       <ButtonGroupSeparator />
-                      <span className="flex h-7 min-w-10 items-center justify-center px-1 text-xs font-medium text-muted-foreground tabular-nums">
+                      <span className="flex h-7 min-w-10 items-center justify-center bg-secondary px-2 text-xs font-medium text-muted-foreground tabular-nums">
                         {currentAssetIndex + 1} / {assets.length}
                       </span>
                       <ButtonGroupSeparator />
@@ -1786,6 +1773,7 @@ export function ImageAssetViewer({
                             <Button
                               variant="ghost"
                               size="icon-sm"
+                              className={VIEWER_BUTTON_CLASS}
                               disabled={!nextAsset}
                               onClick={() =>
                                 nextAsset && handleAssetChange(nextAsset)
@@ -1802,7 +1790,7 @@ export function ImageAssetViewer({
                   </div>
                 ) : null}
                 {onShowInBoard ? (
-                  <div className={VIEWER_BUTTON_GROUP_SURFACE_CLASS}>
+                  <div className={VIEWER_BUTTON_GROUP_CLASS}>
                     <ButtonGroup>
                       <Tooltip>
                         <TooltipTrigger
@@ -1811,6 +1799,7 @@ export function ImageAssetViewer({
                               type="button"
                               variant="ghost"
                               size="icon-sm"
+                              className={VIEWER_BUTTON_CLASS}
                               aria-label="Show in board"
                               onClick={onShowInBoard}
                             />
@@ -1828,10 +1817,10 @@ export function ImageAssetViewer({
             </div>
           </div>
 
-          <div className="pointer-events-none absolute top-[0.75rem] right-[0.75rem] z-30 w-[min(20rem,calc(100%-1.5rem))] sm:w-80 lg:w-[25rem]">
+          <div className="pointer-events-none absolute top-[var(--app-shell-inset)] right-[var(--app-shell-inset)] z-30 w-[min(20rem,calc(100%-1rem))] sm:w-80 lg:w-[25rem]">
             <div
               className={cn(
-                "pointer-events-auto flex min-h-16 w-full min-w-0 items-center gap-1 p-4 [&_[data-slot=button]]:duration-75 lg:px-5 lg:py-4",
+                "pointer-events-auto flex min-h-16 w-full min-w-0 items-center gap-1 rounded-t-xl rounded-b-none bg-card p-4 [&_[data-slot=button]]:duration-75",
                 !asset ? "justify-end" : "justify-between",
               )}
             >
@@ -2050,7 +2039,7 @@ export function ImageAssetViewer({
               "pointer-events-auto",
             )}
           >
-            <div className="flex min-h-0 flex-1 flex-col pt-16">
+            <div className="flex min-h-0 flex-1 flex-col bg-card pt-16">
               <AnimatePresence initial={false} mode="sync">
                 {cropMode && asset ? (
                   <motion.section
@@ -2082,9 +2071,9 @@ export function ImageAssetViewer({
                     transition={
                       shouldReduceMotion
                         ? { duration: 0 }
-                        : { type: "spring", duration: 0.15, bounce: 0.08 }
+                        : { duration: 0.18, ease: [0.16, 1, 0.3, 1] }
                     }
-                    className="relative overflow-hidden rounded-t-xl border-t border-foreground/10 bg-card shadow-none"
+                    className="relative overflow-hidden rounded-t-xl bg-card shadow-none"
                     aria-label="Edit image"
                   >
                     <div className="relative z-10 space-y-5 rounded-t-xl px-4 py-4">
@@ -2106,35 +2095,56 @@ export function ImageAssetViewer({
                       ) : null}
                     </div>
                     <div className="relative z-0 flex gap-2 px-4 py-4">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="mr-auto bg-muted hover:bg-muted/80 active:bg-muted/70"
-                        onClick={handleResetCrop}
-                        disabled={!hasCropChanges || isSavingCrop}
-                      >
-                        <RotateCcwIcon className="size-3.5" />
-                        Reset
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={handleCancelCrop}
-                        disabled={isSavingCrop}
-                      >
-                        Discard
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="default"
-                        size="sm"
-                        onClick={handleApplyCrop}
-                        disabled={isSavingCrop}
-                      >
-                        Apply
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="mr-auto bg-muted hover:bg-muted/80 active:bg-muted/70"
+                              onClick={handleResetCrop}
+                              disabled={!hasCropChanges || isSavingCrop}
+                            />
+                          }
+                        >
+                          <RotateCcwIcon className="size-3.5" />
+                          Reset
+                        </TooltipTrigger>
+                        <TooltipContent>Reset crop</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              onClick={handleCancelCrop}
+                              disabled={isSavingCrop}
+                            />
+                          }
+                        >
+                          Discard
+                        </TooltipTrigger>
+                        <TooltipContent>Discard changes</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="default"
+                              size="sm"
+                              onClick={handleApplyCrop}
+                              disabled={isSavingCrop}
+                            />
+                          }
+                        >
+                          Apply
+                        </TooltipTrigger>
+                        <TooltipContent>Apply crop</TooltipContent>
+                      </Tooltip>
                     </div>
                   </motion.section>
                 ) : null}
@@ -2144,7 +2154,7 @@ export function ImageAssetViewer({
                 transition={
                   shouldReduceMotion
                     ? { duration: 0 }
-                    : { type: "spring", duration: 0.15, bounce: 0.08 }
+                    : { duration: 0.18, ease: [0.16, 1, 0.3, 1] }
                 }
                 className={cn(
                   "relative z-20 min-h-0 flex flex-1 flex-col before:pointer-events-none before:absolute before:inset-x-0 before:-top-2 before:z-0 before:h-3 before:bg-card before:opacity-0 before:transition-opacity before:duration-150 before:content-['']",
@@ -2162,7 +2172,7 @@ export function ImageAssetViewer({
                     transition={
                       shouldReduceMotion
                         ? { duration: 0 }
-                        : { type: "spring", duration: 0.15, bounce: 0.08 }
+                        : { duration: 0.18, ease: [0.16, 1, 0.3, 1] }
                     }
                   >
                     {asset ? (
@@ -2235,7 +2245,7 @@ export function ImageAssetViewer({
                       ? { duration: 0 }
                       : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
                   }
-                  className="shrink-0 bg-transparent p-4"
+                  className="shrink-0 bg-card p-4"
                 >
                   <ImageMetadataDetails asset={asset} />
                 </motion.div>
