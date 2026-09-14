@@ -41,8 +41,10 @@ export type SafeFetchOptions = {
   /**
    * `full` protects callers that need the complete resource. `html-head` is an
    * explicit metadata-only mode: it returns through `</head>` and leaves the
-   * potentially much larger page body unread. In both modes, `maxBytes` is a
-   * hard cap on the bytes retained by this process.
+   * potentially much larger page body unread. If the head itself exceeds
+   * `maxBytes`, the retained prefix is returned so metadata near the top of the
+   * head (title, og tags, favicon links) is still recovered. In both modes,
+   * `maxBytes` is a hard cap on the bytes retained by this process.
    */
   bodyMode?: "full" | "html-head";
 };
@@ -329,6 +331,12 @@ export async function readBoundedBody(
 
     if (bytes.length > remaining) {
       stream.destroy();
+      if (bodyMode === "html-head") {
+        // A head that exceeds the budget is still worth parsing: metadata and
+        // the favicon link live near the top, and the retained prefix is a
+        // valid (if truncated) HTML document.
+        return Buffer.concat(chunks, total);
+      }
       throw new SafeFetchError(
         "response_too_large",
         "Remote response is too large",

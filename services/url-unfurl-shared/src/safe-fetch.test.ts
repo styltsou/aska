@@ -135,18 +135,14 @@ describe("bounded response bodies", () => {
     ).resolves.toEqual(Buffer.from(document));
   });
 
-  it("rejects an HTML head that exceeds its byte budget", async () => {
+  it("returns the retained head prefix when an HTML head exceeds its budget", async () => {
+    const truncated = `<head>${"x".repeat(1_024)}</head>`;
+
     await expect(
-      readBoundedBody(
-        response(`<head>${"x".repeat(1_024)}</head>`),
-        256,
-        signal,
-        "html-head",
-      ),
-    ).rejects.toMatchObject({
-      category: "response_too_large",
-      retryable: false,
-    });
+      readBoundedBody(response(truncated), 256, signal, "html-head"),
+    ).resolves.toEqual(
+      Buffer.from(`<head>${"x".repeat(1_024).slice(0, 256 - "<head>".length)}`),
+    );
   });
 
   it("retains strict full-body limits for existing callers", async () => {
