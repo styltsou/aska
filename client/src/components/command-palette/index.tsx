@@ -192,7 +192,7 @@ const COMMAND_GROUPS = [
         id: "toggle-board-action-rail",
         label: "Toggle actions dock",
         icon: SquarePlusIcon,
-        shortcut: undefined,
+        shortcut: "⇧+A",
       },
       {
         id: "change-theme",
@@ -250,7 +250,7 @@ export function CommandPalette() {
     .filter(Boolean);
   const isBoardActionRailVisible = usePersistedStore((state) =>
     workspaceSlug
-      ? (state.workspaceBoardActionRails?.[workspaceSlug] ?? true)
+      ? (state.workspaceBoardActionRails?.[workspaceSlug] ?? false)
       : false,
   );
   const setWorkspaceBoardActionRail = usePersistedStore(

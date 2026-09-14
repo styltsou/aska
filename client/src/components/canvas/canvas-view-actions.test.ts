@@ -1,10 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
 
 import {
-  getCanvasViewShortcutAction,
-  runCanvasViewAction,
-  setCanvasViewActions,
-} from "./canvas-view-actions";
+  CanvasActionsProvider,
+  useCanvasActions,
+} from "./canvas-actions-context";
+import { getCanvasViewShortcutAction } from "./canvas-view-actions";
 
 const event = (
   key: string,
@@ -21,48 +23,26 @@ const event = (
     ...modifiers,
   }) as KeyboardEvent;
 
-describe("canvas view actions", () => {
-  it("dispatches registered actions and safely ignores unavailable boards", () => {
-    const zoomIn = vi.fn();
-    const setZoom = vi.fn();
-    const clear = setCanvasViewActions("active-board", {
-      "zoom-in": zoomIn,
-      "zoom-out": vi.fn(),
-      "set-zoom": setZoom,
-      "fit-view": vi.fn(),
+describe("canvas view actions context", () => {
+  it("requires the provider before exposing the shared handle ref", () => {
+    const probe = createElement(() => {
+      useCanvasActions();
+      return null;
     });
 
-    expect(runCanvasViewAction("active-board", "zoom-in")).toBe(true);
-    expect(zoomIn).toHaveBeenCalledOnce();
-    expect(runCanvasViewAction("active-board", "set-zoom", 1.25)).toBe(true);
-    expect(setZoom).toHaveBeenCalledWith(1.25);
-    expect(runCanvasViewAction("missing-board", "zoom-in")).toBe(false);
-
-    clear();
+    expect(() => renderToStaticMarkup(probe)).toThrow(/CanvasActionsProvider/);
   });
 
-  it("does not let an older cleanup remove a newer registration", () => {
-    const oldZoomIn = vi.fn();
-    const newZoomIn = vi.fn();
-    const clearOld = setCanvasViewActions("replaced-board", {
-      "zoom-in": oldZoomIn,
-      "zoom-out": vi.fn(),
-      "set-zoom": vi.fn(),
-      "fit-view": vi.fn(),
-    });
-    const clearNew = setCanvasViewActions("replaced-board", {
-      "zoom-in": newZoomIn,
-      "zoom-out": vi.fn(),
-      "set-zoom": vi.fn(),
-      "fit-view": vi.fn(),
+  it("exposes a shared handle ref to consumers inside the provider", () => {
+    let captured: ReturnType<typeof useCanvasActions> | null = null;
+    const probe = createElement(() => {
+      captured = useCanvasActions();
+      return null;
     });
 
-    clearOld();
-    runCanvasViewAction("replaced-board", "zoom-in");
-    expect(oldZoomIn).not.toHaveBeenCalled();
-    expect(newZoomIn).toHaveBeenCalledOnce();
+    renderToStaticMarkup(createElement(CanvasActionsProvider, null, probe));
 
-    clearNew();
+    expect(captured).not.toBeNull();
   });
 
   it("maps only unmodified canvas navigation shortcuts", () => {

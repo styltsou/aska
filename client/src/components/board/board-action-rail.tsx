@@ -1,6 +1,4 @@
 import {
-  CirclePlusIcon,
-  CircleXIcon,
   FileTextIcon,
   FolderPlusIcon,
   ImageIcon,
@@ -74,10 +72,7 @@ export function BoardActionRail({
     (state) => state.pexelsBrowserByScope[pexelsScope]?.open ?? false,
   );
   const isRailVisible = usePersistedStore(
-    (state) => state.workspaceBoardActionRails?.[workspaceSlug] ?? true,
-  );
-  const setWorkspaceBoardActionRail = usePersistedStore(
-    (state) => state.setWorkspaceBoardActionRail,
+    (state) => state.workspaceBoardActionRails?.[workspaceSlug] ?? false,
   );
   const reduceMotion = useReducedMotion();
   const transition = reduceMotion ? { duration: 0 } : RAIL_TRANSITION;
@@ -86,8 +81,8 @@ export function BoardActionRail({
     : { ...RAIL_TRANSITION, delay: isRailVisible ? 0 : 0.04 };
 
   return (
-    <div className="absolute inset-y-0 left-3 z-20 hidden items-center lg:flex">
-      <div className="relative isolate flex flex-col items-center rounded-lg p-1">
+    <div className="absolute inset-x-0 bottom-3 z-20 hidden items-end justify-center lg:flex">
+      <div className="relative isolate flex items-center rounded-lg p-1">
         <AnimatePresence initial={false}>
           {isRailVisible ? (
             <motion.div
@@ -123,36 +118,36 @@ export function BoardActionRail({
                   ? false
                   : {
                       opacity: 0,
-                      height: 0,
-                      marginBottom: 0,
+                      width: 0,
+                      marginRight: 0,
                     }
               }
               animate={{
                 opacity: 1,
-                height: "auto",
-                marginBottom: 4,
+                width: "auto",
+                marginRight: 4,
               }}
               exit={
                 reduceMotion
                   ? undefined
                   : {
                       opacity: 0,
-                      height: 0,
-                      marginBottom: 0,
+                      width: 0,
+                      marginRight: 0,
                     }
               }
               transition={dockTransition}
               className="relative z-10 overflow-hidden"
             >
               <motion.div
-                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: 6 }}
+                initial={reduceMotion ? false : { opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, x: -6 }}
                 transition={transition}
-                className="flex flex-col items-center gap-1"
+                className="flex items-center gap-1"
               >
                 <div className={GLASS_ISLAND_CLASS}>
-                  <ButtonGroup orientation="vertical">
+                  <ButtonGroup>
                     <Tooltip>
                       <UploadImagesDialog
                         workspaceSlug={workspaceSlug}
@@ -174,12 +169,12 @@ export function BoardActionRail({
                           }
                         />
                       </UploadImagesDialog>
-                      <TooltipContent side="right">
+                      <TooltipContent side="top">
                         <span>Upload images</span>
                         <RailShortcut keys="U" />
                       </TooltipContent>
                     </Tooltip>
-                    <ButtonGroupSeparator orientation="horizontal" />
+                    <ButtonGroupSeparator />
                     <Tooltip>
                       <CreateNoteDialog
                         workspaceSlug={workspaceSlug}
@@ -201,12 +196,12 @@ export function BoardActionRail({
                           }
                         />
                       </CreateNoteDialog>
-                      <TooltipContent side="right">
+                      <TooltipContent side="top">
                         <span>New note</span>
                         <RailShortcut keys="N" />
                       </TooltipContent>
                     </Tooltip>
-                    <ButtonGroupSeparator orientation="horizontal" />
+                    <ButtonGroupSeparator />
                     <Tooltip>
                       <ColorEditorDialog
                         workspaceSlug={workspaceSlug}
@@ -227,9 +222,9 @@ export function BoardActionRail({
                           }
                         />
                       </ColorEditorDialog>
-                      <TooltipContent side="right">New color</TooltipContent>
+                      <TooltipContent side="top">New color</TooltipContent>
                     </Tooltip>
-                    <ButtonGroupSeparator orientation="horizontal" />
+                    <ButtonGroupSeparator />
                     <Tooltip>
                       <CreateFolderDialog
                         workspaceSlug={workspaceSlug}
@@ -250,7 +245,7 @@ export function BoardActionRail({
                           }
                         />
                       </CreateFolderDialog>
-                      <TooltipContent side="right">
+                      <TooltipContent side="top">
                         <span>New folder</span>
                         <RailShortcut keys="D" />
                       </TooltipContent>
@@ -258,7 +253,7 @@ export function BoardActionRail({
                   </ButtonGroup>
                 </div>
                 <div className={GLASS_ISLAND_CLASS}>
-                  <ButtonGroup orientation="vertical">
+                  <ButtonGroup>
                     <Tooltip>
                       <TooltipTrigger
                         render={
@@ -287,7 +282,7 @@ export function BoardActionRail({
                           </Button>
                         }
                       />
-                      <TooltipContent side="right">
+                      <TooltipContent side="top">
                         {pexelsBrowserOpen
                           ? "Close Pexels photos"
                           : "Browse Pexels photos"}
@@ -299,56 +294,6 @@ export function BoardActionRail({
             </motion.div>
           ) : null}
         </AnimatePresence>
-        <div className={cn("relative z-10", GLASS_ISLAND_CLASS)}>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  aria-label={
-                    isRailVisible ? "Hide actions dock" : "Show actions dock"
-                  }
-                  aria-expanded={isRailVisible}
-                  className={cn(
-                    RAIL_BUTTON_CLASS,
-                    "aria-expanded:bg-transparent! aria-expanded:hover:bg-muted/80!",
-                  )}
-                  onClick={() =>
-                    setWorkspaceBoardActionRail(workspaceSlug, !isRailVisible)
-                  }
-                >
-                  <span className="relative size-4">
-                    <AnimatePresence initial={false} mode="popLayout">
-                      <motion.span
-                        key={isRailVisible ? "close" : "open"}
-                        initial={
-                          reduceMotion
-                            ? false
-                            : { opacity: 0, rotate: -45, scale: 0.75 }
-                        }
-                        animate={{ opacity: 1, rotate: 0, scale: 1 }}
-                        exit={
-                          reduceMotion
-                            ? undefined
-                            : { opacity: 0, rotate: 45, scale: 0.75 }
-                        }
-                        transition={transition}
-                        className="absolute inset-0 flex items-center justify-center"
-                      >
-                        {isRailVisible ? <CircleXIcon /> : <CirclePlusIcon />}
-                      </motion.span>
-                    </AnimatePresence>
-                  </span>
-                </Button>
-              }
-            />
-            <TooltipContent side="right">
-              {isRailVisible ? "Hide actions dock" : "Show actions dock"}
-            </TooltipContent>
-          </Tooltip>
-        </div>
       </div>
     </div>
   );

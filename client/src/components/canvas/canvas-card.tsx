@@ -45,6 +45,17 @@ export type CanvasNodeData = {
 
 export type CanvasNode = Node<CanvasNodeData, "asset">;
 
+function canvasCardPropsEqual(
+  prev: NodeProps<CanvasNode>,
+  next: NodeProps<CanvasNode>,
+) {
+  return (
+    prev.data === next.data &&
+    prev.dragging === next.dragging &&
+    prev.selected === next.selected
+  );
+}
+
 export const CanvasCard = memo(function CanvasCard({
   data,
   dragging,
@@ -196,7 +207,7 @@ export const CanvasCard = memo(function CanvasCard({
       ) : null}
     </motion.div>
   );
-});
+}, canvasCardPropsEqual);
 
 function isPendingCollectionNode(node: CollectionNode): boolean {
   return (

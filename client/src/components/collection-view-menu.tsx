@@ -1,13 +1,10 @@
 import {
-  AlignCenterHorizontalIcon,
   ChevronDownIcon,
   LayoutGridIcon,
   LockIcon,
   MinusIcon,
   PanelsTopLeftIcon,
   PlusIcon,
-  ScanIcon,
-  UnlockIcon,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -37,7 +34,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { runCanvasViewAction } from "@/components/canvas/canvas-view-actions";
+import { useCanvasActions } from "@/components/canvas/canvas-actions-context";
 
 const ZOOM_PRESETS = [25, 50, 75, 100, 110, 125, 150, 175, 200] as const;
 
@@ -62,10 +59,18 @@ export function CollectionViewMenu({
   const setWorkspaceAlignmentGuides = usePersistedStore(
     (state) => state.setWorkspaceAlignmentGuides,
   );
+  const isBoardActionRailVisible = usePersistedStore(
+    (state) => state.workspaceBoardActionRails?.[workspaceSlug] ?? false,
+  );
+  const setWorkspaceBoardActionRail = usePersistedStore(
+    (state) => state.setWorkspaceBoardActionRail,
+  );
   const zoom = usePersistedStore(
     (state) => state.boardViewports[boardKey]?.zoom ?? 1.1,
   );
+  const canvasActions = useCanvasActions();
   const viewShortcut = formatPlatformShortcut("⇧+V");
+  const actionsDockShortcut = formatPlatformShortcut("⇧+A");
   const zoomPercentage = Math.round(zoom * 100);
 
   return (
@@ -114,7 +119,7 @@ export function CollectionViewMenu({
           <ChevronDownIcon className="max-sm:hidden" />
         </DropdownMenuTrigger>
       </div>
-      <DropdownMenuContent align="end" className="w-52">
+      <DropdownMenuContent align="end" className="w-max min-w-52">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Layout</DropdownMenuLabel>
           <DropdownMenuRadioGroup
@@ -154,7 +159,7 @@ export function CollectionViewMenu({
                     size="icon-sm"
                     className="!border-border/70 bg-transparent text-foreground shadow-none hover:bg-foreground/10 active:bg-foreground/15"
                     aria-label="Zoom out"
-                    onClick={() => runCanvasViewAction(boardKey, "zoom-out")}
+                    onClick={() => canvasActions.current?.zoomOut()}
                   >
                     <MinusIcon />
                   </Button>
@@ -178,11 +183,7 @@ export function CollectionViewMenu({
                       <DropdownMenuRadioGroup
                         value={String(zoomPercentage)}
                         onValueChange={(nextZoom) =>
-                          runCanvasViewAction(
-                            boardKey,
-                            "set-zoom",
-                            Number(nextZoom) / 100,
-                          )
+                          canvasActions.current?.setZoom(Number(nextZoom) / 100)
                         }
                       >
                         {ZOOM_PRESETS.map((preset) => (
@@ -204,38 +205,50 @@ export function CollectionViewMenu({
                     size="icon-sm"
                     className="!border-border/70 bg-transparent text-foreground shadow-none hover:bg-foreground/10 active:bg-foreground/15"
                     aria-label="Zoom in"
-                    onClick={() => runCanvasViewAction(boardKey, "zoom-in")}
+                    onClick={() => canvasActions.current?.zoomIn()}
                   >
                     <PlusIcon />
                   </Button>
                 </ButtonGroup>
               </div>
+              <DropdownMenuItem
+                className="gap-10"
+                closeOnClick={false}
+                onClick={() => canvasActions.current?.fitView()}
+              >
+                Fit in view
+                <DropdownMenuShortcut>1</DropdownMenuShortcut>
+              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuLabel>Canvas</DropdownMenuLabel>
-              <DropdownMenuItem
-                closeOnClick={false}
-                onClick={() => runCanvasViewAction(boardKey, "fit-view")}
+              <DropdownMenuCheckboxItem
+                className="gap-10"
+                checked={isBoardActionRailVisible}
+                onCheckedChange={(visible) =>
+                  setWorkspaceBoardActionRail(workspaceSlug, visible === true)
+                }
               >
-                <ScanIcon />
-                Fit collection
-                <DropdownMenuShortcut>1</DropdownMenuShortcut>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                closeOnClick={false}
-                onClick={() => setCanvasLock(boardKey, !isCanvasLocked)}
+                Actions dock
+                <DropdownMenuShortcut>
+                  {actionsDockShortcut}
+                </DropdownMenuShortcut>
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={isCanvasLocked}
+                onCheckedChange={(locked) =>
+                  setCanvasLock(boardKey, locked === true)
+                }
               >
-                {isCanvasLocked ? <UnlockIcon /> : <LockIcon />}
-                {isCanvasLocked ? "Unlock canvas" : "Lock canvas"}
-              </DropdownMenuItem>
+                Lock canvas
+              </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={areAlignmentGuidesEnabled}
                 onCheckedChange={(enabled) =>
                   setWorkspaceAlignmentGuides(workspaceSlug, enabled === true)
                 }
               >
-                <AlignCenterHorizontalIcon />
                 Alignment guides
               </DropdownMenuCheckboxItem>
             </DropdownMenuGroup>

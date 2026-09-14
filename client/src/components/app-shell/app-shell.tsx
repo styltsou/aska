@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { AppHeader } from "@/components/app-shell/app-header";
 import { GlobalScratchpad } from "@/components/app-shell/global-scratchpad";
+import { CanvasActionsProvider } from "@/components/canvas/canvas-actions-context";
 import { CommandPalette } from "@/components/command-palette";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { PexelsBrowserPanel } from "@/components/board/pexels-browser-panel";
@@ -66,17 +67,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 "md:mr-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--app-shell-inset))] md:transition-[margin-right] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none",
               )}
             >
-              <AppHeader />
-              <div
-                className={cn(
-                  "flex min-w-0 flex-1 flex-col",
-                  isBoardView
-                    ? "min-h-0 overflow-hidden rounded-xl bg-card"
-                    : "gap-4 rounded-xl bg-card p-3 shadow-sm",
-                )}
-              >
-                {children}
-              </div>
+              <CanvasActionsProvider>
+                <AppHeader />
+                <div
+                  className={cn(
+                    "flex min-w-0 flex-1 flex-col",
+                    isBoardView
+                      ? "min-h-0 overflow-hidden rounded-xl bg-card"
+                      : "gap-4 rounded-xl bg-card p-3 shadow-sm",
+                  )}
+                >
+                  {children}
+                </div>
+              </CanvasActionsProvider>
             </SidebarInset>
             {collectionSlug ? (
               <PexelsBrowserPanel

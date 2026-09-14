@@ -189,7 +189,7 @@ export function FilterBar({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 8 }}
           transition={FILTER_ISLAND_TRANSITION}
-          className="pointer-events-none absolute inset-x-0 bottom-6 z-40 flex justify-center"
+          className="pointer-events-none absolute top-6 left-6 z-40 flex"
         >
           <div className="pointer-events-auto relative w-fit">
             <div
@@ -211,7 +211,7 @@ export function FilterBar({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="center"
-                      side="top"
+                      side="bottom"
                       sideOffset={16}
                       className="border border-border/50 bg-background/60 shadow-2xl"
                     >
@@ -249,7 +249,7 @@ export function FilterBar({
                           <PlusIcon className="size-3.5" />
                         </PopoverTrigger>
                         <PopoverContent
-                          side="top"
+                          side="bottom"
                           align="start"
                           sideOffset={16}
                           className="w-64 border border-border/50 bg-background/60 shadow-2xl backdrop-blur-2xl backdrop-saturate-150"

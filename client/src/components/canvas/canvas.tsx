@@ -16,6 +16,7 @@ import {
 import {
   useCallback,
   useEffect,
+  useImperativeHandle,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -53,10 +54,8 @@ import {
   setBoardPointerPosition,
   setBoardViewportZoomReader,
 } from "./board-pointer-position";
-import {
-  getCanvasViewShortcutAction,
-  setCanvasViewActions,
-} from "./canvas-view-actions";
+import { getCanvasViewShortcutAction } from "./canvas-view-actions";
+import { useCanvasActions } from "./canvas-actions-context";
 import {
   BOARD_CARD_WIDTH,
   arrangeNodesInGrid,
@@ -486,7 +485,7 @@ function CanvasSurface({
       CANVAS_MAX_ZOOM,
       (Math.round(viewport.zoom * 100) + 10) / 100,
     );
-    void zoomTo(zoom);
+    void zoomTo(zoom, { duration: VIEWPORT_ANIMATION_DURATION });
   }, [getViewport, zoomTo]);
 
   const zoomOutCanvas = useCallback(() => {
@@ -495,7 +494,7 @@ function CanvasSurface({
       CANVAS_MIN_ZOOM,
       (Math.round(viewport.zoom * 100) - 10) / 100,
     );
-    void zoomTo(zoom);
+    void zoomTo(zoom, { duration: VIEWPORT_ANIMATION_DURATION });
   }, [getViewport, zoomTo]);
 
   const setZoomCanvas = useCallback(
@@ -504,7 +503,7 @@ function CanvasSurface({
         CANVAS_MAX_ZOOM,
         Math.max(CANVAS_MIN_ZOOM, nextZoom),
       );
-      void zoomTo(zoom);
+      void zoomTo(zoom, { duration: VIEWPORT_ANIMATION_DURATION });
     },
     [zoomTo],
   );
@@ -517,15 +516,17 @@ function CanvasSurface({
     });
   }, [fitView]);
 
-  useEffect(
-    () =>
-      setCanvasViewActions(boardKey, {
-        "zoom-in": zoomInCanvas,
-        "zoom-out": zoomOutCanvas,
-        "set-zoom": setZoomCanvas,
-        "fit-view": fitCanvasView,
-      }),
-    [boardKey, fitCanvasView, setZoomCanvas, zoomInCanvas, zoomOutCanvas],
+  const canvasActionsRef = useCanvasActions();
+
+  useImperativeHandle(
+    canvasActionsRef,
+    () => ({
+      zoomIn: zoomInCanvas,
+      zoomOut: zoomOutCanvas,
+      setZoom: setZoomCanvas,
+      fitView: fitCanvasView,
+    }),
+    [fitCanvasView, setZoomCanvas, zoomInCanvas, zoomOutCanvas],
   );
 
   const openFolder = useCallback(
