@@ -1,4 +1,5 @@
 import { NavMain } from "@/components/app-shell/nav-main";
+import { SidebarSearchTrigger } from "@/components/app-shell/sidebar-search-trigger";
 import { NavProjects } from "@/components/app-shell/nav-projects";
 import { NavSecondary } from "@/components/app-shell/nav-secondary";
 import { NavUser } from "@/components/app-shell/nav-user";
@@ -120,6 +121,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <WorkspaceSwitcher />
       </SidebarHeader>
       <SidebarContent>
+        <SidebarSearchTrigger />
         <NavMain items={navMain} />
         <NavProjects
           collections={navCollections}
