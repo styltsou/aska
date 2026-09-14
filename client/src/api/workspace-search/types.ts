@@ -20,6 +20,8 @@ export type WorkspaceSearchResult = {
     | { type: "navigate" }
     | { type: "external"; url: string };
   preview: {
+    url?: string;
+    faviconUrl?: string;
     hex?: string;
     blurDataURL?: string;
     hostname?: string;

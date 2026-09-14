@@ -81,6 +81,7 @@ import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { getRecentWorkspaceAssetIds } from "@/lib/workspace-recent-assets";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { toast } from "sonner";
 
 type PaletteMode = "search" | "commands";
@@ -976,14 +977,38 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
     );
   }
 
+  if (result.type === "image" && result.preview?.url) {
+    return (
+      <span
+        aria-hidden="true"
+        className="relative size-8 shrink-0 overflow-hidden rounded-md"
+      >
+        <ProgressiveImage
+          src={result.preview.url}
+          blurDataURL={result.preview.blurDataURL}
+          className="absolute inset-0 size-full rounded-[inherit] object-cover"
+        />
+      </span>
+    );
+  }
+
   if (result.type === "image" && result.preview?.blurDataURL) {
     return (
-      <img
-        src={result.preview.blurDataURL}
-        alt=""
-        className="size-8 shrink-0 rounded-md object-cover"
-      />
+      <span
+        aria-hidden="true"
+        className="relative size-8 shrink-0 overflow-hidden rounded-md bg-muted"
+      >
+        <img
+          src={result.preview.blurDataURL}
+          alt=""
+          className="absolute -inset-px size-[calc(100%+2px)] max-w-none scale-[1.06] object-cover blur-[0.75px]"
+        />
+      </span>
     );
+  }
+
+  if (result.type === "link" && result.preview?.faviconUrl) {
+    return <LinkSearchResultPreview src={result.preview.faviconUrl} />;
   }
 
   const Icon =
@@ -1002,6 +1027,29 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
   return (
     <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
       <Icon className="size-4" />
+    </span>
+  );
+}
+
+function LinkSearchResultPreview({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+        <ExternalLinkIcon className="size-4" />
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background shadow-sm">
+      <img
+        src={src}
+        alt=""
+        className="size-4 object-contain"
+        onError={() => setFailed(true)}
+      />
     </span>
   );
 }

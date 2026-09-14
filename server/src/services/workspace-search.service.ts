@@ -1,4 +1,14 @@
-import { and, asc, desc, eq, ilike, isNotNull, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -6,6 +16,7 @@ import {
   collectionNodes,
   collectionsTable,
   colorAssets,
+  externalResourceMedia,
   externalResources,
   folders,
   imageAssets,
@@ -17,6 +28,11 @@ import type {
   WorkspaceSearchResponse,
   WorkspaceSearchResult,
 } from "@/dto/workspace-search.dto";
+import type { IObjectStorageService } from "@/services/object-storage.service";
+
+type Deps = {
+  objectStorageService: IObjectStorageService;
+};
 
 export interface IWorkspaceSearchService {
   search(
@@ -31,13 +47,25 @@ type RankedResult = WorkspaceSearchResult & {
 };
 
 export class WorkspaceSearchService implements IWorkspaceSearchService {
+  private readonly objectStorageService: IObjectStorageService;
+
+  constructor({ objectStorageService }: Deps) {
+    this.objectStorageService = objectStorageService;
+  }
+
   async search(
     orgId: string,
     query: WorkspaceSearchQuery,
   ): Promise<WorkspaceSearchResponse> {
     const normalizedQuery = query.q.trim();
     const [assetResults, folderResults, collectionResults] = await Promise.all([
-      searchAssets(orgId, normalizedQuery, query.limit, query.recent),
+      searchAssets(
+        orgId,
+        normalizedQuery,
+        query.limit,
+        query.recent,
+        this.objectStorageService,
+      ),
       searchFolders(orgId, normalizedQuery, query.limit),
       searchCollections(orgId, normalizedQuery, query.limit),
     ]);
@@ -61,6 +89,7 @@ async function searchAssets(
   query: string,
   limit: number,
   recentAssetNodeIds: readonly string[],
+  objectStorageService: IObjectStorageService,
 ): Promise<RankedResult[]> {
   const match = `%${query}%`;
   const prefix = `${query}%`;
@@ -107,8 +136,10 @@ async function searchAssets(
       imageAlt: imageAssets.alt,
       imageNote: imageAssets.note,
       imageBlurDataURL: imageAssets.blurDataURL,
+      imageVariants: imageAssets.variants,
       colorHex: colorAssets.hex,
       linkOriginalUrl: linkAssets.originalUrl,
+      linkResourceId: linkAssets.resourceId,
       linkNote: linkAssets.note,
       linkHostname: externalResources.hostname,
       linkTitle: externalResources.title,
@@ -160,6 +191,47 @@ async function searchAssets(
     )
     .limit(limit);
 
+  const imageVariantKeys = new Map<number, string>();
+  for (const row of rows) {
+    if (row.assetType !== "image") continue;
+    const variant =
+      row.imageVariants?.preview ??
+      row.imageVariants?.display ??
+      row.imageVariants?.original;
+    if (variant?.objectKey)
+      imageVariantKeys.set(row.assetId, variant.objectKey);
+  }
+  const linkResourceIds = rows.flatMap((row) =>
+    row.assetType === "link" && row.linkResourceId ? [row.linkResourceId] : [],
+  );
+  const faviconRows = linkResourceIds.length
+    ? await db
+        .select({
+          resourceId: externalResourceMedia.resourceId,
+          variants: externalResourceMedia.variants,
+        })
+        .from(externalResourceMedia)
+        .where(
+          and(
+            inArray(externalResourceMedia.resourceId, [
+              ...new Set(linkResourceIds),
+            ]),
+            eq(externalResourceMedia.role, "icon"),
+            eq(externalResourceMedia.status, "ready"),
+          ),
+        )
+    : [];
+  const faviconKeys = new Map<number, string>();
+  for (const row of faviconRows) {
+    const variant =
+      row.variants.preview ?? row.variants.master ?? row.variants.display;
+    if (variant?.objectKey) faviconKeys.set(row.resourceId, variant.objectKey);
+  }
+  const signedMedia = await objectStorageService.createPresignedGetUrls([
+    ...imageVariantKeys.values(),
+    ...faviconKeys.values(),
+  ]);
+
   return rows.map((row) => {
     const type = row.assetType;
     const resultLabel =
@@ -185,6 +257,16 @@ async function searchAssets(
       type === "link" &&
       row.linkResolverKey === "youtube-oembed" &&
       row.linkResourceKind === "video";
+    const imageVariantKey = imageVariantKeys.get(row.assetId);
+    const imageUrl = imageVariantKey
+      ? signedMedia.get(imageVariantKey)?.url
+      : undefined;
+    const faviconKey = row.linkResourceId
+      ? faviconKeys.get(row.linkResourceId)
+      : undefined;
+    const faviconUrl = faviconKey
+      ? signedMedia.get(faviconKey)?.url
+      : undefined;
     return {
       id: `${type}-${row.assetId}`,
       type,
@@ -203,10 +285,18 @@ async function searchAssets(
       preview:
         type === "color" && row.colorHex
           ? { hex: row.colorHex }
-          : type === "image" && row.imageBlurDataURL
-            ? { blurDataURL: row.imageBlurDataURL }
+          : type === "image" && (imageUrl || row.imageBlurDataURL)
+            ? {
+                ...(imageUrl ? { url: imageUrl } : {}),
+                ...(row.imageBlurDataURL
+                  ? { blurDataURL: row.imageBlurDataURL }
+                  : {}),
+              }
             : type === "link" && row.linkHostname
-              ? { hostname: row.linkHostname }
+              ? {
+                  hostname: row.linkHostname,
+                  ...(faviconUrl ? { faviconUrl } : {}),
+                }
               : null,
       rank: query
         ? Number(row.rank)

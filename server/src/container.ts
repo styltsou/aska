@@ -49,7 +49,9 @@ export const container = {
     loggerService,
   }),
   noteMentionService: new NoteMentionService(),
-  workspaceSearchService: new WorkspaceSearchService(),
+  workspaceSearchService: new WorkspaceSearchService({
+    objectStorageService,
+  }),
 };
 
 export type Container = typeof container;
