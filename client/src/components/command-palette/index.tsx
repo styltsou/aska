@@ -555,7 +555,7 @@ export function CommandPalette() {
             ? "Search assets, folders, and collections."
             : "Search app commands and destinations."
         }
-        className="top-[18vh] max-w-lg transition-[height,opacity,transform] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+        className="top-[18vh] max-w-xl transition-[height,opacity,transform] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
         contentStyle={
           paletteHeight === undefined ? undefined : { height: paletteHeight }
         }
@@ -633,7 +633,7 @@ export function CommandPalette() {
                     : "Search actions…"
                 }
               />
-              <CommandList className="max-h-80">
+              <CommandList className="max-h-96">
                 {mode === "search" ? (
                   <WorkspaceSearchResults
                     query={query}
@@ -1043,11 +1043,11 @@ function LinkSearchResultPreview({ src }: { src: string }) {
   }
 
   return (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background shadow-sm">
+    <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/60 bg-background shadow-sm">
       <img
         src={src}
         alt=""
-        className="size-4 object-contain"
+        className="size-full object-contain"
         onError={() => setFailed(true)}
       />
     </span>
