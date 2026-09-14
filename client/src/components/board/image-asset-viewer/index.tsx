@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ButtonGroup,
   ButtonGroupSeparator,
@@ -46,6 +47,7 @@ import Cropper, { type Area, type Size } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import { ImageColorPalette, ImageMetadataDetails } from "./image-metadata";
 import { CropToolbar } from "./crop-toolbar";
+import { getImageNavigation } from "./image-navigation";
 import { apiPost } from "@/lib/api";
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
 import { useUpdateImage } from "@/api/collection";
@@ -53,7 +55,7 @@ import { collectionQueryKeys } from "@/api/collection/query-keys";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { copyImageToClipboard } from "@/lib/clipboard";
-import { GLASS_FRAME_CLASS } from "@/lib/glass";
+import { GLASS_FRAME_CLASS, GLASS_ISLAND_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -143,12 +145,13 @@ const FLOATING_ISLAND_SURFACE_CLASS = cn(
   "border border-foreground/10 bg-background shadow-none",
 );
 
-const VIEWER_BUTTON_GROUP_CLASS = "relative z-10 rounded-md";
-
 const VIEWER_CONTROL_FRAME_CLASS = "relative rounded-lg p-1";
 
-const VIEWER_BUTTON_CLASS =
-  "rounded-[calc(var(--radius-md)-1px)] bg-secondary text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:!bg-muted/80 active:!bg-muted/70";
+const VIEWER_ISLAND_BUTTON_CLASS =
+  "rounded-[calc(var(--radius-md)-1px)] text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80";
+
+const VIEWER_HEADER_ICON_BUTTON_CLASS =
+  "rounded-[calc(var(--radius-md)-1px)] text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:!bg-foreground/10 active:!bg-foreground/15 dark:hover:!bg-foreground/15 dark:active:!bg-foreground/20";
 
 const COLOR_PICKER_SURFACE_CLASS = cn(
   "flex items-center gap-2 rounded-md border border-border/80 p-1.5",
@@ -895,6 +898,8 @@ export function ImageAssetViewer({
   assets = [],
   open,
   onOpenChange,
+  onOpenChangeComplete,
+  loading = false,
   onBack,
   backLabel = "Back to board",
   onAssetChange,
@@ -905,6 +910,8 @@ export function ImageAssetViewer({
   assets?: ImageAsset[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onOpenChangeComplete?: (open: boolean) => void;
+  loading?: boolean;
   onBack?: () => void;
   backLabel?: string;
   onAssetChange?: (asset: ImageAsset) => void;
@@ -922,18 +929,39 @@ export function ImageAssetViewer({
     if (selectedAsset) retainedAssetRef.current = selectedAsset;
   }, [selectedAsset]);
 
-  const asset = editedAsset ?? selectedAsset ?? retainedAssetRef.current;
+  useEffect(() => {
+    setEditedAsset(null);
+    setOptimisticCropPreviewUrl(null);
+  }, [selectedAsset?.id]);
+
+  const applicableEditedAsset =
+    editedAsset &&
+    (!selectedAsset || editedAsset.id === selectedAsset.id) &&
+    !loading
+      ? editedAsset
+      : null;
+  const asset =
+    applicableEditedAsset ??
+    selectedAsset ??
+    (loading ? undefined : retainedAssetRef.current);
   const title = asset?.title || asset?.sourceLabel || "Image preview";
-  const currentAssetIndex = asset
-    ? assets.findIndex((candidate) => candidate.id === asset.id)
-    : -1;
+  const {
+    currentIndex: currentAssetIndex,
+    previousAsset,
+    nextAsset,
+  } = getImageNavigation(assets, asset?.id);
   const hasImageNavigation = currentAssetIndex >= 0 && assets.length > 1;
-  const previousAsset = hasImageNavigation
-    ? assets[currentAssetIndex - 1]
-    : undefined;
-  const nextAsset = hasImageNavigation
-    ? assets[currentAssetIndex + 1]
-    : undefined;
+
+  useEffect(() => {
+    const adjacentUrls = [previousAsset?.url, nextAsset?.url].filter(
+      (url): url is string => Boolean(url),
+    );
+    for (const url of adjacentUrls) {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = url;
+    }
+  }, [nextAsset?.url, previousAsset?.url]);
 
   const originalAspect = asset
     ? (asset.originalWidth ?? asset.width) /
@@ -1686,14 +1714,23 @@ export function ImageAssetViewer({
   const cropTransform = `translate(${crop.x}px, ${crop.y}px) scale(${zoom}) scaleX(${flipX ? -1 : 1}) scaleY(${flipY ? -1 : 1}) rotate(${rotation}deg)`;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      onOpenChangeComplete={onOpenChangeComplete}
+    >
       <DialogContent
         showCloseButton={false}
         data-command-palette-allowed="true"
         overlayClassName="bg-transparent"
-        className="top-1/2 h-[100svh] w-screen max-w-none -translate-y-1/2 rounded-none bg-transparent shadow-none ring-0"
+        className="top-1/2 h-[100svh] w-screen max-w-none -translate-y-1/2 rounded-none bg-transparent shadow-none ring-0 duration-[160ms]"
       >
-        <DialogBody className="relative isolate h-full min-h-0 w-full overflow-hidden rounded-none border-0 bg-transparent p-0 text-foreground">
+        <DialogBody
+          className={cn(
+            "relative isolate h-full min-h-0 w-full overflow-hidden rounded-none border-0 bg-transparent p-0 text-foreground",
+            loading && "bg-neutral-950",
+          )}
+        >
           {displayUrl ? (
             <div
               className={cn(
@@ -1718,7 +1755,7 @@ export function ImageAssetViewer({
           <div className="pointer-events-none absolute top-5 left-5 z-30 flex items-center gap-1">
             <div className={VIEWER_CONTROL_FRAME_CLASS}>
               <div className="pointer-events-auto flex items-center gap-1">
-                <div className={VIEWER_BUTTON_GROUP_CLASS}>
+                <div className={GLASS_ISLAND_CLASS}>
                   <ButtonGroup>
                     <Tooltip>
                       <TooltipTrigger
@@ -1727,7 +1764,7 @@ export function ImageAssetViewer({
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            className={VIEWER_BUTTON_CLASS}
+                            className={VIEWER_ISLAND_BUTTON_CLASS}
                             onClick={() => handleOpenChange(false)}
                           />
                         }
@@ -1740,7 +1777,7 @@ export function ImageAssetViewer({
                   </ButtonGroup>
                 </div>
                 {hasImageNavigation ? (
-                  <div className={VIEWER_BUTTON_GROUP_CLASS}>
+                  <div className={GLASS_ISLAND_CLASS}>
                     <ButtonGroup>
                       <Tooltip>
                         <TooltipTrigger
@@ -1748,7 +1785,7 @@ export function ImageAssetViewer({
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              className={VIEWER_BUTTON_CLASS}
+                              className={VIEWER_ISLAND_BUTTON_CLASS}
                               disabled={!previousAsset}
                               onClick={() =>
                                 previousAsset &&
@@ -1763,7 +1800,7 @@ export function ImageAssetViewer({
                         <TooltipContent>Previous image</TooltipContent>
                       </Tooltip>
                       <ButtonGroupSeparator />
-                      <span className="flex h-7 min-w-10 items-center justify-center bg-secondary px-2 text-xs font-medium text-muted-foreground tabular-nums">
+                      <span className="flex h-7 min-w-10 items-center justify-center bg-background px-2 text-xs font-medium text-muted-foreground tabular-nums">
                         {currentAssetIndex + 1} / {assets.length}
                       </span>
                       <ButtonGroupSeparator />
@@ -1773,7 +1810,7 @@ export function ImageAssetViewer({
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              className={VIEWER_BUTTON_CLASS}
+                              className={VIEWER_ISLAND_BUTTON_CLASS}
                               disabled={!nextAsset}
                               onClick={() =>
                                 nextAsset && handleAssetChange(nextAsset)
@@ -1790,7 +1827,7 @@ export function ImageAssetViewer({
                   </div>
                 ) : null}
                 {onShowInBoard ? (
-                  <div className={VIEWER_BUTTON_GROUP_CLASS}>
+                  <div className={GLASS_ISLAND_CLASS}>
                     <ButtonGroup>
                       <Tooltip>
                         <TooltipTrigger
@@ -1799,7 +1836,7 @@ export function ImageAssetViewer({
                               type="button"
                               variant="ghost"
                               size="icon-sm"
-                              className={VIEWER_BUTTON_CLASS}
+                              className={VIEWER_ISLAND_BUTTON_CLASS}
                               aria-label="Show in board"
                               onClick={onShowInBoard}
                             />
@@ -1851,8 +1888,9 @@ export function ImageAssetViewer({
                             size="icon-sm"
                             onClick={handlePickColor}
                             className={cn(
-                              "hover:bg-foreground/8 dark:hover:bg-foreground/10",
-                              isEyeDropping && "bg-foreground/8",
+                              VIEWER_HEADER_ICON_BUTTON_CLASS,
+                              isEyeDropping &&
+                                "!bg-foreground/10 dark:!bg-foreground/15",
                             )}
                             aria-pressed={isEyeDropping}
                             disabled={cropMode}
@@ -1885,7 +1923,7 @@ export function ImageAssetViewer({
                             variant="ghost"
                             size="icon-sm"
                             onClick={handleCopyImage}
-                            className="hover:bg-foreground/8 dark:hover:bg-foreground/10"
+                            className={VIEWER_HEADER_ICON_BUTTON_CLASS}
                           />
                         }
                       >
@@ -1905,7 +1943,7 @@ export function ImageAssetViewer({
                             variant="ghost"
                             size="icon-sm"
                             onClick={handleDownload}
-                            className="hover:bg-foreground/8 dark:hover:bg-foreground/10"
+                            className={VIEWER_HEADER_ICON_BUTTON_CLASS}
                           />
                         }
                       >
@@ -2027,6 +2065,8 @@ export function ImageAssetViewer({
                     onPick={handlePickColorResult}
                     loadSamplingCanvas={loadSamplingCanvas}
                   />
+                ) : loading ? (
+                  <Skeleton className="h-[min(68cqh,42rem)] w-[min(70cqw,64rem)] rounded-lg bg-white/10" />
                 ) : null}
               </div>
             )}
@@ -2183,6 +2223,12 @@ export function ImageAssetViewer({
                         <p className="mt-1 text-sm font-medium wrap-break-word text-foreground">
                           {asset.title ?? "Untitled image"}
                         </p>
+                      </div>
+                    ) : loading ? (
+                      <div className="space-y-3">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-5 w-3/4" />
+                        <Skeleton className="h-20 w-full" />
                       </div>
                     ) : null}
                     {asset?.sourceUrl ? (

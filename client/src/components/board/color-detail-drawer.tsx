@@ -38,6 +38,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { gradientToCss } from "@/lib/color-gradient";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -51,19 +52,23 @@ export function ColorDetailDrawer({
   workspaceSlug,
   scope,
   onClose,
+  onCloseComplete,
   onOpenImage,
   onEdit,
   onShowInBoard,
   open = color !== undefined,
+  loading = false,
 }: {
   color?: ColorAsset;
   workspaceSlug: string;
   scope: ColorSearchScope;
   onClose: () => void;
+  onCloseComplete?: () => void;
   onOpenImage: (image: ImageAsset) => void;
   onEdit?: () => void;
   onShowInBoard?: () => void;
   open?: boolean;
+  loading?: boolean;
 }) {
   const { peekColor } = useWorkspacePeek();
   const isMobile = useIsMobile();
@@ -71,12 +76,13 @@ export function ColorDetailDrawer({
   useEffect(() => {
     if (color) setActiveColor(color);
   }, [color]);
+  const displayedColor = color ?? (loading ? undefined : activeColor);
   const [includeDescendants, setIncludeDescendants] = useState(false);
   const [copied, setCopied] = useState(false);
   const copiedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchColors = useMemo(
-    () => (activeColor ? colorAssetToSearchColors(activeColor) : []),
-    [activeColor],
+    () => (displayedColor ? colorAssetToSearchColors(displayedColor) : []),
+    [displayedColor],
   );
   const effectiveScope = useMemo<ColorSearchScope>(
     () =>
@@ -90,22 +96,22 @@ export function ColorDetailDrawer({
   );
   const results = search.data?.results ?? EMPTY_RESULTS;
   const hasGradient =
-    activeColor?.gradient !== undefined && activeColor?.gradient !== null;
+    displayedColor?.gradient !== undefined && displayedColor?.gradient !== null;
   const gradientCss = hasGradient
     ? gradientToCss(
-        activeColor!.gradient?.stops ?? [
-          { color: activeColor!.gradient!.from, position: 0 },
-          { color: activeColor!.gradient!.to, position: 100 },
+        displayedColor!.gradient?.stops ?? [
+          { color: displayedColor!.gradient!.from, position: 0 },
+          { color: displayedColor!.gradient!.to, position: 100 },
         ],
-        activeColor!.gradient?.type ?? "linear",
-        activeColor!.gradient?.angle ?? 90,
+        displayedColor!.gradient?.type ?? "linear",
+        displayedColor!.gradient?.angle ?? 90,
       )
     : undefined;
 
-  useEffect(() => setIncludeDescendants(false), [activeColor?.id]);
+  useEffect(() => setIncludeDescendants(false), [displayedColor?.id]);
 
   function copyValue() {
-    const value = gradientCss ?? activeColor?.hex ?? "";
+    const value = gradientCss ?? displayedColor?.hex ?? "";
     void navigator.clipboard
       .writeText(value)
       .then(() => {
@@ -121,10 +127,11 @@ export function ColorDetailDrawer({
     <Drawer
       open={open}
       onOpenChange={(next) => !next && onClose()}
+      onOpenChangeComplete={(next) => !next && onCloseComplete?.()}
       swipeDirection={isMobile ? "down" : "right"}
       fast
     >
-      {activeColor ? (
+      {displayedColor ? (
         <DrawerContent
           className="max-h-[calc(100dvh-var(--app-shell-inset)-var(--app-shell-inset))] gap-0 rounded-xl! border-0! bg-background! p-0 text-foreground! shadow-none ring-1 ring-foreground/10"
           style={
@@ -147,7 +154,7 @@ export function ColorDetailDrawer({
                 style={
                   gradientCss
                     ? { background: gradientCss }
-                    : { backgroundColor: activeColor.hex }
+                    : { backgroundColor: displayedColor.hex }
                 }
               >
                 <span
@@ -159,12 +166,13 @@ export function ColorDetailDrawer({
               </button>
               <div className="min-w-0">
                 <DrawerTitle className="truncate text-base leading-tight font-medium">
-                  {activeColor.title?.trim() || activeColor.hex.toUpperCase()}
+                  {displayedColor.title?.trim() ||
+                    displayedColor.hex.toUpperCase()}
                 </DrawerTitle>
                 <DrawerDescription className="font-mono text-xs">
                   {hasGradient
-                    ? `${activeColor.gradient?.type === "radial" ? "Radial" : "Linear"} gradient`
-                    : activeColor.hex.toUpperCase()}
+                    ? `${displayedColor.gradient?.type === "radial" ? "Radial" : "Linear"} gradient`
+                    : displayedColor.hex.toUpperCase()}
                 </DrawerDescription>
               </div>
             </div>
@@ -176,8 +184,8 @@ export function ColorDetailDrawer({
                 aria-label="Peek"
                 title="Peek color"
                 onClick={() => {
-                  if (!activeColor) return;
-                  peekColor(activeColor, effectiveScope);
+                  if (!displayedColor) return;
+                  peekColor(displayedColor, effectiveScope);
                   onClose();
                 }}
               >
@@ -305,6 +313,36 @@ export function ColorDetailDrawer({
                 </div>
               </ScrollArea>
             </div>
+          </div>
+        </DrawerContent>
+      ) : loading ? (
+        <DrawerContent
+          className="max-h-[calc(100dvh-var(--app-shell-inset)-var(--app-shell-inset))] gap-0 rounded-xl! border-0! bg-background! p-0 text-foreground! shadow-none ring-1 ring-foreground/10"
+          style={
+            {
+              "--drawer-content-width": "34rem",
+              "--drawer-inset": "var(--app-shell-inset)",
+              "--bleed": "0",
+            } as unknown as CSSProperties
+          }
+        >
+          <DrawerTitle className="sr-only">Loading color</DrawerTitle>
+          <DrawerDescription className="sr-only">
+            Loading color details.
+          </DrawerDescription>
+          <div className="space-y-4 border-b p-4">
+            <div className="flex items-center gap-3.5">
+              <Skeleton className="size-12 rounded-xl" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 p-4">
+            {Array.from({ length: 6 }, (_, index) => (
+              <Skeleton key={index} className="aspect-square rounded-lg" />
+            ))}
           </div>
         </DrawerContent>
       ) : null}

@@ -92,6 +92,22 @@ function InboxPage() {
     );
   }
 
+  const handleOpenAsset = (assetId: string) => {
+    const node = data?.nodes.find((candidate) => candidate.id === assetId);
+    openAsset(assetId, {
+      initialData:
+        node && node.type !== "folder"
+          ? { asset: node, location: { type: "inbox" } }
+          : undefined,
+      imageSiblings: data?.nodes.filter(
+        (
+          candidate,
+        ): candidate is Extract<typeof candidate, { type: "image" }> =>
+          candidate.type === "image",
+      ),
+    });
+  };
+
   return (
     <BoardContextMenu
       workspaceSlug={workspaceSlug}
@@ -109,10 +125,10 @@ function InboxPage() {
           focusedAssetId={focusedShowRequest?.assetId}
           focusRequestId={focusedShowRequest?.id}
           onDismissFocusedAsset={() => setFocusedShowRequest(undefined)}
-          onOpenNote={(note) => openAsset(note.id)}
-          onOpenImage={(image) => openAsset(image.id)}
-          onOpenColor={(color) => openAsset(color.id)}
-          onOpenVideo={(video) => openAsset(video.id)}
+          onOpenNote={(note) => handleOpenAsset(note.id)}
+          onOpenImage={(image) => handleOpenAsset(image.id)}
+          onOpenColor={(color) => handleOpenAsset(color.id)}
+          onOpenVideo={(video) => handleOpenAsset(video.id)}
           emptyTitle={
             hasResolvedColorSearch || isTypeFilterActive
               ? "No matching assets"

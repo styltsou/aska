@@ -263,6 +263,25 @@ function CollectionPage() {
     });
   };
 
+  const handleOpenAsset = (assetId: string) => {
+    const node = nodes.find((candidate) => candidate.id === assetId);
+    const location = {
+      type: "collection" as const,
+      collectionSlug,
+      folderPath: parentFolderPath,
+    };
+    openAsset(assetId, {
+      initialData:
+        node && node.type !== "folder" ? { asset: node, location } : undefined,
+      imageSiblings: nodes.filter(
+        (
+          candidate,
+        ): candidate is Extract<typeof candidate, { type: "image" }> =>
+          candidate.type === "image",
+      ),
+    });
+  };
+
   const loadError =
     isError && (!data || hasStaleRoutePlaceholder) ? (
       <ResourceLoadError
@@ -321,10 +340,10 @@ function CollectionPage() {
                         ? "Add images, notes, links, or folders to start arranging this board."
                         : "Add images, notes, links, or folders to start arranging this collection."
                   }
-                  onOpenNote={(note) => openAsset(note.id)}
-                  onOpenImage={(image) => openAsset(image.id)}
-                  onOpenColor={(color) => openAsset(color.id)}
-                  onOpenVideo={(video) => openAsset(video.id)}
+                  onOpenNote={(note) => handleOpenAsset(note.id)}
+                  onOpenImage={(image) => handleOpenAsset(image.id)}
+                  onOpenColor={(color) => handleOpenAsset(color.id)}
+                  onOpenVideo={(video) => handleOpenAsset(video.id)}
                   onOpenFolder={handleOpenFolder}
                 />
               </>
@@ -359,10 +378,10 @@ function CollectionPage() {
                       ? "Add images, notes, links, or folders to this folder."
                       : "Add images, notes, links, or folders to this collection."
                 }
-                onOpenNote={(note) => openAsset(note.id)}
-                onOpenImage={(image) => openAsset(image.id)}
-                onOpenColor={(color) => openAsset(color.id)}
-                onOpenVideo={(video) => openAsset(video.id)}
+                onOpenNote={(note) => handleOpenAsset(note.id)}
+                onOpenImage={(image) => handleOpenAsset(image.id)}
+                onOpenColor={(color) => handleOpenAsset(color.id)}
+                onOpenVideo={(video) => handleOpenAsset(video.id)}
                 onOpenFolder={handleOpenFolder}
               />
             )}

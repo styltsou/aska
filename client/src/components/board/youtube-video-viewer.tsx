@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useUpdateLink } from "@/api/collection";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
@@ -84,12 +85,18 @@ function clearLinkNoteDraft(workspaceSlug: string, assetId: string) {
 
 export function YouTubeVideoViewer({
   asset,
+  open: controlledOpen,
+  loading = false,
   onClose,
+  onCloseComplete,
   onShowInBoard,
   workspaceSlug,
 }: {
   asset?: LinkAsset;
+  open?: boolean;
+  loading?: boolean;
   onClose: () => void;
+  onCloseComplete?: () => void;
   onShowInBoard?: () => void;
   workspaceSlug: string;
 }) {
@@ -100,16 +107,23 @@ export function YouTubeVideoViewer({
     if (isVideoLinkAsset(asset)) setActiveAsset(asset);
   }, [asset]);
 
-  const displayedAsset = isVideoLinkAsset(asset) ? asset : activeAsset;
-  if (!displayedAsset) return null;
-  const open = asset !== undefined;
-  const accessibleDescription = `Watch ${displayedAsset.title} without leaving Aska.`;
+  const displayedAsset = isVideoLinkAsset(asset)
+    ? asset
+    : loading
+      ? undefined
+      : activeAsset;
+  if (!displayedAsset && !loading) return null;
+  const open = controlledOpen ?? asset !== undefined;
+  const accessibleDescription = displayedAsset
+    ? `Watch ${displayedAsset.title} without leaving Aska.`
+    : "Loading video details.";
 
   if (isMobile) {
     return (
       <Drawer
         open={open}
         onOpenChange={(next) => !next && onClose()}
+        onOpenChangeComplete={(next) => !next && onCloseComplete?.()}
         swipeDirection="down"
         showSwipeHandle
         fast
@@ -124,43 +138,69 @@ export function YouTubeVideoViewer({
             } as CSSProperties
           }
         >
-          <DrawerTitle className="sr-only">{displayedAsset.title}</DrawerTitle>
+          <DrawerTitle className="sr-only">
+            {displayedAsset?.title ?? "Loading video"}
+          </DrawerTitle>
           <DrawerDescription className="sr-only">
             {accessibleDescription}
           </DrawerDescription>
-          <VideoViewerContent
-            key={displayedAsset.video.videoId}
-            asset={displayedAsset}
-            open={open}
-            workspaceSlug={workspaceSlug}
-            onShowInBoard={onShowInBoard}
-          />
+          {displayedAsset ? (
+            <VideoViewerContent
+              key={displayedAsset.video.videoId}
+              asset={displayedAsset}
+              open={open}
+              workspaceSlug={workspaceSlug}
+              onShowInBoard={onShowInBoard}
+            />
+          ) : (
+            <VideoViewerLoading />
+          )}
         </DrawerContent>
       </Drawer>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => !next && onClose()}
+      onOpenChangeComplete={(next) => !next && onCloseComplete?.()}
+    >
       <DialogContent
         showCloseButton={false}
-        className="top-1/2 w-[calc(100vw-2rem)] max-w-[60rem] -translate-y-1/2 overflow-hidden rounded-xl shadow-2xl ring-1 ring-foreground/10"
+        className="top-1/2 w-[calc(100vw-2rem)] max-w-[60rem] -translate-y-1/2 overflow-hidden rounded-xl shadow-2xl ring-1 ring-foreground/10 duration-[160ms]"
       >
-        <DialogTitle className="sr-only">{displayedAsset.title}</DialogTitle>
+        <DialogTitle className="sr-only">
+          {displayedAsset?.title ?? "Loading video"}
+        </DialogTitle>
         <DialogDescription className="sr-only">
           {accessibleDescription}
         </DialogDescription>
         <DialogBody className="max-h-[calc(100svh-2rem)] overflow-y-auto rounded-xl border-0 bg-background p-0">
-          <VideoViewerContent
-            key={displayedAsset.video.videoId}
-            asset={displayedAsset}
-            open={open}
-            workspaceSlug={workspaceSlug}
-            onShowInBoard={onShowInBoard}
-          />
+          {displayedAsset ? (
+            <VideoViewerContent
+              key={displayedAsset.video.videoId}
+              asset={displayedAsset}
+              open={open}
+              workspaceSlug={workspaceSlug}
+              onShowInBoard={onShowInBoard}
+            />
+          ) : (
+            <VideoViewerLoading />
+          )}
         </DialogBody>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function VideoViewerLoading() {
+  return (
+    <div className="space-y-4 p-3 sm:p-4">
+      <Skeleton className="aspect-video w-full rounded-md" />
+      <Skeleton className="h-6 w-2/3" />
+      <Skeleton className="h-4 w-36" />
+    </div>
   );
 }
 

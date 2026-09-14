@@ -119,6 +119,9 @@ export function NoteDetailDrawer({
   onBack,
   hasPreviousNote = false,
   onShowInBoard,
+  loading = false,
+  open: controlledOpen,
+  onRequestClose,
   onClose,
 }: {
   note: NoteAsset | undefined;
@@ -145,6 +148,9 @@ export function NoteDetailDrawer({
   onBack?: () => void;
   hasPreviousNote?: boolean;
   onShowInBoard?: () => void;
+  loading?: boolean;
+  open?: boolean;
+  onRequestClose?: () => void;
   onClose: () => void;
 }) {
   const isCreateMode = createOptions !== undefined;
@@ -188,6 +194,7 @@ export function NoteDetailDrawer({
   const [workspaceOpen, setWorkspaceOpen] = useState(
     note !== undefined || Boolean(createOptions?.open),
   );
+  const isWorkspaceOpen = controlledOpen ?? workspaceOpen;
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [copied, setCopied] = useState(false);
   const [highlightColor, setHighlightColor] = useState<NoteHighlightColor>();
@@ -225,8 +232,9 @@ export function NoteDetailDrawer({
   const closeWorkspace = useCallback(() => {
     closeRequestedRef.current = true;
     setActiveNoteId(undefined);
-    setWorkspaceOpen(false);
-  }, [setActiveNoteId]);
+    if (controlledOpen === undefined) setWorkspaceOpen(false);
+    else onRequestClose?.();
+  }, [controlledOpen, onRequestClose, setActiveNoteId]);
   const frontMatter = useMemo(() => parseFrontMatter(draft), [draft]);
   const updateNote = useUpdateNote(workspaceSlug);
   const deleteAsset = useDeleteAsset(workspaceSlug);
@@ -270,7 +278,7 @@ export function NoteDetailDrawer({
   }, [activeNote, createOptions?.open, isCreateMode]);
 
   useEffect(() => {
-    if (!isCreateMode || activeNote || !workspaceOpen) return;
+    if (!isCreateMode || activeNote || !isWorkspaceOpen) return;
 
     const focusFrame = window.requestAnimationFrame(() => {
       const input = titleInputRef.current;
@@ -280,10 +288,10 @@ export function NoteDetailDrawer({
     });
 
     return () => window.cancelAnimationFrame(focusFrame);
-  }, [activeNote, isCreateMode, workspaceOpen]);
+  }, [activeNote, isCreateMode, isWorkspaceOpen]);
 
   useEffect(() => {
-    if (!isCreateMode || !createDraftId || !workspaceOpen) return;
+    if (!isCreateMode || !createDraftId || !isWorkspaceOpen) return;
     const storedDraft = loadCreateNoteDraft(createDraftId);
     const nextDraft =
       createOptions.initialContent || storedDraft?.content || "";
@@ -299,7 +307,7 @@ export function NoteDetailDrawer({
     createDraftId,
     createOptions?.initialContent,
     isCreateMode,
-    workspaceOpen,
+    isWorkspaceOpen,
   ]);
 
   useEffect(() => {
@@ -334,12 +342,12 @@ export function NoteDetailDrawer({
       !isCreateMode ||
       activeNote ||
       !createDraftId ||
-      !workspaceOpen ||
+      !isWorkspaceOpen ||
       !hasSaveableNote(title, draft)
     )
       return;
     saveCreateNoteDraft(createDraftId, { content: draft, title, open: true });
-  }, [activeNote, createDraftId, draft, isCreateMode, title, workspaceOpen]);
+  }, [activeNote, createDraftId, draft, isCreateMode, isWorkspaceOpen, title]);
 
   useEffect(() => {
     setActiveNoteId(activeNote?.id);
@@ -347,7 +355,7 @@ export function NoteDetailDrawer({
   }, [activeNote?.id, setActiveNoteId]);
 
   useEffect(() => {
-    if (!workspaceOpen || !activeNote || isPeekMirror) return;
+    if (!isWorkspaceOpen || !activeNote || isPeekMirror) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return;
       if (!matchesKeybinding(event, PEEK_NOTE_SHORTCUT)) return;
@@ -364,7 +372,7 @@ export function NoteDetailDrawer({
     isPeekMirror,
     location,
     peekNote,
-    workspaceOpen,
+    isWorkspaceOpen,
   ]);
 
   useEffect(() => {
@@ -1199,7 +1207,7 @@ export function NoteDetailDrawer({
 
   return (
     <NoteWorkspace
-      open={workspaceOpen}
+      open={isWorkspaceOpen}
       modal={!peekTarget}
       disablePointerDismissal={Boolean(peekTarget) || isPeekResizing}
       onOpenChange={(open) => {
@@ -1212,7 +1220,11 @@ export function NoteDetailDrawer({
         }
       }}
       onOpenChangeComplete={(open) => {
-        if (open || !closeRequestedRef.current) return;
+        if (
+          open ||
+          (controlledOpen === undefined && !closeRequestedRef.current)
+        )
+          return;
         closeRequestedRef.current = false;
         if (isCreateMode) {
           setCreatedNote(undefined);
@@ -1234,7 +1246,7 @@ export function NoteDetailDrawer({
       {children ? <NoteWorkspaceTrigger render={children} /> : null}
       <NoteWorkspaceContent className="md:right-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--workspace-peek-stage-gap))] md:w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--workspace-peek-stage-gap))] md:transition-[right,width,opacity,scale,transform] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none">
         <NoteWorkspaceTitle>
-          {activeNote ? "Note" : "New note"}
+          {activeNote ? "Note" : loading ? "Loading note" : "New note"}
         </NoteWorkspaceTitle>
         <div className="relative z-20 mt-[var(--app-shell-inset)] flex shrink-0 items-center justify-between gap-3 rounded-t-xl rounded-b-none p-2 text-xs font-medium text-muted-foreground">
           <div className="ml-[var(--app-shell-inset)] flex items-center gap-0.5">
@@ -1438,7 +1450,9 @@ export function NoteDetailDrawer({
           className="note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto"
         >
           <div className="note-workspace-column [&_.ProseMirror]:!pt-8">
-            {isCreateMode || activeNote ? (
+            {loading && !activeNote ? (
+              <NoteEditorLoading />
+            ) : isCreateMode || activeNote ? (
               <Suspense fallback={<NoteEditorLoading />}>
                 <NoteEditorErrorBoundary noteId={activeNote?.id ?? "new-note"}>
                   <NoteTitleField

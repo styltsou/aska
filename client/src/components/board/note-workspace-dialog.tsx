@@ -43,7 +43,7 @@ export function NoteWorkspaceContent({
       <DialogPrimitive.Popup
         data-slot="note-workspace-content"
         className={cn(
-          "fixed inset-0 z-50 flex h-dvh w-dvw flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition duration-100 outline-none data-ending-style:pointer-events-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
+          "fixed inset-0 z-50 flex h-dvh w-dvw flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition duration-[160ms] outline-none data-ending-style:pointer-events-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
           className,
         )}
         {...props}

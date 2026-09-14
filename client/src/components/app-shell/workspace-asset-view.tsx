@@ -16,9 +16,11 @@ import {
   collectionContentsQueryOptions,
   inboxContentsQueryOptions,
   type AssetLocation,
+  type CollectionImageNode,
   type CollectionNode,
 } from "@/api/collection";
 import { fetchPeekableAsset } from "@/api/collection/fetchers";
+import type { PeekableAssetResponse } from "@/api/collection/types";
 import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
@@ -34,8 +36,19 @@ import {
   getCurrentBoardScopeKey,
   useWorkspacePeek,
 } from "./workspace-peek";
+import {
+  completeAssetPresentationClose,
+  openAssetPresentation,
+  requestAssetPresentationClose,
+  syncAssetPresentationToUrl,
+  type AssetPresentation,
+} from "./workspace-asset-view-state";
 
-type OpenAssetOptions = { replace?: boolean };
+type OpenAssetOptions = {
+  replace?: boolean;
+  initialData?: PeekableAssetResponse;
+  imageSiblings?: CollectionImageNode[];
+};
 
 type WorkspaceAssetViewContextValue = {
   assetId?: string;
@@ -73,19 +86,54 @@ export function WorkspaceAssetViewProvider({
     select: (state) => (state.location.search as { asset?: unknown }).asset,
   });
   const assetId = parseWorkspaceAssetId(rawAssetId);
+  const queryClient = useQueryClient();
   const openedInAppAssetIdsRef = useRef(new Set<string>());
+  const presentationStackRef = useRef<AssetPresentation[]>([]);
+  const [presentation, setPresentation] = useState<AssetPresentation | null>(
+    () => (assetId ? { assetId, open: true, urlStatus: "committed" } : null),
+  );
+  const presentationRef = useRef(presentation);
+  presentationRef.current = presentation;
 
   const openAsset = useCallback(
     (nextAssetId: string, options?: OpenAssetOptions) => {
       if (!parseWorkspaceAssetId(nextAssetId)) return;
+      const currentPresentation = presentationRef.current;
+      if (
+        !options?.replace &&
+        currentPresentation?.open &&
+        currentPresentation.assetId !== nextAssetId
+      ) {
+        presentationStackRef.current.push(currentPresentation);
+      }
+      const queryKey = workspaceAssetQueryKey(workspaceSlug, nextAssetId);
+      if (options?.initialData) {
+        queryClient.setQueryData<PeekableAssetResponse>(
+          queryKey,
+          (current) => current ?? options.initialData,
+        );
+        void queryClient.invalidateQueries({
+          queryKey,
+          exact: true,
+          refetchType: "none",
+        });
+      }
+      setPresentation(
+        openAssetPresentation(nextAssetId, assetId, options?.imageSiblings),
+      );
       openedInAppAssetIdsRef.current.add(nextAssetId);
       recordRecentWorkspaceAsset(workspaceSlug, nextAssetId);
       void navigate({
         search: (previous) => ({ ...previous, asset: nextAssetId }),
         replace: options?.replace,
+      }).catch(() => {
+        openedInAppAssetIdsRef.current.delete(nextAssetId);
+        setPresentation(
+          assetId ? openAssetPresentation(assetId, assetId) : null,
+        );
       });
     },
-    [navigate, workspaceSlug],
+    [assetId, navigate, queryClient, workspaceSlug],
   );
 
   const removeAssetFromUrl = useCallback(
@@ -101,24 +149,50 @@ export function WorkspaceAssetViewProvider({
   );
 
   const closeAsset = useCallback(() => {
-    const openedHere = assetId
-      ? openedInAppAssetIdsRef.current.delete(assetId)
-      : false;
+    setPresentation(requestAssetPresentationClose);
+  }, []);
 
+  const completeAssetClose = useCallback(() => {
+    const current = presentationRef.current;
+    const completed = completeAssetPresentationClose(current);
+    setPresentation(completed.presentation);
+    if (!completed.shouldCleanupUrl || !current) return;
+
+    const openedHere = openedInAppAssetIdsRef.current.delete(current.assetId);
     if (openedHere && window.history.length > 1) {
+      const previousPresentation = presentationStackRef.current.pop();
+      if (previousPresentation) {
+        setPresentation(
+          openAssetPresentation(
+            previousPresentation.assetId,
+            undefined,
+            previousPresentation.imageSiblings,
+          ),
+        );
+      }
       window.history.back();
       return;
     }
     void removeAssetFromUrl(true);
-  }, [assetId, removeAssetFromUrl]);
+  }, [removeAssetFromUrl]);
 
   useEffect(() => {
-    if (!assetId) openedInAppAssetIdsRef.current.clear();
+    const current = presentationRef.current;
+    if (assetId && current && current.assetId !== assetId) {
+      const previous = presentationStackRef.current.at(-1);
+      if (previous?.assetId === assetId) presentationStackRef.current.pop();
+      else presentationStackRef.current.length = 0;
+    }
+    setPresentation((current) => syncAssetPresentationToUrl(current, assetId));
+    if (!assetId) {
+      openedInAppAssetIdsRef.current.clear();
+      presentationStackRef.current.length = 0;
+    }
   }, [assetId]);
 
   const value = useMemo(
-    () => ({ assetId, openAsset, closeAsset }),
-    [assetId, closeAsset, openAsset],
+    () => ({ assetId: presentation?.assetId, openAsset, closeAsset }),
+    [closeAsset, openAsset, presentation?.assetId],
   );
 
   return (
@@ -126,9 +200,10 @@ export function WorkspaceAssetViewProvider({
       {children}
       <WorkspaceAssetViewController
         workspaceSlug={workspaceSlug}
-        assetId={assetId}
+        presentation={presentation}
         openAsset={openAsset}
         closeAsset={closeAsset}
+        completeAssetClose={completeAssetClose}
         removeAssetFromUrl={removeAssetFromUrl}
       />
     </WorkspaceAssetViewContext.Provider>
@@ -137,17 +212,20 @@ export function WorkspaceAssetViewProvider({
 
 function WorkspaceAssetViewController({
   workspaceSlug,
-  assetId,
+  presentation,
   openAsset,
   closeAsset,
+  completeAssetClose,
   removeAssetFromUrl,
 }: {
   workspaceSlug: string;
-  assetId?: string;
+  presentation: AssetPresentation | null;
   openAsset: WorkspaceAssetViewContextValue["openAsset"];
   closeAsset: () => void;
+  completeAssetClose: () => void;
   removeAssetFromUrl: (replace?: boolean) => Promise<void>;
 }) {
+  const assetId = presentation?.assetId;
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -168,7 +246,7 @@ function WorkspaceAssetViewController({
   }, [assetId]);
 
   useEffect(() => {
-    if (!assetId || !assetQuery.isError) return;
+    if (!assetId || !assetQuery.isError || assetQuery.data) return;
     if (unavailableAssetRef.current === assetId) return;
     unavailableAssetRef.current = assetId;
     const message =
@@ -179,8 +257,14 @@ function WorkspaceAssetViewController({
             "Could not open this asset.",
           );
     toast.error(message);
-    void removeAssetFromUrl(true);
-  }, [assetId, assetQuery.error, assetQuery.isError, removeAssetFromUrl]);
+    closeAsset();
+  }, [
+    assetId,
+    assetQuery.data,
+    assetQuery.error,
+    assetQuery.isError,
+    closeAsset,
+  ]);
 
   const response = assetQuery.data;
   const asset = useMemo(
@@ -193,8 +277,8 @@ function WorkspaceAssetViewController({
     if (unavailableAssetRef.current === assetId) return;
     unavailableAssetRef.current = assetId;
     toast.info("Regular links open in a new tab.");
-    void removeAssetFromUrl(true);
-  }, [asset, assetId, removeAssetFromUrl]);
+    closeAsset();
+  }, [asset, assetId, closeAsset]);
 
   const location = response?.location;
   const destinationScope = location
@@ -222,42 +306,65 @@ function WorkspaceAssetViewController({
     ),
     enabled: asset?.type === "image" && location?.type === "collection",
   });
-  const siblingNodes =
+  const queriedSiblingNodes =
     location?.type === "collection"
       ? collectionSiblingQuery.data?.nodes
       : inboxSiblingQuery.data?.nodes;
+  const siblingNodes = queriedSiblingNodes ?? presentation?.imageSiblings;
+  const siblingImageNodes = useMemo(
+    () =>
+      (siblingNodes ?? []).filter(
+        (
+          node: CollectionNode,
+        ): node is Extract<CollectionNode, { type: "image" }> =>
+          node.type === "image",
+      ),
+    [siblingNodes],
+  );
   const siblingImages = useMemo(
     () =>
-      (siblingNodes ?? [])
-        .filter(
-          (
-            node: CollectionNode,
-          ): node is Extract<CollectionNode, { type: "image" }> =>
-            node.type === "image",
-        )
+      siblingImageNodes
         .map(collectionNodeToAsset)
         .filter(
           (candidate): candidate is ImageAsset => candidate.type === "image",
         ),
-    [siblingNodes],
+    [siblingImageNodes],
   );
 
-  if (!asset || !location) return null;
+  if (!assetId || !presentation) return null;
+
+  const requestedType = asset?.type ?? assetId.split("-", 1)[0];
+  const loading =
+    !asset ||
+    !location ||
+    (requestedType === "link" && asset.type === "link" && !asset.video);
+  const resolvedLocation = location ?? ({ type: "inbox" } as const);
 
   const showAction = canShowInBoard ? showInBoard : undefined;
   const collectionPath =
-    location.type === "collection"
+    location?.type === "collection"
       ? [location.collectionSlug, location.folderPath].filter(Boolean).join("/")
       : undefined;
+  const viewerAssets =
+    siblingImages.length > 0
+      ? siblingImages
+      : asset?.type === "image"
+        ? [asset]
+        : [];
 
   return (
     <>
-      {asset.type === "note" ? (
+      {requestedType === "note" ? (
         <NoteDetailDrawer
-          note={asset}
+          note={asset?.type === "note" ? asset : undefined}
           workspaceSlug={workspaceSlug}
-          location={location}
-          noteExtractionTarget={noteExtractionTarget(location)}
+          location={resolvedLocation}
+          noteExtractionTarget={
+            location ? noteExtractionTarget(location) : undefined
+          }
+          loading={loading}
+          open={presentation.open}
+          onRequestClose={closeAsset}
           onNoteChange={(note) => {
             void queryClient.invalidateQueries({
               queryKey: workspaceAssetQueryKey(workspaceSlug, note.id),
@@ -267,43 +374,64 @@ function WorkspaceAssetViewController({
           onPromote={(note) => openAsset(note.id)}
           onSwap={(note) => openAsset(note.id, { replace: true })}
           onShowInBoard={showAction}
-          onClose={closeAsset}
+          onClose={completeAssetClose}
         />
       ) : null}
-      {asset.type === "image" ? (
+      {requestedType === "image" ? (
         <ImageAssetViewer
-          asset={asset}
-          assets={siblingImages.length > 0 ? siblingImages : [asset]}
-          open
+          asset={asset?.type === "image" ? asset : undefined}
+          assets={viewerAssets}
+          open={presentation.open}
+          loading={loading}
           workspaceSlug={workspaceSlug}
           onShowInBoard={showAction}
-          onAssetChange={(image) => openAsset(image.id, { replace: true })}
+          onAssetChange={(image) => {
+            const node = siblingImageNodes.find(
+              (candidate) => candidate.id === image.id,
+            );
+            openAsset(image.id, {
+              replace: true,
+              initialData:
+                node?.type === "image" && location
+                  ? { asset: node, location }
+                  : undefined,
+              imageSiblings: siblingImageNodes,
+            });
+          }}
           onOpenChange={(open) => {
             if (!open) closeAsset();
           }}
+          onOpenChangeComplete={(open) => {
+            if (!open) completeAssetClose();
+          }}
         />
       ) : null}
-      {asset.type === "color" ? (
+      {requestedType === "color" ? (
         <ColorDetailDrawer
-          color={asset}
-          open
+          color={asset?.type === "color" ? asset : undefined}
+          open={presentation.open}
+          loading={loading}
           workspaceSlug={workspaceSlug}
-          scope={colorSearchScope(location)}
+          scope={colorSearchScope(resolvedLocation)}
           onClose={closeAsset}
+          onCloseComplete={completeAssetClose}
           onShowInBoard={showAction}
           onOpenImage={(image) => openAsset(image.id)}
           onEdit={() => setColorEditorOpen(true)}
         />
       ) : null}
-      {asset.type === "link" && asset.video ? (
+      {requestedType === "link" ? (
         <YouTubeVideoViewer
-          asset={asset}
+          asset={asset?.type === "link" ? asset : undefined}
+          open={presentation.open}
+          loading={loading}
           workspaceSlug={workspaceSlug}
           onShowInBoard={showAction}
           onClose={closeAsset}
+          onCloseComplete={completeAssetClose}
         />
       ) : null}
-      {asset.type === "color" ? (
+      {asset?.type === "color" && location ? (
         <ColorEditorDialog
           workspaceSlug={workspaceSlug}
           target={location.type === "inbox" ? "inbox" : "collection"}
