@@ -25,7 +25,6 @@ import { MoveToDialog } from "@/components/move-to-dialog";
 import { Masonry } from "@/components/masonry-grid";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
-import { isGridRenderableNode } from "@/lib/collection-grid-node";
 import { sortCollectionNodesByMostRecent } from "@/lib/collection-node-order";
 import {
   isPersistedSelectableAsset,
@@ -123,7 +122,7 @@ export function CollectionGridView({
   );
 
   const orderedNodes = useMemo(
-    () => sortCollectionNodesByMostRecent(nodes.filter(isGridRenderableNode)),
+    () => sortCollectionNodesByMostRecent(nodes),
     [nodes],
   );
   const nodeById = useMemo(
