@@ -122,7 +122,7 @@ type CanvasProps = {
   folderPath?: string;
   expectedParentFolderNodeId: string | null;
   nodes: CollectionNode[];
-  canvasObjects: CanvasObject[];
+  canvasObjects: readonly CanvasObject[];
   isColorFilterActive?: boolean;
   colorMatchNodeIds?: ReadonlySet<string>;
   focusedNodeId?: string;
@@ -325,7 +325,7 @@ function CanvasSurface({
     selectedIds: selectedIdSet,
     count: selectedIds.length,
   };
-  const eligibleNodeIds = useMemo(() => {
+  const eligibleNodeIdsKey = useMemo(() => {
     const ids = nodes
       .filter(
         (node) =>
@@ -339,8 +339,12 @@ function CanvasSurface({
       .map((node) => node.id);
     ids.push(...canvasObjects.map((object) => object.id));
     if (draftText) ids.push(draftText.id);
-    return new Set(ids);
+    return ids.join("\u001f");
   }, [canvasObjects, colorMatchNodeIds, draftText, isColorFilterActive, nodes]);
+  const eligibleNodeIds = useMemo(
+    () => new Set(eligibleNodeIdsKey ? eligibleNodeIdsKey.split("\u001f") : []),
+    [eligibleNodeIdsKey],
+  );
   const marquee = useMarqueeSelection({
     surfaceRef: boardRef,
     eligibleNodeIds,
@@ -1061,10 +1065,11 @@ function CanvasSurface({
 
   useEffect(() => {
     if (selection.scopeKey !== boardKey) return;
-    replaceSelection(
-      boardKey,
-      selectedIds.filter((nodeId) => eligibleNodeIds.has(nodeId)),
+    const retainedIds = selectedIds.filter((nodeId) =>
+      eligibleNodeIds.has(nodeId),
     );
+    if (retainedIds.length === selectedIds.length) return;
+    replaceSelection(boardKey, retainedIds);
   }, [
     boardKey,
     eligibleNodeIds,

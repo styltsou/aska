@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { collectionQueryKeys } from "@/api/collection/query-keys";
-import { useCollectionContents } from "@/api/collection";
+import { useCollectionContents, type CanvasObject } from "@/api/collection";
 import { type ColorSearchScope, useColorImageSearch } from "@/api/color-search";
 import {
   BoardActionRail,
@@ -32,6 +32,7 @@ import {
 import { useWorkspaceAssetView } from "@/components/app-shell/workspace-asset-view";
 
 const EMPTY_COLOR_RESULTS: readonly [] = [];
+const EMPTY_CANVAS_OBJECTS: readonly CanvasObject[] = [];
 
 export const Route = createFileRoute("/$workspaceSlug/collections/$")({
   head: () => ({
@@ -333,7 +334,7 @@ function CollectionPage() {
                     activeFolder ? `folder-${activeFolder.id}` : null
                   }
                   nodes={nodes}
-                  canvasObjects={data?.canvasObjects ?? []}
+                  canvasObjects={data?.canvasObjects ?? EMPTY_CANVAS_OBJECTS}
                   isColorFilterActive={hasResolvedColorSearch}
                   colorMatchNodeIds={colorMatchNodeIds}
                   focusedNodeId={focusedNodeId}
