@@ -22,6 +22,52 @@ function columnCountFor(width: number): number {
 }
 
 type Item = { node: ReactNode; key: string };
+export type MasonryPosition = { x: number; y: number; width: number };
+
+export function calculateMasonryLayout(
+  heights: readonly number[],
+  columns: number,
+  itemWidth: number,
+): { positions: MasonryPosition[]; height: number } | undefined {
+  if (!columns || !heights.length || heights.some((height) => height <= 0)) {
+    return undefined;
+  }
+
+  const columnHeights = Array<number>(columns).fill(0);
+  const positions = heights.map((height) => {
+    const column = columnHeights.indexOf(Math.min(...columnHeights));
+    const position = {
+      x: column * (itemWidth + MASONRY_GAP),
+      y: columnHeights[column]!,
+      width: itemWidth,
+    };
+    columnHeights[column]! += height + MASONRY_GAP;
+    return position;
+  });
+
+  return {
+    positions,
+    height: Math.max(...columnHeights) - MASONRY_GAP,
+  };
+}
+
+function layoutsEqual(
+  current: readonly MasonryPosition[],
+  next: readonly MasonryPosition[],
+  currentHeight: number,
+  nextHeight: number,
+) {
+  return (
+    currentHeight === nextHeight &&
+    current.length === next.length &&
+    current.every(
+      (position, index) =>
+        position.x === next[index]?.x &&
+        position.y === next[index]?.y &&
+        position.width === next[index]?.width,
+    )
+  );
+}
 
 export function Masonry({
   children,
@@ -44,15 +90,18 @@ export function Masonry({
       })),
     [children],
   );
-  const [positions, setPositions] = useState<
-    { x: number; y: number; width: number }[]
-  >([]);
+  const [positions, setPositions] = useState<MasonryPosition[]>([]);
   const [height, setHeight] = useState(0);
+  const layoutRef = useRef({ positions, height });
+  layoutRef.current = { positions, height };
 
   useIsomorphicLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const update = () => setWidth(el.clientWidth);
+    const update = () => {
+      const nextWidth = el.clientWidth;
+      setWidth((current) => (current === nextWidth ? current : nextWidth));
+    };
     update();
     const observer =
       typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
@@ -65,37 +114,52 @@ export function Masonry({
     ? Math.max(0, (width - MASONRY_GAP * (columns - 1)) / columns)
     : 0;
 
-  const recompute = useRef<() => void>(() => {});
-  recompute.current = () => {
-    if (!columns || !items.length) return;
-    const heights = itemRefs.current.map((el) => el?.offsetHeight ?? 0);
-    if (heights.some((h) => h === 0)) return;
+  const frameRef = useRef<number | undefined>(undefined);
+  const scheduleRecompute = useRef<() => void>(() => {});
+  scheduleRecompute.current = () => {
+    if (frameRef.current !== undefined) return;
 
-    const colHeights = Array<number>(columns).fill(0);
-    const next = items.map((_, index) => {
-      const col = colHeights.indexOf(Math.min(...colHeights));
-      const pos = {
-        x: col * (itemWidth + MASONRY_GAP),
-        y: colHeights[col],
-        width: itemWidth,
-      };
-      colHeights[col] += heights[index] + MASONRY_GAP;
-      return pos;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = undefined;
+      const heights = itemRefs.current
+        .slice(0, items.length)
+        .map((el) => el?.offsetHeight ?? 0);
+      const layout = calculateMasonryLayout(heights, columns, itemWidth);
+      if (!layout) return;
+
+      const current = layoutRef.current;
+      if (
+        layoutsEqual(
+          current.positions,
+          layout.positions,
+          current.height,
+          layout.height,
+        )
+      ) {
+        return;
+      }
+
+      layoutRef.current = layout;
+      setPositions(layout.positions);
+      setHeight(layout.height);
     });
-
-    setPositions(next);
-    setHeight(Math.max(...colHeights) - MASONRY_GAP);
   };
 
   useEffect(() => {
-    recompute.current();
+    scheduleRecompute.current();
     const nodes = itemRefs.current.filter(Boolean) as HTMLDivElement[];
     const observer =
       typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => recompute.current())
+        ? new ResizeObserver(() => scheduleRecompute.current())
         : null;
     nodes.forEach((el) => observer?.observe(el));
-    return () => observer?.disconnect();
+    return () => {
+      observer?.disconnect();
+      if (frameRef.current !== undefined) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = undefined;
+      }
+    };
   }, [columns, items, itemWidth]);
 
   return (

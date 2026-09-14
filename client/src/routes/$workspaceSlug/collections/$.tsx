@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Activity, useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -182,6 +182,19 @@ function CollectionPage() {
   const boardView = useSessionStore(
     (state) => state.collectionViews[collectionViewScope] ?? "canvas",
   );
+  const [warmedBoardKey, setWarmedBoardKey] = useState<string>();
+  const isInactiveViewWarmed = warmedBoardKey === boardKey;
+
+  useEffect(() => {
+    const warm = () => setWarmedBoardKey(boardKey);
+    if (typeof window.requestIdleCallback === "function") {
+      const idleCallback = window.requestIdleCallback(warm, { timeout: 750 });
+      return () => window.cancelIdleCallback(idleCallback);
+    }
+
+    const timeout = window.setTimeout(warm, 250);
+    return () => window.clearTimeout(timeout);
+  }, [boardKey]);
 
   useEffect(() => {
     if (
@@ -305,8 +318,8 @@ function CollectionPage() {
           boardKey={boardKey}
         >
           <div className="relative flex h-full min-w-0 flex-1">
-            {boardView === "canvas" ? (
-              <>
+            {boardView === "canvas" || isInactiveViewWarmed ? (
+              <Activity mode={boardView === "canvas" ? "visible" : "hidden"}>
                 <BoardActionRail
                   workspaceSlug={workspaceSlug}
                   collectionPath={collectionPath}
@@ -346,45 +359,48 @@ function CollectionPage() {
                   onOpenVideo={(video) => handleOpenAsset(video.id)}
                   onOpenFolder={handleOpenFolder}
                 />
-              </>
-            ) : (
-              <CollectionGridView
-                key={boardKey}
-                boardKey={boardKey}
-                workspaceSlug={workspaceSlug}
-                collectionSlug={collectionSlug}
-                folderPath={parentFolderPath}
-                expectedParentFolderNodeId={
-                  activeFolder ? `folder-${activeFolder.id}` : null
-                }
-                nodes={nodes}
-                isColorFilterActive={hasResolvedColorSearch}
-                colorMatchNodeIds={colorMatchNodeIds}
-                focusedNodeId={focusedNodeId}
-                focusRequestId={focusedShowRequest?.id}
-                onDismissFocusedNode={() => setFocusedShowRequest(undefined)}
-                loadError={loadError}
-                emptyTitle={
-                  isTypeFilterActive
-                    ? "No matching assets"
-                    : folderPath
-                      ? "Folder is empty"
-                      : "Collection is empty"
-                }
-                emptyDescription={
-                  isTypeFilterActive
-                    ? "Try a different asset type."
-                    : folderPath
-                      ? "Add images, notes, links, or folders to this folder."
-                      : "Add images, notes, links, or folders to this collection."
-                }
-                onOpenNote={(note) => handleOpenAsset(note.id)}
-                onOpenImage={(image) => handleOpenAsset(image.id)}
-                onOpenColor={(color) => handleOpenAsset(color.id)}
-                onOpenVideo={(video) => handleOpenAsset(video.id)}
-                onOpenFolder={handleOpenFolder}
-              />
-            )}
+              </Activity>
+            ) : null}
+            {boardView === "grid" || isInactiveViewWarmed ? (
+              <Activity mode={boardView === "grid" ? "visible" : "hidden"}>
+                <CollectionGridView
+                  key={boardKey}
+                  boardKey={boardKey}
+                  workspaceSlug={workspaceSlug}
+                  collectionSlug={collectionSlug}
+                  folderPath={parentFolderPath}
+                  expectedParentFolderNodeId={
+                    activeFolder ? `folder-${activeFolder.id}` : null
+                  }
+                  nodes={nodes}
+                  isColorFilterActive={hasResolvedColorSearch}
+                  colorMatchNodeIds={colorMatchNodeIds}
+                  focusedNodeId={focusedNodeId}
+                  focusRequestId={focusedShowRequest?.id}
+                  onDismissFocusedNode={() => setFocusedShowRequest(undefined)}
+                  loadError={loadError}
+                  emptyTitle={
+                    isTypeFilterActive
+                      ? "No matching assets"
+                      : folderPath
+                        ? "Folder is empty"
+                        : "Collection is empty"
+                  }
+                  emptyDescription={
+                    isTypeFilterActive
+                      ? "Try a different asset type."
+                      : folderPath
+                        ? "Add images, notes, links, or folders to this folder."
+                        : "Add images, notes, links, or folders to this collection."
+                  }
+                  onOpenNote={(note) => handleOpenAsset(note.id)}
+                  onOpenImage={(image) => handleOpenAsset(image.id)}
+                  onOpenColor={(color) => handleOpenAsset(color.id)}
+                  onOpenVideo={(video) => handleOpenAsset(video.id)}
+                  onOpenFolder={handleOpenFolder}
+                />
+              </Activity>
+            ) : null}
           </div>
         </BoardUploadZone>
       </BoardContextMenu>

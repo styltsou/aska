@@ -25,6 +25,7 @@ import { MoveToDialog } from "@/components/move-to-dialog";
 import { Masonry } from "@/components/masonry-grid";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
+import { isGridRenderableNode } from "@/lib/collection-grid-node";
 import { sortCollectionNodesByMostRecent } from "@/lib/collection-node-order";
 import {
   isPersistedSelectableAsset,
@@ -36,7 +37,8 @@ import { cn } from "@/lib/utils";
 import { useTransientStore } from "@/store";
 import type { LinkAsset } from "@/types/asset";
 
-const ASSET_PAGE_SIZE = 40;
+const INITIAL_ASSET_COUNT = 12;
+const ASSET_PAGE_SIZE = 24;
 const GRID_NODE_DRAG_TYPE = "grid-node";
 const GRID_FOLDER_DROP_PREFIX = "grid-folder:";
 
@@ -98,7 +100,8 @@ export function CollectionGridView({
   const scrollRef = useRef<HTMLDivElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const [visibleAssetCount, setVisibleAssetCount] = useState(ASSET_PAGE_SIZE);
+  const [visibleAssetCount, setVisibleAssetCount] =
+    useState(INITIAL_ASSET_COUNT);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [activeDrag, setActiveDrag] = useState<GridNodeDragData>();
   const [pendingFolderDrop, setPendingFolderDrop] =
@@ -120,7 +123,7 @@ export function CollectionGridView({
   );
 
   const orderedNodes = useMemo(
-    () => sortCollectionNodesByMostRecent(nodes),
+    () => sortCollectionNodesByMostRecent(nodes.filter(isGridRenderableNode)),
     [nodes],
   );
   const nodeById = useMemo(
@@ -240,7 +243,7 @@ export function CollectionGridView({
   ]);
 
   useEffect(() => {
-    setVisibleAssetCount(ASSET_PAGE_SIZE);
+    setVisibleAssetCount(INITIAL_ASSET_COUNT);
   }, [assets, boardKey]);
 
   useEffect(() => {
