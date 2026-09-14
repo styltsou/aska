@@ -46,7 +46,7 @@ sequenceDiagram
   A->>D: Transaction: asset + link + resource/attempt
   A-->>C: 201 persisted usable link card
   A->>Q: Enqueue attempt ID + generation
-  C->>A: Poll collection while queued/resolving
+  C->>A: Poll this new link's status while queued/resolving
   Q->>R: Deliver attempt
   R->>A: Signed claim(ID, generation)
   A-->>R: Normalized URL or ignored
@@ -54,14 +54,14 @@ sequenceDiagram
   R->>A: Signed metadata result + media intents
   A->>D: Guard generation; persist metadata/media rows
   A->>M: Enqueue media IDs + generations
-  A-->>C: Collection read exposes text metadata
+  A-->>C: Link status exposes text metadata
   M->>A: Signed media claim(ID, generation)
   A-->>M: Remote media URL, role, and profile
   M->>M: SSRF-safe fetch, validate, transform
   M->>S: Store immutable WebP variants
   M->>A: Signed variant manifest
   A->>D: Guard generation; mark media/resource ready
-  A-->>C: Collection read exposes authorized stored media
+  A-->>C: Link status exposes authorized stored media
   C->>C: Stop polling at ready, partial, or failed
 ```
 
@@ -78,9 +78,11 @@ image pipeline.
 
 `client/src/api/url-unfurl/hooks.ts` inserts a local `CollectionLinkNode` into
 the appropriate React Query cache, reserves its canvas position, and reconciles
-the temporary ID with the persisted node. Collection and Inbox queries poll at
-1.5 seconds only while at least one visible link is `queued` or `resolving`.
-They stop for terminal `ready`, `partial`, and `failed` states.
+the temporary ID with the persisted node. Only links created or manually
+refreshed in the current tab poll their small status endpoint; each response
+patches matching cached cards without refetching the whole collection or inbox.
+Polling stops for terminal `ready`, `partial`, and `failed` states, and does
+not resume after a page reload.
 
 `client/src/components/board/cards/link-asset-card.tsx` always renders a usable
 anchor from the user-supplied URL. It progressively adds text, favicon, and
@@ -147,8 +149,8 @@ Resolvers declare media intent rather than processing bytes. Each
 `external_resource_media` row has an explicit role and versioned processing
 profile:
 
-- `preview` + `link-preview-v1`: visual summary only; stored master, display,
-  preview, and blur placeholder; no palette or embeddings;
+- `preview` + `link-preview-v2`: visual summary only; stores one bounded
+  display thumbnail with no blur placeholder, palette, or embeddings;
 - `icon` + `icon-v1`: at most 64 by 64, stored as a validated WebP master;
 - `primary` and `cover`: reserved extension roles. A future resolver must map
   them to an explicit profile before use.
@@ -272,7 +274,7 @@ fixtures; they never call live websites. Coverage is split by ownership:
 - resolver tests cover precedence, fallbacks, malformed metadata, composition,
   and specialized failure fallback;
 - media tests cover validation, role profiles, and no-upscale behavior;
-- client tests cover clipboard/drop URL detection and conditional polling;
+- client tests cover clipboard/drop URL detection and per-link conditional polling;
 - database integration tests cover optimistic persistence, duplicate-resource
   reuse, progressive/partial results, stale generations, sensitive URLs, and
   deletion during active resolution;

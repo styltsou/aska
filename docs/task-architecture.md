@@ -41,7 +41,7 @@ receive a copy.
 | Lane           | Inputs                                       | Responsibility                                                                       |
 | -------------- | -------------------------------------------- | ------------------------------------------------------------------------------------ |
 | URL resolution | Resource-attempt commands                    | Safely fetch external pages and return normalized metadata and media intents         |
-| Image variants | Upload S3 events and resource-media commands | Acquire the source and generate profile-specific WebP variants and blur placeholders |
+| Image variants | Upload S3 events and resource-media commands | Acquire the source and generate profile-specific WebP variants, with blur placeholders only where the profile needs them |
 | Image palette  | Upload S3 events                             | Generate optional search-oriented colour analysis for primary image assets           |
 
 The image-variants worker has source adapters for trusted S3 uploads and

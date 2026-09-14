@@ -75,7 +75,7 @@ export class YouTubeOEmbedResolver implements UrlResolver {
               role: "preview",
               sourceUrl: thumbnailUrl,
               sourceMetadata: "oembed:thumbnail_url",
-              processingProfile: "link-preview-v1",
+              processingProfile: "link-preview-v2",
               alt: title,
             },
           ]

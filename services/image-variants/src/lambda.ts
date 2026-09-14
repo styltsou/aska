@@ -41,7 +41,7 @@ type ResourceMediaClaim =
       organizationId: string;
       storageId: string;
       role: "preview" | "icon" | "primary" | "cover";
-      processingProfile: "link-preview-v1" | "icon-v1";
+      processingProfile: "link-preview-v1" | "link-preview-v2" | "icon-v1";
     };
 
 function parseJob(body: string): VariantsJob {

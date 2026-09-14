@@ -12,7 +12,11 @@ const MASTER_MAX_WIDTH = 2_400;
 
 export const VARIANT_WIDTHS = { display: 960, preview: 320 } as const;
 
-export type ImageRenditionProfile = "upload-v1" | "link-preview-v1" | "icon-v1";
+export type ImageRenditionProfile =
+  | "upload-v1"
+  | "link-preview-v1"
+  | "link-preview-v2"
+  | "icon-v1";
 
 /** A generated, display-ready derivative that will be written to S3. */
 export type ProcessedVariant = {
@@ -77,6 +81,7 @@ export async function processImageVariants(
   if (
     profile !== "upload-v1" &&
     profile !== "link-preview-v1" &&
+    profile !== "link-preview-v2" &&
     profile !== "icon-v1"
   )
     throw terminal("unsupported_processing_profile");
@@ -117,6 +122,27 @@ export async function processImageVariants(
           bytes,
         },
       ],
+    };
+  }
+
+  // Link cards have a fixed aspect-ratio slot, so they do not need image
+  // dimensions, a blur placeholder, or several derivatives before painting.
+  // Keep the older v1 path below for already-queued jobs during deployment.
+  if (profile === "link-preview-v2") {
+    const display = await makeWidthVariant(
+      buffer,
+      "display",
+      VARIANT_WIDTHS.display,
+      metadata.width,
+      metadata.height,
+    );
+    return {
+      width: metadata.width,
+      height: metadata.height,
+      format: metadata.format,
+      sizeBytes: buffer.byteLength,
+      blurDataURL: null,
+      variants: [display],
     };
   }
 

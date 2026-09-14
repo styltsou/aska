@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { activeLinkRefetchInterval, createOptimisticLink } from "./hooks";
+import { createOptimisticLink } from "./hooks";
 
 describe("createOptimisticLink", () => {
   it("creates an immediate usable hostname card without resolved fields", () => {
@@ -21,20 +21,5 @@ describe("createOptimisticLink", () => {
       favicon: null,
       video: null,
     });
-  });
-});
-
-describe("activeLinkRefetchInterval", () => {
-  it("polls only while a link is queued or resolving", () => {
-    expect(
-      activeLinkRefetchInterval({
-        nodes: [{ type: "link", resolutionStatus: "queued" }],
-      }),
-    ).toBe(1500);
-    expect(
-      activeLinkRefetchInterval({
-        nodes: [{ type: "link", resolutionStatus: "partial" }],
-      }),
-    ).toBe(false);
   });
 });

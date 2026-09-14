@@ -79,7 +79,7 @@ export class GenericHtmlResolver implements UrlResolver {
                 role: "preview" as const,
                 sourceUrl: previewUrl,
                 sourceMetadata: metadata.previewUrl?.source ?? "unknown",
-                processingProfile: "link-preview-v1",
+                processingProfile: "link-preview-v2",
                 alt: metadata.previewAlt ?? null,
               },
             ]

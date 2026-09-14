@@ -78,11 +78,17 @@ export const ResourceMediaResultSchema = z.discriminatedUnion("event", [
     format: z.string().max(32),
     sizeBytes: z.number().int().positive(),
     blurDataURL: z.string().nullable(),
-    variants: z.object({
-      master: StoredVariantSchema,
-      display: StoredVariantSchema.optional(),
-      preview: StoredVariantSchema.optional(),
-    }),
+    variants: z
+      .object({
+        master: StoredVariantSchema.optional(),
+        display: StoredVariantSchema.optional(),
+        preview: StoredVariantSchema.optional(),
+      })
+      .refine(
+        (variants) =>
+          Boolean(variants.master || variants.display || variants.preview),
+        "At least one stored image variant is required",
+      ),
   }),
   PipelineClaimBaseSchema.extend({
     event: z.literal("resource.media.failed"),

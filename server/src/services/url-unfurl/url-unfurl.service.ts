@@ -793,7 +793,7 @@ export class UrlUnfurlService {
           sizeBytes: input.sizeBytes,
           blurDataURL: input.blurDataURL,
           variants: {
-            master: input.variants.master,
+            ...(input.variants.master ? { master: input.variants.master } : {}),
             ...(input.variants.display
               ? { display: input.variants.display }
               : {}),

@@ -72,7 +72,6 @@ import { emitBatchPlacementCompleted } from "@/components/canvas/batch-placement
 import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
 import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
-import { activeLinkRefetchInterval } from "@/api/url-unfurl/hooks";
 import { colorSearchQueryKeys } from "@/api/color-search/hooks";
 import {
   invalidateMentionSuggestionQueries,
@@ -140,9 +139,6 @@ export function inboxContentsQueryOptions(
     queryKey: collectionQueryKeys.inbox(workspaceSlug, typeSignature),
     queryFn: () => fetchInboxContents(workspaceSlug, normalizedTypes),
     staleTime: COLLECTION_CONTENTS_STALE_TIME,
-    refetchInterval: (query: { state: { data: unknown } }) =>
-      activeLinkRefetchInterval(query.state.data),
-    refetchIntervalInBackground: false,
   };
 }
 
@@ -169,9 +165,6 @@ export function collectionContentsQueryOptions(
         normalizedTypes,
       ),
     staleTime: COLLECTION_CONTENTS_STALE_TIME,
-    refetchInterval: (query: { state: { data: unknown } }) =>
-      activeLinkRefetchInterval(query.state.data),
-    refetchIntervalInBackground: false,
   };
 }
 

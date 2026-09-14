@@ -2,6 +2,7 @@ import { apiDelete, apiGet, apiGetBlob, apiPatch, apiPost } from "@/lib/api";
 import type {
   BulkDeleteResponse,
   CollectionContentsResponse,
+  CollectionLinkNode,
   ContentTypeFilter,
   CollectionsData,
   CreateCollectionInput,
@@ -127,6 +128,16 @@ export async function refreshLink(
   return apiPost<CreateLinkResponse>(
     `/api/v1/workspace/${workspaceSlug}/links/${encodeURIComponent(assetId)}/resolution`,
   );
+}
+
+export async function fetchLinkResolutionStatus(
+  workspaceSlug: string,
+  assetId: string,
+): Promise<CollectionLinkNode> {
+  const response = await apiGet<CreateLinkResponse>(
+    `/api/v1/workspace/${workspaceSlug}/links/${encodeURIComponent(assetId)}/status`,
+  );
+  return response.link;
 }
 
 export async function createImageUpload(

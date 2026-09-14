@@ -14,6 +14,10 @@ import type {
   InboxContentsResponse,
 } from "@/api/collection/types";
 import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
+import {
+  patchLinkInCaches,
+  trackLinkResolution,
+} from "./link-resolution-poller";
 
 type CreateLinkMutationInput = CreateLinkInput & {
   placement?: BoardInsertionPlacement;
@@ -118,6 +122,7 @@ export function useCreateLink(workspaceSlug: string, collectionSlug: string) {
       void queryClient.invalidateQueries({
         queryKey: collectionQueryKeys.collections(workspaceSlug),
       });
+      trackLinkResolution(workspaceSlug, data.link);
     },
   });
 }
@@ -164,6 +169,7 @@ export function useCreateInboxLink(workspaceSlug: string) {
       void queryClient.invalidateQueries({
         queryKey: ["workspace", workspaceSlug],
       });
+      trackLinkResolution(workspaceSlug, data.link);
     },
   });
 }
@@ -172,25 +178,9 @@ export function useRefreshLink(workspaceSlug: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (assetId: string) => refreshLink(workspaceSlug, assetId),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["collectionContents", workspaceSlug],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: collectionQueryKeys.inbox(workspaceSlug),
-      });
+    onSuccess: (data) => {
+      patchLinkInCaches(queryClient, workspaceSlug, data.link);
+      trackLinkResolution(workspaceSlug, data.link);
     },
   });
-}
-
-export function activeLinkRefetchInterval(data: unknown): number | false {
-  const response = data as CollectionContentsResponse | undefined;
-  return response?.nodes.some(
-    (node) =>
-      node.type === "link" &&
-      (node.resolutionStatus === "queued" ||
-        node.resolutionStatus === "resolving"),
-  )
-    ? 1_500
-    : false;
 }

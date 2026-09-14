@@ -81,7 +81,7 @@ describe("YouTube oEmbed resolver", () => {
         role: "preview",
         sourceUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
         sourceMetadata: "oembed:thumbnail_url",
-        processingProfile: "link-preview-v1",
+        processingProfile: "link-preview-v2",
         alt: "A video title",
       },
     ]);

@@ -43,7 +43,7 @@ describe("generic HTML resolver", () => {
         role: "preview",
         sourceUrl: "https://example.com/social-card.jpg",
         sourceMetadata: "og:image",
-        processingProfile: "link-preview-v1",
+        processingProfile: "link-preview-v2",
         alt: null,
       },
       {

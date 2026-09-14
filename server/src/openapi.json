@@ -877,6 +877,36 @@
         }
       }
     },
+    "/api/v1/workspace/{workspaceSlug}/links/{assetId}/status": {
+      "get": {
+        "operationId": "getLinkResolutionStatus",
+        "tags": ["Link Unfurling"],
+        "summary": "Get the current projected link resolution state",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^link-\\d+$" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The current link card projection.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CreateLinkResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}/links/{assetId}/resolution": {
       "post": {
         "operationId": "refreshLinkResolution",

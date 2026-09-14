@@ -34,8 +34,8 @@ an explicit master and role-specific variants:
 ```
 
 These namespaces belong to `external_resource_media`, not `image_assets`.
-Favicon profiles only need `master.webp`. Link-preview profiles may create all
-three representations. Their remote source URLs are never returned to clients.
+Favicon profiles only need `master.webp`. Link-preview-v2 profiles only store
+`display.webp`; their remote source URLs are never returned to clients.
 
 `workspaceId` is the immutable organization ID, not a mutable workspace slug.
 Putting it first is deliberate: the storage namespace is the same tenant

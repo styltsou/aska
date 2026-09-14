@@ -67,3 +67,21 @@ export const refreshLink = factory.createHandlers(
     return c.json(success({ link }), 202);
   },
 );
+
+export const getLinkResolutionStatus = factory.createHandlers(
+  authMiddleware,
+  validate.param(LinkAssetPathParamSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const workspace = await container.collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      c.get("userId"),
+    );
+    const link = await container.urlUnfurlService.getLinkNode(
+      workspace.id,
+      Number(assetId.slice("link-".length)),
+      null,
+    );
+    return c.json(success({ link }));
+  },
+);

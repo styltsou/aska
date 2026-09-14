@@ -58,6 +58,7 @@ import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/store";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { LinkResolutionPoller } from "@/api/url-unfurl/link-resolution-poller";
 import type { ColorAsset, NoteAsset } from "@/types/asset";
 import type { NoteHighlightColor } from "@/lib/note-highlights";
 import {
@@ -496,6 +497,7 @@ export function WorkspacePeekProvider({
   return (
     <WorkspacePeekContext.Provider value={value}>
       {children}
+      <LinkResolutionPoller workspaceSlug={workspaceSlug} />
       {target ? <WorkspacePeekSwapButton target={target} /> : null}
       <AnimatePresence initial={false} onExitComplete={handleExitComplete}>
         {target ? (
