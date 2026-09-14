@@ -3,6 +3,7 @@ import type { Viewport, XYPosition } from "@xyflow/react";
 import type { BoardVisibleBounds } from "@/api/collection";
 
 export type BoardView = "canvas" | "grid";
+export type CanvasTool = "select" | "text" | "arrow";
 
 export interface PersistedBoardSlice {
   boardViewports: Record<string, Viewport>;
@@ -55,11 +56,23 @@ export const createPersistedBoardSlice: StateCreator<PersistedBoardSlice> = (
 export interface TransientBoardSlice {
   boardVisibleBounds: Record<string, BoardVisibleBounds | undefined>;
   insertionPositions: Record<string, XYPosition | undefined>;
+  canvasTools: Record<string, CanvasTool | undefined>;
+  canvasCreationRequests: Record<
+    string,
+    | { id: number; tool: Exclude<CanvasTool, "select">; position?: XYPosition }
+    | undefined
+  >;
   setBoardVisibleBounds: (
     boardKey: string,
     bounds?: BoardVisibleBounds,
   ) => void;
   setInsertionPosition: (boardKey: string, position?: XYPosition) => void;
+  setCanvasTool: (boardKey: string, tool: CanvasTool) => void;
+  requestCanvasObject: (
+    boardKey: string,
+    tool: Exclude<CanvasTool, "select">,
+    position?: XYPosition,
+  ) => void;
 }
 
 export const createTransientBoardSlice: StateCreator<TransientBoardSlice> = (
@@ -67,6 +80,8 @@ export const createTransientBoardSlice: StateCreator<TransientBoardSlice> = (
 ) => ({
   boardVisibleBounds: {},
   insertionPositions: {},
+  canvasTools: {},
+  canvasCreationRequests: {},
   setBoardVisibleBounds: (boardKey, bounds) =>
     set((state) => ({
       boardVisibleBounds: { ...state.boardVisibleBounds, [boardKey]: bounds },
@@ -76,6 +91,18 @@ export const createTransientBoardSlice: StateCreator<TransientBoardSlice> = (
       insertionPositions: {
         ...state.insertionPositions,
         [boardKey]: position,
+      },
+    })),
+  setCanvasTool: (boardKey, tool) =>
+    set((state) => ({
+      canvasTools: { ...state.canvasTools, [boardKey]: tool },
+    })),
+  requestCanvasObject: (boardKey, tool, position) =>
+    set((state) => ({
+      canvasTools: { ...state.canvasTools, [boardKey]: tool },
+      canvasCreationRequests: {
+        ...state.canvasCreationRequests,
+        [boardKey]: { id: Date.now(), tool, position },
       },
     })),
 });

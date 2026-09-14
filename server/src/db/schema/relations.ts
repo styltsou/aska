@@ -83,6 +83,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.collectionsTable.id,
       to: r.collectionNodes.collectionId,
     }),
+    canvasObjects: r.many.canvasObjects({
+      from: r.collectionsTable.id,
+      to: r.canvasObjects.collectionId,
+    }),
   },
 
   assets: {
@@ -230,6 +234,43 @@ export const relations = defineRelations(schema, (r) => ({
     folder: r.one.folders({
       from: r.collectionNodes.folderId,
       to: r.folders.id,
+    }),
+  },
+
+  canvasObjects: {
+    organization: r.one.organization({
+      from: r.canvasObjects.organizationId,
+      to: r.organization.id,
+    }),
+    collection: r.one.collectionsTable({
+      from: r.canvasObjects.collectionId,
+      to: r.collectionsTable.id,
+    }),
+    parentFolder: r.one.folders({
+      from: r.canvasObjects.parentFolderId,
+      to: r.folders.id,
+    }),
+    text: r.one.canvasTextObjects({
+      from: r.canvasObjects.id,
+      to: r.canvasTextObjects.canvasObjectId,
+    }),
+    arrow: r.one.canvasArrowObjects({
+      from: r.canvasObjects.id,
+      to: r.canvasArrowObjects.canvasObjectId,
+    }),
+  },
+
+  canvasTextObjects: {
+    canvasObject: r.one.canvasObjects({
+      from: r.canvasTextObjects.canvasObjectId,
+      to: r.canvasObjects.id,
+    }),
+  },
+
+  canvasArrowObjects: {
+    canvasObject: r.one.canvasObjects({
+      from: r.canvasArrowObjects.canvasObjectId,
+      to: r.canvasObjects.id,
     }),
   },
 

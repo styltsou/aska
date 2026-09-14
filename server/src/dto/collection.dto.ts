@@ -9,6 +9,123 @@ export const BoardPositionSchema = z.object({
 
 export type BoardPosition = z.infer<typeof BoardPositionSchema>;
 
+export const CanvasObjectColorSchema = z.enum([
+  "ink",
+  "cobalt",
+  "coral",
+  "moss",
+  "ochre",
+]);
+export const CanvasTextFontSchema = z.enum(["inter", "newsreader", "caveat"]);
+export const CanvasTextSizeSchema = z.enum(["sm", "md", "lg", "xl"]);
+export const CanvasArrowStyleSchema = z.enum(["clean", "sketch"]);
+export const CanvasArrowPatternSchema = z.enum(["solid", "dashed", "dotted"]);
+
+const CanvasBindableIdSchema = z
+  .string()
+  .regex(/^(folder|image|note|link|color|text|arrow)-\d+$/);
+
+export const CanvasArrowEndpointSchema = z.object({
+  position: BoardPositionSchema,
+  binding: z
+    .object({
+      targetId: CanvasBindableIdSchema,
+      anchor: z.object({
+        x: z.number().finite().min(0).max(1),
+        y: z.number().finite().min(0).max(1),
+      }),
+    })
+    .optional(),
+});
+
+export const CanvasTextObjectSchema = z.object({
+  id: z.string().regex(/^text-\d+$/),
+  type: z.literal("text"),
+  content: z.string(),
+  position: BoardPositionSchema,
+  font: CanvasTextFontSchema,
+  size: CanvasTextSizeSchema,
+  color: CanvasObjectColorSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const CanvasArrowObjectSchema = z.object({
+  id: z.string().regex(/^arrow-\d+$/),
+  type: z.literal("arrow"),
+  start: CanvasArrowEndpointSchema,
+  end: CanvasArrowEndpointSchema,
+  style: CanvasArrowStyleSchema,
+  pattern: CanvasArrowPatternSchema,
+  color: CanvasObjectColorSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const CanvasObjectSchema = z.discriminatedUnion("type", [
+  CanvasTextObjectSchema,
+  CanvasArrowObjectSchema,
+]);
+
+export type CanvasObject = z.infer<typeof CanvasObjectSchema>;
+export type CanvasTextObject = z.infer<typeof CanvasTextObjectSchema>;
+export type CanvasArrowObject = z.infer<typeof CanvasArrowObjectSchema>;
+
+export const CreateCanvasTextSchema = z.object({
+  type: z.literal("text").default("text"),
+  content: z
+    .string()
+    .max(2_000)
+    .refine((value) => value.trim().length > 0),
+  position: BoardPositionSchema,
+  font: CanvasTextFontSchema.default("inter"),
+  size: CanvasTextSizeSchema.default("md"),
+  color: CanvasObjectColorSchema.default("ink"),
+  parentFolderPath: z.string().optional(),
+});
+
+export type CreateCanvasTextInput = z.infer<typeof CreateCanvasTextSchema>;
+
+export const UpdateCanvasTextSchema = z
+  .object({
+    content: z
+      .string()
+      .max(2_000)
+      .refine((value) => value.trim().length > 0)
+      .optional(),
+    position: BoardPositionSchema.optional(),
+    font: CanvasTextFontSchema.optional(),
+    size: CanvasTextSizeSchema.optional(),
+    color: CanvasObjectColorSchema.optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, "No changes supplied");
+
+export type UpdateCanvasTextInput = z.infer<typeof UpdateCanvasTextSchema>;
+
+export const CreateCanvasArrowSchema = z.object({
+  type: z.literal("arrow").default("arrow"),
+  start: CanvasArrowEndpointSchema,
+  end: CanvasArrowEndpointSchema,
+  style: CanvasArrowStyleSchema.default("clean"),
+  pattern: CanvasArrowPatternSchema.default("solid"),
+  color: CanvasObjectColorSchema.default("ink"),
+  parentFolderPath: z.string().optional(),
+});
+
+export type CreateCanvasArrowInput = z.infer<typeof CreateCanvasArrowSchema>;
+
+export const UpdateCanvasArrowSchema = z
+  .object({
+    start: CanvasArrowEndpointSchema.optional(),
+    end: CanvasArrowEndpointSchema.optional(),
+    style: CanvasArrowStyleSchema.optional(),
+    pattern: CanvasArrowPatternSchema.optional(),
+    color: CanvasObjectColorSchema.optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, "No changes supplied");
+
+export type UpdateCanvasArrowInput = z.infer<typeof UpdateCanvasArrowSchema>;
+
 export const LightCollectionSchema = z.object({
   id: z.number(),
   name: z.string(),
@@ -362,13 +479,17 @@ export const CollectionContentsResponseSchema = z.object({
   }),
   breadcrumbs: z.array(BreadcrumbSchema),
   nodes: z.array(CollectionNodeSchema),
+  canvasObjects: z.array(CanvasObjectSchema),
 });
 
 export type CollectionContentsResponse = z.infer<
   typeof CollectionContentsResponseSchema
 >;
 
-export const InboxContentsResponseSchema = CollectionContentsResponseSchema;
+export const InboxContentsResponseSchema =
+  CollectionContentsResponseSchema.omit({
+    canvasObjects: true,
+  });
 
 export type InboxContentsResponse = z.infer<typeof InboxContentsResponseSchema>;
 
@@ -376,6 +497,10 @@ const AssetNodeIdSchema = z.string().regex(/^(image|note|link|color)-\d+$/);
 const CollectionNodeIdSchema = z
   .string()
   .regex(/^(folder|image|note|link|color)-\d+$/);
+const CanvasObjectIdSchema = z.string().regex(/^(text|arrow)-\d+$/);
+const CanvasItemIdSchema = z
+  .string()
+  .regex(/^(folder|image|note|link|color|text|arrow)-\d+$/);
 const FolderNodeIdSchema = z.string().regex(/^folder-\d+$/);
 
 export const AssetPathParamSchema = z.object({
@@ -413,6 +538,10 @@ export const CollectionPathParamSchema = z.object({
 
 export const CollectionNodePathParamSchema = CollectionPathParamSchema.extend({
   nodeId: CollectionNodeIdSchema,
+});
+
+export const CanvasObjectPathParamSchema = CollectionPathParamSchema.extend({
+  objectId: CanvasObjectIdSchema,
 });
 
 export const FolderNodePathParamSchema = CollectionPathParamSchema.extend({
@@ -497,7 +626,7 @@ export const CollectionContentsQuerySchema = ContentTypeQuerySchema.extend({
 
 export const BulkDeleteBodySchema = z.object({
   nodeIds: z
-    .array(CollectionNodeIdSchema)
+    .array(CanvasItemIdSchema)
     .min(1)
     .max(100)
     .refine(

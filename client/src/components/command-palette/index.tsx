@@ -1,6 +1,7 @@
 import {
   AlignCenterHorizontalIcon,
   ArrowDownIcon,
+  ArrowUpRightIcon,
   ArrowUpIcon,
   FileTextIcon,
   FolderPlusIcon,
@@ -20,6 +21,7 @@ import {
   SquarePlusIcon,
   PipetteIcon,
   SearchIcon,
+  TypeIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
@@ -88,6 +90,8 @@ type PaletteMode = "search" | "commands";
 
 type CommandId =
   | "new-note"
+  | "canvas-text-tool"
+  | "canvas-arrow-tool"
   | "new-folder"
   | "upload-images"
   | "open-scratchpad"
@@ -111,6 +115,18 @@ const COMMAND_GROUPS = [
         label: "New note",
         icon: FileTextIcon,
         shortcut: "⇧+N",
+      },
+      {
+        id: "canvas-text-tool",
+        label: "Text tool",
+        icon: TypeIcon,
+        shortcut: "⇧+T",
+      },
+      {
+        id: "canvas-arrow-tool",
+        label: "Arrow tool",
+        icon: ArrowUpRightIcon,
+        shortcut: undefined,
       },
       {
         id: "open-scratchpad",
@@ -257,6 +273,7 @@ export function CommandPalette() {
     (state) => state.setWorkspaceBoardActionRail,
   );
   const openScratchpad = useTransientStore((state) => state.openScratchpad);
+  const setCanvasTool = useTransientStore((state) => state.setCanvasTool);
   const openPexelsBrowser = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
   );
@@ -458,6 +475,15 @@ export function CommandPalette() {
         if (!canCreateNote) return;
         handleOpenChange(false);
         setCreateNoteOpen(true);
+        return;
+      case "canvas-text-tool":
+      case "canvas-arrow-tool":
+        if (!boardKey || collectionView !== "canvas") return;
+        handleOpenChange(false);
+        setCanvasTool(
+          boardKey,
+          commandId === "canvas-text-tool" ? "text" : "arrow",
+        );
         return;
       case "new-folder":
         if (!canCreateFolder) return;
@@ -662,6 +688,10 @@ export function CommandPalette() {
                             canToggleAlignmentGuides) &&
                           (item.id !== "toggle-board-action-rail" ||
                             canToggleBoardActionRail) &&
+                          (item.id !== "canvas-text-tool" ||
+                            canToggleAlignmentGuides) &&
+                          (item.id !== "canvas-arrow-tool" ||
+                            canToggleAlignmentGuides) &&
                           (item.id !== "open-pexels-browser" ||
                             canCreateFolder),
                       ),

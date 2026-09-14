@@ -677,6 +677,7 @@ export function useCreateCollection(workspaceSlug: string) {
           },
           breadcrumbs: [],
           nodes: [],
+          canvasObjects: [],
         },
       );
     },

@@ -69,6 +69,7 @@ function contents(node: CollectionLinkNode): CollectionContentsResponse {
     collection: { id: 1, name: "Ideas", slug: "ideas" },
     breadcrumbs: [],
     nodes: [node],
+    canvasObjects: [],
   };
 }
 

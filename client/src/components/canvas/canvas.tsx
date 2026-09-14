@@ -24,13 +24,23 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 
-import type { CollectionNode } from "@/api/collection";
+import type {
+  CanvasArrowEndpoint,
+  CanvasArrowObject,
+  CanvasObject,
+  CanvasTextObject,
+  CollectionNode,
+} from "@/api/collection";
 import type { LinkAsset } from "@/types/asset";
 import {
   useBulkDelete,
   useMoveCollectionNodesToFolder,
   useUpdateCollectionNodePosition,
   useUpdateCollectionNodePositions,
+  useCreateCanvasArrow,
+  useCreateCanvasText,
+  useUpdateCanvasArrow,
+  useUpdateCanvasText,
 } from "@/api/collection";
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
 import { MoveToDialog } from "@/components/move-to-dialog";
@@ -47,6 +57,7 @@ import { usePersistedStore, useTransientStore } from "@/store";
 import { toast } from "sonner";
 
 import { formatPlatformShortcut } from "@/lib/platform";
+import { cn } from "@/lib/utils";
 import { makeBoardKey } from "./canvas-key";
 import { onBatchPlacementCompleted } from "./batch-placement-completed";
 import {
@@ -89,6 +100,12 @@ import {
   type CanvasNode,
   type CanvasNodeData,
 } from "./canvas-card";
+import {
+  CanvasTextNode,
+  type CanvasTextFlowNode,
+  type CanvasTextNodeData,
+} from "./canvas-text-node";
+import { CanvasArrowLayer, type DraftCanvasArrow } from "./canvas-arrow-layer";
 
 const DEFAULT_VIEWPORT = { x: 40, y: 40, zoom: 1.1 };
 const BOARD_VIEWPORT_INSET = 24;
@@ -96,7 +113,8 @@ const FIT_VIEW_MAX_ZOOM = 1.1;
 const VIEWPORT_ANIMATION_DURATION = 150;
 const CANVAS_MIN_ZOOM = 0.15;
 const CANVAS_MAX_ZOOM = 2;
-const nodeTypes: NodeTypes = { asset: CanvasCard };
+type CanvasFlowNode = CanvasNode | CanvasTextFlowNode;
+const nodeTypes: NodeTypes = { asset: CanvasCard, text: CanvasTextNode };
 
 type CanvasProps = {
   workspaceSlug: string;
@@ -104,6 +122,7 @@ type CanvasProps = {
   folderPath?: string;
   expectedParentFolderNodeId: string | null;
   nodes: CollectionNode[];
+  canvasObjects: CanvasObject[];
   isColorFilterActive?: boolean;
   colorMatchNodeIds?: ReadonlySet<string>;
   focusedNodeId?: string;
@@ -165,6 +184,7 @@ function CanvasSurface({
   folderPath,
   expectedParentFolderNodeId,
   nodes,
+  canvasObjects,
   isColorFilterActive = false,
   colorMatchNodeIds,
   focusedNodeId,
@@ -229,7 +249,7 @@ function CanvasSurface({
     getViewport,
     screenToFlowPosition,
     zoomTo,
-  } = useReactFlow<CanvasNode>();
+  } = useReactFlow<CanvasFlowNode>();
   const boardRef = useRef<HTMLDivElement>(null);
   const boardSizeRef = useRef({ width: 0, height: 0 });
   const suppressedClickIdsRef = useRef(new Set<string>());
@@ -254,6 +274,30 @@ function CanvasSurface({
   const [pendingFolderDrop, setPendingFolderDrop] =
     useState<PendingFolderDrop>();
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [draftText, setDraftText] = useState<CanvasTextObject>();
+  const [editingTextId, setEditingTextId] = useState<string>();
+  const [draftArrow, setDraftArrow] = useState<DraftCanvasArrow>();
+  const arrowPointerStartRef = useRef<XYPosition | undefined>(undefined);
+  const handledCreationRequestRef = useRef<number | undefined>(undefined);
+  const activeTool = useTransientStore(
+    (state) => state.canvasTools[boardKey] ?? "select",
+  );
+  const creationRequest = useTransientStore(
+    (state) => state.canvasCreationRequests[boardKey],
+  );
+  const setCanvasTool = useTransientStore((state) => state.setCanvasTool);
+  const createCanvasText = useCreateCanvasText(workspaceSlug, collectionSlug);
+  const createCanvasArrow = useCreateCanvasArrow(workspaceSlug, collectionSlug);
+  const updateCanvasText = useUpdateCanvasText(
+    workspaceSlug,
+    collectionSlug,
+    folderPath,
+  );
+  const updateCanvasArrow = useUpdateCanvasArrow(
+    workspaceSlug,
+    collectionSlug,
+    folderPath,
+  );
   const actionRefs = useRef<ActionRefs>({
     onOpenFolder,
     onOpenImage,
@@ -273,43 +317,57 @@ function CanvasSurface({
     [boardKey, selection],
   );
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const selectionHasCanvasObjects = selectedIds.some((id) =>
+    /^(text|arrow)-/.test(id),
+  );
   const selectionRef = useRef({ selectedIds: selectedIdSet, count: 0 });
   selectionRef.current = {
     selectedIds: selectedIdSet,
     count: selectedIds.length,
   };
-  const eligibleNodeIds = useMemo(
-    () =>
-      new Set(
-        nodes
-          .filter(
-            (node) =>
-              isPersistedSelectableAsset(node) &&
-              !(
-                isColorFilterActive &&
-                node.type !== "folder" &&
-                !colorMatchNodeIds?.has(node.id)
-              ),
-          )
-          .map((node) => node.id),
-      ),
-    [colorMatchNodeIds, isColorFilterActive, nodes],
-  );
+  const eligibleNodeIds = useMemo(() => {
+    const ids = nodes
+      .filter(
+        (node) =>
+          isPersistedSelectableAsset(node) &&
+          !(
+            isColorFilterActive &&
+            node.type !== "folder" &&
+            !colorMatchNodeIds?.has(node.id)
+          ),
+      )
+      .map((node) => node.id);
+    ids.push(...canvasObjects.map((object) => object.id));
+    if (draftText) ids.push(draftText.id);
+    return new Set(ids);
+  }, [canvasObjects, colorMatchNodeIds, draftText, isColorFilterActive, nodes]);
   const marquee = useMarqueeSelection({
     surfaceRef: boardRef,
     eligibleNodeIds,
     onReplace: (nodeIds) => replaceSelection(boardKey, nodeIds),
     shouldStart: (event) =>
-      !(event.target instanceof Element) ||
-      !event.target.closest(".react-flow__node"),
+      activeTool === "select" &&
+      (!(event.target instanceof Element) ||
+        !event.target.closest(".react-flow__node")),
     stopNativeEvents: true,
   });
 
   const handleBulkDelete = useCallback(() => {
+    const persistedIds = selectedIds.filter(
+      (id) => !id.startsWith("text-draft-"),
+    );
+    if (persistedIds.length === 0) {
+      setDraftText(undefined);
+      setEditingTextId(undefined);
+      clearSelection(boardKey);
+      return;
+    }
     bulkDelete.mutate(
-      { nodeIds: selectedIds, collectionSlug },
+      { nodeIds: persistedIds, collectionSlug },
       {
         onSuccess: () => {
+          setDraftText(undefined);
+          setEditingTextId(undefined);
           clearSelection(boardKey);
         },
       },
@@ -572,6 +630,254 @@ function CanvasSurface({
     },
     [boardKey, clearSelection, eligibleNodeIds, toggleSelectedNode],
   );
+  const beginTextDraft = useCallback(
+    (position: XYPosition) => {
+      const id = `text-draft-${Date.now()}`;
+      setDraftText({
+        id,
+        type: "text",
+        content: "",
+        position: roundPosition(position),
+        font: "inter",
+        size: "md",
+        color: "ink",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        clientId: id,
+      });
+      setEditingTextId(id);
+      replaceSelection(boardKey, [id]);
+    },
+    [boardKey, replaceSelection],
+  );
+  const handleTextSelect = useCallback(
+    (objectId: string, event: ReactMouseEvent) => {
+      if (hasSelectionModifier(event)) {
+        toggleSelectedNode(boardKey, objectId);
+      } else {
+        replaceSelection(boardKey, [objectId]);
+      }
+      event.stopPropagation();
+    },
+    [boardKey, replaceSelection, toggleSelectedNode],
+  );
+  const commitText = useCallback(
+    (objectId: string, content: string) => {
+      const trimmed = content.trim();
+      if (objectId.startsWith("text-draft-")) {
+        const draft = draftText;
+        if (!draft || draft.id !== objectId) return;
+        if (!trimmed) {
+          setDraftText(undefined);
+          setEditingTextId(undefined);
+          clearSelection(boardKey);
+          return;
+        }
+        createCanvasText.mutate(
+          {
+            type: "text",
+            content,
+            position: draft.position,
+            font: draft.font,
+            size: draft.size,
+            color: draft.color,
+            parentFolderPath: folderPath,
+          },
+          {
+            onSuccess: ({ object }) => {
+              setDraftText(undefined);
+              setEditingTextId(undefined);
+              replaceSelection(boardKey, [object.id]);
+            },
+            onError: () => toast.error("Unable to create canvas text."),
+          },
+        );
+        return;
+      }
+      setEditingTextId(undefined);
+      if (!trimmed) return;
+      updateCanvasText.mutate(
+        { objectId, content },
+        { onError: () => toast.error("Unable to update canvas text.") },
+      );
+    },
+    [
+      boardKey,
+      clearSelection,
+      createCanvasText,
+      draftText,
+      folderPath,
+      replaceSelection,
+      updateCanvasText,
+    ],
+  );
+  const cancelTextEdit = useCallback(
+    (objectId: string) => {
+      setEditingTextId(undefined);
+      if (objectId.startsWith("text-draft-")) {
+        setDraftText(undefined);
+        clearSelection(boardKey);
+      }
+    },
+    [boardKey, clearSelection],
+  );
+  const updateTextStyle = useCallback(
+    (
+      objectId: string,
+      update: Partial<Pick<CanvasTextObject, "font" | "size" | "color">>,
+    ) => {
+      if (objectId.startsWith("text-draft-")) {
+        setDraftText((current) =>
+          current?.id === objectId ? { ...current, ...update } : current,
+        );
+        return;
+      }
+      updateCanvasText.mutate({ objectId, ...update });
+    },
+    [updateCanvasText],
+  );
+  const updateArrowObject = useCallback(
+    (
+      objectId: string,
+      update: Partial<
+        Pick<CanvasArrowObject, "start" | "end" | "style" | "pattern" | "color">
+      >,
+    ) => {
+      updateCanvasArrow.mutate(
+        { objectId, ...update },
+        { onError: () => toast.error("Unable to update the arrow.") },
+      );
+    },
+    [updateCanvasArrow],
+  );
+  const findArrowBinding = useCallback(
+    (position: XYPosition): CanvasArrowEndpoint => {
+      const padding = 16 / getViewport().zoom;
+      const target = getNodes()
+        .map((node) => {
+          const width = node.measured?.width ?? node.width ?? 0;
+          const height = node.measured?.height ?? node.height ?? 0;
+          const nearest = {
+            x: Math.min(
+              node.position.x + width,
+              Math.max(node.position.x, position.x),
+            ),
+            y: Math.min(
+              node.position.y + height,
+              Math.max(node.position.y, position.y),
+            ),
+          };
+          return {
+            node,
+            width,
+            height,
+            nearest,
+            distance: Math.hypot(
+              position.x - nearest.x,
+              position.y - nearest.y,
+            ),
+          };
+        })
+        .filter((candidate) => candidate.distance <= padding)
+        .sort((left, right) => left.distance - right.distance)[0];
+      if (!target || target.width <= 0 || target.height <= 0) {
+        return { position: roundPosition(position) };
+      }
+      return {
+        position: roundPosition(target.nearest),
+        binding: {
+          targetId: target.node.id,
+          anchor: {
+            x: Math.min(
+              1,
+              Math.max(
+                0,
+                (target.nearest.x - target.node.position.x) / target.width,
+              ),
+            ),
+            y: Math.min(
+              1,
+              Math.max(
+                0,
+                (target.nearest.y - target.node.position.y) / target.height,
+              ),
+            ),
+          },
+        },
+      };
+    },
+    [getNodes, getViewport],
+  );
+  const createArrowBetween = useCallback(
+    (start: XYPosition, end: XYPosition) => {
+      const arrow: DraftCanvasArrow = {
+        start: findArrowBinding(start),
+        end: findArrowBinding(end),
+        style: "clean",
+        pattern: "solid",
+        color: "ink",
+      };
+      setDraftArrow(arrow);
+      createCanvasArrow.mutate(
+        {
+          type: "arrow",
+          ...arrow,
+          parentFolderPath: folderPath,
+        },
+        {
+          onSuccess: ({ object }) => {
+            setDraftArrow(undefined);
+            replaceSelection(boardKey, [object.id]);
+          },
+          onError: () => {
+            setDraftArrow(undefined);
+            toast.error("Unable to create the arrow.");
+          },
+        },
+      );
+    },
+    [
+      boardKey,
+      createCanvasArrow,
+      findArrowBinding,
+      folderPath,
+      replaceSelection,
+    ],
+  );
+  const handleArrowSelect = useCallback(
+    (objectId: string, event: React.PointerEvent) => {
+      if (hasSelectionModifier(event)) {
+        toggleSelectedNode(boardKey, objectId);
+      } else {
+        replaceSelection(boardKey, [objectId]);
+      }
+      event.stopPropagation();
+    },
+    [boardKey, replaceSelection, toggleSelectedNode],
+  );
+
+  useEffect(() => {
+    if (
+      !creationRequest ||
+      handledCreationRequestRef.current === creationRequest.id
+    ) {
+      return;
+    }
+    handledCreationRequestRef.current = creationRequest.id;
+    const viewport = getViewport();
+    const size = boardSizeRef.current;
+    const position =
+      creationRequest.position ??
+      roundPosition({
+        x: (size.width / 2 - viewport.x) / viewport.zoom,
+        y: (size.height / 2 - viewport.y) / viewport.zoom,
+      });
+    if (creationRequest.tool === "text") {
+      beginTextDraft(position);
+    } else {
+      createArrowBetween(position, { x: position.x + 160, y: position.y });
+    }
+  }, [beginTextDraft, createArrowBetween, creationRequest, getViewport]);
   const clearAlignmentGuides = useCallback(() => {
     setAlignmentGuides((current) =>
       current === undefined ? current : undefined,
@@ -670,8 +976,32 @@ function CanvasSurface({
     ],
   );
 
-  const [flowNodes, setFlowNodes] = useState<CanvasNode[]>(() =>
-    nodes.map((node, index) =>
+  const makeTextNodeData = useCallback(
+    (object: CanvasTextObject): CanvasTextNodeData => ({
+      object,
+      editing: editingTextId === object.id,
+      onSelect: handleTextSelect,
+      onBeginEdit: (id) => {
+        replaceSelection(boardKey, [id]);
+        setEditingTextId(id);
+      },
+      onCommit: commitText,
+      onCancel: cancelTextEdit,
+      onStyle: updateTextStyle,
+    }),
+    [
+      boardKey,
+      cancelTextEdit,
+      commitText,
+      editingTextId,
+      handleTextSelect,
+      replaceSelection,
+      updateTextStyle,
+    ],
+  );
+
+  const [flowNodes, setFlowNodes] = useState<CanvasFlowNode[]>(() => [
+    ...nodes.map((node, index) =>
       makeFlowNode(
         node,
         index,
@@ -679,7 +1009,10 @@ function CanvasSurface({
         expandedNoteOrderRef.current,
       ),
     ),
-  );
+    ...canvasObjects
+      .filter((object): object is CanvasTextObject => object.type === "text")
+      .map((object) => makeTextFlowNode(object, makeTextNodeData(object))),
+  ]);
 
   useEffect(() => {
     let timer: number | undefined;
@@ -766,6 +1099,9 @@ function CanvasSurface({
         return;
       }
       if (event.key === "Escape") {
+        setCanvasTool(boardKey, "select");
+        setDraftArrow(undefined);
+        arrowPointerStartRef.current = undefined;
         clearSelection(boardKey);
         return;
       }
@@ -782,6 +1118,7 @@ function CanvasSurface({
     eligibleNodeIds,
     fitCanvasView,
     replaceSelection,
+    setCanvasTool,
     zoomInCanvas,
     zoomOutCanvas,
   ]);
@@ -819,23 +1156,38 @@ function CanvasSurface({
       const currentById = new Map(current.map((node) => [node.id, node]));
       const currentByClientId = new Map(
         current.flatMap((node) => {
+          if (node.type !== "asset") return [];
           const clientId = getNodeClientId(node.data.collectionNode);
           return clientId ? [[clientId, node] as const] : [];
         }),
       );
 
-      return nodes.map((node, index) =>
+      const assetNodes = nodes.map((node, index) =>
         makeFlowNode(
           node,
           index,
           makeNodeData(node),
           expandedNoteOrder,
-          currentById.get(node.id) ??
-            currentByClientId.get(getNodeClientId(node) ?? ""),
+          (currentById.get(node.id) ??
+            currentByClientId.get(getNodeClientId(node) ?? "")) as
+            | CanvasNode
+            | undefined,
         ),
       );
+      const textObjects = canvasObjects.filter(
+        (object): object is CanvasTextObject => object.type === "text",
+      );
+      if (draftText) textObjects.push(draftText);
+      const textNodes = textObjects.map((object) =>
+        makeTextFlowNode(
+          object,
+          makeTextNodeData(object),
+          currentById.get(object.id) as CanvasTextFlowNode | undefined,
+        ),
+      );
+      return [...assetNodes, ...textNodes];
     });
-  }, [makeNodeData, nodes]);
+  }, [canvasObjects, draftText, makeNodeData, makeTextNodeData, nodes]);
 
   useEffect(() => {
     const currentClientIds = new Set(
@@ -888,7 +1240,7 @@ function CanvasSurface({
   }, [fitView, focusRequestId, focusedNodeId, getNode]);
 
   const handleNodesChange = useCallback(
-    (changes: NodeChange<CanvasNode>[]) => {
+    (changes: NodeChange<CanvasFlowNode>[]) => {
       const dragSession = dragSessionRef.current;
       const primaryChange = dragSession
         ? getPositionChange(changes, dragSession.primaryNodeId)
@@ -968,8 +1320,8 @@ function CanvasSurface({
     ],
   );
   const updateDropTarget = useCallback(
-    (event: MouseEvent | TouchEvent, node: CanvasNode) => {
-      if (!isDraggableNode(node)) {
+    (event: MouseEvent | TouchEvent, node: CanvasFlowNode) => {
+      if (!isDraggableNode(node) || node.type !== "asset") {
         clearDropTarget();
         return;
       }
@@ -989,6 +1341,7 @@ function CanvasSurface({
         .filter(
           (candidate) =>
             !dragSessionRef.current?.origins.has(candidate.id) &&
+            candidate.type === "asset" &&
             candidate.data.collectionNode.type === "folder",
         )
         .sort((left, right) => {
@@ -1028,12 +1381,48 @@ function CanvasSurface({
   return (
     <div
       ref={boardRef}
-      className="relative h-full min-h-0 w-full bg-transparent"
+      className={cn(
+        "relative h-full min-h-0 w-full bg-transparent",
+        activeTool === "text" && "cursor-text",
+        activeTool === "arrow" && "cursor-crosshair",
+      )}
       onPointerDownCapture={(event) => {
         if (focusRequestId !== undefined) onDismissFocusedNode?.();
+        if (
+          activeTool === "arrow" &&
+          event.target instanceof Element &&
+          event.target.closest(".react-flow__pane, .react-flow__node")
+        ) {
+          const start = roundPosition(
+            screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+          );
+          arrowPointerStartRef.current = start;
+          setDraftArrow({
+            start: { position: start },
+            end: { position: start },
+            style: "clean",
+            pattern: "solid",
+            color: "ink",
+          });
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         marquee.onPointerDownCapture(event);
       }}
       onPointerMoveCapture={(event) => {
+        const arrowStart = arrowPointerStartRef.current;
+        if (arrowStart) {
+          const end = roundPosition(
+            screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+          );
+          setDraftArrow((current) =>
+            current ? { ...current, end: { position: end } } : current,
+          );
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         marquee.onPointerMoveCapture(event);
         alignmentBypassRef.current = event.altKey;
         setBoardPointerPosition(
@@ -1043,13 +1432,34 @@ function CanvasSurface({
           ),
         );
       }}
-      onPointerUpCapture={marquee.onPointerUpCapture}
-      onPointerCancelCapture={marquee.onPointerCancelCapture}
+      onPointerUpCapture={(event) => {
+        const start = arrowPointerStartRef.current;
+        if (start) {
+          arrowPointerStartRef.current = undefined;
+          const end = roundPosition(
+            screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+          );
+          if (Math.hypot(end.x - start.x, end.y - start.y) >= 8) {
+            createArrowBetween(start, end);
+          } else {
+            setDraftArrow(undefined);
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        marquee.onPointerUpCapture(event);
+      }}
+      onPointerCancelCapture={(event) => {
+        arrowPointerStartRef.current = undefined;
+        setDraftArrow(undefined);
+        marquee.onPointerCancelCapture(event);
+      }}
       onClickCapture={(event) => {
         marquee.consumeClick(event);
       }}
     >
-      <ReactFlow<CanvasNode>
+      <ReactFlow<CanvasFlowNode>
         className="aska-flow"
         nodes={flowNodes}
         nodeTypes={nodeTypes}
@@ -1064,8 +1474,8 @@ function CanvasSurface({
         edgesFocusable={false}
         elementsSelectable={false}
         elevateNodesOnSelect={false}
-        nodesDraggable={!isCanvasLocked}
-        autoPanOnNodeDrag={!isCanvasLocked}
+        nodesDraggable={!isCanvasLocked && activeTool === "select"}
+        autoPanOnNodeDrag={!isCanvasLocked && activeTool === "select"}
         selectionKeyCode={["Control", "Meta"]}
         multiSelectionKeyCode={["Control", "Meta"]}
         selectionMode={SelectionMode.Full}
@@ -1089,7 +1499,15 @@ function CanvasSurface({
           });
           setInsertionPosition(boardKey, roundPosition(position));
         }}
-        onPaneClick={() => clearSelection(boardKey)}
+        onPaneClick={(event) => {
+          if (activeTool === "text") {
+            beginTextDraft(
+              screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+            );
+            return;
+          }
+          clearSelection(boardKey);
+        }}
         onNodeDragStart={(_, node, movedNodes) => {
           alignmentBypassRef.current = false;
           clearAlignmentGuides();
@@ -1175,10 +1593,13 @@ function CanvasSurface({
               draggedNodeIds.has(flowNode.id)
                 ? {
                     ...flowNode,
-                    zIndex: getCanvasRestingZIndex(
-                      flowNode.data.collectionNode,
-                      expandedNoteOrderRef.current,
-                    ),
+                    zIndex:
+                      flowNode.type === "asset"
+                        ? getCanvasRestingZIndex(
+                            flowNode.data.collectionNode,
+                            expandedNoteOrderRef.current,
+                          )
+                        : 1,
                   }
                 : flowNode,
             ),
@@ -1190,7 +1611,10 @@ function CanvasSurface({
 
           if (
             targetFolderNodeId &&
-            dragNodes.every((dragNode) => isDraggableNode(dragNode))
+            dragNodes.every(
+              (dragNode) =>
+                dragNode.type === "asset" && isDraggableNode(dragNode),
+            )
           ) {
             const nodeIds = dragNodes.map((dragNode) => dragNode.id);
             const nodeIdsKey = nodeIds.join(",");
@@ -1258,8 +1682,32 @@ function CanvasSurface({
           suppressClicks(...moved.map(({ node: movedNode }) => movedNode.id));
 
           if (session.isGroup) {
-            const saves = moved.filter(({ node: movedNode }) =>
-              isPersistedSelectableAsset(movedNode.data.collectionNode),
+            const textMoves = moved.filter(
+              ({ node: movedNode }) => movedNode.type === "text",
+            );
+            for (const { node: movedNode, position, origin } of textMoves) {
+              if (movedNode.id.startsWith("text-draft-")) {
+                setDraftText((current) =>
+                  current?.id === movedNode.id
+                    ? { ...current, position }
+                    : current,
+                );
+                continue;
+              }
+              updateCanvasText.mutate(
+                { objectId: movedNode.id, position },
+                {
+                  onError: () =>
+                    setFlowNodes((current) =>
+                      updateLocalNodePosition(current, movedNode.id, origin),
+                    ),
+                },
+              );
+            }
+            const saves = moved.filter(
+              ({ node: movedNode }) =>
+                movedNode.type === "asset" &&
+                isPersistedSelectableAsset(movedNode.data.collectionNode),
             );
             const versions = new Map(
               saves.map(({ node: movedNode }) => {
@@ -1301,11 +1749,45 @@ function CanvasSurface({
               );
               return;
             }
+            const singleAsset = saves[0];
+            if (!singleAsset) return;
+            const version =
+              (dragVersionRef.current.get(singleAsset.node.id) ?? 0) + 1;
+            dragVersionRef.current.set(singleAsset.node.id, version);
+            positionSaveQueueRef.current.enqueue(singleAsset.node.id, {
+              nodeId: singleAsset.node.id,
+              folderPath,
+              position: singleAsset.position,
+              expectedParentFolderNodeId,
+              version,
+              origin: singleAsset.origin,
+            });
+            return;
           }
 
           const [single] = moved;
           if (!single) return;
           const { node: movedNode, origin, position } = single;
+          if (movedNode.type === "text") {
+            if (!movedNode.id.startsWith("text-draft-")) {
+              updateCanvasText.mutate(
+                { objectId: movedNode.id, position },
+                {
+                  onError: () =>
+                    setFlowNodes((current) =>
+                      updateLocalNodePosition(current, movedNode.id, origin),
+                    ),
+                },
+              );
+            } else {
+              setDraftText((current) =>
+                current?.id === movedNode.id
+                  ? { ...current, position }
+                  : current,
+              );
+            }
+            return;
+          }
           if (isPendingCollectionNode(movedNode.data.collectionNode)) {
             const clientId = getNodeClientId(movedNode.data.collectionNode);
             if (clientId) {
@@ -1332,6 +1814,16 @@ function CanvasSurface({
           size={1}
           color="color-mix(in oklch, var(--foreground) 14%, transparent)"
         />
+        <CanvasArrowLayer
+          arrows={canvasObjects.filter(
+            (object): object is CanvasArrowObject => object.type === "arrow",
+          )}
+          draft={draftArrow}
+          selectedIds={selectedIdSet}
+          enabled={activeTool === "select"}
+          onSelect={handleArrowSelect}
+          onUpdate={updateArrowObject}
+        />
         <CanvasAlignmentGuideLines
           guides={alignmentGuides}
           zoom={getViewport().zoom}
@@ -1341,19 +1833,25 @@ function CanvasSurface({
             count={selectedIds.length}
             surface="canvas"
             onClear={() => clearSelection(boardKey)}
-            onMove={() => setMoveDialogOpen(true)}
+            onMove={
+              selectionHasCanvasObjects
+                ? undefined
+                : () => setMoveDialogOpen(true)
+            }
             onDelete={handleBulkDelete}
-            onArrange={handleArrange}
-            onCompact={handleCompact}
-            onMakeRow={handleMakeRow}
-            onMakeColumn={handleMakeColumn}
+            onArrange={selectionHasCanvasObjects ? undefined : handleArrange}
+            onCompact={selectionHasCanvasObjects ? undefined : handleCompact}
+            onMakeRow={selectionHasCanvasObjects ? undefined : handleMakeRow}
+            onMakeColumn={
+              selectionHasCanvasObjects ? undefined : handleMakeColumn
+            }
           />
         </Panel>
       </ReactFlow>
 
       {loadError ? (
         <div className="absolute inset-0 z-10">{loadError}</div>
-      ) : nodes.length === 0 ? (
+      ) : nodes.length === 0 && canvasObjects.length === 0 && !draftText ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center">
           <div className="max-w-sm space-y-1.5">
             <h2 className="text-sm font-medium">{emptyTitle}</h2>
@@ -1430,12 +1928,31 @@ function makeFlowNode(
   };
 }
 
-function getCanvasCardHeight(node: CanvasNode): number {
+function makeTextFlowNode(
+  object: CanvasTextObject,
+  data: CanvasTextNodeData,
+  current?: CanvasTextFlowNode,
+): CanvasTextFlowNode {
+  return {
+    ...current,
+    id: object.id,
+    type: "text",
+    position: current?.position ?? object.position,
+    data,
+    draggable: !data.editing,
+    selectable: false,
+    zIndex: current?.dragging ? getCanvasInteractionZIndex() : 1,
+    style: { width: 360 },
+  };
+}
+
+function getCanvasCardHeight(node: CanvasFlowNode): number {
   const measuredHeight = node.measured?.height;
   if (measuredHeight && Number.isFinite(measuredHeight)) {
     return measuredHeight;
   }
 
+  if (node.type !== "asset") return 80;
   const collectionNode = node.data.collectionNode;
   if (collectionNode.type === "image") {
     return (BOARD_CARD_WIDTH * collectionNode.height) / collectionNode.width;
@@ -1445,17 +1962,17 @@ function getCanvasCardHeight(node: CanvasNode): number {
 }
 
 function updateLocalNodePosition(
-  nodes: CanvasNode[],
+  nodes: CanvasFlowNode[],
   nodeId: string,
   position: XYPosition,
-): CanvasNode[] {
+): CanvasFlowNode[] {
   return nodes.map((node) =>
     node.id === nodeId ? { ...node, position } : node,
   );
 }
 
 function toCanvasAlignmentRect(
-  node: CanvasNode,
+  node: CanvasFlowNode,
 ): CanvasAlignmentRect | undefined {
   const width = node.measured?.width;
   const height = node.measured?.height;
@@ -1490,7 +2007,7 @@ function getCanvasViewportBounds(
 }
 
 function getPositionChange(
-  changes: NodeChange<CanvasNode>[],
+  changes: NodeChange<CanvasFlowNode>[],
   nodeId: string,
 ): NodePositionChange | undefined {
   return changes.find(
@@ -1500,11 +2017,11 @@ function getPositionChange(
 }
 
 function withAlignedDragPositions(
-  changes: NodeChange<CanvasNode>[],
+  changes: NodeChange<CanvasFlowNode>[],
   session: CanvasDragSession,
   offset: XYPosition,
   dragging: boolean | undefined,
-): NodeChange<CanvasNode>[] {
+): NodeChange<CanvasFlowNode>[] {
   const draggedNodeIds = new Set(session.draggedRects.keys());
   const nonDragPositionChanges = changes.filter(
     (change) => change.type !== "position" || !draggedNodeIds.has(change.id),
@@ -1531,7 +2048,7 @@ function withAlignedDragPositions(
 
 function recordDraggedChangePositions(
   session: CanvasDragSession,
-  changes: NodeChange<CanvasNode>[],
+  changes: NodeChange<CanvasFlowNode>[],
 ) {
   for (const change of changes) {
     if (
@@ -1592,8 +2109,10 @@ function isPendingCollectionNode(node: CollectionNode): boolean {
   );
 }
 
-function isDraggableNode(node: CanvasNode): boolean {
-  return !isPendingCollectionNode(node.data.collectionNode);
+function isDraggableNode(node: CanvasFlowNode): boolean {
+  return (
+    node.type === "text" || !isPendingCollectionNode(node.data.collectionNode)
+  );
 }
 
 function getClientPosition(

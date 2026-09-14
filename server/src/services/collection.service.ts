@@ -1,9 +1,13 @@
 import type {
   CollectionContentsResponse,
+  CanvasArrowObject,
+  CanvasTextObject,
   CollectionColorNode,
   ContentTypeFilter,
   CollectionNoteNode,
   CreateCollectionInput,
+  CreateCanvasArrowInput,
+  CreateCanvasTextInput,
   CreateColorInput,
   CreateFolderInput,
   CreateNoteInput,
@@ -12,6 +16,8 @@ import type {
   LightCollection,
   UpdateNodePositionInput,
   UpdateNodePositionsInput,
+  UpdateCanvasArrowInput,
+  UpdateCanvasTextInput,
 } from "@/dto/collection.dto";
 import {
   CollectionAssetMoveService,
@@ -21,6 +27,7 @@ import {
 import { CollectionDeleteService } from "@/services/collection/collection-delete.service";
 import { CollectionMutationService } from "@/services/collection/collection-mutation.service";
 import { CollectionQueryService } from "@/services/collection/collection-query.service";
+import { CanvasObjectService } from "@/services/collection/canvas-object.service";
 import type {
   CreatedCollectionRow,
   DeleteCollectionNodeResult,
@@ -66,6 +73,42 @@ export interface ICollectionService {
     collectionSlug: string,
     data: CreateColorInput,
   ): Promise<CollectionColorNode>;
+  createCanvasText(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: CreateCanvasTextInput,
+  ): Promise<CanvasTextObject>;
+  createCanvasArrow(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: CreateCanvasArrowInput,
+  ): Promise<CanvasArrowObject>;
+  updateCanvasText(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    objectId: string,
+    data: UpdateCanvasTextInput,
+  ): Promise<CanvasTextObject>;
+  updateCanvasArrow(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    objectId: string,
+    data: UpdateCanvasArrowInput,
+  ): Promise<CanvasArrowObject>;
+  deleteCanvasObject(
+    orgId: string,
+    collectionSlug: string,
+    objectId: string,
+  ): Promise<{ deletedObjectId: string }>;
+  deleteCanvasObjects(
+    orgId: string,
+    collectionSlug: string,
+    objectIds: string[],
+  ): Promise<number>;
   deleteNode(
     orgId: string,
     collectionSlug: string,
@@ -112,6 +155,7 @@ export interface ICollectionService {
 export class CollectionService implements ICollectionService {
   private readonly queries: CollectionQueryService;
   private readonly mutations = new CollectionMutationService();
+  private readonly canvasObjects = new CanvasObjectService();
   private readonly moves = new CollectionAssetMoveService();
   private readonly deletes: CollectionDeleteService;
   private readonly logger: ILoggerService;
@@ -177,6 +221,72 @@ export class CollectionService implements ICollectionService {
     data: CreateColorInput,
   ): Promise<CollectionColorNode> {
     return this.mutations.createColor(orgId, userId, collectionSlug, data);
+  }
+
+  createCanvasText(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: CreateCanvasTextInput,
+  ): Promise<CanvasTextObject> {
+    return this.canvasObjects.createText(orgId, userId, collectionSlug, data);
+  }
+
+  createCanvasArrow(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: CreateCanvasArrowInput,
+  ): Promise<CanvasArrowObject> {
+    return this.canvasObjects.createArrow(orgId, userId, collectionSlug, data);
+  }
+
+  updateCanvasText(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    objectId: string,
+    data: UpdateCanvasTextInput,
+  ): Promise<CanvasTextObject> {
+    return this.canvasObjects.updateText(
+      orgId,
+      userId,
+      collectionSlug,
+      objectId,
+      data,
+    );
+  }
+
+  updateCanvasArrow(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    objectId: string,
+    data: UpdateCanvasArrowInput,
+  ): Promise<CanvasArrowObject> {
+    return this.canvasObjects.updateArrow(
+      orgId,
+      userId,
+      collectionSlug,
+      objectId,
+      data,
+    );
+  }
+
+  deleteCanvasObject(
+    orgId: string,
+    collectionSlug: string,
+    objectId: string,
+  ): Promise<{ deletedObjectId: string }> {
+    return this.canvasObjects.deleteObject(orgId, collectionSlug, objectId);
+  }
+
+  deleteCanvasObjects(
+    orgId: string,
+    collectionSlug: string,
+    objectIds: string[],
+  ): Promise<number> {
+    return this.canvasObjects.deleteObjects(orgId, collectionSlug, objectIds);
   }
 
   deleteNode(

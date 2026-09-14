@@ -163,8 +163,12 @@ state instead of a generic query error. Collection states link back to the
 workspace; folder states link back to their collection when that destination is
 known.
 
-Edges, handles, connection behavior, and delete-key node removal are disabled.
-The canvas is a moodboard, not a diagram editor.
+XYFlow handles and its graph connection behavior remain disabled. Canvas text
+and arrows are first-class annotations owned by Aska: text renders as an
+unframed custom node, while arrows render in a viewport-aware SVG layer and may
+optionally bind either endpoint to a visible card or text object. These visual
+bindings do not turn the canvas into a diagram editor. Delete-key node removal
+remains disabled.
 
 ## Backend Storage
 
@@ -176,11 +180,19 @@ coordinates are present or both are null.
 through asynchronous image processing so the finalized image appears at the
 intended canvas location.
 
+`canvas_objects` owns annotation identity and collection/folder scope.
+`canvas_text_objects` stores text position and the intentionally small
+typography token set. `canvas_arrow_objects` stores free endpoint coordinates,
+optional same-canvas endpoint bindings, and curated path/color tokens. Canvas
+objects are returned separately from collection `nodes`; they never contribute
+to asset counts, folder previews, Inbox contents, grid view, or workspace
+search.
+
 ## Deferred Capabilities
 
 - Further alignment-guide refinement, including equal-spacing cues, optional
   distance labels, and continued interaction and visual tuning.
 - Multi-select actions and resize handles.
-- Deliberate z-ordering and arbitrary canvas objects.
-- Relationships and other diagram-style features.
+- Deliberate user-controlled z-ordering and further canvas object types.
+- Semantic relationships and other diagram-style features.
 - Durable viewport persistence across sessions.

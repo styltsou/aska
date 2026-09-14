@@ -333,6 +333,7 @@ function CollectionPage() {
                     activeFolder ? `folder-${activeFolder.id}` : null
                   }
                   nodes={nodes}
+                  canvasObjects={data?.canvasObjects ?? []}
                   isColorFilterActive={hasResolvedColorSearch}
                   colorMatchNodeIds={colorMatchNodeIds}
                   focusedNodeId={focusedNodeId}
@@ -402,31 +403,31 @@ function CollectionPage() {
               </Activity>
             ) : null}
           </div>
+          {(nodes.length > 0 || selectedAssetTypes.length > 0) && (
+            <FilterBar
+              scope={filterScope}
+              searchStatus={{
+                resultCount: hasResolvedColorSearch
+                  ? colorResults.length
+                  : isTypeFilterActive && !isFetching
+                    ? nodes.length
+                    : undefined,
+                isSearching:
+                  colorSearch.isSearching || (isTypeFilterActive && isFetching),
+                focusedResultIndex: hasResolvedColorSearch
+                  ? focusedColorResultIndex
+                  : undefined,
+                onPrevious: hasResolvedColorSearch
+                  ? () => focusRelativeColorResult(-1)
+                  : undefined,
+                onNext: hasResolvedColorSearch
+                  ? () => focusRelativeColorResult(1)
+                  : undefined,
+              }}
+            />
+          )}
         </BoardUploadZone>
       </BoardContextMenu>
-      {(nodes.length > 0 || selectedAssetTypes.length > 0) && (
-        <FilterBar
-          scope={filterScope}
-          searchStatus={{
-            resultCount: hasResolvedColorSearch
-              ? colorResults.length
-              : isTypeFilterActive && !isFetching
-                ? nodes.length
-                : undefined,
-            isSearching:
-              colorSearch.isSearching || (isTypeFilterActive && isFetching),
-            focusedResultIndex: hasResolvedColorSearch
-              ? focusedColorResultIndex
-              : undefined,
-            onPrevious: hasResolvedColorSearch
-              ? () => focusRelativeColorResult(-1)
-              : undefined,
-            onNext: hasResolvedColorSearch
-              ? () => focusRelativeColorResult(1)
-              : undefined,
-          }}
-        />
-      )}
     </>
   );
 }

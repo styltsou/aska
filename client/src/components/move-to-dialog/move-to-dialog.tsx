@@ -255,6 +255,7 @@ export function MoveToDialog({
                 { id: result.folder.id, name: result.folder.name, slug },
               ],
               nodes: [],
+              canvasObjects: [],
             },
           );
           queryClient.setQueryData<CollectionContentsResponse>(

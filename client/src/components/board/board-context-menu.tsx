@@ -60,6 +60,9 @@ export function BoardContextMenu({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const requestCanvasObject = useTransientStore(
+    (state) => state.requestCanvasObject,
+  );
   const hasActiveModalLayer = useActiveModalLayer();
   const openPexelsBrowser = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
@@ -117,6 +120,31 @@ export function BoardContextMenu({
           </ContextMenuItem>
           {target === "collection" ? (
             <>
+              {boardKey ? (
+                <>
+                  <ContextMenuItem
+                    onClick={() =>
+                      requestCanvasObject(boardKey, "text", placement?.position)
+                    }
+                  >
+                    Add text
+                    <ContextMenuShortcut>
+                      {formatPlatformShortcut("⇧+T")}
+                    </ContextMenuShortcut>
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      requestCanvasObject(
+                        boardKey,
+                        "arrow",
+                        placement?.position,
+                      )
+                    }
+                  >
+                    Draw arrow
+                  </ContextMenuItem>
+                </>
+              ) : null}
               <ContextMenuItem onClick={() => setFolderDialogOpen(true)}>
                 New folder
                 <ContextMenuShortcut>

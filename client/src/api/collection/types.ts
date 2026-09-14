@@ -10,6 +10,63 @@ export type FolderChildPreview = {
 };
 
 export type BoardPosition = { x: number; y: number };
+export type CanvasObjectColor = "ink" | "cobalt" | "coral" | "moss" | "ochre";
+export type CanvasTextFont = "inter" | "newsreader" | "caveat";
+export type CanvasTextSize = "sm" | "md" | "lg" | "xl";
+export type CanvasArrowStyle = "clean" | "sketch";
+export type CanvasArrowPattern = "solid" | "dashed" | "dotted";
+
+export type CanvasArrowEndpoint = {
+  position: BoardPosition;
+  binding?: {
+    targetId: string;
+    anchor: { x: number; y: number };
+  };
+};
+
+export type CanvasTextObject = {
+  id: string;
+  type: "text";
+  content: string;
+  position: BoardPosition;
+  font: CanvasTextFont;
+  size: CanvasTextSize;
+  color: CanvasObjectColor;
+  createdAt: string;
+  updatedAt: string;
+  clientId?: string;
+};
+
+export type CanvasArrowObject = {
+  id: string;
+  type: "arrow";
+  start: CanvasArrowEndpoint;
+  end: CanvasArrowEndpoint;
+  style: CanvasArrowStyle;
+  pattern: CanvasArrowPattern;
+  color: CanvasObjectColor;
+  createdAt: string;
+  updatedAt: string;
+  clientId?: string;
+};
+
+export type CanvasObject = CanvasTextObject | CanvasArrowObject;
+
+export type CreateCanvasTextInput = Omit<
+  CanvasTextObject,
+  "id" | "createdAt" | "updatedAt" | "clientId"
+> & { parentFolderPath?: string };
+export type UpdateCanvasTextInput = Partial<
+  Pick<CanvasTextObject, "content" | "position" | "font" | "size" | "color">
+>;
+export type CreateCanvasArrowInput = Omit<
+  CanvasArrowObject,
+  "id" | "createdAt" | "updatedAt" | "clientId"
+> & { parentFolderPath?: string };
+export type UpdateCanvasArrowInput = Partial<
+  Pick<CanvasArrowObject, "start" | "end" | "style" | "pattern" | "color">
+>;
+export type CanvasObjectResponse = { object: CanvasObject };
 export type ContentTypeFilter = "image" | "note" | "link" | "color" | "folder";
 
 export type BoardVisibleBounds = {
@@ -470,6 +527,10 @@ export type CollectionContentsResponse = {
   };
   breadcrumbs: Breadcrumb[];
   nodes: CollectionNode[];
+  canvasObjects: CanvasObject[];
 };
 
-export type InboxContentsResponse = CollectionContentsResponse;
+export type InboxContentsResponse = Omit<
+  CollectionContentsResponse,
+  "canvasObjects"
+>;

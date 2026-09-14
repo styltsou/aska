@@ -9,12 +9,15 @@ import {
   AssetPathParamSchema,
   CollectionAssetNodePathParamSchema,
   CollectionContentsQuerySchema,
+  CreateCanvasArrowSchema,
+  CreateCanvasTextSchema,
   UpdateNodePositionSchema,
   UpdateNodePositionsSchema,
   UpdateNoteSchema,
   UpdateImageSchema,
   UpdateLinkSchema,
   MoveCollectionNodesParentSchema,
+  UpdateCanvasTextSchema,
 } from "./collection.dto";
 
 describe("collection board position DTOs", () => {
@@ -209,6 +212,52 @@ describe("collection board position DTOs", () => {
     ).toEqual({ folderPath: "references", types: ["image", "note"] });
     expect(
       CollectionContentsQuerySchema.safeParse({ types: "video" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("canvas object DTOs", () => {
+  it("applies restrained text defaults and rejects blank text", () => {
+    expect(
+      CreateCanvasTextSchema.parse({
+        content: "Direction",
+        position: { x: -24, y: 80 },
+      }),
+    ).toMatchObject({
+      type: "text",
+      font: "inter",
+      size: "md",
+      color: "ink",
+    });
+    expect(
+      CreateCanvasTextSchema.safeParse({
+        content: "   ",
+        position: { x: 0, y: 0 },
+      }).success,
+    ).toBe(false);
+    expect(UpdateCanvasTextSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("accepts free and bound arrow endpoints with normalized anchors", () => {
+    expect(
+      CreateCanvasArrowSchema.safeParse({
+        start: { position: { x: 0, y: 0 } },
+        end: {
+          position: { x: 160, y: 40 },
+          binding: { targetId: "image-9", anchor: { x: 0, y: 0.5 } },
+        },
+        style: "sketch",
+        pattern: "dashed",
+      }).success,
+    ).toBe(true);
+    expect(
+      CreateCanvasArrowSchema.safeParse({
+        start: { position: { x: 0, y: 0 } },
+        end: {
+          position: { x: 160, y: 40 },
+          binding: { targetId: "image-9", anchor: { x: 1.1, y: 0.5 } },
+        },
+      }).success,
     ).toBe(false);
   });
 });

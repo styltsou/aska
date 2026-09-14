@@ -66,6 +66,7 @@ function makeContents(nodes: CollectionNode[]): CollectionContentsResponse {
     collection: { id: 1, name: "Reference", slug: "reference" },
     breadcrumbs: [],
     nodes,
+    canvasObjects: [],
   };
 }
 

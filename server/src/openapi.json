@@ -390,6 +390,220 @@
         }
       }
     },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/canvas-objects/text": {
+      "post": {
+        "operationId": "createCanvasText",
+        "tags": ["Collections"],
+        "summary": "Create text directly on a collection canvas",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCanvasTextRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The canvas text was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CanvasObjectResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/canvas-objects/arrows": {
+      "post": {
+        "operationId": "createCanvasArrow",
+        "tags": ["Collections"],
+        "summary": "Create an arrow on a collection canvas",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCanvasArrowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The canvas arrow was created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CanvasObjectResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/canvas-objects/text/{objectId}": {
+      "patch": {
+        "operationId": "updateCanvasText",
+        "tags": ["Collections"],
+        "summary": "Update canvas text",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" },
+          {
+            "name": "objectId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^text-\\d+$" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "position": { "$ref": "#/components/schemas/BoardPosition" },
+                  "font": {
+                    "type": "string",
+                    "enum": ["inter", "newsreader", "caveat"]
+                  },
+                  "size": {
+                    "type": "string",
+                    "enum": ["sm", "md", "lg", "xl"]
+                  },
+                  "color": { "$ref": "#/components/schemas/CanvasObjectColor" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The canvas text was updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CanvasObjectResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/canvas-objects/arrows/{objectId}": {
+      "patch": {
+        "operationId": "updateCanvasArrow",
+        "tags": ["Collections"],
+        "summary": "Update a canvas arrow",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" },
+          {
+            "name": "objectId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^arrow-\\d+$" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "start": {
+                    "$ref": "#/components/schemas/CanvasArrowEndpoint"
+                  },
+                  "end": { "$ref": "#/components/schemas/CanvasArrowEndpoint" },
+                  "style": { "type": "string", "enum": ["clean", "sketch"] },
+                  "pattern": {
+                    "type": "string",
+                    "enum": ["solid", "dashed", "dotted"]
+                  },
+                  "color": { "$ref": "#/components/schemas/CanvasObjectColor" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The canvas arrow was updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CanvasObjectResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/canvas-objects/{objectId}": {
+      "delete": {
+        "operationId": "deleteCanvasObject",
+        "tags": ["Collections"],
+        "summary": "Delete canvas text or an arrow",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" },
+          {
+            "name": "objectId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^(text|arrow)-\\d+$" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "The canvas object was deleted." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/contents": {
       "get": {
         "operationId": "getCollectionContents",
@@ -2352,13 +2566,166 @@
         },
         "description": "A breadcrumb entry for folder navigation."
       },
+      "CanvasObjectColor": {
+        "type": "string",
+        "enum": ["ink", "cobalt", "coral", "moss", "ochre"]
+      },
+      "CanvasArrowEndpoint": {
+        "type": "object",
+        "required": ["position"],
+        "properties": {
+          "position": { "$ref": "#/components/schemas/BoardPosition" },
+          "binding": {
+            "type": "object",
+            "required": ["targetId", "anchor"],
+            "properties": {
+              "targetId": {
+                "type": "string",
+                "pattern": "^(folder|image|note|link|color|text|arrow)-\\d+$"
+              },
+              "anchor": {
+                "type": "object",
+                "required": ["x", "y"],
+                "properties": {
+                  "x": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "y": { "type": "number", "minimum": 0, "maximum": 1 }
+                }
+              }
+            }
+          }
+        }
+      },
+      "CanvasTextObject": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "content",
+          "position",
+          "font",
+          "size",
+          "color",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^text-\\d+$" },
+          "type": { "type": "string", "enum": ["text"] },
+          "content": { "type": "string", "maxLength": 2000 },
+          "position": { "$ref": "#/components/schemas/BoardPosition" },
+          "font": {
+            "type": "string",
+            "enum": ["inter", "newsreader", "caveat"]
+          },
+          "size": { "type": "string", "enum": ["sm", "md", "lg", "xl"] },
+          "color": { "$ref": "#/components/schemas/CanvasObjectColor" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CanvasArrowObject": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "start",
+          "end",
+          "style",
+          "pattern",
+          "color",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^arrow-\\d+$" },
+          "type": { "type": "string", "enum": ["arrow"] },
+          "start": { "$ref": "#/components/schemas/CanvasArrowEndpoint" },
+          "end": { "$ref": "#/components/schemas/CanvasArrowEndpoint" },
+          "style": { "type": "string", "enum": ["clean", "sketch"] },
+          "pattern": {
+            "type": "string",
+            "enum": ["solid", "dashed", "dotted"]
+          },
+          "color": { "$ref": "#/components/schemas/CanvasObjectColor" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CanvasObject": {
+        "oneOf": [
+          { "$ref": "#/components/schemas/CanvasTextObject" },
+          { "$ref": "#/components/schemas/CanvasArrowObject" }
+        ],
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "text": "#/components/schemas/CanvasTextObject",
+            "arrow": "#/components/schemas/CanvasArrowObject"
+          }
+        }
+      },
+      "CreateCanvasTextRequest": {
+        "type": "object",
+        "required": ["content", "position"],
+        "properties": {
+          "type": { "type": "string", "enum": ["text"], "default": "text" },
+          "content": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "position": { "$ref": "#/components/schemas/BoardPosition" },
+          "font": {
+            "type": "string",
+            "enum": ["inter", "newsreader", "caveat"],
+            "default": "inter"
+          },
+          "size": {
+            "type": "string",
+            "enum": ["sm", "md", "lg", "xl"],
+            "default": "md"
+          },
+          "color": { "$ref": "#/components/schemas/CanvasObjectColor" },
+          "parentFolderPath": { "type": "string" }
+        }
+      },
+      "CreateCanvasArrowRequest": {
+        "type": "object",
+        "required": ["start", "end"],
+        "properties": {
+          "type": { "type": "string", "enum": ["arrow"], "default": "arrow" },
+          "start": { "$ref": "#/components/schemas/CanvasArrowEndpoint" },
+          "end": { "$ref": "#/components/schemas/CanvasArrowEndpoint" },
+          "style": {
+            "type": "string",
+            "enum": ["clean", "sketch"],
+            "default": "clean"
+          },
+          "pattern": {
+            "type": "string",
+            "enum": ["solid", "dashed", "dotted"],
+            "default": "solid"
+          },
+          "color": { "$ref": "#/components/schemas/CanvasObjectColor" },
+          "parentFolderPath": { "type": "string" }
+        }
+      },
+      "CanvasObjectResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["object"],
+            "properties": {
+              "object": { "$ref": "#/components/schemas/CanvasObject" }
+            }
+          }
+        }
+      },
       "CollectionContentsResponse": {
         "type": "object",
         "required": ["data"],
         "properties": {
           "data": {
             "type": "object",
-            "required": ["collection", "breadcrumbs", "nodes"],
+            "required": ["collection", "breadcrumbs", "nodes", "canvasObjects"],
             "properties": {
               "collection": {
                 "type": "object",
@@ -2408,6 +2775,10 @@
                     }
                   }
                 }
+              },
+              "canvasObjects": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/CanvasObject" }
               }
             }
           }

@@ -1,9 +1,11 @@
 import {
+  ArrowUpRightIcon,
   FileTextIcon,
   FolderPlusIcon,
   ImageIcon,
   PaletteIcon,
   UploadIcon,
+  TypeIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -24,11 +26,12 @@ import {
   GLASS_ISLAND_CLASS,
 } from "@/lib/glass";
 import { cn } from "@/lib/utils";
-import { useBoardInsertionPlacement } from "@/components/canvas";
+import { makeBoardKey, useBoardInsertionPlacement } from "@/components/canvas";
 import {
   getPexelsBrowserScope,
   usePersistedStore,
   useSessionStore,
+  useTransientStore,
 } from "@/store";
 import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
@@ -61,6 +64,16 @@ export function BoardActionRail({
   collectionPath: string;
 }) {
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
+  const [collectionSlug = "", ...folderSegments] = collectionPath.split("/");
+  const boardKey = makeBoardKey(
+    workspaceSlug,
+    collectionSlug,
+    folderSegments.join("/") || undefined,
+  );
+  const activeTool = useTransientStore(
+    (state) => state.canvasTools[boardKey] ?? "select",
+  );
+  const setCanvasTool = useTransientStore((state) => state.setCanvasTool);
   const openPexelsBrowser = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
   );
@@ -173,6 +186,67 @@ export function BoardActionRail({
                         <span>Upload images</span>
                         <RailShortcut keys="U" />
                       </TooltipContent>
+                    </Tooltip>
+                    <ButtonGroupSeparator />
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label="Text tool"
+                            aria-pressed={activeTool === "text"}
+                            data-active={activeTool === "text" || undefined}
+                            className={cn(
+                              RAIL_BUTTON_CLASS,
+                              activeTool === "text" &&
+                                "bg-sidebar-active text-sidebar-accent-foreground",
+                            )}
+                            onClick={() =>
+                              setCanvasTool(
+                                boardKey,
+                                activeTool === "text" ? "select" : "text",
+                              )
+                            }
+                          >
+                            <TypeIcon />
+                          </Button>
+                        }
+                      />
+                      <TooltipContent side="top">
+                        <span>Text tool</span>
+                        <RailShortcut keys="T" />
+                      </TooltipContent>
+                    </Tooltip>
+                    <ButtonGroupSeparator />
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            aria-label="Arrow tool"
+                            aria-pressed={activeTool === "arrow"}
+                            data-active={activeTool === "arrow" || undefined}
+                            className={cn(
+                              RAIL_BUTTON_CLASS,
+                              activeTool === "arrow" &&
+                                "bg-sidebar-active text-sidebar-accent-foreground",
+                            )}
+                            onClick={() =>
+                              setCanvasTool(
+                                boardKey,
+                                activeTool === "arrow" ? "select" : "arrow",
+                              )
+                            }
+                          >
+                            <ArrowUpRightIcon />
+                          </Button>
+                        }
+                      />
+                      <TooltipContent side="top">Arrow tool</TooltipContent>
                     </Tooltip>
                     <ButtonGroupSeparator />
                     <Tooltip>

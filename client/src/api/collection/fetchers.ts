@@ -1,11 +1,14 @@
 import { apiDelete, apiGet, apiGetBlob, apiPatch, apiPost } from "@/lib/api";
 import type {
   BulkDeleteResponse,
+  CanvasObjectResponse,
   CollectionContentsResponse,
   CollectionLinkNode,
   ContentTypeFilter,
   CollectionsData,
   CreateCollectionInput,
+  CreateCanvasArrowInput,
+  CreateCanvasTextInput,
   CreateCollectionResponse,
   CreateFolderInput,
   CreateFolderResponse,
@@ -32,6 +35,8 @@ import type {
   UpdateNodePositionsInput,
   UpdateNodePositionsResponse,
   UpdateNoteInput,
+  UpdateCanvasArrowInput,
+  UpdateCanvasTextInput,
   UpdateNoteResponse,
   UpdateImageInput,
   UpdateImageResponse,
@@ -41,6 +46,62 @@ import type {
   UpdateColorResponse,
   PeekableAssetResponse,
 } from "./types";
+
+export async function createCanvasText(
+  workspaceSlug: string,
+  collectionSlug: string,
+  data: CreateCanvasTextInput,
+): Promise<CanvasObjectResponse> {
+  return apiPost<CanvasObjectResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/canvas-objects/text`,
+    data,
+  );
+}
+
+export async function createCanvasArrow(
+  workspaceSlug: string,
+  collectionSlug: string,
+  data: CreateCanvasArrowInput,
+): Promise<CanvasObjectResponse> {
+  return apiPost<CanvasObjectResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/canvas-objects/arrows`,
+    data,
+  );
+}
+
+export async function updateCanvasText(
+  workspaceSlug: string,
+  collectionSlug: string,
+  objectId: string,
+  data: UpdateCanvasTextInput,
+): Promise<CanvasObjectResponse> {
+  return apiPatch<CanvasObjectResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/canvas-objects/text/${encodeURIComponent(objectId)}`,
+    data,
+  );
+}
+
+export async function updateCanvasArrow(
+  workspaceSlug: string,
+  collectionSlug: string,
+  objectId: string,
+  data: UpdateCanvasArrowInput,
+): Promise<CanvasObjectResponse> {
+  return apiPatch<CanvasObjectResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/canvas-objects/arrows/${encodeURIComponent(objectId)}`,
+    data,
+  );
+}
+
+export async function deleteCanvasObject(
+  workspaceSlug: string,
+  collectionSlug: string,
+  objectId: string,
+): Promise<{ deletedObjectId: string }> {
+  return apiDelete(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/canvas-objects/${encodeURIComponent(objectId)}`,
+  );
+}
 
 export async function fetchPeekableAsset(
   workspaceSlug: string,

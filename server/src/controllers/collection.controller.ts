@@ -2,10 +2,13 @@ import { parseCollectionNodeId } from "@/lib/collection-node-id";
 
 import {
   BulkDeleteBodySchema,
+  CanvasObjectPathParamSchema,
   CollectionNodePathParamSchema,
   FolderNodePathParamSchema,
   CollectionPathParamSchema,
   CreateCollectionSchema,
+  CreateCanvasArrowSchema,
+  CreateCanvasTextSchema,
   CreateColorSchema,
   CreateFolderSchema,
   CreateNoteSchema,
@@ -14,6 +17,8 @@ import {
   WorkspaceParamSchema,
   UpdateNodePositionSchema,
   UpdateNodePositionsSchema,
+  UpdateCanvasArrowSchema,
+  UpdateCanvasTextSchema,
 } from "@/dto/collection.dto";
 import { factory } from "@/factory";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -180,6 +185,115 @@ export const createColor = factory.createHandlers(
   },
 );
 
+export const createCanvasText = factory.createHandlers(
+  authMiddleware,
+  validate.param(CollectionPathParamSchema),
+  validate.body(CreateCanvasTextSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const object = await collectionService.createCanvasText(
+      workspace.id,
+      userId,
+      collectionSlug,
+      data,
+    );
+    return c.json(success({ object }), 201);
+  },
+);
+
+export const createCanvasArrow = factory.createHandlers(
+  authMiddleware,
+  validate.param(CollectionPathParamSchema),
+  validate.body(CreateCanvasArrowSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const object = await collectionService.createCanvasArrow(
+      workspace.id,
+      userId,
+      collectionSlug,
+      data,
+    );
+    return c.json(success({ object }), 201);
+  },
+);
+
+export const updateCanvasText = factory.createHandlers(
+  authMiddleware,
+  validate.param(CanvasObjectPathParamSchema),
+  validate.body(UpdateCanvasTextSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug, objectId } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const object = await collectionService.updateCanvasText(
+      workspace.id,
+      userId,
+      collectionSlug,
+      objectId,
+      data,
+    );
+    return c.json(success({ object }));
+  },
+);
+
+export const updateCanvasArrow = factory.createHandlers(
+  authMiddleware,
+  validate.param(CanvasObjectPathParamSchema),
+  validate.body(UpdateCanvasArrowSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug, objectId } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const object = await collectionService.updateCanvasArrow(
+      workspace.id,
+      userId,
+      collectionSlug,
+      objectId,
+      data,
+    );
+    return c.json(success({ object }));
+  },
+);
+
+export const deleteCanvasObject = factory.createHandlers(
+  authMiddleware,
+  validate.param(CanvasObjectPathParamSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug, objectId } = c.req.valid("param");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const result = await collectionService.deleteCanvasObject(
+      workspace.id,
+      collectionSlug,
+      objectId,
+    );
+    return c.json(success(result));
+  },
+);
+
 export const deleteCollectionNode = factory.createHandlers(
   authMiddleware,
   validate.param(CollectionNodePathParamSchema),
@@ -323,8 +437,13 @@ export const bulkDelete = factory.createHandlers(
 
     const folderIds: number[] = [];
     const assetNodeIds: string[] = [];
+    const canvasObjectIds: string[] = [];
 
     for (const nodeId of nodeIds) {
+      if (/^(text|arrow)-\d+$/.test(nodeId)) {
+        canvasObjectIds.push(nodeId);
+        continue;
+      }
       const target = parseCollectionNodeId(nodeId);
       if (target.nodeType === "folder") {
         folderIds.push(target.entityId);
@@ -335,6 +454,20 @@ export const bulkDelete = factory.createHandlers(
 
     let deletedCount = 0;
     let deletedAssetCount = 0;
+
+    if (canvasObjectIds.length > 0) {
+      if (!collectionSlug) {
+        throw new AppError(
+          ErrorCode.VALIDATION_ERROR,
+          "collectionSlug is required when deleting canvas objects",
+        );
+      }
+      deletedCount += await collectionService.deleteCanvasObjects(
+        workspace.id,
+        collectionSlug,
+        canvasObjectIds,
+      );
+    }
 
     if (folderIds.length > 0) {
       if (!collectionSlug) {

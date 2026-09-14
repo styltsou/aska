@@ -51,6 +51,7 @@ import {
   getResourceMediaLookup,
   projectLinkNode,
 } from "@/services/url-unfurl/projection";
+import { CanvasObjectService } from "./canvas-object.service";
 
 type Deps = {
   objectStorageService: IObjectStorageService;
@@ -58,6 +59,7 @@ type Deps = {
 
 export class CollectionQueryService {
   private readonly objectStorageService: IObjectStorageService;
+  private readonly canvasObjects = new CanvasObjectService();
 
   constructor(deps: Deps) {
     this.objectStorageService = deps.objectStorageService;
@@ -252,6 +254,11 @@ export class CollectionQueryService {
   ): Promise<CollectionContentsResponse> {
     const collection = await getCollectionBySlug(orgId, collectionSlug);
     const target = await resolveTargetInCollection(collection, folderPath);
+    const canvasObjectsPromise = this.canvasObjects.getObjects(
+      orgId,
+      collection.id,
+      target.parentFolderId,
+    );
     const assetTypes = types?.filter(
       (type): type is "image" | "note" | "link" | "color" => type !== "folder",
     );
@@ -599,6 +606,7 @@ export class CollectionQueryService {
       },
       breadcrumbs,
       nodes,
+      canvasObjects: await canvasObjectsPromise,
     };
   }
 

@@ -28,6 +28,37 @@ export const collectionNodeTypeEnum = pgEnum("collection_node_type", [
   "asset",
   "folder",
 ]);
+export const canvasObjectTypeEnum = pgEnum("canvas_object_type", [
+  "text",
+  "arrow",
+]);
+export const canvasObjectColorEnum = pgEnum("canvas_object_color", [
+  "ink",
+  "cobalt",
+  "coral",
+  "moss",
+  "ochre",
+]);
+export const canvasTextFontEnum = pgEnum("canvas_text_font", [
+  "inter",
+  "newsreader",
+  "caveat",
+]);
+export const canvasTextSizeEnum = pgEnum("canvas_text_size", [
+  "sm",
+  "md",
+  "lg",
+  "xl",
+]);
+export const canvasArrowStyleEnum = pgEnum("canvas_arrow_style", [
+  "clean",
+  "sketch",
+]);
+export const canvasArrowPatternEnum = pgEnum("canvas_arrow_pattern", [
+  "solid",
+  "dashed",
+  "dotted",
+]);
 export const uploadSourceEnum = pgEnum("upload_source", [
   "direct",
   "remote_url",
@@ -801,6 +832,122 @@ export const collectionNodes = pgTable(
     check(
       "collection_nodes_position_pair_chk",
       sql`(${table.positionX} is null and ${table.positionY} is null) or (${table.positionX} is not null and ${table.positionY} is not null)`,
+    ),
+  ],
+);
+
+export const canvasObjects = pgTable(
+  "canvas_objects",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    collectionId: integer("collection_id").notNull(),
+    parentFolderId: integer("parent_folder_id"),
+    objectType: canvasObjectTypeEnum("object_type").notNull(),
+    createdByUserId: text("created_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      name: "canvas_objects_collection_org_fkey",
+      columns: [table.collectionId, table.organizationId],
+      foreignColumns: [collectionsTable.id, collectionsTable.organizationId],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "canvas_objects_parent_folder_in_collection_fkey",
+      columns: [table.collectionId, table.parentFolderId],
+      foreignColumns: [collectionNodes.collectionId, collectionNodes.folderId],
+    }).onDelete("cascade"),
+    index("canvas_objects_scope_idx").on(
+      table.organizationId,
+      table.collectionId,
+      table.parentFolderId,
+    ),
+  ],
+);
+
+export const canvasTextObjects = pgTable(
+  "canvas_text_objects",
+  {
+    canvasObjectId: integer("canvas_object_id")
+      .primaryKey()
+      .references(() => canvasObjects.id, { onDelete: "cascade" }),
+    content: text().notNull(),
+    positionX: integer("position_x").notNull(),
+    positionY: integer("position_y").notNull(),
+    font: canvasTextFontEnum().default("inter").notNull(),
+    size: canvasTextSizeEnum().default("md").notNull(),
+    color: canvasObjectColorEnum().default("ink").notNull(),
+  },
+  (table) => [
+    check(
+      "canvas_text_objects_content_not_blank_chk",
+      sql`length(btrim(${table.content})) > 0`,
+    ),
+  ],
+);
+
+export const canvasArrowObjects = pgTable(
+  "canvas_arrow_objects",
+  {
+    canvasObjectId: integer("canvas_object_id")
+      .primaryKey()
+      .references(() => canvasObjects.id, { onDelete: "cascade" }),
+    startX: integer("start_x").notNull(),
+    startY: integer("start_y").notNull(),
+    endX: integer("end_x").notNull(),
+    endY: integer("end_y").notNull(),
+    startCollectionNodeId: integer("start_collection_node_id").references(
+      () => collectionNodes.id,
+      { onDelete: "set null" },
+    ),
+    startCanvasObjectId: integer("start_canvas_object_id").references(
+      () => canvasObjects.id,
+      { onDelete: "set null" },
+    ),
+    startAnchorX: doublePrecision("start_anchor_x"),
+    startAnchorY: doublePrecision("start_anchor_y"),
+    endCollectionNodeId: integer("end_collection_node_id").references(
+      () => collectionNodes.id,
+      { onDelete: "set null" },
+    ),
+    endCanvasObjectId: integer("end_canvas_object_id").references(
+      () => canvasObjects.id,
+      { onDelete: "set null" },
+    ),
+    endAnchorX: doublePrecision("end_anchor_x"),
+    endAnchorY: doublePrecision("end_anchor_y"),
+    style: canvasArrowStyleEnum().default("clean").notNull(),
+    pattern: canvasArrowPatternEnum().default("solid").notNull(),
+    color: canvasObjectColorEnum().default("ink").notNull(),
+  },
+  (table) => [
+    check(
+      "canvas_arrow_start_single_target_chk",
+      sql`not (${table.startCollectionNodeId} is not null and ${table.startCanvasObjectId} is not null)`,
+    ),
+    check(
+      "canvas_arrow_end_single_target_chk",
+      sql`not (${table.endCollectionNodeId} is not null and ${table.endCanvasObjectId} is not null)`,
+    ),
+    check(
+      "canvas_arrow_start_anchor_pair_chk",
+      sql`(${table.startAnchorX} is null) = (${table.startAnchorY} is null)`,
+    ),
+    check(
+      "canvas_arrow_end_anchor_pair_chk",
+      sql`(${table.endAnchorX} is null) = (${table.endAnchorY} is null)`,
     ),
   ],
 );

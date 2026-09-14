@@ -29,8 +29,24 @@ export {
   inboxContentsQueryOptions,
 } from "./hooks";
 export { useMoveCollectionNodesToFolder } from "./use-move-collection-node";
+export {
+  useCreateCanvasArrow,
+  useCreateCanvasText,
+  useDeleteCanvasObject,
+  useUpdateCanvasArrow,
+  useUpdateCanvasText,
+} from "./canvas-object-hooks";
 export type {
   Breadcrumb,
+  CanvasArrowEndpoint,
+  CanvasArrowObject,
+  CanvasArrowPattern,
+  CanvasArrowStyle,
+  CanvasObject,
+  CanvasObjectColor,
+  CanvasTextFont,
+  CanvasTextObject,
+  CanvasTextSize,
   CollectionContentsResponse,
   CollectionFolderNode,
   CollectionImageNode,
@@ -41,6 +57,8 @@ export type {
   DetailedCollection,
   CollectionsData,
   CreateCollectionInput,
+  CreateCanvasArrowInput,
+  CreateCanvasTextInput,
   CreatedCollection,
   CreateCollectionResponse,
   CreateFolderInput,
@@ -70,6 +88,8 @@ export type {
   MoveCollectionNodesToFolderInput,
   MoveCollectionNodesToFolderResponse,
   UpdateNodePositionInput,
+  UpdateCanvasArrowInput,
+  UpdateCanvasTextInput,
   UpdateNodePositionResponse,
   UpdateNodePositionsInput,
   UpdateNodePositionsResponse,
