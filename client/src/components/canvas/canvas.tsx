@@ -286,14 +286,20 @@ function CanvasSurface({
     (state) => state.canvasCreationRequests[boardKey],
   );
   const setCanvasTool = useTransientStore((state) => state.setCanvasTool);
-  const createCanvasText = useCreateCanvasText(workspaceSlug, collectionSlug);
-  const createCanvasArrow = useCreateCanvasArrow(workspaceSlug, collectionSlug);
-  const updateCanvasText = useUpdateCanvasText(
+  const { mutate: createCanvasTextMutation } = useCreateCanvasText(
+    workspaceSlug,
+    collectionSlug,
+  );
+  const { mutate: createCanvasArrowMutation } = useCreateCanvasArrow(
+    workspaceSlug,
+    collectionSlug,
+  );
+  const { mutate: updateCanvasTextMutation } = useUpdateCanvasText(
     workspaceSlug,
     collectionSlug,
     folderPath,
   );
-  const updateCanvasArrow = useUpdateCanvasArrow(
+  const { mutate: updateCanvasArrowMutation } = useUpdateCanvasArrow(
     workspaceSlug,
     collectionSlug,
     folderPath,
@@ -677,7 +683,7 @@ function CanvasSurface({
           clearSelection(boardKey);
           return;
         }
-        createCanvasText.mutate(
+        createCanvasTextMutation(
           {
             type: "text",
             content,
@@ -700,7 +706,7 @@ function CanvasSurface({
       }
       setEditingTextId(undefined);
       if (!trimmed) return;
-      updateCanvasText.mutate(
+      updateCanvasTextMutation(
         { objectId, content },
         { onError: () => toast.error("Unable to update canvas text.") },
       );
@@ -708,11 +714,11 @@ function CanvasSurface({
     [
       boardKey,
       clearSelection,
-      createCanvasText,
+      createCanvasTextMutation,
       draftText,
       folderPath,
       replaceSelection,
-      updateCanvasText,
+      updateCanvasTextMutation,
     ],
   );
   const cancelTextEdit = useCallback(
@@ -736,9 +742,9 @@ function CanvasSurface({
         );
         return;
       }
-      updateCanvasText.mutate({ objectId, ...update });
+      updateCanvasTextMutation({ objectId, ...update });
     },
-    [updateCanvasText],
+    [updateCanvasTextMutation],
   );
   const updateArrowObject = useCallback(
     (
@@ -747,12 +753,12 @@ function CanvasSurface({
         Pick<CanvasArrowObject, "start" | "end" | "style" | "pattern" | "color">
       >,
     ) => {
-      updateCanvasArrow.mutate(
+      updateCanvasArrowMutation(
         { objectId, ...update },
         { onError: () => toast.error("Unable to update the arrow.") },
       );
     },
-    [updateCanvasArrow],
+    [updateCanvasArrowMutation],
   );
   const findArrowBinding = useCallback(
     (position: XYPosition): CanvasArrowEndpoint => {
@@ -822,7 +828,7 @@ function CanvasSurface({
         color: "ink",
       };
       setDraftArrow(arrow);
-      createCanvasArrow.mutate(
+      createCanvasArrowMutation(
         {
           type: "arrow",
           ...arrow,
@@ -842,7 +848,7 @@ function CanvasSurface({
     },
     [
       boardKey,
-      createCanvasArrow,
+      createCanvasArrowMutation,
       findArrowBinding,
       folderPath,
       replaceSelection,
@@ -1699,7 +1705,7 @@ function CanvasSurface({
                 );
                 continue;
               }
-              updateCanvasText.mutate(
+              updateCanvasTextMutation(
                 { objectId: movedNode.id, position },
                 {
                   onError: () =>
@@ -1775,7 +1781,7 @@ function CanvasSurface({
           const { node: movedNode, origin, position } = single;
           if (movedNode.type === "text") {
             if (!movedNode.id.startsWith("text-draft-")) {
-              updateCanvasText.mutate(
+              updateCanvasTextMutation(
                 { objectId: movedNode.id, position },
                 {
                   onError: () =>
