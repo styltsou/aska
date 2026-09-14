@@ -1722,8 +1722,8 @@ export function ImageAssetViewer({
       <DialogContent
         showCloseButton={false}
         data-command-palette-allowed="true"
-        overlayClassName="bg-transparent"
-        className="top-1/2 h-[100svh] w-screen max-w-none -translate-y-1/2 rounded-none bg-transparent shadow-none ring-0 duration-[160ms]"
+        overlayClassName="data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 bg-background duration-150"
+        className="top-1/2 h-[100svh] w-screen max-w-none -translate-y-1/2 rounded-none bg-transparent shadow-none ring-0 transition-none duration-150 data-ending-style:scale-100 data-ending-style:opacity-100 data-starting-style:scale-100 data-starting-style:opacity-100 motion-reduce:animate-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
       >
         <DialogBody
           className={cn(

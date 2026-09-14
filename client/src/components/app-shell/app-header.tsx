@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,11 +18,10 @@ import { titleFromSlug } from "@/lib/slug";
 import { getCollectionViewScope, useSessionStore } from "@/store";
 import { makeBoardKey } from "@/components/canvas/canvas-key";
 import { CollectionViewMenu } from "@/components/collection-view-menu";
+import { useCommittedPathname } from "./use-committed-pathname";
 
 function AppBreadcrumbs() {
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  });
+  const pathname = useCommittedPathname();
   const [, workspaceSlug, collectionsSegment, ...pathSegments] =
     pathname.split("/");
   const isInboxPath = collectionsSegment === "inbox";
@@ -109,9 +108,7 @@ function AppBreadcrumbs() {
 }
 
 export function AppHeader() {
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  });
+  const pathname = useCommittedPathname();
   const [, workspaceSlug, collectionsSegment, ...pathSegments] =
     pathname.split("/");
   const isCollectionsView = pathname === `/${workspaceSlug}`;

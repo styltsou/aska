@@ -8,7 +8,6 @@ import { GlobalScratchpad } from "@/components/app-shell/global-scratchpad";
 import { CommandPalette } from "@/components/command-palette";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { PexelsBrowserPanel } from "@/components/board/pexels-browser-panel";
-import { useRouterState } from "@tanstack/react-router";
 import { pruneExpiredUploadImagesDrafts } from "@/lib/upload-images-draft";
 import { cn } from "@/lib/utils";
 import { getSidebarCollectionLocation } from "./sidebar-collection-navigation";
@@ -17,18 +16,14 @@ import { WorkspacePeekProvider } from "./workspace-peek";
 import { WorkspaceAssetViewProvider } from "./workspace-asset-view";
 import { workspaceSearchQueryOptions } from "@/api/workspace-search";
 import { getRecentWorkspaceAssetIds } from "@/lib/workspace-recent-assets";
+import { useCommittedPathname } from "./use-committed-pathname";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
-  const isBoardView = useRouterState({
-    select: (state) => {
-      const segments = state.location.pathname.split("/").filter(Boolean);
-      return segments[1] === "collections" && segments.length >= 3;
-    },
-  });
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  });
+  const pathname = useCommittedPathname();
+  const pathnameSegments = pathname.split("/").filter(Boolean);
+  const isBoardView =
+    pathnameSegments[1] === "collections" && pathnameSegments.length >= 3;
   const { workspaceSlug, collectionSlug, folderPath } =
     getSidebarCollectionLocation(pathname);
   const pexelsBrowserOpen = useSessionStore((state) =>

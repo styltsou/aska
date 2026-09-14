@@ -1244,7 +1244,7 @@ export function NoteDetailDrawer({
       }}
     >
       {children ? <NoteWorkspaceTrigger render={children} /> : null}
-      <NoteWorkspaceContent className="md:right-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--workspace-peek-stage-gap))] md:w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--workspace-peek-stage-gap))] md:transition-[right,width,opacity,scale,transform] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none">
+      <NoteWorkspaceContent className="md:right-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--workspace-peek-stage-gap))] md:w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--workspace-peek-stage-gap))] md:transition-[right,width] md:duration-[150ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none">
         <NoteWorkspaceTitle>
           {activeNote ? "Note" : loading ? "Loading note" : "New note"}
         </NoteWorkspaceTitle>

@@ -40,10 +40,14 @@ export function NoteWorkspaceContent({
 }: DialogPrimitive.Popup.Props) {
   return (
     <DialogPrimitive.Portal>
+      <DialogPrimitive.Backdrop
+        data-slot="note-workspace-backdrop"
+        className="fixed inset-0 z-[49] bg-sidebar duration-150 motion-reduce:animate-none data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+      />
       <DialogPrimitive.Popup
         data-slot="note-workspace-content"
         className={cn(
-          "fixed inset-0 z-50 flex h-dvh w-dvw flex-col overflow-hidden bg-sidebar text-sidebar-foreground transition duration-[160ms] outline-none data-ending-style:pointer-events-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
+          "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed inset-0 z-50 flex h-dvh w-dvw flex-col overflow-hidden bg-sidebar text-sidebar-foreground duration-150 outline-none data-closed:pointer-events-none motion-reduce:animate-none",
           className,
         )}
         {...props}

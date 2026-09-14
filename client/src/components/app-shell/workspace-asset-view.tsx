@@ -43,6 +43,7 @@ import {
   syncAssetPresentationToUrl,
   type AssetPresentation,
 } from "./workspace-asset-view-state";
+import { useCommittedPathname } from "./use-committed-pathname";
 
 type OpenAssetOptions = {
   replace?: boolean;
@@ -82,6 +83,7 @@ export function WorkspaceAssetViewProvider({
   children: ReactNode;
 }) {
   const navigate = useNavigate({ from: "/$workspaceSlug" });
+  const pathname = useCommittedPathname();
   const rawAssetId = useRouterState({
     select: (state) => (state.location.search as { asset?: unknown }).asset,
   });
@@ -124,6 +126,9 @@ export function WorkspaceAssetViewProvider({
       openedInAppAssetIdsRef.current.add(nextAssetId);
       recordRecentWorkspaceAsset(workspaceSlug, nextAssetId);
       void navigate({
+        // The workspace route owns the validated search schema, but using it as
+        // an implicit destination would collapse nested routes to its index.
+        to: pathname as "/$workspaceSlug",
         search: (previous) => ({ ...previous, asset: nextAssetId }),
         replace: options?.replace,
       }).catch(() => {
@@ -133,19 +138,20 @@ export function WorkspaceAssetViewProvider({
         );
       });
     },
-    [assetId, navigate, queryClient, workspaceSlug],
+    [assetId, navigate, pathname, queryClient, workspaceSlug],
   );
 
   const removeAssetFromUrl = useCallback(
     (replace = true) =>
       navigate({
+        to: pathname as "/$workspaceSlug",
         search: (previous) => {
           const { asset: _asset, ...rest } = previous;
           return rest;
         },
         replace,
       }),
-    [navigate],
+    [navigate, pathname],
   );
 
   const closeAsset = useCallback(() => {
@@ -226,9 +232,7 @@ function WorkspaceAssetViewController({
   removeAssetFromUrl: (replace?: boolean) => Promise<void>;
 }) {
   const assetId = presentation?.assetId;
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  });
+  const pathname = useCommittedPathname();
   const queryClient = useQueryClient();
   const { showAssetInBoard } = useWorkspacePeek();
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
