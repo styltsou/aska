@@ -140,11 +140,6 @@ function fitSizeWithinBounds(size: Size, maxSize: Size): Size {
   };
 }
 
-const FLOATING_ISLAND_SURFACE_CLASS = cn(
-  "relative z-10 rounded-md",
-  "border border-foreground/10 bg-background shadow-none",
-);
-
 const VIEWER_CONTROL_FRAME_CLASS = "relative rounded-lg p-1";
 
 const VIEWER_ISLAND_BUTTON_CLASS =
@@ -160,6 +155,12 @@ const COLOR_PICKER_SURFACE_CLASS = cn(
 
 const VIEWER_CANVAS_CLASS =
   "min-h-0 flex-1 px-5 py-14 pr-5 sm:px-8 sm:py-16 sm:pr-8 lg:pr-[27rem]";
+
+const CROP_AREA_BASE_CLASS =
+  "![border-width:1px] !shadow-none before:content-[''] before:!border-[color-mix(in_srgb,currentcolor_72%,transparent)] before:![border-width:1px] before:transition-opacity before:duration-50 before:ease-[ease] after:content-[''] after:!border-[color-mix(in_srgb,currentcolor_72%,transparent)] after:![border-width:1px] after:transition-opacity after:duration-50 after:ease-[ease] motion-reduce:before:transition-none motion-reduce:after:transition-none";
+
+const CROP_FRAME_BASE_CLASS =
+  "before:content-[''] before:absolute before:pointer-events-none before:!border-[color-mix(in_srgb,currentcolor_72%,transparent)] before:border-solid before:transition-opacity before:duration-50 before:ease-[ease] before:[inset:0_33.33%] before:![border-width:0_1px] after:content-[''] after:absolute after:pointer-events-none after:!border-[color-mix(in_srgb,currentcolor_72%,transparent)] after:border-solid after:transition-opacity after:duration-50 after:ease-[ease] after:[inset:33.33%_0] after:![border-width:1px_0] motion-reduce:before:transition-none motion-reduce:after:transition-none";
 
 type CropFrameColors = {
   frame: string;
@@ -261,7 +262,10 @@ function getCropFrameColors(dominantColors?: string[]): CropFrameColors {
   if (colors.length === 0) {
     return {
       frame: "var(--sidebar-foreground)",
-      className: "aska-crop-area aska-crop-area--theme",
+      className: cn(
+        CROP_AREA_BASE_CLASS,
+        "![border-color:color-mix(in_srgb,var(--sidebar-foreground)_90%,transparent)] ![color:color-mix(in_srgb,var(--sidebar-foreground)_90%,transparent)]",
+      ),
     };
   }
 
@@ -288,11 +292,17 @@ function getCropFrameColors(dominantColors?: string[]): CropFrameColors {
   return luminance > 0.42
     ? {
         frame: "rgb(0 0 0)",
-        className: "aska-crop-area aska-crop-area--dark",
+        className: cn(
+          CROP_AREA_BASE_CLASS,
+          "![border-color:rgb(0_0_0_/_0.9)] ![color:rgb(0_0_0_/_0.9)]",
+        ),
       }
     : {
         frame: "rgb(255 255 255)",
-        className: "aska-crop-area aska-crop-area--light",
+        className: cn(
+          CROP_AREA_BASE_CLASS,
+          "![border-color:rgb(255_255_255_/_0.9)] ![color:rgb(255_255_255_/_0.9)]",
+        ),
       };
 }
 
@@ -478,8 +488,9 @@ function FreeCropResizeHandles({
   return (
     <div
       className={cn(
-        "aska-crop-frame pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 border",
-        !showGrid && "aska-crop-frame--grid-hidden",
+        "pointer-events-none absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 border",
+        CROP_FRAME_BASE_CLASS,
+        !showGrid && "before:opacity-0 after:opacity-0",
       )}
       style={{
         width: cropSize.width,
@@ -1854,10 +1865,131 @@ export function ImageAssetViewer({
             </div>
           </div>
 
-          <div className="pointer-events-none absolute top-[var(--app-shell-inset)] right-[var(--app-shell-inset)] z-30 w-[min(20rem,calc(100%-1rem))] sm:w-80 lg:w-[25rem]">
-            <div
+          <div className="relative z-10 flex h-full min-h-0 flex-col">
+            {cropMode && asset ? (
+              <div
+                className={cn(
+                  "[container-type:size] relative z-10 flex items-center justify-center",
+                  VIEWER_CANVAS_CLASS,
+                )}
+              >
+                <div
+                  ref={cropperContainerRef}
+                  className="relative mx-auto h-full w-full max-w-[1920px] overflow-visible"
+                  style={{
+                    width: `min(100cqw, calc(100cqh * ${originalAspect}), 1920px)`,
+                    height: `min(100cqh, calc(100cqw / ${originalAspect}), ${1920 / originalAspect}px)`,
+                  }}
+                >
+                  <div className="absolute inset-0 overflow-hidden rounded-lg">
+                    {!mediaLoaded && blurPlaceholder ? (
+                      <div className="absolute inset-0 overflow-hidden">
+                        <img
+                          src={blurPlaceholder}
+                          alt=""
+                          aria-hidden="true"
+                          className="size-full object-contain blur-[5px] brightness-90 saturate-75"
+                        />
+                      </div>
+                    ) : null}
+                    <Cropper
+                      image={asset.originalUrl ?? asset.url}
+                      crop={crop}
+                      zoom={zoom}
+                      rotation={rotation}
+                      transform={cropTransform}
+                      aspect={resolvedAspect}
+                      cropSize={cropBoxSize ?? undefined}
+                      onCropChange={handleCropChange}
+                      onZoomChange={handleZoomChange}
+                      onInteractionStart={handleCropInteractionStart}
+                      onInteractionEnd={handleCropInteractionEnd}
+                      onCropComplete={handleCropComplete}
+                      onCropSizeChange={handleCropSizeChange}
+                      onMediaLoaded={() => setMediaLoaded(true)}
+                      setMediaSize={setMediaSize}
+                      classes={{
+                        cropAreaClassName: cn(
+                          cropFrameColors.className,
+                          !isCropInteracting &&
+                            "before:opacity-0 after:opacity-0",
+                        ),
+                      }}
+                      style={{ mediaStyle: { filter: "brightness(0.48)" } }}
+                      objectFit="contain"
+                      disableAutomaticStylesInjection
+                      showGrid={isCropInteracting}
+                    />
+                    {mediaSize && cropHighlightClip ? (
+                      <div
+                        className="pointer-events-none absolute inset-0 z-10 overflow-hidden"
+                        style={{ clipPath: cropHighlightClip }}
+                      >
+                        <img
+                          src={asset.originalUrl ?? asset.url}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                          className="absolute top-1/2 left-1/2 max-w-none"
+                          style={{
+                            width: mediaSize.width,
+                            height: mediaSize.height,
+                            transform: `translate(-50%, -50%) ${cropTransform}`,
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                  {cropBoxSize && cropBoxMaxSize ? (
+                    <FreeCropResizeHandles
+                      cropSize={cropBoxSize}
+                      aspect={aspect === 0 ? undefined : resolvedAspect}
+                      frameColors={cropFrameColors}
+                      maxCropSize={cropBoxMaxSize}
+                      showGrid={isCropInteracting}
+                      onInteractionStart={handleCropInteractionStart}
+                      onInteractionEnd={handleCropInteractionEnd}
+                      onResize={handleCropBoxResize}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div
+                className={cn(
+                  "[container-type:size] flex items-center justify-center",
+                  VIEWER_CANVAS_CLASS,
+                )}
+              >
+                {open && displayUrl ? (
+                  <ProgressiveViewerImage
+                    key={viewerImageUrl}
+                    displayUrl={displayUrl}
+                    originalUrl={viewerImageUrl}
+                    alt={asset?.alt ?? ""}
+                    aspectRatio={viewerAspectRatio}
+                    imageRef={viewerImageRef}
+                    pickMode={isEyeDropping}
+                    onPick={handlePickColorResult}
+                    loadSamplingCanvas={loadSamplingCanvas}
+                  />
+                ) : loading ? (
+                  <Skeleton className="h-[min(68cqh,42rem)] w-[min(70cqw,64rem)] rounded-lg bg-white/10" />
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          <aside
+            className={cn(
+              GLASS_FRAME_CLASS,
+              "pointer-events-none absolute top-[var(--app-shell-inset)] right-[var(--app-shell-inset)] bottom-[var(--app-shell-inset)] z-20 flex w-[min(20rem,calc(100%-1rem))] min-h-0 flex-col overflow-hidden rounded-xl sm:w-80 lg:w-[25rem]",
+              "pointer-events-auto",
+            )}
+          >
+            <header
               className={cn(
-                "pointer-events-auto flex min-h-16 w-full min-w-0 items-center gap-1 rounded-t-xl rounded-b-none bg-card p-4 [&_[data-slot=button]]:duration-75",
+                "flex min-h-16 w-full shrink-0 min-w-0 items-center gap-1 rounded-t-xl bg-card p-4 [&_[data-slot=button]]:duration-75",
                 !asset ? "justify-end" : "justify-between",
               )}
             >
@@ -1955,131 +2087,8 @@ export function ImageAssetViewer({
                   </div>
                 </>
               ) : null}
-            </div>
-          </div>
-
-          <div className="relative z-10 flex h-full min-h-0 flex-col">
-            {cropMode && asset ? (
-              <div
-                className={cn(
-                  "[container-type:size] relative z-10 flex items-center justify-center",
-                  VIEWER_CANVAS_CLASS,
-                )}
-              >
-                <div
-                  ref={cropperContainerRef}
-                  className="relative mx-auto h-full w-full max-w-[1920px] overflow-visible"
-                  style={{
-                    width: `min(100cqw, calc(100cqh * ${originalAspect}), 1920px)`,
-                    height: `min(100cqh, calc(100cqw / ${originalAspect}), ${1920 / originalAspect}px)`,
-                  }}
-                >
-                  <div className="absolute inset-0 overflow-hidden rounded-lg">
-                    {!mediaLoaded && blurPlaceholder ? (
-                      <div className="absolute inset-0 overflow-hidden">
-                        <img
-                          src={blurPlaceholder}
-                          alt=""
-                          aria-hidden="true"
-                          className="size-full object-contain blur-[5px] brightness-90 saturate-75"
-                        />
-                      </div>
-                    ) : null}
-                    <Cropper
-                      image={asset.originalUrl ?? asset.url}
-                      crop={crop}
-                      zoom={zoom}
-                      rotation={rotation}
-                      transform={cropTransform}
-                      aspect={resolvedAspect}
-                      cropSize={cropBoxSize ?? undefined}
-                      onCropChange={handleCropChange}
-                      onZoomChange={handleZoomChange}
-                      onInteractionStart={handleCropInteractionStart}
-                      onInteractionEnd={handleCropInteractionEnd}
-                      onCropComplete={handleCropComplete}
-                      onCropSizeChange={handleCropSizeChange}
-                      onMediaLoaded={() => setMediaLoaded(true)}
-                      setMediaSize={setMediaSize}
-                      classes={{
-                        cropAreaClassName: cn(
-                          cropFrameColors.className,
-                          !isCropInteracting && "aska-crop-area--grid-hidden",
-                        ),
-                      }}
-                      style={{ mediaStyle: { filter: "brightness(0.48)" } }}
-                      objectFit="contain"
-                      disableAutomaticStylesInjection
-                      showGrid={isCropInteracting}
-                    />
-                    {mediaSize && cropHighlightClip ? (
-                      <div
-                        className="pointer-events-none absolute inset-0 z-10 overflow-hidden"
-                        style={{ clipPath: cropHighlightClip }}
-                      >
-                        <img
-                          src={asset.originalUrl ?? asset.url}
-                          alt=""
-                          aria-hidden="true"
-                          draggable={false}
-                          className="absolute top-1/2 left-1/2 max-w-none"
-                          style={{
-                            width: mediaSize.width,
-                            height: mediaSize.height,
-                            transform: `translate(-50%, -50%) ${cropTransform}`,
-                          }}
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-                  {cropBoxSize && cropBoxMaxSize ? (
-                    <FreeCropResizeHandles
-                      cropSize={cropBoxSize}
-                      aspect={aspect === 0 ? undefined : resolvedAspect}
-                      frameColors={cropFrameColors}
-                      maxCropSize={cropBoxMaxSize}
-                      showGrid={isCropInteracting}
-                      onInteractionStart={handleCropInteractionStart}
-                      onInteractionEnd={handleCropInteractionEnd}
-                      onResize={handleCropBoxResize}
-                    />
-                  ) : null}
-                </div>
-              </div>
-            ) : (
-              <div
-                className={cn(
-                  "[container-type:size] flex items-center justify-center",
-                  VIEWER_CANVAS_CLASS,
-                )}
-              >
-                {open && displayUrl ? (
-                  <ProgressiveViewerImage
-                    key={viewerImageUrl}
-                    displayUrl={displayUrl}
-                    originalUrl={viewerImageUrl}
-                    alt={asset?.alt ?? ""}
-                    aspectRatio={viewerAspectRatio}
-                    imageRef={viewerImageRef}
-                    pickMode={isEyeDropping}
-                    onPick={handlePickColorResult}
-                    loadSamplingCanvas={loadSamplingCanvas}
-                  />
-                ) : loading ? (
-                  <Skeleton className="h-[min(68cqh,42rem)] w-[min(70cqw,64rem)] rounded-lg bg-white/10" />
-                ) : null}
-              </div>
-            )}
-          </div>
-
-          <aside
-            className={cn(
-              GLASS_FRAME_CLASS,
-              "pointer-events-none absolute top-[var(--app-shell-inset)] right-[var(--app-shell-inset)] bottom-[var(--app-shell-inset)] z-20 flex w-[min(20rem,calc(100%-1rem))] min-h-0 flex-col gap-1 overflow-hidden rounded-xl sm:w-80 lg:w-[25rem] lg:gap-0",
-              "pointer-events-auto",
-            )}
-          >
-            <div className="flex min-h-0 flex-1 flex-col bg-card pt-16">
+            </header>
+            <div className="relative flex min-h-0 flex-1 flex-col bg-background">
               <AnimatePresence initial={false} mode="sync">
                 {cropMode && asset ? (
                   <motion.section
@@ -2113,7 +2122,7 @@ export function ImageAssetViewer({
                         ? { duration: 0 }
                         : { duration: 0.18, ease: [0.16, 1, 0.3, 1] }
                     }
-                    className="relative overflow-hidden rounded-t-xl bg-card shadow-none"
+                    className="relative overflow-hidden bg-card shadow-none"
                     aria-label="Edit image"
                   >
                     <div className="relative z-10 space-y-5 rounded-t-xl px-4 py-4">
@@ -2201,12 +2210,7 @@ export function ImageAssetViewer({
                   cropMode && "before:opacity-100",
                 )}
               >
-                <div
-                  className={cn(
-                    FLOATING_ISLAND_SURFACE_CLASS,
-                    "relative z-10 min-h-0 flex flex-1 flex-col overflow-y-auto border-y border-l border-foreground/10 border-r-0 p-4 lg:rounded-xl lg:border-y lg:border-l lg:border-foreground/10 lg:border-r-0 lg:bg-background lg:px-5 lg:pt-4 lg:pb-4",
-                  )}
-                >
+                <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col overflow-y-auto rounded-xl border-y border-foreground/10 bg-background px-4 pt-4 pb-4 lg:px-5">
                   <motion.div
                     layout="position"
                     transition={
@@ -2280,22 +2284,14 @@ export function ImageAssetViewer({
                         {cropError}
                       </p>
                     ) : null}
+                    {asset ? (
+                      <div className="mt-6 border-t border-border pt-5">
+                        <ImageMetadataDetails asset={asset} />
+                      </div>
+                    ) : null}
                   </motion.div>
                 </div>
               </motion.div>
-              {asset ? (
-                <motion.div
-                  layout="position"
-                  transition={
-                    shouldReduceMotion
-                      ? { duration: 0 }
-                      : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
-                  }
-                  className="shrink-0 bg-card p-4"
-                >
-                  <ImageMetadataDetails asset={asset} />
-                </motion.div>
-              ) : null}
             </div>
           </aside>
         </DialogBody>

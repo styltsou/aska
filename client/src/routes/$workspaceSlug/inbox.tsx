@@ -142,21 +142,21 @@ function InboxPage() {
                 : "Quick captures and imports that are not in a collection yet will appear here."
           }
         />
+        {(assets.length > 0 || selectedAssetTypes.length > 0) && (
+          <FilterBar
+            scope={filterScope}
+            searchStatus={{
+              resultCount: hasResolvedColorSearch
+                ? colorSearch.data.results.length
+                : isTypeFilterActive && !isFetching
+                  ? assets.length
+                  : undefined,
+              isSearching:
+                colorSearch.isSearching || (isTypeFilterActive && isFetching),
+            }}
+          />
+        )}
       </BoardUploadZone>
-      {(assets.length > 0 || selectedAssetTypes.length > 0) && (
-        <FilterBar
-          scope={filterScope}
-          searchStatus={{
-            resultCount: hasResolvedColorSearch
-              ? colorSearch.data.results.length
-              : isTypeFilterActive && !isFetching
-                ? assets.length
-                : undefined,
-            isSearching:
-              colorSearch.isSearching || (isTypeFilterActive && isFetching),
-          }}
-        />
-      )}
     </BoardContextMenu>
   );
 }
