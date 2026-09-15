@@ -230,6 +230,7 @@ export class CollectionMutationService {
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString(),
       position: data.position ?? null,
+      frontIndex: null,
     };
   }
 
@@ -302,6 +303,7 @@ export class CollectionMutationService {
       isFavorite: false,
       createdAt: color.createdAt.toISOString(),
       position: data.position ?? null,
+      frontIndex: null,
     };
   }
 

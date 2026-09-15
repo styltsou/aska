@@ -18,6 +18,7 @@ import {
   updateCollectionNodePositions,
   updateCanvasArrow,
   updateCanvasText,
+  updateCanvasItemFrontIndexes,
 } from "@/controllers/collection.controller";
 import { factory } from "@/factory";
 
@@ -53,6 +54,10 @@ const collectionRoutes = factory
   .patch(
     "/workspace/:workspaceSlug/collections/:collectionSlug/canvas-objects/arrows/:objectId",
     ...updateCanvasArrow,
+  )
+  .patch(
+    "/workspace/:workspaceSlug/collections/:collectionSlug/canvas/items/front-index",
+    ...updateCanvasItemFrontIndexes,
   )
   .delete(
     "/workspace/:workspaceSlug/collections/:collectionSlug/canvas-objects/:objectId",

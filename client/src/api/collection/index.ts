@@ -35,6 +35,7 @@ export {
   useDeleteCanvasObject,
   useUpdateCanvasArrow,
   useUpdateCanvasText,
+  useUpdateCanvasItemFrontIndexes,
 } from "./canvas-object-hooks";
 export type {
   Breadcrumb,
@@ -49,6 +50,7 @@ export type {
   CanvasTextFont,
   CanvasTextObject,
   CanvasTextSize,
+  CanvasItemFrontIndex,
   CollectionContentsResponse,
   CollectionFolderNode,
   CollectionImageNode,
@@ -92,6 +94,8 @@ export type {
   UpdateNodePositionInput,
   UpdateCanvasArrowInput,
   UpdateCanvasTextInput,
+  UpdateCanvasItemFrontIndexesInput,
+  UpdateCanvasItemFrontIndexesResponse,
   UpdateNodePositionResponse,
   UpdateNodePositionsInput,
   UpdateNodePositionsResponse,

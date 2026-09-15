@@ -4,6 +4,7 @@ import {
   type Query,
   type QueryKey,
 } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import {
   createCanvasArrow,
@@ -11,14 +12,17 @@ import {
   deleteCanvasObject,
   updateCanvasArrow,
   updateCanvasText,
+  updateCanvasItemFrontIndexes,
 } from "./fetchers";
 import type {
+  CanvasItemFrontIndex,
   CanvasObject,
   CollectionContentsResponse,
   CreateCanvasArrowInput,
   CreateCanvasTextInput,
   UpdateCanvasArrowInput,
   UpdateCanvasTextInput,
+  UpdateCanvasItemFrontIndexesInput,
 } from "./types";
 
 function contentsFilter(
@@ -53,16 +57,92 @@ function updateObjectInContents(
   };
 }
 
+export function updateFrontIndexesInContents(
+  current: CollectionContentsResponse | undefined,
+  items: readonly CanvasItemFrontIndex[],
+) {
+  if (!current) return current;
+  const frontIndexes = new Map(
+    items.map((item) => [item.id, item.frontIndex] as const),
+  );
+  return {
+    ...current,
+    nodes: current.nodes.map((node) => {
+      const frontIndex = frontIndexes.get(node.id);
+      return frontIndex === undefined ? node : { ...node, frontIndex };
+    }),
+    canvasObjects: current.canvasObjects.map((object) => {
+      const frontIndex = frontIndexes.get(object.id);
+      return object.type !== "text" || frontIndex === undefined
+        ? object
+        : { ...object, frontIndex };
+    }),
+  };
+}
+
+type UpdateCanvasItemFrontIndexesVariables =
+  UpdateCanvasItemFrontIndexesInput & {
+    folderPath?: string;
+    optimisticItems: CanvasItemFrontIndex[];
+  };
+
+export function useUpdateCanvasItemFrontIndexes(
+  workspaceSlug: string,
+  collectionSlug: string,
+  folderPath?: string,
+) {
+  const queryClient = useQueryClient();
+  const filter = contentsFilter(workspaceSlug, collectionSlug, folderPath);
+  return useMutation({
+    mutationFn: ({
+      optimisticItems: _optimisticItems,
+      folderPath: _folderPath,
+      ...data
+    }: UpdateCanvasItemFrontIndexesVariables) =>
+      updateCanvasItemFrontIndexes(workspaceSlug, collectionSlug, data),
+    onMutate: async ({ optimisticItems }) => {
+      await queryClient.cancelQueries(filter);
+      const previous =
+        queryClient.getQueriesData<CollectionContentsResponse>(filter);
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        filter,
+        (current) => updateFrontIndexesInContents(current, optimisticItems),
+      );
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      context?.previous.forEach(([key, value]: [QueryKey, unknown]) => {
+        queryClient.setQueryData(key, value);
+      });
+      toast.error("Unable to save the canvas layer order.");
+    },
+    onSuccess: ({ items }) => {
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        filter,
+        (current) => updateFrontIndexesInContents(current, items),
+      );
+    },
+  });
+}
+
+type CreateCanvasTextVariables = CreateCanvasTextInput & {
+  clientId?: string;
+};
+
 export function useCreateCanvasText(
   workspaceSlug: string,
   collectionSlug: string,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateCanvasTextInput) =>
+    mutationFn: ({ clientId: _clientId, ...data }: CreateCanvasTextVariables) =>
       createCanvasText(workspaceSlug, collectionSlug, data),
     onSuccess: ({ object }, variables) => {
       if (object.type !== "text") return;
+      const persisted =
+        variables.clientId === undefined
+          ? object
+          : { ...object, clientId: variables.clientId };
       queryClient.setQueriesData<CollectionContentsResponse>(
         contentsFilter(
           workspaceSlug,
@@ -74,10 +154,10 @@ export function useCreateCanvasText(
             ? {
                 ...current,
                 canvasObjects: current.canvasObjects.some(
-                  (candidate) => candidate.id === object.id,
+                  (candidate) => candidate.id === persisted.id,
                 )
                   ? current.canvasObjects
-                  : [...current.canvasObjects, object],
+                  : [...current.canvasObjects, persisted],
               }
             : current,
       );

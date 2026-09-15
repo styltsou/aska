@@ -96,6 +96,7 @@ export function projectLinkNode(
   row: LinkProjectionRow,
   media: ProjectedMedia | undefined,
   position: CollectionLinkNode["position"],
+  frontIndex: CollectionLinkNode["frontIndex"] = null,
 ): CollectionLinkNode {
   return {
     id: `link-${row.assetId}`,
@@ -117,6 +118,7 @@ export function projectLinkNode(
     video: projectLinkVideo(row),
     createdAt: row.createdAt.toISOString(),
     position,
+    frontIndex,
   };
 }
 

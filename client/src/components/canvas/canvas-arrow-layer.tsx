@@ -18,6 +18,7 @@ import {
   arrowDashArray,
   canvasObjectColor,
 } from "./canvas-object-style";
+import { ARROW_Z_INDEX, OVERLAY_Z_INDEX } from "./canvas-node-stacking";
 
 export type DraftCanvasArrow = Pick<
   CanvasArrowObject,
@@ -324,7 +325,8 @@ export function CanvasArrowLayer({
   return (
     <ViewportPortal>
       <svg
-        className="pointer-events-none absolute top-0 left-0 z-0 overflow-visible"
+        className="pointer-events-none absolute top-0 left-0 overflow-visible"
+        style={{ zIndex: ARROW_Z_INDEX }}
         width="1"
         height="1"
         aria-label="Canvas arrows"
@@ -334,9 +336,10 @@ export function CanvasArrowLayer({
             (["filled", "hollow", "chevron"] as CanvasArrowHead[]).map(
               (head) => (
                 <ArrowMarker
-                  key={`${color}-${head}`}
+                  key={`${color}-${head}-clean`}
                   color={color}
                   head={head}
+                  style="clean"
                 />
               ),
             ),
@@ -367,6 +370,16 @@ export function CanvasArrowLayer({
                   "opacity-65",
               )}
             >
+              {arrow.style === "sketch" ? (
+                <defs>
+                  <ArrowMarker
+                    color={arrow.color}
+                    head={arrow.head}
+                    style="sketch"
+                    seed={arrow.id}
+                  />
+                </defs>
+              ) : null}
               {selected ? (
                 <path
                   d={path}
@@ -385,7 +398,7 @@ export function CanvasArrowLayer({
                 strokeLinejoin="round"
                 strokeDasharray={arrowDashArray(arrow.pattern)}
                 vectorEffect="non-scaling-stroke"
-                markerEnd={`url(#aska-arrowhead-${arrow.color}-${arrow.head})`}
+                markerEnd={`url(#aska-arrowhead-${arrow.color}-${arrow.head}-${arrow.style}${arrow.style === "sketch" ? `-${arrow.id}` : ""})`}
               />
               {arrow.id !== "arrow-draft" ? (
                 <path
@@ -487,14 +500,29 @@ export function CanvasArrowLayer({
 function ArrowMarker({
   color,
   head,
+  style,
+  seed,
 }: {
   color: CanvasObjectColor;
   head: CanvasArrowHead;
+  style: CanvasArrowStyle;
+  seed?: string;
 }) {
   const stroke = canvasObjectColor(color);
+  const skew = style === "sketch" ? arrowheadSketchJitter(seed ?? "") : null;
+  const tip = 4 + (skew?.tipY ?? 0);
+  const left =
+    head === "filled"
+      ? { x: skew?.leftX ?? 0, y: skew?.leftY ?? 0 }
+      : { x: 0.75 + (skew?.leftX ?? 0), y: 0.75 + (skew?.leftY ?? 0) };
+  const right =
+    head === "filled"
+      ? { x: skew?.rightX ?? 0, y: 8 + (skew?.rightY ?? 0) }
+      : { x: 0.75 + (skew?.rightX ?? 0), y: 7.25 + (skew?.rightY ?? 0) };
+  const path = `M ${left.x} ${left.y} L 8 ${tip} L ${right.x} ${right.y}`;
   return (
     <marker
-      id={`aska-arrowhead-${color}-${head}`}
+      id={`aska-arrowhead-${color}-${head}-${style}${style === "sketch" && seed ? `-${seed}` : ""}`}
       markerWidth="9"
       markerHeight="9"
       refX="8"
@@ -503,27 +531,50 @@ function ArrowMarker({
       markerUnits="strokeWidth"
     >
       {head === "filled" ? (
-        <path d="M 0 0 L 8 4 L 0 8 z" fill={stroke} />
+        <path d={`${path} z`} fill={stroke} />
       ) : head === "hollow" ? (
         <path
-          d="M .75 .75 L 8 4 L .75 7.25 z"
+          d={`${path} z`}
           fill="var(--background)"
           stroke={stroke}
-          strokeWidth="1.5"
+          strokeWidth="1"
           strokeLinejoin="round"
         />
       ) : (
         <path
-          d="M .75 .75 L 8 4 L .75 7.25"
+          d={path}
           fill="none"
           stroke={stroke}
-          strokeWidth="1.75"
+          strokeWidth="1"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
       )}
     </marker>
   );
+}
+
+function arrowheadSketchJitter(seed: string) {
+  let state =
+    [...seed].reduce(
+      (value, char) => (value * 31 + char.charCodeAt(0)) % 0xffff_ffff,
+      0x811c9dc5,
+    ) || 1;
+  const next = () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    state >>>= 0;
+    return state / 0xffff_ffff;
+  };
+  const spread = (magnitude: number) => (next() * 2 - 1) * magnitude;
+  return {
+    tipY: spread(0.9),
+    leftX: spread(0.5),
+    leftY: spread(0.5),
+    rightX: spread(0.5),
+    rightY: spread(0.5),
+  };
 }
 
 function ArrowToolbar({
@@ -541,8 +592,13 @@ function ArrowToolbar({
     <div
       role="toolbar"
       aria-label="Arrow style"
-      className="nodrag nopan nowheel absolute z-30 flex -translate-x-1/2 -translate-y-full items-center gap-1 rounded-lg border border-border/70 bg-popover/95 p-1 text-popover-foreground shadow-lg backdrop-blur"
-      style={{ left: position.x, top: position.y, pointerEvents: "all" }}
+      className="nodrag nopan nowheel absolute flex -translate-x-1/2 -translate-y-full items-center gap-1 rounded-lg border border-border/70 bg-popover/95 p-1 text-popover-foreground shadow-lg backdrop-blur"
+      style={{
+        left: position.x,
+        top: position.y,
+        zIndex: OVERLAY_Z_INDEX,
+        pointerEvents: "all",
+      }}
       onPointerDown={(event) => event.stopPropagation()}
     >
       {(["clean", "sketch"] as CanvasArrowStyle[]).map((style) => (

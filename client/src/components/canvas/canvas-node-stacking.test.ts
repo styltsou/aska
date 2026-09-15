@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ARROW_Z_INDEX,
+  MAX_FRONT_INDEX,
+  OVERLAY_Z_INDEX,
+  RESTING_CARD_Z_INDEX,
+  RESTING_TEXT_Z_INDEX,
+  getCanvasFrontZIndex,
   getCanvasInteractionZIndex,
   getCanvasRestingZIndex,
+  promoteCanvasFrontIndexes,
+  renumberFrontIndexes,
   updateExpandedNoteOrder,
 } from "./canvas-node-stacking";
 
@@ -67,5 +75,60 @@ describe("canvas node stacking", () => {
     );
 
     expect(order).toEqual([]);
+  });
+
+  it("keeps every visual band in the intended order", () => {
+    const order = updateExpandedNoteOrder([], [note("note-1", true)]);
+    const expanded = getCanvasRestingZIndex(note("note-1", true), order);
+    const front = getCanvasFrontZIndex(0);
+
+    expect(RESTING_TEXT_Z_INDEX).toBeGreaterThan(RESTING_CARD_Z_INDEX);
+    expect(front).toBeGreaterThan(expanded);
+    expect(ARROW_Z_INDEX).toBeGreaterThan(
+      getCanvasFrontZIndex(MAX_FRONT_INDEX),
+    );
+    expect(OVERLAY_Z_INDEX).toBeGreaterThan(ARROW_Z_INDEX);
+    expect(getCanvasInteractionZIndex()).toBeGreaterThan(OVERLAY_Z_INDEX);
+  });
+
+  it("uses persisted front order for collapsed and expanded nodes", () => {
+    const order = ["expanded"];
+
+    expect(getCanvasRestingZIndex(note("collapsed"), order, 4)).toBe(
+      getCanvasFrontZIndex(4),
+    );
+    expect(getCanvasRestingZIndex(note("expanded", true), order, 5)).toBe(
+      getCanvasFrontZIndex(5),
+    );
+  });
+
+  it("renumbers front indexes without changing relative order", () => {
+    const result = renumberFrontIndexes(
+      new Map([
+        ["middle", 50],
+        ["back", 10],
+        ["front", 90],
+      ]),
+    );
+
+    expect([...result.indexes.entries()]).toEqual([
+      ["back", 0],
+      ["middle", 1],
+      ["front", 2],
+    ]);
+    expect(result.next).toBe(3);
+  });
+
+  it("promotes a group in bottom-to-top order", () => {
+    const result = promoteCanvasFrontIndexes(
+      new Map([
+        ["primary", 1],
+        ["other", 8],
+      ]),
+      ["secondary", "primary"],
+    );
+
+    expect(result.get("secondary")).toBe(9);
+    expect(result.get("primary")).toBe(10);
   });
 });

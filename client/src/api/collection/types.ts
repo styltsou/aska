@@ -7,6 +7,8 @@ export type FolderChildPreview = {
   hostname?: string;
   title?: string | null;
   hex?: string;
+  favicon?: string;
+  videoId?: string;
 };
 
 export type BoardPosition = { x: number; y: number };
@@ -38,6 +40,7 @@ export type CanvasTextObject = {
   font: CanvasTextFont;
   size: CanvasTextSize;
   color: CanvasObjectColor;
+  frontIndex?: number | null;
   createdAt: string;
   updatedAt: string;
   clientId?: string;
@@ -64,7 +67,7 @@ export type CanvasObject = CanvasTextObject | CanvasArrowObject;
 
 export type CreateCanvasTextInput = Omit<
   CanvasTextObject,
-  "id" | "createdAt" | "updatedAt" | "clientId"
+  "id" | "createdAt" | "updatedAt" | "clientId" | "frontIndex"
 > & { parentFolderPath?: string };
 export type UpdateCanvasTextInput = Partial<
   Pick<CanvasTextObject, "content" | "position" | "font" | "size" | "color">
@@ -164,6 +167,7 @@ export type CollectionFolderNode = {
   previews: FolderChildPreview[];
   createdAt: string;
   position: BoardPosition | null;
+  frontIndex?: number | null;
   /** Browser-only marker while a flatten mutation for this folder is in flight. */
   flattenStatus?: "pending";
 };
@@ -241,6 +245,7 @@ export type CollectionImageNode = {
   sizeBytes?: number;
   createdAt: string;
   position: BoardPosition | null;
+  frontIndex?: number | null;
 };
 
 export type CollectionNoteNode = {
@@ -256,6 +261,7 @@ export type CollectionNoteNode = {
   updatedAt?: string;
   clientId?: string;
   position: BoardPosition | null;
+  frontIndex?: number | null;
 };
 
 export type LinkResolutionStatus =
@@ -303,6 +309,7 @@ export type CollectionLinkNode = {
   createdAt: string;
   clientId?: string;
   position: BoardPosition | null;
+  frontIndex?: number | null;
 };
 
 export type CreateLinkInput = {
@@ -347,6 +354,21 @@ export type CollectionColorNode = {
   createdAt: string;
   clientId?: string;
   position: BoardPosition | null;
+  frontIndex?: number | null;
+};
+
+export type CanvasItemFrontIndex = {
+  id: string;
+  frontIndex: number;
+};
+
+export type UpdateCanvasItemFrontIndexesInput = {
+  itemIds: string[];
+  expectedParentFolderNodeId: string | null;
+};
+
+export type UpdateCanvasItemFrontIndexesResponse = {
+  items: CanvasItemFrontIndex[];
 };
 
 export type CreateColorResponse = { color: CollectionColorNode };

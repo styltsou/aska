@@ -53,6 +53,7 @@ export const CanvasTextObjectSchema = z.object({
   font: CanvasTextFontSchema,
   size: CanvasTextSizeSchema,
   color: CanvasObjectColorSchema,
+  frontIndex: z.number().int().min(0).max(100_000).nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -160,6 +161,8 @@ export const FolderChildPreviewSchema = z.object({
   snippet: z.string().optional(),
   hostname: z.string().optional(),
   title: z.string().nullable().optional(),
+  favicon: z.string().optional(),
+  videoId: z.string().optional(),
 });
 
 export type FolderChildPreview = z.infer<typeof FolderChildPreviewSchema>;
@@ -328,6 +331,7 @@ export const CollectionFolderNodeSchema = z.object({
   previews: z.array(FolderChildPreviewSchema),
   createdAt: z.string(),
   position: BoardPositionSchema.nullable(),
+  frontIndex: z.number().int().min(0).max(100_000).nullable(),
 });
 
 export type CollectionFolderNode = z.infer<typeof CollectionFolderNodeSchema>;
@@ -355,6 +359,7 @@ export const CollectionImageNodeSchema = z.object({
   sizeBytes: z.number().optional(),
   createdAt: z.string(),
   position: BoardPositionSchema.nullable(),
+  frontIndex: z.number().int().min(0).max(100_000).nullable(),
 });
 
 export const CollectionNoteNodeSchema = z.object({
@@ -369,6 +374,7 @@ export const CollectionNoteNodeSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string().optional(),
   position: BoardPositionSchema.nullable(),
+  frontIndex: z.number().int().min(0).max(100_000).nullable(),
 });
 
 export const LinkResolutionStatusSchema = z.enum([
@@ -437,6 +443,7 @@ export const CollectionLinkNodeSchema = z.object({
   video: LinkVideoSchema.nullable(),
   createdAt: z.string(),
   position: BoardPositionSchema.nullable(),
+  frontIndex: z.number().int().min(0).max(100_000).nullable(),
 });
 
 export const CollectionColorNodeSchema = z.object({
@@ -448,6 +455,7 @@ export const CollectionColorNodeSchema = z.object({
   isFavorite: z.boolean(),
   createdAt: z.string(),
   position: BoardPositionSchema.nullable(),
+  frontIndex: z.number().int().min(0).max(100_000).nullable(),
 });
 
 export type CollectionImageNode = z.infer<typeof CollectionImageNodeSchema>;
@@ -517,6 +525,9 @@ const CanvasObjectIdSchema = z.string().regex(/^(text|arrow)-\d+$/);
 const CanvasItemIdSchema = z
   .string()
   .regex(/^(folder|image|note|link|color|text|arrow)-\d+$/);
+const StackableCanvasItemIdSchema = z
+  .string()
+  .regex(/^(folder|image|note|link|color|text)-\d+$/);
 const FolderNodeIdSchema = z.string().regex(/^folder-\d+$/);
 
 export const AssetPathParamSchema = z.object({
@@ -614,6 +625,27 @@ export const UpdateNodePositionsSchema = z.object({
 export type UpdateNodePositionsInput = z.infer<
   typeof UpdateNodePositionsSchema
 >;
+
+export const UpdateCanvasItemFrontIndexesSchema = z.object({
+  itemIds: z
+    .array(StackableCanvasItemIdSchema)
+    .min(1)
+    .max(100)
+    .refine(
+      (itemIds) => new Set(itemIds).size === itemIds.length,
+      "Front order must not contain duplicate item IDs",
+    ),
+  expectedParentFolderNodeId: FolderNodeIdSchema.nullable(),
+});
+
+export type UpdateCanvasItemFrontIndexesInput = z.infer<
+  typeof UpdateCanvasItemFrontIndexesSchema
+>;
+
+export type CanvasItemFrontIndex = {
+  id: string;
+  frontIndex: number;
+};
 
 export const ContentTypeFilterSchema = z.enum([
   "image",

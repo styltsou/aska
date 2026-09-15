@@ -53,6 +53,7 @@ export class CanvasObjectService {
       .select({
         id: canvasObjects.id,
         objectType: canvasObjects.objectType,
+        frontIndex: canvasObjects.frontIndex,
         createdAt: canvasObjects.createdAt,
         updatedAt: canvasObjects.updatedAt,
         content: canvasTextObjects.content,
@@ -194,6 +195,7 @@ export class CanvasObjectService {
           font: row.font!,
           size: row.size!,
           color: row.textColor!,
+          frontIndex: row.frontIndex,
           createdAt: row.createdAt.toISOString(),
           updatedAt: row.updatedAt.toISOString(),
         };
@@ -271,6 +273,7 @@ export class CanvasObjectService {
       font: data.font,
       size: data.size,
       color: data.color,
+      frontIndex: null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

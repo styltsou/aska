@@ -18,6 +18,8 @@ import type {
   UpdateNodePositionsInput,
   UpdateCanvasArrowInput,
   UpdateCanvasTextInput,
+  UpdateCanvasItemFrontIndexesInput,
+  CanvasItemFrontIndex,
 } from "@/dto/collection.dto";
 import {
   CollectionAssetMoveService,
@@ -28,6 +30,7 @@ import { CollectionDeleteService } from "@/services/collection/collection-delete
 import { CollectionMutationService } from "@/services/collection/collection-mutation.service";
 import { CollectionQueryService } from "@/services/collection/collection-query.service";
 import { CanvasObjectService } from "@/services/collection/canvas-object.service";
+import { CanvasStackingService } from "@/services/collection/canvas-stacking.service";
 import type {
   CreatedCollectionRow,
   DeleteCollectionNodeResult,
@@ -99,6 +102,12 @@ export interface ICollectionService {
     objectId: string,
     data: UpdateCanvasArrowInput,
   ): Promise<CanvasArrowObject>;
+  bringCanvasItemsToFront(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: UpdateCanvasItemFrontIndexesInput,
+  ): Promise<{ items: CanvasItemFrontIndex[] }>;
   deleteCanvasObject(
     orgId: string,
     collectionSlug: string,
@@ -156,6 +165,7 @@ export class CollectionService implements ICollectionService {
   private readonly queries: CollectionQueryService;
   private readonly mutations = new CollectionMutationService();
   private readonly canvasObjects = new CanvasObjectService();
+  private readonly canvasStacking = new CanvasStackingService();
   private readonly moves = new CollectionAssetMoveService();
   private readonly deletes: CollectionDeleteService;
   private readonly logger: ILoggerService;
@@ -349,6 +359,20 @@ export class CollectionService implements ICollectionService {
     data: UpdateNodePositionsInput,
   ): Promise<{ nodeIds: string[] }> {
     return this.mutations.updateNodePositions(orgId, collectionSlug, data);
+  }
+
+  bringCanvasItemsToFront(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: UpdateCanvasItemFrontIndexesInput,
+  ): Promise<{ items: CanvasItemFrontIndex[] }> {
+    return this.canvasStacking.bringItemsToFront(
+      orgId,
+      userId,
+      collectionSlug,
+      data,
+    );
   }
 
   moveNodesToFolder(

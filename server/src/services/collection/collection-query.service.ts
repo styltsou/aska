@@ -39,6 +39,7 @@ import {
   makeSnippet,
   toBoardPosition,
   toFolderPreview,
+  toPreviewVideoId,
   type FolderPreviewRow,
   type ImageVariantLookup,
 } from "./collection-node-mappers";
@@ -155,6 +156,7 @@ export class CollectionQueryService {
         linkResourceId: externalResources.id,
         linkHostname: externalResources.hostname,
         linkTitle: externalResources.title,
+        linkProviderExtensions: externalResources.providerExtensions,
       })
       .from(collectionNodes)
       .innerJoin(assets, eq(assets.id, collectionNodes.assetId))
@@ -185,6 +187,13 @@ export class CollectionQueryService {
       .filter((row) => row.assetType === "image")
       .map((row) => row.assetId);
     const imageVariants = await this.getSignedImageVariantLookup(imageAssetIds);
+    const linkResourceIds = selectedPreviewRows
+      .filter((row) => row.assetType === "link" && row.linkResourceId !== null)
+      .map((row) => row.linkResourceId!);
+    const resourceMedia = await getResourceMediaLookup(
+      linkResourceIds,
+      this.objectStorageService,
+    );
     const previewMap = new Map<number, FolderChildPreview[]>();
     for (const row of selectedPreviewRows) {
       let preview: FolderChildPreview | undefined;
@@ -210,11 +219,18 @@ export class CollectionQueryService {
           snippet,
         };
       } else if (row.assetType === "link" && row.linkHostname) {
+        const media = row.linkResourceId
+          ? resourceMedia.get(row.linkResourceId)
+          : undefined;
         preview = {
           assetId: `link-${row.assetId}`,
           type: "link",
           hostname: row.linkHostname,
           title: row.linkTitle,
+          url: media?.previewImage?.url,
+          blurDataURL: media?.previewImage?.blurDataURL,
+          favicon: media?.favicon?.url,
+          videoId: toPreviewVideoId(row.linkProviderExtensions),
         };
       } else if (row.assetType === "color" && row.colorHex) {
         preview = {
@@ -284,6 +300,7 @@ export class CollectionQueryService {
         nodeType: collectionNodes.nodeType,
         positionX: collectionNodes.positionX,
         positionY: collectionNodes.positionY,
+        frontIndex: collectionNodes.frontIndex,
         assetId: assets.id,
         assetType: assets.type,
         title: assets.title,
@@ -401,6 +418,7 @@ export class CollectionQueryService {
           resourceId: externalResources.id,
           hostname: externalResources.hostname,
           title: externalResources.title,
+          providerExtensions: externalResources.providerExtensions,
         })
         .from(collectionNodes)
         .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
@@ -438,11 +456,17 @@ export class CollectionQueryService {
         .map((row) => row.assetId!),
     ];
     const imageVariants = await this.getSignedImageVariantLookup(imageAssetIds);
-    const linkResourceIds = children
-      .filter(
-        (child) => child.assetType === "link" && child.linkResourceId !== null,
-      )
-      .map((child) => child.linkResourceId!);
+    const linkResourceIds = [
+      ...children
+        .filter(
+          (child) =>
+            child.assetType === "link" && child.linkResourceId !== null,
+        )
+        .map((child) => child.linkResourceId!),
+      ...selectedFolderPreviewRows
+        .filter((row) => row.assetType === "link" && row.resourceId !== null)
+        .map((row) => row.resourceId!),
+    ];
     const resourceMedia = await getResourceMediaLookup(
       linkResourceIds,
       this.objectStorageService,
@@ -451,7 +475,7 @@ export class CollectionQueryService {
     for (const row of selectedFolderPreviewRows) {
       if (!row.folderId) continue;
       const list = previewMap.get(row.folderId);
-      const folderPreview = toFolderPreview(row, imageVariants);
+      const folderPreview = toFolderPreview(row, imageVariants, resourceMedia);
       if (!list) {
         previewMap.set(row.folderId, [folderPreview]);
       } else if (list.length < 4) {
@@ -474,6 +498,7 @@ export class CollectionQueryService {
           previews: previewMap.get(fid) ?? [],
           createdAt: child.createdAt.toISOString(),
           position,
+          frontIndex: child.frontIndex,
         };
       }
 
@@ -511,6 +536,7 @@ export class CollectionQueryService {
           sizeBytes: display.sizeBytes,
           createdAt: child.createdAt.toISOString(),
           position,
+          frontIndex: child.frontIndex,
         };
       }
 
@@ -524,6 +550,7 @@ export class CollectionQueryService {
           isFavorite: child.isFavorite ?? false,
           createdAt: child.createdAt.toISOString(),
           position,
+          frontIndex: child.frontIndex,
         };
       }
 
@@ -557,6 +584,7 @@ export class CollectionQueryService {
           },
           resourceMedia.get(child.linkResourceId),
           position,
+          child.frontIndex,
         );
       }
 
@@ -577,6 +605,7 @@ export class CollectionQueryService {
         updatedAt:
           child.assetUpdatedAt?.toISOString() ?? child.createdAt.toISOString(),
         position,
+        frontIndex: child.frontIndex,
       };
     });
 

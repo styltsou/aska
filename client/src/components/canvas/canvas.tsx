@@ -43,12 +43,16 @@ import {
   useCreateCanvasText,
   useDeleteCanvasObject,
   useUpdateCanvasArrow,
+  useUpdateCanvasItemFrontIndexes,
   useUpdateCanvasText,
 } from "@/api/collection";
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
 import { MoveToDialog } from "@/components/move-to-dialog";
 import { useTheme } from "@/components/theme-provider";
-import { useMarqueeSelection } from "@/components/board/use-marquee-selection";
+import {
+  selectionMarqueeClassName,
+  useMarqueeSelection,
+} from "@/components/board/use-marquee-selection";
 import {
   hasSelectionModifier,
   isPersistedSelectableAsset,
@@ -94,8 +98,11 @@ import {
   type CanvasDropStackStyle,
 } from "./canvas-drop-stack";
 import {
+  getCanvasFrontZIndex,
   getCanvasInteractionZIndex,
   getCanvasRestingZIndex,
+  getCanvasTextRestingZIndex,
+  promoteCanvasFrontIndexes,
   updateExpandedNoteOrder,
 } from "./canvas-node-stacking";
 import {
@@ -311,6 +318,8 @@ function CanvasSurface({
     collectionSlug,
     folderPath,
   );
+  const { mutate: updateCanvasItemFrontIndexesMutation } =
+    useUpdateCanvasItemFrontIndexes(workspaceSlug, collectionSlug, folderPath);
   const { mutate: deleteCanvasObjectMutation } = useDeleteCanvasObject(
     workspaceSlug,
     collectionSlug,
@@ -685,6 +694,7 @@ function CanvasSurface({
         font: "inter",
         size: "md",
         color: "ink",
+        frontIndex: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         clientId: id,
@@ -729,11 +739,11 @@ function CanvasSurface({
             size: draft.size,
             color: draft.color,
             parentFolderPath: folderPath,
+            clientId: draft.clientId,
           },
           {
             onSuccess: ({ object }) => {
               const currentDraft = draftTextRef.current;
-              setDraftText(undefined);
               clearSelection(boardKey);
               if (
                 currentDraft?.id === objectId &&
@@ -745,7 +755,11 @@ function CanvasSurface({
                 });
               }
             },
-            onError: () => toast.error("Unable to create canvas text."),
+            onError: () => {
+              setDraftText(undefined);
+              setEditingTextId(undefined);
+              toast.error("Unable to create canvas text.");
+            },
           },
         );
         return;
@@ -1226,13 +1240,16 @@ function CanvasSurface({
 
     setFlowNodes((current) => {
       const currentById = new Map(current.map((node) => [node.id, node]));
-      const currentByClientId = new Map(
-        current.flatMap((node) => {
-          if (node.type !== "asset") return [];
+      const currentByClientId = new Map<string, CanvasFlowNode>();
+      current.forEach((node) => {
+        if (node.type === "asset") {
           const clientId = getNodeClientId(node.data.collectionNode);
-          return clientId ? [[clientId, node] as const] : [];
-        }),
-      );
+          if (clientId) currentByClientId.set(clientId, node);
+        } else if (node.type === "text") {
+          const clientId = node.data.object.clientId;
+          if (clientId) currentByClientId.set(clientId, node);
+        }
+      });
 
       const assetNodes = nodes.map((node, index) =>
         makeFlowNode(
@@ -1249,17 +1266,37 @@ function CanvasSurface({
       const textObjects = canvasObjects.filter(
         (object): object is CanvasTextObject => object.type === "text",
       );
-      if (draftText) textObjects.push(draftText);
+      if (
+        draftText &&
+        !textObjects.some((object) => object.clientId === draftText.clientId)
+      ) {
+        textObjects.push(draftText);
+      }
       const textNodes = textObjects.map((object) =>
         makeTextFlowNode(
           object,
           makeTextNodeData(object),
-          currentById.get(object.id) as CanvasTextFlowNode | undefined,
+          (currentById.get(object.id) ??
+            currentByClientId.get(object.clientId ?? "")) as
+            | CanvasTextFlowNode
+            | undefined,
         ),
       );
       return [...assetNodes, ...textNodes];
     });
   }, [canvasObjects, draftText, makeNodeData, makeTextNodeData, nodes]);
+
+  useEffect(() => {
+    if (
+      draftText &&
+      canvasObjects.some(
+        (object) =>
+          object.type === "text" && object.clientId === draftText.clientId,
+      )
+    ) {
+      setDraftText(undefined);
+    }
+  }, [canvasObjects, draftText]);
 
   useEffect(() => {
     const currentClientIds = new Set(
@@ -1696,8 +1733,11 @@ function CanvasSurface({
                         ? getCanvasRestingZIndex(
                             flowNode.data.collectionNode,
                             expandedNoteOrderRef.current,
+                            flowNode.data.collectionNode.frontIndex,
                           )
-                        : 1,
+                        : getCanvasTextRestingZIndex(
+                            flowNode.data.object.frontIndex,
+                          ),
                   }
                 : flowNode,
             ),
@@ -1769,6 +1809,55 @@ function CanvasSurface({
               : [];
           });
           if (moved.length === 0) return;
+
+          const itemIdsBottomToTop = [...dragNodes]
+            .reverse()
+            .map((dragNode) => dragNode.id);
+          const currentFrontIndexes = new Map<string, number>();
+          for (const flowNode of getNodes()) {
+            const frontIndex =
+              flowNode.type === "asset"
+                ? flowNode.data.collectionNode.frontIndex
+                : flowNode.data.object.frontIndex;
+            if (frontIndex != null) {
+              currentFrontIndexes.set(flowNode.id, frontIndex);
+            }
+          }
+          const optimisticFrontIndexes = promoteCanvasFrontIndexes(
+            currentFrontIndexes,
+            itemIdsBottomToTop,
+          );
+          setFlowNodes((current) =>
+            current.map((flowNode) => {
+              const frontIndex = optimisticFrontIndexes.get(flowNode.id);
+              return frontIndex === undefined
+                ? flowNode
+                : { ...flowNode, zIndex: getCanvasFrontZIndex(frontIndex) };
+            }),
+          );
+
+          const persistedItemIds = itemIdsBottomToTop.filter((itemId) => {
+            const dragNode = dragNodes.find(
+              (candidate) => candidate.id === itemId,
+            );
+            if (!dragNode || dragNode.id.startsWith("text-draft-")) {
+              return false;
+            }
+            return (
+              dragNode.type === "text" ||
+              !isPendingCollectionNode(dragNode.data.collectionNode)
+            );
+          });
+          if (persistedItemIds.length > 0) {
+            updateCanvasItemFrontIndexesMutation({
+              itemIds: persistedItemIds,
+              expectedParentFolderNodeId,
+              folderPath,
+              optimisticItems: [...optimisticFrontIndexes].map(
+                ([id, frontIndex]) => ({ id, frontIndex }),
+              ),
+            });
+          }
 
           setFlowNodes((current) =>
             moved.reduce(
@@ -1986,7 +2075,7 @@ function CanvasSurface({
       ) : null}
       {marquee.marquee ? (
         <div
-          className="selection-marquee pointer-events-none fixed z-50"
+          className={selectionMarqueeClassName}
           style={{
             left: marquee.marquee.left,
             top: marquee.marquee.top,
@@ -2032,7 +2121,11 @@ function makeFlowNode(
       ? getCanvasInteractionZIndex(data.dropStackStyle.stackOrder)
       : current?.dragging
         ? getCanvasInteractionZIndex()
-        : getCanvasRestingZIndex(collectionNode, expandedNoteOrder),
+        : getCanvasRestingZIndex(
+            collectionNode,
+            expandedNoteOrder,
+            collectionNode.frontIndex,
+          ),
     style: { width: BOARD_CARD_WIDTH },
   };
 }
@@ -2050,7 +2143,9 @@ function makeTextFlowNode(
     data,
     draggable: !data.editing,
     selectable: false,
-    zIndex: current?.dragging ? getCanvasInteractionZIndex() : 1,
+    zIndex: current?.dragging
+      ? getCanvasInteractionZIndex()
+      : getCanvasTextRestingZIndex(object.frontIndex),
     style: undefined,
   };
 }

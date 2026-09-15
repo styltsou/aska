@@ -189,6 +189,7 @@ export class CollectionAssetMoveService {
             parentFolderId: folderNode.parentFolderId,
             positionX: child.positionX! + offset.x,
             positionY: child.positionY! + offset.y,
+            frontIndex: null,
           })
           .where(eq(collectionNodes.id, child.id));
       }
@@ -445,6 +446,7 @@ export class CollectionAssetMoveService {
               parentFolderId: targetFolder.folderId,
               positionX: position.x,
               positionY: position.y,
+              frontIndex: null,
               depth: newDepth,
               pathFolderIds: newPathFolderIds,
               pathFolderSlugs: newPathFolderSlugs,

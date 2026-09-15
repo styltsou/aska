@@ -18,6 +18,7 @@ import {
   UpdateLinkSchema,
   MoveCollectionNodesParentSchema,
   UpdateCanvasTextSchema,
+  UpdateCanvasItemFrontIndexesSchema,
 } from "./collection.dto";
 
 describe("collection board position DTOs", () => {
@@ -115,6 +116,27 @@ describe("collection board position DTOs", () => {
     expect(
       UpdateNodePositionsSchema.safeParse({
         positions: [{ nodeId: "image-1", position: { x: 48, y: 24 } }],
+        expectedParentFolderNodeId: null,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("accepts unique stackable canvas items and rejects arrows", () => {
+    expect(
+      UpdateCanvasItemFrontIndexesSchema.safeParse({
+        itemIds: ["image-1", "text-2", "folder-3"],
+        expectedParentFolderNodeId: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      UpdateCanvasItemFrontIndexesSchema.safeParse({
+        itemIds: ["image-1", "image-1"],
+        expectedParentFolderNodeId: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      UpdateCanvasItemFrontIndexesSchema.safeParse({
+        itemIds: ["arrow-1"],
         expectedParentFolderNodeId: null,
       }).success,
     ).toBe(false);

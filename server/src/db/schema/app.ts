@@ -751,6 +751,7 @@ export const collectionNodes = pgTable(
     folderId: integer("folder_id"),
     positionX: integer("position_x"),
     positionY: integer("position_y"),
+    frontIndex: integer("front_index"),
     depth: integer().default(0).notNull(),
     pathFolderIds: integer("path_folder_ids")
       .array()
@@ -801,6 +802,12 @@ export const collectionNodes = pgTable(
       table.collectionId,
       table.parentFolderId,
     ),
+    index("collection_nodes_canvas_front_idx").on(
+      table.organizationId,
+      table.collectionId,
+      table.parentFolderId,
+      table.frontIndex,
+    ),
     index("collection_nodes_pathFolderIds_gin_idx").using(
       "gin",
       table.pathFolderIds,
@@ -843,6 +850,10 @@ export const collectionNodes = pgTable(
       "collection_nodes_position_pair_chk",
       sql`(${table.positionX} is null and ${table.positionY} is null) or (${table.positionX} is not null and ${table.positionY} is not null)`,
     ),
+    check(
+      "collection_nodes_front_index_range_chk",
+      sql`${table.frontIndex} is null or (${table.frontIndex} >= 0 and ${table.frontIndex} <= 100000)`,
+    ),
   ],
 );
 
@@ -856,6 +867,7 @@ export const canvasObjects = pgTable(
     collectionId: integer("collection_id").notNull(),
     parentFolderId: integer("parent_folder_id"),
     objectType: canvasObjectTypeEnum("object_type").notNull(),
+    frontIndex: integer("front_index"),
     createdByUserId: text("created_by_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
@@ -883,6 +895,16 @@ export const canvasObjects = pgTable(
       table.organizationId,
       table.collectionId,
       table.parentFolderId,
+    ),
+    index("canvas_objects_front_idx").on(
+      table.organizationId,
+      table.collectionId,
+      table.parentFolderId,
+      table.frontIndex,
+    ),
+    check(
+      "canvas_objects_front_index_range_chk",
+      sql`${table.frontIndex} is null or (${table.frontIndex} >= 0 and ${table.frontIndex} <= 100000)`,
     ),
   ],
 );

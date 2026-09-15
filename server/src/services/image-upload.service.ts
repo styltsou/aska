@@ -609,6 +609,7 @@ export class ImageUploadService implements IImageUploadService {
       sizeBytes: preferred.sizeBytes,
       createdAt: row.createdAt.toISOString(),
       position: null,
+      frontIndex: null,
     };
   }
 

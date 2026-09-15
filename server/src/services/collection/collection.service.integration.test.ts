@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
 import {
   assets,
+  canvasObjects,
   collectionNodes,
   collectionsTable,
   folders,
@@ -168,6 +169,15 @@ describe("CollectionService integration", () => {
         position: { x: 70, y: 90 },
       },
     );
+    await collectionService.bringCanvasItemsToFront(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        itemIds: [directNote.id],
+        expectedParentFolderNodeId: `folder-${sourceFolder.id}`,
+      },
+    );
 
     await expect(
       collectionService.flattenFolder(
@@ -200,6 +210,7 @@ describe("CollectionService integration", () => {
             positionY: collectionNodes.positionY,
             pathFolderSlugs: collectionNodes.pathFolderSlugs,
             depth: collectionNodes.depth,
+            frontIndex: collectionNodes.frontIndex,
           })
           .from(collectionNodes)
           .where(eq(collectionNodes.assetId, Number(directNote.id.slice(5)))),
@@ -244,6 +255,7 @@ describe("CollectionService integration", () => {
         positionY: 200,
         pathFolderSlugs: [],
         depth: 0,
+        frontIndex: null,
       },
     ]);
     expect(nestedPlacement).toEqual([
@@ -1198,6 +1210,102 @@ describe("CollectionService integration", () => {
     expect(remainingNodes).toEqual([]);
     expect(remainingAssets).toEqual([]);
     expect(remainingFolders).toEqual([]);
+  });
+
+  it("persists mixed canvas front order and rebases it at the cap", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Stacking Test" },
+    );
+    const secondary = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "Secondary", position: { x: 0, y: 0 } },
+    );
+    const primary = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "Primary", position: { x: 20, y: 20 } },
+    );
+    const text = await collectionService.createCanvasText(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        type: "text",
+        content: "Label",
+        position: { x: 40, y: 40 },
+        font: "inter",
+        size: "md",
+        color: "ink",
+      },
+    );
+
+    await expect(
+      collectionService.bringCanvasItemsToFront(
+        fixture.organizationId,
+        fixture.userId,
+        collection.slug,
+        {
+          itemIds: [secondary.id, text.id, primary.id],
+          expectedParentFolderNodeId: null,
+        },
+      ),
+    ).resolves.toEqual({
+      items: [
+        { id: secondary.id, frontIndex: 0 },
+        { id: text.id, frontIndex: 1 },
+        { id: primary.id, frontIndex: 2 },
+      ],
+    });
+
+    const firstContents = await collectionService.getCollectionContents(
+      fixture.organizationId,
+      collection.slug,
+    );
+    expect(
+      firstContents.nodes.find((node) => node.id === primary.id)?.frontIndex,
+    ).toBe(2);
+    expect(
+      firstContents.canvasObjects.find((object) => object.id === text.id),
+    ).toMatchObject({ frontIndex: 1 });
+
+    await db
+      .update(collectionNodes)
+      .set({ frontIndex: 100_000 })
+      .where(
+        and(
+          eq(collectionNodes.collectionId, collection.id),
+          eq(collectionNodes.assetId, Number(secondary.id.split("-")[1])),
+        ),
+      );
+
+    await expect(
+      collectionService.bringCanvasItemsToFront(
+        fixture.organizationId,
+        fixture.userId,
+        collection.slug,
+        {
+          itemIds: [text.id],
+          expectedParentFolderNodeId: null,
+        },
+      ),
+    ).resolves.toEqual({
+      items: [
+        { id: primary.id, frontIndex: 0 },
+        { id: secondary.id, frontIndex: 1 },
+        { id: text.id, frontIndex: 2 },
+      ],
+    });
+
+    const [persistedText] = await db
+      .select({ frontIndex: canvasObjects.frontIndex })
+      .from(canvasObjects)
+      .where(eq(canvasObjects.id, Number(text.id.split("-")[1])));
+    expect(persistedText?.frontIndex).toBe(2);
   });
 
   it("deletes a collection, its folders, and all descendant assets", async () => {

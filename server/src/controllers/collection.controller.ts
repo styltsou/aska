@@ -19,6 +19,7 @@ import {
   UpdateNodePositionsSchema,
   UpdateCanvasArrowSchema,
   UpdateCanvasTextSchema,
+  UpdateCanvasItemFrontIndexesSchema,
 } from "@/dto/collection.dto";
 import { factory } from "@/factory";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -272,6 +273,28 @@ export const updateCanvasArrow = factory.createHandlers(
       data,
     );
     return c.json(success({ object }));
+  },
+);
+
+export const updateCanvasItemFrontIndexes = factory.createHandlers(
+  authMiddleware,
+  validate.param(CollectionPathParamSchema),
+  validate.body(UpdateCanvasItemFrontIndexesSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const result = await collectionService.bringCanvasItemsToFront(
+      workspace.id,
+      userId,
+      collectionSlug,
+      data,
+    );
+    return c.json(success(result));
   },
 );
 

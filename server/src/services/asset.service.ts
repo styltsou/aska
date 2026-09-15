@@ -454,6 +454,7 @@ export class AssetService implements IAssetService {
       isFavorite: false,
       createdAt: color.createdAt.toISOString(),
       position: null,
+      frontIndex: null,
     };
   }
 
@@ -526,6 +527,7 @@ export class AssetService implements IAssetService {
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString(),
       position: null,
+      frontIndex: null,
     };
   }
 
@@ -1047,6 +1049,7 @@ export class AssetService implements IAssetService {
           sizeBytes: rendition.sizeBytes,
           createdAt: row.createdAt.toISOString(),
           position: null,
+          frontIndex: null,
         } satisfies CollectionImageNode);
         continue;
       }
@@ -1096,6 +1099,7 @@ export class AssetService implements IAssetService {
           isFavorite: row.isFavorite,
           createdAt: row.createdAt.toISOString(),
           position: null,
+          frontIndex: null,
         } satisfies CollectionColorNode);
         continue;
       }
@@ -1114,6 +1118,7 @@ export class AssetService implements IAssetService {
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
         position: null,
+        frontIndex: null,
       } satisfies CollectionNoteNode);
     }
 

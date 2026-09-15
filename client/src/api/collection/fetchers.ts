@@ -45,6 +45,8 @@ import type {
   UpdateColorInput,
   UpdateColorResponse,
   PeekableAssetResponse,
+  UpdateCanvasItemFrontIndexesInput,
+  UpdateCanvasItemFrontIndexesResponse,
 } from "./types";
 
 export async function createCanvasText(
@@ -89,6 +91,17 @@ export async function updateCanvasArrow(
 ): Promise<CanvasObjectResponse> {
   return apiPatch<CanvasObjectResponse>(
     `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/canvas-objects/arrows/${encodeURIComponent(objectId)}`,
+    data,
+  );
+}
+
+export async function updateCanvasItemFrontIndexes(
+  workspaceSlug: string,
+  collectionSlug: string,
+  data: UpdateCanvasItemFrontIndexesInput,
+): Promise<UpdateCanvasItemFrontIndexesResponse> {
+  return apiPatch<UpdateCanvasItemFrontIndexesResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/canvas/items/front-index`,
     data,
   );
 }
