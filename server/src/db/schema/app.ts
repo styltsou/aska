@@ -41,8 +41,9 @@ export const canvasObjectColorEnum = pgEnum("canvas_object_color", [
 ]);
 export const canvasTextFontEnum = pgEnum("canvas_text_font", [
   "inter",
-  "newsreader",
-  "caveat",
+  "fraunces",
+  "ibm_plex_mono",
+  "sue_ellen_francisco",
 ]);
 export const canvasTextSizeEnum = pgEnum("canvas_text_size", [
   "sm",

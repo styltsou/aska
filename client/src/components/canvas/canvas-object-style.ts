@@ -20,12 +20,17 @@ export const CANVAS_TEXT_FONTS: Array<{
 }> = [
   { value: "inter", label: "Sans", className: "font-sans" },
   {
-    value: "newsreader",
+    value: "fraunces",
     label: "Serif",
     className: "font-editorial",
   },
   {
-    value: "caveat",
+    value: "ibm_plex_mono",
+    label: "Mono",
+    className: "font-mono",
+  },
+  {
+    value: "sue_ellen_francisco",
     label: "Pencil",
     className: "font-handwritten",
   },

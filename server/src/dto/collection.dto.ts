@@ -16,7 +16,12 @@ export const CanvasObjectColorSchema = z.enum([
   "moss",
   "ochre",
 ]);
-export const CanvasTextFontSchema = z.enum(["inter", "newsreader", "caveat"]);
+export const CanvasTextFontSchema = z.enum([
+  "inter",
+  "fraunces",
+  "ibm_plex_mono",
+  "sue_ellen_francisco",
+]);
 export const CanvasTextSizeSchema = z.enum(["sm", "md", "lg", "xl"]);
 export const CanvasArrowStyleSchema = z.enum(["clean", "sketch"]);
 export const CanvasArrowPatternSchema = z.enum(["solid", "dashed", "dotted"]);

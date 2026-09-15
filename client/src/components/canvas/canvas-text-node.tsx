@@ -45,9 +45,13 @@ export function CanvasTextNode({
   const typographyClass = cn(
     font.className,
     size.className,
-    data.object.font === "caveat"
-      ? "font-medium tracking-[0.01em]"
-      : "font-normal",
+    data.object.font === "sue_ellen_francisco"
+      ? "font-normal leading-[1.3] tracking-[0.01em]"
+      : data.object.font === "fraunces"
+        ? "font-normal tracking-[-0.01em]"
+        : data.object.font === "ibm_plex_mono"
+          ? "font-normal tracking-[-0.02em]"
+          : "font-normal",
   );
 
   return (
@@ -174,7 +178,13 @@ export function CanvasTextEditor({
   const typographyClass = cn(
     font.className,
     size.className,
-    object.font === "caveat" ? "font-medium tracking-[0.01em]" : "font-normal",
+    object.font === "sue_ellen_francisco"
+      ? "font-normal leading-[1.3] tracking-[0.01em]"
+      : object.font === "fraunces"
+        ? "font-normal tracking-[-0.01em]"
+        : object.font === "ibm_plex_mono"
+          ? "font-normal tracking-[-0.02em]"
+          : "font-normal",
   );
 
   useLayoutEffect(() => {

@@ -1,9 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource/ibm-plex-mono";
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/newsreader";
-@import "@fontsource-variable/caveat";
+@import "@fontsource/sue-ellen-francisco";
 @import "@xyflow/react/dist/style.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -21,8 +22,9 @@
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: "Inter Variable", sans-serif;
-  --font-editorial: "Newsreader Variable", serif;
-  --font-handwritten: "Caveat Variable", cursive;
+  --font-editorial: "Fraunces Variable", serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --font-handwritten: "Sue Ellen Francisco", cursive;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-active: var(--sidebar-active);

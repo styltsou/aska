@@ -495,7 +495,12 @@
                   "position": { "$ref": "#/components/schemas/BoardPosition" },
                   "font": {
                     "type": "string",
-                    "enum": ["inter", "newsreader", "caveat"]
+                    "enum": [
+                      "inter",
+                      "fraunces",
+                      "ibm_plex_mono",
+                      "sue_ellen_francisco"
+                    ]
                   },
                   "size": {
                     "type": "string",
@@ -2628,7 +2633,12 @@
           "position": { "$ref": "#/components/schemas/BoardPosition" },
           "font": {
             "type": "string",
-            "enum": ["inter", "newsreader", "caveat"]
+            "enum": [
+              "inter",
+              "fraunces",
+              "ibm_plex_mono",
+              "sue_ellen_francisco"
+            ]
           },
           "size": { "type": "string", "enum": ["sm", "md", "lg", "xl"] },
           "color": { "$ref": "#/components/schemas/CanvasObjectColor" },
@@ -2702,7 +2712,12 @@
           "position": { "$ref": "#/components/schemas/BoardPosition" },
           "font": {
             "type": "string",
-            "enum": ["inter", "newsreader", "caveat"],
+            "enum": [
+              "inter",
+              "fraunces",
+              "ibm_plex_mono",
+              "sue_ellen_francisco"
+            ],
             "default": "inter"
           },
           "size": {

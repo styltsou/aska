@@ -8,9 +8,10 @@
         "@base-ui/react": "^1.6.0",
         "@dnd-kit/collision": "^0.5.0",
         "@dnd-kit/react": "^0.5.0",
-        "@fontsource-variable/caveat": "^5.3.0",
+        "@fontsource-variable/fraunces": "^5.3.0",
         "@fontsource-variable/inter": "^5.2.8",
-        "@fontsource-variable/newsreader": "^5.3.0",
+        "@fontsource/ibm-plex-mono": "^5.3.0",
+        "@fontsource/sue-ellen-francisco": "^5.3.0",
         "@sentry/react": "^10.69.0",
         "@sentry/replay": "^10.69.0",
         "@tailwindcss/vite": "^4.3.2",
@@ -183,11 +184,13 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
-    "@fontsource-variable/caveat": ["@fontsource-variable/caveat@5.3.0", "", {}, "sha512-Q3mjghoYIlXgwqBPJKZ4q6f3zu921Gq7UU76r9Z+NAmhapHfX130GIFpOCYf8vt2SIcgCi9RHDT7anfJKg/kiA=="],
+    "@fontsource-variable/fraunces": ["@fontsource-variable/fraunces@5.3.0", "", {}, "sha512-9BYGySn4AHEJdgp9Z28tQ3X+laJMEOITXkQarZXeloWQZDq5oOvXJ3kDA8c7MGIfpogIaZfjrQBqmda8POOCKA=="],
 
     "@fontsource-variable/inter": ["@fontsource-variable/inter@5.2.8", "", {}, "sha512-kOfP2D+ykbcX/P3IFnokOhVRNoTozo5/JxhAIVYLpea/UBmCQ/YWPBfWIDuBImXX/15KH+eKh4xpEUyS2sQQGQ=="],
 
-    "@fontsource-variable/newsreader": ["@fontsource-variable/newsreader@5.3.0", "", {}, "sha512-rrzYi43qMpbzwuFtf9OkWH8sxAPVPcQQQEwXpPtwaKYeJ8yVg5aLs5kawmo1f2Q1t1M38TLmEKCkGVDsYwgdFw=="],
+    "@fontsource/ibm-plex-mono": ["@fontsource/ibm-plex-mono@5.3.0", "", {}, "sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q=="],
+
+    "@fontsource/sue-ellen-francisco": ["@fontsource/sue-ellen-francisco@5.3.0", "", {}, "sha512-cwzU21In+AcbXarvXqFrsTC9GEqMUvm3lHuNmu3DfcNkUcBIGUAL0tr5OklYJiHzuM4aJiZF1nj4gQN51Ri71Q=="],
 
     "@hono/node-server": ["@hono/node-server@1.19.14", "", { "peerDependencies": { "hono": "^4" } }, "sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw=="],
 

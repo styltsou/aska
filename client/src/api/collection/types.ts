@@ -11,7 +11,11 @@ export type FolderChildPreview = {
 
 export type BoardPosition = { x: number; y: number };
 export type CanvasObjectColor = "ink" | "cobalt" | "coral" | "moss" | "ochre";
-export type CanvasTextFont = "inter" | "newsreader" | "caveat";
+export type CanvasTextFont =
+  | "inter"
+  | "fraunces"
+  | "ibm_plex_mono"
+  | "sue_ellen_francisco";
 export type CanvasTextSize = "sm" | "md" | "lg" | "xl";
 export type CanvasArrowStyle = "clean" | "sketch";
 export type CanvasArrowPattern = "solid" | "dashed" | "dotted";
