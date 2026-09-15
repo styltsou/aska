@@ -187,14 +187,12 @@ type LinkCardPreviewData = Pick<
 const YOUTUBE_THUMBNAIL_URL = (videoId: string) =>
   `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
-/** The card-content slice shared by folder and collection card previews. */
+/** Full-size card content, sized to fill its container and clipped by it. */
 export function LinkCardPreview({
   preview,
-  previewScale,
   className,
 }: {
   preview: LinkCardPreviewData;
-  previewScale?: number;
   className?: string;
 }) {
   const isYoutube = Boolean(preview.videoId);
@@ -208,21 +206,9 @@ export function LinkCardPreview({
 
   return (
     <div
-      className={cn(
-        "w-full min-w-0 bg-card",
-        previewScale !== undefined && "origin-top-left",
-        className,
-      )}
-      style={
-        previewScale === undefined
-          ? undefined
-          : {
-              width: `${100 / previewScale}%`,
-              transform: `scale(${previewScale})`,
-            }
-      }
+      className={cn("flex h-full w-full min-w-0 flex-col bg-card", className)}
     >
-      <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-muted/40">
+      <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-sm bg-muted/40">
         {thumbnailUrl ? (
           <ProgressiveImage
             src={thumbnailUrl}
@@ -244,7 +230,7 @@ export function LinkCardPreview({
           </span>
         ) : null}
       </div>
-      <div className="space-y-1 px-2 pt-1.5 pb-2">
+      <div className="flex flex-col gap-1 px-2 pt-1.5 pb-2">
         <div className="flex items-center gap-1.5 text-[11px] text-sidebar-foreground/60">
           {preview.favicon ? (
             <img
@@ -261,7 +247,7 @@ export function LinkCardPreview({
           {displayTitle}
         </div>
         {preview.description?.trim() ? (
-          <div className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+          <div className="line-clamp-3 text-xs leading-snug text-muted-foreground">
             {preview.description.trim()}
           </div>
         ) : null}

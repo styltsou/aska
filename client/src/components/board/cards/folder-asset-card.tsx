@@ -134,8 +134,7 @@ export function FolderAssetCard({
                   >
                     <LinkCardPreview
                       preview={preview}
-                      previewScale={0.5}
-                      className="w-full"
+                      className="h-full w-full"
                     />
                   </motion.div>
                 );
@@ -166,7 +165,7 @@ export function FolderAssetCard({
                   <NoteMarkdown
                     content={preview.snippet ?? ""}
                     title={preview.title}
-                    previewScale={0.5}
+                    compact
                   />
                 </motion.div>
               );

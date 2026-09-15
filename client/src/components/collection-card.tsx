@@ -34,6 +34,13 @@ const PREVIEW_POSITION: CSSProperties = {
   transformOrigin: "bottom center",
 };
 
+const STACKED_POSITION: CSSProperties = {
+  inset: 0,
+  margin: "auto",
+  width: "54%",
+  transformOrigin: "bottom center",
+};
+
 interface CollectionCardItem {
   id: number;
   slug: string;
@@ -116,8 +123,7 @@ export function CollectionCard({
                           >
                             <LinkCardPreview
                               preview={preview}
-                              previewScale={0.65}
-                              className="w-full"
+                              className="h-full w-full"
                             />
                           </div>
                         );
@@ -149,7 +155,7 @@ export function CollectionCard({
                           <NoteMarkdown
                             content={preview.snippet ?? ""}
                             title={preview.title}
-                            previewScale={0.65}
+                            className="h-full w-full"
                           />
                         </div>
                       );
@@ -170,7 +176,7 @@ export function CollectionCard({
                           <div
                             key={preview.assetId}
                             style={{
-                              ...PREVIEW_POSITION,
+                              ...STACKED_POSITION,
                               zIndex: z,
                               transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
                               transition: PREVIEW_TRANSITION,
@@ -195,7 +201,7 @@ export function CollectionCard({
                             key={preview.assetId}
                             className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
                             style={{
-                              ...PREVIEW_POSITION,
+                              ...STACKED_POSITION,
                               zIndex: z,
                               transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
                               transition: PREVIEW_TRANSITION,
@@ -203,8 +209,7 @@ export function CollectionCard({
                           >
                             <LinkCardPreview
                               preview={preview}
-                              previewScale={0.65}
-                              className="w-full"
+                              className="h-full w-full"
                             />
                           </div>
                         );
@@ -215,7 +220,7 @@ export function CollectionCard({
                             key={preview.assetId}
                             className="absolute aspect-square rounded-xl shadow-md ring-1 ring-sidebar-foreground/5"
                             style={{
-                              ...PREVIEW_POSITION,
+                              ...STACKED_POSITION,
                               zIndex: z,
                               backgroundColor: preview.hex,
                               transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
@@ -232,7 +237,7 @@ export function CollectionCard({
                           key={preview.assetId}
                           className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
                           style={{
-                            ...PREVIEW_POSITION,
+                            ...STACKED_POSITION,
                             zIndex: z,
                             transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
                             transition: PREVIEW_TRANSITION,
@@ -244,7 +249,8 @@ export function CollectionCard({
                           <NoteMarkdown
                             content={preview.snippet ?? ""}
                             title={preview.title}
-                            previewScale={0.65}
+                            compact
+                            className="h-full w-full"
                           />
                         </div>
                       );

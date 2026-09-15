@@ -182,7 +182,6 @@ describe("LinkCardPreview", () => {
           title: "A video",
           videoId: "dQw4w9WgXcQ",
         }}
-        previewScale={0.65}
       />,
     );
 
@@ -191,10 +190,10 @@ describe("LinkCardPreview", () => {
     expect(html).toContain("bg-popover/85");
     expect(html).toContain("A video");
     expect(html).toContain("www.youtube.com");
-    expect(html).toContain("scale(0.65)");
+    expect(html).not.toContain("scale(");
   });
 
-  it("falls back to the unfurl thumbnail and drops the play badge without a video", () => {
+  it("renders the title, description, and site footer at natural card sizes", () => {
     const html = renderToStaticMarkup(
       <LinkCardPreview
         preview={{
@@ -209,9 +208,10 @@ describe("LinkCardPreview", () => {
       />,
     );
 
+    expect(html).toContain("aspect-video");
+    expect(html).toContain("A thorough writeup about the topic.");
     expect(html).toContain("https://example.com/preview.jpg");
     expect(html).toContain("https://example.com/favicon.ico");
-    expect(html).toContain("A thorough writeup about the topic.");
     expect(html).not.toContain("lucide-play");
     expect(html).not.toContain("i.ytimg.com");
   });

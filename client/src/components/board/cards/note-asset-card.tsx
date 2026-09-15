@@ -97,217 +97,252 @@ function getCodeBlockLanguage(children: ReactNode): string {
     : "Plain text";
 }
 
-const MD_COMPONENTS: Components = {
-  h1: ({ className, ...props }) => (
-    <h1
-      className={cn(
-        "text-sidebar-foreground mb-3 text-xl leading-tight font-semibold tracking-tight",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  h2: ({ className, ...props }) => (
-    <h2
-      className={cn(
-        "text-sidebar-foreground mt-4 mb-2 text-lg leading-snug font-semibold first:mt-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  h3: ({ className, ...props }) => (
-    <h3
-      className={cn(
-        "text-sidebar-foreground mt-4 mb-1.5 text-base leading-snug font-semibold first:mt-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  h4: ({ className, ...props }) => (
-    <h4
-      className={cn(
-        "text-sidebar-foreground mt-3 mb-1.5 text-base leading-snug font-semibold first:mt-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  h5: ({ className, ...props }) => (
-    <h5
-      className={cn(
-        "text-sidebar-foreground mt-3 mb-1 text-sm leading-snug font-semibold first:mt-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  h6: ({ className, ...props }) => (
-    <h6
-      className={cn(
-        "text-sidebar-foreground mt-3 mb-1 text-sm leading-snug font-medium first:mt-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  p: ({ className, ...props }) => (
-    <p
-      className={cn(
-        "text-sidebar-foreground/80 my-2.5 leading-6 first:mt-0 last:mb-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  ul: ({ className, ...props }) => (
-    <ul
-      className={cn(
-        "text-sidebar-foreground/80 marker:text-sidebar-foreground/35 my-3 ml-4 list-disc space-y-1.5",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  ol: ({ className, ...props }) => (
-    <ol
-      className={cn(
-        "text-sidebar-foreground/80 marker:text-sidebar-foreground/35 my-3 ml-4 list-decimal space-y-1.5",
-        className,
-      )}
-      {...props}
-    />
-  ),
-  li: ({ className, ...props }) => (
-    <li className={cn("pl-1 leading-6 [&>p]:my-0", className)} {...props} />
-  ),
-  input: ({ className, ...props }) => (
-    <input
-      className={cn("mr-2 size-3.5 accent-primary", className)}
-      {...props}
-    />
-  ),
-  a: ({ className, href, children, ...props }) => {
-    const mention = /^(note|color):(\d+)$/.exec(href ?? "");
-    if (mention) {
-      return (
-        <span
-          className={cn(NOTE_MENTION_CHIP_CLASS, "cursor-inherit", className)}
-          data-asset-mention={mention[1]}
-        >
-          <span aria-hidden="true">@</span>
-          <span className="truncate">{children}</span>
-        </span>
-      );
-    }
-    return (
-      <a
+function createMDComponents(compact: boolean): Components {
+  return {
+    h1: ({ className, ...props }) => (
+      <h1
         className={cn(
-          "text-primary hover:text-primary/75 font-medium break-words underline underline-offset-4 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          "text-sidebar-foreground font-semibold tracking-tight",
+          compact ? "mb-1 text-sm leading-tight" : "mb-3 text-xl leading-tight",
           className,
         )}
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
         {...props}
-      >
-        {children}
-      </a>
-    );
-  },
-  blockquote: ({ className, ...props }) => (
-    <blockquote
-      className={cn("text-sidebar-foreground/65 my-3 pl-3 italic", className)}
-      {...props}
-    />
-  ),
-  mark: ({ className, ...props }) => <mark className={className} {...props} />,
-  hr: ({ className, ...props }) => (
-    <hr
-      className={cn("border-sidebar-border my-4 border-t", className)}
-      {...props}
-    />
-  ),
-  pre: ({ children, ...props }) => (
-    <div className="note-code-block note-code-block--preview">
-      <div className="note-code-block-header" aria-hidden="true">
-        <span className="note-code-block-language">
-          {getCodeBlockLanguage(children)}
-        </span>
-        <span className="note-code-block-copy flex size-7 items-center justify-center">
-          <CopyIcon className="size-3.5" />
-        </span>
-      </div>
-      <pre {...props}>{children}</pre>
-    </div>
-  ),
-  code: ({ className, children, ...props }) => {
-    const match = /language-(\w+)/.exec(className ?? "");
-    const inline = !match;
-
-    if (inline) {
+      />
+    ),
+    h2: ({ className, ...props }) => (
+      <h2
+        className={cn(
+          "text-sidebar-foreground font-semibold first:mt-0",
+          compact
+            ? "mt-1.5 mb-0.5 text-[0.8125rem] leading-snug"
+            : "mt-4 mb-2 text-lg leading-snug",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    h3: ({ className, ...props }) => (
+      <h3
+        className={cn(
+          "text-sidebar-foreground font-semibold first:mt-0",
+          compact
+            ? "mt-1.5 mb-0.5 text-[0.75rem] leading-snug"
+            : "mt-4 mb-1.5 text-base leading-snug",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    h4: ({ className, ...props }) => (
+      <h4
+        className={cn(
+          "text-sidebar-foreground font-semibold first:mt-0",
+          compact
+            ? "mt-1 mb-0.5 text-[0.75rem] leading-snug"
+            : "mt-3 mb-1.5 text-base leading-snug",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    h5: ({ className, ...props }) => (
+      <h5
+        className={cn(
+          "text-sidebar-foreground font-semibold first:mt-0",
+          compact
+            ? "mt-1 mb-0.5 text-[0.6875rem] leading-snug"
+            : "mt-3 mb-1 text-sm leading-snug",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    h6: ({ className, ...props }) => (
+      <h6
+        className={cn(
+          "text-sidebar-foreground font-medium first:mt-0",
+          compact
+            ? "mt-1 mb-0.5 text-[0.6875rem] leading-snug"
+            : "mt-3 mb-1 text-sm leading-snug",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    p: ({ className, ...props }) => (
+      <p
+        className={cn(
+          "text-sidebar-foreground/80 first:mt-0 last:mb-0",
+          compact ? "my-0.5 leading-[1.35]" : "my-2.5 leading-6",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    ul: ({ className, ...props }) => (
+      <ul
+        className={cn(
+          "text-sidebar-foreground/80 marker:text-sidebar-foreground/35 list-disc",
+          compact ? "my-1 ml-3 space-y-0.5" : "my-3 ml-4 space-y-1.5",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    ol: ({ className, ...props }) => (
+      <ol
+        className={cn(
+          "text-sidebar-foreground/80 marker:text-sidebar-foreground/35 list-decimal",
+          compact ? "my-1 ml-3 space-y-0.5" : "my-3 ml-4 space-y-1.5",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    li: ({ className, ...props }) => (
+      <li
+        className={cn(
+          "pl-1 [&>p]:my-0",
+          compact ? "leading-[1.35]" : "leading-6",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    input: ({ className, ...props }) => (
+      <input
+        className={cn("mr-2 size-3.5 accent-primary", className)}
+        {...props}
+      />
+    ),
+    a: ({ className, href, children, ...props }) => {
+      const mention = /^(note|color):(\d+)$/.exec(href ?? "");
+      if (mention) {
+        return (
+          <span
+            className={cn(NOTE_MENTION_CHIP_CLASS, "cursor-inherit", className)}
+            data-asset-mention={mention[1]}
+          >
+            <span aria-hidden="true">@</span>
+            <span className="truncate">{children}</span>
+          </span>
+        );
+      }
       return (
-        <code
+        <a
           className={cn(
-            "bg-muted text-sidebar-foreground rounded px-1 py-0.5 font-mono text-[0.8125rem] font-medium",
+            "text-primary hover:text-primary/75 font-medium break-words underline underline-offset-4 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
             className,
           )}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
           {...props}
         >
           {children}
+        </a>
+      );
+    },
+    blockquote: ({ className, ...props }) => (
+      <blockquote
+        className={cn(
+          "text-sidebar-foreground/65 italic",
+          compact ? "my-1 pl-2" : "my-3 pl-3",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    mark: ({ className, ...props }) => (
+      <mark className={className} {...props} />
+    ),
+    hr: ({ className, ...props }) => (
+      <hr
+        className={cn(
+          "border-sidebar-border border-t",
+          compact ? "my-2" : "my-4",
+          className,
+        )}
+        {...props}
+      />
+    ),
+    pre: ({ children, ...props }) => (
+      <div className="note-code-block note-code-block--preview">
+        <div className="note-code-block-header" aria-hidden="true">
+          <span className="note-code-block-language">
+            {getCodeBlockLanguage(children)}
+          </span>
+          <span className="note-code-block-copy flex size-7 items-center justify-center">
+            <CopyIcon className="size-3.5" />
+          </span>
+        </div>
+        <pre {...props}>{children}</pre>
+      </div>
+    ),
+    code: ({ className, children, ...props }) => {
+      const match = /language-(\w+)/.exec(className ?? "");
+      const inline = !match;
+
+      if (inline) {
+        return (
+          <code
+            className={cn(
+              "bg-muted text-sidebar-foreground rounded px-1 py-0.5 font-mono font-medium",
+              compact ? "text-[0.6875rem]" : "text-[0.8125rem]",
+              className,
+            )}
+            {...props}
+          >
+            {children}
+          </code>
+        );
+      }
+
+      const source = String(children).replace(/\n$/, "");
+      const language = match[1];
+      const highlighted = lowlight.listLanguages().includes(language)
+        ? lowlight.highlight(language, source)
+        : undefined;
+
+      return (
+        <code className={className} {...props}>
+          {highlighted ? renderHighlightedCode(highlighted.children) : children}
         </code>
       );
-    }
-
-    const source = String(children).replace(/\n$/, "");
-    const language = match[1];
-    const highlighted = lowlight.listLanguages().includes(language)
-      ? lowlight.highlight(language, source)
-      : undefined;
-
-    return (
-      <code className={className} {...props}>
-        {highlighted ? renderHighlightedCode(highlighted.children) : children}
-      </code>
-    );
-  },
-};
+    },
+  };
+}
 
 export function NoteMarkdown({
   content,
   title,
   className,
-  previewScale,
+  compact = false,
 }: {
   content: string;
   title?: string | null;
   className?: string;
-  previewScale?: number;
+  compact?: boolean;
 }) {
   const body = useMemo(() => parseFrontMatter(content).body, [content]);
   const displayTitle = title?.trim() || "Untitled";
   const isUntitled = !title?.trim();
+  const components = useMemo(() => createMDComponents(compact), [compact]);
 
   return (
     <div
       className={cn(
-        "note-rich-text-content note-card-preview-content note-card-preview-content--card",
-        previewScale !== undefined && "note-card-preview-content--scaled",
+        "note-rich-text-content",
+        compact ? "text-[0.6875rem] leading-4" : "text-[0.8125rem] leading-5",
         className,
       )}
-      style={
-        previewScale === undefined
-          ? undefined
-          : {
-              width: `${100 / previewScale}%`,
-              transform: `scale(${previewScale})`,
-            }
-      }
     >
       <h1
         className={cn(
-          "note-card-preview-title mt-0 mb-2 text-xl leading-tight font-semibold tracking-tight text-sidebar-foreground",
+          "note-card-preview-title mt-0 font-semibold tracking-tight text-sidebar-foreground",
+          compact
+            ? "mb-1 text-[0.8125rem] leading-4"
+            : "mb-2 text-xl leading-tight",
           isUntitled &&
             "note-card-preview-title--placeholder text-sidebar-foreground/45",
         )}
@@ -316,7 +351,7 @@ export function NoteMarkdown({
         {displayTitle}
       </h1>
       <ReactMarkdown
-        components={MD_COMPONENTS}
+        components={components}
         remarkPlugins={[remarkGfm, remarkHighlight]}
         urlTransform={(url) =>
           /^(?:note|color):\d+$/.test(url) ? url : defaultUrlTransform(url)

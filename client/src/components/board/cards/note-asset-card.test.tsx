@@ -13,6 +13,17 @@ describe("NoteMarkdown", () => {
     expect(html).toContain(">Project plan</h1><p");
   });
 
+  it("renders compact sizing for small tile previews", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown title="Project plan" content="Outline it." compact />,
+    );
+
+    expect(html).toContain("text-[0.6875rem]");
+    expect(html).toContain("text-[0.8125rem] leading-4");
+    expect(html).not.toContain("text-xl");
+    expect(html).not.toContain("leading-6");
+  });
+
   it("uses a muted Untitled heading when the title is absent", () => {
     const html = renderToStaticMarkup(<NoteMarkdown content="Draft body." />);
 
