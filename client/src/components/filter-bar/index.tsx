@@ -1,6 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { createPortal } from "react-dom";
-import { Fragment, useState, type ComponentType, type ReactNode } from "react";
+import { Fragment, type ComponentType, type ReactNode } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -47,8 +46,6 @@ import {
   MAX_COLOR_FILTERS,
   type AssetFilterType,
 } from "@/store/slices/filter-bar-slice";
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
-
 const EXTRA_COLORS = [
   { value: "#dc2626", label: "Strong Red" },
   { value: "#ea580c", label: "Deep Orange" },
@@ -89,7 +86,7 @@ const FILTER_ISLAND_TRANSITION = {
   ease: [0, 0, 0.2, 1] as const,
 };
 const FILTER_FRAME_TRANSITION = {
-  duration: 0.16,
+  duration: 0.12,
   ease: [0, 0, 0.2, 1] as const,
 };
 
@@ -149,7 +146,6 @@ export function FilterBar({
   const toggleAssetType = useSessionStore((s) => s.toggleAssetType);
   const clearAssetTypes = useSessionStore((s) => s.clearAssetTypes);
   const setFilterType = useSessionStore((s) => s.setFilterType);
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const canAddColor = selectedColors.length < MAX_COLOR_FILTERS;
   const hasSearchableFilter =
     (filterType === "Color" && selectedColors.length > 0) ||
@@ -173,23 +169,16 @@ export function FilterBar({
     }
   }
 
-  useIsomorphicLayoutEffect(() => {
-    setPortalTarget(
-      document.querySelector<HTMLElement>('[data-slot="sidebar-inset"]'),
-    );
-  }, []);
-
-  if (!portalTarget) return null;
-
-  return createPortal(
+  return (
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 8 }}
-          transition={FILTER_ISLAND_TRANSITION}
-          className="pointer-events-none absolute top-6 left-6 z-40 flex"
+          initial={{ opacity: 0, y: -14, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -14, scale: 0.98 }}
+          transition={FILTER_FRAME_TRANSITION}
+          style={{ transformOrigin: "top left" }}
+          className="pointer-events-none absolute top-2 left-2 z-40 flex"
         >
           <div className="pointer-events-auto relative w-fit">
             <div
@@ -347,8 +336,7 @@ export function FilterBar({
           </div>
         </motion.div>
       )}
-    </AnimatePresence>,
-    portalTarget,
+    </AnimatePresence>
   );
 }
 

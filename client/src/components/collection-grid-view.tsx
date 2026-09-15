@@ -19,7 +19,10 @@ import {
   type CollectionNode,
 } from "@/api/collection";
 import { AssetCard } from "@/components/board/asset-card";
-import { useMarqueeSelection } from "@/components/board/use-marquee-selection";
+import {
+  selectionMarqueeClassName,
+  useMarqueeSelection,
+} from "@/components/board/use-marquee-selection";
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
 import { MoveToDialog } from "@/components/move-to-dialog";
 import { Masonry } from "@/components/masonry-grid";
@@ -443,7 +446,7 @@ export function CollectionGridView({
 
           {marquee.marquee ? (
             <div
-              className="selection-marquee pointer-events-none fixed z-50"
+              className={selectionMarqueeClassName}
               style={{
                 left: marquee.marquee.left,
                 top: marquee.marquee.top,

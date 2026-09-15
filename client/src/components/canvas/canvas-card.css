@@ -1,0 +1,8 @@
+.aska-flow .react-flow__node-asset {
+  cursor: grab;
+}
+
+.aska-flow .react-flow__node-asset.dragging,
+.aska-flow .react-flow__node-asset.dragging * {
+  cursor: grabbing;
+}

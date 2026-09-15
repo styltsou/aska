@@ -647,7 +647,7 @@ export function PexelsBrowserPanel({
                 >
                   <div
                     className={cn(
-                      "pexels-results-container flex min-h-full flex-col",
+                      "[container-type:inline-size] flex min-h-full flex-col",
                       selected.length > 0
                         ? "pb-24"
                         : "pb-[var(--app-shell-inset)]",
@@ -660,7 +660,7 @@ export function PexelsBrowserPanel({
                         description="Search the Pexels library to start collecting photos for your board."
                       />
                     ) : search.isLoading ? (
-                      <div className="pexels-results-grid columns-2 gap-2">
+                      <div className="columns-2 gap-2 [@container(min-width:38rem)]:columns-3">
                         {Array.from({ length: 6 }, (_, index) => (
                           <div
                             key={index}
@@ -672,7 +672,7 @@ export function PexelsBrowserPanel({
                       <>
                         <div
                           className={cn(
-                            "pexels-results-grid columns-2 gap-2",
+                            "columns-2 gap-2 [@container(min-width:38rem)]:columns-3",
                             search.isPlaceholderData &&
                               "pointer-events-none opacity-50 transition-opacity",
                           )}

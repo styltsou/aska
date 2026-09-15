@@ -1,0 +1,50 @@
+/* The selection region is a gesture, while selected cards provide the lasting state. */
+.aska-flow .react-flow__nodesselection {
+  display: none;
+}
+
+.aska-flow .react-flow__selection {
+  --marquee-dash-color: color-mix(in oklch, var(--primary) 78%, transparent);
+  background-color: color-mix(in oklch, var(--primary) 9%, transparent);
+  background-image:
+    linear-gradient(
+      90deg,
+      var(--marquee-dash-color) 0 60%,
+      transparent 60% 100%
+    ),
+    linear-gradient(
+      0deg,
+      var(--marquee-dash-color) 0 60%,
+      transparent 60% 100%
+    ),
+    linear-gradient(
+      90deg,
+      var(--marquee-dash-color) 0 60%,
+      transparent 60% 100%
+    ),
+    linear-gradient(0deg, var(--marquee-dash-color) 0 60%, transparent 60% 100%);
+  background-position:
+    0 0,
+    100% 0,
+    0 100%,
+    0 0;
+  background-repeat: repeat-x, repeat-y, repeat-x, repeat-y;
+  background-size:
+    20px 1px,
+    1px 20px,
+    20px 1px,
+    1px 20px;
+  border: 0;
+  border-radius: var(--radius-md);
+  animation: selection-marquee-dashes 700ms linear infinite;
+}
+
+@keyframes selection-marquee-dashes {
+  to {
+    background-position:
+      20px 0,
+      100% 20px,
+      -20px 100%,
+      0 -20px;
+  }
+}

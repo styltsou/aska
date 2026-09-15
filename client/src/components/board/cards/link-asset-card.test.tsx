@@ -6,6 +6,7 @@ import { shouldShowLinkPreviewRefresh } from "../asset-context-menu";
 import {
   handleLinkCardNavigationClick,
   LinkAssetCard,
+  LinkCardPreview,
 } from "./link-asset-card";
 
 const asset: LinkAsset = {
@@ -121,7 +122,9 @@ describe("LinkAssetCard", () => {
 
     expect(html).toContain("aspect-video w-full");
     expect(html).toContain('data-slot="optimistic-link-preview"');
-    expect(html).toContain("link-preview-shimmer");
+    expect(html).toContain(
+      "animate-[link-preview-shimmer_1.6s_linear_infinite]",
+    );
     expect(html).not.toContain("Resolving");
   });
 
@@ -133,7 +136,9 @@ describe("LinkAssetCard", () => {
     );
 
     expect(html).toContain("aspect-video w-full");
-    expect(html).toContain("link-preview-shimmer");
+    expect(html).toContain(
+      "animate-[link-preview-shimmer_1.6s_linear_infinite]",
+    );
     expect(html).not.toContain("group-hover:scale-[1.05]");
   });
 
@@ -163,5 +168,67 @@ describe("LinkAssetCard", () => {
         failureCategory: "credentials",
       }),
     ).toBe(false);
+  });
+});
+
+describe("LinkCardPreview", () => {
+  it("renders a YouTube thumbnail with a play badge from the video id", () => {
+    const html = renderToStaticMarkup(
+      <LinkCardPreview
+        preview={{
+          type: "link",
+          assetId: "link-7",
+          hostname: "www.youtube.com",
+          title: "A video",
+          videoId: "dQw4w9WgXcQ",
+        }}
+        previewScale={0.65}
+      />,
+    );
+
+    expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
+    expect(html).toContain("lucide-play");
+    expect(html).toContain("bg-popover/85");
+    expect(html).toContain("A video");
+    expect(html).toContain("www.youtube.com");
+    expect(html).toContain("scale(0.65)");
+  });
+
+  it("falls back to the unfurl thumbnail and drops the play badge without a video", () => {
+    const html = renderToStaticMarkup(
+      <LinkCardPreview
+        preview={{
+          type: "link",
+          assetId: "link-8",
+          hostname: "example.com",
+          title: "An article",
+          description: "A thorough writeup about the topic.",
+          url: "https://example.com/preview.jpg",
+          favicon: "https://example.com/favicon.ico",
+        }}
+      />,
+    );
+
+    expect(html).toContain("https://example.com/preview.jpg");
+    expect(html).toContain("https://example.com/favicon.ico");
+    expect(html).toContain("A thorough writeup about the topic.");
+    expect(html).not.toContain("lucide-play");
+    expect(html).not.toContain("i.ytimg.com");
+  });
+
+  it("falls back to a globe tile when no thumbnail is resolved", () => {
+    const html = renderToStaticMarkup(
+      <LinkCardPreview
+        preview={{
+          type: "link",
+          assetId: "link-9",
+          hostname: "example.com",
+        }}
+      />,
+    );
+
+    expect(html).toContain("size-8 text-muted-foreground/40");
+    expect(html).not.toContain("i.ytimg.com");
+    expect(html).toContain("Untitled link");
   });
 });

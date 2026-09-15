@@ -1,3 +1,5 @@
+import "@/components/board/note-workspace.css";
+
 import {
   createContext,
   useCallback,

@@ -8,8 +8,6 @@ import {
 import { useRef, useState } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { GLASS_SURFACE_CLASS } from "@/lib/glass";
-import { cn } from "@/lib/utils";
 import { usePersistedStore } from "@/store";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { makeBoardKey } from "./canvas-key";
@@ -137,20 +135,6 @@ export function CanvasLoading({
                 </div>
               );
             })}
-          </div>
-        </div>
-        <div className="pointer-events-none absolute right-3 bottom-3">
-          <div
-            className={cn(
-              "flex flex-col gap-px rounded-md p-1",
-              GLASS_SURFACE_CLASS,
-            )}
-          >
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="p-1">
-                <Skeleton className="size-5 rounded-sm" />
-              </div>
-            ))}
           </div>
         </div>
       </div>

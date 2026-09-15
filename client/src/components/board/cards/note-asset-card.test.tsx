@@ -29,6 +29,18 @@ describe("NoteMarkdown", () => {
     ).toContain("<mark");
   });
 
+  it("preserves the highlight color on preview marks", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown
+        content={'Keep [highlight color="mint"]this idea[/highlight] close.'}
+      />,
+    );
+
+    expect(html).toContain('class="note-highlight');
+    expect(html).toContain('data-highlight-color="mint"');
+    expect(html).not.toContain("bg-amber");
+  });
+
   it("renders task-list checkboxes", () => {
     const html = renderToStaticMarkup(
       <NoteMarkdown content={"- [ ] Open\n- [x] Finished"} />,

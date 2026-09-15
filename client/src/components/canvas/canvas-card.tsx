@@ -1,3 +1,5 @@
+import "./canvas-card.css";
+
 import { LoaderCircleIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { memo, useMemo } from "react";

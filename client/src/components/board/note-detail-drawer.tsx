@@ -1,3 +1,5 @@
+import "./note-workspace.css";
+
 import {
   lazy,
   Suspense,
@@ -1449,7 +1451,7 @@ export function NoteDetailDrawer({
           ref={noteContentRef}
           className="note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto"
         >
-          <div className="note-workspace-column [&_.ProseMirror]:!pt-8">
+          <div className="mx-auto min-h-full w-full max-w-5xl px-5 sm:px-10 lg:px-16 [&_.ProseMirror]:!pt-8">
             {loading && !activeNote ? (
               <NoteEditorLoading />
             ) : isCreateMode || activeNote ? (

@@ -101,7 +101,7 @@ export function SelectionActionBar({
             aria-label="Selection actions"
             className="flex w-fit flex-col items-center gap-1"
             transition={{
-              duration: 0.1,
+              duration: 0.12,
               ease: [0, 0, 0.2, 1],
             }}
           >

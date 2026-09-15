@@ -1,3 +1,6 @@
+import "../note-highlight-colors.css";
+import "../note-rich-text.css";
+
 import {
   Children,
   createElement,
@@ -25,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
 import { remarkHighlight } from "@/lib/remark-highlight";
 import { useUpdateNote } from "@/api/collection/hooks";
+import { NOTE_MENTION_CHIP_CLASS } from "@/components/board/note-mentions";
 import type { NoteAsset } from "@/types/asset";
 
 const BARE_URL_RE = /(^|[^[(])(https?:\/\/[^\s<"'>)\]]+)/gi;
@@ -189,7 +193,7 @@ const MD_COMPONENTS: Components = {
     if (mention) {
       return (
         <span
-          className={cn("note-mention-chip cursor-inherit", className)}
+          className={cn(NOTE_MENTION_CHIP_CLASS, "cursor-inherit", className)}
           data-asset-mention={mention[1]}
         >
           <span aria-hidden="true">@</span>
@@ -218,15 +222,7 @@ const MD_COMPONENTS: Components = {
       {...props}
     />
   ),
-  mark: ({ className, ...props }) => (
-    <mark
-      className={cn(
-        "rounded-[0.18em] bg-amber-200/75 px-[0.08em] text-inherit box-decoration-clone dark:bg-amber-400/30",
-        className,
-      )}
-      {...props}
-    />
-  ),
+  mark: ({ className, ...props }) => <mark className={className} {...props} />,
   hr: ({ className, ...props }) => (
     <hr
       className={cn("border-sidebar-border my-4 border-t", className)}
@@ -296,10 +292,8 @@ export function NoteMarkdown({
   return (
     <div
       className={cn(
-        "note-rich-text-content note-card-preview-content",
-        previewScale === undefined
-          ? "note-card-preview-content--card"
-          : "note-card-preview-content--scaled",
+        "note-rich-text-content note-card-preview-content note-card-preview-content--card",
+        previewScale !== undefined && "note-card-preview-content--scaled",
         className,
       )}
       style={
@@ -313,8 +307,9 @@ export function NoteMarkdown({
     >
       <h1
         className={cn(
-          "note-card-preview-title",
-          isUntitled && "note-card-preview-title--placeholder",
+          "note-card-preview-title mt-0 mb-2 text-xl leading-tight font-semibold tracking-tight text-sidebar-foreground",
+          isUntitled &&
+            "note-card-preview-title--placeholder text-sidebar-foreground/45",
         )}
         data-note-title-placeholder={isUntitled || undefined}
       >

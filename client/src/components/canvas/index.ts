@@ -1,3 +1,5 @@
+import "./canvas.css";
+
 export { makeBoardKey } from "./canvas-key";
 export { Canvas } from "./canvas";
 export { CanvasLoading } from "./canvas-loading";

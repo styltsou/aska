@@ -1,3 +1,5 @@
+import "./note-highlight-colors.css";
+
 import { BanIcon, EraserIcon, HighlighterIcon } from "lucide-react";
 import { useState, type RefObject } from "react";
 import { AnimatePresence, motion } from "motion/react";

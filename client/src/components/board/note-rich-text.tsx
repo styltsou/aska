@@ -1,3 +1,6 @@
+import "./note-highlight-colors.css";
+import "./note-rich-text.css";
+
 import {
   forwardRef,
   useEffect,

@@ -1,0 +1,42 @@
+@layer components {
+  .note-workspace-scroll-container {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .note-workspace-scroll-container:hover {
+    scrollbar-color: color-mix(
+        in oklab,
+        var(--sidebar-foreground) 28%,
+        transparent
+      )
+      transparent;
+  }
+
+  .note-workspace-scroll-container::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .note-workspace-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .note-workspace-scroll-container::-webkit-scrollbar-thumb {
+    border-radius: 999px 0 0 999px;
+    background: transparent;
+  }
+
+  .note-workspace-scroll-container:hover::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--sidebar-foreground) 28%, transparent);
+  }
+
+  @media (min-width: 64rem) {
+    .note-workspace-scroll-container[data-note-preview-rail-visible="true"] {
+      scrollbar-width: none;
+    }
+
+    .note-workspace-scroll-container[data-note-preview-rail-visible="true"]::-webkit-scrollbar {
+      display: none;
+    }
+  }
+}

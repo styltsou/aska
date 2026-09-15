@@ -1,10 +1,11 @@
-import { FolderIcon, Globe2Icon, PlusIcon } from "lucide-react";
+import { FolderIcon, PlusIcon } from "lucide-react";
 import { AnimatePresence, motion, type Transition } from "motion/react";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
 import type { FolderAsset } from "@/types/asset";
 
+import { LinkCardPreview } from "./link-asset-card";
 import { NoteMarkdown } from "./note-asset-card";
 
 const previewTransition: Transition = {
@@ -129,12 +130,13 @@ export function FolderAssetCard({
                     layout="position"
                     layoutDependency={previewLayoutKey}
                     transition={previewTransition}
-                    className="flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-sm bg-card p-2 text-center ring-1 ring-sidebar-foreground/5"
+                    className="flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-sm bg-card p-2 ring-1 ring-sidebar-foreground/5"
                   >
-                    <Globe2Icon className="size-5 text-muted-foreground/60" />
-                    <span className="max-w-full truncate text-[8px] text-muted-foreground">
-                      {preview.hostname}
-                    </span>
+                    <LinkCardPreview
+                      preview={preview}
+                      previewScale={0.5}
+                      className="w-full"
+                    />
                   </motion.div>
                 );
               }

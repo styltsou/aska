@@ -1,0 +1,22 @@
+@import "@xyflow/react/dist/style.css";
+
+.aska-flow {
+  --xy-background-color: transparent;
+  --xy-controls-button-background-color-default: var(--popover);
+  --xy-controls-button-background-color-hover-default: var(--muted);
+  --xy-controls-button-color-default: var(--popover-foreground);
+  --xy-controls-button-border-color-default: var(--border);
+  --canvas-object-ink: var(--foreground);
+  --canvas-object-cobalt: oklch(0.5 0.2 262);
+  --canvas-object-coral: oklch(0.59 0.2 31);
+  --canvas-object-moss: oklch(0.45 0.12 151);
+  --canvas-object-ochre: oklch(0.55 0.13 78);
+}
+
+.dark .aska-flow {
+  --canvas-object-ink: var(--foreground);
+  --canvas-object-cobalt: oklch(0.73 0.14 260);
+  --canvas-object-coral: oklch(0.72 0.16 32);
+  --canvas-object-moss: oklch(0.7 0.11 151);
+  --canvas-object-ochre: oklch(0.76 0.12 82);
+}

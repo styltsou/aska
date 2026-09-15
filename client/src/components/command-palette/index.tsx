@@ -1001,7 +1001,7 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
     return (
       <span
         aria-hidden="true"
-        className="size-8 shrink-0 rounded-md border border-border/60 shadow-sm"
+        className="size-8 shrink-0 rounded-md ring-1 ring-foreground/10"
         style={{ background: result.preview.hex }}
       />
     );

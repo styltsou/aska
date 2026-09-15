@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 
+import { LinkCardPreview } from "./board/cards/link-asset-card";
 import { NoteMarkdown } from "./board/cards/note-asset-card";
 import { useDeleteCollection } from "@/api/collection";
 import {
@@ -23,7 +24,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { FolderChildPreview } from "@/api/collection/types";
-import { Globe2Icon } from "lucide-react";
 
 const PREVIEW_TRANSITION = "transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1)";
 
@@ -106,7 +106,7 @@ export function CollectionCard({
                       if (preview.type === "link") {
                         return (
                           <div
-                            className="absolute flex aspect-square flex-col items-center justify-center gap-1 rounded-xl bg-card p-3 shadow-md ring-1 ring-sidebar-foreground/5"
+                            className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
                             style={{
                               ...PREVIEW_POSITION,
                               zIndex: 0,
@@ -114,10 +114,11 @@ export function CollectionCard({
                               transition: PREVIEW_TRANSITION,
                             }}
                           >
-                            <Globe2Icon className="size-7 text-muted-foreground/50" />
-                            <span className="max-w-full truncate text-[9px] text-muted-foreground">
-                              {preview.hostname}
-                            </span>
+                            <LinkCardPreview
+                              preview={preview}
+                              previewScale={0.65}
+                              className="w-full"
+                            />
                           </div>
                         );
                       }
@@ -192,7 +193,7 @@ export function CollectionCard({
                         return (
                           <div
                             key={preview.assetId}
-                            className="absolute flex aspect-square flex-col items-center justify-center gap-1 rounded-xl bg-card p-3 shadow-md ring-1 ring-sidebar-foreground/5"
+                            className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
                             style={{
                               ...PREVIEW_POSITION,
                               zIndex: z,
@@ -200,10 +201,11 @@ export function CollectionCard({
                               transition: PREVIEW_TRANSITION,
                             }}
                           >
-                            <Globe2Icon className="size-7 text-muted-foreground/50" />
-                            <span className="max-w-full truncate text-[9px] text-muted-foreground">
-                              {preview.hostname}
-                            </span>
+                            <LinkCardPreview
+                              preview={preview}
+                              previewScale={0.65}
+                              className="w-full"
+                            />
                           </div>
                         );
                       }

@@ -74,6 +74,14 @@ const MentionContext = createContext<MentionContextValue>({
 });
 const mentionSuggestionPluginKey = new PluginKey("assetMentionSuggestion");
 
+export const NOTE_MENTION_CHIP_CLASS =
+  "mx-[0.08em] inline-flex max-w-full cursor-pointer items-center gap-1 rounded-md border border-foreground/10 bg-[color-mix(in_srgb,var(--muted)_18%,transparent)] px-1.5 py-0.5 align-baseline text-[0.875em] leading-none font-medium text-foreground no-underline transition-[background-color,border-color,box-shadow,opacity] duration-100 hover:border-foreground/20 hover:bg-[color-mix(in_srgb,var(--muted)_28%,transparent)]";
+export const NOTE_MENTION_SELECTED_CLASS = "ring-2 ring-ring/35";
+export const NOTE_MENTION_UNAVAILABLE_CLASS =
+  "cursor-default border-transparent bg-muted/45 text-muted-foreground opacity-65 grayscale";
+export const NOTE_MENTION_SWATCH_CLASS =
+  "size-3 shrink-0 rounded-[0.2rem] border border-foreground/15";
+
 export const AssetMention = Node.create({
   name: "assetMention",
   priority: 1_100,
@@ -231,9 +239,9 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
       type="button"
       disabled={unavailable || !onOpen}
       className={cn(
-        "note-mention-chip",
-        selected && "note-mention-chip--selected",
-        unavailable && "note-mention-chip--unavailable",
+        NOTE_MENTION_CHIP_CLASS,
+        selected && NOTE_MENTION_SELECTED_CLASS,
+        unavailable && NOTE_MENTION_UNAVAILABLE_CLASS,
       )}
       aria-label={`${unavailable ? "Unavailable reference" : "Open reference"}: ${label}`}
       onMouseDown={(event) => event.preventDefault()}
@@ -243,7 +251,7 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
       {assetType === "color" ? (
         <span
           aria-hidden="true"
-          className="note-mention-swatch"
+          className={NOTE_MENTION_SWATCH_CLASS}
           style={{
             background: resolved?.gradient
               ? gradientToCss(

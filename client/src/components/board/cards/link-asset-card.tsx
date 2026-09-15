@@ -1,3 +1,5 @@
+import "./link-asset-card.css";
+
 import { ExternalLinkIcon, Globe2Icon, PlayIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, type MouseEvent } from "react";
@@ -6,6 +8,7 @@ import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { hasSelectionModifier } from "@/lib/selection";
 import { isYouTubeVideoUrl } from "@/lib/youtube-url";
 import { cn } from "@/lib/utils";
+import type { FolderAssetPreview } from "@/types/asset";
 import type { LinkAsset } from "@/types/asset";
 
 export function handleLinkCardNavigationClick(
@@ -69,7 +72,7 @@ export function LinkAssetCard({
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
                 data-slot="optimistic-link-preview"
-                className="link-preview-shimmer pointer-events-none absolute inset-0 z-10"
+                className="pointer-events-none absolute inset-0 z-10 animate-[link-preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
               />
             )}
           </AnimatePresence>
@@ -165,6 +168,104 @@ export function LinkAssetCard({
       aria-label={`Open video details: ${asset.title}`}
     >
       {contents}
+    </div>
+  );
+}
+
+type LinkCardPreviewData = Pick<
+  FolderAssetPreview,
+  | "url"
+  | "blurDataURL"
+  | "hostname"
+  | "title"
+  | "favicon"
+  | "videoId"
+  | "description"
+> &
+  Partial<Pick<FolderAssetPreview, "assetId" | "type">>;
+
+const YOUTUBE_THUMBNAIL_URL = (videoId: string) =>
+  `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+/** The card-content slice shared by folder and collection card previews. */
+export function LinkCardPreview({
+  preview,
+  previewScale,
+  className,
+}: {
+  preview: LinkCardPreviewData;
+  previewScale?: number;
+  className?: string;
+}) {
+  const isYoutube = Boolean(preview.videoId);
+  const thumbnailUrl =
+    preview.url ??
+    (isYoutube && preview.videoId
+      ? YOUTUBE_THUMBNAIL_URL(preview.videoId)
+      : undefined);
+  const displayTitle = preview.title?.trim() || "Untitled link";
+  const hostname = preview.hostname ?? "Link";
+
+  return (
+    <div
+      className={cn(
+        "w-full min-w-0 bg-card",
+        previewScale !== undefined && "origin-top-left",
+        className,
+      )}
+      style={
+        previewScale === undefined
+          ? undefined
+          : {
+              width: `${100 / previewScale}%`,
+              transform: `scale(${previewScale})`,
+            }
+      }
+    >
+      <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-muted/40">
+        {thumbnailUrl ? (
+          <ProgressiveImage
+            src={thumbnailUrl}
+            blurDataURL={preview.blurDataURL}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center">
+            <Globe2Icon className="size-8 text-muted-foreground/40" />
+          </div>
+        )}
+        {isYoutube ? (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-popover/85 text-popover-foreground shadow-lg ring-1 ring-border/30 backdrop-blur-sm">
+              <PlayIcon className="ml-0.5 size-4 fill-current" />
+            </span>
+          </span>
+        ) : null}
+      </div>
+      <div className="space-y-1 px-2 pt-1.5 pb-2">
+        <div className="flex items-center gap-1.5 text-[11px] text-sidebar-foreground/60">
+          {preview.favicon ? (
+            <img
+              src={preview.favicon}
+              alt=""
+              className="size-3.5 rounded-sm object-contain"
+            />
+          ) : (
+            <Globe2Icon className="size-3.5 shrink-0" />
+          )}
+          <span className="truncate">{hostname}</span>
+        </div>
+        <div className="line-clamp-2 text-sm leading-snug font-medium text-sidebar-foreground">
+          {displayTitle}
+        </div>
+        {preview.description?.trim() ? (
+          <div className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+            {preview.description.trim()}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

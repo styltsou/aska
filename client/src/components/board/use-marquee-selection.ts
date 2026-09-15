@@ -1,3 +1,5 @@
+import "@/components/selection/selection-marquee.css";
+
 import { useCallback, useRef, useState } from "react";
 
 import {
@@ -5,6 +7,9 @@ import {
   rectFullyContains,
   type Rect,
 } from "@/lib/selection";
+
+export const selectionMarqueeClassName =
+  "pointer-events-none fixed z-50 rounded-md border-0 bg-[color-mix(in_oklch,var(--primary)_9%,transparent)] [--marquee-dash-color:color-mix(in_oklch,var(--primary)_78%,transparent)] [background-image:linear-gradient(90deg,var(--marquee-dash-color)_0_60%,transparent_60%_100%),linear-gradient(0deg,var(--marquee-dash-color)_0_60%,transparent_60%_100%),linear-gradient(90deg,var(--marquee-dash-color)_0_60%,transparent_60%_100%),linear-gradient(0deg,var(--marquee-dash-color)_0_60%,transparent_60%_100%)] [background-position:0_0,100%_0,0_100%,0_0] [background-repeat:repeat-x,repeat-y,repeat-x,repeat-y] [background-size:20px_1px,1px_20px,20px_1px,1px_20px] animate-[selection-marquee-dashes_700ms_linear_infinite]";
 
 const MOVEMENT_THRESHOLD = 4;
 

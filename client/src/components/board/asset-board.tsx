@@ -5,7 +5,10 @@ import { MasonryEmptyState } from "@/components/masonry-empty-state";
 import { Masonry } from "@/components/masonry-grid";
 import type { Asset, ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import { AssetCard } from "./asset-card";
-import { useMarqueeSelection } from "./use-marquee-selection";
+import {
+  selectionMarqueeClassName,
+  useMarqueeSelection,
+} from "./use-marquee-selection";
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
 import {
   isPersistedSelectableAsset,
@@ -249,7 +252,7 @@ export function AssetBoard({
       )}
       {marquee.marquee ? (
         <div
-          className="selection-marquee pointer-events-none fixed z-50"
+          className={selectionMarqueeClassName}
           style={{
             left: marquee.marquee.left,
             top: marquee.marquee.top,
