@@ -217,6 +217,41 @@ describe("move cache transition", () => {
     ]);
   });
 
+  it("keeps target-folder previews unchanged for an internal move until refetch", () => {
+    const root = makeContents([movedNote, targetFolder]);
+    const targetKey = [
+      "collectionContents",
+      "personal",
+      "reference",
+      "archive",
+    ];
+
+    const updates = transitionCachedContentsForMoves(
+      [
+        [["collectionContents", "personal", "reference", undefined], root],
+        [targetKey, makeContents([])],
+      ],
+      {
+        sourceFolderPath: undefined,
+        targetFolderPath: "archive",
+        targetFolderNodeId: targetFolder.id,
+        movedNodes: [movedNote],
+        updateTargetFolderPreview: false,
+      },
+    );
+    const updateMap = new Map(updates);
+
+    expect(updateMap.get(updates[0]![0])?.nodes).toContainEqual({
+      ...targetFolder,
+      count: targetFolder.count + 1,
+    });
+    expect(
+      updateMap
+        .get(updates[0]![0])
+        ?.nodes.find((node) => node.id === targetFolder.id),
+    ).toMatchObject({ previews: targetFolder.previews });
+  });
+
   it("rebuilds source-folder previews from remaining children and rolls back by asset ID", () => {
     const parent = makeContents([
       {

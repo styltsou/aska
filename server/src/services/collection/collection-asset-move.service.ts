@@ -478,24 +478,44 @@ export class CollectionAssetMoveService {
               .where(eq(collectionNodes.id, descendant.id));
           }
         } else {
-          if (sourceNode.id !== null) {
+          if (
+            sourceNode.id !== null &&
+            sourceNode.collectionId === collection.id
+          ) {
             await tx
-              .delete(collectionNodes)
+              .update(collectionNodes)
+              .set({
+                parentFolderId: targetFolder.folderId,
+                positionX: position.x,
+                positionY: position.y,
+                frontIndex: null,
+                depth: targetFolder.pathFolderSlugs.length,
+                pathFolderIds: targetFolder.pathFolderIds,
+                pathFolderSlugs: targetFolder.pathFolderSlugs,
+                pathFolderNames: targetFolder.pathFolderNames,
+              })
               .where(eq(collectionNodes.id, sourceNode.id));
+          } else {
+            if (sourceNode.id !== null) {
+              await tx
+                .delete(collectionNodes)
+                .where(eq(collectionNodes.id, sourceNode.id));
+            }
+
+            await tx.insert(collectionNodes).values({
+              organizationId: orgId,
+              collectionId: collection.id,
+              parentFolderId: targetFolder.folderId,
+              nodeType: "asset",
+              assetId: source.entityId,
+              positionX: position.x,
+              positionY: position.y,
+              depth: targetFolder.pathFolderSlugs.length,
+              pathFolderIds: targetFolder.pathFolderIds,
+              pathFolderSlugs: targetFolder.pathFolderSlugs,
+              pathFolderNames: targetFolder.pathFolderNames,
+            });
           }
-          await tx.insert(collectionNodes).values({
-            organizationId: orgId,
-            collectionId: collection.id,
-            parentFolderId: targetFolder.folderId,
-            nodeType: "asset",
-            assetId: source.entityId,
-            positionX: position.x,
-            positionY: position.y,
-            depth: targetFolder.pathFolderSlugs.length,
-            pathFolderIds: targetFolder.pathFolderIds,
-            pathFolderSlugs: targetFolder.pathFolderSlugs,
-            pathFolderNames: targetFolder.pathFolderNames,
-          });
         }
 
         movesByNodeId.set(nodeId, { ...result, position, moved: true });

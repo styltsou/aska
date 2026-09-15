@@ -23,6 +23,7 @@ type CachedMoveInput = {
   targetFolderNodeId: string;
   movedNode: CollectionNode;
   preview?: FolderChildPreview;
+  updateTargetFolderPreview?: boolean;
   remainingUnfilteredSourceNodes?: CollectionNode[];
 };
 
@@ -178,7 +179,7 @@ export function transitionCachedContentsForMove(
         updateTargetFolderForMove(
           removal.contents,
           input.targetFolderNodeId,
-          input.preview,
+          input.updateTargetFolderPreview === false ? undefined : input.preview,
           movedAssetCount,
           movedFolderDelta,
         ),

@@ -425,6 +425,182 @@ describe("CollectionService integration", () => {
     ).resolves.toMatchObject({ moved: false });
   });
 
+  it("preserves preview recency when assets move within a collection", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Preview Recency Test" },
+    );
+    const oldNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "Old note" },
+    );
+    const oldColor = await collectionService.createColor(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { hex: "#112233" },
+    );
+    const newerNote = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "Newer note" },
+    );
+    const newestColor = await collectionService.createColor(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { hex: "#445566" },
+    );
+    const oldNoteAssetId = Number(oldNote.id.slice("note-".length));
+    const oldColorAssetId = Number(oldColor.id.slice("color-".length));
+    const placementDates = [
+      [oldNoteAssetId, new Date("2025-01-01T00:00:00.000Z")],
+      [oldColorAssetId, new Date("2025-02-01T00:00:00.000Z")],
+      [
+        Number(newerNote.id.slice("note-".length)),
+        new Date("2025-03-01T00:00:00.000Z"),
+      ],
+      [
+        Number(newestColor.id.slice("color-".length)),
+        new Date("2025-04-01T00:00:00.000Z"),
+      ],
+    ] as const;
+
+    for (const [assetId, createdAt] of placementDates) {
+      await db
+        .update(collectionNodes)
+        .set({ createdAt })
+        .where(eq(collectionNodes.assetId, assetId));
+    }
+
+    const targetFolder = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Archive" },
+    );
+    const beforePlacements = await Promise.all(
+      [oldNoteAssetId, oldColorAssetId].map(async (assetId) => {
+        const [placement] = await db
+          .select({
+            id: collectionNodes.id,
+            assetId: collectionNodes.assetId,
+            createdAt: collectionNodes.createdAt,
+          })
+          .from(collectionNodes)
+          .where(eq(collectionNodes.assetId, assetId));
+        return placement!;
+      }),
+    );
+
+    await collectionService.moveNodesToFolder(
+      fixture.organizationId,
+      collection.slug,
+      {
+        nodeIds: [oldNote.id, oldColor.id],
+        targetFolderNodeId: `folder-${targetFolder.id}`,
+      },
+    );
+
+    const [afterPlacements, collections, rootContents] = await Promise.all([
+      Promise.all(
+        [oldNoteAssetId, oldColorAssetId].map(async (assetId) => {
+          const [placement] = await db
+            .select({
+              id: collectionNodes.id,
+              assetId: collectionNodes.assetId,
+              createdAt: collectionNodes.createdAt,
+              parentFolderId: collectionNodes.parentFolderId,
+            })
+            .from(collectionNodes)
+            .where(eq(collectionNodes.assetId, assetId));
+          return placement!;
+        }),
+      ),
+      collectionService.getDetailedCollections(fixture.organizationId),
+      collectionService.getCollectionContents(
+        fixture.organizationId,
+        collection.slug,
+      ),
+    ]);
+
+    expect(afterPlacements).toEqual(
+      beforePlacements.map((placement) =>
+        expect.objectContaining({
+          id: placement.id,
+          assetId: placement.assetId,
+          createdAt: placement.createdAt,
+          parentFolderId: targetFolder.id,
+        }),
+      ),
+    );
+    expect(collections[0]!.previews.map((preview) => preview.assetId)).toEqual([
+      newestColor.id,
+      newerNote.id,
+      oldColor.id,
+      oldNote.id,
+    ]);
+    expect(
+      rootContents.nodes.find(
+        (node) => node.id === `folder-${targetFolder.id}`,
+      ),
+    ).toMatchObject({
+      previews: [
+        expect.objectContaining({ assetId: oldColor.id }),
+        expect.objectContaining({ assetId: oldNote.id }),
+      ],
+    });
+  });
+
+  it("treats a move to another collection as new membership", async () => {
+    const source = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Source Collection" },
+    );
+    const destination = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Destination Collection" },
+    );
+    const note = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      source.slug,
+      { content: "Move between collections" },
+    );
+    const assetId = Number(note.id.slice("note-".length));
+    const originalCreatedAt = new Date("2025-01-01T00:00:00.000Z");
+
+    await db
+      .update(collectionNodes)
+      .set({ createdAt: originalCreatedAt })
+      .where(eq(collectionNodes.assetId, assetId));
+
+    await collectionService.moveNodesToFolder(
+      fixture.organizationId,
+      destination.slug,
+      { nodeIds: [note.id], targetFolderNodeId: null },
+    );
+
+    const [placement] = await db
+      .select({
+        collectionId: collectionNodes.collectionId,
+        createdAt: collectionNodes.createdAt,
+      })
+      .from(collectionNodes)
+      .where(eq(collectionNodes.assetId, assetId));
+
+    expect(placement).toMatchObject({ collectionId: destination.id });
+    expect(placement!.createdAt.getTime()).toBeGreaterThan(
+      originalCreatedAt.getTime(),
+    );
+  });
+
   it("places a moved asset in a collision-free destination composition slot", async () => {
     const collection = await collectionService.createCollection(
       fixture.organizationId,

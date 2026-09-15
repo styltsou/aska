@@ -154,6 +154,7 @@ export function useMoveCollectionNodesToFolder(
               sourceFolderSlug,
               targetFolderNodeId: variables.targetFolderNodeId,
               movedNodes,
+              updateTargetFolderPreview: false,
               remainingUnfilteredSourceNodes,
             },
           );
@@ -161,23 +162,6 @@ export function useMoveCollectionNodesToFolder(
             queryClient.setQueryData<CollectionContentsResponse>(key, contents);
           }
           appliedContent = true;
-
-          const previews = movedNodes.flatMap((node) =>
-            node.type === "folder" ? [] : [getAssetPreview(node)],
-          );
-          if (previews.length > 0) {
-            queryClient.setQueryData<CollectionsData>(
-              collectionsKey,
-              (current) =>
-                previews.reduce(
-                  (next, preview) =>
-                    next
-                      ? promoteCollectionPreview(next, collectionSlug, preview)
-                      : next,
-                  current,
-                ),
-            );
-          }
         }
       }
 
