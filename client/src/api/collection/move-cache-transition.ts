@@ -48,6 +48,9 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
       title: node.title,
       url: node.previewImage?.url,
       blurDataURL: node.previewImage?.blurDataURL,
+      favicon: node.favicon?.url,
+      videoId: node.video?.videoId,
+      description: node.description ?? null,
     };
   }
 

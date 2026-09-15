@@ -156,6 +156,7 @@ export class CollectionQueryService {
         linkResourceId: externalResources.id,
         linkHostname: externalResources.hostname,
         linkTitle: externalResources.title,
+        linkDescription: externalResources.description,
         linkProviderExtensions: externalResources.providerExtensions,
       })
       .from(collectionNodes)
@@ -231,6 +232,7 @@ export class CollectionQueryService {
           blurDataURL: media?.previewImage?.blurDataURL,
           favicon: media?.favicon?.url,
           videoId: toPreviewVideoId(row.linkProviderExtensions),
+          description: row.linkDescription,
         };
       } else if (row.assetType === "color" && row.colorHex) {
         preview = {
@@ -418,6 +420,7 @@ export class CollectionQueryService {
           resourceId: externalResources.id,
           hostname: externalResources.hostname,
           title: externalResources.title,
+          description: externalResources.description,
           providerExtensions: externalResources.providerExtensions,
         })
         .from(collectionNodes)

@@ -9,6 +9,7 @@ export type FolderChildPreview = {
   hex?: string;
   favicon?: string;
   videoId?: string;
+  description?: string | null;
 };
 
 export type BoardPosition = { x: number; y: number };

@@ -87,14 +87,65 @@ describe("collection node mappers", () => {
           content: null,
           hostname: "example.com",
           title: "Example link",
+          description: "A fully resolved example page.",
+          resourceId: 4,
         },
         imageVariants,
+        new Map([
+          [
+            4,
+            {
+              previewImage: {
+                url: "https://example.test/preview.webp",
+                width: 480,
+                height: 270,
+                blurDataURL: "data:image/webp;base64,BB==",
+              },
+              favicon: {
+                url: "https://example.test/favicon.ico",
+                width: 32,
+                height: 32,
+              },
+            },
+          ],
+        ]),
       ),
     ).toEqual({
       assetId: "link-9",
       type: "link",
       hostname: "example.com",
       title: "Example link",
+      url: "https://example.test/preview.webp",
+      blurDataURL: "data:image/webp;base64,BB==",
+      favicon: "https://example.test/favicon.ico",
+      description: "A fully resolved example page.",
+    });
+    expect(
+      toFolderPreview(
+        {
+          folderId: 1,
+          assetType: "link",
+          assetId: 10,
+          content: null,
+          hostname: "www.youtube.com",
+          title: "Some video title",
+          resourceId: 5,
+          providerExtensions: {
+            youtube: { videoId: "dQw4w9WgXcQ" },
+          },
+        },
+        imageVariants,
+      ),
+    ).toEqual({
+      assetId: "link-10",
+      type: "link",
+      hostname: "www.youtube.com",
+      title: "Some video title",
+      url: undefined,
+      blurDataURL: undefined,
+      favicon: undefined,
+      videoId: "dQw4w9WgXcQ",
+      description: "Some video title",
     });
   });
 

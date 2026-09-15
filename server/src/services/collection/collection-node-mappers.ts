@@ -1,5 +1,6 @@
 import type { ImageAssetVariants } from "@/db/schema";
 import type { BoardPosition, FolderChildPreview } from "@/dto/collection.dto";
+import type { ProjectedMedia } from "@/services/url-unfurl/projection";
 
 export type ImageVariantLookup = Map<
   number,
@@ -11,6 +12,8 @@ export type ImageVariantLookup = Map<
   }
 >;
 
+export type LinkMediaLookup = Map<number, ProjectedMedia>;
+
 export type FolderPreviewRow = {
   folderId: number | null;
   assetType: string | null;
@@ -21,6 +24,8 @@ export type FolderPreviewRow = {
   hostname?: string | null;
   title?: string | null;
   assetTitle?: string | null;
+  providerExtensions?: Record<string, unknown> | null;
+  description?: string | null;
 };
 
 /** Converts nullable persisted coordinates into the board's optional position. */
@@ -35,6 +40,7 @@ export function toBoardPosition(
 export function toFolderPreview(
   row: FolderPreviewRow,
   imageVariants: ImageVariantLookup,
+  linkMedia?: LinkMediaLookup,
 ): FolderChildPreview {
   const variants = row.assetId ? imageVariants.get(row.assetId) : undefined;
   const previewUrl = variants?.preview?.url ?? variants?.original?.url;
@@ -48,11 +54,17 @@ export function toFolderPreview(
   }
 
   if (row.assetType === "link" && row.hostname) {
+    const media = row.resourceId ? linkMedia?.get(row.resourceId) : undefined;
     return {
       assetId: `link-${row.assetId}`,
       type: "link",
       hostname: row.hostname,
       title: row.assetTitle ?? row.title ?? null,
+      url: media?.previewImage?.url,
+      blurDataURL: media?.previewImage?.blurDataURL,
+      favicon: media?.favicon?.url,
+      videoId: toPreviewVideoId(row.providerExtensions),
+      description: row.description ?? row.title ?? null,
     };
   }
 
@@ -130,4 +142,17 @@ function findOpenFence(content: string): string | undefined {
   }
 
   return openFence;
+}
+
+export function toPreviewVideoId(
+  providerExtensions?: Record<string, unknown> | null,
+): string | undefined {
+  const extension = providerExtensions?.youtube;
+  if (!extension || typeof extension !== "object" || Array.isArray(extension))
+    return undefined;
+
+  const { videoId } = extension as { videoId?: unknown };
+  return typeof videoId === "string" && /^[A-Za-z0-9_-]{11}$/.test(videoId)
+    ? videoId
+    : undefined;
 }

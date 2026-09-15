@@ -97,6 +97,9 @@ export interface FolderAssetPreview {
   hostname?: string;
   title?: string | null;
   hex?: string;
+  favicon?: string;
+  videoId?: string;
+  description?: string | null;
 }
 
 export interface FolderAsset {

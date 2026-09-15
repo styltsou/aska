@@ -163,6 +163,7 @@ export const FolderChildPreviewSchema = z.object({
   title: z.string().nullable().optional(),
   favicon: z.string().optional(),
   videoId: z.string().optional(),
+  description: z.string().nullable().optional(),
 });
 
 export type FolderChildPreview = z.infer<typeof FolderChildPreviewSchema>;

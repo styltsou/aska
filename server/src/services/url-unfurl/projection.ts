@@ -26,7 +26,7 @@ export type LinkProjectionRow = {
   createdAt: Date;
 };
 
-type ProjectedMedia = {
+export type ProjectedMedia = {
   previewImage: CollectionLinkNode["previewImage"];
   favicon: CollectionLinkNode["favicon"];
 };
