@@ -16,6 +16,7 @@ import {
   NotebookPenIcon,
   PanelLeftIcon,
   PanelsTopLeftIcon,
+  PaletteIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
   SquarePlusIcon,
@@ -48,6 +49,7 @@ import {
 import { DialogBody } from "@/components/ui/dialog";
 import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
+import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
 import {
   collectionsQueryOptions,
@@ -90,6 +92,7 @@ type PaletteMode = "search" | "commands";
 
 type CommandId =
   | "new-note"
+  | "new-color"
   | "canvas-text-tool"
   | "canvas-arrow-tool"
   | "new-folder"
@@ -115,6 +118,12 @@ const COMMAND_GROUPS = [
         label: "New note",
         icon: FileTextIcon,
         shortcut: "⇧+N",
+      },
+      {
+        id: "new-color",
+        label: "New color",
+        icon: PaletteIcon,
+        shortcut: "⇧+C",
       },
       {
         id: "canvas-text-tool",
@@ -246,6 +255,7 @@ export function CommandPalette() {
   const [createNoteOpen, setCreateNoteOpen] = useState(false);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [uploadImagesOpen, setUploadImagesOpen] = useState(false);
+  const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const hasActiveModalLayer = useActiveModalLayer();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -299,6 +309,7 @@ export function CommandPalette() {
         : undefined;
   const canCreateNote = view === "inbox" || Boolean(collectionPath);
   const canCreateFolder = Boolean(collectionPath);
+  const canCreateColor = canCreateNote;
   const canToggleCollectionView = Boolean(collectionViewScope);
   const boardKey =
     workspaceSlug && view === "collections" && viewPath[0]
@@ -475,6 +486,11 @@ export function CommandPalette() {
         if (!canCreateNote) return;
         handleOpenChange(false);
         setCreateNoteOpen(true);
+        return;
+      case "new-color":
+        if (!canCreateColor) return;
+        handleOpenChange(false);
+        setColorEditorOpen(true);
         return;
       case "canvas-text-tool":
       case "canvas-arrow-tool":
@@ -680,6 +696,7 @@ export function CommandPalette() {
                           (item.id !== "toggle-filter-bar" ||
                             Boolean(filterScope)) &&
                           (item.id !== "new-note" || canCreateNote) &&
+                          (item.id !== "new-color" || canCreateColor) &&
                           (item.id !== "new-folder" || canCreateFolder) &&
                           (item.id !== "upload-images" || canCreateFolder) &&
                           (item.id !== "toggle-collection-view" ||
@@ -824,6 +841,14 @@ export function CommandPalette() {
         collectionPath={collectionPath}
         open={uploadImagesOpen}
         onOpenChange={setUploadImagesOpen}
+        placement={placement}
+      />
+      <ColorEditorDialog
+        workspaceSlug={workspaceSlug ?? ""}
+        collectionPath={collectionPath}
+        target={view === "inbox" ? "inbox" : "collection"}
+        open={colorEditorOpen}
+        onOpenChange={setColorEditorOpen}
         placement={placement}
       />
     </>

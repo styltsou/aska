@@ -190,7 +190,10 @@ export function BoardActionRail({
                           }
                         />
                       </ColorEditorDialog>
-                      <TooltipContent side="top">New color</TooltipContent>
+                      <TooltipContent side="top">
+                        <span>New color</span>
+                        <RailShortcut keys="C" />
+                      </TooltipContent>
                     </Tooltip>
                     <ButtonGroupSeparator />
                     <Tooltip>

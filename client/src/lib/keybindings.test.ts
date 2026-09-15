@@ -118,4 +118,26 @@ describe("matchesKeybinding", () => {
       ),
     ).toBe(false);
   });
+
+  it("new-color matches only Shift+C", () => {
+    const newColor = KEYBINDINGS.find((kb) => kb.command === "new-color");
+    expect(newColor).toBeDefined();
+    expect(newColor).not.toBeUndefined();
+
+    expect(
+      matchesKeybinding(
+        event({ code: "KeyC", key: "c", shiftKey: true }),
+        newColor!,
+      ),
+    ).toBe(true);
+    expect(
+      matchesKeybinding(event({ code: "KeyC", key: "c" }), newColor!),
+    ).toBe(false);
+    expect(
+      matchesKeybinding(
+        event({ code: "KeyC", key: "c", ctrlKey: true }),
+        newColor!,
+      ),
+    ).toBe(false);
+  });
 });
