@@ -1053,6 +1053,7 @@ function PeekNote({
             value={title}
             onChange={setTitle}
             onBlur={saveTitle}
+            onEnter={readOnly ? undefined : () => richTextRef.current?.focus()}
             readOnly={readOnly}
             className="pt-8"
           />

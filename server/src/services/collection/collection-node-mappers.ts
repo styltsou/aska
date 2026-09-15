@@ -68,6 +68,7 @@ export function toFolderPreview(
   return {
     assetId: `note-${row.assetId}`,
     type: "note",
+    title: row.assetTitle ?? row.title ?? null,
     snippet: row.content ? makeSnippet(row.content) : undefined,
   };
 }

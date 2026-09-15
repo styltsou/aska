@@ -911,6 +911,7 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
       const preview: FolderChildPreview = {
         assetId: data.note.id,
         type: "note",
+        title: data.note.title ?? null,
         snippet: makeMarkdownPreview(data.note.content),
       };
       addPreviewToCollection(
@@ -1329,7 +1330,11 @@ function applyUpdatedNoteToContents(
         ...node,
         previews: node.previews.map((preview) =>
           preview.type === "note" && preview.assetId === note.id
-            ? { ...preview, snippet: makeMarkdownPreview(note.content) }
+            ? {
+                ...preview,
+                title: note.title ?? null,
+                snippet: makeMarkdownPreview(note.content),
+              }
             : preview,
         ),
       };
@@ -1365,15 +1370,25 @@ function applyNoteDraftToContents(
         };
       }
 
-      if (node.type !== "folder" || !hasContent) return node;
+      if (node.type !== "folder") return node;
+
+      const titleChanged = draft.title !== undefined;
+      if (!hasContent && !titleChanged) return node;
 
       return {
         ...node,
-        previews: node.previews.map((preview) =>
-          preview.type === "note" && preview.assetId === draft.assetId
-            ? { ...preview, snippet: makeMarkdownPreview(draft.content!) }
-            : preview,
-        ),
+        previews: node.previews.map((preview) => {
+          if (preview.type !== "note" || preview.assetId !== draft.assetId) {
+            return preview;
+          }
+          return {
+            ...preview,
+            ...(titleChanged ? { title: draft.title?.trim() || null } : {}),
+            ...(hasContent
+              ? { snippet: makeMarkdownPreview(draft.content!) }
+              : {}),
+          };
+        }),
       };
     }),
   };
@@ -1758,6 +1773,7 @@ export function useUpdateNote(workspaceSlug: string) {
                     preview.type === "note" && preview.assetId === note.id
                       ? {
                           ...preview,
+                          title: note.title ?? null,
                           snippet: makeMarkdownPreview(note.content),
                         }
                       : preview,

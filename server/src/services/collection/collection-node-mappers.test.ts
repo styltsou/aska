@@ -68,12 +68,14 @@ describe("collection node mappers", () => {
           assetType: "note",
           assetId: 8,
           content: "One\n two",
+          assetTitle: "Planting notes",
         },
         imageVariants,
       ),
     ).toEqual({
       assetId: "note-8",
       type: "note",
+      title: "Planting notes",
       snippet: "One\n two",
     });
     expect(

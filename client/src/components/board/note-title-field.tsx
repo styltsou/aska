@@ -8,12 +8,13 @@ export const NoteTitleField = forwardRef<
     value: string;
     onChange: (value: string) => void;
     onBlur?: () => void;
+    onEnter?: () => void;
     autoFocus?: boolean;
     readOnly?: boolean;
     className?: string;
   }
 >(function NoteTitleField(
-  { value, onChange, onBlur, autoFocus, readOnly = false, className },
+  { value, onChange, onBlur, onEnter, autoFocus, readOnly = false, className },
   ref,
 ) {
   return (
@@ -22,6 +23,18 @@ export const NoteTitleField = forwardRef<
       value={value}
       onChange={(event) => onChange(event.target.value)}
       onBlur={onBlur}
+      onKeyDown={(event) => {
+        if (
+          event.key === "Enter" &&
+          !event.shiftKey &&
+          !event.metaKey &&
+          !event.ctrlKey &&
+          !event.altKey
+        ) {
+          event.preventDefault();
+          onEnter?.();
+        }
+      }}
       autoFocus={autoFocus}
       readOnly={readOnly}
       maxLength={255}

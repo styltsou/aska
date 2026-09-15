@@ -1459,6 +1459,7 @@ export function NoteDetailDrawer({
                     ref={titleInputRef}
                     value={title}
                     onChange={handleTitleChange}
+                    onEnter={() => richTextRef.current?.focus()}
                     autoFocus={isCreateMode}
                     className="pt-8"
                   />

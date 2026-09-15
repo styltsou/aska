@@ -134,6 +134,7 @@ export type NoteRichTextHandle = {
   applyHighlight: (color: NoteHighlightColor) => string | undefined;
   removeHighlight: () => string | undefined;
   restoreMarkdown: (markdown: string) => void;
+  focus: () => void;
 };
 
 type SlashCommandItem = {
@@ -2061,6 +2062,10 @@ export const NoteRichText = forwardRef<
           contentType: "markdown",
           emitUpdate: false,
         });
+      },
+      focus: () => {
+        if (!editor) return;
+        focusFirstNewLine(editor);
       },
     }),
     [editor, markdown],

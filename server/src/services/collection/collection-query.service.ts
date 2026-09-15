@@ -206,6 +206,7 @@ export class CollectionQueryService {
         preview = {
           assetId: `note-${row.assetId}`,
           type: "note",
+          title: row.assetTitle,
           snippet,
         };
       } else if (row.assetType === "link" && row.linkHostname) {
