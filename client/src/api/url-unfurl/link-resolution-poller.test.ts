@@ -5,6 +5,9 @@ import { collectionQueryKeys } from "@/api/collection/query-keys";
 import type {
   CollectionContentsResponse,
   CollectionLinkNode,
+  CollectionNode,
+  CollectionsData,
+  FolderChildPreview,
 } from "@/api/collection/types";
 import {
   patchLinkInCaches,
@@ -62,15 +65,151 @@ describe("link resolution tracker", () => {
       previewImage: { url: "https://media.test/preview.webp" },
     });
   });
+
+  it("patches matching collection and folder card previews", () => {
+    const queryClient = new QueryClient();
+    const collectionsKey = collectionQueryKeys.collections(workspaceSlug);
+    const folderKey = collectionQueryKeys.contents(
+      workspaceSlug,
+      "ideas",
+      undefined,
+      "folder",
+    );
+    const pendingPreview = linkPreview();
+    const untouchedPreview: FolderChildPreview = {
+      assetId: "note-7",
+      type: "note",
+      title: "Leave me alone",
+      snippet: "Unchanged",
+    };
+
+    queryClient.setQueryData<CollectionsData>(collectionsKey, {
+      collections: [
+        {
+          id: 1,
+          name: "Ideas",
+          slug: "ideas",
+          description: null,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          assetCount: 2,
+          previews: [pendingPreview, untouchedPreview],
+        },
+      ],
+    });
+    queryClient.setQueryData(
+      folderKey,
+      contents({
+        id: "folder-8",
+        type: "folder",
+        name: "Reading",
+        slug: "reading",
+        count: 2,
+        folderCount: 0,
+        previews: [pendingPreview, untouchedPreview],
+        createdAt: "2026-01-01T00:00:00.000Z",
+        position: null,
+      }),
+    );
+
+    patchLinkInCaches(queryClient, workspaceSlug, resolvedLink());
+
+    const collectionPreview =
+      queryClient.getQueryData<CollectionsData>(collectionsKey)?.collections[0]
+        ?.previews[0];
+    const folderPreview =
+      queryClient.getQueryData<CollectionContentsResponse>(folderKey)?.nodes[0];
+
+    expect(collectionPreview).toMatchObject(resolvedPreview());
+    expect(folderPreview).toMatchObject({
+      previews: [expect.objectContaining(resolvedPreview()), untouchedPreview],
+    });
+  });
+
+  it("revalidates collection card and content caches only for terminal links", () => {
+    const queryClient = new QueryClient();
+    const collectionsKey = collectionQueryKeys.collections(workspaceSlug);
+    const contentsKey = collectionQueryKeys.contents(workspaceSlug, "ideas");
+    queryClient.setQueryData<CollectionsData>(collectionsKey, {
+      collections: [],
+    });
+    queryClient.setQueryData(contentsKey, contents(link()));
+
+    patchLinkInCaches(
+      queryClient,
+      workspaceSlug,
+      link({ resolutionStatus: "resolving" }),
+    );
+
+    expect(queryClient.getQueryState(collectionsKey)?.isInvalidated).toBe(
+      false,
+    );
+    expect(queryClient.getQueryState(contentsKey)?.isInvalidated).toBe(false);
+
+    patchLinkInCaches(queryClient, workspaceSlug, resolvedLink());
+
+    expect(queryClient.getQueryState(collectionsKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(contentsKey)?.isInvalidated).toBe(true);
+  });
 });
 
-function contents(node: CollectionLinkNode): CollectionContentsResponse {
+function contents(node: CollectionNode): CollectionContentsResponse {
   return {
     collection: { id: 1, name: "Ideas", slug: "ideas" },
     breadcrumbs: [],
     nodes: [node],
     canvasObjects: [],
   };
+}
+
+function linkPreview(): FolderChildPreview {
+  return {
+    assetId: "link-42",
+    type: "link",
+    hostname: "example.com",
+    title: "example.com",
+    description: null,
+  };
+}
+
+function resolvedPreview() {
+  return {
+    assetId: "link-42",
+    type: "link",
+    hostname: "docs.example.com",
+    title: "Resolved title",
+    description: "Resolved description",
+    url: "https://media.test/preview.webp",
+    blurDataURL: "data:image/webp;base64,preview",
+    favicon: "https://media.test/favicon.webp",
+    videoId: "dQw4w9WgXcQ",
+  };
+}
+
+function resolvedLink(): CollectionLinkNode {
+  return link({
+    hostname: "docs.example.com",
+    title: "Resolved title",
+    description: "Resolved description",
+    resolutionStatus: "ready",
+    previewImage: {
+      url: "https://media.test/preview.webp",
+      width: 960,
+      height: 480,
+      blurDataURL: "data:image/webp;base64,preview",
+    },
+    favicon: {
+      url: "https://media.test/favicon.webp",
+      width: 32,
+      height: 32,
+    },
+    video: {
+      provider: "youtube",
+      videoId: "dQw4w9WgXcQ",
+      channelName: null,
+      channelUrl: null,
+    },
+  });
 }
 
 function link(overrides: Partial<CollectionLinkNode> = {}): CollectionLinkNode {

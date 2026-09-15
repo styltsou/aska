@@ -80,9 +80,10 @@ image pipeline.
 the appropriate React Query cache, reserves its canvas position, and reconciles
 the temporary ID with the persisted node. Only links created or manually
 refreshed in the current tab poll their small status endpoint; each response
-patches matching cached cards without refetching the whole collection or inbox.
-Polling stops for terminal `ready`, `partial`, and `failed` states, and does
-not resume after a page reload.
+patches matching full cards and compact collection/folder previews. A terminal
+`ready`, `partial`, or `failed` response also revalidates the affected
+collection metadata and contents so server-selected preview ordering remains
+authoritative. Polling then stops and does not resume after a page reload.
 
 `client/src/components/board/cards/link-asset-card.tsx` always renders a usable
 anchor from the user-supplied URL. It progressively adds text, favicon, and
