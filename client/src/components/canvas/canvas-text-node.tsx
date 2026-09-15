@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef } from "react";
-import type { Node, NodeProps } from "@xyflow/react";
+import { useLayoutEffect, useRef, useState } from "react";
+import type { Node, NodeProps, XYPosition } from "@xyflow/react";
+import { Trash2Icon } from "lucide-react";
 
 import type {
   CanvasObjectColor,
@@ -21,7 +22,7 @@ export type CanvasTextNodeData = {
   onSelect: (id: string, event: React.MouseEvent) => void;
   onBeginEdit: (id: string) => void;
   onCommit: (id: string, content: string) => void;
-  onCancel: (id: string) => void;
+  onDelete: (id: string) => void;
   onStyle: (
     id: string,
     update: Partial<Pick<CanvasTextObject, "font" | "size" | "color">>,
@@ -34,23 +35,12 @@ export function CanvasTextNode({
   data,
   selected,
 }: NodeProps<CanvasTextFlowNode>) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const cancelledRef = useRef(false);
   const font = CANVAS_TEXT_FONTS.find(
     (candidate) => candidate.value === data.object.font,
   )!;
   const size = CANVAS_TEXT_SIZES.find(
     (candidate) => candidate.value === data.object.size,
   )!;
-
-  useLayoutEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "0px";
-    textarea.style.height = `${Math.max(24, textarea.scrollHeight)}px`;
-    textarea.focus();
-    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-  }, [data.editing, data.object.content, data.object.font, data.object.size]);
 
   const typographyClass = cn(
     font.className,
@@ -63,7 +53,7 @@ export function CanvasTextNode({
   return (
     <div
       className={cn(
-        "group/text relative min-h-7 w-[22.5rem] rounded-sm px-1 py-0.5",
+        "group/text relative inline-block min-h-7 rounded-sm px-1 py-0.5",
         selected && "outline-1 outline-primary/70 outline-offset-4",
       )}
       style={{ color: canvasObjectColor(data.object.color) }}
@@ -74,48 +64,11 @@ export function CanvasTextNode({
         data.onBeginEdit(data.object.id);
       }}
     >
-      {data.editing ? (
-        <textarea
-          ref={textareaRef}
-          className={cn(
-            "nodrag nowheel block w-full resize-none overflow-hidden border-0 bg-transparent p-0 outline-none placeholder:text-current/35",
-            typographyClass,
-          )}
-          defaultValue={data.object.content}
-          placeholder="Type something…"
-          maxLength={2_000}
-          aria-label="Canvas text"
-          onInput={(event) => {
-            event.currentTarget.style.height = "0px";
-            event.currentTarget.style.height = `${Math.max(24, event.currentTarget.scrollHeight)}px`;
-          }}
-          onBlur={(event) => {
-            if (cancelledRef.current) {
-              cancelledRef.current = false;
-              return;
-            }
-            data.onCommit(data.object.id, event.currentTarget.value);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              cancelledRef.current = true;
-              data.onCancel(data.object.id);
-              event.currentTarget.blur();
-            } else if (
-              event.key === "Enter" &&
-              (event.metaKey || event.ctrlKey)
-            ) {
-              event.preventDefault();
-              event.currentTarget.blur();
-            }
-          }}
-        />
-      ) : (
-        <p className={cn("whitespace-pre-wrap break-words", typographyClass)}>
+      {!data.editing ? (
+        <p className={cn("whitespace-pre", typographyClass)}>
           {data.object.content}
         </p>
-      )}
+      ) : null}
 
       {selected ? (
         <div
@@ -185,8 +138,98 @@ export function CanvasTextNode({
               }
             />
           ))}
+          <span className="mx-0.5 h-5 w-px bg-border" />
+          <button
+            type="button"
+            className="flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            aria-label="Delete text"
+            onClick={() => data.onDelete(data.object.id)}
+          >
+            <Trash2Icon className="size-3.5" />
+          </button>
         </div>
       ) : null}
     </div>
+  );
+}
+
+export function CanvasTextEditor({
+  object,
+  position,
+  onCommit,
+}: {
+  object: CanvasTextObject;
+  position: XYPosition;
+  onCommit: (id: string, content: string) => void;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const committedRef = useRef(false);
+  const [content, setContent] = useState(object.content);
+  const font = CANVAS_TEXT_FONTS.find(
+    (candidate) => candidate.value === object.font,
+  )!;
+  const size = CANVAS_TEXT_SIZES.find(
+    (candidate) => candidate.value === object.size,
+  )!;
+  const typographyClass = cn(
+    font.className,
+    size.className,
+    object.font === "caveat" ? "font-medium tracking-[0.01em]" : "font-normal",
+  );
+
+  useLayoutEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      textarea.focus({ preventScroll: true });
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "0px";
+    textarea.style.height = `${Math.max(24, textarea.scrollHeight)}px`;
+  }, [content, object.font, object.size]);
+
+  const commit = () => {
+    if (committedRef.current) return;
+    committedRef.current = true;
+    onCommit(object.id, content);
+  };
+
+  return (
+    <textarea
+      ref={textareaRef}
+      className={cn(
+        "nodrag nopan nowheel field-sizing-content absolute z-20 block min-w-6 max-w-none resize-none overflow-hidden border-0 bg-transparent p-0 whitespace-pre outline-none placeholder:text-current/35",
+        typographyClass,
+      )}
+      style={{
+        left: position.x + 4,
+        top: position.y + 2,
+        color: canvasObjectColor(object.color),
+        pointerEvents: "all",
+      }}
+      value={content}
+      placeholder="Type something…"
+      rows={1}
+      wrap="off"
+      maxLength={2_000}
+      aria-label="Canvas text"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      onDoubleClick={(event) => event.stopPropagation()}
+      onChange={(event) => setContent(event.currentTarget.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          commit();
+        }
+      }}
+    />
   );
 }

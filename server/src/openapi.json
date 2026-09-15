@@ -557,6 +557,19 @@
                     "type": "string",
                     "enum": ["solid", "dashed", "dotted"]
                   },
+                  "head": {
+                    "type": "string",
+                    "enum": ["filled", "hollow", "chevron"]
+                  },
+                  "routing": {
+                    "type": "string",
+                    "enum": ["straight", "smooth"]
+                  },
+                  "points": {
+                    "type": "array",
+                    "maxItems": 16,
+                    "items": { "$ref": "#/components/schemas/BoardPosition" }
+                  },
                   "color": { "$ref": "#/components/schemas/CanvasObjectColor" }
                 }
               }
@@ -2632,6 +2645,9 @@
           "end",
           "style",
           "pattern",
+          "head",
+          "routing",
+          "points",
           "color",
           "createdAt",
           "updatedAt"
@@ -2645,6 +2661,19 @@
           "pattern": {
             "type": "string",
             "enum": ["solid", "dashed", "dotted"]
+          },
+          "head": {
+            "type": "string",
+            "enum": ["filled", "hollow", "chevron"]
+          },
+          "routing": {
+            "type": "string",
+            "enum": ["straight", "smooth"]
+          },
+          "points": {
+            "type": "array",
+            "maxItems": 16,
+            "items": { "$ref": "#/components/schemas/BoardPosition" }
           },
           "color": { "$ref": "#/components/schemas/CanvasObjectColor" },
           "createdAt": { "type": "string", "format": "date-time" },
@@ -2701,6 +2730,22 @@
             "type": "string",
             "enum": ["solid", "dashed", "dotted"],
             "default": "solid"
+          },
+          "head": {
+            "type": "string",
+            "enum": ["filled", "hollow", "chevron"],
+            "default": "filled"
+          },
+          "routing": {
+            "type": "string",
+            "enum": ["straight", "smooth"],
+            "default": "straight"
+          },
+          "points": {
+            "type": "array",
+            "maxItems": 16,
+            "items": { "$ref": "#/components/schemas/BoardPosition" },
+            "default": []
           },
           "color": { "$ref": "#/components/schemas/CanvasObjectColor" },
           "parentFolderPath": { "type": "string" }

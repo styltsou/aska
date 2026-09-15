@@ -21,4 +21,20 @@ describe("canvas arrow paths", () => {
     ).toBe(first);
     expect(first).toContain(" Q ");
   });
+
+  it("uses every persisted bend point for straight and smooth routes", () => {
+    const points = [
+      { x: 0, y: 0 },
+      { x: 40, y: 80 },
+      { x: 120, y: 20 },
+      { x: 180, y: 60 },
+    ];
+
+    expect(makeArrowPath("arrow-3", points, "clean", "straight")).toBe(
+      "M 0 0 L 40 80 L 120 20 L 180 60",
+    );
+    expect(makeArrowPath("arrow-3", points, "clean", "smooth")).toContain(
+      " C ",
+    );
+  });
 });

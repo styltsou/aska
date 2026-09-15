@@ -20,6 +20,8 @@ export const CanvasTextFontSchema = z.enum(["inter", "newsreader", "caveat"]);
 export const CanvasTextSizeSchema = z.enum(["sm", "md", "lg", "xl"]);
 export const CanvasArrowStyleSchema = z.enum(["clean", "sketch"]);
 export const CanvasArrowPatternSchema = z.enum(["solid", "dashed", "dotted"]);
+export const CanvasArrowHeadSchema = z.enum(["filled", "hollow", "chevron"]);
+export const CanvasArrowRoutingSchema = z.enum(["straight", "smooth"]);
 
 const CanvasBindableIdSchema = z
   .string()
@@ -57,6 +59,9 @@ export const CanvasArrowObjectSchema = z.object({
   end: CanvasArrowEndpointSchema,
   style: CanvasArrowStyleSchema,
   pattern: CanvasArrowPatternSchema,
+  head: CanvasArrowHeadSchema,
+  routing: CanvasArrowRoutingSchema,
+  points: z.array(BoardPositionSchema).max(16),
   color: CanvasObjectColorSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -108,6 +113,9 @@ export const CreateCanvasArrowSchema = z.object({
   end: CanvasArrowEndpointSchema,
   style: CanvasArrowStyleSchema.default("clean"),
   pattern: CanvasArrowPatternSchema.default("solid"),
+  head: CanvasArrowHeadSchema.default("filled"),
+  routing: CanvasArrowRoutingSchema.default("straight"),
+  points: z.array(BoardPositionSchema).max(16).default([]),
   color: CanvasObjectColorSchema.default("ink"),
   parentFolderPath: z.string().optional(),
 });
@@ -120,6 +128,9 @@ export const UpdateCanvasArrowSchema = z
     end: CanvasArrowEndpointSchema.optional(),
     style: CanvasArrowStyleSchema.optional(),
     pattern: CanvasArrowPatternSchema.optional(),
+    head: CanvasArrowHeadSchema.optional(),
+    routing: CanvasArrowRoutingSchema.optional(),
+    points: z.array(BoardPositionSchema).max(16).optional(),
     color: CanvasObjectColorSchema.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, "No changes supplied");

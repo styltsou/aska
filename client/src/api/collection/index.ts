@@ -39,8 +39,10 @@ export {
 export type {
   Breadcrumb,
   CanvasArrowEndpoint,
+  CanvasArrowHead,
   CanvasArrowObject,
   CanvasArrowPattern,
+  CanvasArrowRouting,
   CanvasArrowStyle,
   CanvasObject,
   CanvasObjectColor,

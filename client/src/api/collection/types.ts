@@ -15,6 +15,8 @@ export type CanvasTextFont = "inter" | "newsreader" | "caveat";
 export type CanvasTextSize = "sm" | "md" | "lg" | "xl";
 export type CanvasArrowStyle = "clean" | "sketch";
 export type CanvasArrowPattern = "solid" | "dashed" | "dotted";
+export type CanvasArrowHead = "filled" | "hollow" | "chevron";
+export type CanvasArrowRouting = "straight" | "smooth";
 
 export type CanvasArrowEndpoint = {
   position: BoardPosition;
@@ -44,6 +46,10 @@ export type CanvasArrowObject = {
   end: CanvasArrowEndpoint;
   style: CanvasArrowStyle;
   pattern: CanvasArrowPattern;
+  head: CanvasArrowHead;
+  routing: CanvasArrowRouting;
+  /** Ordered intermediate points; the endpoints remain separately bindable. */
+  points: BoardPosition[];
   color: CanvasObjectColor;
   createdAt: string;
   updatedAt: string;
@@ -64,7 +70,17 @@ export type CreateCanvasArrowInput = Omit<
   "id" | "createdAt" | "updatedAt" | "clientId"
 > & { parentFolderPath?: string };
 export type UpdateCanvasArrowInput = Partial<
-  Pick<CanvasArrowObject, "start" | "end" | "style" | "pattern" | "color">
+  Pick<
+    CanvasArrowObject,
+    | "start"
+    | "end"
+    | "style"
+    | "pattern"
+    | "head"
+    | "routing"
+    | "points"
+    | "color"
+  >
 >;
 export type CanvasObjectResponse = { object: CanvasObject };
 export type ContentTypeFilter = "image" | "note" | "link" | "color" | "folder";

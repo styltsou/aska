@@ -75,6 +75,9 @@ export class CanvasObjectService {
         endAnchorY: canvasArrowObjects.endAnchorY,
         arrowStyle: canvasArrowObjects.style,
         arrowPattern: canvasArrowObjects.pattern,
+        arrowHead: canvasArrowObjects.head,
+        arrowRouting: canvasArrowObjects.routing,
+        arrowPoints: canvasArrowObjects.points,
         arrowColor: canvasArrowObjects.color,
       })
       .from(canvasObjects)
@@ -214,6 +217,9 @@ export class CanvasObjectService {
         ),
         style: row.arrowStyle!,
         pattern: row.arrowPattern!,
+        head: row.arrowHead!,
+        routing: row.arrowRouting!,
+        points: row.arrowPoints!,
         color: row.arrowColor!,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
@@ -319,6 +325,9 @@ export class CanvasObjectService {
         endAnchorY: data.end.binding?.anchor.y,
         style: data.style,
         pattern: data.pattern,
+        head: data.head,
+        routing: data.routing,
+        points: data.points,
         color: data.color,
       });
       return object;
@@ -330,6 +339,9 @@ export class CanvasObjectService {
       end: data.end,
       style: data.style,
       pattern: data.pattern,
+      head: data.head,
+      routing: data.routing,
+      points: data.points,
       color: data.color,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
@@ -446,6 +458,9 @@ export class CanvasObjectService {
             data.end?.binding?.anchor.y ?? (data.end ? null : undefined),
           style: data.style,
           pattern: data.pattern,
+          head: data.head,
+          routing: data.routing,
+          points: data.points,
           color: data.color,
         })
         .where(eq(canvasArrowObjects.canvasObjectId, target.id));

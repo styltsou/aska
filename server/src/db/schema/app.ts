@@ -59,6 +59,15 @@ export const canvasArrowPatternEnum = pgEnum("canvas_arrow_pattern", [
   "dashed",
   "dotted",
 ]);
+export const canvasArrowHeadEnum = pgEnum("canvas_arrow_head", [
+  "filled",
+  "hollow",
+  "chevron",
+]);
+export const canvasArrowRoutingEnum = pgEnum("canvas_arrow_routing", [
+  "straight",
+  "smooth",
+]);
 export const uploadSourceEnum = pgEnum("upload_source", [
   "direct",
   "remote_url",
@@ -930,6 +939,12 @@ export const canvasArrowObjects = pgTable(
     endAnchorY: doublePrecision("end_anchor_y"),
     style: canvasArrowStyleEnum().default("clean").notNull(),
     pattern: canvasArrowPatternEnum().default("solid").notNull(),
+    head: canvasArrowHeadEnum().default("filled").notNull(),
+    routing: canvasArrowRoutingEnum().default("straight").notNull(),
+    points: jsonb("points")
+      .$type<{ x: number; y: number }[]>()
+      .default([])
+      .notNull(),
     color: canvasObjectColorEnum().default("ink").notNull(),
   },
   (table) => [
