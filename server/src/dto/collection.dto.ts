@@ -15,6 +15,9 @@ export const CanvasObjectColorSchema = z.enum([
   "coral",
   "moss",
   "ochre",
+  "saffron",
+  "violet",
+  "fuchsia",
 ]);
 export const CanvasTextFontSchema = z.enum([
   "inter",

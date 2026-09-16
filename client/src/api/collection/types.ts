@@ -13,7 +13,15 @@ export type FolderChildPreview = {
 };
 
 export type BoardPosition = { x: number; y: number };
-export type CanvasObjectColor = "ink" | "cobalt" | "coral" | "moss" | "ochre";
+export type CanvasObjectColor =
+  | "ink"
+  | "cobalt"
+  | "coral"
+  | "moss"
+  | "ochre"
+  | "saffron"
+  | "violet"
+  | "fuchsia";
 export type CanvasTextFont =
   | "inter"
   | "fraunces"

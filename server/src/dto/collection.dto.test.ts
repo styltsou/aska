@@ -260,6 +260,18 @@ describe("canvas object DTOs", () => {
     expect(UpdateCanvasTextSchema.safeParse({}).success).toBe(false);
   });
 
+  it("accepts the expanded canvas color palette", () => {
+    for (const color of ["saffron", "violet", "fuchsia"] as const) {
+      expect(
+        CreateCanvasTextSchema.safeParse({
+          content: "Palette sample",
+          position: { x: 0, y: 0 },
+          color,
+        }).success,
+      ).toBe(true);
+    }
+  });
+
   it("accepts free and bound arrow endpoints with normalized anchors", () => {
     expect(
       CreateCanvasArrowSchema.safeParse({

@@ -38,6 +38,9 @@ export const canvasObjectColorEnum = pgEnum("canvas_object_color", [
   "coral",
   "moss",
   "ochre",
+  "saffron",
+  "violet",
+  "fuchsia",
 ]);
 export const canvasTextFontEnum = pgEnum("canvas_text_font", [
   "inter",

@@ -1,5 +1,6 @@
 @import "@xyflow/react/dist/style.css";
 
+:root,
 .aska-flow {
   --xy-background-color: transparent;
   --xy-controls-button-background-color-default: var(--popover);
@@ -11,12 +12,35 @@
   --canvas-object-coral: oklch(0.59 0.2 31);
   --canvas-object-moss: oklch(0.45 0.12 151);
   --canvas-object-ochre: oklch(0.55 0.13 78);
+  --canvas-object-saffron: oklch(0.74 0.15 87);
+  --canvas-object-violet: oklch(0.54 0.17 300);
+  --canvas-object-fuchsia: oklch(0.59 0.19 335);
+  --canvas-object-ink-marker: #fff;
+  --canvas-object-cobalt-marker: #fff;
+  --canvas-object-coral-marker: #000;
+  --canvas-object-moss-marker: #fff;
+  --canvas-object-ochre-marker: #000;
+  --canvas-object-saffron-marker: #000;
+  --canvas-object-violet-marker: #fff;
+  --canvas-object-fuchsia-marker: #fff;
 }
 
+.dark,
 .dark .aska-flow {
   --canvas-object-ink: var(--foreground);
   --canvas-object-cobalt: oklch(0.73 0.14 260);
   --canvas-object-coral: oklch(0.72 0.16 32);
   --canvas-object-moss: oklch(0.7 0.11 151);
   --canvas-object-ochre: oklch(0.76 0.12 82);
+  --canvas-object-saffron: oklch(0.82 0.13 87);
+  --canvas-object-violet: oklch(0.75 0.14 300);
+  --canvas-object-fuchsia: oklch(0.75 0.15 335);
+  --canvas-object-ink-marker: #000;
+  --canvas-object-cobalt-marker: #000;
+  --canvas-object-coral-marker: #000;
+  --canvas-object-moss-marker: #000;
+  --canvas-object-ochre-marker: #000;
+  --canvas-object-saffron-marker: #000;
+  --canvas-object-violet-marker: #000;
+  --canvas-object-fuchsia-marker: #000;
 }

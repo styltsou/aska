@@ -8,7 +8,6 @@ import {
 import { ChevronDownIcon, Trash2Icon } from "lucide-react";
 
 import type {
-  CanvasObjectColor,
   CanvasTextFont,
   CanvasTextObject,
   CanvasTextSize,
@@ -22,13 +21,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import {
-  CANVAS_OBJECT_COLORS,
   CANVAS_TEXT_FONTS,
   CANVAS_TEXT_SIZES,
   canvasObjectColor,
   canvasTextFontPreviewStyle,
   canvasTextTypography,
 } from "./canvas-object-style";
+import { CanvasColorSwatches } from "./canvas-color-swatches";
 import { OVERLAY_Z_INDEX } from "./canvas-node-stacking";
 
 export type CanvasTextNodeData = {
@@ -170,24 +169,15 @@ export function CanvasTextNode({
               </button>
             ))}
             <span className="mx-0.5 h-5 w-px bg-border" />
-            {CANVAS_OBJECT_COLORS.map((color) => (
-              <button
-                key={color}
-                type="button"
-                className={cn(
-                  "size-5 rounded-full border border-black/10 ring-offset-2 ring-offset-popover",
-                  data.object.color === color && "ring-2 ring-ring",
-                )}
-                style={{ backgroundColor: canvasObjectColor(color) }}
-                aria-label={`${color} text color`}
-                aria-pressed={data.object.color === color}
-                onClick={() =>
-                  data.onStyle(data.object.id, {
-                    color: color as CanvasObjectColor,
-                  })
-                }
-              />
-            ))}
+            <CanvasColorSwatches
+              value={data.object.color}
+              onChange={(color) =>
+                data.onStyle(data.object.id, {
+                  color,
+                })
+              }
+              ariaLabel="Text color"
+            />
             <span className="mx-0.5 h-5 w-px bg-border" />
             <button
               type="button"
