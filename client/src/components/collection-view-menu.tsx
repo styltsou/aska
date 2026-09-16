@@ -5,6 +5,7 @@ import {
   MinusIcon,
   PanelsTopLeftIcon,
   PlusIcon,
+  ScanIcon,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -209,18 +210,18 @@ export function CollectionViewMenu({
                   </Button>
                 </ButtonGroup>
               </div>
-              <DropdownMenuItem
-                className="gap-10"
-                closeOnClick={false}
-                onClick={() => canvasActions.current?.fitView()}
-              >
-                Fit in view
-                <DropdownMenuShortcut>1</DropdownMenuShortcut>
-              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuLabel>Canvas</DropdownMenuLabel>
+              <DropdownMenuItem
+                closeOnClick={false}
+                onClick={() => canvasActions.current?.fitView()}
+              >
+                <ScanIcon />
+                Fit in view
+                <DropdownMenuShortcut>1</DropdownMenuShortcut>
+              </DropdownMenuItem>
               <DropdownMenuCheckboxItem
                 checked={isBoardActionRailVisible}
                 onCheckedChange={(visible) =>
