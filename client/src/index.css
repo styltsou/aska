@@ -1,11 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fontsource-variable/caveat";
 @import "@fontsource-variable/fraunces";
 @import "@fontsource/ibm-plex-mono";
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource-variable/inter";
-@import "@fontsource/sue-ellen-francisco";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -14,7 +14,7 @@
   --font-sans: "Inter Variable", sans-serif;
   --font-editorial: "Fraunces Variable", serif;
   --font-mono: "IBM Plex Mono", monospace;
-  --font-handwritten: "Sue Ellen Francisco", cursive;
+  --font-handwritten: "Caveat Variable", cursive;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-active: var(--sidebar-active);
