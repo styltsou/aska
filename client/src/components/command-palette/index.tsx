@@ -265,7 +265,7 @@ export function CommandPalette() {
     select: (state) => state.location.pathname,
   });
   const { theme, setTheme } = useTheme();
-  const { toggleSidebar } = useSidebar();
+  const { open: isSidebarOpen, toggleSidebar } = useSidebar();
   const toggleFilterBar = useSessionStore((state) => state.toggleFilterBar);
   const setCollectionView = useSessionStore((state) => state.setCollectionView);
   const setWorkspaceAlignmentGuides = usePersistedStore(
@@ -307,6 +307,9 @@ export function CommandPalette() {
       : collectionPath
         ? `collection:${workspaceSlug}/${collectionPath}`
         : undefined;
+  const isFilterBarOpen = useSessionStore((state) =>
+    filterScope ? (state.filterBars[filterScope]?.open ?? false) : false,
+  );
   const canCreateNote = view === "inbox" || Boolean(collectionPath);
   const canCreateFolder = Boolean(collectionPath);
   const canCreateColor = canCreateNote;
@@ -738,19 +741,24 @@ export function CommandPalette() {
                                       ? isBoardActionRailVisible
                                         ? "Hide actions dock"
                                         : "Show actions dock"
-                                      : item.label;
+                                      : item.id === "toggle-alignment-guides"
+                                        ? areAlignmentGuidesEnabled
+                                          ? "Hide alignment guides"
+                                          : "Show alignment guides"
+                                        : item.id === "toggle-filter-bar"
+                                          ? isFilterBarOpen
+                                            ? "Hide filter bar"
+                                            : "Show filter bar"
+                                          : item.id === "toggle-sidebar"
+                                            ? isSidebarOpen
+                                              ? "Hide sidebar"
+                                              : "Show sidebar"
+                                            : item.label;
 
                               return (
                                 <CommandItem
                                   key={item.id}
                                   value={item.label}
-                                  data-checked={
-                                    item.id === "toggle-alignment-guides"
-                                      ? areAlignmentGuidesEnabled
-                                      : item.id === "toggle-board-action-rail"
-                                        ? isBoardActionRailVisible
-                                        : undefined
-                                  }
                                   onSelect={() => runCommand(item.id)}
                                 >
                                   <Icon className="size-4 text-muted-foreground" />
