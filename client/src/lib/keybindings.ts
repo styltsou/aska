@@ -3,10 +3,10 @@ export type GlobalShortcut =
   | "new-note"
   | "new-color"
   | "canvas-text-tool"
+  | "canvas-arrow-tool"
   | "new-folder"
   | "upload-images"
   | "toggle-filter-bar"
-  | "toggle-board-action-rail"
   | "open-scratchpad"
   | "toggle-collection-view"
   | "toggle-sidebar"
@@ -31,7 +31,7 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "new-folder", code: "KeyD", shiftKey: true },
   { command: "upload-images", code: "KeyU", shiftKey: true },
   { command: "toggle-filter-bar", code: "KeyF", shiftKey: true },
-  { command: "toggle-board-action-rail", code: "KeyA", shiftKey: true },
+  { command: "canvas-arrow-tool", code: "KeyA", shiftKey: true },
   { command: "open-scratchpad", code: "KeyP", shiftKey: true },
   { command: "toggle-collection-view", code: "KeyV", shiftKey: true },
   { command: "toggle-sidebar", key: "b", metaOrCtrl: true },

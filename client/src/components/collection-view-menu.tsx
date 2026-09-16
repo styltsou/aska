@@ -70,7 +70,6 @@ export function CollectionViewMenu({
   );
   const canvasActions = useCanvasActions();
   const viewShortcut = formatPlatformShortcut("⇧+V");
-  const actionsDockShortcut = formatPlatformShortcut("⇧+A");
   const zoomPercentage = Math.round(zoom * 100);
 
   return (
@@ -109,7 +108,6 @@ export function CollectionViewMenu({
               type="button"
               variant="ghost"
               size="sm"
-              className="text-muted-foreground hover:text-foreground aria-expanded:text-foreground"
               aria-label="View options"
             />
           }
@@ -224,16 +222,12 @@ export function CollectionViewMenu({
             <DropdownMenuGroup>
               <DropdownMenuLabel>Canvas</DropdownMenuLabel>
               <DropdownMenuCheckboxItem
-                className="gap-10"
                 checked={isBoardActionRailVisible}
                 onCheckedChange={(visible) =>
                   setWorkspaceBoardActionRail(workspaceSlug, visible === true)
                 }
               >
                 Actions dock
-                <DropdownMenuShortcut>
-                  {actionsDockShortcut}
-                </DropdownMenuShortcut>
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
                 checked={isCanvasLocked}

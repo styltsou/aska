@@ -135,7 +135,7 @@ const COMMAND_GROUPS = [
         id: "canvas-arrow-tool",
         label: "Arrow tool",
         icon: ArrowUpRightIcon,
-        shortcut: undefined,
+        shortcut: "⇧+A",
       },
       {
         id: "open-scratchpad",
@@ -217,7 +217,7 @@ const COMMAND_GROUPS = [
         id: "toggle-board-action-rail",
         label: "Toggle actions dock",
         icon: SquarePlusIcon,
-        shortcut: "⇧+A",
+        shortcut: undefined,
       },
       {
         id: "change-theme",
