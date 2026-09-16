@@ -19,6 +19,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { GLASS_OPTION_BAR_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import {
   CANVAS_TEXT_FONTS,
@@ -84,7 +85,10 @@ export function CanvasTextNode({
           <div
             role="toolbar"
             aria-label="Text style"
-            className="nodrag nopan nowheel absolute flex -translate-y-full items-center gap-1 rounded-lg border border-border/70 bg-popover/95 p-1 text-popover-foreground shadow-lg backdrop-blur"
+            className={cn(
+              "nodrag nopan nowheel absolute flex -translate-y-full items-center gap-1 rounded-lg p-1",
+              GLASS_OPTION_BAR_CLASS,
+            )}
             style={{
               left: positionAbsoluteX,
               top: positionAbsoluteY - 10,
@@ -102,7 +106,7 @@ export function CanvasTextNode({
                   <button
                     type="button"
                     className={cn(
-                      "flex h-7 items-center gap-1 rounded-md px-1.5 text-xs transition-colors hover:bg-accent aria-expanded:bg-accent",
+                      "flex h-7 items-center gap-1 rounded-md px-1.5 text-xs transition-colors hover:bg-foreground/5 aria-expanded:bg-foreground/10",
                     )}
                   />
                 }
@@ -121,7 +125,10 @@ export function CanvasTextNode({
                 side="bottom"
                 align="start"
                 sideOffset={8}
-                className="w-32 min-w-32 overflow-visible rounded-lg border-border/50 bg-background/95 p-1 shadow-xl backdrop-blur-xl"
+                className={cn(
+                  "w-32 min-w-32 overflow-visible rounded-lg p-1",
+                  GLASS_OPTION_BAR_CLASS,
+                )}
               >
                 <DropdownMenuRadioGroup
                   value={data.object.font}
@@ -154,8 +161,8 @@ export function CanvasTextNode({
                 key={option.value}
                 type="button"
                 className={cn(
-                  "size-7 rounded-md text-[11px] font-medium transition-colors hover:bg-accent",
-                  data.object.size === option.value && "bg-accent",
+                  "size-7 rounded-md text-[11px] font-medium transition-colors hover:bg-foreground/5",
+                  data.object.size === option.value && "bg-foreground/10",
                 )}
                 aria-label={`${option.label} text size`}
                 aria-pressed={data.object.size === option.value}

@@ -1,6 +1,9 @@
 import { motion } from "motion/react";
 import type { ComponentProps } from "react";
-import { FLOATING_GLASS_BACKDROP_CLASS, GLASS_FRAME_CLASS } from "@/lib/glass";
+import {
+  FLOATING_GLASS_BACKDROP_CLASS,
+  GLASS_OPTION_BAR_CLASS,
+} from "@/lib/glass";
 import { cn } from "@/lib/utils";
 
 type NoteSelectionMenuSurfaceProps = ComponentProps<"div">;
@@ -15,8 +18,8 @@ export function NoteSelectionMenuSurface({
     <div className={cn("relative w-fit", FLOATING_GLASS_BACKDROP_CLASS)}>
       <div
         className={cn(
-          "relative z-10 rounded-lg p-1",
-          GLASS_FRAME_CLASS,
+          "relative z-10 rounded-lg p-0.5",
+          GLASS_OPTION_BAR_CLASS,
           className,
         )}
         {...props}
@@ -26,7 +29,7 @@ export function NoteSelectionMenuSurface({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="flex items-center gap-1">{children}</div>
+          <div className="flex items-center gap-0.5">{children}</div>
         </motion.div>
       </div>
     </div>

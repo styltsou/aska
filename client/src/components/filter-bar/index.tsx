@@ -35,8 +35,8 @@ import { Separator } from "@/components/ui/separator";
 import { SimpleColorPicker } from "@/components/ui/color-picker";
 import {
   FLOATING_GLASS_BACKDROP_CLASS,
-  GLASS_FRAME_CLASS,
-  GLASS_ISLAND_CLASS,
+  GLASS_OPTION_BAR_CLASS,
+  GLASS_OPTION_ISLAND_CLASS,
 } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/store";
@@ -80,7 +80,7 @@ type FilterSearchStatus = {
   onNext?: () => void;
 };
 
-const FILTER_ISLAND_CLASS = GLASS_ISLAND_CLASS;
+const FILTER_ISLAND_CLASS = GLASS_OPTION_ISLAND_CLASS;
 const FILTER_ISLAND_TRANSITION = {
   duration: 0.1,
   ease: [0, 0, 0.2, 1] as const,
@@ -97,7 +97,7 @@ function AnimatedFilterIsland({ children }: { children: ReactNode }) {
       animate={{ opacity: 1, width: "auto", marginLeft: 0 }}
       exit={{ opacity: 0, width: 0, marginLeft: 0 }}
       transition={FILTER_ISLAND_TRANSITION}
-      className="-m-1 overflow-hidden p-1"
+      className="-m-0.5 overflow-hidden p-0.5"
     >
       <div className={FILTER_ISLAND_CLASS}>{children}</div>
     </motion.div>
@@ -112,7 +112,7 @@ function FilterControlIsland({
   children: ReactNode;
 }) {
   return (
-    <div className="ml-1">
+    <div className="ml-0.5">
       <div className={FILTER_ISLAND_CLASS}>
         <motion.div
           key={controlKey}
@@ -188,13 +188,13 @@ export function FilterBar({
                 layout="size"
                 transition={FILTER_FRAME_TRANSITION}
                 className={cn(
-                  "relative z-10 flex items-center rounded-lg p-1",
-                  GLASS_FRAME_CLASS,
+                  "relative z-10 flex items-center rounded-lg p-0.5",
+                  GLASS_OPTION_BAR_CLASS,
                 )}
               >
                 <div className={FILTER_ISLAND_CLASS}>
                   <DropdownMenu>
-                    <DropdownMenuTrigger className="group flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium text-foreground transition-colors duration-75 hover:bg-foreground/5 focus-visible:outline-none data-popup-open:bg-foreground/5">
+                    <DropdownMenuTrigger className="group flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-foreground transition-colors duration-75 hover:bg-foreground/5 focus-visible:outline-none data-popup-open:bg-foreground/5">
                       <span>{filterType}</span>
                       <ChevronDownIcon className="size-3.5 text-foreground transition-colors duration-75" />
                     </DropdownMenuTrigger>
@@ -447,8 +447,8 @@ function AssetTypeFilterControl({
               aria-pressed={active}
               onClick={() => onToggle(type)}
               className={cn(
-                "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
-                active && "bg-foreground/8 text-foreground",
+                "text-xs text-muted-foreground hover:bg-foreground/5 hover:text-foreground [&_svg]:size-3.5",
+                active && "bg-foreground/10 text-foreground",
               )}
             >
               <Icon />

@@ -111,7 +111,7 @@ import { markdownFromSelection } from "@/lib/markdown";
 import {
   FLOATING_GLASS_BACKDROP_CLASS,
   GLASS_FRAME_CLASS,
-  GLASS_ISLAND_CLASS,
+  GLASS_OPTION_ISLAND_CLASS,
 } from "@/lib/glass";
 import {
   getSlashMenuScrollTop,
@@ -1236,14 +1236,14 @@ function InlineFormattingMenu({
         }}
       >
         <NoteSelectionMenuSurface>
-          <div className={GLASS_ISLAND_CLASS}>
+          <div className={GLASS_OPTION_ISLAND_CLASS}>
             <ButtonGroup>
               <Tooltip>
                 <TooltipTrigger
                   render={
                     <SelectTrigger
                       size="sm"
-                      className="h-7 gap-1 rounded-md border-0 bg-transparent px-1.5 text-xs font-medium text-foreground hover:bg-accent hover:text-foreground data-popup-open:bg-accent data-popup-open:text-foreground"
+                      className="h-7 gap-1 rounded-md border-0 bg-transparent px-1.5 text-xs font-medium text-foreground hover:bg-foreground/5 hover:text-foreground data-popup-open:bg-foreground/5 data-popup-open:text-foreground"
                       aria-label="Text style"
                       onMouseDown={(event) => event.preventDefault()}
                     >
@@ -1256,7 +1256,7 @@ function InlineFormattingMenu({
               </Tooltip>
             </ButtonGroup>
           </div>
-          <div className={GLASS_ISLAND_CLASS}>
+          <div className={GLASS_OPTION_ISLAND_CLASS}>
             <ButtonGroup>
               {controls.map((control) => {
                 const Icon = control.icon;
@@ -1268,8 +1268,9 @@ function InlineFormattingMenu({
                           variant="ghost"
                           size="icon-sm"
                           className={cn(
-                            "rounded-md text-foreground hover:bg-accent hover:text-foreground",
-                            control.active && "bg-accent text-foreground",
+                            "rounded-md text-foreground hover:bg-foreground/5 hover:text-foreground",
+                            control.active &&
+                              "bg-foreground/10 text-foreground",
                           )}
                           type="button"
                           aria-label={control.label}
@@ -1287,7 +1288,7 @@ function InlineFormattingMenu({
               })}
             </ButtonGroup>
           </div>
-          <div className={GLASS_ISLAND_CLASS}>
+          <div className={GLASS_OPTION_ISLAND_CLASS}>
             <ButtonGroup>
               <Popover
                 open={highlightPaletteOpen}
@@ -1301,7 +1302,7 @@ function InlineFormattingMenu({
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            className="rounded-md text-foreground hover:bg-accent hover:text-foreground data-popup-open:bg-accent data-popup-open:text-foreground"
+                            className="rounded-md text-foreground hover:bg-foreground/5 hover:text-foreground data-popup-open:bg-foreground/5 data-popup-open:text-foreground"
                             type="button"
                             aria-label="Highlight selection"
                             onMouseDown={(event) => event.preventDefault()}
@@ -1368,7 +1369,7 @@ function InlineFormattingMenu({
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="size-7 rounded-l-none rounded-r-md text-foreground hover:bg-accent hover:text-foreground"
+                            className="size-7 rounded-l-none rounded-r-md text-foreground hover:bg-foreground/5 hover:text-foreground"
                             aria-label="Remove highlight"
                             onMouseDown={(event) => event.preventDefault()}
                             onClick={() =>
@@ -1386,7 +1387,7 @@ function InlineFormattingMenu({
               </AnimatePresence>
             </ButtonGroup>
           </div>
-          <div className={GLASS_ISLAND_CLASS}>
+          <div className={GLASS_OPTION_ISLAND_CLASS}>
             <ButtonGroup>
               <Tooltip>
                 <TooltipTrigger
@@ -1394,7 +1395,7 @@ function InlineFormattingMenu({
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      className="rounded-md"
+                      className="rounded-md text-foreground hover:bg-foreground/5 hover:text-foreground"
                       type="button"
                       aria-label={
                         selectionCopied ? "Selection copied" : "Copy selection"
@@ -1416,7 +1417,7 @@ function InlineFormattingMenu({
             </ButtonGroup>
           </div>
           {onExtractSelection ? (
-            <div className={GLASS_ISLAND_CLASS}>
+            <div className={GLASS_OPTION_ISLAND_CLASS}>
               <ButtonGroup>
                 <Tooltip>
                   <TooltipTrigger
@@ -1424,7 +1425,7 @@ function InlineFormattingMenu({
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        className="rounded-md text-foreground hover:bg-accent hover:text-foreground"
+                        className="rounded-md text-foreground hover:bg-foreground/5 hover:text-foreground"
                         type="button"
                         aria-label="Extract note"
                         onMouseDown={(event) => event.preventDefault()}
