@@ -11,7 +11,13 @@ export const CANVAS_OBJECT_COLORS: CanvasObjectColor[] = [
   "coral",
   "moss",
   "ochre",
+  "saffron",
+  "violet",
+  "fuchsia",
 ];
+
+export const CANVAS_OBJECT_VISIBLE_COLORS = CANVAS_OBJECT_COLORS.slice(0, 4);
+export const CANVAS_OBJECT_OVERFLOW_COLORS = CANVAS_OBJECT_COLORS.slice(4);
 
 export const CANVAS_TEXT_FONTS: Array<{
   value: CanvasTextFont;
@@ -48,8 +54,8 @@ export const CANVAS_TEXT_FONTS: Array<{
     value: "ibm_plex_mono",
     label: "Mono",
     className: "font-mono",
-    sizeScale: 0.94,
-    previewScale: 0.92,
+    sizeScale: 0.92,
+    previewScale: 0.9,
     previewOffsetY: 0,
     fontWeight: 400,
     letterSpacing: "-0.035em",
@@ -58,12 +64,11 @@ export const CANVAS_TEXT_FONTS: Array<{
     value: "sue_ellen_francisco",
     label: "Pencil",
     className: "font-handwritten",
-    sizeScale: 1.34,
-    previewScale: 1.08,
+    sizeScale: 1.3,
+    previewScale: 1.22,
     previewOffsetY: 1,
-    fontWeight: 400,
-    letterSpacing: "0.01em",
-    textStroke: "0.006em currentColor",
+    fontWeight: 500,
+    letterSpacing: "-0.005em",
   },
 ];
 
@@ -142,6 +147,10 @@ export function canvasTextFontPreviewStyle(
 
 export function canvasObjectColor(color: CanvasObjectColor) {
   return `var(--canvas-object-${color})`;
+}
+
+export function canvasObjectColorMarker(color: CanvasObjectColor) {
+  return `var(--canvas-object-${color}-marker)`;
 }
 
 export function arrowDashArray(pattern: CanvasArrowPattern) {
