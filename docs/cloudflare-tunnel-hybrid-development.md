@@ -39,12 +39,9 @@ When this environment is needed, make these stage-specific changes together:
 3. Build local Vite with
    `VITE_SERVER_URL=https://aska-hybrid-api.styltsou.com`; do not use a raw
    `execute-api` URL for browser authentication work.
-4. Put both hostnames in the same Cloudflare Access application or matching
-   Access policy. Restrict it to the approved email identities and use the
-   one-time-pin login method if no identity provider is configured. If the API
-   is Access-protected, add the same exact-path Bypass described in the AWS
-   workflow for its HMAC-authenticated image-worker callback—never bypass the
-   whole API.
+4. Keep both hostnames public at Cloudflare. Better Auth and the API's normal
+   authorization middleware protect user data, while the image-worker callback
+   remains protected by its dedicated HMAC verification.
 5. Keep the tunnel credential outside the repository and stop the tunnel when
    the laptop should no longer expose the preview.
 

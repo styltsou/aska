@@ -14,20 +14,6 @@ const NODE_ENV_VALUES = [
 
 const DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://localhost:5174";
 
-const CloudflareAccessTeamDomain = z
-  .string()
-  .trim()
-  .min(1)
-  // Cloudflare displays the team domain as a hostname, while some dashboard
-  // locations and our docs use its full HTTPS URL. Accept both forms and keep
-  // one canonical issuer/JWKS base URL internally.
-  .transform((value) => (value.includes("://") ? value : `https://${value}`))
-  .pipe(z.url())
-  .refine((value) => new URL(value).protocol === "https:", {
-    message: "CLOUDFLARE_ACCESS_TEAM_DOMAIN must use HTTPS",
-  })
-  .transform((value) => new URL(value).origin);
-
 const MediaBaseUrl = z
   .url("MEDIA_BASE_URL must be a valid URL")
   .transform((value) => new URL(value).origin);
@@ -71,8 +57,6 @@ const envSchema = z
           "AUTH_COOKIE_DOMAIN must be a parent domain such as .example.com",
       })
       .optional(),
-    CLOUDFLARE_ACCESS_TEAM_DOMAIN: CloudflareAccessTeamDomain.optional(),
-    CLOUDFLARE_ACCESS_AUD: z.string().min(1).optional(),
     RESEND_API_KEY: z.string().min(1, "RESEND_API_KEY is required"),
     // Optional so local development and CI do not require a provider key.
     PEXELS_API_KEY: z.string().min(1).optional(),
@@ -144,16 +128,6 @@ const envSchema = z
         message: "CORS_ORIGINS must include at least one origin",
       }),
   })
-  .refine(
-    (value) =>
-      Boolean(value.CLOUDFLARE_ACCESS_TEAM_DOMAIN) ===
-      Boolean(value.CLOUDFLARE_ACCESS_AUD),
-    {
-      message:
-        "CLOUDFLARE_ACCESS_TEAM_DOMAIN and CLOUDFLARE_ACCESS_AUD must be set together",
-      path: ["CLOUDFLARE_ACCESS_AUD"],
-    },
-  )
   .refine(
     (value) =>
       !value.CROSS_SITE_AUTH_COOKIES || Boolean(value.AUTH_COOKIE_DOMAIN),

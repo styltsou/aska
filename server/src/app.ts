@@ -11,7 +11,7 @@ import { factory } from "@/factory";
 import { auth } from "@/lib/auth";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { errorResponse } from "@/lib/response";
-import { cloudflareAccess, requestLogger, securityHeaders } from "@/middleware";
+import { requestLogger, securityHeaders } from "@/middleware";
 import { getOpenApiSpec } from "@/openapi";
 import { apiRoutes } from "@/routes";
 
@@ -36,7 +36,6 @@ baseApp.use(
 baseApp.use("*", securityHeaders);
 baseApp.use("*", requestId());
 baseApp.use("*", requestLogger);
-baseApp.use("*", cloudflareAccess);
 
 baseApp.onError((err, c) => {
   if (err instanceof AppError) {

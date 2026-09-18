@@ -30,7 +30,6 @@
     "color-namer": "^1.4.0",
     "drizzle-orm": "^1.0.0-rc.4",
     "hono": "^4.12.27",
-    "jose": "^6.2.3",
     "resend": "^6.17.1",
     "sharp": "^0.35.3",
     "slugify": "^1.6.9",

@@ -51,7 +51,7 @@ export default $config({
               // Supplying the zone explicitly keeps the DNS token narrowly
               // scoped to styltsou.com and avoids account-wide zone discovery.
               zone: requireEnvironment("CLOUDFLARE_ZONE_ID"),
-              // Cloudflare Access only protects proxied hostnames.
+              // Keep public application and API traffic on Cloudflare's edge.
               proxy: true,
             }),
             // CloudFront itself is the media edge and validates the signed
@@ -82,9 +82,6 @@ export default $config({
       ? new sst.Secret("CloudFrontMediaPublicKey")
       : undefined;
     const sentryEnvironment = getSentryEnvironment("aska-api", sentryDsn.value);
-    const cloudflareAccessEnvironment = stableCloudDomains
-      ? getCloudflareAccessEnvironment()
-      : {};
     const createWorkerQueue = (name: string, deadLetterQueueName: string) => {
       const deadLetterQueue = new sst.aws.Queue(deadLetterQueueName, {
         transform: {
@@ -210,8 +207,8 @@ export default $config({
               name: stableCloudDomains.api,
               dns: stableCloudDomains.dns,
             },
-            // Cloudflare Access protects the custom hostname. Disable the
-            // default AWS hostname so it cannot bypass that policy.
+            // Keep browser traffic on the configured custom hostname instead
+            // of exposing a second, unmanaged API origin.
             transform: {
               api: {
                 disableExecuteApiEndpoint: true,
@@ -287,7 +284,6 @@ export default $config({
               CLOUDFRONT_COOKIE_DOMAIN: ".styltsou.com",
             }
           : {}),
-        ...cloudflareAccessEnvironment,
         ...sentryEnvironment,
       },
     });
@@ -589,13 +585,4 @@ function requireEnvironment(name: string): string {
     throw new Error(`${name} must be set for this deployment.`);
   }
   return value;
-}
-
-function getCloudflareAccessEnvironment(): Record<string, string> {
-  return {
-    CLOUDFLARE_ACCESS_TEAM_DOMAIN: requireEnvironment(
-      "CLOUDFLARE_ACCESS_TEAM_DOMAIN",
-    ),
-    CLOUDFLARE_ACCESS_AUD: requireEnvironment("CLOUDFLARE_ACCESS_AUD"),
-  };
 }

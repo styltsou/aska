@@ -81,7 +81,7 @@ For an arbitrary SST subcommand, use `bun run sst --`, for example:
 bun run sst -- diff --stage dev
 ```
 
-### 2. Cloudflare domain and Access setup
+### 2. Cloudflare domain setup
 
 The stable `dev` deployment uses exactly these public hostnames:
 
@@ -127,66 +127,17 @@ CLOUDFLARE_ZONE_ID
 
 SST uses that token to create the DNS records and validate the AWS-managed ACM
 certificates. Do not hand-create the application CNAME records: SST owns them.
-The app and API DNS records are proxied through Cloudflare because Cloudflare
-Access only enforces policy for proxied hostnames. `images` is deliberately
-DNS-only so CloudFront remains the sole media edge and validates its signed
-cookies. Set the Cloudflare zone SSL/TLS mode to **Full (strict)**.
+The app and API DNS records stay proxied through Cloudflare for TLS and edge
+network protection. `images` is deliberately DNS-only so CloudFront remains
+the sole media edge and validates its signed cookies. Set the Cloudflare zone
+SSL/TLS mode to **Full (strict)**.
 
-Before the first deploy, create one Cloudflare Zero Trust **self-hosted Access
-application** containing both application domains above. Add an **Allow**
-policy for the approved email addresses, and enable Cloudflare's one-time-pin
-identity provider if there is no external identity provider. Everyone not
-matching an Allow policy is denied. Keeping both domains on the same Access
-application lets browser navigation and credentialed API requests use the same
-Access session.
+The app and API are public at the edge. Better Auth and the API authorization
+middleware protect user data, while image and URL pipeline callbacks continue
+to require their dedicated HMAC signatures and replay checks.
 
-In that application's **Advanced settings → CORS settings**, enable
-**Bypass OPTIONS requests to origin**. Do not configure Access-managed CORS
-response headers for this application.
-
-Browsers never send cookies on an `OPTIONS` preflight, so Access cannot
-authenticate that request. This narrowly bypasses Access only for the
-preflight; API Gateway and Hono then enforce the exact CORS policy, and every
-real API request still requires a valid Cloudflare Access JWT. The deployment
-config sets the permitted browser origin to `https://aska-app.styltsou.com`.
-
-Create more-specific self-hosted Access path rules for these pipeline callbacks:
-
-```text
-https://aska-api.styltsou.com/api/v1/internal/image-pipeline/callback
-https://aska-api.styltsou.com/api/v1/internal/url-resolution/claim
-https://aska-api.styltsou.com/api/v1/internal/url-resolution/result
-https://aska-api.styltsou.com/api/v1/internal/resource-media/claim
-https://aska-api.styltsou.com/api/v1/internal/resource-media/result
-```
-
-Use exact-path applications, or one application matching only
-`/api/v1/internal/*`, with a **Bypass / Everyone** policy. Cloudflare's
-more-specific rule takes precedence over the API-wide Allow rule. The origin
-itself exempts only the five explicit paths above, and every handler requires a
-rotated HMAC callback secret plus timestamp/replay checks. Do not broaden the
-bypass beyond `/api/v1/internal/*` or use Bypass on the API hostname itself.
-Any future internal endpoint must add HMAC authentication before it is included
-in both allowlists.
-
-The API's generated `execute-api` hostname is disabled in this stage. This is
-important: otherwise it would be an unprotected route around the Access policy.
-The API also verifies Cloudflare's signed Access JWT on every request at the
-origin. Add the Access application's **team domain** (including `https://`)
-and **AUD tag** as these GitHub Actions repository secrets:
-
-```text
-CLOUDFLARE_ACCESS_TEAM_DOMAIN
-CLOUDFLARE_ACCESS_AUD
-```
-
-This prevents a request that somehow reaches AWS without passing through
-Cloudflare from being treated as an authenticated browser request. The only
-origin-level exemptions are the explicit HMAC-authenticated pipeline paths
-described above, plus CORS preflight.
-
-If Cloudflare Access is not configured yet, do that first and do not share the
-hostnames until it is in place.
+The API's generated `execute-api` hostname remains disabled so browser traffic
+uses the configured custom domain rather than a second, unmanaged API origin.
 
 ### 4. Stage secrets
 
@@ -257,7 +208,7 @@ The GitHub Actions deployment deploys **both** the backend and this client.
 The client is served as `https://aska-app.styltsou.com` and is built with
 `https://aska-api.styltsou.com` as `VITE_SERVER_URL`. CloudFront remains the
 client's origin and its S3 bucket remains private; Cloudflare is the public
-edge and Access gate.
+edge.
 
 The image Lambda packages the Linux `sharp` runtime from the pipeline's Bun
 installation. SST does not run npm to assemble that Lambda package.
@@ -414,8 +365,6 @@ The job also requires these GitHub Actions repository secrets:
 CLOUDFLARE_API_TOKEN
 CLOUDFLARE_DEFAULT_ACCOUNT_ID
 CLOUDFLARE_ZONE_ID
-CLOUDFLARE_ACCESS_TEAM_DOMAIN
-CLOUDFLARE_ACCESS_AUD
 SENTRY_AUTH_TOKEN
 SENTRY_ORG
 SENTRY_PROJECT
@@ -442,8 +391,7 @@ When the client has a public domain and you are ready to launch:
    domains and Cloudflare DNS configuration.
 2. Create its own SST secrets and use a separate database URL—not the `dev`
    database.
-3. Create a matching Cloudflare Access application before deployment.
-4. Deploy through the production CI workflow. SST embeds the custom production
+3. Deploy through the production CI workflow. SST embeds the custom production
    API URL in the Vite build automatically.
 
 There is intentionally no staging environment yet. Add one only when you need
