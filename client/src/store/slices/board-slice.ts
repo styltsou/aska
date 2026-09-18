@@ -56,6 +56,7 @@ export const createPersistedBoardSlice: StateCreator<PersistedBoardSlice> = (
 export interface TransientBoardSlice {
   boardVisibleBounds: Record<string, BoardVisibleBounds | undefined>;
   insertionPositions: Record<string, XYPosition | undefined>;
+  canvasViewportActivity: Record<string, number | undefined>;
   canvasTools: Record<string, CanvasTool | undefined>;
   canvasCreationRequests: Record<
     string,
@@ -67,6 +68,7 @@ export interface TransientBoardSlice {
     bounds?: BoardVisibleBounds,
   ) => void;
   setInsertionPosition: (boardKey: string, position?: XYPosition) => void;
+  notifyCanvasViewportActivity: (boardKey: string) => void;
   setCanvasTool: (boardKey: string, tool: CanvasTool) => void;
   requestCanvasObject: (
     boardKey: string,
@@ -80,6 +82,7 @@ export const createTransientBoardSlice: StateCreator<TransientBoardSlice> = (
 ) => ({
   boardVisibleBounds: {},
   insertionPositions: {},
+  canvasViewportActivity: {},
   canvasTools: {},
   canvasCreationRequests: {},
   setBoardVisibleBounds: (boardKey, bounds) =>
@@ -91,6 +94,13 @@ export const createTransientBoardSlice: StateCreator<TransientBoardSlice> = (
       insertionPositions: {
         ...state.insertionPositions,
         [boardKey]: position,
+      },
+    })),
+  notifyCanvasViewportActivity: (boardKey) =>
+    set((state) => ({
+      canvasViewportActivity: {
+        ...state.canvasViewportActivity,
+        [boardKey]: (state.canvasViewportActivity[boardKey] ?? 0) + 1,
       },
     })),
   setCanvasTool: (boardKey, tool) =>
