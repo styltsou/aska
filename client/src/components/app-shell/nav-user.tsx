@@ -78,7 +78,6 @@ export function NavUser({ user }: { user: AuthUser }) {
               side={isMobile ? "bottom" : "top"}
               align="end"
               sideOffset={8}
-              style={{ backdropFilter: "blur(4px) saturate(1.5)" }}
             >
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="p-0 font-normal">

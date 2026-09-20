@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { Fragment, type ComponentType, type ReactNode } from "react";
 import {
   CheckIcon,
@@ -35,8 +35,10 @@ import { Separator } from "@/components/ui/separator";
 import { SimpleColorPicker } from "@/components/ui/color-picker";
 import {
   FLOATING_GLASS_BACKDROP_CLASS,
-  GLASS_OPTION_BAR_CLASS,
-  GLASS_OPTION_ISLAND_CLASS,
+  FLOATING_TOOLBAR_ENTER_TRANSITION,
+  FLOATING_TOOLBAR_EXIT_TRANSITION,
+  GLASS_FRAME_CLASS,
+  GLASS_ISLAND_CLASS,
 } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/store";
@@ -80,15 +82,7 @@ type FilterSearchStatus = {
   onNext?: () => void;
 };
 
-const FILTER_ISLAND_CLASS = GLASS_OPTION_ISLAND_CLASS;
-const FILTER_ISLAND_TRANSITION = {
-  duration: 0.1,
-  ease: [0, 0, 0.2, 1] as const,
-};
-const FILTER_FRAME_TRANSITION = {
-  duration: 0.12,
-  ease: [0, 0, 0.2, 1] as const,
-};
+const FILTER_ISLAND_CLASS = GLASS_ISLAND_CLASS;
 
 function AnimatedFilterIsland({ children }: { children: ReactNode }) {
   return (
@@ -96,8 +90,8 @@ function AnimatedFilterIsland({ children }: { children: ReactNode }) {
       initial={{ opacity: 0, width: 0, marginLeft: 0 }}
       animate={{ opacity: 1, width: "auto", marginLeft: 0 }}
       exit={{ opacity: 0, width: 0, marginLeft: 0 }}
-      transition={FILTER_ISLAND_TRANSITION}
-      className="-m-0.5 overflow-hidden p-0.5"
+      transition={FLOATING_TOOLBAR_ENTER_TRANSITION}
+      className="-m-1 overflow-hidden p-1"
     >
       <div className={FILTER_ISLAND_CLASS}>{children}</div>
     </motion.div>
@@ -112,18 +106,25 @@ function FilterControlIsland({
   children: ReactNode;
 }) {
   return (
-    <div className="ml-0.5">
-      <div className={FILTER_ISLAND_CLASS}>
+    <motion.div
+      layout="size"
+      layoutDependency={controlKey}
+      transition={FLOATING_TOOLBAR_ENTER_TRANSITION}
+      className={cn(FILTER_ISLAND_CLASS, "overflow-hidden")}
+    >
+      <AnimatePresence initial={false} mode="popLayout">
         <motion.div
           key={controlKey}
-          initial={{ opacity: 0, y: 2 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={FILTER_ISLAND_TRANSITION}
+          layout="position"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={FLOATING_TOOLBAR_ENTER_TRANSITION}
         >
           {children}
         </motion.div>
-      </div>
-    </div>
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -173,10 +174,15 @@ export function FilterBar({
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ opacity: 0, y: -14, scale: 0.98 }}
+          initial={{ opacity: 0, y: -8, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -14, scale: 0.98 }}
-          transition={FILTER_FRAME_TRANSITION}
+          exit={{
+            opacity: 0,
+            y: -8,
+            scale: 0.98,
+            transition: FLOATING_TOOLBAR_EXIT_TRANSITION,
+          }}
+          transition={FLOATING_TOOLBAR_ENTER_TRANSITION}
           style={{ transformOrigin: "top left" }}
           className="pointer-events-none absolute top-2 left-2 z-40 flex"
         >
@@ -184,154 +190,158 @@ export function FilterBar({
             <div
               className={cn("relative w-fit", FLOATING_GLASS_BACKDROP_CLASS)}
             >
-              <motion.div
-                layout="size"
-                transition={FILTER_FRAME_TRANSITION}
-                className={cn(
-                  "relative z-10 flex items-center rounded-lg p-0.5",
-                  GLASS_OPTION_BAR_CLASS,
-                )}
-              >
-                <div className={FILTER_ISLAND_CLASS}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="group flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-foreground transition-colors duration-75 hover:bg-foreground/5 focus-visible:outline-none data-popup-open:bg-foreground/5">
-                      <span>{filterType}</span>
-                      <ChevronDownIcon className="size-3.5 text-foreground transition-colors duration-75" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="center"
-                      side="bottom"
-                      sideOffset={16}
-                      className="border border-border/50 bg-background/60 shadow-2xl"
-                    >
-                      {FILTER_TYPES.map((type) => (
-                        <DropdownMenuItem
-                          key={type}
-                          onClick={() => setFilterType(scope, type)}
-                          className="gap-2 px-3 py-1.5 text-sm"
-                        >
-                          <span className="flex-1">{type}</span>
-                          {type === filterType && (
-                            <CheckIcon className="size-3.5" />
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                <FilterControlIsland controlKey={filterType}>
-                  {filterType === "Color" ? (
-                    <ButtonGroup>
-                      <Popover>
-                        <PopoverTrigger
-                          render={
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground data-popup-open:bg-foreground/5 data-popup-open:text-foreground"
-                              aria-label="Pick a custom color"
-                            />
-                          }
-                        >
-                          <PlusIcon className="size-3.5" />
-                        </PopoverTrigger>
-                        <PopoverContent
-                          side="bottom"
-                          align="start"
-                          sideOffset={16}
-                          className="w-64 border border-border/50 bg-background/60 shadow-2xl backdrop-blur-2xl backdrop-saturate-150"
-                        >
-                          <div className="flex flex-col gap-3">
-                            <SimpleColorPicker
-                              onPick={(color) => toggleColor(scope, color)}
-                            />
-                            <Separator orientation="horizontal" />
-                            <div className="flex flex-wrap gap-1.5">
-                              {EXTRA_COLORS.map(({ value, label }) => {
-                                const active = selectedColors.includes(value);
-                                return (
-                                  <button
-                                    key={value}
-                                    type="button"
-                                    aria-label={label}
-                                    aria-pressed={active}
-                                    data-active={active || undefined}
-                                    onClick={() => toggleColor(scope, value)}
-                                    disabled={!active && !canAddColor}
-                                    className={cn(
-                                      "size-5 rounded-[min(var(--radius-md),8px)] shadow-[inset_0_0_0_1.5px_rgba(0,0,0,0.25)] transition-all duration-100 hover:scale-105 data-active:scale-90 data-active:hover:scale-95",
-                                      active &&
-                                        "ring-offset-background shadow-[inset_0_0_0_1.5px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-offset-1",
-                                    )}
-                                    style={{ backgroundColor: value }}
-                                  />
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                      <ButtonGroupSeparator className="data-vertical:my-0" />
-                      <div className="flex h-8 items-center gap-2 px-2">
-                        {FILTER_COLORS.map(({ value, label }) => {
-                          const active = selectedColors.includes(value);
-                          return (
-                            <button
-                              key={value}
-                              type="button"
-                              aria-label={label}
-                              aria-pressed={active}
-                              data-active={active || undefined}
-                              onClick={() => toggleColor(scope, value)}
-                              disabled={!active && !canAddColor}
-                              className={cn(
-                                "size-6 rounded-[min(var(--radius-md),10px)] shadow-[inset_0_0_0_1.5px_rgba(0,0,0,0.25)] transition-all duration-100 hover:scale-105 data-active:scale-90 data-active:hover:scale-95",
-                                active &&
-                                  "ring-offset-background shadow-[inset_0_0_0_1.5px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-offset-2",
-                              )}
-                              style={{ backgroundColor: value }}
-                            />
-                          );
-                        })}
-                      </div>
-                    </ButtonGroup>
-                  ) : filterType === "Tags" ? (
-                    <TagsFilterControl />
-                  ) : (
-                    <AssetTypeFilterControl
-                      selectedTypes={selectedAssetTypes}
-                      onToggle={(type) => toggleAssetType(scope, type)}
-                    />
+              <LayoutGroup id={`filter-bar-${scope}`}>
+                <motion.div
+                  layout="size"
+                  layoutDependency={filterType}
+                  transition={FLOATING_TOOLBAR_ENTER_TRANSITION}
+                  className={cn(
+                    "relative z-10 flex items-center gap-1 rounded-lg p-1",
+                    GLASS_FRAME_CLASS,
                   )}
-                </FilterControlIsland>
-
-                <AnimatePresence initial={false}>
-                  {showSearchStatus ? (
-                    <AnimatedFilterIsland key="filter-search-status">
-                      <FilterSearchStatusIsland status={searchStatus} />
-                    </AnimatedFilterIsland>
-                  ) : null}
-                </AnimatePresence>
-
-                <AnimatePresence initial={false}>
-                  {hasActiveFilter ? (
-                    <AnimatedFilterIsland key="clear-filter">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={clearActiveFilter}
-                        aria-label="Clear all filters"
-                        className="rounded-md text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+                >
+                  <div className={FILTER_ISLAND_CLASS}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="group flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium text-foreground transition-colors duration-75 hover:bg-foreground/5 focus-visible:outline-none data-popup-open:bg-foreground/5">
+                        <span>{filterType}</span>
+                        <ChevronDownIcon className="size-3.5 text-foreground transition-colors duration-75" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="center"
+                        side="bottom"
+                        sideOffset={16}
+                        surface="solid"
                       >
-                        <XIcon className="size-3.5" />
-                      </Button>
-                    </AnimatedFilterIsland>
-                  ) : null}
-                </AnimatePresence>
-              </motion.div>
+                        {FILTER_TYPES.map((type) => (
+                          <DropdownMenuItem
+                            key={type}
+                            onClick={() => setFilterType(scope, type)}
+                            className="gap-2 px-3 py-1.5 text-sm"
+                          >
+                            <span className="flex-1">{type}</span>
+                            {type === filterType && (
+                              <CheckIcon className="size-3.5" />
+                            )}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  <FilterControlIsland controlKey={filterType}>
+                    {filterType === "Color" ? (
+                      <ButtonGroup>
+                        <Popover>
+                          <PopoverTrigger
+                            render={
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-muted-foreground hover:bg-foreground/5 hover:text-foreground data-popup-open:bg-foreground/5 data-popup-open:text-foreground"
+                                aria-label="Pick a custom color"
+                              />
+                            }
+                          >
+                            <PlusIcon className="size-3.5" />
+                          </PopoverTrigger>
+                          <PopoverContent
+                            side="bottom"
+                            align="start"
+                            sideOffset={16}
+                            surface="solid"
+                            className="w-64"
+                          >
+                            <div className="flex flex-col gap-3">
+                              <SimpleColorPicker
+                                onPick={(color) => toggleColor(scope, color)}
+                              />
+                              <Separator orientation="horizontal" />
+                              <div className="flex flex-wrap gap-1.5">
+                                {EXTRA_COLORS.map(({ value, label }) => {
+                                  const active = selectedColors.includes(value);
+                                  return (
+                                    <button
+                                      key={value}
+                                      type="button"
+                                      aria-label={label}
+                                      aria-pressed={active}
+                                      data-active={active || undefined}
+                                      onClick={() => toggleColor(scope, value)}
+                                      disabled={!active && !canAddColor}
+                                      className={cn(
+                                        "size-5 rounded-[min(var(--radius-md),8px)] shadow-[inset_0_0_0_1.5px_rgba(0,0,0,0.25)] transition-all duration-100 hover:scale-105 data-active:scale-90 data-active:hover:scale-95",
+                                        active &&
+                                          "ring-offset-background shadow-[inset_0_0_0_1.5px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-offset-1",
+                                      )}
+                                      style={{ backgroundColor: value }}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                        <ButtonGroupSeparator className="data-vertical:my-0" />
+                        <div className="flex h-8 items-center gap-2 px-2">
+                          {FILTER_COLORS.map(({ value, label }) => {
+                            const active = selectedColors.includes(value);
+                            return (
+                              <button
+                                key={value}
+                                type="button"
+                                aria-label={label}
+                                aria-pressed={active}
+                                data-active={active || undefined}
+                                onClick={() => toggleColor(scope, value)}
+                                disabled={!active && !canAddColor}
+                                className={cn(
+                                  "size-6 rounded-[min(var(--radius-md),10px)] shadow-[inset_0_0_0_1.5px_rgba(0,0,0,0.25)] transition-all duration-100 hover:scale-105 data-active:scale-90 data-active:hover:scale-95",
+                                  active &&
+                                    "ring-offset-background shadow-[inset_0_0_0_1.5px_rgba(0,0,0,0.45)] ring-2 ring-white/60 ring-offset-2",
+                                )}
+                                style={{ backgroundColor: value }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </ButtonGroup>
+                    ) : filterType === "Tags" ? (
+                      <TagsFilterControl />
+                    ) : (
+                      <AssetTypeFilterControl
+                        selectedTypes={selectedAssetTypes}
+                        onToggle={(type) => toggleAssetType(scope, type)}
+                      />
+                    )}
+                  </FilterControlIsland>
+
+                  <AnimatePresence initial={false}>
+                    {showSearchStatus ? (
+                      <AnimatedFilterIsland key="filter-search-status">
+                        <FilterSearchStatusIsland status={searchStatus} />
+                      </AnimatedFilterIsland>
+                    ) : null}
+                  </AnimatePresence>
+
+                  <AnimatePresence initial={false}>
+                    {hasActiveFilter ? (
+                      <AnimatedFilterIsland key="clear-filter">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={clearActiveFilter}
+                          aria-label="Clear all filters"
+                          className="rounded-md text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
+                        >
+                          <XIcon className="size-3.5" />
+                        </Button>
+                      </AnimatedFilterIsland>
+                    ) : null}
+                  </AnimatePresence>
+                </motion.div>
+              </LayoutGroup>
             </div>
           </div>
         </motion.div>

@@ -115,7 +115,7 @@ export function NoteHighlightControl({
         align="start"
         sideOffset={8}
         initialFocus={false}
-        className="w-fit gap-1.5 rounded-xl border-border/60 bg-background/95 p-1.5 shadow-xl backdrop-blur-xl"
+        className="w-fit gap-1.5 rounded-xl p-1.5"
       >
         <PopoverHeader className="px-1.5 pt-1 pb-0.5">
           <PopoverTitle className="text-xs font-medium text-muted-foreground">

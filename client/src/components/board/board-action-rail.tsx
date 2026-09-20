@@ -22,6 +22,8 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { getPlatformShift } from "@/lib/platform";
 import {
   FLOATING_GLASS_BACKDROP_CLASS,
+  FLOATING_TOOLBAR_ENTER_TRANSITION,
+  FLOATING_TOOLBAR_EXIT_TRANSITION,
   GLASS_FRAME_CLASS,
   GLASS_ISLAND_CLASS,
 } from "@/lib/glass";
@@ -40,11 +42,6 @@ import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog"
 
 const RAIL_BUTTON_CLASS =
   "rounded-[calc(var(--radius-md)-1px)] text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80";
-
-const RAIL_FRAME_TRANSITION = {
-  duration: 0.12,
-  ease: [0, 0, 0.2, 1] as const,
-};
 
 function RailShortcut({ keys }: { keys: string }) {
   return (
@@ -88,7 +85,12 @@ export function BoardActionRail({
     (state) => state.workspaceBoardActionRails?.[workspaceSlug] ?? false,
   );
   const reduceMotion = useReducedMotion();
-  const transition = reduceMotion ? { duration: 0 } : RAIL_FRAME_TRANSITION;
+  const enterTransition = reduceMotion
+    ? { duration: 0 }
+    : FLOATING_TOOLBAR_ENTER_TRANSITION;
+  const exitTransition = reduceMotion
+    ? { duration: 0 }
+    : FLOATING_TOOLBAR_EXIT_TRANSITION;
 
   return (
     <div className="absolute inset-x-0 bottom-3 z-20 hidden items-end justify-center lg:flex">
@@ -96,10 +98,19 @@ export function BoardActionRail({
         {isRailVisible ? (
           <motion.div
             key="actions-dock"
-            initial={reduceMotion ? false : { opacity: 0, y: 14, scale: 0.98 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reduceMotion ? undefined : { opacity: 0, y: 14, scale: 0.98 }}
-            transition={transition}
+            exit={
+              reduceMotion
+                ? undefined
+                : {
+                    opacity: 0,
+                    y: 8,
+                    scale: 0.98,
+                    transition: exitTransition,
+                  }
+            }
+            transition={enterTransition}
             style={{ transformOrigin: "bottom center" }}
             className="pointer-events-auto relative w-fit"
           >
@@ -108,7 +119,7 @@ export function BoardActionRail({
             >
               <motion.div
                 layout="size"
-                transition={transition}
+                transition={enterTransition}
                 className={cn(
                   "relative z-10 flex items-center rounded-lg p-1",
                   GLASS_FRAME_CLASS,
@@ -247,7 +258,7 @@ export function BoardActionRail({
                               )
                             }
                           >
-                            <TypeIcon />
+                            <TypeIcon className="size-3.5" />
                           </Button>
                         }
                       />
@@ -279,11 +290,14 @@ export function BoardActionRail({
                               )
                             }
                           >
-                            <ArrowUpRightIcon />
+                            <ArrowUpRightIcon className="size-4.5" />
                           </Button>
                         }
                       />
-                      <TooltipContent side="top">Arrow tool</TooltipContent>
+                      <TooltipContent side="top">
+                        <span>Arrow tool</span>
+                        <RailShortcut keys="A" />
+                      </TooltipContent>
                     </Tooltip>
                   </ButtonGroup>
                 </div>

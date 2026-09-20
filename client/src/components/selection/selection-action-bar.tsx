@@ -101,7 +101,7 @@ export function SelectionActionBar({
             aria-label="Selection actions"
             className="flex w-fit flex-col items-center gap-1"
             transition={{
-              duration: 0.12,
+              duration: 0.1,
               ease: [0, 0, 0.2, 1],
             }}
           >
@@ -186,7 +186,7 @@ export function SelectionActionBar({
                         initial={{ opacity: 0, width: 0, marginLeft: 0 }}
                         animate={{ opacity: 1, width: "auto", marginLeft: 0 }}
                         exit={{ opacity: 0, width: 0, marginLeft: 0 }}
-                        transition={{ duration: 0.1, ease: [0, 0, 0.2, 1] }}
+                        transition={{ duration: 0.08, ease: [0, 0, 0.2, 1] }}
                         className="-m-1 overflow-hidden p-1"
                       >
                         <div className={BUTTON_GROUP_SURFACE_CLASS}>
@@ -334,7 +334,8 @@ function LayoutActionsMenu({
       <DropdownMenuContent
         align="end"
         side="bottom"
-        className="w-48 border border-border/50 bg-background/70 shadow-xl"
+        surface="solid"
+        className="w-48"
       >
         <DropdownMenuGroup>
           <DropdownMenuLabel>Arrange in column</DropdownMenuLabel>

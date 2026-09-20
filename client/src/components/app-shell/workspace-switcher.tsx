@@ -68,7 +68,6 @@ export function WorkspaceSwitcher() {
             align="end"
             side="right"
             sideOffset={4}
-            style={{ backdropFilter: "blur(4px) saturate(1.5)" }}
           >
             <DropdownMenuGroup>
               <DropdownMenuLabel className="text-xs text-muted-foreground">
