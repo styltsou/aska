@@ -620,7 +620,7 @@ export function CommandPalette() {
             <Command
               shouldFilter={mode === "commands"}
               onKeyDown={(event) => {
-                if (event.key === "Tab" && query.length === 0) {
+                if (event.key === "Tab") {
                   event.preventDefault();
                   changeMode(mode === "search" ? "commands" : "search");
                   return;
@@ -761,7 +761,7 @@ export function CommandPalette() {
                                   value={item.label}
                                   onSelect={() => runCommand(item.id)}
                                 >
-                                  <Icon className="size-4 text-muted-foreground" />
+                                  <Icon className="size-4" />
                                   <span>{label}</span>
                                   {item.shortcut ? (
                                     <CommandShortcut>
@@ -781,7 +781,7 @@ export function CommandPalette() {
           </MeasuredCommandPaletteSection>
         </DialogBody>
         <MeasuredCommandPaletteSection onHeightChange={setPaletteFooterHeight}>
-          <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground sm:pr-[18px]">
+          <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground sm:pr-[18px] sm:pl-[10px]">
             {mode === "search" ? (
               <span className="inline-flex items-center gap-1">
                 <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
@@ -884,7 +884,7 @@ function CommandInputLeadingContent({
   const shouldReduceMotion = useReducedMotion();
   const transition = shouldReduceMotion
     ? { duration: 0 }
-    : { duration: 0.12, ease: [0.16, 1, 0.3, 1] as const };
+    : { duration: 0.06, ease: [0.16, 1, 0.3, 1] as const };
 
   return (
     <AnimatePresence initial={false} mode="wait">
@@ -1010,7 +1010,7 @@ function WorkspaceSearchResults({
           onSelect={() => onSelect(result)}
         >
           <SearchResultPreview result={result} />
-          <span className="min-w-0 flex-1">
+          <span className="mr-1.5 min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">
               {result.label}
             </span>
@@ -1020,7 +1020,10 @@ function WorkspaceSearchResults({
               </span>
             ) : null}
           </span>
-          <span className="max-w-28 shrink-0 truncate text-right text-[11px] text-muted-foreground/75">
+          <span
+            data-slot="command-shortcut"
+            className="ml-auto max-w-28 shrink-0 truncate text-right text-[11px] text-muted-foreground/75"
+          >
             {result.locationLabel}
           </span>
         </CommandItem>
@@ -1071,7 +1074,12 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
   }
 
   if (result.type === "link" && result.preview?.faviconUrl) {
-    return <LinkSearchResultPreview src={result.preview.faviconUrl} />;
+    return (
+      <LinkSearchResultPreview
+        src={result.preview.faviconUrl}
+        bare={/youtube/i.test(result.preview.hostname ?? "")}
+      />
+    );
   }
 
   const Icon =
@@ -1088,29 +1096,41 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
               : FolderOpenIcon;
 
   return (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
       <Icon className="size-4" />
     </span>
   );
 }
 
-function LinkSearchResultPreview({ src }: { src: string }) {
+function LinkSearchResultPreview({
+  src,
+  bare = false,
+}: {
+  src: string;
+  bare?: boolean;
+}) {
   const [failed, setFailed] = useState(false);
 
   if (failed) {
     return (
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
         <ExternalLinkIcon className="size-4" />
       </span>
     );
   }
 
   return (
-    <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/60 bg-background shadow-sm">
+    <span
+      className={
+        bare
+          ? "flex size-8 shrink-0 items-center justify-center"
+          : "flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/60 bg-background shadow-sm"
+      }
+    >
       <img
         src={src}
         alt=""
-        className="size-full object-contain"
+        className={bare ? "size-8 object-contain" : "size-full object-contain"}
         onError={() => setFailed(true)}
       />
     </span>

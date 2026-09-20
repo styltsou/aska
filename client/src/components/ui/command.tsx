@@ -75,8 +75,11 @@ function CommandInput({
   startAddonClassName?: string;
 }) {
   return (
-    <div data-slot="command-input-wrapper">
-      <InputGroup className="relative z-10 h-10! rounded-none! border-0 border-b border-border/40 bg-transparent! pb-1.5 shadow-none ring-0 backdrop-blur-none focus-within:border-border/60! focus-within:ring-0! dark:bg-transparent!">
+    <div
+      data-slot="command-input-wrapper"
+      className="-mx-1.5 border-b border-border/40 px-1.5 focus-within:border-border/60"
+    >
+      <InputGroup className="relative z-10 h-10! rounded-none! border-0 bg-transparent! pb-1.5 shadow-none ring-0 backdrop-blur-none focus-within:ring-0! dark:bg-transparent!">
         {startAddon ? (
           <InputGroupAddon
             className={cn(
@@ -171,7 +174,7 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "group/command-item data-selected:bg-foreground/10 data-selected:text-foreground data-selected:*:[svg]:text-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "group/command-item data-selected:bg-foreground/10 data-selected:text-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg! data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
