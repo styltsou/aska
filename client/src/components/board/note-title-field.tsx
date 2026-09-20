@@ -1,9 +1,10 @@
 import { forwardRef } from "react";
 
+import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { cn } from "@/lib/utils";
 
 export const NoteTitleField = forwardRef<
-  HTMLInputElement,
+  HTMLTextAreaElement,
   {
     value: string;
     onChange: (value: string) => void;
@@ -18,8 +19,9 @@ export const NoteTitleField = forwardRef<
   ref,
 ) {
   return (
-    <input
+    <AutoResizeTextarea
       ref={ref}
+      rows={1}
       value={value}
       onChange={(event) => onChange(event.target.value)}
       onBlur={onBlur}

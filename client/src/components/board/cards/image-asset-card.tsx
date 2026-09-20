@@ -10,10 +10,12 @@ export function ImageAssetCard({
   asset,
   onOpen,
   isContextMenuOpen = false,
+  selected = false,
 }: {
   asset: ImageAsset;
   onOpen?: () => void;
   isContextMenuOpen?: boolean;
+  selected?: boolean;
 }) {
   const hasBar = asset.sourceLabel;
   const [hovered, setHovered] = useState(false);
@@ -23,7 +25,8 @@ export function ImageAssetCard({
       role={onOpen ? "button" : undefined}
       tabIndex={onOpen ? 0 : undefined}
       className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-lg border border-transparent transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20",
+        "group relative cursor-pointer overflow-hidden rounded-lg border border-transparent transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        !selected && "hover:border-sidebar-foreground/20",
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}
       style={{ aspectRatio: `${asset.width} / ${asset.height}` }}

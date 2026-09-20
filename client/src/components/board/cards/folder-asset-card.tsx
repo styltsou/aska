@@ -20,6 +20,7 @@ export function FolderAssetCard({
   isDropTarget = false,
   onOpen,
   isContextMenuOpen = false,
+  selected = false,
 }: {
   asset: FolderAsset;
   incomingAssetId?: string;
@@ -27,6 +28,7 @@ export function FolderAssetCard({
   isDropTarget?: boolean;
   onOpen?: () => void;
   isContextMenuOpen?: boolean;
+  selected?: boolean;
 }) {
   const previews = asset.previews ?? [];
   const hasPreviews = previews.length > 0;
@@ -43,7 +45,8 @@ export function FolderAssetCard({
   return (
     <div
       className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+        "group relative cursor-pointer overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+        !selected && "hover:border-sidebar-foreground/20",
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}
       role={onOpen ? "link" : undefined}

@@ -28,10 +28,12 @@ export function LinkAssetCard({
   asset,
   onOpen,
   isContextMenuOpen = false,
+  selected = false,
 }: {
   asset: LinkAsset;
   onOpen?: () => void;
   isContextMenuOpen?: boolean;
+  selected?: boolean;
 }) {
   const [loadedPreviewUrl, setLoadedPreviewUrl] = useState<string | null>(null);
   const isYoutube =
@@ -40,8 +42,9 @@ export function LinkAssetCard({
   const previewLoaded = loadedPreviewUrl === asset.previewImage?.url;
 
   const className = cn(
-    "group relative block w-full overflow-hidden rounded-lg border bg-sidebar text-left text-sidebar-foreground transition-colors hover:border-sidebar-foreground/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
+    "group relative block w-full overflow-hidden rounded-lg border bg-sidebar text-left text-sidebar-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
     onOpen && "cursor-pointer",
+    !selected && "hover:border-sidebar-foreground/20",
     isContextMenuOpen && "border-sidebar-foreground/20",
   );
   const contents = (

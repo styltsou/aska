@@ -111,7 +111,7 @@ import { markdownFromSelection } from "@/lib/markdown";
 import {
   FLOATING_GLASS_BACKDROP_CLASS,
   GLASS_FRAME_CLASS,
-  GLASS_OPTION_ISLAND_CLASS,
+  GLASS_ISLAND_CLASS,
 } from "@/lib/glass";
 import {
   getSlashMenuScrollTop,
@@ -1236,7 +1236,7 @@ function InlineFormattingMenu({
         }}
       >
         <NoteSelectionMenuSurface>
-          <div className={GLASS_OPTION_ISLAND_CLASS}>
+          <div className={GLASS_ISLAND_CLASS}>
             <ButtonGroup>
               <Tooltip>
                 <TooltipTrigger
@@ -1256,7 +1256,7 @@ function InlineFormattingMenu({
               </Tooltip>
             </ButtonGroup>
           </div>
-          <div className={GLASS_OPTION_ISLAND_CLASS}>
+          <div className={GLASS_ISLAND_CLASS}>
             <ButtonGroup>
               {controls.map((control) => {
                 const Icon = control.icon;
@@ -1288,7 +1288,7 @@ function InlineFormattingMenu({
               })}
             </ButtonGroup>
           </div>
-          <div className={GLASS_OPTION_ISLAND_CLASS}>
+          <div className={GLASS_ISLAND_CLASS}>
             <ButtonGroup>
               <Popover
                 open={highlightPaletteOpen}
@@ -1320,7 +1320,8 @@ function InlineFormattingMenu({
                   side="top"
                   sideOffset={8}
                   initialFocus={false}
-                  className="w-fit gap-1 rounded-xl border-border/60 bg-background/95 p-1.5 shadow-xl backdrop-blur-xl"
+                  surface="solid"
+                  className="w-fit gap-1 rounded-xl p-1.5"
                 >
                   <div
                     className="flex items-center gap-1"
@@ -1387,7 +1388,7 @@ function InlineFormattingMenu({
               </AnimatePresence>
             </ButtonGroup>
           </div>
-          <div className={GLASS_OPTION_ISLAND_CLASS}>
+          <div className={GLASS_ISLAND_CLASS}>
             <ButtonGroup>
               <Tooltip>
                 <TooltipTrigger
@@ -1417,7 +1418,7 @@ function InlineFormattingMenu({
             </ButtonGroup>
           </div>
           {onExtractSelection ? (
-            <div className={GLASS_OPTION_ISLAND_CLASS}>
+            <div className={GLASS_ISLAND_CLASS}>
               <ButtonGroup>
                 <Tooltip>
                   <TooltipTrigger
@@ -1446,7 +1447,8 @@ function InlineFormattingMenu({
           side="top"
           sideOffset={8}
           alignItemWithTrigger={false}
-          className="w-44 min-w-max rounded-lg border-border/50 bg-background/95 p-1 shadow-xl backdrop-blur-xl"
+          surface="solid"
+          className="w-44 min-w-max p-1"
         >
           <SelectItem value="paragraph">
             <CaseSensitiveIcon className="size-4" />
@@ -1692,7 +1694,7 @@ function LinkInteractionPopover({ editor }: { editor: Editor }) {
             anchor={hoveredLink.anchor}
             side="top"
             sideOffset={8}
-            className="w-auto max-w-[calc(100vw-2rem)] rounded-xl border-border/60 bg-background/95 px-1.5 py-1 shadow-xl backdrop-blur-xl"
+            className="w-auto max-w-[calc(100vw-2rem)] rounded-xl px-1.5 py-1"
             onPointerEnter={cancelClose}
             onPointerLeave={scheduleClose}
           >
@@ -1755,7 +1757,7 @@ function LinkInteractionPopover({ editor }: { editor: Editor }) {
             anchor={editingLink.anchor}
             side="top"
             sideOffset={8}
-            className="w-[min(22rem,calc(100vw-2rem))] gap-2 rounded-xl border-border/60 bg-background/95 p-1.5 shadow-xl backdrop-blur-xl"
+            className="w-[min(22rem,calc(100vw-2rem))] gap-2 rounded-xl p-1.5"
           >
             <form className="grid gap-2" onSubmit={saveLink}>
               <label className="grid gap-1 px-1 text-xs font-medium text-muted-foreground">
@@ -1914,6 +1916,17 @@ export const NoteRichText = forwardRef<
           highlightPointerDownRef.current = false;
           onHighlightModeChangeRef.current?.(false);
           return true;
+        }
+        if (event.key === "Escape") {
+          const currentEditor = editorInstanceRef.current;
+          if (currentEditor && !currentEditor.state.selection.empty) {
+            event.preventDefault();
+            event.stopPropagation();
+            currentEditor.commands.setTextSelection(
+              currentEditor.state.selection.to,
+            );
+            return true;
+          }
         }
         if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
           event.preventDefault();

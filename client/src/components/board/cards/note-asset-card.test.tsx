@@ -19,9 +19,23 @@ describe("NoteMarkdown", () => {
     );
 
     expect(html).toContain("text-[0.6875rem]");
-    expect(html).toContain("text-[0.8125rem] leading-4");
+    expect(html).toContain("text-base leading-tight");
     expect(html).not.toContain("text-xl");
     expect(html).not.toContain("leading-6");
+  });
+
+  it("keeps the document title above the first heading level", () => {
+    const regularHtml = renderToStaticMarkup(
+      <NoteMarkdown title="Project plan" content="# First section" />,
+    );
+    const compactHtml = renderToStaticMarkup(
+      <NoteMarkdown title="Project plan" content="# First section" compact />,
+    );
+
+    expect(regularHtml).toContain("mb-2 text-2xl leading-tight");
+    expect(regularHtml).toContain("mb-3 text-xl leading-tight");
+    expect(compactHtml).toContain("mb-1 text-base leading-tight");
+    expect(compactHtml).toContain("mb-1 text-sm leading-tight");
   });
 
   it("uses a muted Untitled heading when the title is absent", () => {

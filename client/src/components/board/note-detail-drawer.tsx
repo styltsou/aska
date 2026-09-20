@@ -174,7 +174,7 @@ export function NoteDetailDrawer({
   } = useWorkspacePeek();
   const isMobile = useIsMobile();
   const noteContentRef = useRef<HTMLDivElement>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const richTextRef = useRef<NoteRichTextHandle>(null);
   const draftRef = useRef(note?.content ?? "");
   const titleRef = useRef(note?.title ?? "");

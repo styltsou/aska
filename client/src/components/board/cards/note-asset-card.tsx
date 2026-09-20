@@ -341,8 +341,8 @@ export function NoteMarkdown({
         className={cn(
           "note-card-preview-title mt-0 font-semibold tracking-tight text-sidebar-foreground",
           compact
-            ? "mb-1 text-[0.8125rem] leading-4"
-            : "mb-2 text-xl leading-tight",
+            ? "mb-1 text-base leading-tight"
+            : "mb-2 text-2xl leading-tight",
           isUntitled &&
             "note-card-preview-title--placeholder text-sidebar-foreground/45",
         )}
@@ -368,11 +368,13 @@ export function NoteAssetCard({
   workspaceSlug,
   onOpen,
   isContextMenuOpen = false,
+  selected = false,
 }: {
   asset: NoteAsset;
   workspaceSlug?: string;
   onOpen?: () => void;
   isContextMenuOpen?: boolean;
+  selected?: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -480,9 +482,10 @@ export function NoteAssetCard({
         },
       }}
       className={cn(
-        "group hover:border-sidebar-foreground/20 relative min-w-0 overflow-hidden rounded-lg border bg-sidebar px-4 py-2.5 text-sm transition-[border-color,background-color,filter,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "group relative min-w-0 overflow-hidden rounded-lg border bg-sidebar px-4 py-2.5 text-sm transition-[border-color,background-color,filter,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
         !cardHeights && !isExpanded && "max-h-80",
         effectiveOnOpen && "cursor-pointer",
+        !selected && "hover:border-sidebar-foreground/20",
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}
       role={effectiveOnOpen ? "button" : undefined}

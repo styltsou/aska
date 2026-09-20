@@ -1,3 +1,6 @@
+/* Preserve Tailwind's global cascade order when this colocated file loads first. */
+@layer theme, base, components, utilities;
+
 @layer components {
   .note-workspace-scroll-container {
     scrollbar-width: thin;

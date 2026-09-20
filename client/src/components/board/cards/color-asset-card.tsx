@@ -10,10 +10,12 @@ export function ColorAssetCard({
   asset,
   isContextMenuOpen = false,
   onOpen,
+  selected = false,
 }: {
   asset: ColorAsset;
   isContextMenuOpen?: boolean;
   onOpen?: () => void;
+  selected?: boolean;
 }) {
   const [surfaceHovered, setSurfaceHovered] = useState(false);
   const hasAlpha = asset.hex.length === 9 && !asset.hex.endsWith("ff");
@@ -60,8 +62,9 @@ export function ColorAssetCard({
   return (
     <div
       className={cn(
-        "group relative w-full overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 hover:border-sidebar-foreground/20",
+        "group relative w-full overflow-hidden rounded-lg border bg-sidebar transition-all duration-100",
         onOpen && "cursor-pointer",
+        !selected && "hover:border-sidebar-foreground/20",
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}
       onMouseEnter={() => setSurfaceHovered(true)}

@@ -1,6 +1,10 @@
 @reference "tailwindcss";
 @reference "../../index.css";
 
+/* This CSS can be extracted before index.css. Fix the cascade order here so
+   Tailwind's base heading reset cannot override these component styles. */
+@layer theme, base, components, utilities;
+
 @layer components {
   .note-rich-text-content {
     @apply text-base leading-7 text-sidebar-foreground/80;
@@ -326,4 +330,23 @@
     @apply pointer-events-none float-left h-0 font-normal text-muted-foreground;
     content: attr(data-placeholder);
   }
+}
+
+/* Keep the editable document's block hierarchy above Tailwind's heading
+   normalization. Preview cards supply their own utilities, but Tiptap emits
+   bare semantic heading elements. */
+.note-rich-text-editable .note-rich-text-content h1 {
+  @apply mt-7 mb-4 text-3xl leading-tight font-semibold tracking-tight text-sidebar-foreground;
+}
+
+.note-rich-text-editable .note-rich-text-content h2 {
+  @apply mt-6 mb-3 text-2xl leading-snug font-semibold text-sidebar-foreground;
+}
+
+.note-rich-text-editable .note-rich-text-content h3 {
+  @apply mt-5 mb-2 text-xl leading-snug font-semibold text-sidebar-foreground;
+}
+
+.note-rich-text-editable .note-rich-text-content h4 {
+  @apply mt-4 mb-2 text-base leading-snug font-semibold text-sidebar-foreground;
 }
