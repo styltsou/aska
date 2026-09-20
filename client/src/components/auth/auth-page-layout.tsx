@@ -25,7 +25,7 @@ export function AuthPageLayout({
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_17%,transparent)_1px,transparent_1px)] bg-[size:24px_24px]"
+          className="auth-canvas-tilted-plane pointer-events-none absolute inset-[-18%] z-0 bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_17%,transparent)_1px,transparent_1px)] bg-[size:24px_24px]"
         />
         <AuthCanvasPreview />
         <div

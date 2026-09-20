@@ -111,7 +111,10 @@ function SignupPage() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
-              <InputGroupAddon align="end">
+              <InputGroupAddon
+                align="end"
+                className="relative z-10 rounded-md bg-background"
+              >
                 <button
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -139,7 +142,10 @@ function SignupPage() {
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
               />
-              <InputGroupAddon align="end">
+              <InputGroupAddon
+                align="end"
+                className="relative z-10 rounded-md bg-background"
+              >
                 <button
                   aria-label={
                     showConfirmPassword ? "Hide password" : "Show password"

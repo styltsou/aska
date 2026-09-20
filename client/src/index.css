@@ -141,6 +141,12 @@
   }
 }
 
+.auth-canvas-tilted-plane {
+  transform: perspective(1200px) rotateX(4deg) rotateY(-11deg) rotateZ(-7deg)
+    scale(1.02);
+  transform-origin: center;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

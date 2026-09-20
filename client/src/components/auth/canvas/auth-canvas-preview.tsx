@@ -85,40 +85,44 @@ const GREEN_STUDY: ImageAsset = {
 const MATERIAL_NOTE: NoteAsset = {
   id: "auth-material-note",
   type: "note",
+  title: "Material cues",
   content:
-    "### Material cues\n\nMatte surfaces, one saturated detail, and shadow that describes depth.",
+    "Matte surfaces, one saturated detail, and shadow that describes depth.",
 };
 
 const COLOUR_NOTE: NoteAsset = {
   id: "auth-colour-note",
   type: "note",
-  content:
-    "### Colour as structure\n\nA saturated mark can do more work than a page of explanation.",
+  title: "Colour as structure",
+  content: "A saturated mark can do more work than a page of explanation.",
 };
 
 const RHYTHM_NOTE: NoteAsset = {
   id: "auth-rhythm-note",
   type: "note",
-  content: "### Rhythm\n\nRepeat the spacing, not the idea.",
+  title: "Rhythm",
+  content: "Repeat the spacing, not the idea.",
 };
 
 const EDGE_NOTE: NoteAsset = {
   id: "auth-edge-note",
   type: "note",
-  content: "### Edge\n\nA clean crop can make a collection feel intentional.",
+  title: "Edge",
+  content: "A clean crop can make a collection feel intentional.",
 };
 
 const LIGHT_NOTE: NoteAsset = {
   id: "auth-light-note",
   type: "note",
-  content: "### Light\n\nUse contrast to describe form, not decorate it.",
+  title: "Light",
+  content: "Use contrast to describe form, not decorate it.",
 };
 
 const EDIT_NOTE: NoteAsset = {
   id: "auth-edit-note",
   type: "note",
-  content:
-    "### Edit\n\nKeep only the reference that changes the next decision.",
+  title: "Edit",
+  content: "Keep only the reference that changes the next decision.",
 };
 
 const SHAPE_STUDY: ImageAsset = {
@@ -133,35 +137,36 @@ const SHAPE_STUDY: ImageAsset = {
 const SURFACE_NOTE: NoteAsset = {
   id: "auth-surface-note",
   type: "note",
-  content:
-    "### Surface\n\nTexture belongs where it helps the eye measure depth.",
+  title: "Surface",
+  content: "Texture belongs where it helps the eye measure depth.",
 };
 
 const PALETTE_NOTE: NoteAsset = {
   id: "auth-palette-note",
   type: "note",
-  content:
-    "### Palette\n\nChoose colour families before choosing individual colours.",
+  title: "Palette",
+  content: "Choose colour families before choosing individual colours.",
 };
 
 const FOCUS_NOTE: NoteAsset = {
   id: "auth-focus-note",
   type: "note",
-  content:
-    "### Focus\n\nThe strongest reference is often the most specific one.",
+  title: "Focus",
+  content: "The strongest reference is often the most specific one.",
 };
 
 const BALANCE_NOTE: NoteAsset = {
   id: "auth-balance-note",
   type: "note",
-  content: "### Balance\n\nOffset the weight, then let the empty space work.",
+  title: "Balance",
+  content: "Offset the weight, then let the empty space work.",
 };
 
 const DETAIL_NOTE: NoteAsset = {
   id: "auth-detail-note",
   type: "note",
-  content:
-    "### Detail\n\nA small material change can carry the whole composition.",
+  title: "Detail",
+  content: "A small material change can carry the whole composition.",
 };
 
 const INDEX_STUDY: ImageAsset = {
@@ -194,7 +199,8 @@ const ARCHIVE_STUDY: ImageAsset = {
 const PAUSE_NOTE: NoteAsset = {
   id: "auth-pause-note",
   type: "note",
-  content: "### Pause\n\nMake room for the next useful connection.",
+  title: "Pause",
+  content: "Make room for the next useful connection.",
 };
 
 const REFERENCE_PREVIEW_URLS = [
@@ -235,7 +241,8 @@ const REFERENCES_FOLDER: FolderAsset = {
     {
       assetId: "auth-references-folder-note-preview",
       type: "note",
-      snippet: "Reference set\n\nA small selection for the next pass.",
+      title: "Reference set",
+      snippet: "A small selection for the next pass.",
     },
     {
       assetId: "auth-references-folder-preview-3",
@@ -269,7 +276,8 @@ const MATERIALS_FOLDER: FolderAsset = {
     {
       assetId: "auth-materials-folder-note-preview",
       type: "note",
-      snippet: "Surface samples\n\nColour, grain, and edge quality.",
+      title: "Surface samples",
+      snippet: "Colour, grain, and edge quality.",
     },
   ],
 };
@@ -332,29 +340,33 @@ export function AuthCanvasPreview() {
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 z-[1]"
     >
-      <div className="absolute top-1/2 left-[68%] grid w-[51rem] origin-center [transform:translate(-50%,-50%)_perspective(1200px)_rotateX(4deg)_rotateY(-11deg)_rotateZ(-7deg)_scale(1.02)] grid-cols-[repeat(4,10.5rem)] gap-7 p-8">
-        {CANVAS_COLUMNS.map((column, columnIndex) => (
-          <div
-            key={`column-${columnIndex}`}
-            className={`flex flex-col gap-7 ${COLUMN_OFFSETS[columnIndex]}`}
-          >
-            {column.map((asset, itemIndex) => (
-              <div
-                key={`${asset.id}-${itemIndex}`}
-                className="relative z-[1] min-w-0 [&>*]:shadow-[0_0.5rem_1rem_-0.75rem_color-mix(in_oklch,var(--foreground)_14%,transparent)]"
-                data-preview-kind={asset.type}
-              >
-                {asset.type === "image" ? (
-                  <ImageAssetCard asset={asset} />
-                ) : null}
-                {asset.type === "note" ? <NoteAssetCard asset={asset} /> : null}
-                {asset.type === "folder" ? (
-                  <FolderAssetCard asset={asset} />
-                ) : null}
-              </div>
-            ))}
-          </div>
-        ))}
+      <div className="absolute top-1/2 left-[68%] w-[51rem] -translate-x-1/2 -translate-y-1/2">
+        <div className="auth-canvas-tilted-plane grid grid-cols-[repeat(4,10.5rem)] gap-7 p-8">
+          {CANVAS_COLUMNS.map((column, columnIndex) => (
+            <div
+              key={`column-${columnIndex}`}
+              className={`flex flex-col gap-7 ${COLUMN_OFFSETS[columnIndex]}`}
+            >
+              {column.map((asset, itemIndex) => (
+                <div
+                  key={`${asset.id}-${itemIndex}`}
+                  className="relative z-[1] min-w-0 [&>*]:shadow-[0_0.5rem_1rem_-0.75rem_color-mix(in_oklch,var(--foreground)_14%,transparent)]"
+                  data-preview-kind={asset.type}
+                >
+                  {asset.type === "image" ? (
+                    <ImageAssetCard asset={asset} />
+                  ) : null}
+                  {asset.type === "note" ? (
+                    <NoteAssetCard asset={asset} />
+                  ) : null}
+                  {asset.type === "folder" ? (
+                    <FolderAssetCard asset={asset} />
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
