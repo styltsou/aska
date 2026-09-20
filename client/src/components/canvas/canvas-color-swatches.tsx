@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PlusIcon } from "lucide-react";
 
 import type { CanvasObjectColor } from "@/api/collection";
@@ -7,7 +7,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { GLASS_OPTION_BAR_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import {
   CANVAS_OBJECT_OVERFLOW_COLORS,
@@ -20,17 +19,24 @@ type CanvasColorSwatchesProps = {
   value: CanvasObjectColor;
   onChange: (color: CanvasObjectColor) => void;
   ariaLabel: string;
+  /** Changes when a canvas viewport interaction should dismiss the popover. */
+  dismissKey?: number;
 };
 
 export function CanvasColorSwatches({
   value,
   onChange,
   ariaLabel,
+  dismissKey,
 }: CanvasColorSwatchesProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const overflowColor = CANVAS_OBJECT_OVERFLOW_COLORS.includes(value)
     ? value
     : undefined;
+
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [dismissKey]);
 
   return (
     <div
@@ -72,15 +78,12 @@ export function CanvasColorSwatches({
                 className="absolute inset-0 rounded-[inherit]"
                 style={{ backgroundColor: canvasObjectColor(overflowColor) }}
               />
-              <span className="absolute right-0.5 bottom-0.5 flex size-2.5 items-center justify-center rounded-[2px] bg-popover/90 text-popover-foreground shadow-sm ring-1 ring-foreground/15">
+              <span className="absolute right-0.5 bottom-0.5 flex size-2.5 items-center justify-center rounded-[2px] bg-popover/90 text-foreground shadow-sm ring-1 ring-foreground/15">
                 <PlusIcon className="size-2" strokeWidth={2.5} />
               </span>
             </>
           ) : (
-            <PlusIcon
-              className="size-3 text-muted-foreground"
-              strokeWidth={2}
-            />
+            <PlusIcon className="size-3 text-foreground" strokeWidth={2} />
           )}
           <SwatchSelectionMark
             color={overflowColor ?? "ink"}
@@ -91,7 +94,7 @@ export function CanvasColorSwatches({
           side="bottom"
           align="end"
           sideOffset={8}
-          className={cn("w-auto min-w-0 gap-0 p-2", GLASS_OPTION_BAR_CLASS)}
+          className="w-auto min-w-0 gap-0 p-2"
         >
           <div
             className="grid grid-cols-4 gap-1.5"

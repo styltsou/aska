@@ -14,12 +14,14 @@ import { LinkAssetCard } from "@/components/board/cards/link-asset-card";
 import { ColorAssetCard } from "@/components/board/cards/color-asset-card";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { cn } from "@/lib/utils";
+import { useTransientStore } from "@/store";
 import type { LinkAsset } from "@/types/asset";
 
 import type { CanvasDropStackStyle } from "./canvas-drop-stack";
 
 export type CanvasNodeData = {
   collectionNode: CollectionNode;
+  boardKey: string;
   deleteContext: {
     workspaceSlug: string;
     collectionSlug: string;
@@ -63,6 +65,9 @@ export const CanvasCard = memo(function CanvasCard({
   dragging,
   selected,
 }: NodeProps<CanvasNode>) {
+  const viewportActivity = useTransientStore(
+    (state) => state.canvasViewportActivity[data.boardKey] ?? 0,
+  );
   const node = data.collectionNode;
   const asset = collectionNodeToAsset(node);
   const isPending = isPendingCollectionNode(node);
@@ -87,6 +92,7 @@ export const CanvasCard = memo(function CanvasCard({
           asset={asset}
           onOpen={isPending ? undefined : () => data.onOpenImage(node)}
           isContextMenuOpen={isContextMenuOpen}
+          selected={selected}
         />
       ) : null}
       {node.type === "note" && asset.type === "note" ? (
@@ -95,6 +101,7 @@ export const CanvasCard = memo(function CanvasCard({
           workspaceSlug={data.deleteContext.workspaceSlug}
           onOpen={isPending ? undefined : () => data.onOpenNote(node)}
           isContextMenuOpen={isContextMenuOpen}
+          selected={selected}
         />
       ) : null}
       {node.type === "link" && asset.type === "link" ? (
@@ -102,6 +109,7 @@ export const CanvasCard = memo(function CanvasCard({
           asset={asset}
           onOpen={asset.video ? () => data.onOpenVideo(asset) : undefined}
           isContextMenuOpen={isContextMenuOpen}
+          selected={selected}
         />
       ) : null}
       {node.type === "color" && displayAsset.type === "color" ? (
@@ -109,6 +117,7 @@ export const CanvasCard = memo(function CanvasCard({
           asset={displayAsset}
           onOpen={isPending ? undefined : () => data.onOpenColor(node)}
           isContextMenuOpen={isContextMenuOpen}
+          selected={selected}
         />
       ) : null}
       {node.type === "folder" && asset.type === "folder" ? (
@@ -119,6 +128,7 @@ export const CanvasCard = memo(function CanvasCard({
           isDropTarget={data.isDropTarget}
           onOpen={() => data.onOpenFolder(node)}
           isContextMenuOpen={isContextMenuOpen}
+          selected={selected}
         />
       ) : null}
     </div>
@@ -133,7 +143,7 @@ export const CanvasCard = memo(function CanvasCard({
         data.isColorFocused && "outline-2 outline-primary outline-offset-2",
         node.type === "folder" &&
           data.isDropTarget &&
-          "bg-accent/45 ring-2 ring-primary ring-offset-2 ring-offset-background",
+          "bg-accent/45 ring-2 ring-primary ring-offset-2 ring-offset-card",
       )}
       animate={stackAnimation}
       transition={{
@@ -182,6 +192,8 @@ export const CanvasCard = memo(function CanvasCard({
           asset={asset}
           deleteContext={data.deleteContext}
           onOpenVideo={data.onOpenVideo}
+          dismissVersion={viewportActivity}
+          canvasBoardKey={data.boardKey}
         >
           {card}
         </AssetContextMenu>
@@ -204,7 +216,7 @@ export const CanvasCard = memo(function CanvasCard({
       {selected ? (
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-background"
+          className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-card"
         />
       ) : null}
     </motion.div>

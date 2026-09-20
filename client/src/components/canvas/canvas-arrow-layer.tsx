@@ -1,6 +1,12 @@
 import { useState } from "react";
-import { ViewportPortal, useReactFlow, type Node } from "@xyflow/react";
-import { Trash2Icon } from "lucide-react";
+import {
+  ViewportPortal,
+  useReactFlow,
+  useStore,
+  type Node,
+} from "@xyflow/react";
+import { ChevronDownIcon, Trash2Icon } from "lucide-react";
+import { AnimatePresence } from "motion/react";
 
 import type {
   BoardPosition,
@@ -12,13 +18,29 @@ import type {
   CanvasArrowStyle,
   CanvasObjectColor,
 } from "@/api/collection";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { GLASS_OPTION_TOOLBAR_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
+import { useTransientStore } from "@/store";
+import { CanvasColorSwatches } from "./canvas-color-swatches";
+import { CanvasScreenOverlay } from "./canvas-screen-overlay";
+import {
+  arrowheadSketchJitter,
+  arrowMarkerRefX,
+  makeArrowPaths,
+} from "./canvas-arrow-geometry";
 import {
   CANVAS_OBJECT_COLORS,
   arrowDashArray,
   canvasObjectColor,
 } from "./canvas-object-style";
-import { ARROW_Z_INDEX, OVERLAY_Z_INDEX } from "./canvas-node-stacking";
+import { ARROW_Z_INDEX } from "./canvas-node-stacking";
 
 export type DraftCanvasArrow = Pick<
   CanvasArrowObject,
@@ -53,6 +75,7 @@ type ArrowUpdate = Partial<
 export function CanvasArrowLayer({
   arrows,
   draft,
+  boardKey,
   selectedIds,
   enabled,
   onSelect,
@@ -61,6 +84,7 @@ export function CanvasArrowLayer({
 }: {
   arrows: CanvasArrowObject[];
   draft?: DraftCanvasArrow;
+  boardKey: string;
   selectedIds: ReadonlySet<string>;
   enabled: boolean;
   onSelect: (id: string, event: React.PointerEvent) => void;
@@ -73,8 +97,11 @@ export function CanvasArrowLayer({
 }) {
   const { getNode, getNodes, getViewport, screenToFlowPosition } =
     useReactFlow<Node>();
+  const zoom = useStore((state) => state.transform[2]);
+  const viewportActivity = useTransientStore(
+    (state) => state.canvasViewportActivity[boardKey] ?? 0,
+  );
   const [previews, setPreviews] = useState<Record<string, ArrowGeometry>>({});
-  const [draggingId, setDraggingId] = useState<string>();
 
   const resolveEndpoint = (endpoint: CanvasArrowEndpoint) => {
     const target = endpoint.binding
@@ -147,7 +174,6 @@ export function CanvasArrowLayer({
     event.preventDefault();
     event.stopPropagation();
     onSelect(arrow.id, event);
-    setDraggingId(arrow.id);
     const pointerStart = screenToFlowPosition({
       x: event.clientX,
       y: event.clientY,
@@ -185,7 +211,6 @@ export function CanvasArrowLayer({
     };
     const up = (upEvent: PointerEvent) => {
       cleanup();
-      setDraggingId(undefined);
       if (!didMove) {
         clearPreview(arrow.id);
         return;
@@ -224,7 +249,6 @@ export function CanvasArrowLayer({
     };
     const cancel = () => {
       cleanup();
-      setDraggingId(undefined);
       clearPreview(arrow.id);
     };
     const cleanup = () => {
@@ -242,15 +266,19 @@ export function CanvasArrowLayer({
     arrow: CanvasArrowObject,
     index: number,
     insert: boolean,
+    insertionPoint?: BoardPosition,
   ) => {
     if (!enabled) return;
     event.preventDefault();
     event.stopPropagation();
     onSelect(arrow.id, event);
-    setDraggingId(arrow.id);
     const geometry = resolvedGeometry(arrow, resolveEndpoint);
     const initialPoints = insert
-      ? insertPoint(geometry.points, index, midpointForSegment(geometry, index))
+      ? insertPoint(
+          geometry.points,
+          index,
+          insertionPoint ?? midpointForSegment(geometry, index),
+        )
       : geometry.points;
     const pointerStart = screenToFlowPosition({
       x: event.clientX,
@@ -268,17 +296,21 @@ export function CanvasArrowLayer({
         y: point.y - pointerStart.y,
       };
       didMove ||= Math.hypot(delta.x, delta.y) > 1;
-      latestPoints = initialPoints.map((bend, bendIndex) =>
-        bendIndex === index ? addPoint(bend, delta) : bend,
-      );
+      latestPoints = initialPoints.map((bend, bendIndex) => {
+        if (bendIndex !== index) return bend;
+        return insert ? point : addPoint(bend, delta);
+      });
       setPreviews((current) => ({
         ...current,
-        [arrow.id]: { ...geometry, points: latestPoints, routing: "smooth" },
+        [arrow.id]: {
+          ...geometry,
+          points: latestPoints,
+          routing: geometry.routing,
+        },
       }));
     };
     const up = () => {
       cleanup();
-      setDraggingId(undefined);
       if (!didMove) {
         clearPreview(arrow.id);
         return;
@@ -286,17 +318,16 @@ export function CanvasArrowLayer({
       const points = latestPoints.map(roundPoint);
       setPreviews((current) => ({
         ...current,
-        [arrow.id]: { ...geometry, points, routing: "smooth" },
+        [arrow.id]: { ...geometry, points, routing: geometry.routing },
       }));
       onUpdate(
         arrow.id,
-        { points, routing: "smooth" },
+        { points, routing: geometry.routing },
         { onSettled: () => clearPreview(arrow.id) },
       );
     };
     const cancel = () => {
       cleanup();
-      setDraggingId(undefined);
       clearPreview(arrow.id);
     };
     const cleanup = () => {
@@ -323,177 +354,258 @@ export function CanvasArrowLayer({
     : arrows;
 
   return (
-    <ViewportPortal>
-      <svg
-        className="pointer-events-none absolute top-0 left-0 overflow-visible"
-        style={{ zIndex: ARROW_Z_INDEX }}
-        width="1"
-        height="1"
-        aria-label="Canvas arrows"
-      >
-        <defs>
-          {CANVAS_OBJECT_COLORS.flatMap((color) =>
-            (["filled", "hollow", "chevron"] as CanvasArrowHead[]).map(
-              (head) => (
-                <ArrowMarker
-                  key={`${color}-${head}-clean`}
-                  color={color}
-                  head={head}
-                  style="clean"
-                />
+    <>
+      <ViewportPortal>
+        <svg
+          className="pointer-events-none absolute top-0 left-0 overflow-visible"
+          style={{ zIndex: ARROW_Z_INDEX }}
+          width="1"
+          height="1"
+          aria-label="Canvas arrows"
+        >
+          <defs>
+            {CANVAS_OBJECT_COLORS.flatMap((color) =>
+              (["filled", "hollow", "chevron"] as CanvasArrowHead[]).map(
+                (head) => (
+                  <ArrowMarker
+                    key={`${color}-${head}-clean`}
+                    color={color}
+                    head={head}
+                    style="clean"
+                  />
+                ),
               ),
-            ),
-          )}
-        </defs>
-        {rendered.map((arrow) => {
+            )}
+          </defs>
+          {rendered.map((arrow) => {
+            const preview = previews[arrow.id];
+            const geometry = preview
+              ? resolvedGeometry({ ...arrow, ...preview }, resolveEndpoint)
+              : resolvedGeometry(arrow, resolveEndpoint);
+            const points = geometryPoints(geometry);
+            const selected = selectedIds.has(arrow.id);
+            const paths = makeArrowPaths(
+              arrow.id,
+              points,
+              arrow.style,
+              geometry.routing,
+            );
+            const endpointHandles = endpointHandlePositions(points, zoom);
+            return (
+              <g key={arrow.id}>
+                {arrow.style === "sketch" ? (
+                  <defs>
+                    <ArrowMarker
+                      color={arrow.color}
+                      head={arrow.head}
+                      style="sketch"
+                      seed={arrow.id}
+                    />
+                  </defs>
+                ) : null}
+                {selected ? (
+                  <path
+                    d={paths.primary}
+                    fill="none"
+                    stroke="var(--background)"
+                    strokeWidth="6"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null}
+                {paths.secondary ? (
+                  <path
+                    d={paths.secondary}
+                    fill="none"
+                    stroke={canvasObjectColor(arrow.color)}
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray={arrowDashArray(arrow.pattern)}
+                    opacity={arrow.pattern === "solid" ? 0.65 : 0.42}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null}
+                <path
+                  d={paths.primary}
+                  fill="none"
+                  stroke={canvasObjectColor(arrow.color)}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={arrowDashArray(arrow.pattern)}
+                  vectorEffect="non-scaling-stroke"
+                  markerEnd={`url(#aska-arrowhead-${arrow.color}-${arrow.head}-${arrow.style}${arrow.style === "sketch" ? `-${arrow.id}` : ""})`}
+                />
+                {arrow.id !== "arrow-draft" ? (
+                  <path
+                    d={paths.canonical}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth="16"
+                    vectorEffect="non-scaling-stroke"
+                    className="pointer-events-auto cursor-move"
+                    data-selection-node-id={arrow.id}
+                    onPointerDown={(event) => beginDrag(event, arrow, "body")}
+                  />
+                ) : null}
+                {selected ? (
+                  <>
+                    <ArrowCircleHandle
+                      position={endpointHandles.start}
+                      zoom={zoom}
+                      color={arrow.color}
+                      onPointerDown={(event) =>
+                        beginDrag(event, arrow, "start")
+                      }
+                    />
+                    <ArrowCircleHandle
+                      position={endpointHandles.end}
+                      zoom={zoom}
+                      color={arrow.color}
+                      onPointerDown={(event) => beginDrag(event, arrow, "end")}
+                    />
+                    {geometry.points.map((point, index) => (
+                      <ArrowCircleHandle
+                        key={`point-${index}`}
+                        position={point}
+                        zoom={zoom}
+                        color={arrow.color}
+                        onPointerDown={(event) =>
+                          beginBendDrag(event, arrow, index, false)
+                        }
+                      />
+                    ))}
+                    {paths.segmentAnchors.map((point, index) => (
+                      <ArrowDiamondHandle
+                        key={`insert-${index}`}
+                        position={point}
+                        zoom={zoom}
+                        color={arrow.color}
+                        onPointerDown={(event) =>
+                          beginBendDrag(event, arrow, index, true, point)
+                        }
+                      />
+                    ))}
+                  </>
+                ) : null}
+              </g>
+            );
+          })}
+        </svg>
+      </ViewportPortal>
+      <AnimatePresence initial={false}>
+        {arrows.map((arrow) => {
+          if (!selectedIds.has(arrow.id)) return null;
           const preview = previews[arrow.id];
           const geometry = preview
             ? resolvedGeometry({ ...arrow, ...preview }, resolveEndpoint)
             : resolvedGeometry(arrow, resolveEndpoint);
-          const points = geometryPoints(geometry);
-          const selected = selectedIds.has(arrow.id);
-          const path = makeArrowPath(
-            arrow.id,
-            points,
-            arrow.style,
-            geometry.routing,
-          );
-          const endpointHandles = endpointHandlePositions(
-            points,
-            getViewport().zoom,
-          );
           return (
-            <g
-              key={arrow.id}
-              className={cn(
-                (arrow.id === "arrow-draft" || draggingId === arrow.id) &&
-                  "opacity-65",
-              )}
-            >
-              {arrow.style === "sketch" ? (
-                <defs>
-                  <ArrowMarker
-                    color={arrow.color}
-                    head={arrow.head}
-                    style="sketch"
-                    seed={arrow.id}
-                  />
-                </defs>
-              ) : null}
-              {selected ? (
-                <path
-                  d={path}
-                  fill="none"
-                  stroke="var(--background)"
-                  strokeWidth="6"
-                  vectorEffect="non-scaling-stroke"
-                />
-              ) : null}
-              <path
-                d={path}
-                fill="none"
-                stroke={canvasObjectColor(arrow.color)}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray={arrowDashArray(arrow.pattern)}
-                vectorEffect="non-scaling-stroke"
-                markerEnd={`url(#aska-arrowhead-${arrow.color}-${arrow.head}-${arrow.style}${arrow.style === "sketch" ? `-${arrow.id}` : ""})`}
-              />
-              {arrow.id !== "arrow-draft" ? (
-                <path
-                  d={path}
-                  fill="none"
-                  stroke="transparent"
-                  strokeWidth="16"
-                  vectorEffect="non-scaling-stroke"
-                  className="pointer-events-auto cursor-move"
-                  data-selection-node-id={arrow.id}
-                  onPointerDown={(event) => beginDrag(event, arrow, "body")}
-                />
-              ) : null}
-              {selected ? (
-                <>
-                  <circle
-                    cx={endpointHandles.start.x}
-                    cy={endpointHandles.start.y}
-                    r="5"
-                    fill="var(--background)"
-                    stroke={canvasObjectColor(arrow.color)}
-                    strokeWidth="2"
-                    vectorEffect="non-scaling-stroke"
-                    className="pointer-events-auto cursor-crosshair"
-                    onPointerDown={(event) => beginDrag(event, arrow, "start")}
-                  />
-                  <circle
-                    cx={endpointHandles.end.x}
-                    cy={endpointHandles.end.y}
-                    r="5"
-                    fill="var(--background)"
-                    stroke={canvasObjectColor(arrow.color)}
-                    strokeWidth="2"
-                    vectorEffect="non-scaling-stroke"
-                    className="pointer-events-auto cursor-crosshair"
-                    onPointerDown={(event) => beginDrag(event, arrow, "end")}
-                  />
-                  {geometry.points.map((point, index) => (
-                    <circle
-                      key={`point-${index}`}
-                      cx={point.x}
-                      cy={point.y}
-                      r="5"
-                      fill="var(--background)"
-                      stroke={canvasObjectColor(arrow.color)}
-                      strokeWidth="2"
-                      vectorEffect="non-scaling-stroke"
-                      className="pointer-events-auto cursor-grab active:cursor-grabbing"
-                      onPointerDown={(event) =>
-                        beginBendDrag(event, arrow, index, false)
-                      }
-                    />
-                  ))}
-                  {segmentMidpoints(geometry).map((point, index) => (
-                    <rect
-                      key={`insert-${index}`}
-                      x={point.x - 3}
-                      y={point.y - 3}
-                      width="6"
-                      height="6"
-                      rx="1"
-                      fill="var(--background)"
-                      stroke={canvasObjectColor(arrow.color)}
-                      strokeWidth="1.5"
-                      vectorEffect="non-scaling-stroke"
-                      transform={`rotate(45 ${point.x} ${point.y})`}
-                      className="pointer-events-auto cursor-crosshair"
-                      onPointerDown={(event) =>
-                        beginBendDrag(event, arrow, index, true)
-                      }
-                    />
-                  ))}
-                </>
-              ) : null}
-            </g>
+            <ArrowToolbar
+              key={`${arrow.id}-toolbar`}
+              arrow={preview ? { ...arrow, ...preview } : arrow}
+              position={toolbarPosition(geometry)}
+              dismissKey={viewportActivity}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+            />
           );
         })}
-      </svg>
-      {arrows.map((arrow) => {
-        if (!selectedIds.has(arrow.id)) return null;
-        const preview = previews[arrow.id];
-        const geometry = preview
-          ? resolvedGeometry({ ...arrow, ...preview }, resolveEndpoint)
-          : resolvedGeometry(arrow, resolveEndpoint);
-        return (
-          <ArrowToolbar
-            key={`${arrow.id}-toolbar`}
-            arrow={preview ? { ...arrow, ...preview } : arrow}
-            position={toolbarPosition(geometry)}
-            onUpdate={onUpdate}
-            onDelete={onDelete}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function ArrowCircleHandle({
+  position,
+  zoom,
+  color,
+  onPointerDown,
+}: {
+  position: BoardPosition;
+  zoom: number;
+  color: CanvasObjectColor;
+  onPointerDown: (event: React.PointerEvent<SVGGElement>) => void;
+}) {
+  return (
+    <g
+      className="group/arrow-handle pointer-events-auto cursor-grab active:cursor-grabbing"
+      style={{ touchAction: "none" }}
+      onPointerDown={onPointerDown}
+    >
+      <circle
+        cx={position.x}
+        cy={position.y}
+        r={10 / zoom}
+        fill="transparent"
+      />
+      <g className="pointer-events-none origin-center scale-[0.78] opacity-0 transition-[transform,opacity] duration-150 ease-out [transform-box:fill-box] group-hover/arrow-handle:scale-100 group-hover/arrow-handle:opacity-[0.14] motion-reduce:scale-100 motion-reduce:transition-none">
+        <circle
+          cx={position.x}
+          cy={position.y}
+          r={7 / zoom}
+          fill={canvasObjectColor(color)}
+        />
+      </g>
+      <circle
+        cx={position.x}
+        cy={position.y}
+        r={5 / zoom}
+        fill="var(--background)"
+        stroke={canvasObjectColor(color)}
+        strokeWidth="2"
+        vectorEffect="non-scaling-stroke"
+        className="pointer-events-none transition-[fill,stroke-width] duration-100 ease-out group-hover/arrow-handle:fill-accent group-hover/arrow-handle:stroke-[2.75px]"
+      />
+    </g>
+  );
+}
+
+function ArrowDiamondHandle({
+  position,
+  zoom,
+  color,
+  onPointerDown,
+}: {
+  position: BoardPosition;
+  zoom: number;
+  color: CanvasObjectColor;
+  onPointerDown: (event: React.PointerEvent<SVGGElement>) => void;
+}) {
+  const size = 6.5 / zoom;
+  const hoverSize = 9 / zoom;
+  return (
+    <g
+      className="group/arrow-handle pointer-events-auto cursor-grab active:cursor-grabbing"
+      style={{ touchAction: "none" }}
+      onPointerDown={onPointerDown}
+    >
+      <circle cx={position.x} cy={position.y} r={9 / zoom} fill="transparent" />
+      <g transform={`rotate(45 ${position.x} ${position.y})`}>
+        <g className="pointer-events-none origin-center scale-[0.78] opacity-0 transition-[transform,opacity] duration-150 ease-out [transform-box:fill-box] group-hover/arrow-handle:scale-100 group-hover/arrow-handle:opacity-[0.14] motion-reduce:scale-100 motion-reduce:transition-none">
+          <rect
+            x={position.x - hoverSize / 2}
+            y={position.y - hoverSize / 2}
+            width={hoverSize}
+            height={hoverSize}
+            rx={1.25 / zoom}
+            fill={canvasObjectColor(color)}
           />
-        );
-      })}
-    </ViewportPortal>
+        </g>
+        <rect
+          x={position.x - size / 2}
+          y={position.y - size / 2}
+          width={size}
+          height={size}
+          rx={1 / zoom}
+          fill="var(--background)"
+          stroke={canvasObjectColor(color)}
+          strokeWidth="1.5"
+          vectorEffect="non-scaling-stroke"
+          className="pointer-events-none transition-[fill,stroke-width] duration-100 ease-out group-hover/arrow-handle:fill-accent group-hover/arrow-handle:stroke-[2.25px]"
+        />
+      </g>
+    </g>
   );
 }
 
@@ -509,186 +621,256 @@ function ArrowMarker({
   seed?: string;
 }) {
   const stroke = canvasObjectColor(color);
-  const skew = style === "sketch" ? arrowheadSketchJitter(seed ?? "") : null;
-  const tip = 4 + (skew?.tipY ?? 0);
-  const left =
-    head === "filled"
-      ? { x: skew?.leftX ?? 0, y: skew?.leftY ?? 0 }
-      : { x: 0.75 + (skew?.leftX ?? 0), y: 0.75 + (skew?.leftY ?? 0) };
-  const right =
-    head === "filled"
-      ? { x: skew?.rightX ?? 0, y: 8 + (skew?.rightY ?? 0) }
-      : { x: 0.75 + (skew?.rightX ?? 0), y: 7.25 + (skew?.rightY ?? 0) };
-  const path = `M ${left.x} ${left.y} L 8 ${tip} L ${right.x} ${right.y}`;
+  const markerPath = (pass: "primary" | "secondary") => {
+    const skew =
+      style === "sketch"
+        ? arrowheadSketchJitter(seed ?? "", pass)
+        : { tipY: 0, leftX: 0, leftY: 0, rightX: 0, rightY: 0 };
+    const inset = head === "filled" ? 0 : 0.75;
+    const left = { x: inset + skew.leftX, y: inset + skew.leftY };
+    const right = {
+      x: inset + skew.rightX,
+      y: 8 - inset + skew.rightY,
+    };
+    return `M ${left.x} ${left.y} L 8 ${4 + skew.tipY} L ${right.x} ${right.y}`;
+  };
+  const primaryPath = markerPath("primary");
+  const secondaryPath = markerPath("secondary");
   return (
     <marker
       id={`aska-arrowhead-${color}-${head}-${style}${style === "sketch" && seed ? `-${seed}` : ""}`}
       markerWidth="9"
       markerHeight="9"
-      refX="8"
+      refX={arrowMarkerRefX(style, head)}
       refY="4"
       orient="auto"
       markerUnits="strokeWidth"
+      overflow="visible"
     >
       {head === "filled" ? (
-        <path d={`${path} z`} fill={stroke} />
+        <>
+          <path d={`${primaryPath} z`} fill={stroke} />
+          {style === "sketch" ? (
+            <path
+              d={`${secondaryPath} z`}
+              fill="none"
+              stroke={stroke}
+              strokeWidth="0.65"
+              strokeLinejoin="round"
+              opacity="0.65"
+            />
+          ) : null}
+        </>
       ) : head === "hollow" ? (
-        <path
-          d={`${path} z`}
-          fill="var(--background)"
-          stroke={stroke}
-          strokeWidth="1"
-          strokeLinejoin="round"
-        />
+        <>
+          <path
+            d={`${primaryPath} z`}
+            fill="var(--background)"
+            stroke={stroke}
+            strokeWidth="1"
+            strokeLinejoin="round"
+          />
+          {style === "sketch" ? (
+            <path
+              d={`${secondaryPath} z`}
+              fill="none"
+              stroke={stroke}
+              strokeWidth="0.7"
+              strokeLinejoin="round"
+              opacity="0.65"
+            />
+          ) : null}
+        </>
       ) : (
-        <path
-          d={path}
-          fill="none"
-          stroke={stroke}
-          strokeWidth="1"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <>
+          <path
+            d={primaryPath}
+            fill="none"
+            stroke={stroke}
+            strokeWidth="1"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {style === "sketch" ? (
+            <path
+              d={secondaryPath}
+              fill="none"
+              stroke={stroke}
+              strokeWidth="0.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.65"
+            />
+          ) : null}
+        </>
       )}
     </marker>
   );
 }
 
-function arrowheadSketchJitter(seed: string) {
-  let state =
-    [...seed].reduce(
-      (value, char) => (value * 31 + char.charCodeAt(0)) % 0xffff_ffff,
-      0x811c9dc5,
-    ) || 1;
-  const next = () => {
-    state ^= state << 13;
-    state ^= state >>> 17;
-    state ^= state << 5;
-    state >>>= 0;
-    return state / 0xffff_ffff;
-  };
-  const spread = (magnitude: number) => (next() * 2 - 1) * magnitude;
-  return {
-    tipY: spread(0.9),
-    leftX: spread(0.5),
-    leftY: spread(0.5),
-    rightX: spread(0.5),
-    rightY: spread(0.5),
-  };
-}
-
 function ArrowToolbar({
   arrow,
   position,
+  dismissKey,
   onUpdate,
   onDelete,
 }: {
   arrow: CanvasArrowObject;
   position: BoardPosition;
+  dismissKey: number;
   onUpdate: (id: string, update: ArrowUpdate) => void;
   onDelete: (id: string) => void;
 }) {
   return (
-    <div
-      role="toolbar"
-      aria-label="Arrow style"
-      className="nodrag nopan nowheel absolute flex -translate-x-1/2 -translate-y-full items-center gap-1 rounded-lg border border-border/70 bg-popover/95 p-1 text-popover-foreground shadow-lg backdrop-blur"
-      style={{
-        left: position.x,
-        top: position.y,
-        zIndex: OVERLAY_Z_INDEX,
-        pointerEvents: "all",
-      }}
-      onPointerDown={(event) => event.stopPropagation()}
-    >
-      {(["clean", "sketch"] as CanvasArrowStyle[]).map((style) => (
-        <button
-          key={style}
-          type="button"
-          className={cn(
-            "h-7 cursor-pointer rounded-md px-2 text-xs capitalize hover:bg-accent",
-            arrow.style === style && "bg-accent",
-          )}
-          aria-pressed={arrow.style === style}
-          onClick={() => onUpdate(arrow.id, { style })}
-        >
-          {style}
-        </button>
-      ))}
-      <ToolbarDivider />
-      {(["straight", "smooth"] as CanvasArrowRouting[]).map((routing) => (
-        <button
-          key={routing}
-          type="button"
-          className={cn(
-            "h-7 cursor-pointer rounded-md px-2 text-xs hover:bg-accent",
-            arrow.routing === routing && "bg-accent",
-          )}
-          aria-label={`${routing} arrow path`}
-          aria-pressed={arrow.routing === routing}
-          onClick={() => onUpdate(arrow.id, { routing })}
-        >
-          {routing === "straight" ? "Line" : "Curve"}
-        </button>
-      ))}
-      <ToolbarDivider />
-      {(["filled", "hollow", "chevron"] as CanvasArrowHead[]).map((head) => (
-        <button
-          key={head}
-          type="button"
-          className={cn(
-            "flex size-7 cursor-pointer items-center justify-center rounded-md hover:bg-accent",
-            arrow.head === head && "bg-accent",
-          )}
-          aria-label={`${head} arrowhead`}
-          aria-pressed={arrow.head === head}
-          onClick={() => onUpdate(arrow.id, { head })}
-        >
-          <ArrowheadGlyph head={head} />
-        </button>
-      ))}
-      <ToolbarDivider />
-      {(["solid", "dashed", "dotted"] as CanvasArrowPattern[]).map(
-        (pattern) => (
-          <button
-            key={pattern}
-            type="button"
-            className={cn(
-              "h-7 cursor-pointer rounded-md px-2 text-[11px] capitalize hover:bg-accent",
-              arrow.pattern === pattern && "bg-accent",
-            )}
-            aria-pressed={arrow.pattern === pattern}
-            onClick={() => onUpdate(arrow.id, { pattern })}
-          >
-            {pattern}
-          </button>
-        ),
-      )}
-      <ToolbarDivider />
-      {CANVAS_OBJECT_COLORS.map((color) => (
-        <button
-          key={color}
-          type="button"
-          className={cn(
-            "size-5 cursor-pointer rounded-full border border-black/10 ring-offset-2 ring-offset-popover",
-            arrow.color === color && "ring-2 ring-ring",
-          )}
-          style={{ backgroundColor: canvasObjectColor(color) }}
-          aria-label={`${color} arrow color`}
-          aria-pressed={arrow.color === color}
-          onClick={() => onUpdate(arrow.id, { color })}
-        />
-      ))}
-      <ToolbarDivider />
-      <button
-        type="button"
-        className="flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-        aria-label="Delete arrow"
-        onClick={() => onDelete(arrow.id)}
+    <CanvasScreenOverlay anchor={position} align="center" offset={18}>
+      <div
+        role="toolbar"
+        aria-label="Arrow style"
+        className="flex items-center gap-2"
+        onPointerDown={(event) => event.stopPropagation()}
       >
-        <Trash2Icon className="size-3.5" />
-      </button>
-    </div>
+        <div
+          className={cn(
+            "flex items-center gap-0.5 rounded-lg px-1.5 py-1",
+            GLASS_OPTION_TOOLBAR_CLASS,
+          )}
+        >
+          <DropdownMenu key={`pattern-${dismissKey}`}>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  className="flex h-7 items-center gap-1 rounded-md px-2 text-xs capitalize transition-colors hover:bg-foreground/5 data-popup-open:bg-foreground/10"
+                />
+              }
+              aria-label="Arrow line type"
+            >
+              {arrow.pattern}
+              <ChevronDownIcon className="size-3 text-muted-foreground" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="bottom"
+              align="start"
+              sideOffset={8}
+              className="min-w-28"
+            >
+              <DropdownMenuRadioGroup
+                value={arrow.pattern}
+                onValueChange={(value) =>
+                  onUpdate(arrow.id, { pattern: value as CanvasArrowPattern })
+                }
+              >
+                {(["solid", "dashed", "dotted"] as CanvasArrowPattern[]).map(
+                  (pattern) => (
+                    <DropdownMenuRadioItem
+                      key={pattern}
+                      value={pattern}
+                      className="capitalize"
+                    >
+                      {pattern}
+                    </DropdownMenuRadioItem>
+                  ),
+                )}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ToolbarDivider />
+          {(["clean", "sketch"] as CanvasArrowStyle[]).map((style) => (
+            <button
+              key={style}
+              type="button"
+              className={cn(
+                "h-7 cursor-pointer rounded-md px-2 text-xs capitalize hover:bg-foreground/5",
+                arrow.style === style && "bg-foreground/10",
+              )}
+              aria-pressed={arrow.style === style}
+              onClick={() => onUpdate(arrow.id, { style })}
+            >
+              {style}
+            </button>
+          ))}
+          <ToolbarDivider />
+          {(["straight", "smooth"] as CanvasArrowRouting[]).map((routing) => (
+            <button
+              key={routing}
+              type="button"
+              className={cn(
+                "h-7 cursor-pointer rounded-md px-2 text-xs hover:bg-foreground/5",
+                arrow.routing === routing && "bg-foreground/10",
+              )}
+              aria-label={`${routing} arrow path`}
+              aria-pressed={arrow.routing === routing}
+              onClick={() => onUpdate(arrow.id, { routing })}
+            >
+              {routing === "straight" ? "Line" : "Curve"}
+            </button>
+          ))}
+          <ToolbarDivider />
+          <DropdownMenu key={`head-${dismissKey}`}>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  className="flex h-7 items-center gap-1 rounded-md px-1.5 transition-colors hover:bg-foreground/5 data-popup-open:bg-foreground/10"
+                />
+              }
+              aria-label={`${arrow.head} arrowhead`}
+            >
+              <ArrowheadGlyph head={arrow.head} style={arrow.style} />
+              <ChevronDownIcon className="size-3 text-muted-foreground" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="bottom"
+              align="start"
+              sideOffset={8}
+              className="min-w-36"
+            >
+              <DropdownMenuRadioGroup
+                value={arrow.head}
+                onValueChange={(value) =>
+                  onUpdate(arrow.id, { head: value as CanvasArrowHead })
+                }
+              >
+                {(["filled", "hollow", "chevron"] as CanvasArrowHead[]).map(
+                  (head) => (
+                    <DropdownMenuRadioItem
+                      key={head}
+                      value={head}
+                      className="capitalize"
+                    >
+                      <ArrowheadGlyph head={head} style={arrow.style} />
+                      {head}
+                    </DropdownMenuRadioItem>
+                  ),
+                )}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ToolbarDivider />
+          <CanvasColorSwatches
+            value={arrow.color}
+            onChange={(color) => onUpdate(arrow.id, { color })}
+            ariaLabel="Arrow color"
+            dismissKey={dismissKey}
+          />
+        </div>
+        <div
+          className={cn(
+            "flex size-9 items-center justify-center rounded-lg p-1",
+            GLASS_OPTION_TOOLBAR_CLASS,
+          )}
+        >
+          <button
+            type="button"
+            className="flex size-7 cursor-pointer items-center justify-center rounded-md text-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            aria-label="Delete arrow"
+            onClick={() => onDelete(arrow.id)}
+          >
+            <Trash2Icon className="size-3.5" />
+          </button>
+        </div>
+      </div>
+    </CanvasScreenOverlay>
   );
 }
 
@@ -696,82 +878,119 @@ function ToolbarDivider() {
   return <span className="mx-0.5 h-5 w-px bg-border" />;
 }
 
-function ArrowheadGlyph({ head }: { head: CanvasArrowHead }) {
+function ArrowheadGlyph({
+  head,
+  style,
+}: {
+  head: CanvasArrowHead;
+  style: CanvasArrowStyle;
+}) {
+  if (style === "sketch") {
+    return (
+      <svg viewBox="0 0 30 18" className="h-4 w-7" aria-hidden="true">
+        <path
+          d="M 1.5 9.4 Q 10 7.4 21 8.7"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+        <path
+          d="M 2 8.1 Q 11 10.1 21.3 8.4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          strokeLinecap="round"
+          opacity="0.55"
+        />
+        {head === "filled" ? (
+          <>
+            <path d="M 20.2 2.1 L 29 8.6 L 19.4 15.4 z" fill="currentColor" />
+            <path
+              d="M 20.7 2.7 L 28.7 8.1 L 19.8 14.8 z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="0.9"
+              strokeLinejoin="round"
+              opacity="0.65"
+            />
+          </>
+        ) : head === "hollow" ? (
+          <>
+            <path
+              d="M 20.2 2.1 L 29 8.6 L 19.4 15.4 z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M 20.7 2.7 L 28.7 8.1 L 19.8 14.8 z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="0.8"
+              strokeLinejoin="round"
+              opacity="0.6"
+            />
+          </>
+        ) : (
+          <>
+            <path
+              d="M 20.2 2.1 L 29 8.6 L 19.4 15.4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M 20.7 2.7 L 28.7 8.1 L 19.8 14.8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="0.85"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.6"
+            />
+          </>
+        )}
+      </svg>
+    );
+  }
+
   return (
-    <svg viewBox="0 0 20 12" className="h-3 w-5" aria-hidden="true">
-      <path d="M 1 6 H 14" stroke="currentColor" strokeWidth="1.75" />
+    <svg viewBox="0 0 30 18" className="h-4 w-7" aria-hidden="true">
+      <path
+        d="M 1.5 9 H 21"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
       {head === "filled" ? (
-        <path d="M 13 1 L 19 6 L 13 11 z" fill="currentColor" />
+        <path d="M 20 2 L 29 9 L 20 16 z" fill="currentColor" />
       ) : head === "hollow" ? (
         <path
-          d="M 13 1 L 19 6 L 13 11 z"
+          d="M 20 2 L 29 9 L 20 16 z"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"
+          strokeLinejoin="round"
         />
       ) : (
         <path
-          d="M 13 1 L 19 6 L 13 11"
+          d="M 20 2 L 29 9 L 20 16"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
       )}
     </svg>
   );
 }
 
-export function makeArrowPath(
-  id: string,
-  points: BoardPosition[],
-  style: CanvasArrowStyle,
-  routing: CanvasArrowRouting,
-): string;
-/** Legacy straight-arrow signature retained for the small path unit tests. */
-export function makeArrowPath(
-  id: string,
-  start: BoardPosition,
-  end: BoardPosition,
-  style: CanvasArrowStyle,
-): string;
-export function makeArrowPath(
-  id: string,
-  pointsOrStart: BoardPosition[] | BoardPosition,
-  styleOrEnd: CanvasArrowStyle | BoardPosition,
-  routingOrStyle: CanvasArrowRouting | CanvasArrowStyle,
-  routing: CanvasArrowRouting = "straight",
-) {
-  const points = Array.isArray(pointsOrStart)
-    ? pointsOrStart
-    : [pointsOrStart, styleOrEnd as BoardPosition];
-  const style = (
-    Array.isArray(pointsOrStart) ? styleOrEnd : routingOrStyle
-  ) as CanvasArrowStyle;
-  const resolvedRouting = (
-    Array.isArray(pointsOrStart) ? routingOrStyle : routing
-  ) as CanvasArrowRouting;
-  if (points.length < 2) return "";
-  if (
-    style === "sketch" &&
-    resolvedRouting === "straight" &&
-    points.length === 2
-  ) {
-    const [start, end] = points;
-    const hash = [...id].reduce((value, char) => value + char.charCodeAt(0), 0);
-    const dx = end!.x - start!.x;
-    const dy = end!.y - start!.y;
-    const length = Math.max(1, Math.hypot(dx, dy));
-    const bend = ((hash % 11) - 5) * Math.min(1, length / 180);
-    const normal = { x: -dy / length, y: dx / length };
-    return `M ${start!.x} ${start!.y} Q ${(start!.x + end!.x) / 2 + normal.x * bend} ${(start!.y + end!.y) / 2 + normal.y * bend} ${end!.x} ${end!.y}`;
-  }
-  if (resolvedRouting === "straight")
-    return `M ${points[0]!.x} ${points[0]!.y}${points
-      .slice(1)
-      .map((point) => ` L ${point.x} ${point.y}`)
-      .join("")}`;
-  return catmullRomPath(points);
-}
+export { makeArrowPath } from "./canvas-arrow-geometry";
 
 function resolvedGeometry(
   arrow: Pick<CanvasArrowObject, "start" | "end" | "points" | "routing">,
@@ -791,12 +1010,6 @@ function midpointForSegment(geometry: ArrowGeometry, index: number) {
   const points = geometryPoints(geometry);
   return midpoint(points[index]!, points[index + 1]!);
 }
-function segmentMidpoints(geometry: ArrowGeometry) {
-  const points = geometryPoints(geometry);
-  return points
-    .slice(0, -1)
-    .map((point, index) => midpoint(point, points[index + 1]!));
-}
 function toolbarPosition(geometry: ArrowGeometry) {
   const points = geometryPoints(geometry);
   return {
@@ -807,7 +1020,7 @@ function toolbarPosition(geometry: ArrowGeometry) {
 function endpointHandlePositions(points: BoardPosition[], zoom: number) {
   // A 5px-radius handle sits just beyond the visible endpoint instead of
   // covering the arrowhead or line cap.
-  const distance = 6 / zoom;
+  const distance = 8 / zoom;
   const start = points[0]!;
   const end = points.at(-1)!;
   const startDirection = unitVector(start, points[1] ?? end);
@@ -822,17 +1035,6 @@ function endpointHandlePositions(points: BoardPosition[], zoom: number) {
       y: endDirection.y * distance,
     }),
   };
-}
-function catmullRomPath(points: BoardPosition[]) {
-  let path = `M ${points[0]!.x} ${points[0]!.y}`;
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const previous = points[index - 1] ?? points[index]!;
-    const current = points[index]!;
-    const next = points[index + 1]!;
-    const afterNext = points[index + 2] ?? next;
-    path += ` C ${current.x + (next.x - previous.x) / 6} ${current.y + (next.y - previous.y) / 6} ${next.x - (afterNext.x - current.x) / 6} ${next.y - (afterNext.y - current.y) / 6} ${next.x} ${next.y}`;
-  }
-  return path;
 }
 function insertPoint(
   points: BoardPosition[],

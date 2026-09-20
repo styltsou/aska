@@ -200,6 +200,8 @@ export function AssetContextMenu({
   deleteContext,
   inboxContext,
   onOpenVideo,
+  dismissVersion,
+  canvasBoardKey,
 }: {
   asset: Asset;
   children: (isContextMenuOpen: boolean, asset: Asset) => React.ReactNode;
@@ -213,6 +215,10 @@ export function AssetContextMenu({
     workspaceSlug: string;
   };
   onOpenVideo?: (asset: LinkAsset) => void;
+  /** Canvas viewport version that should close an open context menu. */
+  dismissVersion?: number;
+  /** Marks this portaled menu as belonging to a specific canvas. */
+  canvasBoardKey?: string;
 }) {
   const { peekNote, peekColor } = useWorkspacePeek();
   const setPexelsBrowserOpen = useSessionStore(
@@ -229,6 +235,11 @@ export function AssetContextMenu({
     "hex" | "gradient"
   > | null>(null);
   const imagePrefetchRef = useRef<ImagePrefetch | undefined>(undefined);
+  const contextMenuActionsRef = useRef<{
+    close: () => void;
+    unmount: () => void;
+  } | null>(null);
+  const previousDismissVersionRef = useRef(dismissVersion);
   const workspaceSlug =
     inboxContext?.workspaceSlug ?? deleteContext?.workspaceSlug;
   const isFavorite = asset.isFavorite ?? false;
@@ -305,6 +316,17 @@ export function AssetContextMenu({
       imagePrefetchRef.current = undefined;
     };
   }, [asset.id, workspaceSlug]);
+
+  useEffect(() => {
+    if (
+      dismissVersion === undefined ||
+      previousDismissVersionRef.current === dismissVersion
+    ) {
+      return;
+    }
+    previousDismissVersionRef.current = dismissVersion;
+    contextMenuActionsRef.current?.close();
+  }, [dismissVersion]);
 
   function cancelImagePrefetch() {
     const prefetch = imagePrefetchRef.current;
@@ -409,13 +431,16 @@ export function AssetContextMenu({
 
   return (
     <>
-      <ContextMenu onOpenChange={handleContextMenuOpenChange}>
+      <ContextMenu
+        actionsRef={contextMenuActionsRef}
+        onOpenChange={handleContextMenuOpenChange}
+      >
         <ContextMenuTrigger
           render={(triggerProps, state) => (
             <div {...triggerProps}>{children(state.open, displayAsset)}</div>
           )}
         />
-        <ContextMenuContent>
+        <ContextMenuContent data-canvas-menu={canvasBoardKey}>
           {asset.type === "folder" ? (
             <>
               {folderActions()}

@@ -66,7 +66,7 @@ export const CANVAS_TEXT_FONTS: Array<{
     className: "font-handwritten",
     sizeScale: 1.3,
     previewScale: 1.22,
-    previewOffsetY: 1,
+    previewOffsetY: 0,
     fontWeight: 500,
     letterSpacing: "-0.005em",
   },

@@ -14,7 +14,6 @@ import {
   type Viewport,
   type XYPosition,
 } from "@xyflow/react";
-import { PencilIcon } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -65,6 +64,7 @@ import { toast } from "sonner";
 
 import { formatPlatformShortcut } from "@/lib/platform";
 import { cn } from "@/lib/utils";
+import { CanvasToolCursorIndicator } from "./canvas-tool-cursor-indicator";
 import { makeBoardKey } from "./canvas-key";
 import { onBatchPlacementCompleted } from "./batch-placement-completed";
 import {
@@ -73,6 +73,7 @@ import {
   setBoardViewportZoomReader,
 } from "./board-pointer-position";
 import { getCanvasViewShortcutAction } from "./canvas-view-actions";
+import { getCanvasWheelZoomViewport } from "./canvas-wheel-zoom";
 import { useCanvasActions } from "./canvas-actions-context";
 import {
   BOARD_CARD_WIDTH,
@@ -229,6 +230,9 @@ function CanvasSurface({
   const setInsertionPosition = useTransientStore(
     (state) => state.setInsertionPosition,
   );
+  const notifyCanvasViewportActivity = useTransientStore(
+    (state) => state.notifyCanvasViewportActivity,
+  );
   const selection = useTransientStore((state) => state.selection);
   const activateSelectionScope = useTransientStore(
     (state) => state.activateSelectionScope,
@@ -259,10 +263,11 @@ function CanvasSurface({
     getNodes,
     getViewport,
     screenToFlowPosition,
+    setViewport,
     zoomTo,
   } = useReactFlow<CanvasFlowNode>();
   const boardRef = useRef<HTMLDivElement>(null);
-  const textToolCursorRef = useRef<HTMLDivElement>(null);
+  const lastViewportActivityAtRef = useRef(0);
   const boardSizeRef = useRef({ width: 0, height: 0 });
   const suppressedClickIdsRef = useRef(new Set<string>());
   const dragSessionRef = useRef<CanvasDragSession | undefined>(undefined);
@@ -588,42 +593,104 @@ function CanvasSurface({
     [boardKey, getViewport],
   );
 
+  const startViewportInteraction = useCallback(() => {
+    const now = performance.now();
+    if (now - lastViewportActivityAtRef.current < 120) return;
+    lastViewportActivityAtRef.current = now;
+    notifyCanvasViewportActivity(boardKey);
+  }, [boardKey, notifyCanvasViewportActivity]);
+
+  useEffect(() => {
+    const handleWheel = (event: WheelEvent) => {
+      if ((!event.ctrlKey && !event.metaKey) || !event.cancelable) return;
+
+      const board = boardRef.current;
+      if (!board) return;
+      const bounds = board.getBoundingClientRect();
+      const pointerIsOnBoard =
+        event.clientX >= bounds.left &&
+        event.clientX <= bounds.right &&
+        event.clientY >= bounds.top &&
+        event.clientY <= bounds.bottom;
+      const menuBoardKey =
+        event.target instanceof Element
+          ? event.target
+              .closest("[data-canvas-menu]")
+              ?.getAttribute("data-canvas-menu")
+          : undefined;
+      if (!pointerIsOnBoard && menuBoardKey !== boardKey) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const viewport = getViewport();
+      const nextViewport = getCanvasWheelZoomViewport({
+        viewport,
+        pointer: {
+          x: event.clientX - bounds.left,
+          y: event.clientY - bounds.top,
+        },
+        deltaY: event.deltaY,
+        deltaMode: event.deltaMode,
+        minZoom: CANVAS_MIN_ZOOM,
+        maxZoom: CANVAS_MAX_ZOOM,
+        pinchBoost:
+          event.ctrlKey && navigator.userAgent.includes("Mac") ? 10 : 1,
+      });
+      if (nextViewport.zoom === viewport.zoom) return;
+
+      startViewportInteraction();
+      void setViewport(nextViewport);
+    };
+
+    window.addEventListener("wheel", handleWheel, {
+      capture: true,
+      passive: false,
+    });
+    return () => window.removeEventListener("wheel", handleWheel, true);
+  }, [boardKey, getViewport, setViewport, startViewportInteraction]);
+
   const zoomInCanvas = useCallback(() => {
+    startViewportInteraction();
     const viewport = getViewport();
     const zoom = Math.min(
       CANVAS_MAX_ZOOM,
       (Math.round(viewport.zoom * 100) + 10) / 100,
     );
     void zoomTo(zoom, { duration: VIEWPORT_ANIMATION_DURATION });
-  }, [getViewport, zoomTo]);
+  }, [getViewport, startViewportInteraction, zoomTo]);
 
   const zoomOutCanvas = useCallback(() => {
+    startViewportInteraction();
     const viewport = getViewport();
     const zoom = Math.max(
       CANVAS_MIN_ZOOM,
       (Math.round(viewport.zoom * 100) - 10) / 100,
     );
     void zoomTo(zoom, { duration: VIEWPORT_ANIMATION_DURATION });
-  }, [getViewport, zoomTo]);
+  }, [getViewport, startViewportInteraction, zoomTo]);
 
   const setZoomCanvas = useCallback(
     (nextZoom: number) => {
+      startViewportInteraction();
       const zoom = Math.min(
         CANVAS_MAX_ZOOM,
         Math.max(CANVAS_MIN_ZOOM, nextZoom),
       );
       void zoomTo(zoom, { duration: VIEWPORT_ANIMATION_DURATION });
     },
-    [zoomTo],
+    [startViewportInteraction, zoomTo],
   );
 
   const fitCanvasView = useCallback(() => {
+    startViewportInteraction();
     void fitView({
       padding: 0.18,
       maxZoom: FIT_VIEW_MAX_ZOOM,
       duration: VIEWPORT_ANIMATION_DURATION,
     });
-  }, [fitView]);
+  }, [fitView, startViewportInteraction]);
 
   const canvasActionsRef = useCanvasActions();
 
@@ -1000,6 +1067,7 @@ function CanvasSurface({
         collectionNode.id === pendingFolderDrop?.targetFolderNodeId;
       return {
         collectionNode,
+        boardKey,
         deleteContext: {
           workspaceSlug,
           collectionSlug,
@@ -1036,6 +1104,7 @@ function CanvasSurface({
       };
     },
     [
+      boardKey,
       collectionSlug,
       colorMatchNodeIds,
       dropTargetNodeId,
@@ -1058,6 +1127,7 @@ function CanvasSurface({
   const makeTextNodeData = useCallback(
     (object: CanvasTextObject): CanvasTextNodeData => ({
       object,
+      boardKey,
       editing: editingTextId === object.id,
       onSelect: handleTextSelect,
       onBeginEdit: (id) => {
@@ -1537,15 +1607,6 @@ function CanvasSurface({
           return;
         }
         marquee.onPointerMoveCapture(event);
-        if (activeTool === "text") {
-          const board = boardRef.current;
-          const cursor = textToolCursorRef.current;
-          if (board && cursor) {
-            const bounds = board.getBoundingClientRect();
-            cursor.style.transform = `translate(${event.clientX - bounds.left + 12}px, ${event.clientY - bounds.top + 12}px)`;
-            cursor.style.opacity = "1";
-          }
-        }
         alignmentBypassRef.current = event.altKey;
         setBoardPointerPosition(
           boardKey,
@@ -1583,17 +1644,7 @@ function CanvasSurface({
         marquee.consumeClick(event);
       }}
     >
-      {activeTool === "text" ? (
-        <div
-          ref={textToolCursorRef}
-          className="pointer-events-none absolute top-0 left-0 z-40 opacity-0 transition-opacity"
-          aria-hidden="true"
-        >
-          <span className="flex size-6 items-center justify-center rounded-full border border-primary/30 bg-background/95 text-primary shadow-sm">
-            <PencilIcon className="size-3.5" />
-          </span>
-        </div>
-      ) : null}
+      <CanvasToolCursorIndicator tool={activeTool} boardRef={boardRef} />
       <ReactFlow<CanvasFlowNode>
         className="aska-flow"
         nodes={flowNodes}
@@ -1613,6 +1664,7 @@ function CanvasSurface({
         autoPanOnNodeDrag={!isCanvasLocked && activeTool === "select"}
         selectionKeyCode={["Control", "Meta"]}
         multiSelectionKeyCode={["Control", "Meta"]}
+        zoomActivationKeyCode={null}
         selectionMode={SelectionMode.Full}
         selectionOnDrag={false}
         panOnDrag
@@ -1622,6 +1674,7 @@ function CanvasSurface({
         zoomOnDoubleClick={false}
         onlyRenderVisibleElements
         proOptions={{ hideAttribution: true }}
+        onMoveStart={startViewportInteraction}
         onMoveEnd={(_, viewport) => {
           setStoredViewport(boardKey, viewport);
           publishVisibleBounds(viewport);
@@ -2016,6 +2069,7 @@ function CanvasSurface({
             (object): object is CanvasArrowObject => object.type === "arrow",
           )}
           draft={draftArrow}
+          boardKey={boardKey}
           selectedIds={selectedIdSet}
           enabled={activeTool === "select"}
           onSelect={handleArrowSelect}
