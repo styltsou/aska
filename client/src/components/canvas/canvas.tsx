@@ -74,6 +74,7 @@ import {
 } from "./board-pointer-position";
 import { getCanvasViewShortcutAction } from "./canvas-view-actions";
 import { getCanvasWheelZoomViewport } from "./canvas-wheel-zoom";
+import { activeCanvasObjectFocus } from "./canvas-object-focus";
 import { useCanvasActions } from "./canvas-actions-context";
 import {
   BOARD_CARD_WIDTH,
@@ -293,6 +294,10 @@ function CanvasSurface({
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [draftText, setDraftText] = useState<CanvasTextObject>();
   const [editingTextId, setEditingTextId] = useState<string>();
+  const [canvasObjectFocus, setCanvasObjectFocus] = useState<{
+    boardKey: string;
+    objectId: string;
+  }>();
   const draftTextRef = useRef<CanvasTextObject | undefined>(undefined);
   draftTextRef.current = draftText;
   const [draftArrow, setDraftArrow] = useState<DraftCanvasArrow>();
@@ -348,6 +353,12 @@ function CanvasSurface({
     () => selectionIdsForScope(selection, boardKey),
     [boardKey, selection],
   );
+  const focusedCanvasObjectId = activeCanvasObjectFocus(
+    canvasObjectFocus?.boardKey === boardKey
+      ? canvasObjectFocus.objectId
+      : undefined,
+    selectedIds,
+  );
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const selectedAssetIds = useMemo(
     () => selectedIds.filter((id) => nodes.some((node) => node.id === id)),
@@ -384,7 +395,10 @@ function CanvasSurface({
   const marquee = useMarqueeSelection({
     surfaceRef: boardRef,
     eligibleNodeIds,
-    onReplace: (nodeIds) => replaceSelection(boardKey, nodeIds),
+    onReplace: (nodeIds) => {
+      setCanvasObjectFocus(undefined);
+      replaceSelection(boardKey, nodeIds);
+    },
     shouldStart: (event) =>
       activeTool === "select" &&
       (!(event.target instanceof Element) ||
@@ -393,6 +407,7 @@ function CanvasSurface({
   });
 
   const handleBulkDelete = useCallback(() => {
+    setCanvasObjectFocus(undefined);
     const persistedIds = selectedIds.filter(
       (id) => !id.startsWith("text-draft-"),
     );
@@ -416,6 +431,7 @@ function CanvasSurface({
 
   const deleteCanvasObject = useCallback(
     (objectId: string) => {
+      setCanvasObjectFocus(undefined);
       if (objectId.startsWith("text-draft-")) {
         setDraftText(undefined);
         setEditingTextId(undefined);
@@ -737,6 +753,7 @@ function CanvasSurface({
   }, []);
   const handleCardClick = useCallback(
     (nodeId: string, event: ReactMouseEvent) => {
+      setCanvasObjectFocus(undefined);
       if (hasSelectionModifier(event)) {
         if (eligibleNodeIds.has(nodeId)) {
           toggleSelectedNode(boardKey, nodeId);
@@ -751,6 +768,7 @@ function CanvasSurface({
   const beginTextDraft = useCallback(
     (position: XYPosition) => {
       const id = `text-draft-${Date.now()}`;
+      setCanvasObjectFocus(undefined);
       clearSelection(boardKey);
       setCanvasTool(boardKey, "select");
       setDraftText({
@@ -773,8 +791,10 @@ function CanvasSurface({
   const handleTextSelect = useCallback(
     (objectId: string, event: ReactMouseEvent) => {
       if (hasSelectionModifier(event)) {
+        setCanvasObjectFocus(undefined);
         toggleSelectedNode(boardKey, objectId);
       } else {
+        setCanvasObjectFocus({ boardKey, objectId });
         replaceSelection(boardKey, [objectId]);
       }
       event.stopPropagation();
@@ -950,6 +970,7 @@ function CanvasSurface({
   );
   const createArrowBetween = useCallback(
     (start: XYPosition, end: XYPosition) => {
+      setCanvasObjectFocus(undefined);
       clearSelection(boardKey);
       setCanvasTool(boardKey, "select");
       const arrow: DraftCanvasArrow = {
@@ -993,8 +1014,10 @@ function CanvasSurface({
   const handleArrowSelect = useCallback(
     (objectId: string, event: React.PointerEvent) => {
       if (hasSelectionModifier(event)) {
+        setCanvasObjectFocus(undefined);
         toggleSelectedNode(boardKey, objectId);
       } else {
+        setCanvasObjectFocus({ boardKey, objectId });
         replaceSelection(boardKey, [objectId]);
       }
       event.stopPropagation();
@@ -1051,6 +1074,7 @@ function CanvasSurface({
         event.preventDefault();
         event.stopPropagation();
       } else if (!selectedIds.has(nodeId) && count > 0) {
+        setCanvasObjectFocus(undefined);
         clearSelection(boardKey);
       }
     },
@@ -1129,8 +1153,10 @@ function CanvasSurface({
       object,
       boardKey,
       editing: editingTextId === object.id,
+      focused: focusedCanvasObjectId === object.id,
       onSelect: handleTextSelect,
       onBeginEdit: (id) => {
+        setCanvasObjectFocus(undefined);
         clearSelection(boardKey);
         setEditingTextId(id);
       },
@@ -1144,6 +1170,7 @@ function CanvasSurface({
       commitText,
       deleteCanvasObject,
       editingTextId,
+      focusedCanvasObjectId,
       handleTextSelect,
       updateTextStyle,
     ],
@@ -1258,11 +1285,13 @@ function CanvasSurface({
         setCanvasTool(boardKey, "select");
         setDraftArrow(undefined);
         arrowPointerStartRef.current = undefined;
+        setCanvasObjectFocus(undefined);
         clearSelection(boardKey);
         return;
       }
       if (isSelectionShortcut(event)) {
         event.preventDefault();
+        setCanvasObjectFocus(undefined);
         replaceSelection(boardKey, eligibleNodeIds);
       }
     };
@@ -1572,6 +1601,7 @@ function CanvasSurface({
           event.target instanceof Element &&
           event.target.closest(".react-flow__pane, .react-flow__node")
         ) {
+          setCanvasObjectFocus(undefined);
           clearSelection(boardKey);
           const start = roundPosition(
             screenToFlowPosition({ x: event.clientX, y: event.clientY }),
@@ -1680,6 +1710,7 @@ function CanvasSurface({
           publishVisibleBounds(viewport);
         }}
         onPaneContextMenu={(event) => {
+          setCanvasObjectFocus(undefined);
           clearSelection(boardKey);
           const position = screenToFlowPosition({
             x: event.clientX,
@@ -1694,6 +1725,7 @@ function CanvasSurface({
             );
             return;
           }
+          setCanvasObjectFocus(undefined);
           clearSelection(boardKey);
         }}
         onNodeDragStart={(_, node, movedNodes) => {
@@ -2071,6 +2103,7 @@ function CanvasSurface({
           draft={draftArrow}
           boardKey={boardKey}
           selectedIds={selectedIdSet}
+          focusedId={focusedCanvasObjectId}
           enabled={activeTool === "select"}
           onSelect={handleArrowSelect}
           onUpdate={updateArrowObject}
@@ -2084,7 +2117,10 @@ function CanvasSurface({
           <SelectionActionBar
             count={selectedAssetIds.length}
             surface="canvas"
-            onClear={() => clearSelection(boardKey)}
+            onClear={() => {
+              setCanvasObjectFocus(undefined);
+              clearSelection(boardKey);
+            }}
             onMove={
               selectionHasCanvasObjects
                 ? undefined
@@ -2147,7 +2183,10 @@ function CanvasSurface({
           sourceFolderPath: folderPath,
           nodeIds: selectedIds,
         }}
-        onMoved={() => clearSelection(boardKey)}
+        onMoved={() => {
+          setCanvasObjectFocus(undefined);
+          clearSelection(boardKey);
+        }}
       />
     </div>
   );

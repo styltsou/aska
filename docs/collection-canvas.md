@@ -170,6 +170,12 @@ optionally bind either endpoint to a visible card or text object. These visual
 bindings do not turn the canvas into a diagram editor. Delete-key node removal
 remains disabled.
 
+Selection and annotation focus are separate interactions. Multi-selection
+keeps every chosen item highlighted without showing per-object controls. An
+ordinary click focuses one text or arrow object and shows its style toolbar;
+focused arrows also expose their endpoint and bend handles. Modifier and
+marquee selection clear that focus.
+
 Text and arrow edits update the collection cache optimistically. Persistence is
 serialized per canvas object, and changes made during an in-flight write are
 coalesced into the next patch with the newest value winning per field. A server

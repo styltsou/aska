@@ -33,6 +33,7 @@ export type CanvasTextNodeData = {
   object: CanvasTextObject;
   boardKey: string;
   editing: boolean;
+  focused: boolean;
   onSelect: (id: string, event: React.MouseEvent) => void;
   onBeginEdit: (id: string) => void;
   onCommit: (id: string, content: string) => void;
@@ -99,7 +100,7 @@ export function CanvasTextNode({
       ) : null}
 
       <AnimatePresence initial={false}>
-        {selected ? (
+        {data.focused ? (
           <CanvasScreenOverlay
             anchor={{ x: positionAbsoluteX, y: positionAbsoluteY }}
           >

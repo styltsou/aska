@@ -77,6 +77,7 @@ export function CanvasArrowLayer({
   draft,
   boardKey,
   selectedIds,
+  focusedId,
   enabled,
   onSelect,
   onUpdate,
@@ -86,6 +87,7 @@ export function CanvasArrowLayer({
   draft?: DraftCanvasArrow;
   boardKey: string;
   selectedIds: ReadonlySet<string>;
+  focusedId?: string;
   enabled: boolean;
   onSelect: (id: string, event: React.PointerEvent) => void;
   onUpdate: (
@@ -384,6 +386,7 @@ export function CanvasArrowLayer({
               : resolvedGeometry(arrow, resolveEndpoint);
             const points = geometryPoints(geometry);
             const selected = selectedIds.has(arrow.id);
+            const focused = focusedId === arrow.id && selected;
             const paths = makeArrowPaths(
               arrow.id,
               points,
@@ -448,7 +451,7 @@ export function CanvasArrowLayer({
                     onPointerDown={(event) => beginDrag(event, arrow, "body")}
                   />
                 ) : null}
-                {selected ? (
+                {focused ? (
                   <>
                     <ArrowCircleHandle
                       position={endpointHandles.start}
@@ -495,7 +498,7 @@ export function CanvasArrowLayer({
       </ViewportPortal>
       <AnimatePresence initial={false}>
         {arrows.map((arrow) => {
-          if (!selectedIds.has(arrow.id)) return null;
+          if (focusedId !== arrow.id || !selectedIds.has(arrow.id)) return null;
           const preview = previews[arrow.id];
           const geometry = preview
             ? resolvedGeometry({ ...arrow, ...preview }, resolveEndpoint)
