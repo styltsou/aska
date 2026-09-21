@@ -1,7 +1,9 @@
+import { useCallback, useMemo, useRef } from "react";
 import {
   useMutation,
   useQueryClient,
   type Query,
+  type QueryClient,
   type QueryKey,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -17,6 +19,7 @@ import {
 import type {
   CanvasItemFrontIndex,
   CanvasObject,
+  CanvasObjectResponse,
   CollectionContentsResponse,
   CreateCanvasArrowInput,
   CreateCanvasTextInput,
@@ -24,6 +27,7 @@ import type {
   UpdateCanvasTextInput,
   UpdateCanvasItemFrontIndexesInput,
 } from "./types";
+import { createLatestPatchQueue } from "./latest-patch-queue";
 
 function contentsFilter(
   workspaceSlug: string,
@@ -55,6 +59,134 @@ function updateObjectInContents(
       object.id === objectId ? update(object) : object,
     ),
   };
+}
+
+type CanvasObjectType = CanvasObject["type"];
+type CanvasObjectUpdateVariables<TPatch> = TPatch & { objectId: string };
+
+export function createCanvasObjectUpdateQueue<TPatch extends object>({
+  queryClient,
+  filter,
+  objectType,
+  save,
+}: {
+  queryClient: QueryClient;
+  filter: ReturnType<typeof contentsFilter>;
+  objectType: CanvasObjectType;
+  save: (objectId: string, patch: TPatch) => Promise<CanvasObjectResponse>;
+}) {
+  const confirmedObjects = new Map<string, CanvasObject | undefined>();
+  const queue = createLatestPatchQueue<TPatch, CanvasObjectResponse>({
+    save,
+    merge: (current, next) => ({ ...current, ...next }),
+    onSuccess: (objectId, { object }, hasPending) => {
+      const previous = confirmedObjects.get(objectId);
+      const persisted = previous?.clientId
+        ? { ...object, clientId: previous.clientId }
+        : object;
+      confirmedObjects.set(objectId, persisted);
+      if (hasPending) return;
+
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        filter,
+        (current) =>
+          updateObjectInContents(current, objectId, (candidate) =>
+            candidate.type === objectType && object.type === objectType
+              ? persisted
+              : candidate,
+          ),
+      );
+      confirmedObjects.delete(objectId);
+    },
+    onError: (objectId, _error, hasPending) => {
+      if (hasPending) return;
+
+      const confirmed = confirmedObjects.get(objectId);
+      if (confirmed) {
+        queryClient.setQueriesData<CollectionContentsResponse>(
+          filter,
+          (current) =>
+            updateObjectInContents(current, objectId, (candidate) =>
+              candidate.type === objectType && confirmed.type === objectType
+                ? confirmed
+                : candidate,
+            ),
+        );
+      } else {
+        void queryClient.invalidateQueries(filter);
+      }
+      confirmedObjects.delete(objectId);
+    },
+  });
+
+  return {
+    enqueue(objectId: string, patch: TPatch) {
+      void queryClient.cancelQueries(filter);
+
+      if (!confirmedObjects.has(objectId)) {
+        const confirmed = queryClient
+          .getQueriesData<CollectionContentsResponse>(filter)
+          .flatMap(([, current]) => current?.canvasObjects ?? [])
+          .find(
+            (object) => object.id === objectId && object.type === objectType,
+          );
+        confirmedObjects.set(objectId, confirmed);
+      }
+
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        filter,
+        (current) =>
+          updateObjectInContents(current, objectId, (object) =>
+            object.type === objectType ? { ...object, ...patch } : object,
+          ),
+      );
+      return queue.enqueue(objectId, patch);
+    },
+  };
+}
+
+function useQueuedCanvasObjectUpdate<TPatch extends object>(
+  filter: ReturnType<typeof contentsFilter>,
+  objectType: CanvasObjectType,
+  save: (objectId: string, patch: TPatch) => Promise<CanvasObjectResponse>,
+) {
+  const queryClient = useQueryClient();
+  const requests = useRef(
+    new WeakMap<
+      CanvasObjectUpdateVariables<TPatch>,
+      Promise<CanvasObjectResponse>
+    >(),
+  );
+  const updateQueue = useMemo(
+    () =>
+      createCanvasObjectUpdateQueue({
+        queryClient,
+        filter,
+        objectType,
+        save,
+      }),
+    [filter, objectType, queryClient, save],
+  );
+
+  return useMutation({
+    mutationFn: (variables: CanvasObjectUpdateVariables<TPatch>) => {
+      const queued = requests.current.get(variables);
+      if (queued) {
+        requests.current.delete(variables);
+        return queued;
+      }
+
+      const { objectId, ...patch } = variables;
+      return updateQueue.enqueue(objectId, patch as TPatch);
+    },
+    onMutate: (variables) => {
+      const { objectId, ...patch } = variables;
+      requests.current.set(
+        variables,
+        updateQueue.enqueue(objectId, patch as TPatch),
+      );
+    },
+  });
 }
 
 export function updateFrontIndexesInContents(
@@ -202,39 +334,16 @@ export function useUpdateCanvasText(
   collectionSlug: string,
   folderPath?: string,
 ) {
-  const queryClient = useQueryClient();
-  const filter = contentsFilter(workspaceSlug, collectionSlug, folderPath);
-  return useMutation({
-    mutationFn: ({
-      objectId,
-      ...data
-    }: UpdateCanvasTextInput & { objectId: string }) =>
+  const filter = useMemo(
+    () => contentsFilter(workspaceSlug, collectionSlug, folderPath),
+    [workspaceSlug, collectionSlug, folderPath],
+  );
+  const save = useCallback(
+    (objectId: string, data: UpdateCanvasTextInput) =>
       updateCanvasText(workspaceSlug, collectionSlug, objectId, data),
-    onMutate: async ({ objectId, ...data }) => {
-      await queryClient.cancelQueries(filter);
-      const previous =
-        queryClient.getQueriesData<CollectionContentsResponse>(filter);
-      queryClient.setQueriesData<CollectionContentsResponse>(
-        filter,
-        (current) =>
-          updateObjectInContents(current, objectId, (object) =>
-            object.type === "text" ? { ...object, ...data } : object,
-          ),
-      );
-      return { previous };
-    },
-    onError: (_error, _variables, context) => {
-      context?.previous.forEach(([key, value]: [QueryKey, unknown]) => {
-        queryClient.setQueryData(key, value);
-      });
-    },
-    onSuccess: ({ object }) => {
-      queryClient.setQueriesData<CollectionContentsResponse>(
-        filter,
-        (current) => updateObjectInContents(current, object.id, () => object),
-      );
-    },
-  });
+    [workspaceSlug, collectionSlug],
+  );
+  return useQueuedCanvasObjectUpdate(filter, "text", save);
 }
 
 export function useUpdateCanvasArrow(
@@ -242,39 +351,16 @@ export function useUpdateCanvasArrow(
   collectionSlug: string,
   folderPath?: string,
 ) {
-  const queryClient = useQueryClient();
-  const filter = contentsFilter(workspaceSlug, collectionSlug, folderPath);
-  return useMutation({
-    mutationFn: ({
-      objectId,
-      ...data
-    }: UpdateCanvasArrowInput & { objectId: string }) =>
+  const filter = useMemo(
+    () => contentsFilter(workspaceSlug, collectionSlug, folderPath),
+    [workspaceSlug, collectionSlug, folderPath],
+  );
+  const save = useCallback(
+    (objectId: string, data: UpdateCanvasArrowInput) =>
       updateCanvasArrow(workspaceSlug, collectionSlug, objectId, data),
-    onMutate: async ({ objectId, ...data }) => {
-      await queryClient.cancelQueries(filter);
-      const previous =
-        queryClient.getQueriesData<CollectionContentsResponse>(filter);
-      queryClient.setQueriesData<CollectionContentsResponse>(
-        filter,
-        (current) =>
-          updateObjectInContents(current, objectId, (object) =>
-            object.type === "arrow" ? { ...object, ...data } : object,
-          ),
-      );
-      return { previous };
-    },
-    onError: (_error, _variables, context) => {
-      context?.previous.forEach(([key, value]: [QueryKey, unknown]) => {
-        queryClient.setQueryData(key, value);
-      });
-    },
-    onSuccess: ({ object }) => {
-      queryClient.setQueriesData<CollectionContentsResponse>(
-        filter,
-        (current) => updateObjectInContents(current, object.id, () => object),
-      );
-    },
-  });
+    [workspaceSlug, collectionSlug],
+  );
+  return useQueuedCanvasObjectUpdate(filter, "arrow", save);
 }
 
 export function useDeleteCanvasObject(

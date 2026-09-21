@@ -170,6 +170,12 @@ optionally bind either endpoint to a visible card or text object. These visual
 bindings do not turn the canvas into a diagram editor. Delete-key node removal
 remains disabled.
 
+Text and arrow edits update the collection cache optimistically. Persistence is
+serialized per canvas object, and changes made during an in-flight write are
+coalesced into the next patch with the newest value winning per field. A server
+response is reconciled only when it is the latest write for that object, so an
+older response cannot repaint or persist over a newer interaction.
+
 ## Backend Storage
 
 `collection_nodes.position_x` and `position_y` store authored coordinates as a
