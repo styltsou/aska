@@ -172,15 +172,42 @@ remains disabled.
 
 Selection and annotation focus are separate interactions. Multi-selection
 keeps every chosen item highlighted without showing per-object controls. An
-ordinary click focuses one text or arrow object and shows its style toolbar;
-focused arrows also expose their endpoint and bend handles. Modifier and
-marquee selection clear that focus.
+ordinary primary pointer-down focuses one text or arrow object and shows its
+style controls in a fixed top-center inspector dock. The dock is shared by
+object types, uses the same glass-island language as selection actions, and
+remains visible throughout direct manipulation. A focused straight arrow has no
+transform frame: it exposes only its start, dormant midpoint, and end handles.
+Dragging the midpoint creates the first bend, after which transform mode uses a
+padded bounds frame with four outboard corner resize controls, a rotation
+control, and draggable endpoint and existing bend handles. A new bent frame is
+screen-horizontal; only an explicit rotation gesture changes and persists its
+orientation. The full transform-frame interior moves the arrow; resize controls
+reshape the entire frame while endpoint controls remain pure arrow anchors.
+Transform mode cannot create further bend points. A platform-aware glass footer
+teaches `Ctrl`/`Cmd` + double-click on the arrow stroke and `Ctrl`/`Cmd` +
+`Enter` as the two ways to enter point-edit mode. Point-edit mode teaches
+`Ctrl`/`Cmd` + click on an existing bend to remove it directly; expected Escape
+and Delete behavior is not repeated in the footer. Endpoint, bend, and insertion
+drags hide only the transform frame and its controls while keeping path handles
+visible. Whole-arrow moves, resize, and rotation retain the frame and every
+frame/path handle for continuous visual feedback. Corner controls use the
+nearest native diagonal resize cursor for the frame's current angle. Modifier
+and marquee selection clear annotation focus and never show per-object controls;
+selected arrows use the same solid primary selection-ring treatment as selected
+text. Point-edit mode shows path controls without retaining a muted
+transform-frame outline.
 
 Text and arrow edits update the collection cache optimistically. Persistence is
 serialized per canvas object, and changes made during an in-flight write are
 coalesced into the next patch with the newest value winning per field. A server
 response is reconciled only when it is the latest write for that object, so an
-older response cannot repaint or persist over a newer interaction.
+older response cannot repaint or persist over a newer interaction. Arrow
+transform previews also carry an interaction revision, preventing an earlier
+request's settlement from clearing a newer move, resize, or rotation preview.
+New arrows are inserted with a stable optimistic client identity and focused as
+soon as drawing ends, so their three straight-arrow handles and inspector appear
+without waiting for the create request. Any immediate handle edits wait for the
+server identity and then join the same per-arrow update queue.
 
 ## Backend Storage
 
@@ -195,7 +222,8 @@ intended canvas location.
 `canvas_objects` owns annotation identity and collection/folder scope.
 `canvas_text_objects` stores text position and the intentionally small
 typography token set. `canvas_arrow_objects` stores free endpoint coordinates,
-optional same-canvas endpoint bindings, and curated path/color tokens. Canvas
+optional same-canvas endpoint bindings, an explicit transform-frame rotation in
+radians, and curated path/color tokens. Canvas
 objects are returned separately from collection `nodes`; they never contribute
 to asset counts, folder previews, Inbox contents, grid view, or workspace
 search.
@@ -204,7 +232,7 @@ search.
 
 - Further alignment-guide refinement, including equal-spacing cues, optional
   distance labels, and continued interaction and visual tuning.
-- Multi-select actions and resize handles.
+- Multi-select actions and group resize handles.
 - Deliberate user-controlled z-ordering and further canvas object types.
 - Semantic relationships and other diagram-style features.
 - Durable viewport persistence across sessions.

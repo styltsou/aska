@@ -66,6 +66,8 @@ export type CanvasArrowObject = {
   routing: CanvasArrowRouting;
   /** Ordered intermediate points; the endpoints remain separately bindable. */
   points: BoardPosition[];
+  /** Explicit transform-frame rotation in radians. */
+  rotation: number;
   color: CanvasObjectColor;
   createdAt: string;
   updatedAt: string;
@@ -95,6 +97,7 @@ export type UpdateCanvasArrowInput = Partial<
     | "head"
     | "routing"
     | "points"
+    | "rotation"
     | "color"
   >
 >;

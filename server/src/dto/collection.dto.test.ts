@@ -18,6 +18,7 @@ import {
   UpdateLinkSchema,
   MoveCollectionNodesParentSchema,
   UpdateCanvasTextSchema,
+  UpdateCanvasArrowSchema,
   UpdateCanvasItemFrontIndexesSchema,
 } from "./collection.dto";
 
@@ -273,17 +274,21 @@ describe("canvas object DTOs", () => {
   });
 
   it("accepts free and bound arrow endpoints with normalized anchors", () => {
+    const parsed = CreateCanvasArrowSchema.safeParse({
+      start: { position: { x: 0, y: 0 } },
+      end: {
+        position: { x: 160, y: 40 },
+        binding: { targetId: "image-9", anchor: { x: 0, y: 0.5 } },
+      },
+      style: "sketch",
+      pattern: "dashed",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.rotation).toBe(0);
     expect(
-      CreateCanvasArrowSchema.safeParse({
-        start: { position: { x: 0, y: 0 } },
-        end: {
-          position: { x: 160, y: 40 },
-          binding: { targetId: "image-9", anchor: { x: 0, y: 0.5 } },
-        },
-        style: "sketch",
-        pattern: "dashed",
-      }).success,
-    ).toBe(true);
+      UpdateCanvasArrowSchema.safeParse({ rotation: Number.POSITIVE_INFINITY })
+        .success,
+    ).toBe(false);
     expect(
       CreateCanvasArrowSchema.safeParse({
         start: { position: { x: 0, y: 0 } },

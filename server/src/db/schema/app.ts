@@ -971,6 +971,7 @@ export const canvasArrowObjects = pgTable(
       .$type<{ x: number; y: number }[]>()
       .default([])
       .notNull(),
+    rotation: doublePrecision("rotation").default(0).notNull(),
     color: canvasObjectColorEnum().default("ink").notNull(),
   },
   (table) => [

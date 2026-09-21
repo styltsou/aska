@@ -21,6 +21,7 @@ import type {
   CanvasObject,
   CanvasObjectResponse,
   CollectionContentsResponse,
+  CanvasArrowObject,
   CreateCanvasArrowInput,
   CreateCanvasTextInput,
   UpdateCanvasArrowInput,
@@ -56,9 +57,15 @@ function updateObjectInContents(
   return {
     ...current,
     canvasObjects: current.canvasObjects.map((object) =>
-      object.id === objectId ? update(object) : object,
+      object.id === objectId || object.clientId === objectId
+        ? update(object)
+        : object,
     ),
   };
+}
+
+function matchesObjectIdentity(object: CanvasObject, objectId: string) {
+  return object.id === objectId || object.clientId === objectId;
 }
 
 type CanvasObjectType = CanvasObject["type"];
@@ -108,7 +115,11 @@ export function createCanvasObjectUpdateQueue<TPatch extends object>({
           (current) =>
             updateObjectInContents(current, objectId, (candidate) =>
               candidate.type === objectType && confirmed.type === objectType
-                ? confirmed
+                ? {
+                    ...confirmed,
+                    id: candidate.id,
+                    clientId: candidate.clientId ?? confirmed.clientId,
+                  }
                 : candidate,
             ),
         );
@@ -128,7 +139,9 @@ export function createCanvasObjectUpdateQueue<TPatch extends object>({
           .getQueriesData<CollectionContentsResponse>(filter)
           .flatMap(([, current]) => current?.canvasObjects ?? [])
           .find(
-            (object) => object.id === objectId && object.type === objectType,
+            (object) =>
+              matchesObjectIdentity(object, objectId) &&
+              object.type === objectType,
           );
         confirmedObjects.set(objectId, confirmed);
       }
@@ -261,6 +274,80 @@ type CreateCanvasTextVariables = CreateCanvasTextInput & {
   clientId?: string;
 };
 
+export type CreateCanvasArrowVariables = CreateCanvasArrowInput & {
+  clientId?: string;
+};
+
+function optimisticArrowFromVariables(
+  variables: CreateCanvasArrowVariables,
+): CanvasArrowObject | undefined {
+  if (!variables.clientId) return undefined;
+  const {
+    clientId,
+    parentFolderPath: _parentFolderPath,
+    type: _type,
+    ...arrow
+  } = variables;
+  const timestamp = new Date().toISOString();
+  return {
+    id: clientId,
+    clientId,
+    type: "arrow",
+    ...arrow,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+export function reconcileCreatedArrowInContents(
+  current: CollectionContentsResponse | undefined,
+  object: CanvasArrowObject,
+  clientId?: string,
+) {
+  if (!current) return current;
+  const optimistic = clientId
+    ? current.canvasObjects.find(
+        (candidate) =>
+          candidate.type === "arrow" &&
+          matchesObjectIdentity(candidate, clientId),
+      )
+    : undefined;
+  const persisted: CanvasArrowObject =
+    optimistic?.type === "arrow"
+      ? {
+          ...object,
+          start: optimistic.start,
+          end: optimistic.end,
+          style: optimistic.style,
+          pattern: optimistic.pattern,
+          head: optimistic.head,
+          routing: optimistic.routing,
+          points: optimistic.points,
+          rotation: optimistic.rotation,
+          color: optimistic.color,
+          clientId,
+        }
+      : clientId
+        ? { ...object, clientId }
+        : object;
+  let replaced = false;
+  const canvasObjects = current.canvasObjects.flatMap((candidate) => {
+    if (
+      candidate.id === object.id ||
+      (clientId !== undefined && matchesObjectIdentity(candidate, clientId))
+    ) {
+      if (replaced) return [];
+      replaced = true;
+      return [persisted];
+    }
+    return [candidate];
+  });
+  return {
+    ...current,
+    canvasObjects: replaced ? canvasObjects : [...canvasObjects, persisted],
+  };
+}
+
 export function useCreateCanvasText(
   workspaceSlug: string,
   collectionSlug: string,
@@ -303,10 +390,36 @@ export function useCreateCanvasArrow(
 ) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateCanvasArrowInput) =>
+    mutationFn: ({
+      clientId: _clientId,
+      ...data
+    }: CreateCanvasArrowVariables) =>
       createCanvasArrow(workspaceSlug, collectionSlug, data),
-    onSuccess: ({ object }, variables) => {
-      if (object.type !== "arrow") return;
+    onMutate: (variables) => {
+      const optimistic = optimisticArrowFromVariables(variables);
+      if (!optimistic) return;
+      const filter = contentsFilter(
+        workspaceSlug,
+        collectionSlug,
+        variables.parentFolderPath,
+      );
+      void queryClient.cancelQueries(filter);
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        filter,
+        (current) =>
+          current &&
+          !current.canvasObjects.some((candidate) =>
+            matchesObjectIdentity(candidate, optimistic.id),
+          )
+            ? {
+                ...current,
+                canvasObjects: [...current.canvasObjects, optimistic],
+              }
+            : current,
+      );
+    },
+    onError: (_error, variables) => {
+      if (!variables.clientId) return;
       queryClient.setQueriesData<CollectionContentsResponse>(
         contentsFilter(
           workspaceSlug,
@@ -317,13 +430,24 @@ export function useCreateCanvasArrow(
           current
             ? {
                 ...current,
-                canvasObjects: current.canvasObjects.some(
-                  (candidate) => candidate.id === object.id,
-                )
-                  ? current.canvasObjects
-                  : [...current.canvasObjects, object],
+                canvasObjects: current.canvasObjects.filter(
+                  (candidate) =>
+                    !matchesObjectIdentity(candidate, variables.clientId!),
+                ),
               }
             : current,
+      );
+    },
+    onSuccess: ({ object }, variables) => {
+      if (object.type !== "arrow") return;
+      queryClient.setQueriesData<CollectionContentsResponse>(
+        contentsFilter(
+          workspaceSlug,
+          collectionSlug,
+          variables.parentFolderPath,
+        ),
+        (current) =>
+          reconcileCreatedArrowInContents(current, object, variables.clientId),
       );
     },
   });
@@ -350,15 +474,25 @@ export function useUpdateCanvasArrow(
   workspaceSlug: string,
   collectionSlug: string,
   folderPath?: string,
+  resolveObjectId?: (objectId: string) => string | Promise<string>,
 ) {
   const filter = useMemo(
     () => contentsFilter(workspaceSlug, collectionSlug, folderPath),
     [workspaceSlug, collectionSlug, folderPath],
   );
   const save = useCallback(
-    (objectId: string, data: UpdateCanvasArrowInput) =>
-      updateCanvasArrow(workspaceSlug, collectionSlug, objectId, data),
-    [workspaceSlug, collectionSlug],
+    async (objectId: string, data: UpdateCanvasArrowInput) => {
+      const persistedId = resolveObjectId
+        ? await resolveObjectId(objectId)
+        : objectId;
+      return updateCanvasArrow(
+        workspaceSlug,
+        collectionSlug,
+        persistedId,
+        data,
+      );
+    },
+    [workspaceSlug, collectionSlug, resolveObjectId],
   );
   return useQueuedCanvasObjectUpdate(filter, "arrow", save);
 }

@@ -62,7 +62,7 @@ import {
 import { usePersistedStore, useTransientStore } from "@/store";
 import { toast } from "sonner";
 
-import { formatPlatformShortcut } from "@/lib/platform";
+import { formatPlatformShortcut, getPlatformModifier } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import { CanvasToolCursorIndicator } from "./canvas-tool-cursor-indicator";
 import { makeBoardKey } from "./canvas-key";
@@ -119,6 +119,11 @@ import {
   type CanvasTextNodeData,
 } from "./canvas-text-node";
 import { CanvasArrowLayer, type DraftCanvasArrow } from "./canvas-arrow-layer";
+import { arrowHasIdentity } from "./canvas-arrow-identity";
+import {
+  CanvasObjectInspector,
+  type CanvasInspectorTarget,
+} from "./canvas-object-inspector";
 
 const DEFAULT_VIEWPORT = { x: 40, y: 40, zoom: 1.1 };
 const BOARD_VIEWPORT_INSET = 24;
@@ -294,6 +299,7 @@ function CanvasSurface({
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [draftText, setDraftText] = useState<CanvasTextObject>();
   const [editingTextId, setEditingTextId] = useState<string>();
+  const [editingArrowId, setEditingArrowId] = useState<string>();
   const [canvasObjectFocus, setCanvasObjectFocus] = useState<{
     boardKey: string;
     objectId: string;
@@ -301,6 +307,10 @@ function CanvasSurface({
   const draftTextRef = useRef<CanvasTextObject | undefined>(undefined);
   draftTextRef.current = draftText;
   const [draftArrow, setDraftArrow] = useState<DraftCanvasArrow>();
+  const pendingArrowCreatesRef = useRef(new Map<string, Promise<string>>());
+  const resolveArrowObjectId = useCallback(async (objectId: string) => {
+    return (await pendingArrowCreatesRef.current.get(objectId)) ?? objectId;
+  }, []);
   const arrowPointerStartRef = useRef<XYPosition | undefined>(undefined);
   const handledCreationRequestRef = useRef<number | undefined>(undefined);
   const activeTool = useTransientStore(
@@ -314,7 +324,7 @@ function CanvasSurface({
     workspaceSlug,
     collectionSlug,
   );
-  const { mutate: createCanvasArrowMutation } = useCreateCanvasArrow(
+  const { mutateAsync: createCanvasArrowMutation } = useCreateCanvasArrow(
     workspaceSlug,
     collectionSlug,
   );
@@ -327,6 +337,7 @@ function CanvasSurface({
     workspaceSlug,
     collectionSlug,
     folderPath,
+    resolveArrowObjectId,
   );
   const { mutate: updateCanvasItemFrontIndexesMutation } =
     useUpdateCanvasItemFrontIndexes(workspaceSlug, collectionSlug, folderPath);
@@ -402,14 +413,30 @@ function CanvasSurface({
     shouldStart: (event) =>
       activeTool === "select" &&
       (!(event.target instanceof Element) ||
-        !event.target.closest(".react-flow__node")),
+        !event.target.closest(
+          ".react-flow__node, [data-selection-node-id], [data-arrow-control]",
+        )),
     stopNativeEvents: true,
   });
 
   const handleBulkDelete = useCallback(() => {
     setCanvasObjectFocus(undefined);
+    const pendingArrowIds = selectedIds.filter((id) =>
+      id.startsWith("arrow-draft-"),
+    );
+    for (const objectId of pendingArrowIds) {
+      const creation = pendingArrowCreatesRef.current.get(objectId);
+      if (!creation) continue;
+      void creation
+        .then((persistedId) => {
+          deleteCanvasObjectMutation(persistedId, {
+            onError: () => toast.error("Unable to delete the canvas object."),
+          });
+        })
+        .catch(() => undefined);
+    }
     const persistedIds = selectedIds.filter(
-      (id) => !id.startsWith("text-draft-"),
+      (id) => !id.startsWith("text-draft-") && !id.startsWith("arrow-draft-"),
     );
     if (persistedIds.length === 0) {
       setDraftText(undefined);
@@ -427,7 +454,14 @@ function CanvasSurface({
         },
       },
     );
-  }, [bulkDelete, collectionSlug, selectedIds, clearSelection, boardKey]);
+  }, [
+    boardKey,
+    bulkDelete,
+    clearSelection,
+    collectionSlug,
+    deleteCanvasObjectMutation,
+    selectedIds,
+  ]);
 
   const deleteCanvasObject = useCallback(
     (objectId: string) => {
@@ -436,6 +470,22 @@ function CanvasSurface({
         setDraftText(undefined);
         setEditingTextId(undefined);
         clearSelection(boardKey);
+        return;
+      }
+      if (objectId.startsWith("arrow-draft-")) {
+        setEditingArrowId(undefined);
+        clearSelection(boardKey);
+        const creation = pendingArrowCreatesRef.current.get(objectId);
+        if (creation) {
+          void creation
+            .then((persistedId) => {
+              deleteCanvasObjectMutation(persistedId, {
+                onError: () =>
+                  toast.error("Unable to delete the canvas object."),
+              });
+            })
+            .catch(() => undefined);
+        }
         return;
       }
       deleteCanvasObjectMutation(objectId, {
@@ -793,13 +843,30 @@ function CanvasSurface({
       if (hasSelectionModifier(event)) {
         setCanvasObjectFocus(undefined);
         toggleSelectedNode(boardKey, objectId);
+      } else if (selectedIds.length > 1 && selectedIdSet.has(objectId)) {
+        return;
       } else {
         setCanvasObjectFocus({ boardKey, objectId });
         replaceSelection(boardKey, [objectId]);
       }
       event.stopPropagation();
     },
-    [boardKey, replaceSelection, toggleSelectedNode],
+    [
+      boardKey,
+      replaceSelection,
+      selectedIdSet,
+      selectedIds.length,
+      toggleSelectedNode,
+    ],
+  );
+  const handleTextPointerDown = useCallback(
+    (objectId: string, event: React.PointerEvent) => {
+      if (event.button !== 0 || hasSelectionModifier(event)) return;
+      if (selectedIds.length > 1 && selectedIdSet.has(objectId)) return;
+      setCanvasObjectFocus({ boardKey, objectId });
+      replaceSelection(boardKey, [objectId]);
+    },
+    [boardKey, replaceSelection, selectedIdSet, selectedIds.length],
   );
   const commitText = useCallback(
     (objectId: string, content: string) => {
@@ -895,6 +962,7 @@ function CanvasSurface({
           | "head"
           | "routing"
           | "points"
+          | "rotation"
           | "color"
         >
       >,
@@ -970,9 +1038,8 @@ function CanvasSurface({
   );
   const createArrowBetween = useCallback(
     (start: XYPosition, end: XYPosition) => {
-      setCanvasObjectFocus(undefined);
-      clearSelection(boardKey);
       setCanvasTool(boardKey, "select");
+      const clientId = `arrow-draft-${crypto.randomUUID()}`;
       const arrow: DraftCanvasArrow = {
         start: findArrowBinding(start),
         end: findArrowBinding(end),
@@ -981,48 +1048,104 @@ function CanvasSurface({
         head: "filled",
         routing: "straight",
         points: [],
+        rotation: 0,
         color: "ink",
       };
-      setDraftArrow(arrow);
-      createCanvasArrowMutation(
-        {
-          type: "arrow",
-          ...arrow,
-          parentFolderPath: folderPath,
-        },
-        {
-          onSuccess: () => {
-            setDraftArrow(undefined);
-            clearSelection(boardKey);
-          },
-          onError: () => {
-            setDraftArrow(undefined);
-            toast.error("Unable to create the arrow.");
-          },
-        },
-      );
+      const creation = createCanvasArrowMutation({
+        type: "arrow",
+        ...arrow,
+        parentFolderPath: folderPath,
+        clientId,
+      }).then(({ object }) => {
+        if (object.type !== "arrow") {
+          throw new Error("Expected the created canvas object to be an arrow");
+        }
+        setCanvasObjectFocus((current) =>
+          current?.boardKey === boardKey && current.objectId === clientId
+            ? { boardKey, objectId: object.id }
+            : current,
+        );
+        setEditingArrowId((current) =>
+          current === clientId ? object.id : current,
+        );
+        if (selectionRef.current.selectedIds.has(clientId)) {
+          replaceSelection(
+            boardKey,
+            [...selectionRef.current.selectedIds].map((id) =>
+              id === clientId ? object.id : id,
+            ),
+          );
+        }
+        return object.id;
+      });
+      pendingArrowCreatesRef.current.set(clientId, creation);
+      setDraftArrow(undefined);
+      setEditingArrowId(undefined);
+      setCanvasObjectFocus({ boardKey, objectId: clientId });
+      replaceSelection(boardKey, [clientId]);
+      void creation.catch(() => {
+        pendingArrowCreatesRef.current.delete(clientId);
+        setCanvasObjectFocus((current) =>
+          current?.boardKey === boardKey && current.objectId === clientId
+            ? undefined
+            : current,
+        );
+        setEditingArrowId((current) =>
+          current === clientId ? undefined : current,
+        );
+        if (selectionRef.current.selectedIds.has(clientId)) {
+          replaceSelection(
+            boardKey,
+            [...selectionRef.current.selectedIds].filter(
+              (id) => id !== clientId,
+            ),
+          );
+        }
+        toast.error("Unable to create the arrow.");
+      });
     },
     [
       boardKey,
-      clearSelection,
       createCanvasArrowMutation,
       findArrowBinding,
       folderPath,
+      replaceSelection,
       setCanvasTool,
     ],
   );
   const handleArrowSelect = useCallback(
-    (objectId: string, event: React.PointerEvent) => {
+    (objectId: string, event: ReactMouseEvent) => {
+      setEditingArrowId((current) =>
+        current === objectId ? current : undefined,
+      );
       if (hasSelectionModifier(event)) {
         setCanvasObjectFocus(undefined);
         toggleSelectedNode(boardKey, objectId);
+      } else if (selectedIds.length > 1 && selectedIdSet.has(objectId)) {
+        return;
       } else {
         setCanvasObjectFocus({ boardKey, objectId });
         replaceSelection(boardKey, [objectId]);
       }
       event.stopPropagation();
     },
-    [boardKey, replaceSelection, toggleSelectedNode],
+    [
+      boardKey,
+      replaceSelection,
+      selectedIdSet,
+      selectedIds.length,
+      toggleSelectedNode,
+    ],
+  );
+  const handleArrowFocus = useCallback(
+    (objectId: string) => {
+      setEditingArrowId((current) =>
+        current === objectId ? current : undefined,
+      );
+      setCanvasObjectFocus({ boardKey, objectId });
+      replaceSelection(boardKey, [objectId]);
+    },
+    [boardKey, replaceSelection],
   );
 
   useEffect(() => {
@@ -1151,30 +1274,62 @@ function CanvasSurface({
   const makeTextNodeData = useCallback(
     (object: CanvasTextObject): CanvasTextNodeData => ({
       object,
-      boardKey,
       editing: editingTextId === object.id,
-      focused: focusedCanvasObjectId === object.id,
       onSelect: handleTextSelect,
+      onPointerDown: handleTextPointerDown,
       onBeginEdit: (id) => {
         setCanvasObjectFocus(undefined);
         clearSelection(boardKey);
         setEditingTextId(id);
       },
       onCommit: commitText,
-      onDelete: deleteCanvasObject,
-      onStyle: updateTextStyle,
     }),
     [
       boardKey,
       clearSelection,
       commitText,
-      deleteCanvasObject,
       editingTextId,
-      focusedCanvasObjectId,
+      handleTextPointerDown,
       handleTextSelect,
-      updateTextStyle,
     ],
   );
+  const focusedInspectorTarget = useMemo<
+    CanvasInspectorTarget | undefined
+  >(() => {
+    if (!focusedCanvasObjectId) return undefined;
+    const object = canvasObjects.find(
+      (candidate) =>
+        candidate.id === focusedCanvasObjectId ||
+        (candidate.type === "arrow" &&
+          arrowHasIdentity(candidate, focusedCanvasObjectId)),
+    );
+    if (!object) return undefined;
+    if (object.type === "arrow") {
+      return {
+        type: "arrow",
+        object,
+        pointEditing: arrowHasIdentity(object, editingArrowId),
+        onUpdate: updateArrowObject,
+        onDelete: deleteCanvasObject,
+      };
+    }
+    if (object.type === "text") {
+      return {
+        type: "text",
+        object,
+        onUpdate: updateTextStyle,
+        onDelete: deleteCanvasObject,
+      };
+    }
+    return undefined;
+  }, [
+    canvasObjects,
+    deleteCanvasObject,
+    editingArrowId,
+    focusedCanvasObjectId,
+    updateArrowObject,
+    updateTextStyle,
+  ]);
 
   const [flowNodes, setFlowNodes] = useState<CanvasFlowNode[]>(() => [
     ...nodes.map((node, index) =>
@@ -1282,6 +1437,12 @@ function CanvasSurface({
         return;
       }
       if (event.key === "Escape") {
+        if (editingArrowId) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          setEditingArrowId(undefined);
+          return;
+        }
         setCanvasTool(boardKey, "select");
         setDraftArrow(undefined);
         arrowPointerStartRef.current = undefined;
@@ -1300,6 +1461,7 @@ function CanvasSurface({
   }, [
     boardKey,
     clearSelection,
+    editingArrowId,
     eligibleNodeIds,
     fitCanvasView,
     replaceSelection,
@@ -1615,6 +1777,7 @@ function CanvasSurface({
             head: "filled",
             routing: "straight",
             points: [],
+            rotation: 0,
             color: "ink",
           });
           event.preventDefault();
@@ -2101,11 +2264,14 @@ function CanvasSurface({
             (object): object is CanvasArrowObject => object.type === "arrow",
           )}
           draft={draftArrow}
-          boardKey={boardKey}
           selectedIds={selectedIdSet}
           focusedId={focusedCanvasObjectId}
+          pointEditId={editingArrowId}
           enabled={activeTool === "select"}
+          editable={!isCanvasLocked && activeTool === "select"}
           onSelect={handleArrowSelect}
+          onFocus={handleArrowFocus}
+          onPointEditChange={setEditingArrowId}
           onUpdate={updateArrowObject}
           onDelete={deleteCanvasObject}
         />
@@ -2114,26 +2280,34 @@ function CanvasSurface({
           zoom={getViewport().zoom}
         />
         <Panel position="top-center" className="m-3">
-          <SelectionActionBar
-            count={selectedAssetIds.length}
-            surface="canvas"
-            onClear={() => {
-              setCanvasObjectFocus(undefined);
-              clearSelection(boardKey);
-            }}
-            onMove={
-              selectionHasCanvasObjects
-                ? undefined
-                : () => setMoveDialogOpen(true)
-            }
-            onDelete={handleBulkDelete}
-            onArrange={selectionHasCanvasObjects ? undefined : handleArrange}
-            onCompact={selectionHasCanvasObjects ? undefined : handleCompact}
-            onMakeRow={selectionHasCanvasObjects ? undefined : handleMakeRow}
-            onMakeColumn={
-              selectionHasCanvasObjects ? undefined : handleMakeColumn
-            }
-          />
+          {focusedInspectorTarget ? (
+            <CanvasObjectInspector
+              boardKey={boardKey}
+              target={focusedInspectorTarget}
+              modifierLabel={getPlatformModifier()}
+            />
+          ) : (
+            <SelectionActionBar
+              count={selectedAssetIds.length}
+              surface="canvas"
+              onClear={() => {
+                setCanvasObjectFocus(undefined);
+                clearSelection(boardKey);
+              }}
+              onMove={
+                selectionHasCanvasObjects
+                  ? undefined
+                  : () => setMoveDialogOpen(true)
+              }
+              onDelete={handleBulkDelete}
+              onArrange={selectionHasCanvasObjects ? undefined : handleArrange}
+              onCompact={selectionHasCanvasObjects ? undefined : handleCompact}
+              onMakeRow={selectionHasCanvasObjects ? undefined : handleMakeRow}
+              onMakeColumn={
+                selectionHasCanvasObjects ? undefined : handleMakeColumn
+              }
+            />
+          )}
         </Panel>
       </ReactFlow>
 

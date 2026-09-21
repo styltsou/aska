@@ -79,6 +79,7 @@ export class CanvasObjectService {
         arrowHead: canvasArrowObjects.head,
         arrowRouting: canvasArrowObjects.routing,
         arrowPoints: canvasArrowObjects.points,
+        arrowRotation: canvasArrowObjects.rotation,
         arrowColor: canvasArrowObjects.color,
       })
       .from(canvasObjects)
@@ -222,6 +223,7 @@ export class CanvasObjectService {
         head: row.arrowHead!,
         routing: row.arrowRouting!,
         points: row.arrowPoints!,
+        rotation: row.arrowRotation!,
         color: row.arrowColor!,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
@@ -331,6 +333,7 @@ export class CanvasObjectService {
         head: data.head,
         routing: data.routing,
         points: data.points,
+        rotation: data.rotation,
         color: data.color,
       });
       return object;
@@ -345,6 +348,7 @@ export class CanvasObjectService {
       head: data.head,
       routing: data.routing,
       points: data.points,
+      rotation: data.rotation,
       color: data.color,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
@@ -464,6 +468,7 @@ export class CanvasObjectService {
           head: data.head,
           routing: data.routing,
           points: data.points,
+          rotation: data.rotation,
           color: data.color,
         })
         .where(eq(canvasArrowObjects.canvasObjectId, target.id));

@@ -71,6 +71,7 @@ export const CanvasArrowObjectSchema = z.object({
   head: CanvasArrowHeadSchema,
   routing: CanvasArrowRoutingSchema,
   points: z.array(BoardPositionSchema).max(16),
+  rotation: z.number().finite(),
   color: CanvasObjectColorSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -125,6 +126,7 @@ export const CreateCanvasArrowSchema = z.object({
   head: CanvasArrowHeadSchema.default("filled"),
   routing: CanvasArrowRoutingSchema.default("straight"),
   points: z.array(BoardPositionSchema).max(16).default([]),
+  rotation: z.number().finite().default(0),
   color: CanvasObjectColorSchema.default("ink"),
   parentFolderPath: z.string().optional(),
 });
@@ -140,6 +142,7 @@ export const UpdateCanvasArrowSchema = z
     head: CanvasArrowHeadSchema.optional(),
     routing: CanvasArrowRoutingSchema.optional(),
     points: z.array(BoardPositionSchema).max(16).optional(),
+    rotation: z.number().finite().optional(),
     color: CanvasObjectColorSchema.optional(),
   })
   .refine((value) => Object.keys(value).length > 0, "No changes supplied");

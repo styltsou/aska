@@ -1,40 +1,45 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ViewportPortal,
   useReactFlow,
   useStore,
   type Node,
 } from "@xyflow/react";
-import { ChevronDownIcon, Trash2Icon } from "lucide-react";
-import { AnimatePresence } from "motion/react";
-
 import type {
   BoardPosition,
   CanvasArrowEndpoint,
   CanvasArrowHead,
   CanvasArrowObject,
-  CanvasArrowPattern,
   CanvasArrowRouting,
   CanvasArrowStyle,
   CanvasObjectColor,
 } from "@/api/collection";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { GLASS_OPTION_TOOLBAR_CLASS } from "@/lib/glass";
+  hasSelectionModifier,
+  isSelectionShortcutBlocked,
+} from "@/lib/selection";
 import { cn } from "@/lib/utils";
-import { useTransientStore } from "@/store";
-import { CanvasColorSwatches } from "./canvas-color-swatches";
-import { CanvasScreenOverlay } from "./canvas-screen-overlay";
 import {
   arrowheadSketchJitter,
   arrowMarkerRefX,
   makeArrowPaths,
 } from "./canvas-arrow-geometry";
+import { arrowHasIdentity, arrowIsSelected } from "./canvas-arrow-identity";
+import { createArrowPreviewSessionTracker } from "./canvas-arrow-preview-session";
+import {
+  ARROW_CORNER_RESIZE_HANDLES,
+  arrowResizeCursor,
+  arrowFrameCorners,
+  arrowFrameResizeHandlePositions,
+  arrowRotationHandlePosition,
+  makeArrowTransformFrame,
+  normalizeArrowRotation,
+  paddedArrowFrameBounds,
+  resizeArrowPoints,
+  rotateArrowPoints,
+  snapArrowRotation,
+  type ArrowResizeHandle,
+} from "./canvas-arrow-transform";
 import {
   CANVAS_OBJECT_COLORS,
   arrowDashArray,
@@ -51,12 +56,13 @@ export type DraftCanvasArrow = Pick<
   | "head"
   | "routing"
   | "points"
+  | "rotation"
   | "color"
 >;
 
 type ArrowGeometry = Pick<
   CanvasArrowObject,
-  "start" | "end" | "points" | "routing"
+  "start" | "end" | "points" | "routing" | "rotation"
 >;
 type ArrowUpdate = Partial<
   Pick<
@@ -68,28 +74,44 @@ type ArrowUpdate = Partial<
     | "head"
     | "routing"
     | "points"
+    | "rotation"
     | "color"
   >
 >;
 
+type ArrowDrag = {
+  arrowId: string;
+  kind: "body" | "start" | "end" | "bend" | "insert" | "resize" | "rotate";
+  index?: number;
+  handle?: ArrowResizeHandle;
+};
+
+const ARROW_RESIZE_HANDLE_OFFSET = 8;
+
 export function CanvasArrowLayer({
   arrows,
   draft,
-  boardKey,
   selectedIds,
   focusedId,
+  pointEditId,
   enabled,
+  editable,
   onSelect,
+  onFocus,
+  onPointEditChange,
   onUpdate,
   onDelete,
 }: {
   arrows: CanvasArrowObject[];
   draft?: DraftCanvasArrow;
-  boardKey: string;
   selectedIds: ReadonlySet<string>;
   focusedId?: string;
+  pointEditId?: string;
   enabled: boolean;
-  onSelect: (id: string, event: React.PointerEvent) => void;
+  editable: boolean;
+  onSelect: (id: string, event: React.MouseEvent) => void;
+  onFocus: (id: string) => void;
+  onPointEditChange: (id: string | undefined) => void;
   onUpdate: (
     id: string,
     update: ArrowUpdate,
@@ -100,23 +122,30 @@ export function CanvasArrowLayer({
   const { getNode, getNodes, getViewport, screenToFlowPosition } =
     useReactFlow<Node>();
   const zoom = useStore((state) => state.transform[2]);
-  const viewportActivity = useTransientStore(
-    (state) => state.canvasViewportActivity[boardKey] ?? 0,
-  );
   const [previews, setPreviews] = useState<Record<string, ArrowGeometry>>({});
+  const [activeBend, setActiveBend] = useState<{
+    arrowId: string;
+    index: number;
+  }>();
+  const [dragging, setDragging] = useState<ArrowDrag>();
+  const [previewSessions] = useState(createArrowPreviewSessionTracker);
+  const pointerFocusIdRef = useRef<string | undefined>(undefined);
 
-  const resolveEndpoint = (endpoint: CanvasArrowEndpoint) => {
-    const target = endpoint.binding
-      ? getNode(endpoint.binding.targetId)
-      : undefined;
-    if (!target) return endpoint.position;
-    const width = target.measured?.width ?? target.width ?? 0;
-    const height = target.measured?.height ?? target.height ?? 0;
-    return {
-      x: target.position.x + width * endpoint.binding!.anchor.x,
-      y: target.position.y + height * endpoint.binding!.anchor.y,
-    };
-  };
+  const resolveEndpoint = useCallback(
+    (endpoint: CanvasArrowEndpoint) => {
+      const target = endpoint.binding
+        ? getNode(endpoint.binding.targetId)
+        : undefined;
+      if (!target) return endpoint.position;
+      const width = target.measured?.width ?? target.width ?? 0;
+      const height = target.measured?.height ?? target.height ?? 0;
+      return {
+        x: target.position.x + width * endpoint.binding!.anchor.x,
+        y: target.position.y + height * endpoint.binding!.anchor.y,
+      };
+    },
+    [getNode],
+  );
 
   const bindEndpoint = (
     position: BoardPosition,
@@ -159,7 +188,8 @@ export function CanvasArrowLayer({
     };
   };
 
-  const clearPreview = (id: string) => {
+  const clearPreview = (id: string, previewSession: number) => {
+    if (!previewSessions.owns(id, previewSession)) return;
     setPreviews((current) => {
       const next = { ...current };
       delete next[id];
@@ -173,9 +203,29 @@ export function CanvasArrowLayer({
     part: "start" | "end" | "body",
   ) => {
     if (!enabled) return;
+    if (part === "body" && hasSelectionModifier(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (
+        event.detail === 1 &&
+        !(arrowHasIdentity(arrow, focusedId) && selectedIds.size === 1)
+      ) {
+        onSelect(arrow.id, event);
+      }
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     onSelect(arrow.id, event);
+    if (
+      !editable ||
+      (part === "body" && arrowHasIdentity(arrow, pointEditId))
+    ) {
+      return;
+    }
+    const previewSession = previewSessions.begin(arrow.id);
+    const releasePointer = capturePointer(event);
+    setDragging({ arrowId: arrow.id, kind: part });
     const pointerStart = screenToFlowPosition({
       x: event.clientX,
       y: event.clientY,
@@ -208,13 +258,14 @@ export function CanvasArrowLayer({
               ? initial.points.map((bend) => addPoint(bend, delta))
               : initial.points,
           routing: initial.routing,
+          rotation: initial.rotation,
         },
       }));
     };
     const up = (upEvent: PointerEvent) => {
       cleanup();
       if (!didMove) {
-        clearPreview(arrow.id);
+        clearPreview(arrow.id, previewSession);
         return;
       }
       const point = screenToFlowPosition({
@@ -245,15 +296,20 @@ export function CanvasArrowLayer({
             ? initial.points.map((bend) => roundPoint(addPoint(bend, delta)))
             : arrow.points,
         routing: arrow.routing,
+        rotation: initial.rotation,
       };
       setPreviews((current) => ({ ...current, [arrow.id]: update }));
-      onUpdate(arrow.id, update, { onSettled: () => clearPreview(arrow.id) });
+      onUpdate(arrow.id, update, {
+        onSettled: () => clearPreview(arrow.id, previewSession),
+      });
     };
     const cancel = () => {
       cleanup();
-      clearPreview(arrow.id);
+      clearPreview(arrow.id, previewSession);
     };
     const cleanup = () => {
+      releasePointer();
+      setDragging(undefined);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", cancel);
@@ -270,10 +326,28 @@ export function CanvasArrowLayer({
     insert: boolean,
     insertionPoint?: BoardPosition,
   ) => {
-    if (!enabled) return;
+    if (
+      !enabled ||
+      !editable ||
+      (insert &&
+        !arrowHasIdentity(arrow, pointEditId) &&
+        arrow.points.length > 0)
+    ) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     onSelect(arrow.id, event);
+    const previewSession = previewSessions.begin(arrow.id);
+    const releasePointer = capturePointer(event);
+    if (!insert && arrowHasIdentity(arrow, pointEditId)) {
+      setActiveBend({ arrowId: arrow.id, index });
+    }
+    setDragging({
+      arrowId: arrow.id,
+      kind: insert ? "insert" : "bend",
+      index,
+    });
     const geometry = resolvedGeometry(arrow, resolveEndpoint);
     const initialPoints = insert
       ? insertPoint(
@@ -314,7 +388,7 @@ export function CanvasArrowLayer({
     const up = () => {
       cleanup();
       if (!didMove) {
-        clearPreview(arrow.id);
+        clearPreview(arrow.id, previewSession);
         return;
       }
       const points = latestPoints.map(roundPoint);
@@ -325,14 +399,16 @@ export function CanvasArrowLayer({
       onUpdate(
         arrow.id,
         { points, routing: geometry.routing },
-        { onSettled: () => clearPreview(arrow.id) },
+        { onSettled: () => clearPreview(arrow.id, previewSession) },
       );
     };
     const cancel = () => {
       cleanup();
-      clearPreview(arrow.id);
+      clearPreview(arrow.id, previewSession);
     };
     const cleanup = () => {
+      releasePointer();
+      setDragging(undefined);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", cancel);
@@ -340,6 +416,374 @@ export function CanvasArrowLayer({
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up, { once: true });
     window.addEventListener("pointercancel", cancel, { once: true });
+  };
+
+  const beginResize = (
+    event: React.PointerEvent,
+    arrow: CanvasArrowObject,
+    handle: ArrowResizeHandle,
+  ) => {
+    if (!enabled || !editable) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onFocus(arrow.id);
+    const previewSession = previewSessions.begin(arrow.id);
+    const releasePointer = capturePointer(event);
+    const initial = resolvedGeometry(arrow, resolveEndpoint);
+    const initialPoints = geometryPoints(initial);
+    const frame = makeArrowTransformFrame(initialPoints, initial.rotation);
+    const pointerStart = screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+    let latest = initial;
+    let didMove = false;
+    setDragging({ arrowId: arrow.id, kind: "resize", handle });
+
+    const move = (moveEvent: PointerEvent) => {
+      const point = screenToFlowPosition({
+        x: moveEvent.clientX,
+        y: moveEvent.clientY,
+      });
+      const delta = subtractPoint(point, pointerStart);
+      didMove ||= Math.hypot(delta.x, delta.y) > 1 / zoom;
+      const resized = resizeArrowPoints(initialPoints, frame, handle, delta, {
+        preserveAspectRatio: moveEvent.shiftKey,
+        fromCenter: moveEvent.altKey,
+        minimumSize: 12 / zoom,
+      });
+      latest = geometryFromPoints(resized, arrow.routing, initial.rotation);
+      setPreviews((current) => ({ ...current, [arrow.id]: latest }));
+    };
+    const up = () => {
+      cleanup();
+      if (!didMove) {
+        clearPreview(arrow.id, previewSession);
+        return;
+      }
+      const update = roundedGeometry(latest);
+      setPreviews((current) => ({ ...current, [arrow.id]: update }));
+      onUpdate(arrow.id, update, {
+        onSettled: () => clearPreview(arrow.id, previewSession),
+      });
+    };
+    const cancel = () => {
+      cleanup();
+      clearPreview(arrow.id, previewSession);
+    };
+    const cleanup = () => {
+      releasePointer();
+      setDragging(undefined);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up, { once: true });
+    window.addEventListener("pointercancel", cancel, { once: true });
+  };
+
+  const beginRotation = (
+    event: React.PointerEvent,
+    arrow: CanvasArrowObject,
+  ) => {
+    if (!enabled || !editable) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onFocus(arrow.id);
+    const previewSession = previewSessions.begin(arrow.id);
+    const releasePointer = capturePointer(event);
+    const initial = resolvedGeometry(arrow, resolveEndpoint);
+    const initialPoints = geometryPoints(initial);
+    const frame = makeArrowTransformFrame(initialPoints, initial.rotation);
+    const pointerStart = screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+    const startAngle = Math.atan2(
+      pointerStart.y - frame.center.y,
+      pointerStart.x - frame.center.x,
+    );
+    let latest = initial;
+    let didMove = false;
+    setDragging({ arrowId: arrow.id, kind: "rotate" });
+
+    const move = (moveEvent: PointerEvent) => {
+      const point = screenToFlowPosition({
+        x: moveEvent.clientX,
+        y: moveEvent.clientY,
+      });
+      let angle =
+        Math.atan2(point.y - frame.center.y, point.x - frame.center.x) -
+        startAngle;
+      if (moveEvent.shiftKey) {
+        angle = snapArrowRotation(initial.rotation + angle) - initial.rotation;
+      }
+      didMove ||= Math.abs(angle) > 0.002;
+      latest = geometryFromPoints(
+        rotateArrowPoints(initialPoints, frame.center, angle),
+        arrow.routing,
+        normalizeArrowRotation(initial.rotation + angle),
+      );
+      setPreviews((current) => ({ ...current, [arrow.id]: latest }));
+    };
+    const up = () => {
+      cleanup();
+      if (!didMove) {
+        clearPreview(arrow.id, previewSession);
+        return;
+      }
+      const update = roundedGeometry(latest);
+      setPreviews((current) => ({ ...current, [arrow.id]: update }));
+      onUpdate(arrow.id, update, {
+        onSettled: () => clearPreview(arrow.id, previewSession),
+      });
+    };
+    const cancel = () => {
+      cleanup();
+      clearPreview(arrow.id, previewSession);
+    };
+    const cleanup = () => {
+      releasePointer();
+      setDragging(undefined);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up, { once: true });
+    window.addEventListener("pointercancel", cancel, { once: true });
+  };
+
+  useEffect(() => {
+    const editedArrow = pointEditId
+      ? arrows.find((arrow) => arrowHasIdentity(arrow, pointEditId))
+      : undefined;
+    if (
+      pointEditId &&
+      (!editedArrow || !arrowHasIdentity(editedArrow, focusedId) || !editable)
+    ) {
+      onPointEditChange(undefined);
+      setActiveBend(undefined);
+    }
+  }, [arrows, editable, focusedId, onPointEditChange, pointEditId]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!focusedId) return;
+      if (isSelectionShortcutBlocked(event.target)) return;
+      const arrow = arrows.find((candidate) =>
+        arrowHasIdentity(candidate, focusedId),
+      );
+      if (!arrow || !arrowIsSelected(arrow, selectedIds)) return;
+      const pointEditing = arrowHasIdentity(arrow, pointEditId);
+
+      if (editable && hasSelectionModifier(event) && event.key === "Enter") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        onPointEditChange(focusedId);
+        setActiveBend(undefined);
+        return;
+      }
+      if (event.key === "Delete") {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (pointEditing) {
+          if (!activeBend || !arrowHasIdentity(arrow, activeBend.arrowId)) {
+            return;
+          }
+          const points = arrow.points.filter(
+            (_point, index) => index !== activeBend.index,
+          );
+          onFocus(arrow.id);
+          onPointEditChange(arrow.id);
+          onUpdate(arrow.id, {
+            points,
+            ...(points.length === 0 ? { rotation: 0 } : {}),
+          });
+          setActiveBend(undefined);
+          return;
+        }
+        onDelete(focusedId);
+        return;
+      }
+
+      const direction = keyboardNudge(event);
+      if (!editable || !direction || pointEditing) return;
+      if (
+        !(event.target instanceof Element) ||
+        !event.target.closest(`[data-arrow-focus-id="${focusedId}"]`)
+      ) {
+        return;
+      }
+      event.preventDefault();
+      const step = event.shiftKey ? 10 : 1;
+      const geometry = resolvedGeometry(arrow, resolveEndpoint);
+      onUpdate(focusedId, {
+        start: {
+          position: addPoint(geometry.start.position, {
+            x: direction.x * step,
+            y: direction.y * step,
+          }),
+        },
+        end: {
+          position: addPoint(geometry.end.position, {
+            x: direction.x * step,
+            y: direction.y * step,
+          }),
+        },
+        points: geometry.points.map((point) =>
+          addPoint(point, {
+            x: direction.x * step,
+            y: direction.y * step,
+          }),
+        ),
+      });
+    };
+
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () =>
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+  }, [
+    activeBend,
+    arrows,
+    editable,
+    focusedId,
+    onDelete,
+    onPointEditChange,
+    onUpdate,
+    pointEditId,
+    resolveEndpoint,
+    selectedIds,
+  ]);
+
+  const nudgeEndpoint = (
+    event: React.KeyboardEvent<SVGGElement>,
+    arrow: CanvasArrowObject,
+    part: "start" | "end",
+  ) => {
+    const direction = keyboardNudge(event);
+    if (!direction || !editable) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const geometry = resolvedGeometry(arrow, resolveEndpoint);
+    const step = event.shiftKey ? 10 : 1;
+    onUpdate(arrow.id, {
+      [part]: {
+        position: addPoint(geometry[part].position, {
+          x: direction.x * step,
+          y: direction.y * step,
+        }),
+      },
+    });
+  };
+
+  const nudgeBend = (
+    event: React.KeyboardEvent<SVGGElement>,
+    arrow: CanvasArrowObject,
+    index: number,
+  ) => {
+    const direction = keyboardNudge(event);
+    if (!direction || !editable) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const step = event.shiftKey ? 10 : 1;
+    const rotation = arrow.rotation ?? 0;
+    onUpdate(arrow.id, {
+      points: arrow.points.map((point, pointIndex) =>
+        pointIndex === index
+          ? addPoint(point, {
+              x: direction.x * step,
+              y: direction.y * step,
+            })
+          : point,
+      ),
+      rotation,
+    });
+  };
+
+  const insertBendFromKeyboard = (
+    event: React.KeyboardEvent<SVGGElement>,
+    arrow: CanvasArrowObject,
+    index: number,
+    position: BoardPosition,
+  ) => {
+    if (event.key !== "Enter" || !editable || arrow.points.length >= 16) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const rotation = arrow.rotation ?? 0;
+    onUpdate(arrow.id, {
+      points: insertPoint(arrow.points, index, roundPoint(position)),
+      rotation,
+    });
+    setActiveBend({ arrowId: arrow.id, index });
+  };
+
+  const resizeFromKeyboard = (
+    event: React.KeyboardEvent<SVGGElement>,
+    arrow: CanvasArrowObject,
+    handle: ArrowResizeHandle,
+  ) => {
+    const direction = keyboardNudge(event);
+    if (!direction || !editable) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const step = event.shiftKey ? 10 : 1;
+    const geometry = resolvedGeometry(arrow, resolveEndpoint);
+    const points = geometryPoints(geometry);
+    const resized = resizeArrowPoints(
+      points,
+      makeArrowTransformFrame(points, geometry.rotation),
+      handle,
+      { x: direction.x * step, y: direction.y * step },
+      {
+        preserveAspectRatio: event.shiftKey,
+        fromCenter: event.altKey,
+        minimumSize: 12 / zoom,
+      },
+    );
+    onUpdate(
+      arrow.id,
+      roundedGeometry(
+        geometryFromPoints(resized, arrow.routing, geometry.rotation),
+      ),
+    );
+  };
+
+  const rotateFromKeyboard = (
+    event: React.KeyboardEvent<SVGGElement>,
+    arrow: CanvasArrowObject,
+  ) => {
+    if (
+      !editable ||
+      (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
+    ) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const geometry = resolvedGeometry(arrow, resolveEndpoint);
+    const points = geometryPoints(geometry);
+    const delta =
+      (event.key === "ArrowLeft" ? -1 : 1) *
+      (event.shiftKey ? Math.PI / 12 : Math.PI / 180);
+    const rotation = normalizeArrowRotation(geometry.rotation + delta);
+    onUpdate(
+      arrow.id,
+      roundedGeometry(
+        geometryFromPoints(
+          rotateArrowPoints(
+            points,
+            makeArrowTransformFrame(points, geometry.rotation).center,
+            delta,
+          ),
+          arrow.routing,
+          rotation,
+        ),
+      ),
+    );
   };
 
   const rendered = draft
@@ -380,13 +824,51 @@ export function CanvasArrowLayer({
             )}
           </defs>
           {rendered.map((arrow) => {
-            const preview = previews[arrow.id];
+            const transientId =
+              arrow.clientId &&
+              (previews[arrow.clientId] || dragging?.arrowId === arrow.clientId)
+                ? arrow.clientId
+                : arrow.id;
+            const preview = previews[transientId];
             const geometry = preview
               ? resolvedGeometry({ ...arrow, ...preview }, resolveEndpoint)
               : resolvedGeometry(arrow, resolveEndpoint);
             const points = geometryPoints(geometry);
-            const selected = selectedIds.has(arrow.id);
-            const focused = focusedId === arrow.id && selected;
+            const selected = arrowIsSelected(arrow, selectedIds);
+            const focused = selected && arrowHasIdentity(arrow, focusedId);
+            const mode = arrowHasIdentity(arrow, pointEditId)
+              ? "point-edit"
+              : "transform";
+            const hasBends = geometry.points.length > 0;
+            const activeDrag =
+              dragging?.arrowId === transientId ? dragging : undefined;
+            const keepsFullTransformUi =
+              activeDrag?.kind === "body" ||
+              activeDrag?.kind === "resize" ||
+              activeDrag?.kind === "rotate";
+            const isPathHandleDrag =
+              activeDrag?.kind === "start" ||
+              activeDrag?.kind === "end" ||
+              activeDrag?.kind === "bend" ||
+              activeDrag?.kind === "insert";
+            const showTransformFrame =
+              focused &&
+              editable &&
+              hasBends &&
+              mode === "transform" &&
+              (!activeDrag || keepsFullTransformUi);
+            const showFrameControls = showTransformFrame;
+            const showPathControls =
+              focused &&
+              editable &&
+              (!activeDrag || keepsFullTransformUi || isPathHandleDrag);
+            const showFrameMoveSurface =
+              focused &&
+              editable &&
+              hasBends &&
+              mode === "transform" &&
+              (!activeDrag || activeDrag.kind === "body");
+            const showSelectionRing = selected && (!focused || !editable);
             const paths = makeArrowPaths(
               arrow.id,
               points,
@@ -394,8 +876,25 @@ export function CanvasArrowLayer({
               geometry.routing,
             );
             const endpointHandles = endpointHandlePositions(points, zoom);
+            const frame = makeArrowTransformFrame(points, geometry.rotation);
+            const frameBounds = paddedArrowFrameBounds(
+              frame,
+              8 / zoom,
+              11 / zoom,
+            );
+            const frameCorners = arrowFrameCorners(frame, frameBounds);
+            const frameHandles = arrowFrameResizeHandlePositions(
+              frame,
+              frameBounds,
+              ARROW_RESIZE_HANDLE_OFFSET / zoom,
+            );
+            const rotationHandle = arrowRotationHandlePosition(
+              frame,
+              frameBounds,
+              24 / zoom,
+            );
             return (
-              <g key={arrow.id}>
+              <g key={arrow.clientId ?? arrow.id} className="group/arrow">
                 {arrow.style === "sketch" ? (
                   <defs>
                     <ArrowMarker
@@ -406,13 +905,32 @@ export function CanvasArrowLayer({
                     />
                   </defs>
                 ) : null}
-                {selected ? (
-                  <path
-                    d={paths.primary}
+                {arrow.id !== "arrow-draft" &&
+                (showTransformFrame || showSelectionRing) ? (
+                  <polygon
+                    points={frameCorners
+                      .map((point) => `${point.x},${point.y}`)
+                      .join(" ")}
                     fill="none"
-                    stroke="var(--background)"
-                    strokeWidth="6"
+                    stroke="var(--primary)"
+                    strokeWidth={showSelectionRing ? "2" : "1.5"}
                     vectorEffect="non-scaling-stroke"
+                    className={cn(
+                      "pointer-events-none transition-opacity duration-100 ease-out motion-reduce:transition-none",
+                      showSelectionRing ? "opacity-100" : "opacity-90",
+                    )}
+                  />
+                ) : null}
+                {showFrameMoveSurface ? (
+                  <polygon
+                    points={frameCorners
+                      .map((point) => `${point.x},${point.y}`)
+                      .join(" ")}
+                    fill="transparent"
+                    stroke="none"
+                    className="pointer-events-auto cursor-move"
+                    onPointerDown={(event) => beginDrag(event, arrow, "body")}
+                    onClick={(event) => event.stopPropagation()}
                   />
                 ) : null}
                 {paths.secondary ? (
@@ -446,49 +964,189 @@ export function CanvasArrowLayer({
                     stroke="transparent"
                     strokeWidth="16"
                     vectorEffect="non-scaling-stroke"
-                    className="pointer-events-auto cursor-move"
+                    className={cn(
+                      "pointer-events-auto outline-none",
+                      enabled &&
+                        (mode === "point-edit"
+                          ? "cursor-default"
+                          : editable
+                            ? "cursor-move"
+                            : "cursor-pointer"),
+                    )}
                     data-selection-node-id={arrow.id}
-                    onPointerDown={(event) => beginDrag(event, arrow, "body")}
+                    data-arrow-focus-id={arrow.id}
+                    tabIndex={enabled ? 0 : undefined}
+                    role="button"
+                    aria-label={`Arrow${mode === "point-edit" ? ", editing points" : ""}`}
+                    onFocus={() => {
+                      if (pointerFocusIdRef.current !== arrow.id) {
+                        onFocus(arrow.id);
+                      }
+                      pointerFocusIdRef.current = undefined;
+                    }}
+                    onPointerDown={(event) => {
+                      pointerFocusIdRef.current = arrow.id;
+                      requestAnimationFrame(() => {
+                        if (pointerFocusIdRef.current === arrow.id) {
+                          pointerFocusIdRef.current = undefined;
+                        }
+                      });
+                      beginDrag(event, arrow, "body");
+                    }}
+                    onClick={(event) => event.stopPropagation()}
+                    onDoubleClick={(event) => {
+                      event.stopPropagation();
+                      if (!editable || !hasSelectionModifier(event)) {
+                        return;
+                      }
+                      event.preventDefault();
+                      onFocus(arrow.id);
+                      onPointEditChange(arrow.id);
+                      setActiveBend(undefined);
+                    }}
                   />
                 ) : null}
-                {focused ? (
+                {showFrameControls ? (
+                  <>
+                    <line
+                      x1={rotationHandle.connector.x}
+                      y1={rotationHandle.connector.y}
+                      x2={rotationHandle.handle.x}
+                      y2={rotationHandle.handle.y}
+                      stroke="var(--primary)"
+                      strokeWidth="1"
+                      vectorEffect="non-scaling-stroke"
+                      className="pointer-events-none opacity-70"
+                    />
+                    {ARROW_CORNER_RESIZE_HANDLES.map((handle) => (
+                      <ArrowResizeHandleControl
+                        key={handle}
+                        handle={handle}
+                        position={frameHandles[handle]}
+                        angle={frame.angle}
+                        zoom={zoom}
+                        onPointerDown={(event) =>
+                          beginResize(event, arrow, handle)
+                        }
+                        onKeyDown={(event) =>
+                          resizeFromKeyboard(event, arrow, handle)
+                        }
+                      />
+                    ))}
+                    <ArrowRotationHandle
+                      position={rotationHandle.handle}
+                      zoom={zoom}
+                      onPointerDown={(event) => beginRotation(event, arrow)}
+                      onKeyDown={(event) => rotateFromKeyboard(event, arrow)}
+                    />
+                  </>
+                ) : null}
+                {showPathControls ? (
                   <>
                     <ArrowCircleHandle
                       position={endpointHandles.start}
                       zoom={zoom}
                       color={arrow.color}
+                      label="Move arrow start"
                       onPointerDown={(event) =>
                         beginDrag(event, arrow, "start")
+                      }
+                      onKeyDown={(event) =>
+                        nudgeEndpoint(event, arrow, "start")
                       }
                     />
                     <ArrowCircleHandle
                       position={endpointHandles.end}
                       zoom={zoom}
                       color={arrow.color}
+                      label="Move arrow end"
                       onPointerDown={(event) => beginDrag(event, arrow, "end")}
+                      onKeyDown={(event) => nudgeEndpoint(event, arrow, "end")}
                     />
+                    {!hasBends && mode === "transform" ? (
+                      <ArrowCircleHandle
+                        position={midpoint(
+                          geometry.start.position,
+                          geometry.end.position,
+                        )}
+                        zoom={zoom}
+                        color={arrow.color}
+                        label="Bend arrow"
+                        onPointerDown={(event) =>
+                          beginBendDrag(
+                            event,
+                            arrow,
+                            0,
+                            true,
+                            midpoint(
+                              geometry.start.position,
+                              geometry.end.position,
+                            ),
+                          )
+                        }
+                      />
+                    ) : null}
                     {geometry.points.map((point, index) => (
                       <ArrowCircleHandle
                         key={`point-${index}`}
                         position={point}
                         zoom={zoom}
                         color={arrow.color}
-                        onPointerDown={(event) =>
-                          beginBendDrag(event, arrow, index, false)
+                        label={`Move bend ${index + 1}`}
+                        active={
+                          mode === "point-edit" &&
+                          arrowHasIdentity(arrow, activeBend?.arrowId) &&
+                          activeBend?.index === index
                         }
+                        onFocus={() => {
+                          if (mode === "point-edit") {
+                            setActiveBend({ arrowId: arrow.id, index });
+                          }
+                        }}
+                        onPointerDown={(event) => {
+                          if (
+                            mode === "point-edit" &&
+                            hasSelectionModifier(event)
+                          ) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            event.currentTarget.blur();
+                            const remainingPoints = geometry.points.filter(
+                              (_point, pointIndex) => pointIndex !== index,
+                            );
+                            onFocus(arrow.id);
+                            onPointEditChange(arrow.id);
+                            onUpdate(arrow.id, {
+                              points: remainingPoints,
+                              ...(remainingPoints.length === 0
+                                ? { rotation: 0 }
+                                : {}),
+                            });
+                            setActiveBend(undefined);
+                            return;
+                          }
+                          beginBendDrag(event, arrow, index, false);
+                        }}
+                        onKeyDown={(event) => nudgeBend(event, arrow, index)}
                       />
                     ))}
-                    {paths.segmentAnchors.map((point, index) => (
-                      <ArrowDiamondHandle
-                        key={`insert-${index}`}
-                        position={point}
-                        zoom={zoom}
-                        color={arrow.color}
-                        onPointerDown={(event) =>
-                          beginBendDrag(event, arrow, index, true, point)
-                        }
-                      />
-                    ))}
+                    {mode === "point-edit" && geometry.points.length < 16
+                      ? paths.segmentAnchors.map((point, index) => (
+                          <ArrowDiamondHandle
+                            key={`insert-${index}`}
+                            position={point}
+                            zoom={zoom}
+                            color={arrow.color}
+                            label={`Add bend after point ${index + 1}`}
+                            onPointerDown={(event) =>
+                              beginBendDrag(event, arrow, index, true, point)
+                            }
+                            onKeyDown={(event) =>
+                              insertBendFromKeyboard(event, arrow, index, point)
+                            }
+                          />
+                        ))
+                      : null}
                   </>
                 ) : null}
               </g>
@@ -496,25 +1154,6 @@ export function CanvasArrowLayer({
           })}
         </svg>
       </ViewportPortal>
-      <AnimatePresence initial={false}>
-        {arrows.map((arrow) => {
-          if (focusedId !== arrow.id || !selectedIds.has(arrow.id)) return null;
-          const preview = previews[arrow.id];
-          const geometry = preview
-            ? resolvedGeometry({ ...arrow, ...preview }, resolveEndpoint)
-            : resolvedGeometry(arrow, resolveEndpoint);
-          return (
-            <ArrowToolbar
-              key={`${arrow.id}-toolbar`}
-              arrow={preview ? { ...arrow, ...preview } : arrow}
-              position={toolbarPosition(geometry)}
-              dismissKey={viewportActivity}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-            />
-          );
-        })}
-      </AnimatePresence>
     </>
   );
 }
@@ -523,18 +1162,36 @@ function ArrowCircleHandle({
   position,
   zoom,
   color,
+  label,
+  active = false,
+  onFocus,
   onPointerDown,
+  onKeyDown,
 }: {
   position: BoardPosition;
   zoom: number;
   color: CanvasObjectColor;
+  label: string;
+  active?: boolean;
+  onFocus?: () => void;
   onPointerDown: (event: React.PointerEvent<SVGGElement>) => void;
+  onKeyDown?: (event: React.KeyboardEvent<SVGGElement>) => void;
 }) {
   return (
     <g
       className="group/arrow-handle pointer-events-auto cursor-grab active:cursor-grabbing"
       style={{ touchAction: "none" }}
+      data-arrow-control
+      role="button"
+      aria-label={label}
+      tabIndex={0}
+      onFocus={onFocus}
       onPointerDown={onPointerDown}
+      onClick={(event) => event.stopPropagation()}
+      onContextMenu={(event) => {
+        if (hasSelectionModifier(event)) event.preventDefault();
+      }}
+      onKeyDown={onKeyDown}
     >
       <circle
         cx={position.x}
@@ -558,7 +1215,10 @@ function ArrowCircleHandle({
         stroke={canvasObjectColor(color)}
         strokeWidth="2"
         vectorEffect="non-scaling-stroke"
-        className="pointer-events-none transition-[fill,stroke-width] duration-100 ease-out group-hover/arrow-handle:fill-accent group-hover/arrow-handle:stroke-[2.75px]"
+        className={cn(
+          "pointer-events-none transition-[fill,stroke-width] duration-100 ease-out group-hover/arrow-handle:fill-accent group-hover/arrow-handle:stroke-[2.75px] group-focus-visible/arrow-handle:fill-accent group-focus-visible/arrow-handle:stroke-[2.75px]",
+          active && "fill-accent stroke-[2.75px]",
+        )}
       />
     </g>
   );
@@ -568,12 +1228,16 @@ function ArrowDiamondHandle({
   position,
   zoom,
   color,
+  label,
   onPointerDown,
+  onKeyDown,
 }: {
   position: BoardPosition;
   zoom: number;
   color: CanvasObjectColor;
+  label: string;
   onPointerDown: (event: React.PointerEvent<SVGGElement>) => void;
+  onKeyDown?: (event: React.KeyboardEvent<SVGGElement>) => void;
 }) {
   const size = 6.5 / zoom;
   const hoverSize = 9 / zoom;
@@ -581,7 +1245,13 @@ function ArrowDiamondHandle({
     <g
       className="group/arrow-handle pointer-events-auto cursor-grab active:cursor-grabbing"
       style={{ touchAction: "none" }}
+      data-arrow-control
+      role="button"
+      aria-label={label}
+      tabIndex={0}
       onPointerDown={onPointerDown}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={onKeyDown}
     >
       <circle cx={position.x} cy={position.y} r={9 / zoom} fill="transparent" />
       <g transform={`rotate(45 ${position.x} ${position.y})`}>
@@ -605,9 +1275,106 @@ function ArrowDiamondHandle({
           stroke={canvasObjectColor(color)}
           strokeWidth="1.5"
           vectorEffect="non-scaling-stroke"
-          className="pointer-events-none transition-[fill,stroke-width] duration-100 ease-out group-hover/arrow-handle:fill-accent group-hover/arrow-handle:stroke-[2.25px]"
+          className="pointer-events-none transition-[fill,stroke-width] duration-100 ease-out group-hover/arrow-handle:fill-accent group-hover/arrow-handle:stroke-[2.25px] group-focus-visible/arrow-handle:fill-accent group-focus-visible/arrow-handle:stroke-[2.25px]"
         />
       </g>
+    </g>
+  );
+}
+
+function ArrowResizeHandleControl({
+  handle,
+  position,
+  angle,
+  zoom,
+  onPointerDown,
+  onKeyDown,
+}: {
+  handle: ArrowResizeHandle;
+  position: BoardPosition;
+  angle: number;
+  zoom: number;
+  onPointerDown: (event: React.PointerEvent<SVGGElement>) => void;
+  onKeyDown?: (event: React.KeyboardEvent<SVGGElement>) => void;
+}) {
+  const visibleSize = 7 / zoom;
+  return (
+    <g
+      className={cn(
+        "group/resize-handle pointer-events-auto",
+        arrowResizeCursor(handle, angle),
+      )}
+      style={{ touchAction: "none" }}
+      data-arrow-control
+      role="button"
+      aria-label={`Resize arrow from ${handle}`}
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={onKeyDown}
+    >
+      <circle
+        cx={position.x}
+        cy={position.y}
+        r={12 / zoom}
+        fill="transparent"
+      />
+      <rect
+        x={position.x - visibleSize / 2}
+        y={position.y - visibleSize / 2}
+        width={visibleSize}
+        height={visibleSize}
+        rx={1.5 / zoom}
+        fill="var(--background)"
+        stroke="var(--primary)"
+        strokeWidth="1.5"
+        vectorEffect="non-scaling-stroke"
+        transform={`rotate(${(angle * 180) / Math.PI} ${position.x} ${position.y})`}
+        className="pointer-events-none transition-[fill,stroke-width] duration-100 ease-out group-hover/resize-handle:fill-primary/10 group-hover/resize-handle:stroke-[2px] group-focus-visible/resize-handle:fill-primary/10 group-focus-visible/resize-handle:stroke-[2px]"
+      />
+    </g>
+  );
+}
+
+function ArrowRotationHandle({
+  position,
+  zoom,
+  onPointerDown,
+  onKeyDown,
+}: {
+  position: BoardPosition;
+  zoom: number;
+  onPointerDown: (event: React.PointerEvent<SVGGElement>) => void;
+  onKeyDown?: (event: React.KeyboardEvent<SVGGElement>) => void;
+}) {
+  return (
+    <g
+      className="group/rotation-handle pointer-events-auto cursor-grab active:cursor-grabbing"
+      style={{ touchAction: "none" }}
+      data-arrow-control
+      role="button"
+      aria-label="Rotate arrow"
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={onKeyDown}
+    >
+      <circle
+        cx={position.x}
+        cy={position.y}
+        r={12 / zoom}
+        fill="transparent"
+      />
+      <circle
+        cx={position.x}
+        cy={position.y}
+        r={5 / zoom}
+        fill="var(--background)"
+        stroke="var(--primary)"
+        strokeWidth="1.5"
+        vectorEffect="non-scaling-stroke"
+        className="pointer-events-none transition-[fill,stroke-width] duration-100 ease-out group-hover/rotation-handle:fill-primary/10 group-hover/rotation-handle:stroke-[2px] group-focus-visible/rotation-handle:fill-primary/10 group-focus-visible/rotation-handle:stroke-[2px]"
+      />
     </g>
   );
 }
@@ -711,292 +1478,32 @@ function ArrowMarker({
   );
 }
 
-function ArrowToolbar({
-  arrow,
-  position,
-  dismissKey,
-  onUpdate,
-  onDelete,
-}: {
-  arrow: CanvasArrowObject;
-  position: BoardPosition;
-  dismissKey: number;
-  onUpdate: (id: string, update: ArrowUpdate) => void;
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <CanvasScreenOverlay anchor={position} align="center" offset={18}>
-      <div
-        role="toolbar"
-        aria-label="Arrow style"
-        className="flex items-center gap-2"
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        <div
-          className={cn(
-            "flex items-center gap-0.5 rounded-lg px-1.5 py-1",
-            GLASS_OPTION_TOOLBAR_CLASS,
-          )}
-        >
-          <DropdownMenu key={`pattern-${dismissKey}`}>
-            <DropdownMenuTrigger
-              render={
-                <button
-                  type="button"
-                  className="flex h-7 items-center gap-1 rounded-md px-2 text-xs capitalize transition-colors hover:bg-foreground/5 data-popup-open:bg-foreground/10"
-                />
-              }
-              aria-label="Arrow line type"
-            >
-              {arrow.pattern}
-              <ChevronDownIcon className="size-3 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="bottom"
-              align="start"
-              sideOffset={8}
-              className="min-w-28"
-            >
-              <DropdownMenuRadioGroup
-                value={arrow.pattern}
-                onValueChange={(value) =>
-                  onUpdate(arrow.id, { pattern: value as CanvasArrowPattern })
-                }
-              >
-                {(["solid", "dashed", "dotted"] as CanvasArrowPattern[]).map(
-                  (pattern) => (
-                    <DropdownMenuRadioItem
-                      key={pattern}
-                      value={pattern}
-                      className="capitalize"
-                    >
-                      {pattern}
-                    </DropdownMenuRadioItem>
-                  ),
-                )}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <ToolbarDivider />
-          {(["clean", "sketch"] as CanvasArrowStyle[]).map((style) => (
-            <button
-              key={style}
-              type="button"
-              className={cn(
-                "h-7 cursor-pointer rounded-md px-2 text-xs capitalize hover:bg-foreground/5",
-                arrow.style === style && "bg-foreground/10",
-              )}
-              aria-pressed={arrow.style === style}
-              onClick={() => onUpdate(arrow.id, { style })}
-            >
-              {style}
-            </button>
-          ))}
-          <ToolbarDivider />
-          {(["straight", "smooth"] as CanvasArrowRouting[]).map((routing) => (
-            <button
-              key={routing}
-              type="button"
-              className={cn(
-                "h-7 cursor-pointer rounded-md px-2 text-xs hover:bg-foreground/5",
-                arrow.routing === routing && "bg-foreground/10",
-              )}
-              aria-label={`${routing} arrow path`}
-              aria-pressed={arrow.routing === routing}
-              onClick={() => onUpdate(arrow.id, { routing })}
-            >
-              {routing === "straight" ? "Line" : "Curve"}
-            </button>
-          ))}
-          <ToolbarDivider />
-          <DropdownMenu key={`head-${dismissKey}`}>
-            <DropdownMenuTrigger
-              render={
-                <button
-                  type="button"
-                  className="flex h-7 items-center gap-1 rounded-md px-1.5 transition-colors hover:bg-foreground/5 data-popup-open:bg-foreground/10"
-                />
-              }
-              aria-label={`${arrow.head} arrowhead`}
-            >
-              <ArrowheadGlyph head={arrow.head} style={arrow.style} />
-              <ChevronDownIcon className="size-3 text-muted-foreground" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="bottom"
-              align="start"
-              sideOffset={8}
-              className="min-w-36"
-            >
-              <DropdownMenuRadioGroup
-                value={arrow.head}
-                onValueChange={(value) =>
-                  onUpdate(arrow.id, { head: value as CanvasArrowHead })
-                }
-              >
-                {(["filled", "hollow", "chevron"] as CanvasArrowHead[]).map(
-                  (head) => (
-                    <DropdownMenuRadioItem
-                      key={head}
-                      value={head}
-                      className="capitalize"
-                    >
-                      <ArrowheadGlyph head={head} style={arrow.style} />
-                      {head}
-                    </DropdownMenuRadioItem>
-                  ),
-                )}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <ToolbarDivider />
-          <CanvasColorSwatches
-            value={arrow.color}
-            onChange={(color) => onUpdate(arrow.id, { color })}
-            ariaLabel="Arrow color"
-            dismissKey={dismissKey}
-          />
-        </div>
-        <div
-          className={cn(
-            "flex size-9 items-center justify-center rounded-lg p-1",
-            GLASS_OPTION_TOOLBAR_CLASS,
-          )}
-        >
-          <button
-            type="button"
-            className="flex size-7 cursor-pointer items-center justify-center rounded-md text-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-            aria-label="Delete arrow"
-            onClick={() => onDelete(arrow.id)}
-          >
-            <Trash2Icon className="size-3.5" />
-          </button>
-        </div>
-      </div>
-    </CanvasScreenOverlay>
-  );
-}
-
-function ToolbarDivider() {
-  return <span className="mx-0.5 h-5 w-px bg-border" />;
-}
-
-function ArrowheadGlyph({
-  head,
-  style,
-}: {
-  head: CanvasArrowHead;
-  style: CanvasArrowStyle;
-}) {
-  if (style === "sketch") {
-    return (
-      <svg viewBox="0 0 30 18" className="h-4 w-7" aria-hidden="true">
-        <path
-          d="M 1.5 9.4 Q 10 7.4 21 8.7"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-        />
-        <path
-          d="M 2 8.1 Q 11 10.1 21.3 8.4"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-          strokeLinecap="round"
-          opacity="0.55"
-        />
-        {head === "filled" ? (
-          <>
-            <path d="M 20.2 2.1 L 29 8.6 L 19.4 15.4 z" fill="currentColor" />
-            <path
-              d="M 20.7 2.7 L 28.7 8.1 L 19.8 14.8 z"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="0.9"
-              strokeLinejoin="round"
-              opacity="0.65"
-            />
-          </>
-        ) : head === "hollow" ? (
-          <>
-            <path
-              d="M 20.2 2.1 L 29 8.6 L 19.4 15.4 z"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.4"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M 20.7 2.7 L 28.7 8.1 L 19.8 14.8 z"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="0.8"
-              strokeLinejoin="round"
-              opacity="0.6"
-            />
-          </>
-        ) : (
-          <>
-            <path
-              d="M 20.2 2.1 L 29 8.6 L 19.4 15.4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M 20.7 2.7 L 28.7 8.1 L 19.8 14.8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="0.85"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity="0.6"
-            />
-          </>
-        )}
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 30 18" className="h-4 w-7" aria-hidden="true">
-      <path
-        d="M 1.5 9 H 21"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-      />
-      {head === "filled" ? (
-        <path d="M 20 2 L 29 9 L 20 16 z" fill="currentColor" />
-      ) : head === "hollow" ? (
-        <path
-          d="M 20 2 L 29 9 L 20 16 z"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        />
-      ) : (
-        <path
-          d="M 20 2 L 29 9 L 20 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      )}
-    </svg>
-  );
-}
-
 export { makeArrowPath } from "./canvas-arrow-geometry";
 
+function capturePointer(event: React.PointerEvent) {
+  const target = event.currentTarget;
+  const pointerId = event.pointerId;
+  try {
+    target.setPointerCapture(pointerId);
+  } catch {
+    // The browser can release capture when a pointer ends before cleanup runs.
+  }
+  return () => {
+    try {
+      if (target.hasPointerCapture(pointerId)) {
+        target.releasePointerCapture(pointerId);
+      }
+    } catch {
+      // The target can be detached while the interaction is being cleaned up.
+    }
+  };
+}
+
 function resolvedGeometry(
-  arrow: Pick<CanvasArrowObject, "start" | "end" | "points" | "routing">,
+  arrow: Pick<
+    CanvasArrowObject,
+    "start" | "end" | "points" | "routing" | "rotation"
+  >,
   resolveEndpoint: (endpoint: CanvasArrowEndpoint) => BoardPosition,
 ): ArrowGeometry {
   return {
@@ -1004,6 +1511,7 @@ function resolvedGeometry(
     end: { position: resolveEndpoint(arrow.end) },
     points: arrow.points,
     routing: arrow.routing,
+    rotation: arrow.rotation ?? 0,
   };
 }
 function geometryPoints(geometry: ArrowGeometry) {
@@ -1012,13 +1520,6 @@ function geometryPoints(geometry: ArrowGeometry) {
 function midpointForSegment(geometry: ArrowGeometry, index: number) {
   const points = geometryPoints(geometry);
   return midpoint(points[index]!, points[index + 1]!);
-}
-function toolbarPosition(geometry: ArrowGeometry) {
-  const points = geometryPoints(geometry);
-  return {
-    x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
-    y: Math.min(...points.map((point) => point.y)) - 18,
-  };
 }
 function endpointHandlePositions(points: BoardPosition[], zoom: number) {
   // A 5px-radius handle sits just beyond the visible endpoint instead of
@@ -1058,9 +1559,41 @@ function unitVector(from: BoardPosition, to: BoardPosition) {
 function addPoint(point: BoardPosition, delta: BoardPosition): BoardPosition {
   return { x: point.x + delta.x, y: point.y + delta.y };
 }
+function subtractPoint(point: BoardPosition, origin: BoardPosition) {
+  return { x: point.x - origin.x, y: point.y - origin.y };
+}
+function geometryFromPoints(
+  points: readonly BoardPosition[],
+  routing: CanvasArrowRouting,
+  rotation: number,
+): ArrowGeometry {
+  return {
+    start: { position: points[0]! },
+    end: { position: points.at(-1)! },
+    points: points.slice(1, -1),
+    routing,
+    rotation,
+  };
+}
+function roundedGeometry(geometry: ArrowGeometry): ArrowGeometry {
+  return {
+    start: { position: roundPoint(geometry.start.position) },
+    end: { position: roundPoint(geometry.end.position) },
+    points: geometry.points.map(roundPoint),
+    routing: geometry.routing,
+    rotation: normalizeArrowRotation(geometry.rotation),
+  };
+}
 function roundPoint(point: BoardPosition): BoardPosition {
   return { x: Math.round(point.x), y: Math.round(point.y) };
 }
 function clamp(value: number) {
   return Math.min(1, Math.max(0, value));
+}
+function keyboardNudge(event: { key: string }): BoardPosition | undefined {
+  if (event.key === "ArrowLeft") return { x: -1, y: 0 };
+  if (event.key === "ArrowRight") return { x: 1, y: 0 };
+  if (event.key === "ArrowUp") return { x: 0, y: -1 };
+  if (event.key === "ArrowDown") return { x: 0, y: 1 };
+  return undefined;
 }
