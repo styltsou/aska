@@ -650,6 +650,7 @@ export function CanvasArrowLayer({
     editable,
     focusedId,
     onDelete,
+    onFocus,
     onPointEditChange,
     onUpdate,
     pointEditId,
@@ -1111,21 +1112,26 @@ export function CanvasArrowLayer({
                             event.preventDefault();
                             event.stopPropagation();
                             event.currentTarget.blur();
-                            const remainingPoints = geometry.points.filter(
-                              (_point, pointIndex) => pointIndex !== index,
-                            );
-                            onFocus(arrow.id);
-                            onPointEditChange(arrow.id);
-                            onUpdate(arrow.id, {
-                              points: remainingPoints,
-                              ...(remainingPoints.length === 0
-                                ? { rotation: 0 }
-                                : {}),
-                            });
-                            setActiveBend(undefined);
                             return;
                           }
                           beginBendDrag(event, arrow, index, false);
+                        }}
+                        onModifiedClick={(event) => {
+                          if (mode !== "point-edit") return;
+                          event.preventDefault();
+                          event.stopPropagation();
+                          const remainingPoints = geometry.points.filter(
+                            (_point, pointIndex) => pointIndex !== index,
+                          );
+                          onFocus(arrow.id);
+                          onPointEditChange(arrow.id);
+                          onUpdate(arrow.id, {
+                            points: remainingPoints,
+                            ...(remainingPoints.length === 0
+                              ? { rotation: 0 }
+                              : {}),
+                          });
+                          setActiveBend(undefined);
                         }}
                         onKeyDown={(event) => nudgeBend(event, arrow, index)}
                       />
@@ -1166,6 +1172,7 @@ function ArrowCircleHandle({
   active = false,
   onFocus,
   onPointerDown,
+  onModifiedClick,
   onKeyDown,
 }: {
   position: BoardPosition;
@@ -1175,6 +1182,7 @@ function ArrowCircleHandle({
   active?: boolean;
   onFocus?: () => void;
   onPointerDown: (event: React.PointerEvent<SVGGElement>) => void;
+  onModifiedClick?: (event: React.MouseEvent<SVGGElement>) => void;
   onKeyDown?: (event: React.KeyboardEvent<SVGGElement>) => void;
 }) {
   return (
@@ -1187,9 +1195,16 @@ function ArrowCircleHandle({
       tabIndex={0}
       onFocus={onFocus}
       onPointerDown={onPointerDown}
-      onClick={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (!onModifiedClick || !hasSelectionModifier(event)) return;
+        event.preventDefault();
+        onModifiedClick(event);
+      }}
       onContextMenu={(event) => {
-        if (hasSelectionModifier(event)) event.preventDefault();
+        if (!hasSelectionModifier(event)) return;
+        event.preventDefault();
+        event.stopPropagation();
       }}
       onKeyDown={onKeyDown}
     >
