@@ -1,4 +1,4 @@
-import type { CollectionNode } from "@/api/collection";
+import type { CanvasTextObject, CollectionNode } from "@/api/collection";
 import type {
   BoardInsertionPlacement,
   BoardPosition,
@@ -7,7 +7,7 @@ import type {
 export const BOARD_CARD_WIDTH = 280;
 export const BOARD_ITEM_GAP = 32;
 
-export type CanvasLayoutNode = CollectionNode & {
+export type CanvasLayoutNode = (CollectionNode | CanvasTextObject) & {
   layoutWidth?: number;
   layoutHeight?: number;
 };
@@ -157,6 +157,8 @@ function getNodeBounds(
 
 function getNodeHeight(node: CanvasLayoutNode): number {
   if (node.layoutHeight && node.layoutHeight > 0) return node.layoutHeight;
+
+  if (node.type === "text") return 40;
 
   if (node.type === "image" && node.width > 0 && node.height > 0) {
     return BOARD_CARD_WIDTH * (node.height / node.width);
@@ -606,5 +608,7 @@ function getAlignedPosition(
 function getNodeWidth(node: CanvasLayoutNode): number {
   return node.layoutWidth && node.layoutWidth > 0
     ? node.layoutWidth
-    : BOARD_CARD_WIDTH;
+    : node.type === "text"
+      ? 80
+      : BOARD_CARD_WIDTH;
 }

@@ -589,7 +589,7 @@ export const CollectionAssetNodePathParamSchema =
 
 export const MoveCollectionNodesParentSchema = z.object({
   nodeIds: z
-    .array(CollectionNodeIdSchema)
+    .array(CanvasItemIdSchema)
     .min(1)
     .max(100)
     .refine(
@@ -597,10 +597,69 @@ export const MoveCollectionNodesParentSchema = z.object({
       "Move must not contain duplicate node IDs",
     ),
   targetFolderNodeId: FolderNodeIdSchema.nullable(),
+  sourceCollectionSlug: z.string().optional(),
+  sourceFolderPath: z.string().optional(),
+  measurements: z
+    .array(
+      z.object({
+        id: CanvasItemIdSchema,
+        width: z.number().finite().positive().max(100_000),
+        height: z.number().finite().positive().max(100_000),
+        position: BoardPositionSchema.optional(),
+      }),
+    )
+    .max(100)
+    .optional(),
+  arrowSnapshots: z
+    .array(
+      z.object({
+        id: z.string().regex(/^arrow-\d+$/),
+        start: BoardPositionSchema,
+        end: BoardPositionSchema,
+        points: z.array(BoardPositionSchema).max(16),
+      }),
+    )
+    .max(1_000)
+    .optional(),
 });
 
 export type MoveCollectionNodesParentInput = z.infer<
   typeof MoveCollectionNodesParentSchema
+>;
+
+export const UpdateCanvasItemsGeometrySchema = z.object({
+  expectedParentFolderNodeId: FolderNodeIdSchema.nullable(),
+  items: z
+    .array(
+      z.discriminatedUnion("type", [
+        z.object({
+          type: z.literal("node"),
+          id: CollectionNodeIdSchema,
+          position: BoardPositionSchema,
+        }),
+        z.object({
+          type: z.literal("text"),
+          id: z.string().regex(/^text-\d+$/),
+          position: BoardPositionSchema,
+        }),
+        z.object({
+          type: z.literal("arrow"),
+          id: z.string().regex(/^arrow-\d+$/),
+          start: CanvasArrowEndpointSchema,
+          end: CanvasArrowEndpointSchema,
+          points: z.array(BoardPositionSchema).max(16),
+          rotation: z.number().finite(),
+        }),
+      ]),
+    )
+    .min(1)
+    .max(1_000)
+    .refine(
+      (items) => new Set(items.map((item) => item.id)).size === items.length,
+    ),
+});
+export type UpdateCanvasItemsGeometryInput = z.infer<
+  typeof UpdateCanvasItemsGeometrySchema
 >;
 
 export const UpdateNodePositionSchema = z.object({

@@ -19,6 +19,7 @@ import type {
   UpdateCanvasArrowInput,
   UpdateCanvasTextInput,
   UpdateCanvasItemFrontIndexesInput,
+  UpdateCanvasItemsGeometryInput,
   CanvasItemFrontIndex,
 } from "@/dto/collection.dto";
 import {
@@ -108,6 +109,12 @@ export interface ICollectionService {
     collectionSlug: string,
     data: UpdateCanvasItemFrontIndexesInput,
   ): Promise<{ items: CanvasItemFrontIndex[] }>;
+  updateCanvasItemsGeometry(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: UpdateCanvasItemsGeometryInput,
+  ): Promise<{ itemIds: string[] }>;
   deleteCanvasObject(
     orgId: string,
     collectionSlug: string,
@@ -169,6 +176,20 @@ export class CollectionService implements ICollectionService {
   private readonly moves = new CollectionAssetMoveService();
   private readonly deletes: CollectionDeleteService;
   private readonly logger: ILoggerService;
+
+  updateCanvasItemsGeometry(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: UpdateCanvasItemsGeometryInput,
+  ): Promise<{ itemIds: string[] }> {
+    return this.canvasObjects.updateItemsGeometry(
+      orgId,
+      userId,
+      collectionSlug,
+      data,
+    );
+  }
 
   constructor({
     objectStorageService,

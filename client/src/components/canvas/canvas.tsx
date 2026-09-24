@@ -33,17 +33,18 @@ import type {
   CollectionNode,
 } from "@/api/collection";
 import type { LinkAsset } from "@/types/asset";
+import type { UpdateCanvasItemsGeometryInput } from "@/api/collection/types";
 import {
   useBulkDelete,
   useMoveCollectionNodesToFolder,
   useUpdateCollectionNodePosition,
-  useUpdateCollectionNodePositions,
   useCreateCanvasArrow,
   useCreateCanvasText,
   useDeleteCanvasObject,
   useUpdateCanvasArrow,
   useUpdateCanvasItemFrontIndexes,
   useUpdateCanvasText,
+  useUpdateCanvasItemsGeometry,
 } from "@/api/collection";
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
 import { MoveToDialog } from "@/components/move-to-dialog";
@@ -121,6 +122,13 @@ import {
 import { CanvasArrowLayer, type DraftCanvasArrow } from "./canvas-arrow-layer";
 import { arrowHasIdentity } from "./canvas-arrow-identity";
 import {
+  getArrowSnapshots,
+  getInternalArrowIds,
+  getLayoutArrowUpdates,
+  getTranslatedArrowUpdates,
+  type ArrowSnapshot,
+} from "./canvas-selection-geometry";
+import {
   CanvasObjectInspector,
   type CanvasInspectorTarget,
 } from "./canvas-object-inspector";
@@ -131,6 +139,8 @@ const FIT_VIEW_MAX_ZOOM = 1.1;
 const VIEWPORT_ANIMATION_DURATION = 150;
 const CANVAS_MIN_ZOOM = 0.15;
 const CANVAS_MAX_ZOOM = 2;
+const PERSISTED_CANVAS_ITEM_ID =
+  /^(folder|image|note|link|color|text|arrow)-\d+$/;
 type CanvasFlowNode = CanvasNode | CanvasTextFlowNode;
 const nodeTypes: NodeTypes = { asset: CanvasCard, text: CanvasTextNode };
 
@@ -186,6 +196,8 @@ type CanvasDragSession = {
   currentPositions: Map<string, XYPosition>;
   draggedRects: Map<string, CanvasAlignmentRect>;
   isGroup: boolean;
+  movingIds: Set<string>;
+  arrowSnapshots: ArrowSnapshot[];
 };
 
 export function Canvas(props: CanvasProps) {
@@ -252,7 +264,7 @@ function CanvasSurface({
     workspaceSlug,
     collectionSlug,
   );
-  const updatePositions = useUpdateCollectionNodePositions(
+  const updateItemsGeometry = useUpdateCanvasItemsGeometry(
     workspaceSlug,
     collectionSlug,
   );
@@ -277,6 +289,24 @@ function CanvasSurface({
   const boardSizeRef = useRef({ width: 0, height: 0 });
   const suppressedClickIdsRef = useRef(new Set<string>());
   const dragSessionRef = useRef<CanvasDragSession | undefined>(undefined);
+  const arrowGroupDragRef = useRef<
+    | {
+        origins: Map<string, XYPosition>;
+        movingIds: Set<string>;
+        arrowSnapshots: ArrowSnapshot[];
+      }
+    | undefined
+  >(undefined);
+  const [groupArrowPreviews, setGroupArrowPreviews] =
+    useState<
+      Record<
+        string,
+        Pick<
+          CanvasArrowObject,
+          "start" | "end" | "points" | "routing" | "rotation"
+        >
+      >
+    >();
   const dropTargetNodeIdRef = useRef<string | undefined>(undefined);
   const dropStackStylesRef = useRef(new Map<string, CanvasDropStackStyle>());
   const alignmentBypassRef = useRef(false);
@@ -371,13 +401,55 @@ function CanvasSurface({
     selectedIds,
   );
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
-  const selectedAssetIds = useMemo(
-    () => selectedIds.filter((id) => nodes.some((node) => node.id === id)),
-    [nodes, selectedIds],
+  const canMoveSelection = selectedIds.every((id) =>
+    PERSISTED_CANVAS_ITEM_ID.test(id),
   );
-  const selectionHasCanvasObjects = selectedIds.some((id) =>
-    /^(text|arrow)-/.test(id),
+  const layoutableIds = useMemo(
+    () =>
+      new Set([
+        ...nodes.map((node) => node.id),
+        ...canvasObjects.flatMap((object) =>
+          object.type === "text" ? [object.id] : [],
+        ),
+      ]),
+    [canvasObjects, nodes],
   );
+  const layoutableSelectionCount = selectedIds.filter((id) =>
+    layoutableIds.has(id),
+  ).length;
+  const moveSource = useMemo(() => {
+    if (!moveDialogOpen) return undefined;
+    const currentNodes = getNodes();
+    const selected = new Set(selectedIds);
+    return {
+      workspaceSlug,
+      sourceCollectionSlug: collectionSlug,
+      sourceFolderPath: folderPath,
+      nodeIds: selectedIds,
+      measurements: currentNodes.flatMap((node) =>
+        selected.has(node.id) && node.measured?.width && node.measured?.height
+          ? [
+              {
+                id: node.id,
+                width: node.measured.width,
+                height: node.measured.height,
+                position: roundPosition(node.position),
+              },
+            ]
+          : [],
+      ),
+      arrowSnapshots: getArrowSnapshots(canvasObjects, currentNodes),
+      includedArrowIds: getInternalArrowIds(canvasObjects, selected),
+    };
+  }, [
+    canvasObjects,
+    collectionSlug,
+    folderPath,
+    getNodes,
+    moveDialogOpen,
+    selectedIds,
+    workspaceSlug,
+  ]);
   const selectionRef = useRef({ selectedIds: selectedIdSet, count: 0 });
   selectionRef.current = {
     selectedIds: selectedIdSet,
@@ -536,6 +608,16 @@ function CanvasSurface({
           });
         }
       }
+      for (const object of canvasObjects) {
+        if (object.type !== "text" || !selectedIdSet.has(object.id)) continue;
+        const flowNode = flowNodesById.get(object.id);
+        selectedNodes.push({
+          ...object,
+          position: flowNode?.position ?? object.position,
+          layoutWidth: flowNode?.measured?.width,
+          layoutHeight: flowNode?.measured?.height,
+        });
+      }
 
       if (selectedNodes.length < 2) return;
 
@@ -546,12 +628,44 @@ function CanvasSurface({
       const targetPositionMap = new Map(
         selectedNodes.map((node, index) => [node.id, targetPositions[index]!]),
       );
-      const saves = selectedNodes.map((node, index) => ({
-        nodeId: node.id,
-        position: targetPositions[index]!,
-      }));
+      const fullDeltas = new Map(
+        selectedNodes.map((node) => {
+          const start = startPositions.get(node.id)!;
+          const target = targetPositionMap.get(node.id)!;
+          return [
+            node.id,
+            { x: target.x - start.x, y: target.y - start.y },
+          ] as const;
+        }),
+      );
+      const arrowSnapshots = getArrowSnapshots(canvasObjects, currentFlowNodes);
+      const arrowUpdates = getLayoutArrowUpdates(
+        canvasObjects,
+        arrowSnapshots,
+        fullDeltas,
+      );
+      const items: UpdateCanvasItemsGeometryInput["items"] = [
+        ...selectedNodes.map((node) => ({
+          type: node.type === "text" ? ("text" as const) : ("node" as const),
+          id: node.id,
+          position: targetPositionMap.get(node.id)!,
+        })),
+        ...arrowUpdates.map(({ id, start, end, points, rotation }) => ({
+          type: "arrow" as const,
+          id,
+          start,
+          end,
+          points,
+          rotation,
+        })),
+      ];
 
       let cancelled = false;
+      let finished = false;
+      let settled = false;
+      const clearPreviewWhenReady = () => {
+        if (finished && settled) setGroupArrowPreviews(undefined);
+      };
       const duration = 150;
       function animate(currentTime: number, startTime: number) {
         if (cancelled) return;
@@ -574,32 +688,51 @@ function CanvasSurface({
             };
           }),
         );
+        const previewDeltas = new Map(
+          [...fullDeltas].map(([id, delta]) => [
+            id,
+            { x: delta.x * eased, y: delta.y * eased },
+          ]),
+        );
+        setGroupArrowPreviews(
+          Object.fromEntries(
+            getLayoutArrowUpdates(
+              canvasObjects,
+              arrowSnapshots,
+              previewDeltas,
+            ).map(({ id, ...geometry }) => [id, geometry]),
+          ),
+        );
 
         if (progress < 1) {
           requestAnimationFrame((t) => animate(t, startTime));
+        } else {
+          finished = true;
+          clearPreviewWhenReady();
         }
       }
 
       requestAnimationFrame((t) => animate(t, t));
 
-      updatePositions.mutate(
+      const rollback = () => {
+        cancelled = true;
+        setFlowNodes((current) =>
+          selectedNodes.reduce((next, node) => {
+            const original = node.position;
+            return original
+              ? updateLocalNodePosition(next, node.id, original)
+              : next;
+          }, current),
+        );
+        setGroupArrowPreviews(undefined);
+      };
+      updateItemsGeometry.mutate(
+        { folderPath, expectedParentFolderNodeId, items },
         {
-          folderPath,
-          expectedParentFolderNodeId,
-          positions: saves,
-        },
-        {
-          onError: () => {
-            cancelled = true;
-            setFlowNodes((current) =>
-              selectedNodes.reduce((next, node) => {
-                const original = node.position;
-                return original
-                  ? updateLocalNodePosition(next, node.id, original)
-                  : next;
-              }, current),
-            );
-            toast.error("Unable to update the card layout.");
+          onError: rollback,
+          onSettled: () => {
+            settled = true;
+            clearPreviewWhenReady();
           },
         },
       );
@@ -607,10 +740,11 @@ function CanvasSurface({
     [
       folderPath,
       expectedParentFolderNodeId,
+      canvasObjects,
       nodes,
       selectedIdSet,
       getNodes,
-      updatePositions,
+      updateItemsGeometry,
     ],
   );
 
@@ -1609,6 +1743,96 @@ function CanvasSurface({
     });
   }, [fitView, focusRequestId, focusedNodeId, getNode]);
 
+  const previewTranslatedArrows = useCallback(
+    (
+      snapshots: ArrowSnapshot[],
+      movingIds: ReadonlySet<string>,
+      delta: XYPosition,
+    ) => {
+      const updates = getTranslatedArrowUpdates(
+        canvasObjects,
+        snapshots,
+        movingIds,
+        delta,
+      );
+      setGroupArrowPreviews(
+        Object.fromEntries(
+          updates.map(({ id, ...geometry }) => [id, geometry]),
+        ),
+      );
+    },
+    [canvasObjects],
+  );
+
+  const saveGroupGeometry = useCallback(
+    (
+      origins: Map<string, XYPosition>,
+      movingIds: ReadonlySet<string>,
+      snapshots: ArrowSnapshot[],
+      delta: XYPosition,
+    ) => {
+      const nodeItems: UpdateCanvasItemsGeometryInput["items"] = [
+        ...origins.entries(),
+      ].flatMap<UpdateCanvasItemsGeometryInput["items"][number]>(
+        ([id, origin]) => {
+          const position = roundPosition({
+            x: origin.x + delta.x,
+            y: origin.y + delta.y,
+          });
+          if (/^(folder|image|note|link|color)-\d+$/.test(id)) {
+            return [{ type: "node" as const, id, position }];
+          }
+          if (/^text-\d+$/.test(id)) {
+            return [{ type: "text" as const, id, position }];
+          }
+          if (id.startsWith("text-draft-")) {
+            setDraftText((current) =>
+              current?.id === id ? { ...current, position } : current,
+            );
+          }
+          return [];
+        },
+      );
+      const arrowItems: UpdateCanvasItemsGeometryInput["items"] =
+        getTranslatedArrowUpdates(canvasObjects, snapshots, movingIds, delta)
+          .filter(({ id }) => /^arrow-\d+$/.test(id))
+          .map(({ id, start, end, points, rotation }) => ({
+            type: "arrow",
+            id,
+            start,
+            end,
+            points,
+            rotation,
+          }));
+      const items = [...nodeItems, ...arrowItems];
+      if (items.length === 0) {
+        setGroupArrowPreviews(undefined);
+        return;
+      }
+      updateItemsGeometry.mutate(
+        { folderPath, expectedParentFolderNodeId, items },
+        {
+          onError: () => {
+            setFlowNodes((current) =>
+              [...origins.entries()].reduce(
+                (next, [id, origin]) =>
+                  updateLocalNodePosition(next, id, origin),
+                current,
+              ),
+            );
+          },
+          onSettled: () => setGroupArrowPreviews(undefined),
+        },
+      );
+    },
+    [
+      canvasObjects,
+      expectedParentFolderNodeId,
+      folderPath,
+      updateItemsGeometry,
+    ],
+  );
+
   const handleNodesChange = useCallback(
     (changes: NodeChange<CanvasFlowNode>[]) => {
       const dragSession = dragSessionRef.current;
@@ -1624,7 +1848,20 @@ function CanvasSurface({
         dropTargetNodeIdRef.current
       ) {
         clearAlignmentGuides();
-        if (dragSession) recordDraggedChangePositions(dragSession, changes);
+        if (dragSession) {
+          recordDraggedChangePositions(dragSession, changes);
+          const origin = dragSession.origins.get(dragSession.primaryNodeId);
+          const current = dragSession.currentPositions.get(
+            dragSession.primaryNodeId,
+          );
+          if (origin && current) {
+            previewTranslatedArrows(
+              dragSession.arrowSnapshots,
+              dragSession.movingIds,
+              { x: current.x - origin.x, y: current.y - origin.y },
+            );
+          }
+        }
         setFlowNodes((current) => applyNodeChanges(changes, current));
         return;
       }
@@ -1680,18 +1917,35 @@ function CanvasSurface({
         x: dragOffset.x + (snap?.offset.x ?? 0),
         y: dragOffset.y + (snap?.offset.y ?? 0),
       });
+      previewTranslatedArrows(
+        dragSession.arrowSnapshots,
+        dragSession.movingIds,
+        {
+          x: dragOffset.x + (snap?.offset.x ?? 0),
+          y: dragOffset.y + (snap?.offset.y ?? 0),
+        },
+      );
       setFlowNodes((current) => applyNodeChanges(adjustedChanges, current));
     },
     [
       areAlignmentGuidesEnabled,
       clearAlignmentGuides,
       getViewport,
+      previewTranslatedArrows,
       setActiveAlignmentGuides,
     ],
   );
   const updateDropTarget = useCallback(
-    (event: MouseEvent | TouchEvent, node: CanvasFlowNode) => {
-      if (!isDraggableNode(node) || node.type !== "asset") {
+    (event: MouseEvent | TouchEvent, node?: CanvasFlowNode) => {
+      const movingIds =
+        dragSessionRef.current?.movingIds ??
+        arrowGroupDragRef.current?.movingIds;
+      if (
+        (node?.type === "asset" && !isDraggableNode(node)) ||
+        (node?.type === "text" && node.id.startsWith("text-draft-")) ||
+        (movingIds &&
+          [...movingIds].some((id) => !PERSISTED_CANVAS_ITEM_ID.test(id)))
+      ) {
         clearDropTarget();
         return;
       }
@@ -1711,6 +1965,7 @@ function CanvasSurface({
         .filter(
           (candidate) =>
             !dragSessionRef.current?.origins.has(candidate.id) &&
+            !arrowGroupDragRef.current?.movingIds.has(candidate.id) &&
             candidate.type === "asset" &&
             candidate.data.collectionNode.type === "folder",
         )
@@ -1745,6 +2000,135 @@ function CanvasSurface({
       getIntersectingNodes,
       getNodes,
       screenToFlowPosition,
+    ],
+  );
+
+  const beginArrowGroupDrag = useCallback(
+    (arrowId: string) => {
+      if (!/^arrow-\d+$/.test(arrowId)) {
+        return false;
+      }
+      const movingSelection = selectedIdSet.has(arrowId)
+        ? selectedIds
+        : [arrowId];
+      const currentNodes = getNodes();
+      const origins = new Map(
+        currentNodes
+          .filter((node) => movingSelection.includes(node.id))
+          .map((node) => [node.id, { ...node.position }] as const),
+      );
+      arrowGroupDragRef.current = {
+        origins,
+        movingIds: new Set(movingSelection),
+        arrowSnapshots: getArrowSnapshots(canvasObjects, currentNodes),
+      };
+      return true;
+    },
+    [canvasObjects, getNodes, selectedIdSet, selectedIds],
+  );
+  const moveArrowGroupDrag = useCallback(
+    (delta: XYPosition, event: PointerEvent) => {
+      const session = arrowGroupDragRef.current;
+      if (!session) return;
+      setFlowNodes((current) =>
+        current.map((node) => {
+          const origin = session.origins.get(node.id);
+          return origin
+            ? {
+                ...node,
+                position: {
+                  x: origin.x + delta.x,
+                  y: origin.y + delta.y,
+                },
+              }
+            : node;
+        }),
+      );
+      previewTranslatedArrows(session.arrowSnapshots, session.movingIds, delta);
+      updateDropTarget(event);
+    },
+    [previewTranslatedArrows, updateDropTarget],
+  );
+  const cancelArrowGroupDrag = useCallback(() => {
+    const session = arrowGroupDragRef.current;
+    arrowGroupDragRef.current = undefined;
+    if (session) {
+      setFlowNodes((current) =>
+        [...session.origins.entries()].reduce(
+          (next, [id, origin]) => updateLocalNodePosition(next, id, origin),
+          current,
+        ),
+      );
+    }
+    setGroupArrowPreviews(undefined);
+    clearDropTarget();
+  }, [clearDropTarget]);
+  const endArrowGroupDrag = useCallback(
+    (delta: XYPosition) => {
+      const session = arrowGroupDragRef.current;
+      arrowGroupDragRef.current = undefined;
+      if (!session) return;
+      const targetFolderNodeId = dropTargetNodeIdRef.current;
+      clearDropTarget();
+      if (
+        targetFolderNodeId &&
+        [...session.movingIds].every((id) => PERSISTED_CANVAS_ITEM_ID.test(id))
+      ) {
+        const nodeIds = [...session.movingIds];
+        const currentNodes = getNodes();
+        moveNodesToFolder.mutate(
+          {
+            nodeIds,
+            folderPath,
+            targetFolderNodeId,
+            sourceCollectionSlug: collectionSlug,
+            sourceFolderPath: folderPath,
+            arrowSnapshots: session.arrowSnapshots,
+            measurements: currentNodes.flatMap((node) =>
+              session.movingIds.has(node.id) &&
+              node.measured?.width &&
+              node.measured?.height
+                ? [
+                    {
+                      id: node.id,
+                      width: node.measured.width,
+                      height: node.measured.height,
+                      position: roundPosition(
+                        session.origins.get(node.id) ?? node.position,
+                      ),
+                    },
+                  ]
+                : [],
+            ),
+          },
+          {
+            onError: () =>
+              setFlowNodes((current) =>
+                [...session.origins.entries()].reduce(
+                  (next, [id, origin]) =>
+                    updateLocalNodePosition(next, id, origin),
+                  current,
+                ),
+              ),
+            onSettled: () => setGroupArrowPreviews(undefined),
+          },
+        );
+        return;
+      }
+      saveGroupGeometry(
+        session.origins,
+        session.movingIds,
+        session.arrowSnapshots,
+        delta,
+      );
+    },
+    [
+      clearDropTarget,
+      collectionSlug,
+      folderPath,
+      getNodes,
+      moveNodesToFolder,
+      saveGroupGeometry,
     ],
   );
 
@@ -1911,6 +2295,16 @@ function CanvasSurface({
           const draggedNodeIds = new Set(
             dragNodes.map((dragNode) => dragNode.id),
           );
+          const movingIds = new Set([
+            ...draggedNodeIds,
+            ...(selectedIdSet.has(node.id)
+              ? canvasObjects.flatMap((object) =>
+                  object.type === "arrow" && selectedIdSet.has(object.id)
+                    ? [object.id]
+                    : [],
+                )
+              : []),
+          ]);
           const currentFlowNodes = getNodes();
           const currentFlowNodesById = new Map(
             currentFlowNodes.map((flowNode) => [flowNode.id, flowNode]),
@@ -1956,7 +2350,9 @@ function CanvasSurface({
               ]),
             ),
             draggedRects,
-            isGroup: dragNodes.length > 1,
+            isGroup: movingIds.size > 1,
+            movingIds,
+            arrowSnapshots: getArrowSnapshots(canvasObjects, currentFlowNodes),
           };
         }}
         onNodeDrag={(event, node) => {
@@ -1997,12 +2393,11 @@ function CanvasSurface({
 
           if (
             targetFolderNodeId &&
-            dragNodes.every(
-              (dragNode) =>
-                dragNode.type === "asset" && isDraggableNode(dragNode),
+            [...session.movingIds].every((id) =>
+              PERSISTED_CANVAS_ITEM_ID.test(id),
             )
           ) {
-            const nodeIds = dragNodes.map((dragNode) => dragNode.id);
+            const nodeIds = [...session.movingIds];
             const nodeIdsKey = nodeIds.join(",");
             suppressClicks(...nodeIds, targetFolderNodeId);
             setPendingFolderDrop({
@@ -2016,6 +2411,23 @@ function CanvasSurface({
                 folderPath,
                 targetFolderNodeId,
                 sourceCollectionSlug: collectionSlug,
+                sourceFolderPath: folderPath,
+                measurements: dragNodes.flatMap((dragNode) =>
+                  dragNode.measured?.width && dragNode.measured?.height
+                    ? [
+                        {
+                          id: dragNode.id,
+                          width: dragNode.measured.width,
+                          height: dragNode.measured.height,
+                          position: roundPosition(
+                            session.origins.get(dragNode.id) ??
+                              dragNode.position,
+                          ),
+                        },
+                      ]
+                    : [],
+                ),
+                arrowSnapshots: session.arrowSnapshots,
               },
               {
                 onError: () => {
@@ -2044,6 +2456,7 @@ function CanvasSurface({
                 },
               },
             );
+            setGroupArrowPreviews(undefined);
             return;
           }
 
@@ -2117,86 +2530,20 @@ function CanvasSurface({
           suppressClicks(...moved.map(({ node: movedNode }) => movedNode.id));
 
           if (session.isGroup) {
-            const textMoves = moved.filter(
-              ({ node: movedNode }) => movedNode.type === "text",
+            const primaryOrigin = session.origins.get(session.primaryNodeId);
+            const primaryPosition = session.currentPositions.get(
+              session.primaryNodeId,
             );
-            for (const { node: movedNode, position, origin } of textMoves) {
-              if (movedNode.id.startsWith("text-draft-")) {
-                setDraftText((current) =>
-                  current?.id === movedNode.id
-                    ? { ...current, position }
-                    : current,
-                );
-                continue;
-              }
-              updateCanvasTextMutation(
-                { objectId: movedNode.id, position },
-                {
-                  onError: () =>
-                    setFlowNodes((current) =>
-                      updateLocalNodePosition(current, movedNode.id, origin),
-                    ),
-                },
-              );
-            }
-            const saves = moved.filter(
-              ({ node: movedNode }) =>
-                movedNode.type === "asset" &&
-                isPersistedSelectableAsset(movedNode.data.collectionNode),
+            if (!primaryOrigin || !primaryPosition) return;
+            saveGroupGeometry(
+              session.origins,
+              session.movingIds,
+              session.arrowSnapshots,
+              {
+                x: primaryPosition.x - primaryOrigin.x,
+                y: primaryPosition.y - primaryOrigin.y,
+              },
             );
-            const versions = new Map(
-              saves.map(({ node: movedNode }) => {
-                const version =
-                  (dragVersionRef.current.get(movedNode.id) ?? 0) + 1;
-                dragVersionRef.current.set(movedNode.id, version);
-                return [movedNode.id, version] as const;
-              }),
-            );
-            if (saves.length > 1) {
-              updatePositions.mutate(
-                {
-                  folderPath,
-                  expectedParentFolderNodeId,
-                  positions: saves.map(({ node: movedNode, position }) => ({
-                    nodeId: movedNode.id,
-                    position,
-                  })),
-                },
-                {
-                  onError: () => {
-                    setFlowNodes((current) =>
-                      saves.reduce(
-                        (next, { node: movedNode, origin }) =>
-                          dragVersionRef.current.get(movedNode.id) ===
-                          versions.get(movedNode.id)
-                            ? updateLocalNodePosition(
-                                next,
-                                movedNode.id,
-                                origin,
-                              )
-                            : next,
-                        current,
-                      ),
-                    );
-                    toast.error("Unable to save the new card positions.");
-                  },
-                },
-              );
-              return;
-            }
-            const singleAsset = saves[0];
-            if (!singleAsset) return;
-            const version =
-              (dragVersionRef.current.get(singleAsset.node.id) ?? 0) + 1;
-            dragVersionRef.current.set(singleAsset.node.id, version);
-            positionSaveQueueRef.current.enqueue(singleAsset.node.id, {
-              nodeId: singleAsset.node.id,
-              folderPath,
-              position: singleAsset.position,
-              expectedParentFolderNodeId,
-              version,
-              origin: singleAsset.origin,
-            });
             return;
           }
 
@@ -2274,6 +2621,11 @@ function CanvasSurface({
           onPointEditChange={setEditingArrowId}
           onUpdate={updateArrowObject}
           onDelete={deleteCanvasObject}
+          groupPreviews={groupArrowPreviews}
+          onGroupDragStart={beginArrowGroupDrag}
+          onGroupDragMove={moveArrowGroupDrag}
+          onGroupDragEnd={endArrowGroupDrag}
+          onGroupDragCancel={cancelArrowGroupDrag}
         />
         <CanvasAlignmentGuideLines
           guides={alignmentGuides}
@@ -2285,27 +2637,37 @@ function CanvasSurface({
               boardKey={boardKey}
               target={focusedInspectorTarget}
               modifierLabel={getPlatformModifier()}
+              onMove={
+                /^(text|arrow)-\d+$/.test(focusedInspectorTarget.object.id)
+                  ? () => setMoveDialogOpen(true)
+                  : undefined
+              }
             />
           ) : (
             <SelectionActionBar
-              count={selectedAssetIds.length}
+              count={selectedIds.length}
               surface="canvas"
               onClear={() => {
                 setCanvasObjectFocus(undefined);
                 clearSelection(boardKey);
               }}
               onMove={
-                selectionHasCanvasObjects
-                  ? undefined
-                  : () => setMoveDialogOpen(true)
+                canMoveSelection ? () => setMoveDialogOpen(true) : undefined
               }
               onDelete={handleBulkDelete}
-              onArrange={selectionHasCanvasObjects ? undefined : handleArrange}
-              onCompact={selectionHasCanvasObjects ? undefined : handleCompact}
-              onMakeRow={selectionHasCanvasObjects ? undefined : handleMakeRow}
-              onMakeColumn={
-                selectionHasCanvasObjects ? undefined : handleMakeColumn
+              onArrange={
+                layoutableSelectionCount >= 2 ? handleArrange : undefined
               }
+              onCompact={
+                layoutableSelectionCount >= 2 ? handleCompact : undefined
+              }
+              onMakeRow={
+                layoutableSelectionCount >= 2 ? handleMakeRow : undefined
+              }
+              onMakeColumn={
+                layoutableSelectionCount >= 2 ? handleMakeColumn : undefined
+              }
+              layoutCount={layoutableSelectionCount}
             />
           )}
         </Panel>
@@ -2349,14 +2711,16 @@ function CanvasSurface({
         />
       ) : null}
       <MoveToDialog
-        open={moveDialogOpen && selectedIds.length > 0}
+        open={moveDialogOpen && selectedIds.length > 0 && canMoveSelection}
         onOpenChange={setMoveDialogOpen}
-        source={{
-          workspaceSlug,
-          sourceCollectionSlug: collectionSlug,
-          sourceFolderPath: folderPath,
-          nodeIds: selectedIds,
-        }}
+        source={
+          moveSource ?? {
+            workspaceSlug,
+            sourceCollectionSlug: collectionSlug,
+            sourceFolderPath: folderPath,
+            nodeIds: selectedIds,
+          }
+        }
         onMoved={() => {
           setCanvasObjectFocus(undefined);
           clearSelection(boardKey);

@@ -1,4 +1,8 @@
-# Canvas Placement Policy (Revised Draft)
+# Canvas Placement Policy (Historical Draft)
+
+The implemented move policy is documented in [Canvas Placement Policy](./placement-policy.md).
+Its group-preserving placement supersedes this draft's per-item folder batch
+packing proposal.
 
 This is a proposed revision of the current placement policy. It keeps
 everything that works, fixes two real inconsistencies in the current

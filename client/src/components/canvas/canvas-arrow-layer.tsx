@@ -101,6 +101,11 @@ export function CanvasArrowLayer({
   onPointEditChange,
   onUpdate,
   onDelete,
+  groupPreviews,
+  onGroupDragStart,
+  onGroupDragMove,
+  onGroupDragEnd,
+  onGroupDragCancel,
 }: {
   arrows: CanvasArrowObject[];
   draft?: DraftCanvasArrow;
@@ -118,6 +123,11 @@ export function CanvasArrowLayer({
     callbacks?: { onSettled?: () => void },
   ) => void;
   onDelete: (id: string) => void;
+  groupPreviews?: Record<string, ArrowGeometry>;
+  onGroupDragStart?: (id: string) => boolean;
+  onGroupDragMove?: (delta: BoardPosition, event: PointerEvent) => void;
+  onGroupDragEnd?: (delta: BoardPosition, event: PointerEvent) => void;
+  onGroupDragCancel?: () => void;
 }) {
   const { getNode, getNodes, getViewport, screenToFlowPosition } =
     useReactFlow<Node>();
@@ -223,6 +233,7 @@ export function CanvasArrowLayer({
     ) {
       return;
     }
+    const groupDrag = part === "body" && onGroupDragStart?.(arrow.id);
     const previewSession = previewSessions.begin(arrow.id);
     const releasePointer = capturePointer(event);
     setDragging({ arrowId: arrow.id, kind: part });
@@ -242,6 +253,10 @@ export function CanvasArrowLayer({
         y: point.y - pointerStart.y,
       };
       didMove ||= Math.hypot(delta.x, delta.y) > 1;
+      if (groupDrag) {
+        onGroupDragMove?.(delta, moveEvent);
+        return;
+      }
       setPreviews((current) => ({
         ...current,
         [arrow.id]: {
@@ -266,6 +281,7 @@ export function CanvasArrowLayer({
       cleanup();
       if (!didMove) {
         clearPreview(arrow.id, previewSession);
+        if (groupDrag) onGroupDragCancel?.();
         return;
       }
       const point = screenToFlowPosition({
@@ -276,6 +292,10 @@ export function CanvasArrowLayer({
         x: point.x - pointerStart.x,
         y: point.y - pointerStart.y,
       };
+      if (groupDrag) {
+        onGroupDragEnd?.(delta, upEvent);
+        return;
+      }
       const update: ArrowGeometry = {
         start:
           part === "end"
@@ -306,6 +326,7 @@ export function CanvasArrowLayer({
     const cancel = () => {
       cleanup();
       clearPreview(arrow.id, previewSession);
+      if (groupDrag) onGroupDragCancel?.();
     };
     const cleanup = () => {
       releasePointer();
@@ -830,7 +851,7 @@ export function CanvasArrowLayer({
               (previews[arrow.clientId] || dragging?.arrowId === arrow.clientId)
                 ? arrow.clientId
                 : arrow.id;
-            const preview = previews[transientId];
+            const preview = previews[transientId] ?? groupPreviews?.[arrow.id];
             const geometry = preview
               ? resolvedGeometry({ ...arrow, ...preview }, resolveEndpoint)
               : resolvedGeometry(arrow, resolveEndpoint);

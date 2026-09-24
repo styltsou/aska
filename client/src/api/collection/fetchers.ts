@@ -37,6 +37,7 @@ import type {
   UpdateNoteInput,
   UpdateCanvasArrowInput,
   UpdateCanvasTextInput,
+  UpdateCanvasItemsGeometryInput,
   UpdateNoteResponse,
   UpdateImageInput,
   UpdateImageResponse,
@@ -435,14 +436,25 @@ export async function updateCollectionNodePositions(
 export async function moveCollectionNodesToFolder(
   workspaceSlug: string,
   collectionSlug: string,
-  data: Pick<
-    MoveCollectionNodesToFolderInput,
-    "nodeIds" | "targetFolderNodeId"
-  >,
+  data: MoveCollectionNodesToFolderInput,
 ): Promise<MoveCollectionNodesToFolderResponse> {
   return apiPatch<MoveCollectionNodesToFolderResponse>(
     `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/nodes/parent`,
     data,
+  );
+}
+
+export async function updateCanvasItemsGeometry(
+  workspaceSlug: string,
+  collectionSlug: string,
+  data: UpdateCanvasItemsGeometryInput,
+): Promise<{ itemIds: string[] }> {
+  return apiPatch<{ itemIds: string[] }>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/canvas/items/geometry`,
+    {
+      expectedParentFolderNodeId: data.expectedParentFolderNodeId,
+      items: data.items,
+    },
   );
 }
 

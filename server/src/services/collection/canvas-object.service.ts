@@ -16,6 +16,7 @@ import type {
   CreateCanvasTextInput,
   UpdateCanvasArrowInput,
   UpdateCanvasTextInput,
+  UpdateCanvasItemsGeometryInput,
 } from "@/dto/collection.dto";
 import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -44,6 +45,151 @@ function parseCanvasObjectId(objectId: string) {
 }
 
 export class CanvasObjectService {
+  async updateItemsGeometry(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: UpdateCanvasItemsGeometryInput,
+  ): Promise<{ itemIds: string[] }> {
+    const collection = await getCollectionBySlug(orgId, collectionSlug);
+    const parentFolderId = data.expectedParentFolderNodeId
+      ? parseCollectionNodeId(data.expectedParentFolderNodeId).entityId
+      : null;
+    if (parentFolderId !== null) {
+      const folder = await db
+        .select({ id: collectionNodes.id })
+        .from(collectionNodes)
+        .where(
+          and(
+            eq(collectionNodes.organizationId, orgId),
+            eq(collectionNodes.collectionId, collection.id),
+            eq(collectionNodes.nodeType, "folder"),
+            eq(collectionNodes.folderId, parentFolderId),
+          ),
+        )
+        .limit(1);
+      if (folder.length === 0) {
+        throw new AppError(ErrorCode.CONFLICT, "The source folder changed");
+      }
+    }
+    const parentCondition =
+      parentFolderId === null
+        ? isNull(canvasObjects.parentFolderId)
+        : eq(canvasObjects.parentFolderId, parentFolderId);
+    const nodeParentCondition =
+      parentFolderId === null
+        ? isNull(collectionNodes.parentFolderId)
+        : eq(collectionNodes.parentFolderId, parentFolderId);
+
+    await db.transaction(async (tx) => {
+      for (const item of data.items) {
+        if (item.type === "node") {
+          const parsed = parseCollectionNodeId(item.id);
+          const row = await tx
+            .select({ id: collectionNodes.id })
+            .from(collectionNodes)
+            .where(
+              and(
+                eq(collectionNodes.organizationId, orgId),
+                eq(collectionNodes.collectionId, collection.id),
+                nodeParentCondition,
+                eq(collectionNodes.nodeType, parsed.nodeType),
+                parsed.nodeType === "folder"
+                  ? eq(collectionNodes.folderId, parsed.entityId)
+                  : eq(collectionNodes.assetId, parsed.entityId),
+              ),
+            )
+            .limit(1);
+          if (!row[0])
+            throw new AppError(ErrorCode.CONFLICT, "The selected card moved");
+          await tx
+            .update(collectionNodes)
+            .set({ positionX: item.position.x, positionY: item.position.y })
+            .where(eq(collectionNodes.id, row[0].id));
+          continue;
+        }
+        const parsed = parseCanvasObjectId(item.id);
+        const row = await tx
+          .select({ id: canvasObjects.id })
+          .from(canvasObjects)
+          .where(
+            and(
+              eq(canvasObjects.id, parsed.id),
+              eq(canvasObjects.objectType, item.type),
+              eq(canvasObjects.organizationId, orgId),
+              eq(canvasObjects.collectionId, collection.id),
+              parentCondition,
+            ),
+          )
+          .limit(1);
+        if (!row[0])
+          throw new AppError(
+            ErrorCode.CONFLICT,
+            "The selected canvas object moved",
+          );
+        await tx
+          .update(canvasObjects)
+          .set({ updatedByUserId: userId, updatedAt: new Date() })
+          .where(eq(canvasObjects.id, parsed.id));
+        if (item.type === "text") {
+          await tx
+            .update(canvasTextObjects)
+            .set({ positionX: item.position.x, positionY: item.position.y })
+            .where(eq(canvasTextObjects.canvasObjectId, parsed.id));
+          continue;
+        }
+        const [existing] = await tx
+          .select({
+            startCollectionNodeId: canvasArrowObjects.startCollectionNodeId,
+            startCanvasObjectId: canvasArrowObjects.startCanvasObjectId,
+            endCollectionNodeId: canvasArrowObjects.endCollectionNodeId,
+            endCanvasObjectId: canvasArrowObjects.endCanvasObjectId,
+          })
+          .from(canvasArrowObjects)
+          .where(eq(canvasArrowObjects.canvasObjectId, parsed.id));
+        if (!existing)
+          throw new AppError(ErrorCode.CONFLICT, "The arrow changed");
+        if (
+          (item.start.binding &&
+            !existing.startCollectionNodeId &&
+            !existing.startCanvasObjectId) ||
+          (item.end.binding &&
+            !existing.endCollectionNodeId &&
+            !existing.endCanvasObjectId)
+        ) {
+          throw new AppError(ErrorCode.CONFLICT, "An arrow connection changed");
+        }
+        await tx
+          .update(canvasArrowObjects)
+          .set({
+            startX: item.start.position.x,
+            startY: item.start.position.y,
+            endX: item.end.position.x,
+            endY: item.end.position.y,
+            startCollectionNodeId: item.start.binding
+              ? existing.startCollectionNodeId
+              : null,
+            startCanvasObjectId: item.start.binding
+              ? existing.startCanvasObjectId
+              : null,
+            startAnchorX: item.start.binding?.anchor.x ?? null,
+            startAnchorY: item.start.binding?.anchor.y ?? null,
+            endCollectionNodeId: item.end.binding
+              ? existing.endCollectionNodeId
+              : null,
+            endCanvasObjectId: item.end.binding
+              ? existing.endCanvasObjectId
+              : null,
+            endAnchorX: item.end.binding?.anchor.x ?? null,
+            endAnchorY: item.end.binding?.anchor.y ?? null,
+            points: item.points,
+            rotation: item.rotation,
+          })
+          .where(eq(canvasArrowObjects.canvasObjectId, parsed.id));
+      }
+    });
+    return { itemIds: data.items.map((item) => item.id) };
+  }
   async getObjects(
     orgId: string,
     collectionId: number,

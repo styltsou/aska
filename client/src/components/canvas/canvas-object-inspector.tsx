@@ -1,4 +1,4 @@
-import { ChevronDownIcon, Trash2Icon } from "lucide-react";
+import { ChevronDownIcon, FolderInputIcon, Trash2Icon } from "lucide-react";
 
 import type {
   CanvasArrowHead,
@@ -58,10 +58,12 @@ export function CanvasObjectInspector({
   boardKey,
   target,
   modifierLabel,
+  onMove,
 }: {
   boardKey: string;
   target?: CanvasInspectorTarget;
   modifierLabel: string;
+  onMove?: () => void;
 }) {
   const viewportActivity = useTransientStore(
     (state) => state.canvasViewportActivity[boardKey] ?? 0,
@@ -106,9 +108,19 @@ export function CanvasObjectInspector({
             <div
               className={cn(
                 GLASS_ISLAND_CLASS,
-                "flex size-9 items-center justify-center p-1",
+                "flex items-center justify-center gap-0.5 p-1",
               )}
             >
+              {onMove ? (
+                <button
+                  type="button"
+                  className="flex size-7 cursor-pointer items-center justify-center rounded-md text-foreground transition-colors hover:bg-foreground/5"
+                  aria-label={`Move ${target.type}`}
+                  onClick={onMove}
+                >
+                  <FolderInputIcon className="size-3.5" />
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="flex size-7 cursor-pointer items-center justify-center rounded-md text-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"

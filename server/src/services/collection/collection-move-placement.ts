@@ -19,6 +19,80 @@ type BoardPosition = { x: number; y: number };
 type CardFootprint = { width: number; height: number };
 type Bounds = { left: number; top: number; right: number; bottom: number };
 
+export type MovePlacementItem = {
+  position: BoardPosition;
+  footprint: CardFootprint;
+};
+
+/** One offset for an authored composition, regardless of its item types. */
+export function getCompositionMoveOffset(
+  destination: MovePlacementItem[],
+  moving: MovePlacementItem[],
+): BoardPosition {
+  if (moving.length === 0) return { x: 0, y: 0 };
+  const sourceBounds = getCompositionBounds(moving);
+  const width = sourceBounds.right - sourceBounds.left;
+  const height = sourceBounds.bottom - sourceBounds.top;
+  const destinationBounds =
+    destination.length > 0 ? getCompositionBounds(destination) : undefined;
+  const preferred = destinationBounds
+    ? {
+        x: Math.round(
+          (destinationBounds.left + destinationBounds.right - width) / 2,
+        ),
+        y: Math.round(
+          (destinationBounds.top + destinationBounds.bottom - height) / 2,
+        ),
+      }
+    : EMPTY_FOLDER_POSITION;
+
+  for (let radius = 0; radius <= COMPOSITION_SEARCH_LIMIT; radius += 1) {
+    for (const offset of squarePerimeterOffsets(radius)) {
+      const anchor = {
+        x: preferred.x + offset.x * (width + CANVAS_ITEM_GAP),
+        y: preferred.y + offset.y * (height + CANVAS_ITEM_GAP),
+      };
+      const delta = {
+        x: anchor.x - sourceBounds.left,
+        y: anchor.y - sourceBounds.top,
+      };
+      if (
+        moving.every((item) =>
+          destination.every(
+            (occupied) =>
+              !intersects(
+                getCollisionBounds(
+                  {
+                    x: item.position.x + delta.x,
+                    y: item.position.y + delta.y,
+                  },
+                  item.footprint,
+                ),
+                getCollisionBounds(occupied.position, occupied.footprint),
+              ),
+          ),
+        )
+      ) {
+        return delta;
+      }
+    }
+  }
+
+  return {
+    x: preferred.x - sourceBounds.left,
+    y: preferred.y - sourceBounds.top,
+  };
+}
+
+export function getMovePlacementItem(
+  node: MovePlacementNode,
+): MovePlacementItem {
+  return {
+    position: { x: node.positionX ?? 0, y: node.positionY ?? 0 },
+    footprint: getCardFootprint(node),
+  };
+}
+
 /**
  * Finds a system-chosen destination position for a node moved into a folder.
  * A single move preserves the composition centre and makes only a bounded,

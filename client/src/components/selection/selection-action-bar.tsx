@@ -56,6 +56,7 @@ import { cn } from "@/lib/utils";
 
 type SelectionActionBarProps = {
   count: number;
+  layoutCount?: number;
   surface: "inbox" | "canvas" | "grid";
   onClear: () => void;
   onMove?: () => void;
@@ -74,6 +75,7 @@ const BUTTON_GROUP_SURFACE_CLASS = cn(
 
 export function SelectionActionBar({
   count,
+  layoutCount,
   surface,
   onClear,
   onMove,
@@ -180,7 +182,7 @@ export function SelectionActionBar({
                     </ButtonGroup>
                   </div>
                   <AnimatePresence initial={false}>
-                    {surface === "canvas" && count >= 2 ? (
+                    {surface === "canvas" && (layoutCount ?? count) >= 2 ? (
                       <motion.div
                         key="layout-actions"
                         initial={{ opacity: 0, width: 0, marginLeft: 0 }}
@@ -280,7 +282,7 @@ export function SelectionActionBar({
                 <AlertDialogTitle>Delete {count} items?</AlertDialogTitle>
                 <AlertDialogDescription>
                   {surface !== "inbox"
-                    ? "Folders and their contents will be permanently deleted."
+                    ? "Selected items will be permanently deleted. Folders also delete their contents."
                     : "This action cannot be undone."}
                 </AlertDialogDescription>
               </AlertDialogHeader>

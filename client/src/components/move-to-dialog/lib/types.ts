@@ -11,6 +11,19 @@ export type MoveToDialogSource = {
   nodeIds: string[];
   sourceCollectionSlug?: string;
   sourceFolderPath?: string;
+  measurements?: Array<{
+    id: string;
+    width: number;
+    height: number;
+    position?: { x: number; y: number };
+  }>;
+  arrowSnapshots?: Array<{
+    id: string;
+    start: { x: number; y: number };
+    end: { x: number; y: number };
+    points: Array<{ x: number; y: number }>;
+  }>;
+  includedArrowIds?: string[];
 };
 
 export type Crumb = {

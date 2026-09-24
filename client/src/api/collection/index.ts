@@ -29,6 +29,7 @@ export {
   inboxContentsQueryOptions,
 } from "./hooks";
 export { useMoveCollectionNodesToFolder } from "./use-move-collection-node";
+export { useUpdateCanvasItemsGeometry } from "./use-update-canvas-items-geometry";
 export {
   useCreateCanvasArrow,
   useCreateCanvasText,

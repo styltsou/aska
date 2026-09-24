@@ -20,6 +20,7 @@ import {
   UpdateCanvasArrowSchema,
   UpdateCanvasTextSchema,
   UpdateCanvasItemFrontIndexesSchema,
+  UpdateCanvasItemsGeometrySchema,
 } from "@/dto/collection.dto";
 import { factory } from "@/factory";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -421,6 +422,27 @@ export const moveCollectionNodesToFolder = factory.createHandlers(
       data,
     );
 
+    return c.json(success(result));
+  },
+);
+
+export const updateCanvasItemsGeometry = factory.createHandlers(
+  authMiddleware,
+  validate.param(CollectionPathParamSchema),
+  validate.body(UpdateCanvasItemsGeometrySchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug } = c.req.valid("param");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const result = await collectionService.updateCanvasItemsGeometry(
+      workspace.id,
+      userId,
+      collectionSlug,
+      c.req.valid("json"),
+    );
     return c.json(success(result));
   },
 );

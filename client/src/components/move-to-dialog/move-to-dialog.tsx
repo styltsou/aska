@@ -137,6 +137,8 @@ export function MoveToDialog({
         folderPath: sourceFolderPath,
         targetFolderNodeId,
         sourceCollectionSlug,
+        measurements: source.measurements,
+        arrowSnapshots: source.arrowSnapshots,
       },
       {
         onSuccess: (result) => {
@@ -159,11 +161,14 @@ export function MoveToDialog({
         ? "Create a collection before moving items from Inbox."
         : undefined;
 
-  const description = sourceCollectionSlug
+  const baseDescription = sourceCollectionSlug
     ? includesFolder
       ? "Browse to a folder or use this collection's root as the destination."
       : "Choose a collection, then browse to a folder or use its root."
     : "Choose a collection, then open the destination folder.";
+  const description = source.includedArrowIds?.length
+    ? `${baseDescription} ${source.includedArrowIds.length} connected ${source.includedArrowIds.length === 1 ? "arrow moves" : "arrows move"} with the selection.`
+    : baseDescription;
 
   const collectionPicker = lockedToSource ? undefined : (
     <CollectionPicker
@@ -207,7 +212,7 @@ export function MoveToDialog({
       onDestinationPathChange={setDestinationPath}
       canMove={canMove}
       disabledReason={disabledReason}
-      count={nodeIds.length}
+      count={nodeIds.length + (source.includedArrowIds?.length ?? 0)}
       isPending={moveNodes.isPending}
       error={error}
       canCreateFolder={

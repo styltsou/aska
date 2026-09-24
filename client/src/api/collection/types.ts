@@ -545,12 +545,42 @@ export type MoveCollectionNodeToFolderResponse = {
 export type MoveCollectionNodesToFolderInput = {
   nodeIds: string[];
   folderPath?: string;
+  sourceFolderPath?: string;
   targetFolderNodeId: string | null;
   sourceCollectionSlug?: string;
+  measurements?: Array<{
+    id: string;
+    width: number;
+    height: number;
+    position?: BoardPosition;
+  }>;
+  arrowSnapshots?: Array<{
+    id: string;
+    start: BoardPosition;
+    end: BoardPosition;
+    points: BoardPosition[];
+  }>;
 };
 
 export type MoveCollectionNodesToFolderResponse = {
   moves: MoveCollectionNodeToFolderResponse[];
+};
+
+export type UpdateCanvasItemsGeometryInput = {
+  folderPath?: string;
+  expectedParentFolderNodeId: string | null;
+  items: Array<
+    | { type: "node"; id: string; position: BoardPosition }
+    | { type: "text"; id: string; position: BoardPosition }
+    | {
+        type: "arrow";
+        id: string;
+        start: CanvasArrowEndpoint;
+        end: CanvasArrowEndpoint;
+        points: BoardPosition[];
+        rotation: number;
+      }
+  >;
 };
 
 export type FlattenFolderResponse = {

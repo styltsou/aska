@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getFlattenGroupAnchor,
   getFolderMovePosition,
+  getCompositionMoveOffset,
   type MovePlacementNode,
 } from "./collection-move-placement";
 
@@ -34,6 +35,24 @@ const folderAt = (x: number, y: number): MovePlacementNode => ({
 });
 
 describe("folder move placement", () => {
+  it("translates a card-only or mixed composition by one offset", () => {
+    const moving = [
+      { position: { x: 100, y: 200 }, footprint: { width: 280, height: 200 } },
+      { position: { x: 450, y: 230 }, footprint: { width: 100, height: 40 } },
+    ];
+    const delta = getCompositionMoveOffset([], moving);
+    expect(delta).toEqual({ x: -52, y: -152 });
+    expect(
+      moving.map((item) => ({
+        x: item.position.x + delta.x,
+        y: item.position.y + delta.y,
+      })),
+    ).toEqual([
+      { x: 48, y: 48 },
+      { x: 398, y: 78 },
+    ]);
+  });
+
   it("uses the entry point for an empty destination", () => {
     expect(getFolderMovePosition([], movedNote)).toEqual({ x: 48, y: 48 });
   });

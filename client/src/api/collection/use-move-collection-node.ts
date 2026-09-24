@@ -13,6 +13,7 @@ import { collectionQueryKeys } from "./query-keys";
 import { invalidateMentionSuggestionQueries } from "@/api/note-mentions/hooks";
 import type {
   CollectionContentsResponse,
+  CanvasObject,
   CollectionsData,
   MoveCollectionNodesToFolderInput,
   MoveCollectionNodesToFolderResponse,
@@ -21,6 +22,10 @@ import type { WorkspaceData } from "@/api/workspace";
 
 type MoveContext =
   | { optimistic: false }
+  | {
+      optimistic: "canvas";
+      previousContents: CollectionContentsCacheEntry[];
+    }
   | {
       optimistic: true;
       previousContents: CollectionContentsCacheEntry[];
@@ -41,12 +46,74 @@ export function useMoveCollectionNodesToFolder(
     MoveContext
   >({
     scope: { id: `collection-node-move:${workspaceSlug}:${collectionSlug}` },
-    mutationFn: async ({ nodeIds, targetFolderNodeId }) =>
+    mutationFn: async (variables) =>
       moveCollectionNodesToFolder(workspaceSlug, collectionSlug, {
-        nodeIds,
-        targetFolderNodeId,
+        ...variables,
+        sourceFolderPath: variables.sourceFolderPath ?? variables.folderPath,
       }),
     onMutate: async (variables) => {
+      const sourceFolderPath =
+        variables.sourceFolderPath ?? variables.folderPath;
+      if (variables.sourceCollectionSlug && variables.arrowSnapshots) {
+        const sourceScope = collectionQueryKeys.contentScope(
+          workspaceSlug,
+          variables.sourceCollectionSlug,
+        );
+        await queryClient.cancelQueries({ queryKey: sourceScope });
+        const previousContents = queryClient
+          .getQueriesData<CollectionContentsResponse>({ queryKey: sourceScope })
+          .filter(
+            (entry): entry is CollectionContentsCacheEntry =>
+              entry[1] !== undefined && entry[0][3] === sourceFolderPath,
+          );
+        const moving = new Set(variables.nodeIds);
+        for (const [, contents] of previousContents) {
+          for (const object of contents.canvasObjects) {
+            if (
+              object.type === "arrow" &&
+              object.start.binding &&
+              object.end.binding &&
+              moving.has(object.start.binding.targetId) &&
+              moving.has(object.end.binding.targetId)
+            ) {
+              moving.add(object.id);
+            }
+          }
+        }
+        const snapshots = new Map(
+          variables.arrowSnapshots.map((snapshot) => [snapshot.id, snapshot]),
+        );
+        for (const [key, contents] of previousContents) {
+          queryClient.setQueryData<CollectionContentsResponse>(key, {
+            ...contents,
+            nodes: contents.nodes.filter((node) => !moving.has(node.id)),
+            canvasObjects: contents.canvasObjects.flatMap<CanvasObject>(
+              (object) => {
+                if (moving.has(object.id)) return [];
+                if (object.type !== "arrow") return [object];
+                const snapshot = snapshots.get(object.id);
+                if (!snapshot) return [object];
+                return [
+                  {
+                    ...object,
+                    start:
+                      object.start.binding &&
+                      moving.has(object.start.binding.targetId)
+                        ? { position: snapshot.start }
+                        : object.start,
+                    end:
+                      object.end.binding &&
+                      moving.has(object.end.binding.targetId)
+                        ? { position: snapshot.end }
+                        : object.end,
+                  },
+                ];
+              },
+            ),
+          });
+        }
+        return { optimistic: "canvas", previousContents };
+      }
       const targetScope = collectionQueryKeys.contentScope(
         workspaceSlug,
         collectionSlug,
@@ -114,7 +181,7 @@ export function useMoveCollectionNodesToFolder(
       ) {
         const sourceEntry = findSourceEntry(
           previousContents,
-          variables.folderPath,
+          sourceFolderPath,
           variables.nodeIds,
           variables.targetFolderNodeId,
         );
@@ -125,17 +192,15 @@ export function useMoveCollectionNodesToFolder(
         if (source && targetFolder && targetFolder.type === "folder") {
           const movedNodeIds = new Set(variables.nodeIds);
           const targetFolderPath = joinFolderPath(
-            variables.folderPath,
+            sourceFolderPath,
             targetFolder.slug,
           );
-          const sourceParentFolderPath = getParentFolderPath(
-            variables.folderPath,
-          );
-          const sourceFolderSlug = getCurrentFolderSlug(variables.folderPath);
+          const sourceParentFolderPath = getParentFolderPath(sourceFolderPath);
+          const sourceFolderSlug = getCurrentFolderSlug(sourceFolderPath);
           const unfilteredSource = previousContents.find(
             ([key, contents]) =>
               isUnfilteredContentsKey(key) &&
-              getFolderPathFromKey(key) === variables.folderPath &&
+              getFolderPathFromKey(key) === sourceFolderPath &&
               variables.nodeIds.every((nodeId) =>
                 contents.nodes.some((node) => node.id === nodeId),
               ),
@@ -148,7 +213,7 @@ export function useMoveCollectionNodesToFolder(
           const contentUpdates = transitionCachedContentsForMoves(
             previousContents,
             {
-              sourceFolderPath: variables.folderPath,
+              sourceFolderPath,
               targetFolderPath,
               sourceParentFolderPath,
               sourceFolderSlug,
@@ -251,6 +316,14 @@ export function useMoveCollectionNodesToFolder(
         return;
       }
 
+      if (context.optimistic === "canvas") {
+        for (const [key, contents] of context.previousContents) {
+          queryClient.setQueryData(key, contents);
+        }
+        toast.error(getMoveErrorMessage(variables.nodeIds));
+        return;
+      }
+
       for (const [key, contents] of context.previousContents) {
         queryClient.setQueryData(key, contents);
       }
@@ -338,7 +411,7 @@ function getMoveErrorMessage(nodeIds: string[]): string {
 
   return nodeIds[0]?.startsWith("folder-")
     ? "Unable to move the folder into that folder."
-    : "Unable to move the asset into that folder.";
+    : "Unable to move the item into that folder.";
 }
 
 function joinFolderPath(parentPath: string | undefined, slug: string): string {

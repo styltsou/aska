@@ -1388,6 +1388,322 @@ describe("CollectionService integration", () => {
     expect(remainingFolders).toEqual([]);
   });
 
+  it("moves a selected one-sided arrow, card, and text as one composition", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Mixed Canvas Move" },
+    );
+    const note = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "Connected", position: { x: 0, y: 0 } },
+    );
+    const text = await collectionService.createCanvasText(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        type: "text",
+        content: "Label",
+        position: { x: 330, y: 200 },
+        font: "inter",
+        size: "md",
+        color: "ink",
+      },
+    );
+    const arrow = await collectionService.createCanvasArrow(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        type: "arrow",
+        start: {
+          position: { x: 280, y: 50 },
+          binding: {
+            targetId: note.id,
+            anchor: { x: 1, y: 0.5 },
+          },
+        },
+        end: { position: { x: 500, y: 80 } },
+        points: [{ x: 390, y: 40 }],
+        rotation: 0,
+        routing: "smooth",
+        style: "clean",
+        pattern: "solid",
+        head: "filled",
+        color: "ink",
+      },
+    );
+    const destination = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Destination", position: { x: 1000, y: 0 } },
+    );
+
+    const result = await collectionService.moveNodesToFolder(
+      fixture.organizationId,
+      collection.slug,
+      {
+        nodeIds: [note.id, text.id, arrow.id],
+        sourceCollectionSlug: collection.slug,
+        targetFolderNodeId: `folder-${destination.id}`,
+        measurements: [
+          { id: note.id, width: 280, height: 320, position: { x: 0, y: 0 } },
+          { id: text.id, width: 100, height: 40, position: { x: 330, y: 200 } },
+        ],
+        arrowSnapshots: [
+          {
+            id: arrow.id,
+            start: { x: 280, y: 50 },
+            end: { x: 500, y: 80 },
+            points: [{ x: 390, y: 40 }],
+          },
+        ],
+      },
+    );
+    expect(result.moves.map((move) => move.nodeId)).toEqual([
+      note.id,
+      text.id,
+      arrow.id,
+    ]);
+
+    const contents = await collectionService.getCollectionContents(
+      fixture.organizationId,
+      collection.slug,
+      destination.slug,
+    );
+    expect(
+      contents.nodes.find((node) => node.id === note.id)?.position,
+    ).toEqual({
+      x: 48,
+      y: 48,
+    });
+    expect(
+      contents.canvasObjects.find((object) => object.id === text.id),
+    ).toMatchObject({
+      position: { x: 378, y: 248 },
+    });
+    expect(
+      contents.canvasObjects.find((object) => object.id === arrow.id),
+    ).toMatchObject({
+      start: {
+        position: { x: 328, y: 98 },
+        binding: { targetId: note.id },
+      },
+      end: { position: { x: 548, y: 128 } },
+      points: [{ x: 438, y: 88 }],
+    });
+  });
+
+  it("brings an internal arrow along when both connected cards move", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Internal Arrow Move" },
+    );
+    const first = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "First", position: { x: 0, y: 0 } },
+    );
+    const second = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "Second", position: { x: 400, y: 0 } },
+    );
+    const arrow = await collectionService.createCanvasArrow(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      {
+        type: "arrow",
+        start: {
+          position: { x: 280, y: 100 },
+          binding: { targetId: first.id, anchor: { x: 1, y: 0.5 } },
+        },
+        end: {
+          position: { x: 400, y: 100 },
+          binding: { targetId: second.id, anchor: { x: 0, y: 0.5 } },
+        },
+        points: [],
+        rotation: 0,
+        routing: "straight",
+        style: "clean",
+        pattern: "solid",
+        head: "filled",
+        color: "ink",
+      },
+    );
+    const destination = await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Destination" },
+    );
+    const result = await collectionService.moveNodesToFolder(
+      fixture.organizationId,
+      collection.slug,
+      {
+        nodeIds: [first.id, second.id],
+        sourceCollectionSlug: collection.slug,
+        targetFolderNodeId: `folder-${destination.id}`,
+      },
+    );
+    expect(result.moves.map((move) => move.nodeId)).toEqual([
+      first.id,
+      second.id,
+      arrow.id,
+    ]);
+    const contents = await collectionService.getCollectionContents(
+      fixture.organizationId,
+      collection.slug,
+      destination.slug,
+    );
+    expect(contents.canvasObjects).toContainEqual(
+      expect.objectContaining({ id: arrow.id }),
+    );
+  });
+
+  it("remaps internal bindings and freezes a crossing arrow on a cross-collection move", async () => {
+    const source = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Arrow Binding Source" },
+    );
+    const destination = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Arrow Binding Destination" },
+    );
+    const first = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      source.slug,
+      { content: "First", position: { x: 0, y: 0 } },
+    );
+    const second = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      source.slug,
+      { content: "Second", position: { x: 400, y: 0 } },
+    );
+    const stationary = await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      source.slug,
+      { content: "Stationary", position: { x: 800, y: 0 } },
+    );
+    const internal = await collectionService.createCanvasArrow(
+      fixture.organizationId,
+      fixture.userId,
+      source.slug,
+      {
+        type: "arrow",
+        start: {
+          position: { x: 280, y: 100 },
+          binding: { targetId: first.id, anchor: { x: 1, y: 0.5 } },
+        },
+        end: {
+          position: { x: 400, y: 100 },
+          binding: { targetId: second.id, anchor: { x: 0, y: 0.5 } },
+        },
+        points: [],
+        rotation: 0,
+        routing: "straight",
+        style: "clean",
+        pattern: "solid",
+        head: "filled",
+        color: "ink",
+      },
+    );
+    const crossing = await collectionService.createCanvasArrow(
+      fixture.organizationId,
+      fixture.userId,
+      source.slug,
+      {
+        type: "arrow",
+        start: {
+          position: { x: 680, y: 100 },
+          binding: { targetId: second.id, anchor: { x: 1, y: 0.5 } },
+        },
+        end: {
+          position: { x: 800, y: 100 },
+          binding: { targetId: stationary.id, anchor: { x: 0, y: 0.5 } },
+        },
+        points: [],
+        rotation: 0,
+        routing: "straight",
+        style: "clean",
+        pattern: "solid",
+        head: "filled",
+        color: "ink",
+      },
+    );
+    const [oldSecondPlacement] = await db
+      .select({ id: collectionNodes.id })
+      .from(collectionNodes)
+      .where(eq(collectionNodes.assetId, Number(second.id.slice(5))));
+
+    const result = await collectionService.moveNodesToFolder(
+      fixture.organizationId,
+      destination.slug,
+      {
+        nodeIds: [first.id, second.id],
+        sourceCollectionSlug: source.slug,
+        targetFolderNodeId: null,
+      },
+    );
+    expect(result.moves.map((move) => move.nodeId)).toEqual([
+      first.id,
+      second.id,
+      internal.id,
+    ]);
+
+    const [sourceContents, destinationContents, newSecondPlacement] =
+      await Promise.all([
+        collectionService.getCollectionContents(
+          fixture.organizationId,
+          source.slug,
+        ),
+        collectionService.getCollectionContents(
+          fixture.organizationId,
+          destination.slug,
+        ),
+        db
+          .select({ id: collectionNodes.id })
+          .from(collectionNodes)
+          .where(
+            and(
+              eq(collectionNodes.assetId, Number(second.id.slice(5))),
+              eq(collectionNodes.collectionId, destination.id),
+            ),
+          ),
+      ]);
+    expect(newSecondPlacement[0]?.id).not.toBe(oldSecondPlacement?.id);
+    const movedArrow = destinationContents.canvasObjects.find(
+      (object) => object.id === internal.id,
+    );
+    expect(movedArrow).toMatchObject({
+      start: { binding: { targetId: first.id } },
+      end: { binding: { targetId: second.id } },
+    });
+    const leftBehind = sourceContents.canvasObjects.find(
+      (object) => object.id === crossing.id,
+    );
+    expect(leftBehind).toMatchObject({
+      start: { position: { x: 680, y: 100 } },
+      end: { binding: { targetId: stationary.id } },
+    });
+    expect(leftBehind?.type === "arrow" && leftBehind.start.binding).toBe(
+      undefined,
+    );
+  });
+
   it("persists mixed canvas front order and rebases it at the cap", async () => {
     const collection = await collectionService.createCollection(
       fixture.organizationId,

@@ -88,7 +88,7 @@ If the node was moved into a folder before a delayed position request arrives,
 the server returns a conflict instead of writing source-canvas coordinates into
 the destination placement.
 
-Dragging a persisted image, note, link, or folder over a visible folder card is a
+Dragging a persisted image, note, link, folder, or canvas text over a visible folder card is a
 separate same-collection move operation:
 
 ```txt
@@ -101,12 +101,12 @@ geometry and highlights only the deterministic topmost candidate. While a group
 drag is over a valid folder, the card surfaces animate into a shallow stack
 behind the grabbed card; this is visual-only, preserves measured node geometry,
 and reverses when the pointer leaves the target. A successful drop removes the
-source-canvas nodes and transactionally places them within the destination
-composition. Mixed asset-and-folder selections move atomically.
-The service uses the destination's positioned direct children as a virtual
-viewport, searching centre-outward for a collision-free slot; a full
-composition falls back to its centre and an empty destination starts at
-`(48, 48)`. Moving a folder preserves every descendant placement and authored
+source-canvas items and transactionally places them within the destination
+composition. Card, text, and arrow selections move atomically. All canvas-origin
+moves preserve the selected arrangement with one group translation; an empty
+destination starts at `(48, 48)`. Connected arrows accompany two moved targets,
+while connections crossing the destination boundary detach at their visible
+coordinates. Moving a folder preserves every descendant placement and authored
 descendant position while transactionally rewriting the subtree's cached folder
 paths. Optimistic notes, pending uploads, Inbox items, moves to the collection
 root, and cross-collection moves are not supported.
@@ -232,7 +232,7 @@ search.
 
 - Further alignment-guide refinement, including equal-spacing cues, optional
   distance labels, and continued interaction and visual tuning.
-- Multi-select actions and group resize handles.
+- Group resize handles.
 - Deliberate user-controlled z-ordering and further canvas object types.
 - Semantic relationships and other diagram-style features.
 - Durable viewport persistence across sessions.
