@@ -25,13 +25,7 @@ import {
   TypeIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -247,9 +241,6 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PaletteMode>("search");
   const [query, setQuery] = useState("");
-  const [paletteBodyContentHeight, setPaletteBodyContentHeight] =
-    useState<number>();
-  const [paletteFooterHeight, setPaletteFooterHeight] = useState<number>();
   const [activeSearchResultId, setActiveSearchResultId] = useState<string>();
   const [activeCommandId, setActiveCommandId] = useState<CommandId>();
   const [createNoteOpen, setCreateNoteOpen] = useState(false);
@@ -345,14 +336,6 @@ export function CommandPalette() {
     workspaceSearch.data?.query === query.trim()
       ? workspaceSearch.data.results
       : [];
-  const paletteBodyHeight =
-    paletteBodyContentHeight === undefined
-      ? undefined
-      : paletteBodyContentHeight + 1;
-  const paletteHeight =
-    paletteBodyHeight === undefined || paletteFooterHeight === undefined
-      ? undefined
-      : paletteBodyHeight + paletteFooterHeight;
 
   function changeMode(nextMode: PaletteMode) {
     setMode(nextMode);
@@ -600,23 +583,10 @@ export function CommandPalette() {
             ? "Search assets, folders, and collections."
             : "Search app commands and destinations."
         }
-        className="top-[18vh] max-w-xl transition-[height,opacity,transform] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
-        contentStyle={
-          paletteHeight === undefined ? undefined : { height: paletteHeight }
-        }
+        className="top-[18vh] max-w-xl transition-[opacity,transform] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
       >
-        <DialogBody
-          className="overflow-hidden p-0 transition-[height] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
-          style={
-            paletteBodyHeight === undefined
-              ? undefined
-              : { height: paletteBodyHeight }
-          }
-        >
-          <MeasuredCommandPaletteSection
-            className="p-1.5"
-            onHeightChange={setPaletteBodyContentHeight}
-          >
+        <DialogBody className="overflow-hidden p-0">
+          <div className="p-1.5">
             <Command
               shouldFilter={mode === "commands"}
               onKeyDown={(event) => {
@@ -778,56 +748,54 @@ export function CommandPalette() {
                 )}
               </CommandList>
             </Command>
-          </MeasuredCommandPaletteSection>
-        </DialogBody>
-        <MeasuredCommandPaletteSection onHeightChange={setPaletteFooterHeight}>
-          <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground sm:pr-[18px] sm:pl-[10px]">
-            {mode === "search" ? (
-              <span className="inline-flex items-center gap-1">
-                <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-                  Tab
-                </Kbd>
-                <span>for actions</span>
-              </span>
-            ) : query.length === 0 ? (
-              <span className="inline-flex items-center gap-1">
-                <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-                  Tab
-                </Kbd>
-                <span>or</span>
-                <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-                  ⌫
-                </Kbd>
-                <span>to search</span>
-              </span>
-            ) : null}
-            {mode === "search" ? (
-              <span className="inline-flex items-center gap-1">
-                <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-                  ⇧ ↵
-                </Kbd>
-                <span>to peek notes or colors</span>
-              </span>
-            ) : null}
-            <span className="ml-auto inline-flex items-center gap-1">
-              <KbdGroup className="gap-0.5">
-                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                  <ArrowUpIcon />
-                </Kbd>
-                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                  <ArrowDownIcon />
-                </Kbd>
-              </KbdGroup>
-              <span>to navigate</span>
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                <CornerDownLeftIcon />
-              </Kbd>
-              <span>to select</span>
-            </span>
           </div>
-        </MeasuredCommandPaletteSection>
+        </DialogBody>
+        <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground sm:pr-[18px] sm:pl-[10px]">
+          {mode === "search" ? (
+            <span className="inline-flex items-center gap-1">
+              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                Tab
+              </Kbd>
+              <span>for actions</span>
+            </span>
+          ) : query.length === 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                Tab
+              </Kbd>
+              <span>or</span>
+              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                ⌫
+              </Kbd>
+              <span>to search</span>
+            </span>
+          ) : null}
+          {mode === "search" ? (
+            <span className="inline-flex items-center gap-1">
+              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                ⇧ ↵
+              </Kbd>
+              <span>to peek notes or colors</span>
+            </span>
+          ) : null}
+          <span className="ml-auto inline-flex items-center gap-1">
+            <KbdGroup className="gap-0.5">
+              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                <ArrowUpIcon />
+              </Kbd>
+              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+                <ArrowDownIcon />
+              </Kbd>
+            </KbdGroup>
+            <span>to navigate</span>
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
+              <CornerDownLeftIcon />
+            </Kbd>
+            <span>to select</span>
+          </span>
+        </div>
       </CommandDialog>
       <CreateNoteDialog
         workspaceSlug={workspaceSlug ?? ""}
@@ -922,42 +890,6 @@ function WorkspaceSearchInputIndicator({
     />
   ) : (
     <SearchIcon aria-hidden="true" className="size-3.5 text-muted-foreground" />
-  );
-}
-
-function MeasuredCommandPaletteSection({
-  children,
-  onHeightChange,
-  className,
-}: {
-  children: ReactNode;
-  onHeightChange: React.Dispatch<React.SetStateAction<number | undefined>>;
-  className?: string;
-}) {
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const content = contentRef.current;
-    if (!content) return;
-
-    const updateHeight = () => {
-      const nextHeight = content.offsetHeight;
-      onHeightChange((currentHeight) =>
-        currentHeight === nextHeight ? currentHeight : nextHeight,
-      );
-    };
-    updateHeight();
-
-    if (!("ResizeObserver" in window)) return;
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(content);
-    return () => observer.disconnect();
-  }, [onHeightChange]);
-
-  return (
-    <div ref={contentRef} className={className}>
-      {children}
-    </div>
   );
 }
 
