@@ -190,6 +190,7 @@ export class AssetService implements IAssetService {
         noteIsExpanded: noteAssets.isExpanded,
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
+        colorNote: colorAssets.note,
         linkOriginalUrl: linkAssets.originalUrl,
         linkNote: linkAssets.note,
         linkResourceId: externalResources.id,
@@ -314,6 +315,7 @@ export class AssetService implements IAssetService {
         noteIsExpanded: noteAssets.isExpanded,
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
+        colorNote: colorAssets.note,
         linkOriginalUrl: linkAssets.originalUrl,
         linkNote: linkAssets.note,
         linkResourceId: externalResources.id,
@@ -449,10 +451,12 @@ export class AssetService implements IAssetService {
       id: `color-${color.id}`,
       type: "color",
       hex,
+      note: null,
       gradient,
       title,
       isFavorite: false,
       createdAt: color.createdAt.toISOString(),
+      updatedAt: color.updatedAt.toISOString(),
       position: null,
       frontIndex: null,
     };
@@ -660,17 +664,26 @@ export class AssetService implements IAssetService {
       throw new AppError(ErrorCode.VALIDATION_ERROR, "Asset is not a color");
     }
 
-    const hex = normalizeHexColor(data.hex);
+    const hex =
+      data.hex === undefined ? undefined : normalizeHexColor(data.hex);
     const gradient = data.gradient
       ? normalizeColorGradient(data.gradient)
       : data.gradient === null
         ? null
         : undefined;
-    const title = gradient === null ? getColorName(hex) : null;
+    const title =
+      hex === undefined
+        ? undefined
+        : gradient === null
+          ? getColorName(hex)
+          : null;
     const updated = await db.transaction(async (tx) => {
       const [asset] = await tx
         .update(assets)
-        .set({ title, updatedByUserId: userId })
+        .set({
+          ...(title === undefined ? {} : { title }),
+          updatedByUserId: userId,
+        })
         .where(
           and(
             eq(assets.id, target.entityId),
@@ -678,37 +691,58 @@ export class AssetService implements IAssetService {
             eq(assets.type, "color"),
           ),
         )
-        .returning({ id: assets.id, isFavorite: assets.isFavorite });
+        .returning({
+          id: assets.id,
+          isFavorite: assets.isFavorite,
+          title: assets.title,
+          updatedAt: assets.updatedAt,
+        });
       if (!asset) {
         throw new AppError(ErrorCode.NOT_FOUND, "Color not found");
       }
 
       const [colorAsset] = await tx
         .update(colorAssets)
-        .set({ hex, ...(gradient === undefined ? {} : { gradient }) })
+        .set({
+          ...(hex === undefined ? {} : { hex }),
+          ...(gradient === undefined ? {} : { gradient }),
+          ...(data.note === undefined ? {} : { note: data.note }),
+        })
         .where(eq(colorAssets.assetId, asset.id))
-        .returning({ gradient: colorAssets.gradient });
+        .returning({
+          hex: colorAssets.hex,
+          gradient: colorAssets.gradient,
+          note: colorAssets.note,
+        });
 
       const effectiveGradient = colorAsset?.gradient ?? null;
-      await rewriteReferencedTargetLabel(
-        tx,
-        orgId,
-        asset.id,
-        "color",
-        title ??
-          (effectiveGradient
-            ? `${effectiveGradient.type === "radial" ? "Radial" : "Linear"} Gradient`
-            : hex),
-      );
+      if (hex !== undefined || gradient !== undefined)
+        await rewriteReferencedTargetLabel(
+          tx,
+          orgId,
+          asset.id,
+          "color",
+          title ??
+            (effectiveGradient
+              ? `${effectiveGradient.type === "radial" ? "Radial" : "Linear"} Gradient`
+              : (colorAsset?.hex ?? hex ?? "")),
+        );
 
-      return { ...asset, gradient: effectiveGradient };
+      return {
+        ...asset,
+        hex: colorAsset?.hex ?? hex ?? "",
+        note: colorAsset?.note ?? null,
+        gradient: effectiveGradient,
+      };
     });
 
     return {
       id: `color-${updated.id}`,
       type: "color",
-      hex,
-      title,
+      hex: updated.hex,
+      note: updated.note,
+      title: updated.title,
+      updatedAt: updated.updatedAt.toISOString(),
       isFavorite: updated.isFavorite,
       gradient: updated.gradient,
     };
@@ -988,6 +1022,7 @@ export class AssetService implements IAssetService {
       noteIsExpanded: boolean | null;
       colorHex: string | null;
       colorGradient: StoredColorGradient | null;
+      colorNote: string | null;
       linkOriginalUrl: string | null;
       linkNote: string | null;
       linkResourceId: number | null;
@@ -1095,9 +1130,11 @@ export class AssetService implements IAssetService {
           type: "color",
           hex: row.colorHex,
           gradient: row.colorGradient ?? null,
+          note: row.colorNote,
           title: row.title,
           isFavorite: row.isFavorite,
           createdAt: row.createdAt.toISOString(),
+          updatedAt: row.updatedAt.toISOString(),
           position: null,
           frontIndex: null,
         } satisfies CollectionColorNode);

@@ -360,10 +360,12 @@ export type CollectionColorNode = {
   id: string;
   type: "color";
   hex: string;
+  note: string | null;
   gradient?: ColorGradient | null;
   title: string | null;
   isFavorite: boolean;
   createdAt: string;
+  updatedAt?: string;
   clientId?: string;
   position: BoardPosition | null;
   frontIndex?: number | null;
@@ -386,13 +388,21 @@ export type UpdateCanvasItemFrontIndexesResponse = {
 export type CreateColorResponse = { color: CollectionColorNode };
 
 export type UpdateColorInput = {
-  hex: string;
+  hex?: string;
   gradient?: ColorGradient | null;
+  note?: string | null;
 };
 
 export type UpdatedColor = Pick<
   CollectionColorNode,
-  "id" | "type" | "hex" | "title" | "isFavorite" | "gradient"
+  | "id"
+  | "type"
+  | "hex"
+  | "note"
+  | "title"
+  | "isFavorite"
+  | "gradient"
+  | "updatedAt"
 >;
 
 export type UpdateColorResponse = { color: UpdatedColor };

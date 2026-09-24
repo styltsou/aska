@@ -949,6 +949,7 @@ export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
         id: "color-pending",
         type: "color",
         hex: data.hex,
+        note: null,
         gradient: data.gradient ?? null,
         title: null,
         isFavorite: false,
@@ -990,6 +991,7 @@ export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
         id: optimisticId,
         type: "color",
         hex: variables.hex,
+        note: null,
         gradient: variables.gradient ?? null,
         title: null,
         isFavorite: false,
@@ -1248,6 +1250,7 @@ export function useCreateInboxColor(workspaceSlug: string) {
         id: optimisticId,
         type: "color",
         hex: variables.hex,
+        note: null,
         gradient: variables.gradient ?? null,
         title: null,
         isFavorite: false,
@@ -1432,8 +1435,8 @@ function applyColorDraftToContents(
       if (node.type === "color" && node.id === draft.assetId) {
         return {
           ...node,
-          hex: draft.hex,
-          title: null,
+          ...(draft.hex === undefined ? {} : { hex: draft.hex, title: null }),
+          ...(draft.note === undefined ? {} : { note: draft.note }),
           ...(draft.gradient === undefined ? {} : { gradient: draft.gradient }),
         };
       }
@@ -1443,7 +1446,12 @@ function applyColorDraftToContents(
         ...node,
         previews: node.previews.map((preview) =>
           preview.type === "color" && preview.assetId === draft.assetId
-            ? { ...preview, hex: draft.hex, title: null }
+            ? {
+                ...preview,
+                ...(draft.hex === undefined
+                  ? {}
+                  : { hex: draft.hex, title: null }),
+              }
             : preview,
         ),
       };
@@ -1827,6 +1835,10 @@ export function useUpdateColor(workspaceSlug: string) {
         contentsFilter,
         (current) => applyUpdatedColorToContents(current, color),
       );
+      void queryClient.invalidateQueries({
+        queryKey: ["workspace-asset", workspaceSlug, color.id],
+        exact: true,
+      });
       void queryClient.invalidateQueries({
         queryKey: collectionQueryKeys.collections(workspaceSlug),
       });

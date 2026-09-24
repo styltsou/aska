@@ -44,6 +44,7 @@ describe("collectionNodeToAsset", () => {
       id: "color-1",
       type: "color",
       hex: "#f43f5e",
+      note: null,
       gradient: {
         from: "#f43f5e",
         to: "#7c3aed",
@@ -57,11 +58,14 @@ describe("collectionNodeToAsset", () => {
       title: null,
       isFavorite: false,
       createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-02T00:00:00.000Z",
       position: null,
     });
 
     expect(asset).toMatchObject({
       type: "color",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-02T00:00:00.000Z",
       gradient: {
         to: "#7c3aed",
         stops: [

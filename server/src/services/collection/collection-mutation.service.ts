@@ -298,10 +298,12 @@ export class CollectionMutationService {
       id: `color-${color.id}`,
       type: "color",
       hex,
+      note: null,
       gradient,
       title: name,
       isFavorite: false,
       createdAt: color.createdAt.toISOString(),
+      updatedAt: color.updatedAt.toISOString(),
       position: data.position ?? null,
       frontIndex: null,
     };

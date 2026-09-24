@@ -245,17 +245,6 @@ export function ColorDetailDrawer({
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
-              {onEdit ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Edit color"
-                  onClick={onEdit}
-                >
-                  <PencilIcon className="size-4" />
-                </Button>
-              ) : null}
               <Button
                 type="button"
                 variant="ghost"
@@ -288,6 +277,17 @@ export function ColorDetailDrawer({
                   </TooltipTrigger>
                   <TooltipContent>Show in board</TooltipContent>
                 </Tooltip>
+              ) : null}
+              {onEdit ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Edit color"
+                  onClick={onEdit}
+                >
+                  <PencilIcon className="size-4" />
+                </Button>
               ) : null}
               <ColorInfoHoverCard color={displayedColor} />
               <Tooltip>
@@ -502,12 +502,22 @@ function ColorDetailModal({
           <motion.div
             layout
             layoutDependency={presentation}
-            transition={{ layout: layoutTransition }}
+            initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
+            animate={{ opacity: open ? 1 : 0, scale: open ? 1 : 0.96 }}
+            transition={{
+              layout: layoutTransition,
+              opacity: reduceMotion
+                ? { duration: 0 }
+                : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
+              scale: reduceMotion
+                ? { duration: 0 }
+                : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
+            }}
             style={{ transformOrigin: "center center" }}
           />
         }
         className={cn(
-          "flex min-h-0 max-h-[calc(100svh-2rem)] flex-col overflow-hidden transition-[opacity,scale,background-color,box-shadow,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "flex min-h-0 max-h-[calc(100svh-2rem)] flex-col overflow-hidden transition-[background-color,box-shadow,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
           expanded
             ? "top-0 left-0 h-dvh max-h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
             : "top-1/2 h-[min(48rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[76rem] -translate-y-1/2 rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10",
@@ -536,17 +546,6 @@ function ColorDetailModal({
           >
             <ArrowLeftIcon className="size-4" />
           </Button>
-          {onEdit ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 rounded-lg"
-              aria-label="Edit color"
-              onClick={onEdit}
-            >
-              <PencilIcon className="size-4" />
-            </Button>
-          ) : null}
           {onPeek ? (
             <Button
               variant="ghost"
@@ -599,8 +598,22 @@ function ColorDetailModal({
               </AnimatePresence>
             </span>
           </Button>
+          {onEdit ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto size-8 rounded-lg"
+              aria-label="Edit color"
+              onClick={onEdit}
+            >
+              <PencilIcon className="size-4" />
+            </Button>
+          ) : null}
           {color ? (
-            <ColorInfoHoverCard color={color} className="ml-auto" />
+            <ColorInfoHoverCard
+              color={color}
+              className={onEdit ? undefined : "ml-auto"}
+            />
           ) : null}
         </motion.div>
         <DialogBody
@@ -651,8 +664,8 @@ function ColorDetailModal({
                     <span className="text-sm font-medium">Relevant images</span>
                     {scope.type === "collection" ? (
                       <Tabs
+                        key={presentation}
                         value={includeDescendants ? "collection" : "view"}
-                        animateIndicator={false}
                         onValueChange={(value) =>
                           onIncludeDescendantsChange(value === "collection")
                         }
@@ -873,13 +886,15 @@ function ImageResultTile({
       onMouseLeave={() => setHovered(false)}
       onClick={onOpen}
     >
-      <ProgressiveImage
-        src={image.url}
-        blurDataURL={image.blurDataURL ?? undefined}
-        alt={image.alt ?? image.title ?? "Color match"}
-        className="absolute inset-0 h-full w-full object-cover transition-all duration-300 ease-out group-hover/tile:scale-[1.025]"
-        loading="lazy"
-      />
+      <div className="absolute inset-0 transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover/tile:scale-[1.025] motion-reduce:transition-none">
+        <ProgressiveImage
+          src={image.url}
+          blurDataURL={image.blurDataURL ?? undefined}
+          alt={image.alt ?? image.title ?? "Color match"}
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+        />
+      </div>
       <AnimatePresence>
         {hovered ? (
           <motion.div

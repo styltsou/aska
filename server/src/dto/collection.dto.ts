@@ -252,10 +252,21 @@ export const CreateColorSchema = z.object({
 
 export type CreateColorInput = z.infer<typeof CreateColorSchema>;
 
-export const UpdateColorSchema = z.object({
-  hex: HexColorSchema,
-  gradient: ColorGradientSchema.nullable().optional(),
-});
+export const UpdateColorSchema = z
+  .object({
+    hex: HexColorSchema.optional(),
+    gradient: ColorGradientSchema.nullable().optional(),
+    note: z.string().max(10_000).nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      value.hex !== undefined ||
+      value.gradient !== undefined ||
+      value.note !== undefined,
+    {
+      message: "Provide at least one color field to update",
+    },
+  );
 
 export type UpdateColorInput = z.infer<typeof UpdateColorSchema>;
 
@@ -263,6 +274,8 @@ export type UpdatedColor = {
   id: string;
   type: "color";
   hex: string;
+  note: string | null;
+  updatedAt: string;
   title: string | null;
   isFavorite: boolean;
   gradient?: z.infer<typeof ColorGradientSchema> | null;
@@ -457,10 +470,12 @@ export const CollectionColorNodeSchema = z.object({
   id: z.string(),
   type: z.literal("color"),
   hex: z.string(),
+  note: z.string().nullable(),
   gradient: ColorGradientSchema.nullable().optional(),
   title: z.string().nullable(),
   isFavorite: z.boolean(),
   createdAt: z.string(),
+  updatedAt: z.string().optional(),
   position: BoardPositionSchema.nullable(),
   frontIndex: z.number().int().min(0).max(100_000).nullable(),
 });

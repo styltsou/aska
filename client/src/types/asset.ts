@@ -76,6 +76,7 @@ export interface ColorAsset {
   id: string;
   type: "color";
   hex: string;
+  note?: string | null;
   gradient?: {
     from: string;
     to: string;
@@ -84,6 +85,8 @@ export interface ColorAsset {
     stops?: Array<{ color: string; position: number }>;
   } | null;
   title?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   isFavorite?: boolean;
   clientId?: string;
 }

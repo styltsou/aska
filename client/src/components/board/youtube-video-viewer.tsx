@@ -226,12 +226,22 @@ export function YouTubeVideoViewer({
           <motion.div
             layout
             layoutDependency={presentation}
-            transition={{ layout: layoutTransition }}
+            initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
+            animate={{ opacity: open ? 1 : 0, scale: open ? 1 : 0.96 }}
+            transition={{
+              layout: layoutTransition,
+              opacity: reduceMotion
+                ? { duration: 0 }
+                : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
+              scale: reduceMotion
+                ? { duration: 0 }
+                : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
+            }}
             style={{ transformOrigin: "center center" }}
           />
         }
         className={cn(
-          "flex max-h-[calc(100svh-2rem)] flex-col overflow-hidden transition-[opacity,scale,background-color,box-shadow,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "flex max-h-[calc(100svh-2rem)] flex-col overflow-hidden transition-[background-color,box-shadow,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
           workspace
             ? "top-0 left-0 h-dvh max-h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
             : "top-1/2 w-[calc(100vw-2rem)] max-w-[76rem] -translate-y-1/2 rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10",
