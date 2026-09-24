@@ -42,6 +42,7 @@ import {
 } from "@/components/app-shell/workspace-peek";
 import { useRouterState } from "@tanstack/react-router";
 import { getPexelsBrowserScope, useSessionStore } from "@/store";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type ImagePrefetch = {
   controller: AbortController;
@@ -162,6 +163,7 @@ function linkActions(
   asset: LinkAsset,
   onRefresh: () => void,
   onOpenVideo?: (asset: LinkAsset) => void,
+  onPeekVideo?: (asset: LinkAsset) => void,
 ) {
   const refreshAllowed = shouldShowLinkPreviewRefresh(asset);
   return (
@@ -169,6 +171,11 @@ function linkActions(
       {asset.video && onOpenVideo ? (
         <ContextMenuItem onClick={() => onOpenVideo(asset)}>
           View video
+        </ContextMenuItem>
+      ) : null}
+      {asset.video && onPeekVideo ? (
+        <ContextMenuItem onClick={() => onPeekVideo(asset)}>
+          Peek video
         </ContextMenuItem>
       ) : null}
       <ContextMenuItem
@@ -220,7 +227,8 @@ export function AssetContextMenu({
   /** Marks this portaled menu as belonging to a specific canvas. */
   canvasBoardKey?: string;
 }) {
-  const { peekNote, peekColor } = useWorkspacePeek();
+  const { peekNote, peekColor, peekVideo } = useWorkspacePeek();
+  const isMobile = useIsMobile();
   const setPexelsBrowserOpen = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
   );
@@ -515,6 +523,13 @@ export function AssetContextMenu({
                     });
                   },
                   onOpenVideo,
+                  onOpenVideo
+                    ? (video) => {
+                        closePexels();
+                        if (isMobile) onOpenVideo(video);
+                        else peekVideo(video, peekLocation);
+                      }
+                    : undefined,
                 )
               )}
               <ContextMenuSeparator />

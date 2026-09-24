@@ -69,7 +69,7 @@ import { composeFrontMatter, parseFrontMatter } from "@/lib/front-matter";
 import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
-import { matchesKeybinding, PEEK_NOTE_SHORTCUT } from "@/lib/keybindings";
+import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
 import { formatNoteMetadataDateTime } from "@/lib/note-date-format";
 import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
 import {
@@ -119,7 +119,6 @@ export function NoteDetailDrawer({
   onPromote,
   onSwap,
   onBack,
-  hasPreviousNote = false,
   onShowInBoard,
   loading = false,
   open: controlledOpen,
@@ -148,7 +147,6 @@ export function NoteDetailDrawer({
   onPromote?: (note: NoteAsset, previousNote?: NoteAsset) => void;
   onSwap?: (note: NoteAsset) => void;
   onBack?: () => void;
-  hasPreviousNote?: boolean;
   onShowInBoard?: () => void;
   loading?: boolean;
   open?: boolean;
@@ -168,6 +166,7 @@ export function NoteDetailDrawer({
     peekColor,
     setActiveNoteId,
     setNotePromotionHandler,
+    setMainNoteLeaveHandler,
     setNoteSwapHandler,
     syncPeekNote,
     isResizing: isPeekResizing,
@@ -360,7 +359,7 @@ export function NoteDetailDrawer({
     if (!isWorkspaceOpen || !activeNote || isPeekMirror) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.repeat) return;
-      if (!matchesKeybinding(event, PEEK_NOTE_SHORTCUT)) return;
+      if (!matchesKeybinding(event, PEEK_ASSET_SHORTCUT)) return;
       event.preventDefault();
       event.stopPropagation();
       peekNote(activeNote, location);
@@ -683,94 +682,107 @@ export function NoteDetailDrawer({
     ],
   );
 
+  const prepareCurrentNoteForSwitch = useCallback(async (): Promise<
+    NoteAsset | false
+  > => {
+    if (isCreateMode || isPending || !activeNote) return false;
+
+    const content = getSaveableNoteContent(draftRef.current);
+    if (!content) {
+      toast.error("Add some content before opening another note.");
+      return false;
+    }
+    const submittedSnapshot = getLatestSaveSnapshot();
+    if (isNoteContentTooLong(content)) {
+      failedSaveSnapshotRef.current = submittedSnapshot;
+      setSaveState("error");
+      toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
+      return false;
+    }
+
+    let currentMainNote = activeNote;
+    const nextTitle = title.trim() || null;
+    const titleChanged = nextTitle !== (activeNote.title ?? null);
+    if (content !== noteContent || titleChanged) {
+      activeSaveSnapshotRef.current = submittedSnapshot;
+      setSaveState("saving");
+      try {
+        const { note: updatedNote } = await mutateAsync({
+          assetId: activeNote.id,
+          content,
+          title: nextTitle,
+        });
+        currentMainNote = {
+          ...activeNote,
+          ...updatedNote,
+        };
+        activeSaveSnapshotRef.current = undefined;
+        onNoteChange?.(currentMainNote);
+        if (!isSameSaveSnapshot(submittedSnapshot, getLatestSaveSnapshot())) {
+          const latestSnapshot = getLatestSaveSnapshot();
+          queuedSaveSnapshotRef.current = latestSnapshot;
+          hasLocalEditRef.current = true;
+          saveEditDraft(
+            activeNote.id,
+            latestSnapshot.content,
+            latestSnapshot.title,
+          );
+          setSaveState("saving");
+          return false;
+        }
+        hasLocalEditRef.current = false;
+        clearEditDraft(activeNote.id);
+        setSaveState("saved");
+      } catch (error) {
+        activeSaveSnapshotRef.current = undefined;
+        const latestSnapshot = getLatestSaveSnapshot();
+        if (!isSameSaveSnapshot(submittedSnapshot, latestSnapshot)) {
+          queuedSaveSnapshotRef.current = latestSnapshot;
+          hasLocalEditRef.current = true;
+          failedSaveSnapshotRef.current = undefined;
+          setSaveState("saving");
+          return false;
+        }
+        failedSaveSnapshotRef.current = submittedSnapshot;
+        setSaveState("error");
+        toast.error(
+          getUserFacingApiErrorMessage(error, "Could not save note."),
+        );
+        return false;
+      }
+    }
+
+    return currentMainNote;
+  }, [
+    activeNote,
+    getLatestSaveSnapshot,
+    isCreateMode,
+    isPending,
+    mutateAsync,
+    noteContent,
+    onNoteChange,
+    title,
+  ]);
+
   const promotePeekedNote = useCallback(
     async (nextMainNote: NoteAsset) => {
-      if (isCreateMode || isPending || !onPromote) return false;
-
+      if (!onPromote || isCreateMode || isPending) return false;
       if (!activeNote) {
         onPromote(nextMainNote);
         return true;
       }
       if (nextMainNote.id === activeNote.id) return false;
-
-      const content = getSaveableNoteContent(draftRef.current);
-      if (!content) {
-        toast.error("Add some content before opening another note.");
-        return false;
-      }
-      const submittedSnapshot = getLatestSaveSnapshot();
-      if (isNoteContentTooLong(content)) {
-        failedSaveSnapshotRef.current = submittedSnapshot;
-        setSaveState("error");
-        toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
-        return false;
-      }
-
-      let currentMainNote = activeNote;
-      const nextTitle = title.trim() || null;
-      const titleChanged = nextTitle !== (activeNote.title ?? null);
-      if (content !== noteContent || titleChanged) {
-        activeSaveSnapshotRef.current = submittedSnapshot;
-        setSaveState("saving");
-        try {
-          const { note: updatedNote } = await mutateAsync({
-            assetId: activeNote.id,
-            content,
-            title: nextTitle,
-          });
-          currentMainNote = {
-            ...activeNote,
-            ...updatedNote,
-          };
-          activeSaveSnapshotRef.current = undefined;
-          onNoteChange?.(currentMainNote);
-          if (!isSameSaveSnapshot(submittedSnapshot, getLatestSaveSnapshot())) {
-            const latestSnapshot = getLatestSaveSnapshot();
-            queuedSaveSnapshotRef.current = latestSnapshot;
-            hasLocalEditRef.current = true;
-            saveEditDraft(
-              activeNote.id,
-              latestSnapshot.content,
-              latestSnapshot.title,
-            );
-            setSaveState("saving");
-            return false;
-          }
-          hasLocalEditRef.current = false;
-          clearEditDraft(activeNote.id);
-          setSaveState("saved");
-        } catch (error) {
-          activeSaveSnapshotRef.current = undefined;
-          const latestSnapshot = getLatestSaveSnapshot();
-          if (!isSameSaveSnapshot(submittedSnapshot, latestSnapshot)) {
-            queuedSaveSnapshotRef.current = latestSnapshot;
-            hasLocalEditRef.current = true;
-            failedSaveSnapshotRef.current = undefined;
-            setSaveState("saving");
-            return false;
-          }
-          failedSaveSnapshotRef.current = submittedSnapshot;
-          setSaveState("error");
-          toast.error(
-            getUserFacingApiErrorMessage(error, "Could not save note."),
-          );
-          return false;
-        }
-      }
-
+      const currentMainNote = await prepareCurrentNoteForSwitch();
+      if (!currentMainNote) return false;
       onPromote(nextMainNote, currentMainNote);
       return true;
     },
     [
       activeNote,
-      getLatestSaveSnapshot,
       isCreateMode,
       isPending,
-      mutateAsync,
-      noteContent,
-      onNoteChange,
       onPromote,
-      title,
+      prepareCurrentNoteForSwitch,
     ],
   );
 
@@ -841,11 +853,25 @@ export function NoteDetailDrawer({
   useEffect(() => {
     if (!onPromote || isCreateMode) {
       setNotePromotionHandler(undefined);
+      setMainNoteLeaveHandler(undefined);
       return;
     }
     setNotePromotionHandler(promotePeekedNote);
-    return () => setNotePromotionHandler(undefined);
-  }, [isCreateMode, onPromote, promotePeekedNote, setNotePromotionHandler]);
+    setMainNoteLeaveHandler(async () =>
+      Boolean(await prepareCurrentNoteForSwitch()),
+    );
+    return () => {
+      setNotePromotionHandler(undefined);
+      setMainNoteLeaveHandler(undefined);
+    };
+  }, [
+    isCreateMode,
+    onPromote,
+    prepareCurrentNoteForSwitch,
+    promotePeekedNote,
+    setMainNoteLeaveHandler,
+    setNotePromotionHandler,
+  ]);
 
   const swapWithPeekedNote = useCallback(async () => {
     if (
@@ -1210,8 +1236,10 @@ export function NoteDetailDrawer({
   return (
     <NoteWorkspace
       open={isWorkspaceOpen}
-      modal={!peekTarget}
-      disablePointerDismissal={Boolean(peekTarget) || isPeekResizing}
+      modal={!peekTarget || isMobile}
+      disablePointerDismissal={
+        (Boolean(peekTarget) && !isMobile) || isPeekResizing
+      }
       onOpenChange={(open) => {
         if (!open && isPeekResizing) return;
         if (open) {
@@ -1260,24 +1288,19 @@ export function NoteDetailDrawer({
                     className="size-8 rounded-lg"
                     variant="ghost"
                     size="icon"
-                    aria-label={
-                      hasPreviousNote
-                        ? "Back to previous note"
-                        : "Back to board"
-                    }
+                    aria-label="Go back"
                     onClick={onBack ?? requestClose}
                   >
                     <ArrowLeftIcon />
-                    <span className="sr-only">
-                      {hasPreviousNote
-                        ? "Back to previous note"
-                        : "Back to board"}
-                    </span>
+                    <span className="sr-only">Go back</span>
                   </Button>
                 }
               />
               <TooltipContent side="bottom">
-                {hasPreviousNote ? "Back to previous note" : "Back to board"}
+                <span>Go back</span>
+                <KbdGroup className="gap-0.5">
+                  <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
+                </KbdGroup>
               </TooltipContent>
             </Tooltip>
             {!isPeekMirror ? (

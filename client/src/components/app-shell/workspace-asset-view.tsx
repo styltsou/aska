@@ -89,6 +89,11 @@ export function WorkspaceAssetViewProvider({
   });
   const assetId = parseWorkspaceAssetId(rawAssetId);
   const queryClient = useQueryClient();
+  const {
+    target: peekTarget,
+    closePeek,
+    setAssetPromotionHandler,
+  } = useWorkspacePeek();
   const openedInAppAssetIdsRef = useRef(new Set<string>());
   const presentationStackRef = useRef<AssetPresentation[]>([]);
   const [presentation, setPresentation] = useState<AssetPresentation | null>(
@@ -99,8 +104,16 @@ export function WorkspaceAssetViewProvider({
 
   const openAsset = useCallback(
     (nextAssetId: string, options?: OpenAssetOptions) => {
-      if (!parseWorkspaceAssetId(nextAssetId)) return;
+      if (!parseWorkspaceAssetId(nextAssetId)) return Promise.resolve(false);
       const currentPresentation = presentationRef.current;
+      if (
+        currentPresentation?.open &&
+        currentPresentation.assetId === nextAssetId
+      ) {
+        if (peekTarget?.type === "link" && peekTarget.asset.id === nextAssetId)
+          closePeek();
+        return Promise.resolve(true);
+      }
       if (
         !options?.replace &&
         currentPresentation?.open &&
@@ -125,21 +138,55 @@ export function WorkspaceAssetViewProvider({
       );
       openedInAppAssetIdsRef.current.add(nextAssetId);
       recordRecentWorkspaceAsset(workspaceSlug, nextAssetId);
-      void navigate({
+      return navigate({
         // The workspace route owns the validated search schema, but using it as
         // an implicit destination would collapse nested routes to its index.
         to: pathname as "/$workspaceSlug",
         search: (previous) => ({ ...previous, asset: nextAssetId }),
         replace: options?.replace,
-      }).catch(() => {
-        openedInAppAssetIdsRef.current.delete(nextAssetId);
-        setPresentation(
-          assetId ? openAssetPresentation(assetId, assetId) : null,
-        );
-      });
+      })
+        .then(() => {
+          if (
+            peekTarget?.type === "link" &&
+            peekTarget.asset.id === nextAssetId
+          )
+            closePeek();
+          return true;
+        })
+        .catch(() => {
+          openedInAppAssetIdsRef.current.delete(nextAssetId);
+          setPresentation(
+            assetId ? openAssetPresentation(assetId, assetId) : null,
+          );
+          return false;
+        });
     },
-    [assetId, navigate, pathname, queryClient, workspaceSlug],
+    [
+      assetId,
+      closePeek,
+      navigate,
+      pathname,
+      peekTarget,
+      queryClient,
+      workspaceSlug,
+    ],
   );
+
+  useEffect(() => {
+    setAssetPromotionHandler((assetId) => openAsset(assetId));
+    return () => setAssetPromotionHandler(undefined);
+  }, [openAsset, setAssetPromotionHandler]);
+
+  useEffect(() => {
+    if (
+      presentation?.open &&
+      assetId === presentation.assetId &&
+      peekTarget?.type === "link" &&
+      peekTarget.asset.id === assetId
+    ) {
+      closePeek();
+    }
+  }, [assetId, closePeek, peekTarget, presentation]);
 
   const removeAssetFromUrl = useCallback(
     (replace = true) =>
@@ -430,6 +477,7 @@ function WorkspaceAssetViewController({
           open={presentation.open}
           loading={loading}
           workspaceSlug={workspaceSlug}
+          location={location}
           onShowInBoard={showAction}
           onClose={closeAsset}
           onCloseComplete={completeAssetClose}

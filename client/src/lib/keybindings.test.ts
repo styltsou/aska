@@ -4,7 +4,7 @@ import {
   KEYBINDINGS,
   matchesKeybinding,
   OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT,
-  PEEK_NOTE_SHORTCUT,
+  PEEK_ASSET_SHORTCUT,
 } from "./keybindings";
 
 function event({
@@ -47,11 +47,11 @@ describe("matchesKeybinding", () => {
     ).toBe(false);
   });
 
-  it("PEEK_NOTE_SHORTCUT matches only Alt+Shift+P", () => {
+  it("PEEK_ASSET_SHORTCUT matches only Alt+Shift+P", () => {
     expect(
       matchesKeybinding(
         event({ code: "KeyP", key: "p", altKey: true, shiftKey: true }),
-        PEEK_NOTE_SHORTCUT,
+        PEEK_ASSET_SHORTCUT,
       ),
     ).toBe(true);
     expect(
@@ -63,17 +63,17 @@ describe("matchesKeybinding", () => {
           altKey: true,
           shiftKey: true,
         }),
-        PEEK_NOTE_SHORTCUT,
+        PEEK_ASSET_SHORTCUT,
       ),
     ).toBe(false);
     expect(
       matchesKeybinding(
         event({ code: "KeyP", key: "p", altKey: true }),
-        PEEK_NOTE_SHORTCUT,
+        PEEK_ASSET_SHORTCUT,
       ),
     ).toBe(false);
     expect(
-      matchesKeybinding(event({ code: "KeyO", key: "o" }), PEEK_NOTE_SHORTCUT),
+      matchesKeybinding(event({ code: "KeyO", key: "o" }), PEEK_ASSET_SHORTCUT),
     ).toBe(false);
   });
 

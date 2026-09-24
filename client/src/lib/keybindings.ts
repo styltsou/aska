@@ -40,7 +40,7 @@ export const KEYBINDINGS: Keybinding[] = [
 
 export type Shortcut = Omit<Keybinding, "command">;
 
-export const PEEK_NOTE_SHORTCUT: Shortcut = {
+export const PEEK_ASSET_SHORTCUT: Shortcut = {
   code: "KeyP",
   altKey: true,
   shiftKey: true,

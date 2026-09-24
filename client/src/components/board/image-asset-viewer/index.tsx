@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   ArrowLeftIcon,
   CheckIcon,
@@ -1783,7 +1784,14 @@ export function ImageAssetViewer({
                         <ArrowLeftIcon />
                         <span className="sr-only">{backLabel}</span>
                       </TooltipTrigger>
-                      <TooltipContent>{backLabel}</TooltipContent>
+                      <TooltipContent>
+                        <span>{backLabel}</span>
+                        <KbdGroup className="gap-0.5">
+                          <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
+                            Esc
+                          </Kbd>
+                        </KbdGroup>
+                      </TooltipContent>
                     </Tooltip>
                   </ButtonGroup>
                 </div>

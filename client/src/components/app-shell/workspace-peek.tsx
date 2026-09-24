@@ -61,7 +61,9 @@ import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/store";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { LinkResolutionPoller } from "@/api/url-unfurl/link-resolution-poller";
-import type { ColorAsset, NoteAsset } from "@/types/asset";
+import { YouTubeVideoContent } from "@/components/board/youtube-video-viewer";
+import { useIsMobile } from "@/hooks/use-mobile";
+import type { ColorAsset, LinkAsset, NoteAsset } from "@/types/asset";
 import type { NoteHighlightColor } from "@/lib/note-highlights";
 import {
   SIDE_PANEL_ANIMATE,
@@ -70,6 +72,7 @@ import {
   SIDE_PANEL_TRANSITION,
 } from "./side-panel-motion";
 import { getSidebarCollectionLocation } from "./sidebar-collection-navigation";
+import { collectionNodeToAsset } from "@/lib/asset-transform";
 
 export type PeekColorScope =
   | { type: "inbox" }
@@ -82,6 +85,11 @@ export type PeekColorScope =
 
 type PeekTarget =
   | { type: "note"; asset: NoteAsset; location?: AssetLocation }
+  | {
+      type: "link";
+      asset: LinkAsset & { video: NonNullable<LinkAsset["video"]> };
+      location?: AssetLocation;
+    }
   | {
       type: "color";
       asset: ColorAsset;
@@ -138,12 +146,18 @@ type WorkspacePeekContextValue = {
   isResizing: boolean;
   peekNote: (note: NoteAsset, location: AssetLocation) => void;
   peekColor: (color: ColorAsset, scope: PeekColorScope) => void;
+  peekVideo: (video: LinkAsset, location?: AssetLocation) => void;
+  syncPeekVideoNote: (assetId: string, note: string | null) => void;
   setActiveNoteId: (noteId?: string) => void;
   syncPeekNote: (note: NoteAsset) => void;
   setNotePromotionHandler: (
     handler?: (note: NoteAsset) => Promise<boolean>,
   ) => void;
-  promoteNote: () => Promise<void>;
+  setMainNoteLeaveHandler: (handler?: () => Promise<boolean>) => void;
+  promotePeekedAsset: () => Promise<void>;
+  setAssetPromotionHandler: (
+    handler?: (assetId: string) => Promise<boolean>,
+  ) => void;
   showPeekedAsset: () => Promise<void>;
   showAssetInBoard: (assetId: string, location: AssetLocation) => Promise<void>;
   consumeShowRequest: (requestId: number) => void;
@@ -230,6 +244,12 @@ export function WorkspacePeekProvider({
   const notePromotionHandlerRef = useRef<
     ((note: NoteAsset) => Promise<boolean>) | undefined
   >(undefined);
+  const mainNoteLeaveHandlerRef = useRef<(() => Promise<boolean>) | undefined>(
+    undefined,
+  );
+  const assetPromotionHandlerRef = useRef<
+    ((assetId: string) => Promise<boolean>) | undefined
+  >(undefined);
   const noteSwapHandlerRef = useRef<(() => Promise<void>) | undefined>(
     undefined,
   );
@@ -253,16 +273,31 @@ export function WorkspacePeekProvider({
     void fetchPeekableAsset(workspaceSlug, targetAssetId)
       .then(({ asset, location }) => {
         if (!active || asset.type !== targetType) return;
+        const videoAsset =
+          asset.type === "link" ? collectionNodeToAsset(asset) : undefined;
         setTarget((current) =>
-          current?.type === "note" && asset.type === "note"
+          current?.asset.id === asset.id &&
+          current.type === "note" &&
+          asset.type === "note"
             ? {
                 type: "note",
                 asset,
                 location,
               }
-            : current?.type === "color" && asset.type === "color"
+            : current?.asset.id === asset.id &&
+                current.type === "color" &&
+                asset.type === "color"
               ? { ...current, asset, location }
-              : current,
+              : current?.asset.id === asset.id &&
+                  current.type === "link" &&
+                  videoAsset?.type === "link" &&
+                  videoAsset.video
+                ? {
+                    type: "link",
+                    asset: { ...videoAsset, video: videoAsset.video },
+                    location,
+                  }
+                : current,
         );
       })
       // A transient network failure must not discard an active reference. The
@@ -380,6 +415,16 @@ export function WorkspacePeekProvider({
         : current,
     );
   }, []);
+  const syncPeekVideoNote = useCallback(
+    (assetId: string, note: string | null) => {
+      setTarget((current) =>
+        current?.type === "link" && current.asset.id === assetId
+          ? { ...current, asset: { ...current.asset, note } }
+          : current,
+      );
+    },
+    [],
+  );
   const handleExitComplete = useCallback(() => {
     if (!targetRef.current) setIsRailReserved(false);
   }, []);
@@ -457,18 +502,42 @@ export function WorkspacePeekProvider({
           location: getLocationFromColorScope(scope),
         });
       },
+      peekVideo: (asset, location) => {
+        if (!asset.video) return;
+        setPeekFocusRequest((request) => request + 1);
+        setIsRailReserved(true);
+        setTarget({
+          type: "link",
+          asset: { ...asset, video: asset.video },
+          location,
+        });
+      },
+      syncPeekVideoNote,
       setActiveNoteId,
       syncPeekNote,
       setNotePromotionHandler: (handler) => {
         notePromotionHandlerRef.current = handler;
       },
-      promoteNote: async () => {
-        if (target?.type !== "note") return;
-        const promoted = await notePromotionHandlerRef.current?.(target.asset);
+      setMainNoteLeaveHandler: (handler) => {
+        mainNoteLeaveHandlerRef.current = handler;
+      },
+      promotePeekedAsset: async () => {
+        if (!target) return;
+        if (target.type === "link" && mainNoteLeaveHandlerRef.current) {
+          const ready = await mainNoteLeaveHandlerRef.current();
+          if (!ready) return;
+        }
+        const promoted =
+          target.type === "note" && notePromotionHandlerRef.current
+            ? await notePromotionHandlerRef.current(target.asset)
+            : await assetPromotionHandlerRef.current?.(target.asset.id);
         if (promoted) {
           setIsRailReserved(false);
           setTarget(undefined);
         }
+      },
+      setAssetPromotionHandler: (handler) => {
+        assetPromotionHandlerRef.current = handler;
       },
       showPeekedAsset,
       showAssetInBoard,
@@ -492,6 +561,7 @@ export function WorkspacePeekProvider({
       showPeekedAsset,
       showRequest,
       syncPeekNote,
+      syncPeekVideoNote,
       target,
     ],
   );
@@ -569,10 +639,19 @@ function WorkspacePeekPanel({
   focusRequest: number;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }) {
-  const { activeNoteId, closePeek, promoteNote, showPeekedAsset } =
-    useWorkspacePeek();
+  const {
+    activeNoteId,
+    closePeek,
+    promotePeekedAsset,
+    showPeekedAsset,
+    target: activeTarget,
+  } = useWorkspacePeek();
+  const isMobile = useIsMobile();
   const reduceMotion = useReducedMotion();
-  const canPromote = target.type === "note" && activeNoteId !== target.asset.id;
+  const canPromote =
+    !isMobile &&
+    (target.type === "link" ||
+      (target.type === "note" && activeNoteId !== target.asset.id));
 
   useEffect(() => {
     if (!canPromote) return;
@@ -581,11 +660,25 @@ function WorkspacePeekPanel({
       if (!matchesKeybinding(event, OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT)) return;
       event.preventDefault();
       event.stopPropagation();
-      void promoteNote();
+      void promotePeekedAsset();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canPromote, promoteNote]);
+  }, [canPromote, promotePeekedAsset]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.repeat || event.defaultPrevented) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      closePeek();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closePeek]);
 
   return (
     <motion.aside
@@ -622,11 +715,34 @@ function WorkspacePeekPanel({
             workspaceSlug={workspaceSlug}
             focusRequest={focusRequest}
             onClose={closePeek}
-            onPromote={canPromote ? promoteNote : undefined}
+            onPromote={canPromote ? promotePeekedAsset : undefined}
             onShow={showPeekedAsset}
             showEnabled={target.location !== undefined}
             readOnly={activeNoteId === target.asset.id}
           />
+        ) : target.type === "link" ? (
+          <>
+            <PeekHeader
+              onClose={closePeek}
+              onPromote={promotePeekedAsset}
+              onShow={showPeekedAsset}
+              showEnabled={target.location !== undefined}
+            />
+            <div className="min-h-0 flex-1 overflow-y-auto bg-background">
+              {!isMobile ? (
+                <YouTubeVideoContent
+                  key={target.asset.video.videoId}
+                  asset={target.asset}
+                  open={
+                    activeTarget?.type === "link" &&
+                    activeTarget.asset.id === target.asset.id
+                  }
+                  workspaceSlug={workspaceSlug}
+                  compact
+                />
+              ) : null}
+            </div>
+          </>
         ) : (
           <>
             <PeekHeader
@@ -702,7 +818,12 @@ function PeekHeader({
               </Button>
             }
           />
-          <TooltipContent side="bottom">Close Peek</TooltipContent>
+          <TooltipContent side="bottom">
+            <span>Close Peek</span>
+            <KbdGroup className="gap-0.5">
+              <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
+            </KbdGroup>
+          </TooltipContent>
         </Tooltip>
         {onPromote ? (
           <Tooltip>
@@ -712,18 +833,18 @@ function PeekHeader({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label="Open in main editor"
+                  aria-label="Open in main view"
                   disabled={isPromoting}
                   className="size-8 rounded-lg"
                   onClick={() => void handlePromote()}
                 >
                   <Maximize2Icon className="size-3.5" />
-                  <span className="sr-only">Open in main editor</span>
+                  <span className="sr-only">Open in main view</span>
                 </Button>
               }
             />
             <TooltipContent side="bottom">
-              <span>Open in main editor</span>
+              <span>Open in main view</span>
               <KbdGroup className="gap-0.5">
                 <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
                   {getPlatformAlt()}
@@ -1193,7 +1314,13 @@ function readTarget(workspaceSlug: string): PeekTarget | undefined {
     const raw = sessionStorage.getItem(storageKey(workspaceSlug));
     if (!raw) return undefined;
     const value = JSON.parse(raw) as PeekTarget;
-    if ((value.type === "note" || value.type === "color") && value.asset?.id)
+    if (
+      (value.type === "note" ||
+        value.type === "color" ||
+        (value.type === "link" &&
+          value.asset?.video?.provider === "youtube")) &&
+      value.asset?.id
+    )
       return value;
   } catch {}
   return undefined;
