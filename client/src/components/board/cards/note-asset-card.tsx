@@ -29,6 +29,7 @@ import { hasSelectionModifier } from "@/lib/selection";
 import { remarkHighlight } from "@/lib/remark-highlight";
 import { useUpdateNote } from "@/api/collection/hooks";
 import { NOTE_MENTION_CHIP_CLASS } from "@/components/board/note-mentions";
+import { NoteMermaidPreview } from "@/components/board/note-mermaid-preview";
 import type { NoteAsset } from "@/types/asset";
 
 const BARE_URL_RE = /(^|[^[(])(https?:\/\/[^\s<"'>)\]]+)/gi;
@@ -55,10 +56,29 @@ function getMeasuredContentHeight(content: HTMLDivElement): number {
 }
 
 function linkifyBareUrls(text: string): string {
-  return text.replace(
-    BARE_URL_RE,
-    (_, before, url) => `${before}[${url}](${url})`,
-  );
+  let fence: string | undefined;
+  return text
+    .split("\n")
+    .map((line) => {
+      const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+      if (marker) {
+        if (!fence) fence = marker;
+        else if (
+          marker[0] === fence[0] &&
+          marker.length >= fence.length &&
+          /^ {0,3}(?:`{3,}|~{3,})[ \t]*$/.test(line)
+        )
+          fence = undefined;
+        return line;
+      }
+      return fence
+        ? line
+        : line.replace(
+            BARE_URL_RE,
+            (_, before, url) => `${before}[${url}](${url})`,
+          );
+    })
+    .join("\n");
 }
 
 function renderHighlightedCode(
@@ -266,19 +286,37 @@ function createMDComponents(compact: boolean): Components {
         {...props}
       />
     ),
-    pre: ({ children, ...props }) => (
-      <div className="note-code-block note-code-block--preview">
-        <div className="note-code-block-header" aria-hidden="true">
-          <span className="note-code-block-language">
-            {getCodeBlockLanguage(children)}
-          </span>
-          <span className="note-code-block-copy flex size-7 items-center justify-center">
-            <CopyIcon className="size-3.5" />
-          </span>
+    pre: ({ children, ...props }) => {
+      const code = Children.toArray(children).find(
+        (
+          child,
+        ): child is ReactElement<{
+          className?: string;
+          children?: ReactNode;
+        }> => isValidElement(child),
+      );
+      if (code?.props.className?.includes("language-mermaid")) {
+        return (
+          <NoteMermaidPreview
+            source={String(code.props.children ?? "").replace(/\n$/, "")}
+            compact={compact}
+          />
+        );
+      }
+      return (
+        <div className="note-code-block note-code-block--preview">
+          <div className="note-code-block-header" aria-hidden="true">
+            <span className="note-code-block-language">
+              {getCodeBlockLanguage(children)}
+            </span>
+            <span className="note-code-block-copy flex size-7 items-center justify-center">
+              <CopyIcon className="size-3.5" />
+            </span>
+          </div>
+          <pre {...props}>{children}</pre>
         </div>
-        <pre {...props}>{children}</pre>
-      </div>
-    ),
+      );
+    },
     code: ({ className, children, ...props }) => {
       const match = /language-(\w+)/.exec(className ?? "");
       const inline = !match;

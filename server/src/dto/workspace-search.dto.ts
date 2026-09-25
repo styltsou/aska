@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const WorkspaceRecentAssetIdSchema = z
   .string()
-  .regex(/^(?:image|note|link|color|diagram)-\d+$/);
+  .regex(/^(?:image|note|link|color)-\d+$/);
 
 export const WorkspaceSearchQuerySchema = z.object({
   q: z.string().max(120).optional().default(""),
@@ -30,14 +30,7 @@ export type WorkspaceSearchLocation =
 
 export type WorkspaceSearchResult = {
   id: string;
-  type:
-    | "image"
-    | "note"
-    | "link"
-    | "color"
-    | "diagram"
-    | "folder"
-    | "collection";
+  type: "image" | "note" | "link" | "color" | "folder" | "collection";
   label: string;
   snippet: string | null;
   locationLabel: string;

@@ -6,6 +6,7 @@ import { TableKit } from "@tiptap/extension-table";
 import { MarkdownManager } from "@tiptap/markdown";
 import StarterKit from "@tiptap/starter-kit";
 import { NoteHighlight } from "@/components/board/note-rich-text";
+import { NoteMermaidBlock } from "@/components/board/note-mermaid-block";
 import { AssetMention } from "@/components/board/note-mentions";
 import { describe, expect, it } from "vitest";
 
@@ -25,6 +26,7 @@ const noteMarkdown = new MarkdownManager({
     TaskList,
     TaskItem,
     NoteHighlight,
+    NoteMermaidBlock,
     TableKit,
     AssetMention,
   ]),
@@ -98,6 +100,28 @@ describe("note Markdown round trips", () => {
     expect(parsed.content?.[0]?.content?.map((node) => node.type)).toContain(
       "assetMention",
     );
+    expect(noteMarkdown.serialize(parsed)).toBe(source);
+  });
+
+  it("round-trips Mermaid diagrams while keeping other code fences as code", () => {
+    const source = [
+      "Before",
+      "",
+      "```mermaid",
+      "flowchart LR",
+      "  A[Idea] --> B[Note]",
+      "```",
+      "",
+      "```ts",
+      "const diagram = false",
+      "```",
+    ].join("\n");
+    const parsed = noteMarkdown.parse(source);
+    expect(parsed.content?.map((node) => node.type)).toEqual([
+      "paragraph",
+      "mermaidBlock",
+      "codeBlock",
+    ]);
     expect(noteMarkdown.serialize(parsed)).toBe(source);
   });
 });

@@ -23,7 +23,6 @@ import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import type { PeekableAssetResponse } from "@/api/collection/types";
 import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
-import { DiagramEditorDialog } from "@/components/board/diagram-editor-dialog";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
 import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
@@ -326,11 +325,6 @@ function WorkspaceAssetViewController({
   const requestedType = asset?.type ?? assetId?.split("-", 1)[0];
 
   useEffect(() => {
-    if (requestedType === "diagram" && presentation && !presentation.open)
-      completeAssetClose();
-  }, [requestedType, presentation, completeAssetClose]);
-
-  useEffect(() => {
     if (!assetId || asset?.type !== "link" || asset.video) return;
     if (unavailableAssetRef.current === assetId) return;
     unavailableAssetRef.current = assetId;
@@ -432,16 +426,6 @@ function WorkspaceAssetViewController({
           onSwap={(note) => openAsset(note.id, { replace: true })}
           onShowInBoard={showAction}
           onClose={completeAssetClose}
-        />
-      ) : null}
-      {requestedType === "diagram" ? (
-        <DiagramEditorDialog
-          workspaceSlug={workspaceSlug}
-          diagram={asset?.type === "diagram" ? asset : undefined}
-          open={presentation.open && !loading}
-          onOpenChange={(open) => {
-            if (!open) closeAsset();
-          }}
         />
       ) : null}
       {requestedType === "image" ? (

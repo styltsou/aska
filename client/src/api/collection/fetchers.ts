@@ -17,10 +17,6 @@ import type {
   CreateLinkInput,
   CreateLinkResponse,
   CreateNoteInput,
-  CreateDiagramInput,
-  CreateDiagramResponse,
-  UpdateDiagramInput,
-  UpdateDiagramResponse,
   CreateNoteResponse,
   CreateColorInput,
   CreateColorResponse,
@@ -164,38 +160,6 @@ export async function createNote(
 ): Promise<CreateNoteResponse> {
   return apiPost<CreateNoteResponse>(
     `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/notes`,
-    data,
-  );
-}
-
-export async function createDiagram(
-  workspaceSlug: string,
-  collectionSlug: string,
-  data: CreateDiagramInput,
-): Promise<CreateDiagramResponse> {
-  return apiPost<CreateDiagramResponse>(
-    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/diagrams`,
-    data,
-  );
-}
-
-export async function createInboxDiagram(
-  workspaceSlug: string,
-  data: CreateDiagramInput,
-): Promise<CreateDiagramResponse> {
-  return apiPost<CreateDiagramResponse>(
-    `/api/v1/workspace/${workspaceSlug}/inbox/diagrams`,
-    data,
-  );
-}
-
-export async function updateDiagram(
-  workspaceSlug: string,
-  assetId: string,
-  data: UpdateDiagramInput,
-): Promise<UpdateDiagramResponse> {
-  return apiPatch<UpdateDiagramResponse>(
-    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/diagram`,
     data,
   );
 }

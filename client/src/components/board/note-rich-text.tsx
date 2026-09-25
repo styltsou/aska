@@ -69,6 +69,7 @@ import Suggestion, {
 import { toast } from "sonner";
 
 import { NotePreviewRail } from "@/components/board/note-preview-rail";
+import { NoteMermaidBlock } from "@/components/board/note-mermaid-block";
 import {
   AssetMention,
   NoteMentionProvider,
@@ -108,6 +109,7 @@ import { ButtonGroup } from "@/components/ui/button-group";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
 import { markdownFromSelection } from "@/lib/markdown";
+import { DEFAULT_MERMAID_SOURCE, parseMermaidFence } from "@/lib/diagram";
 import {
   FLOATING_GLASS_BACKDROP_CLASS,
   GLASS_FRAME_CLASS,
@@ -319,6 +321,22 @@ const SLASH_COMMAND_GROUPS: SlashCommandGroup[] = [
         icon: BracesIcon,
         command: (editor, range) =>
           editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
+      },
+      {
+        title: "Diagram",
+        description: "Insert a Mermaid diagram.",
+        keywords: ["mermaid", "flowchart", "graph"],
+        icon: BracesIcon,
+        command: (editor, range) =>
+          editor
+            .chain()
+            .focus()
+            .deleteRange(range)
+            .insertContent({
+              type: "mermaidBlock",
+              attrs: { source: DEFAULT_MERMAID_SOURCE },
+            })
+            .run(),
       },
       {
         title: "Divider",
@@ -866,6 +884,7 @@ const BASE_NOTE_EXTENSIONS = [
     lowlight: noteLowlight,
     defaultLanguage: null,
   }),
+  NoteMermaidBlock,
   TableKit.configure({ table: { resizable: true } }),
   TaskList,
   AskaTaskItem.configure({ nested: true }),
@@ -1934,6 +1953,20 @@ export const NoteRichText = forwardRef<
           return true;
         }
         return false;
+      },
+      handlePaste: (_view: unknown, event: ClipboardEvent) => {
+        if (!editableRef.current) return false;
+        const source = parseMermaidFence(
+          event.clipboardData?.getData("text/plain") ?? "",
+        );
+        if (source === undefined) return false;
+        event.preventDefault();
+        editorInstanceRef.current
+          ?.chain()
+          .focus()
+          .insertContent({ type: "mermaidBlock", attrs: { source } })
+          .run();
+        return true;
       },
       handleDOMEvents: {
         mousedown: (_view: unknown, event: Event) => {

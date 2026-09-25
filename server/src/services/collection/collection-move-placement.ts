@@ -8,11 +8,9 @@ const EMPTY_FOLDER_POSITION = { x: 48, y: 48 };
 
 export type MovePlacementNode = {
   nodeType: "asset" | "folder";
-  assetType: "image" | "note" | "link" | "color" | "diagram" | null;
+  assetType: "image" | "note" | "link" | "color" | null;
   imageWidth: number | null;
   imageHeight: number | null;
-  diagramWidth?: number | null;
-  diagramHeight?: number | null;
   positionX: number | null;
   positionY: number | null;
 };
@@ -203,12 +201,6 @@ export function getFlattenGroupAnchor(
 }
 
 function getCardFootprint(node: MovePlacementNode): CardFootprint {
-  if (node.nodeType === "asset" && node.assetType === "diagram") {
-    return {
-      width: node.diagramWidth ?? 480,
-      height: node.diagramHeight ?? 320,
-    };
-  }
   if (
     node.nodeType === "asset" &&
     node.assetType === "image" &&

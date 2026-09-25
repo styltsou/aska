@@ -164,8 +164,6 @@ function getNodeHeight(node: CanvasLayoutNode): number {
     return BOARD_CARD_WIDTH * (node.height / node.width);
   }
 
-  if (node.type === "diagram") return node.frameHeight;
-
   if (node.type === "note") return NOTE_CARD_MAX_HEIGHT;
   if (node.type === "color") return COLOR_CARD_HEIGHT;
   return FOLDER_CARD_HEIGHT;
@@ -627,7 +625,5 @@ function getNodeWidth(node: CanvasLayoutNode): number {
     ? node.layoutWidth
     : node.type === "text"
       ? 80
-      : node.type === "diagram"
-        ? node.frameWidth
-        : BOARD_CARD_WIDTH;
+      : BOARD_CARD_WIDTH;
 }

@@ -5,7 +5,6 @@ export type WorkspaceSearchResultType =
   | "note"
   | "link"
   | "color"
-  | "diagram"
   | "folder"
   | "collection";
 

@@ -9,7 +9,6 @@ import {
   collectionNodes,
   folders,
   imageAssets,
-  diagramAssets,
 } from "@/db/schema";
 import type { MoveCollectionNodesParentInput } from "@/dto/collection.dto";
 import { AppError, ErrorCode } from "@/lib/errors";
@@ -100,15 +99,12 @@ export class CollectionAssetMoveService {
           assetType: assets.type,
           imageWidth: imageAssets.width,
           imageHeight: imageAssets.height,
-          diagramWidth: diagramAssets.frameWidth,
-          diagramHeight: diagramAssets.frameHeight,
           positionX: collectionNodes.positionX,
           positionY: collectionNodes.positionY,
         })
         .from(collectionNodes)
         .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
         .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
-        .leftJoin(diagramAssets, eq(diagramAssets.assetId, assets.id))
         .where(
           and(
             eq(collectionNodes.organizationId, orgId),
@@ -135,15 +131,12 @@ export class CollectionAssetMoveService {
           assetType: assets.type,
           imageWidth: imageAssets.width,
           imageHeight: imageAssets.height,
-          diagramWidth: diagramAssets.frameWidth,
-          diagramHeight: diagramAssets.frameHeight,
           positionX: collectionNodes.positionX,
           positionY: collectionNodes.positionY,
         })
         .from(collectionNodes)
         .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
         .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
-        .leftJoin(diagramAssets, eq(diagramAssets.assetId, assets.id))
         .where(
           and(
             eq(collectionNodes.organizationId, orgId),
@@ -505,15 +498,12 @@ export class CollectionAssetMoveService {
           assetType: assets.type,
           imageWidth: imageAssets.width,
           imageHeight: imageAssets.height,
-          diagramWidth: diagramAssets.frameWidth,
-          diagramHeight: diagramAssets.frameHeight,
           positionX: collectionNodes.positionX,
           positionY: collectionNodes.positionY,
         })
         .from(collectionNodes)
         .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
         .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
-        .leftJoin(diagramAssets, eq(diagramAssets.assetId, assets.id))
         .where(
           and(
             eq(collectionNodes.organizationId, orgId),
@@ -636,15 +626,12 @@ export class CollectionAssetMoveService {
                   assetType: assets.type,
                   imageWidth: imageAssets.width,
                   imageHeight: imageAssets.height,
-                  diagramWidth: diagramAssets.frameWidth,
-                  diagramHeight: diagramAssets.frameHeight,
                   positionX: collectionNodes.positionX,
                   positionY: collectionNodes.positionY,
                 })
                 .from(collectionNodes)
                 .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
                 .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
-                .leftJoin(diagramAssets, eq(diagramAssets.assetId, assets.id))
                 .where(
                   and(
                     eq(collectionNodes.organizationId, orgId),
@@ -958,11 +945,9 @@ type MoveSourceNode = {
   pathFolderIds: number[];
   pathFolderSlugs: string[];
   pathFolderNames: string[];
-  assetType: "image" | "note" | "link" | "color" | "diagram" | null;
+  assetType: "image" | "note" | "link" | "color" | null;
   imageWidth: number | null;
   imageHeight: number | null;
-  diagramWidth: number | null;
-  diagramHeight: number | null;
 };
 
 async function getMoveSourceNode(
@@ -1007,8 +992,6 @@ async function getMoveSourceNode(
       assetType: null,
       imageWidth: null,
       imageHeight: null,
-      diagramWidth: null,
-      diagramHeight: null,
     };
   }
 
@@ -1019,12 +1002,9 @@ async function getMoveSourceNode(
         type: assets.type,
         imageWidth: imageAssets.width,
         imageHeight: imageAssets.height,
-        diagramWidth: diagramAssets.frameWidth,
-        diagramHeight: diagramAssets.frameHeight,
       })
       .from(assets)
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
-      .leftJoin(diagramAssets, eq(diagramAssets.assetId, assets.id))
       .where(
         and(eq(assets.organizationId, orgId), eq(assets.id, source.entityId)),
       )
@@ -1076,8 +1056,6 @@ async function getMoveSourceNode(
     assetType: asset.type,
     imageWidth: asset.imageWidth,
     imageHeight: asset.imageHeight,
-    diagramWidth: asset.diagramWidth,
-    diagramHeight: asset.diagramHeight,
   };
 }
 

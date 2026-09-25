@@ -1,4 +1,5 @@
 import CodeMirror from "@uiw/react-codemirror";
+import { useTheme } from "next-themes";
 import {
   autocompletion,
   type CompletionContext,
@@ -45,14 +46,21 @@ const extensions = [autocompletion({ override: [complete] })];
 export function DiagramCodeEditor({
   value,
   onChange,
+  readOnly = false,
 }: {
   value: string;
   onChange: (value: string) => void;
+  readOnly?: boolean;
 }) {
+  const { resolvedTheme } = useTheme();
   return (
     <CodeMirror
       value={value}
       onChange={onChange}
+      autoFocus
+      readOnly={readOnly}
+      editable={!readOnly}
+      theme={resolvedTheme === "dark" ? "dark" : "light"}
       extensions={extensions}
       basicSetup={{
         lineNumbers: true,
@@ -60,7 +68,7 @@ export function DiagramCodeEditor({
         highlightActiveLine: true,
       }}
       height="100%"
-      className="h-full overflow-auto text-sm [&_.cm-editor]:min-h-full [&_.cm-editor]:outline-none"
+      className="min-h-0 flex-1 overflow-auto text-sm [&_.cm-editor]:h-full [&_.cm-editor]:outline-none"
       aria-label="Mermaid source"
     />
   );

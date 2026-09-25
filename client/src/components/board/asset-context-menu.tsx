@@ -43,6 +43,7 @@ import {
 import { useRouterState } from "@tanstack/react-router";
 import { getPexelsBrowserScope, useSessionStore } from "@/store";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { isYouTubeVideoUrl } from "@/lib/youtube-url";
 
 type ImagePrefetch = {
   controller: AbortController;
@@ -152,10 +153,17 @@ function folderActions() {
 }
 
 export function shouldShowLinkPreviewRefresh(asset: LinkAsset): boolean {
+  const active =
+    asset.resolutionStatus === "queued" ||
+    asset.resolutionStatus === "resolving";
+  const blocked =
+    asset.failureCategory === "credentials" ||
+    asset.failureCategory === "sensitive_query";
   return (
-    asset.resolutionStatus === "failed" &&
-    asset.failureCategory !== "credentials" &&
-    asset.failureCategory !== "sensitive_query"
+    !active &&
+    !blocked &&
+    (isYouTubeVideoUrl(asset.originalUrl) ||
+      asset.resolutionStatus === "failed")
   );
 }
 
@@ -445,14 +453,7 @@ export function AssetContextMenu({
       >
         <ContextMenuTrigger
           render={(triggerProps, state) => (
-            <div
-              {...triggerProps}
-              className={
-                asset.type === "diagram"
-                  ? `${triggerProps.className ?? ""} h-full`
-                  : triggerProps.className
-              }
-            >
+            <div {...triggerProps} className={triggerProps.className}>
               {children(state.open, displayAsset)}
             </div>
           )}
@@ -517,19 +518,6 @@ export function AssetContextMenu({
                     peekNote(asset, peekLocation);
                   })}
                 </>
-              ) : asset.type === "diagram" ? (
-                <ContextMenuItem
-                  onClick={() =>
-                    void navigator.clipboard
-                      .writeText(asset.source)
-                      .then(() => toast.success("Copied Mermaid source."))
-                      .catch(() =>
-                        toast.error("Unable to copy Mermaid source."),
-                      )
-                  }
-                >
-                  Copy Mermaid source
-                </ContextMenuItem>
               ) : (
                 linkActions(
                   asset,

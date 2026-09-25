@@ -15,8 +15,6 @@ import {
   type PexelsPhotoDragData,
 } from "@/lib/pexels-dnd";
 import { getDroppedHttpUrl, getPreferredClipboardText } from "@/lib/clipboard";
-import { classifyDiagramPaste } from "@/lib/diagram";
-import { DiagramEditorDialog } from "./diagram-editor-dialog";
 import { useTransientStore } from "@/store";
 import { cn, parseHttpUrl } from "@/lib/utils";
 import { getPexelsDropTopLeft, PexelsDragOverlay } from "./pexels-drag-overlay";
@@ -43,7 +41,6 @@ export function BoardUploadZone({
   }, [boardKey]);
   const {
     createTextNote,
-    createDiagramFromSource,
     importPexelsPhotos,
     createLinkFromUrl,
     isPending,
@@ -58,7 +55,6 @@ export function BoardUploadZone({
   const [draggingKind, setDraggingKind] = useState<"image" | "link" | null>(
     null,
   );
-  const [pendingDiagramSource, setPendingDiagramSource] = useState<string>();
   const pexelsDropTargetId = `pexels-canvas:${boardKey ?? target}`;
   const { ref: droppableRef, isDropTarget: isPexelsDropTarget } = useDroppable({
     id: pexelsDropTargetId,
@@ -150,14 +146,6 @@ export function BoardUploadZone({
 
     const text = getPreferredClipboardText(event.clipboardData);
     const trimmedText = text.trim();
-    const diagram = classifyDiagramPaste(text);
-    if (diagram) {
-      event.preventDefault();
-      if (diagram.confidence === "fenced")
-        void createDiagramFromSource(diagram.source);
-      else setPendingDiagramSource(diagram.source);
-      return;
-    }
     const url = parseHttpUrl(trimmedText);
     if (url) {
       event.preventDefault();
@@ -215,17 +203,6 @@ export function BoardUploadZone({
           {statusText}
         </span>
       ) : null}
-      <DiagramEditorDialog
-        workspaceSlug={workspaceSlug}
-        collectionPath={collectionPath}
-        target={target}
-        placement={getPlacement()}
-        initialSource={pendingDiagramSource}
-        open={pendingDiagramSource !== undefined}
-        onOpenChange={(open) => {
-          if (!open) setPendingDiagramSource(undefined);
-        }}
-      />
     </div>
   );
 }

@@ -1,23 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { classifyDiagramPaste } from "./diagram";
+import { parseMermaidFence } from "./diagram";
 
-describe("classifyDiagramPaste", () => {
-  it("recognizes fenced Mermaid for direct creation", () => {
+describe("parseMermaidFence", () => {
+  it("recognizes a complete Mermaid code fence", () => {
+    expect(parseMermaidFence("```mermaid\nflowchart LR\n  A --> B\n```")).toBe(
+      "flowchart LR\n  A --> B",
+    );
     expect(
-      classifyDiagramPaste("```mermaid\nflowchart LR\n  A --> B\n```"),
-    ).toEqual({ source: "flowchart LR\n  A --> B", confidence: "fenced" });
+      parseMermaidFence("~~~mermaid\nsequenceDiagram\n  A->>B: Hi\n~~~"),
+    ).toBe("sequenceDiagram\n  A->>B: Hi");
   });
 
-  it("recognizes plain Mermaid but requires confirmation", () => {
-    expect(classifyDiagramPaste("sequenceDiagram\n  A->>B: Hello")).toEqual({
-      source: "sequenceDiagram\n  A->>B: Hello",
-      confidence: "plain",
-    });
-  });
-
-  it("leaves ordinary text alone", () => {
+  it("leaves other code and partial Markdown alone", () => {
+    expect(parseMermaidFence("```ts\nconst x = 1\n```")).toBeUndefined();
     expect(
-      classifyDiagramPaste("A thought about diagrams\nwith another line"),
+      parseMermaidFence("Before\n```mermaid\ngraph LR\nA-->B\n```"),
     ).toBeUndefined();
   });
 });

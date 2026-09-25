@@ -6,9 +6,7 @@ import {
   PaletteIcon,
   UploadIcon,
   TypeIcon,
-  WorkflowIcon,
 } from "lucide-react";
-import { useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,7 +39,6 @@ import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog"
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
-import { DiagramEditorDialog } from "./diagram-editor-dialog";
 
 const RAIL_BUTTON_CLASS =
   "rounded-[calc(var(--radius-md)-1px)] text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80";
@@ -63,7 +60,6 @@ export function BoardActionRail({
   workspaceSlug: string;
   collectionPath: string;
 }) {
-  const [diagramOpen, setDiagramOpen] = useState(false);
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
   const [collectionSlug = "", ...folderSegments] = collectionPath.split("/");
   const boardKey = makeBoardKey(
@@ -182,27 +178,6 @@ export function BoardActionRail({
                       <TooltipContent side="top">
                         <span>New note</span>
                         <RailShortcut keys="N" />
-                      </TooltipContent>
-                    </Tooltip>
-                    <ButtonGroupSeparator />
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            type="button"
-                            size="icon-lg"
-                            variant="ghost"
-                            aria-label="New diagram"
-                            className={RAIL_BUTTON_CLASS}
-                            onClick={() => setDiagramOpen(true)}
-                          />
-                        }
-                      >
-                        <WorkflowIcon />
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <span>New diagram</span>
-                        <RailShortcut keys="M" />
                       </TooltipContent>
                     </Tooltip>
                     <ButtonGroupSeparator />
@@ -369,13 +344,6 @@ export function BoardActionRail({
           </motion.div>
         ) : null}
       </AnimatePresence>
-      <DiagramEditorDialog
-        workspaceSlug={workspaceSlug}
-        collectionPath={collectionPath}
-        placement={placement}
-        open={diagramOpen}
-        onOpenChange={setDiagramOpen}
-      />
     </div>
   );
 }

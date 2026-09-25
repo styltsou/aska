@@ -7,17 +7,14 @@ import {
   collectionNodes,
   collectionsTable,
   colorAssets,
-  diagramAssets,
   folders,
   noteAssets,
 } from "@/db/schema";
 import type {
   CollectionColorNode,
-  CollectionDiagramNode,
   CollectionNoteNode,
   CreateCollectionInput,
   CreateColorInput,
-  CreateDiagramInput,
   CreateFolderInput,
   CreateNoteInput,
   CreatedFolder,
@@ -232,69 +229,6 @@ export class CollectionMutationService {
       readingTimeMinutes,
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString(),
-      position: data.position ?? null,
-      frontIndex: null,
-    };
-  }
-
-  async createDiagram(
-    orgId: string,
-    userId: string,
-    collectionSlug: string,
-    data: CreateDiagramInput,
-  ): Promise<CollectionDiagramNode> {
-    const collection = await getCollectionBySlug(orgId, collectionSlug);
-    const parentTarget = await resolveTargetInCollection(
-      collection,
-      data.parentFolderPath,
-    );
-    const asset = await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(assets)
-        .values({
-          organizationId: orgId,
-          type: "diagram",
-          title: normalizeNoteTitle(data.title),
-          createdByUserId: userId,
-          updatedByUserId: userId,
-        })
-        .returning();
-      if (!created)
-        throw new AppError(
-          ErrorCode.INTERNAL_ERROR,
-          "Failed to create diagram",
-        );
-      await tx.insert(diagramAssets).values({
-        assetId: created.id,
-        source: data.source,
-        frameWidth: data.frameWidth,
-        frameHeight: data.frameHeight,
-      });
-      await tx.insert(collectionNodes).values({
-        organizationId: orgId,
-        collectionId: collection.id,
-        parentFolderId: parentTarget.parentFolderId,
-        nodeType: "asset",
-        assetId: created.id,
-        positionX: data.position?.x,
-        positionY: data.position?.y,
-        depth: parentTarget.pathFolderSlugs.length,
-        pathFolderIds: parentTarget.pathFolderIds,
-        pathFolderSlugs: parentTarget.pathFolderSlugs,
-        pathFolderNames: parentTarget.pathFolderNames,
-      });
-      return created;
-    });
-    return {
-      id: `diagram-${asset.id}`,
-      type: "diagram",
-      source: data.source,
-      title: asset.title,
-      frameWidth: data.frameWidth,
-      frameHeight: data.frameHeight,
-      isFavorite: false,
-      createdAt: asset.createdAt.toISOString(),
-      updatedAt: asset.updatedAt.toISOString(),
       position: data.position ?? null,
       frontIndex: null,
     };

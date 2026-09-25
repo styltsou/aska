@@ -1,0 +1,92 @@
+@reference "tailwindcss";
+@reference "../../index.css";
+
+.note-mermaid-block {
+  @apply my-3 overflow-hidden rounded-lg border border-sidebar-border bg-background;
+}
+
+.note-mermaid-toolbar,
+.note-mermaid-full-header {
+  @apply flex items-center gap-2 border-b border-sidebar-border bg-background px-2 py-1.5;
+}
+
+.note-mermaid-label,
+.note-mermaid-pane-label {
+  @apply px-2 text-xs font-medium text-sidebar-foreground/65;
+}
+
+.note-mermaid-actions {
+  @apply ml-auto flex items-center gap-0.5;
+}
+
+.note-mermaid-preview {
+  @apply flex min-h-48 w-full items-center justify-center overflow-hidden bg-card p-5;
+}
+
+.note-mermaid-preview--compact {
+  @apply my-2 max-h-48 min-h-28 rounded-md border border-sidebar-border p-2;
+}
+
+.note-mermaid-svg {
+  @apply pointer-events-none flex min-w-0 items-center justify-center;
+}
+
+.note-mermaid-preview .note-mermaid-svg svg {
+  @apply max-h-72 max-w-full;
+}
+
+.note-mermaid-preview--compact .note-mermaid-svg svg {
+  @apply max-h-44;
+}
+
+.note-mermaid-message {
+  @apply px-4 py-6 text-center text-xs text-muted-foreground;
+}
+
+.note-mermaid-inline-source {
+  @apply block min-h-40 w-full resize-y bg-card p-4 font-mono text-xs leading-5 text-sidebar-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring;
+}
+
+.note-mermaid-error {
+  @apply m-0 border-t border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive;
+}
+
+.note-mermaid-full {
+  @apply fixed inset-0 z-[110] flex flex-col overflow-hidden bg-sidebar text-sidebar-foreground;
+}
+
+.note-mermaid-full-header {
+  @apply min-h-14 shrink-0 px-3;
+}
+
+.note-mermaid-full-header-spacer {
+  @apply flex-1;
+}
+
+.note-mermaid-full-body {
+  @apply flex min-h-0 flex-1 flex-col md:flex-row;
+}
+
+.note-mermaid-source-pane {
+  @apply flex h-[40%] min-h-0 flex-col border-b border-sidebar-border bg-card md:h-auto md:w-[35%] md:min-w-72 md:border-r md:border-b-0;
+}
+
+.note-mermaid-pane-label {
+  @apply border-b border-sidebar-border py-2;
+}
+
+.note-mermaid-source-pane .cm-editor {
+  @apply min-h-0 flex-1 bg-transparent;
+}
+
+.note-mermaid-canvas-pane {
+  @apply relative min-h-0 min-w-0 flex-1 overflow-hidden bg-card;
+}
+
+.note-mermaid-full-svg {
+  @apply p-8;
+}
+
+.note-mermaid-zoom-controls {
+  @apply absolute right-4 bottom-4 flex gap-1 rounded-lg border border-sidebar-border bg-background p-1 shadow-sm;
+}

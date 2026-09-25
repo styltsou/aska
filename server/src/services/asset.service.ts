@@ -13,7 +13,6 @@ import { db } from "@/db";
 import {
   assets,
   colorAssets,
-  diagramAssets,
   collectionsTable,
   collectionNodes,
   externalResources,
@@ -27,15 +26,12 @@ import {
 import type {
   CollectionImageNode,
   CollectionColorNode,
-  CollectionDiagramNode,
   CollectionLinkNode,
   CollectionNode,
   CollectionNoteNode,
   ContentTypeFilter,
   CreateNoteInput,
   CreateColorInput,
-  CreateDiagramInput,
-  UpdateDiagramInput,
   InboxContentsResponse,
   UpdatedNote,
   UpdateNoteInput,
@@ -99,7 +95,6 @@ export interface IAssetService {
     | CollectionNoteNode
     | CollectionLinkNode
     | CollectionColorNode
-    | CollectionDiagramNode
   >;
   getAssetLocation(orgId: string, assetNodeId: string): Promise<AssetLocation>;
   getInboxContents(
@@ -116,17 +111,6 @@ export interface IAssetService {
     userId: string,
     data: CreateNoteInput,
   ): Promise<CollectionNoteNode>;
-  createInboxDiagram(
-    orgId: string,
-    userId: string,
-    data: CreateDiagramInput,
-  ): Promise<CollectionDiagramNode>;
-  updateDiagram(
-    orgId: string,
-    userId: string,
-    assetNodeId: string,
-    data: UpdateDiagramInput,
-  ): Promise<CollectionDiagramNode>;
   createInboxColor(
     orgId: string,
     userId: string,
@@ -185,7 +169,6 @@ export class AssetService implements IAssetService {
     | CollectionNoteNode
     | CollectionLinkNode
     | CollectionColorNode
-    | CollectionDiagramNode
   > {
     const target = parseAssetNodeId(assetNodeId);
     const rows = await db
@@ -205,9 +188,6 @@ export class AssetService implements IAssetService {
         imageDominantColors: imageAssets.dominantColors,
         noteContent: noteAssets.markdown,
         noteIsExpanded: noteAssets.isExpanded,
-        diagramSource: diagramAssets.source,
-        diagramFrameWidth: diagramAssets.frameWidth,
-        diagramFrameHeight: diagramAssets.frameHeight,
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
         colorNote: colorAssets.note,
@@ -230,7 +210,6 @@ export class AssetService implements IAssetService {
       .from(assets)
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
-      .leftJoin(diagramAssets, eq(diagramAssets.assetId, assets.id))
       .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
       .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
       .leftJoin(
@@ -306,8 +285,7 @@ export class AssetService implements IAssetService {
     types?: ContentTypeFilter[],
   ): Promise<InboxContentsResponse> {
     const assetTypes = types?.filter(
-      (type): type is "image" | "note" | "link" | "color" | "diagram" =>
-        type !== "folder",
+      (type): type is "image" | "note" | "link" | "color" => type !== "folder",
     );
 
     if (types !== undefined && assetTypes?.length === 0) {
@@ -335,9 +313,6 @@ export class AssetService implements IAssetService {
         imageDominantColors: imageAssets.dominantColors,
         noteContent: noteAssets.markdown,
         noteIsExpanded: noteAssets.isExpanded,
-        diagramSource: diagramAssets.source,
-        diagramFrameWidth: diagramAssets.frameWidth,
-        diagramFrameHeight: diagramAssets.frameHeight,
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
         colorNote: colorAssets.note,
@@ -360,7 +335,6 @@ export class AssetService implements IAssetService {
       .from(assets)
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
-      .leftJoin(diagramAssets, eq(diagramAssets.assetId, assets.id))
       .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
       .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
       .leftJoin(
@@ -556,118 +530,6 @@ export class AssetService implements IAssetService {
       readingTimeMinutes,
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString(),
-      position: null,
-      frontIndex: null,
-    };
-  }
-
-  async createInboxDiagram(
-    orgId: string,
-    userId: string,
-    data: CreateDiagramInput,
-  ): Promise<CollectionDiagramNode> {
-    const asset = await db.transaction(async (tx) => {
-      const [created] = await tx
-        .insert(assets)
-        .values({
-          organizationId: orgId,
-          type: "diagram",
-          title: normalizeNoteTitle(data.title),
-          lastAddedToInboxAt: new Date(),
-          createdByUserId: userId,
-          updatedByUserId: userId,
-        })
-        .returning();
-      if (!created)
-        throw new AppError(
-          ErrorCode.INTERNAL_ERROR,
-          "Failed to create diagram",
-        );
-      await tx.insert(diagramAssets).values({
-        assetId: created.id,
-        source: data.source,
-        frameWidth: data.frameWidth,
-        frameHeight: data.frameHeight,
-      });
-      return created;
-    });
-    return {
-      id: `diagram-${asset.id}`,
-      type: "diagram",
-      source: data.source,
-      title: asset.title,
-      frameWidth: data.frameWidth,
-      frameHeight: data.frameHeight,
-      isFavorite: false,
-      createdAt: asset.createdAt.toISOString(),
-      updatedAt: asset.updatedAt.toISOString(),
-      position: null,
-      frontIndex: null,
-    };
-  }
-
-  async updateDiagram(
-    orgId: string,
-    userId: string,
-    assetNodeId: string,
-    data: UpdateDiagramInput,
-  ): Promise<CollectionDiagramNode> {
-    const target = parseAssetNodeId(assetNodeId);
-    if (target.assetType !== "diagram")
-      throw new AppError(ErrorCode.VALIDATION_ERROR, "Asset is not a diagram");
-    const updated = await db.transaction(async (tx) => {
-      const [asset] = await tx
-        .update(assets)
-        .set({
-          updatedByUserId: userId,
-          ...(data.title !== undefined
-            ? { title: normalizeNoteTitle(data.title) }
-            : {}),
-        })
-        .where(
-          and(
-            eq(assets.id, target.entityId),
-            eq(assets.organizationId, orgId),
-            eq(assets.type, "diagram"),
-          ),
-        )
-        .returning();
-      if (!asset) throw new AppError(ErrorCode.NOT_FOUND, "Diagram not found");
-      const setValues = {
-        ...(data.source !== undefined ? { source: data.source } : {}),
-        ...(data.frameWidth !== undefined
-          ? { frameWidth: data.frameWidth }
-          : {}),
-        ...(data.frameHeight !== undefined
-          ? { frameHeight: data.frameHeight }
-          : {}),
-      };
-      const [diagram] = Object.keys(setValues).length
-        ? await tx
-            .update(diagramAssets)
-            .set(setValues)
-            .where(eq(diagramAssets.assetId, asset.id))
-            .returning()
-        : await tx
-            .select()
-            .from(diagramAssets)
-            .where(eq(diagramAssets.assetId, asset.id))
-            .limit(1);
-      if (!diagram)
-        throw new AppError(ErrorCode.NOT_FOUND, "Diagram not found");
-      return { asset, diagram };
-    });
-    const { asset, diagram } = updated;
-    return {
-      id: `diagram-${asset.id}`,
-      type: "diagram",
-      source: diagram.source,
-      title: asset.title,
-      frameWidth: diagram.frameWidth,
-      frameHeight: diagram.frameHeight,
-      isFavorite: asset.isFavorite,
-      createdAt: asset.createdAt.toISOString(),
-      updatedAt: asset.updatedAt.toISOString(),
       position: null,
       frontIndex: null,
     };
@@ -1144,7 +1006,7 @@ export class AssetService implements IAssetService {
   private async rowsToAssetNodes(
     rows: Array<{
       assetId: number;
-      assetType: "image" | "note" | "link" | "color" | "diagram";
+      assetType: "image" | "note" | "link" | "color";
       title: string | null;
       isFavorite: boolean;
       createdAt: Date;
@@ -1158,9 +1020,6 @@ export class AssetService implements IAssetService {
       imageDominantColors: string[] | null;
       noteContent: string | null;
       noteIsExpanded: boolean | null;
-      diagramSource: string | null;
-      diagramFrameWidth: number | null;
-      diagramFrameHeight: number | null;
       colorHex: string | null;
       colorGradient: StoredColorGradient | null;
       colorNote: string | null;
@@ -1279,23 +1138,6 @@ export class AssetService implements IAssetService {
           position: null,
           frontIndex: null,
         } satisfies CollectionColorNode);
-        continue;
-      }
-
-      if (row.assetType === "diagram" && row.diagramSource !== null) {
-        nodes.push({
-          id: `diagram-${row.assetId}`,
-          type: "diagram",
-          source: row.diagramSource,
-          title: row.title,
-          frameWidth: row.diagramFrameWidth ?? 480,
-          frameHeight: row.diagramFrameHeight ?? 320,
-          isFavorite: row.isFavorite,
-          createdAt: row.createdAt.toISOString(),
-          updatedAt: row.updatedAt.toISOString(),
-          position: null,
-          frontIndex: null,
-        } satisfies CollectionDiagramNode);
         continue;
       }
 

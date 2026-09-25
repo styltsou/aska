@@ -142,7 +142,7 @@ import {
 const DEFAULT_VIEWPORT = { x: 40, y: 40, zoom: 1.1 };
 const VIEWPORT_ANIMATION_DURATION = 150;
 const PERSISTED_CANVAS_ITEM_ID =
-  /^(folder|image|note|link|color|diagram|text|arrow)-\d+$/;
+  /^(folder|image|note|link|color|text|arrow)-\d+$/;
 type CanvasFlowNode = CanvasNode | CanvasTextFlowNode;
 const nodeTypes: NodeTypes = { asset: CanvasCard, text: CanvasTextNode };
 
@@ -1781,7 +1781,7 @@ function CanvasSurface({
             x: origin.x + delta.x,
             y: origin.y + delta.y,
           });
-          if (/^(folder|image|note|link|color|diagram)-\d+$/.test(id)) {
+          if (/^(folder|image|note|link|color)-\d+$/.test(id)) {
             return [{ type: "node" as const, id, position }];
           }
           if (/^text-\d+$/.test(id)) {
@@ -2759,13 +2759,7 @@ function makeFlowNode(
             expandedNoteOrder,
             collectionNode.frontIndex,
           ),
-    style:
-      collectionNode.type === "diagram"
-        ? {
-            width: collectionNode.frameWidth,
-            height: collectionNode.frameHeight,
-          }
-        : { width: BOARD_CARD_WIDTH },
+    style: { width: BOARD_CARD_WIDTH },
   };
 }
 
@@ -2800,8 +2794,6 @@ function getCanvasCardHeight(node: CanvasFlowNode): number {
   if (collectionNode.type === "image") {
     return (BOARD_CARD_WIDTH * collectionNode.height) / collectionNode.width;
   }
-
-  if (collectionNode.type === "diagram") return collectionNode.frameHeight;
 
   return BOARD_CARD_WIDTH;
 }

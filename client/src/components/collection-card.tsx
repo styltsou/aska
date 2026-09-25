@@ -1,7 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
-import { WorkflowIcon } from "lucide-react";
 
 import { LinkCardPreview } from "./board/cards/link-asset-card";
 import { NoteMarkdown } from "./board/cards/note-asset-card";
@@ -143,21 +142,6 @@ export function CollectionCard({
                           />
                         );
                       }
-                      if (preview.type === "diagram") {
-                        return (
-                          <div
-                            className="absolute flex aspect-square items-center justify-center rounded-xl bg-card text-muted-foreground shadow-md ring-1 ring-sidebar-foreground/5"
-                            style={{
-                              ...PREVIEW_POSITION,
-                              transform: `rotate(-3deg) scale(${hovered ? 1.02 : 1})`,
-                              transition: PREVIEW_TRANSITION,
-                            }}
-                            title={preview.title ?? "Diagram"}
-                          >
-                            <WorkflowIcon className="size-1/2" aria-hidden />
-                          </div>
-                        );
-                      }
                       return (
                         <div
                           className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
@@ -246,23 +230,6 @@ export function CollectionCard({
                                 : `${z * 10}ms`,
                             }}
                           />
-                        );
-                      }
-                      if (preview.type === "diagram") {
-                        return (
-                          <div
-                            key={preview.assetId}
-                            className="absolute flex aspect-square items-center justify-center rounded-xl bg-card text-muted-foreground shadow-md ring-1 ring-sidebar-foreground/5"
-                            style={{
-                              ...STACKED_POSITION,
-                              zIndex: z,
-                              transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
-                              transition: PREVIEW_TRANSITION,
-                            }}
-                            title={preview.title ?? "Diagram"}
-                          >
-                            <WorkflowIcon className="size-1/2" aria-hidden />
-                          </div>
                         );
                       }
                       return (

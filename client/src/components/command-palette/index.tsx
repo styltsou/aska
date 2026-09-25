@@ -1,7 +1,6 @@
 import {
   AlignCenterHorizontalIcon,
   ArrowDownIcon,
-  ArrowUpRightIcon,
   ArrowUpIcon,
   FileTextIcon,
   FolderPlusIcon,
@@ -22,8 +21,6 @@ import {
   SquarePlusIcon,
   PipetteIcon,
   SearchIcon,
-  TypeIcon,
-  WorkflowIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
@@ -44,7 +41,6 @@ import {
 import { DialogBody } from "@/components/ui/dialog";
 import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
-import { DiagramEditorDialog } from "@/components/board/diagram-editor-dialog";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
 import {
@@ -88,7 +84,6 @@ type PaletteMode = "search" | "commands";
 
 type CommandId =
   | "new-note"
-  | "new-diagram"
   | "new-color"
   | "canvas-text-tool"
   | "canvas-arrow-tool"
@@ -117,28 +112,10 @@ const COMMAND_GROUPS = [
         shortcut: "⇧+N",
       },
       {
-        id: "new-diagram",
-        label: "New diagram",
-        icon: WorkflowIcon,
-        shortcut: "⇧+M",
-      },
-      {
         id: "new-color",
         label: "New color",
         icon: PaletteIcon,
         shortcut: "⇧+C",
-      },
-      {
-        id: "canvas-text-tool",
-        label: "Text tool",
-        icon: TypeIcon,
-        shortcut: "⇧+T",
-      },
-      {
-        id: "canvas-arrow-tool",
-        label: "Arrow tool",
-        icon: ArrowUpRightIcon,
-        shortcut: "⇧+A",
       },
       {
         id: "open-scratchpad",
@@ -253,7 +230,6 @@ export function CommandPalette() {
   const [activeSearchResultId, setActiveSearchResultId] = useState<string>();
   const [activeCommandId, setActiveCommandId] = useState<CommandId>();
   const [createNoteOpen, setCreateNoteOpen] = useState(false);
-  const [createDiagramOpen, setCreateDiagramOpen] = useState(false);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [uploadImagesOpen, setUploadImagesOpen] = useState(false);
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
@@ -483,11 +459,6 @@ export function CommandPalette() {
         handleOpenChange(false);
         setCreateNoteOpen(true);
         return;
-      case "new-diagram":
-        if (!canCreateNote) return;
-        handleOpenChange(false);
-        setCreateDiagramOpen(true);
-        return;
       case "new-color":
         if (!canCreateColor) return;
         handleOpenChange(false);
@@ -684,7 +655,6 @@ export function CommandPalette() {
                           (item.id !== "toggle-filter-bar" ||
                             Boolean(filterScope)) &&
                           (item.id !== "new-note" || canCreateNote) &&
-                          (item.id !== "new-diagram" || canCreateNote) &&
                           (item.id !== "new-color" || canCreateColor) &&
                           (item.id !== "new-folder" || canCreateFolder) &&
                           (item.id !== "upload-images" || canCreateFolder) &&
@@ -694,10 +664,6 @@ export function CommandPalette() {
                             canToggleAlignmentGuides) &&
                           (item.id !== "toggle-board-action-rail" ||
                             canToggleBoardActionRail) &&
-                          (item.id !== "canvas-text-tool" ||
-                            canToggleAlignmentGuides) &&
-                          (item.id !== "canvas-arrow-tool" ||
-                            canToggleAlignmentGuides) &&
                           (item.id !== "open-pexels-browser" ||
                             canCreateFolder),
                       ),
@@ -819,14 +785,6 @@ export function CommandPalette() {
         target={view === "inbox" ? "inbox" : "collection"}
         open={createNoteOpen}
         onOpenChange={setCreateNoteOpen}
-        placement={placement}
-      />
-      <DiagramEditorDialog
-        workspaceSlug={workspaceSlug ?? ""}
-        collectionPath={collectionPath}
-        target={view === "inbox" ? "inbox" : "collection"}
-        open={createDiagramOpen}
-        onOpenChange={setCreateDiagramOpen}
         placement={placement}
       />
       <CreateFolderDialog
@@ -1047,11 +1005,9 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
           ? ExternalLinkIcon
           : result.type === "color"
             ? PipetteIcon
-            : result.type === "diagram"
-              ? WorkflowIcon
-              : result.type === "collection"
-                ? PanelsTopLeftIcon
-                : FolderOpenIcon;
+            : result.type === "collection"
+              ? PanelsTopLeftIcon
+              : FolderOpenIcon;
 
   return (
     <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">

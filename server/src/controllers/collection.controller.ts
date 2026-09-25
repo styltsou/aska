@@ -12,7 +12,6 @@ import {
   CreateColorSchema,
   CreateFolderSchema,
   CreateNoteSchema,
-  CreateDiagramSchema,
   CollectionContentsQuerySchema,
   MoveCollectionNodesParentSchema,
   WorkspaceParamSchema,
@@ -161,28 +160,6 @@ export const createNote = factory.createHandlers(
     );
 
     return c.json(success({ note }), 201);
-  },
-);
-
-export const createDiagram = factory.createHandlers(
-  authMiddleware,
-  validate.param(CollectionPathParamSchema),
-  validate.body(CreateDiagramSchema),
-  async (c) => {
-    const { workspaceSlug, collectionSlug } = c.req.valid("param");
-    const data = c.req.valid("json");
-    const userId = c.get("userId");
-    const workspace = await collectionService.getWorkspaceBySlug(
-      workspaceSlug,
-      userId,
-    );
-    const diagram = await collectionService.createDiagram(
-      workspace.id,
-      userId,
-      collectionSlug,
-      data,
-    );
-    return c.json(success({ diagram }), 201);
   },
 );
 

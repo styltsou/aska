@@ -83,6 +83,27 @@ describe("NoteMarkdown", () => {
     expect(html).toContain("hljs-keyword");
   });
 
+  it("shows Mermaid as a compact diagram preview on note cards", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown content={"```mermaid\nflowchart LR\nA-->B\n```"} compact />,
+    );
+
+    expect(html).toContain("note-mermaid-preview--compact");
+    expect(html).not.toContain("note-code-block--preview");
+    expect(html).not.toContain("Open diagram full view");
+  });
+
+  it("keeps URLs inside code fences unchanged", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown
+        content={'```ts\nconst url = "https://example.com"\n```'}
+      />,
+    );
+
+    expect(html).toContain("https://example.com");
+    expect(html).not.toContain("[https://example.com]");
+  });
+
   it("highlights Bash variables with the shared code theme", () => {
     const html = renderToStaticMarkup(
       <NoteMarkdown content={'```bash\necho "$HOME"\n```'} />,

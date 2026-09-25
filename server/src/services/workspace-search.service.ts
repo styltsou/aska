@@ -16,7 +16,6 @@ import {
   collectionNodes,
   collectionsTable,
   colorAssets,
-  diagramAssets,
   externalResourceMedia,
   externalResources,
   folders,
@@ -117,7 +116,6 @@ async function searchAssets(
     case
       when ${assets.type} = 'image' then 'Untitled image'
       when ${assets.type} = 'note' then 'Untitled note'
-      when ${assets.type} = 'diagram' then 'Untitled diagram'
       else 'Untitled'
     end
   )`;
@@ -135,7 +133,6 @@ async function searchAssets(
       createdAt: assets.createdAt,
       updatedAt: assets.updatedAt,
       noteContent: noteAssets.markdown,
-      diagramSource: diagramAssets.source,
       imageAlt: imageAssets.alt,
       imageNote: imageAssets.note,
       imageBlurDataURL: imageAssets.blurDataURL,
@@ -158,7 +155,6 @@ async function searchAssets(
     })
     .from(assets)
     .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
-    .leftJoin(diagramAssets, eq(diagramAssets.assetId, assets.id))
     .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
     .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
     .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
@@ -178,7 +174,6 @@ async function searchAssets(
           ? or(
               ilike(label, match),
               ilike(noteAssets.markdown, match),
-              ilike(diagramAssets.source, match),
               ilike(imageAssets.alt, match),
               ilike(imageAssets.note, match),
               ilike(linkAssets.originalUrl, match),
@@ -248,9 +243,7 @@ async function searchAssets(
         ? "Untitled image"
         : type === "note"
           ? "Untitled note"
-          : type === "diagram"
-            ? "Untitled diagram"
-            : "Untitled");
+          : "Untitled");
     const location = row.collectionSlug
       ? {
           type: "collection" as const,
@@ -448,7 +441,6 @@ async function searchCollections(
 function getAssetSnippet(
   row: {
     noteContent: string | null;
-    diagramSource: string | null;
     imageAlt: string | null;
     imageNote: string | null;
     linkDescription: string | null;
@@ -459,7 +451,6 @@ function getAssetSnippet(
 ): string | null {
   const candidates = [
     row.noteContent,
-    row.diagramSource,
     row.imageNote,
     row.imageAlt,
     row.linkNote,

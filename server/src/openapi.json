@@ -390,39 +390,6 @@
         }
       }
     },
-    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/diagrams": {
-      "post": {
-        "operationId": "createDiagram",
-        "tags": ["Collections"],
-        "summary": "Create a Mermaid diagram in a collection",
-        "parameters": [
-          { "$ref": "#/components/parameters/WorkspaceSlug" },
-          { "$ref": "#/components/parameters/CollectionSlug" }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateDiagramRequest" }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "The diagram was created.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/DiagramResponse" }
-              }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
-        }
-      }
-    },
     "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/canvas-objects/text": {
       "post": {
         "operationId": "createCanvasText",
@@ -1076,35 +1043,6 @@
         }
       }
     },
-    "/api/v1/workspace/{workspaceSlug}/inbox/diagrams": {
-      "post": {
-        "operationId": "createInboxDiagram",
-        "tags": ["Assets"],
-        "summary": "Create a Mermaid diagram in the inbox",
-        "parameters": [{ "$ref": "#/components/parameters/WorkspaceSlug" }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/CreateDiagramRequest" }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "The diagram was created.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/DiagramResponse" }
-              }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" }
-        }
-      }
-    },
     "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/links": {
       "post": {
         "operationId": "createCollectionLink",
@@ -1396,44 +1334,6 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/UpdateNoteResponse" }
-              }
-            }
-          },
-          "400": { "$ref": "#/components/responses/BadRequest" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" }
-        }
-      }
-    },
-    "/api/v1/workspace/{workspaceSlug}/assets/{assetId}/diagram": {
-      "patch": {
-        "operationId": "updateDiagram",
-        "tags": ["Assets"],
-        "summary": "Update Mermaid source, title, or frame size",
-        "parameters": [
-          { "$ref": "#/components/parameters/WorkspaceSlug" },
-          {
-            "name": "assetId",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "string", "pattern": "^diagram-\\d+$" }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateDiagramRequest" }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "The diagram was updated.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/DiagramResponse" }
               }
             }
           },
@@ -2060,7 +1960,7 @@
           },
           "type": {
             "type": "string",
-            "enum": ["image", "note", "link", "color", "diagram"]
+            "enum": ["image", "note", "link", "color"]
           },
           "url": {
             "type": "string",
@@ -2311,43 +2211,6 @@
           }
         }
       },
-      "CreateDiagramRequest": {
-        "type": "object",
-        "required": ["source"],
-        "properties": {
-          "source": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 50000,
-            "description": "Mermaid source code."
-          },
-          "title": { "type": ["string", "null"], "maxLength": 255 },
-          "frameWidth": {
-            "type": "integer",
-            "minimum": 280,
-            "maximum": 1200,
-            "default": 480
-          },
-          "frameHeight": {
-            "type": "integer",
-            "minimum": 180,
-            "maximum": 900,
-            "default": 320
-          },
-          "parentFolderPath": { "type": "string" },
-          "position": { "$ref": "#/components/schemas/BoardPosition" }
-        }
-      },
-      "UpdateDiagramRequest": {
-        "type": "object",
-        "minProperties": 1,
-        "properties": {
-          "source": { "type": "string", "minLength": 1, "maxLength": 50000 },
-          "title": { "type": ["string", "null"], "maxLength": 255 },
-          "frameWidth": { "type": "integer", "minimum": 280, "maximum": 1200 },
-          "frameHeight": { "type": "integer", "minimum": 180, "maximum": 900 }
-        }
-      },
       "CreateNoteRequest": {
         "type": "object",
         "required": ["content"],
@@ -2565,34 +2428,6 @@
           "position": {
             "$ref": "#/components/schemas/NullableBoardPosition"
           }
-        }
-      },
-      "CollectionDiagramNode": {
-        "type": "object",
-        "required": [
-          "id",
-          "type",
-          "source",
-          "title",
-          "frameWidth",
-          "frameHeight",
-          "isFavorite",
-          "createdAt",
-          "updatedAt",
-          "position"
-        ],
-        "properties": {
-          "id": { "type": "string", "pattern": "^diagram-\\d+$" },
-          "type": { "const": "diagram" },
-          "source": { "type": "string" },
-          "title": { "type": ["string", "null"] },
-          "frameWidth": { "type": "integer" },
-          "frameHeight": { "type": "integer" },
-          "isFavorite": { "type": "boolean" },
-          "createdAt": { "type": "string", "format": "date-time" },
-          "updatedAt": { "type": "string", "format": "date-time" },
-          "position": { "$ref": "#/components/schemas/NullableBoardPosition" },
-          "frontIndex": { "type": ["integer", "null"] }
         }
       },
       "CollectionNoteNode": {
@@ -2988,9 +2823,6 @@
                     },
                     {
                       "$ref": "#/components/schemas/CollectionLinkNode"
-                    },
-                    {
-                      "$ref": "#/components/schemas/CollectionDiagramNode"
                     }
                   ],
                   "discriminator": {
@@ -2999,8 +2831,7 @@
                       "folder": "#/components/schemas/CollectionFolderNode",
                       "image": "#/components/schemas/CollectionImageNode",
                       "note": "#/components/schemas/CollectionNoteNode",
-                      "link": "#/components/schemas/CollectionLinkNode",
-                      "diagram": "#/components/schemas/CollectionDiagramNode"
+                      "link": "#/components/schemas/CollectionLinkNode"
                     }
                   }
                 }
@@ -3008,21 +2839,6 @@
               "canvasObjects": {
                 "type": "array",
                 "items": { "$ref": "#/components/schemas/CanvasObject" }
-              }
-            }
-          }
-        }
-      },
-      "DiagramResponse": {
-        "type": "object",
-        "required": ["data"],
-        "properties": {
-          "data": {
-            "type": "object",
-            "required": ["diagram"],
-            "properties": {
-              "diagram": {
-                "$ref": "#/components/schemas/CollectionDiagramNode"
               }
             }
           }

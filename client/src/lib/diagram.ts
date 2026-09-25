@@ -1,50 +1,10 @@
-export const DIAGRAM_TEMPLATES = [
-  {
-    name: "Flowchart",
-    source:
-      "flowchart LR\n  Idea[Idea] --> Draft[Draft]\n  Draft --> Review{Ready?}\n  Review -- Yes --> Share[Share]\n  Review -- No --> Draft",
-  },
-  {
-    name: "Sequence",
-    source:
-      "sequenceDiagram\n  participant A as Alex\n  participant B as Blake\n  A->>B: Share an idea\n  B-->>A: Give feedback",
-  },
-  {
-    name: "Class",
-    source:
-      "classDiagram\n  class Project {\n    +String name\n    +createBoard()\n  }\n  Project --> Board",
-  },
-  {
-    name: "State",
-    source:
-      "stateDiagram-v2\n  [*] --> Draft\n  Draft --> Review\n  Review --> Published\n  Published --> [*]",
-  },
-  {
-    name: "ER",
-    source:
-      "erDiagram\n  PROJECT ||--o{ BOARD : contains\n  BOARD ||--o{ ASSET : holds",
-  },
-  {
-    name: "Mind map",
-    source:
-      "mindmap\n  root((Project))\n    Ideas\n      Notes\n      Diagrams\n    Deliverables",
-  },
-] as const;
+export const DEFAULT_MERMAID_SOURCE =
+  "flowchart LR\n  Idea[Idea] --> Draft[Draft]\n  Draft --> Review{Ready?}\n  Review -- Yes --> Share[Share]\n  Review -- No --> Draft";
 
-const FENCE = /^\s*```mermaid\s*\r?\n([\s\S]*?)\r?\n```\s*$/i;
-const DECLARATION =
-  /^(?:flowchart|graph|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|mindmap|gantt|pie|journey|gitGraph|timeline|quadrantChart|sankey-beta|xychart-beta|block-beta|architecture-beta|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment)\b/i;
-
-export function classifyDiagramPaste(
-  text: string,
-): { source: string; confidence: "fenced" | "plain" } | undefined {
-  const fenced = FENCE.exec(text);
-  if (fenced?.[1]?.trim())
-    return { source: fenced[1].trim(), confidence: "fenced" };
-  const source = text.trim();
-  if (DECLARATION.test(source) && source.includes("\n"))
-    return { source, confidence: "plain" };
-  return undefined;
+export function parseMermaidFence(text: string): string | undefined {
+  const match =
+    /^\s*(`{3,}|~{3,})mermaid[ \t]*\r?\n([\s\S]*?)\r?\n\1\s*$/i.exec(text);
+  return match?.[2];
 }
 
 let sequence = 0;

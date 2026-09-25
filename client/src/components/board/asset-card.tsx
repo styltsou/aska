@@ -12,7 +12,6 @@ import { NoteAssetCard } from "@/components/board/cards/note-asset-card";
 import { FolderAssetCard } from "@/components/board/cards/folder-asset-card";
 import { LinkAssetCard } from "@/components/board/cards/link-asset-card";
 import { ColorAssetCard } from "@/components/board/cards/color-asset-card";
-import { DiagramAssetCard } from "@/components/board/cards/diagram-asset-card";
 import { AssetContextMenu } from "./asset-context-menu";
 import {
   hasSelectionModifier,
@@ -106,13 +105,6 @@ export const AssetCard = memo(function AssetCard({
                   onOpenNote ? () => onOpenNote(asset, "read") : undefined
                 }
                 isContextMenuOpen={isContextMenuOpen}
-              />
-            )}
-            {asset.type === "diagram" && (
-              <DiagramAssetCard
-                asset={asset}
-                isContextMenuOpen={isContextMenuOpen}
-                selected={isSelected}
               />
             )}
             {asset.type === "link" && (

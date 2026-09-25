@@ -1,4 +1,4 @@
-import { FolderIcon, PlusIcon, WorkflowIcon } from "lucide-react";
+import { FolderIcon, PlusIcon } from "lucide-react";
 import { AnimatePresence, motion, type Transition } from "motion/react";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { cn } from "@/lib/utils";
@@ -152,19 +152,6 @@ export function FolderAssetCard({
                     className="aspect-square overflow-hidden rounded-sm ring-1 ring-sidebar-foreground/5"
                     style={{ backgroundColor: preview.hex }}
                   />
-                );
-              }
-              if (preview.type === "diagram") {
-                return (
-                  <motion.div
-                    key={preview.assetId}
-                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-sm bg-card p-2 text-center ring-1 ring-sidebar-foreground/5"
-                  >
-                    <WorkflowIcon className="size-6 text-primary/65" />
-                    <span className="line-clamp-2 text-[10px] text-sidebar-foreground/65">
-                      {preview.title?.trim() || "Diagram"}
-                    </span>
-                  </motion.div>
                 );
               }
               return (
