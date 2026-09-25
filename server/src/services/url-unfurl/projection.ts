@@ -123,7 +123,10 @@ export function projectLinkNode(
 }
 
 function projectLinkVideo(row: LinkProjectionRow) {
-  if (row.resolverKey !== "youtube-oembed" || row.resourceKind !== "video")
+  if (
+    !["youtube-oembed", "youtube-data-api"].includes(row.resolverKey) ||
+    row.resourceKind !== "video"
+  )
     return null;
   const extension = row.providerExtensions.youtube;
   if (!extension || typeof extension !== "object" || Array.isArray(extension))

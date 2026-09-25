@@ -68,6 +68,12 @@ export interface LinkAsset {
     channelName: string | null;
     channelUrl: string | null;
   };
+  /** Browser-only metadata for a YouTube card before server resolution wins. */
+  optimisticYouTube?: {
+    videoId: string;
+    channelName: string | null;
+    metadataStatus: "loading" | "ready";
+  };
   clientId?: string;
   isFavorite?: boolean;
 }

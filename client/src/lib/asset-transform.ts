@@ -67,6 +67,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
         : undefined,
       favicon: node.favicon ?? undefined,
       video: node.video ?? undefined,
+      optimisticYouTube: node.optimisticYouTube,
       clientId: node.clientId,
     };
   }

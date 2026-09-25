@@ -66,6 +66,81 @@ describe("link resolution tracker", () => {
     });
   });
 
+  it("keeps the direct YouTube thumbnail only until server media is terminal", () => {
+    const queryClient = new QueryClient();
+    const key = collectionQueryKeys.contents(workspaceSlug, "ideas");
+    queryClient.setQueryData(
+      key,
+      contents(
+        link({
+          id: "link-youtube",
+          title: "Browser title",
+          resolutionStatus: "queued",
+          previewImage: {
+            url: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+            width: 480,
+            height: 360,
+          },
+          optimisticYouTube: {
+            videoId: "dQw4w9WgXcQ",
+            channelName: "A channel",
+            metadataStatus: "ready",
+          },
+        }),
+      ),
+    );
+
+    patchLinkInCaches(
+      queryClient,
+      workspaceSlug,
+      link({
+        id: "link-youtube",
+        resolutionStatus: "resolving",
+        title: "youtu.be",
+      }),
+    );
+
+    expect(
+      queryClient.getQueryData<CollectionContentsResponse>(key)?.nodes[0],
+    ).toMatchObject({
+      title: "Browser title",
+      previewImage: {
+        url: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+      },
+      optimisticYouTube: { metadataStatus: "ready" },
+    });
+
+    patchLinkInCaches(
+      queryClient,
+      workspaceSlug,
+      link({
+        id: "link-youtube",
+        resolutionStatus: "resolving",
+        resolvedAt: "2026-01-02T00:00:00.000Z",
+        title: "Authoritative title",
+        description: "Authoritative description",
+      }),
+    );
+
+    expect(
+      queryClient.getQueryData<CollectionContentsResponse>(key)?.nodes[0],
+    ).toMatchObject({
+      title: "Authoritative title",
+      description: "Authoritative description",
+    });
+
+    patchLinkInCaches(
+      queryClient,
+      workspaceSlug,
+      link({ id: "link-youtube", resolutionStatus: "partial" }),
+    );
+
+    const terminal =
+      queryClient.getQueryData<CollectionContentsResponse>(key)?.nodes[0];
+    expect(terminal).toMatchObject({ previewImage: null });
+    expect(terminal).not.toHaveProperty("optimisticYouTube");
+  });
+
   it("patches matching collection and folder card previews", () => {
     const queryClient = new QueryClient();
     const collectionsKey = collectionQueryKeys.collections(workspaceSlug);

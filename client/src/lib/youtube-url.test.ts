@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isYouTubeVideoUrl } from "./youtube-url";
+import { extractYouTubeVideoId, isYouTubeVideoUrl } from "./youtube-url";
 
 describe("isYouTubeVideoUrl", () => {
   it.each([
@@ -21,5 +21,19 @@ describe("isYouTubeVideoUrl", () => {
     "not a URL",
   ])("rejects non-video URLs: %s", (url) => {
     expect(isYouTubeVideoUrl(url)).toBe(false);
+  });
+});
+
+describe("extractYouTubeVideoId", () => {
+  it("returns the normalized ID for each supported URL shape", () => {
+    expect(extractYouTubeVideoId("https://youtu.be/dQw4w9WgXcQ")).toBe(
+      "dQw4w9WgXcQ",
+    );
+  });
+
+  it("does not extract IDs from unsupported YouTube URLs", () => {
+    expect(
+      extractYouTubeVideoId("https://www.youtube.com/playlist?list=PL123"),
+    ).toBeNull();
   });
 });

@@ -74,6 +74,7 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("overflow-hidden rounded-sm bg-muted/40");
     expect(html).toContain("bg-popover/85");
     expect(html).toContain("text-popover-foreground");
+    expect(html).toContain("YouTube · A channel");
     expect(html).toContain(`href="${asset.originalUrl}"`);
   });
 
@@ -128,17 +129,34 @@ describe("LinkAssetCard", () => {
     expect(html).not.toContain("Resolving");
   });
 
-  it("reserves a 16:9 frame for a pending YouTube URL before it resolves", () => {
+  it("uses the immediate thumbnail and metadata skeletons for a pending YouTube URL", () => {
     const html = renderToStaticMarkup(
       <LinkAssetCard
-        asset={{ ...asset, video: undefined, resolutionStatus: "queued" }}
+        asset={{
+          ...asset,
+          video: undefined,
+          title: "youtu.be",
+          resolutionStatus: "queued",
+          previewImage: {
+            url: "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+            width: 480,
+            height: 360,
+          },
+          optimisticYouTube: {
+            videoId: "dQw4w9WgXcQ",
+            channelName: null,
+            metadataStatus: "loading",
+          },
+        }}
       />,
     );
 
     expect(html).toContain("aspect-video w-full");
+    expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
     expect(html).toContain(
       "animate-[link-preview-shimmer_1.6s_linear_infinite]",
     );
+    expect(html).toContain('aria-label="Loading video description"');
     expect(html).not.toContain("group-hover:scale-[1.05]");
   });
 

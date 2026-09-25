@@ -255,7 +255,9 @@ async function searchAssets(
       : ({ type: "inbox" } as const);
     const isVideo =
       type === "link" &&
-      row.linkResolverKey === "youtube-oembed" &&
+      ["youtube-oembed", "youtube-data-api"].includes(
+        row.linkResolverKey ?? "",
+      ) &&
       row.linkResourceKind === "video";
     const imageVariantKey = imageVariantKeys.get(row.assetId);
     const imageUrl = imageVariantKey

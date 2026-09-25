@@ -67,6 +67,7 @@ export default $config({
     const betterAuthSecret = new sst.Secret("BetterAuthSecret");
     const resendApiKey = new sst.Secret("ResendApiKey");
     const pexelsApiKey = new sst.Secret("PexelsApiKey");
+    const youtubeDataApiKey = new sst.Secret("YouTubeDataApiKey");
     const imagePipelineCallbackSecret = new sst.Secret(
       "ImagePipelineCallbackSecret",
     );
@@ -414,6 +415,7 @@ export default $config({
           NODE_ENV: stableCloudDomains ? "production" : "development",
           PIPELINE_API_BASE_URL: api.url,
           PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+          YOUTUBE_DATA_API_KEY: youtubeDataApiKey.value,
           ...getSentryEnvironment("url-resolution", sentryDsn.value),
         },
       },

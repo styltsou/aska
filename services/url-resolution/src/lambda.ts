@@ -5,7 +5,7 @@ import { parseUrlResolutionJob } from "../../url-unfurl-shared/src/resolution-jo
 import { SafeFetchError } from "../../url-unfurl-shared/src/safe-fetch";
 import { GenericHtmlResolver } from "./generic-resolver";
 import { resolveWithRegistry } from "./types";
-import { YouTubeOEmbedResolver } from "./youtube-resolver";
+import { YouTubeDataApiResolver } from "./youtube-resolver";
 
 initializeSentry("url-resolution");
 
@@ -22,7 +22,7 @@ type Claim =
     };
 
 const resolvers = [
-  new YouTubeOEmbedResolver(),
+  new YouTubeDataApiResolver(process.env.YOUTUBE_DATA_API_KEY),
   new GenericHtmlResolver(),
 ] as const;
 

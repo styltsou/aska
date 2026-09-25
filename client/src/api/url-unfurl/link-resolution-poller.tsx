@@ -117,21 +117,31 @@ function patchCollectionContents<
   const nodes = current.nodes.map((node) => {
     if (node.type === "link" && node.id === link.id) {
       changed = true;
+      const optimisticYouTube = node.optimisticYouTube;
+      const retainOptimisticPreview =
+        Boolean(optimisticYouTube) && isActive(link) && !link.previewImage;
+      const retainOptimisticMetadata =
+        Boolean(optimisticYouTube) && isActive(link) && !link.resolvedAt;
+      const { optimisticYouTube: _optimisticYouTube, ...nodeWithoutOptimism } =
+        node;
       return {
-        ...node,
+        ...nodeWithoutOptimism,
         canonicalUrl: link.canonicalUrl,
         hostname: link.hostname,
-        title: link.title,
+        title: retainOptimisticMetadata ? node.title : link.title,
         description: link.description,
-        siteName: link.siteName,
+        siteName: retainOptimisticMetadata ? node.siteName : link.siteName,
         resourceKind: link.resourceKind,
         resolutionStatus: link.resolutionStatus,
         failureCategory: link.failureCategory,
         resolvedAt: link.resolvedAt,
         staleAt: link.staleAt,
-        previewImage: link.previewImage,
+        previewImage:
+          link.previewImage ??
+          (retainOptimisticPreview ? node.previewImage : null),
         favicon: link.favicon,
         video: link.video,
+        ...(retainOptimisticPreview ? { optimisticYouTube } : {}),
       };
     }
 
@@ -213,6 +223,8 @@ function linkSignature(link: CollectionLinkNode) {
       ? [link.favicon.url, link.favicon.width, link.favicon.height]
       : null,
     link.video?.videoId,
+    link.video?.channelName,
+    link.video?.channelUrl,
   ]);
 }
 

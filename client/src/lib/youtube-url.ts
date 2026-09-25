@@ -6,8 +6,8 @@ const YOUTUBE_HOSTS = new Set([
   "music.youtube.com",
 ]);
 
-/** Matches the YouTube video URL shapes accepted by the URL resolver. */
-export function isYouTubeVideoUrl(value: string): boolean {
+/** Extracts the video ID from the YouTube URL shapes accepted by the resolver. */
+export function extractYouTubeVideoId(value: string): string | null {
   try {
     const url = new URL(value);
     const host = url.hostname.toLowerCase();
@@ -26,8 +26,12 @@ export function isYouTubeVideoUrl(value: string): boolean {
       }
     }
 
-    return candidate !== null && VIDEO_ID.test(candidate);
+    return candidate !== null && VIDEO_ID.test(candidate) ? candidate : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function isYouTubeVideoUrl(value: string): boolean {
+  return extractYouTubeVideoId(value) !== null;
 }

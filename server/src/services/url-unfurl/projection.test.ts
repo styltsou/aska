@@ -42,6 +42,26 @@ describe("link projection", () => {
     expect(projected).not.toHaveProperty("providerExtensions");
   });
 
+  it("continues to project both legacy and Data API YouTube resources", () => {
+    expect(
+      projectLinkNode(
+        {
+          ...baseRow,
+          resolverKey: "youtube-data-api",
+          providerExtensions: {
+            youtube: {
+              videoId: "dQw4w9WgXcQ",
+              channelName: "A channel",
+              channelUrl: "https://www.youtube.com/channel/UC123",
+            },
+          },
+        },
+        undefined,
+        null,
+      ).video,
+    ).toMatchObject({ provider: "youtube", channelName: "A channel" });
+  });
+
   it("keeps notes scoped to the saved link asset", () => {
     expect(projectLinkNode(baseRow, undefined, null).note).toBe(
       "Watch with the design team",

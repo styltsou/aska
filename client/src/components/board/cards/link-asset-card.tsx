@@ -38,6 +38,16 @@ export function LinkAssetCard({
   const [loadedPreviewUrl, setLoadedPreviewUrl] = useState<string | null>(null);
   const isYoutube =
     asset.video?.provider === "youtube" || isYouTubeVideoUrl(asset.originalUrl);
+  const optimisticYoutube = asset.optimisticYouTube;
+  const isOptimisticYoutube =
+    Boolean(optimisticYoutube) &&
+    (asset.resolutionStatus === "queued" ||
+      asset.resolutionStatus === "resolving");
+  const isYoutubeMetadataLoading =
+    isOptimisticYoutube && optimisticYoutube?.metadataStatus === "loading";
+  const isYoutubeDescriptionLoading = isOptimisticYoutube && !asset.description;
+  const channelName =
+    asset.video?.channelName ?? optimisticYoutube?.channelName;
 
   const previewLoaded = loadedPreviewUrl === asset.previewImage?.url;
 
@@ -118,15 +128,40 @@ export function LinkAssetCard({
           ) : (
             <Globe2Icon className="size-3.5" />
           )}
-          <span className="truncate">{asset.siteName || asset.hostname}</span>
+          {isYoutubeMetadataLoading ? (
+            <span className="h-3 w-28 animate-pulse rounded bg-sidebar-foreground/10" />
+          ) : (
+            <span className="truncate">
+              {isYoutube
+                ? channelName
+                  ? `YouTube · ${channelName}`
+                  : "YouTube"
+                : asset.siteName || asset.hostname}
+            </span>
+          )}
         </div>
-        <div className="line-clamp-2 text-sm leading-snug font-medium">
-          {asset.title}
-        </div>
+        {isYoutubeMetadataLoading ? (
+          <div className="space-y-1.5 py-0.5">
+            <div className="h-3.5 w-full animate-pulse rounded bg-sidebar-foreground/10" />
+            <div className="h-3.5 w-3/5 animate-pulse rounded bg-sidebar-foreground/10" />
+          </div>
+        ) : (
+          <div className="line-clamp-2 text-sm leading-snug font-medium">
+            {asset.title}
+          </div>
+        )}
         {asset.description ? (
           <p className="line-clamp-2 text-xs leading-relaxed text-sidebar-foreground/60">
             {asset.description}
           </p>
+        ) : isYoutubeDescriptionLoading ? (
+          <div
+            className="space-y-1.5 pt-1"
+            aria-label="Loading video description"
+          >
+            <div className="h-2.5 w-full animate-pulse rounded bg-sidebar-foreground/10" />
+            <div className="h-2.5 w-4/5 animate-pulse rounded bg-sidebar-foreground/10" />
+          </div>
         ) : asset.resolutionStatus === "failed" ? (
           <p className="text-xs text-sidebar-foreground/60">
             Preview unavailable · link still works

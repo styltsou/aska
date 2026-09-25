@@ -290,6 +290,13 @@ export type LinkVideo = {
   channelUrl: string | null;
 };
 
+/** Browser-only state used while a just-pasted YouTube link is unresolved. */
+export type OptimisticYouTubeMetadata = {
+  videoId: string;
+  channelName: string | null;
+  metadataStatus: "loading" | "ready";
+};
+
 export type CollectionLinkNode = {
   id: string;
   type: "link";
@@ -318,6 +325,7 @@ export type CollectionLinkNode = {
     height: number;
   } | null;
   video: LinkVideo | null;
+  optimisticYouTube?: OptimisticYouTubeMetadata;
   createdAt: string;
   clientId?: string;
   position: BoardPosition | null;

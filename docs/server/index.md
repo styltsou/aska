@@ -114,6 +114,11 @@ use `DATABASE_URL`.
 The queue URL variables are optional direct-local fallbacks. Deployed and SST
 Live Lambdas obtain both queues from SST resource links.
 
+The URL-resolution Lambda additionally requires `YOUTUBE_DATA_API_KEY` for
+authoritative YouTube metadata. Set the `YouTubeDataApiKey` SST secret for each
+deployed stage; use the environment variable only when invoking that worker
+directly outside SST.
+
 `CORS_ORIGINS` is also passed to Better Auth as its trusted-origin list. Keep
 `BETTER_AUTH_URL` aligned with the URL where `/api/auth/*` is served.
 

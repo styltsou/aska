@@ -118,13 +118,15 @@ generation path. Broad scheduled refresh is deliberately excluded.
 
 `services/url-resolution/src/types.ts` defines an ordered resolver registry.
 Specialized resolvers are registered before the generic resolver. The current
-YouTube resolver uses the provider's oEmbed endpoint for supported video URLs,
-which avoids fetching large watch-page HTML. A
-resolver can return a partial enrichment and set `continueAfterResolve`; later
-matching resolvers fill missing fields. Exceptions also fall through, allowing
-generic resolution after provider failure, rate limiting, or unsupported
-content. Earlier values and media roles win; generic resolution fills only
-fields and roles the specialized resolver did not provide.
+The YouTube resolver uses the private YouTube Data API key to retrieve the
+video snippet (title, description, channel, and provider thumbnail) without
+fetching a watch page. A recognized YouTube video never falls into generic
+HTML parsing: if the provider response is unavailable, its specialized fallback
+keeps the canonical video identity and derived `hqdefault` thumbnail while
+leaving unavailable text blank. This prevents site-wide YouTube descriptions
+from becoming video-card descriptions. Other specialized resolvers can return
+a partial enrichment and set `continueAfterResolve`; later matching resolvers
+fill missing fields. Earlier values and media roles win.
 
 The generic resolver in `generic-resolver.ts` retrieves only the HTML head,
 bounded to at most 1 MiB, without executing JavaScript. Once a complete closing
