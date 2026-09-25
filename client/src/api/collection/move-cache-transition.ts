@@ -64,6 +64,14 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
     };
   }
 
+  if (node.type === "diagram") {
+    return {
+      assetId: node.id,
+      type: "diagram",
+      title: node.title,
+    };
+  }
+
   return {
     assetId: node.id,
     type: "note",

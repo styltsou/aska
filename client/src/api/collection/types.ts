@@ -1,6 +1,6 @@
 export type FolderChildPreview = {
   assetId: string;
-  type: "image" | "note" | "link" | "color";
+  type: "image" | "note" | "link" | "color" | "diagram";
   url?: string;
   blurDataURL?: string | null;
   snippet?: string;
@@ -102,7 +102,13 @@ export type UpdateCanvasArrowInput = Partial<
   >
 >;
 export type CanvasObjectResponse = { object: CanvasObject };
-export type ContentTypeFilter = "image" | "note" | "link" | "color" | "folder";
+export type ContentTypeFilter =
+  | "image"
+  | "note"
+  | "link"
+  | "color"
+  | "diagram"
+  | "folder";
 
 export type BoardVisibleBounds = {
   left: number;
@@ -276,6 +282,35 @@ export type CollectionNoteNode = {
   frontIndex?: number | null;
 };
 
+export type CollectionDiagramNode = {
+  id: string;
+  type: "diagram";
+  source: string;
+  title: string | null;
+  frameWidth: number;
+  frameHeight: number;
+  isFavorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+  clientId?: string;
+  position: BoardPosition | null;
+  frontIndex?: number | null;
+};
+
+export type CreateDiagramInput = {
+  source: string;
+  title?: string | null;
+  frameWidth?: number;
+  frameHeight?: number;
+  parentFolderPath?: string;
+  position?: BoardPosition;
+};
+export type UpdateDiagramInput = Partial<
+  Pick<CollectionDiagramNode, "source" | "title" | "frameWidth" | "frameHeight">
+>;
+export type CreateDiagramResponse = { diagram: CollectionDiagramNode };
+export type UpdateDiagramResponse = { diagram: CollectionDiagramNode };
+
 export type LinkResolutionStatus =
   | "queued"
   | "resolving"
@@ -349,7 +384,8 @@ export type PeekableAssetResponse = {
     | CollectionImageNode
     | CollectionNoteNode
     | CollectionLinkNode
-    | CollectionColorNode;
+    | CollectionColorNode
+    | CollectionDiagramNode;
   location: AssetLocation;
 };
 
@@ -612,6 +648,7 @@ export type CollectionNode =
   | CollectionFolderNode
   | CollectionImageNode
   | CollectionNoteNode
+  | CollectionDiagramNode
   | CollectionLinkNode
   | CollectionColorNode;
 

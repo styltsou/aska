@@ -131,7 +131,7 @@ function findLocalNudgePosition(
 ): BoardPosition {
   for (let step = 0; step <= LOCAL_NUDGE_LIMIT; step += 1) {
     const position = {
-      x: preferred.x + step * (BOARD_CARD_WIDTH + BOARD_ITEM_GAP),
+      x: preferred.x + step * (getNodeWidth(node) + BOARD_ITEM_GAP),
       y: preferred.y,
     };
     if (isAvailablePosition(node, position, occupied, bounds)) return position;
@@ -150,7 +150,7 @@ function getNodeBounds(
   return {
     left: position.x - inset,
     top: position.y - inset,
-    right: position.x + BOARD_CARD_WIDTH + inset,
+    right: position.x + getNodeWidth(node) + inset,
     bottom: position.y + height + inset,
   };
 }
@@ -163,6 +163,8 @@ function getNodeHeight(node: CanvasLayoutNode): number {
   if (node.type === "image" && node.width > 0 && node.height > 0) {
     return BOARD_CARD_WIDTH * (node.height / node.width);
   }
+
+  if (node.type === "diagram") return node.frameHeight;
 
   if (node.type === "note") return NOTE_CARD_MAX_HEIGHT;
   if (node.type === "color") return COLOR_CARD_HEIGHT;
@@ -225,6 +227,16 @@ function getInsertionGridPositions(
 ): BoardPosition[] {
   if (nodes.length === 0) return [];
   const rowHeights = getRowHeights(nodes, INSERTION_GRID_COLUMNS);
+  const columnWidths = Array.from(
+    { length: INSERTION_GRID_COLUMNS },
+    (_, column) =>
+      Math.max(
+        BOARD_CARD_WIDTH,
+        ...nodes
+          .filter((_, index) => index % INSERTION_GRID_COLUMNS === column)
+          .map(getNodeWidth),
+      ),
+  );
   const positions: BoardPosition[] = [];
   let rowTop = Math.round(anchor.y);
 
@@ -237,7 +249,12 @@ function getInsertionGridPositions(
     }
 
     positions.push({
-      x: Math.round(anchor.x + column * (BOARD_CARD_WIDTH + BOARD_ITEM_GAP)),
+      x: Math.round(
+        anchor.x +
+          columnWidths
+            .slice(0, column)
+            .reduce((sum, width) => sum + width + BOARD_ITEM_GAP, 0),
+      ),
       y: Math.round(rowTop),
     });
   }
@@ -277,7 +294,7 @@ function isWithinBounds(
   return (
     position.x >= bounds.left &&
     position.y >= bounds.top &&
-    position.x + BOARD_CARD_WIDTH <= bounds.right &&
+    position.x + getNodeWidth(node) <= bounds.right &&
     position.y + getNodeHeight(node) <= bounds.bottom
   );
 }
@@ -610,5 +627,7 @@ function getNodeWidth(node: CanvasLayoutNode): number {
     ? node.layoutWidth
     : node.type === "text"
       ? 80
-      : BOARD_CARD_WIDTH;
+      : node.type === "diagram"
+        ? node.frameWidth
+        : BOARD_CARD_WIDTH;
 }

@@ -115,7 +115,9 @@ async function requireStackTarget(
   parentFolderId: number | null,
   itemId: string,
 ): Promise<StackTarget> {
-  const match = /^(folder|image|note|link|color|text)-(\d+)$/.exec(itemId);
+  const match = /^(folder|image|note|link|color|diagram|text)-(\d+)$/.exec(
+    itemId,
+  );
   const entityId = match ? Number(match[2]) : NaN;
   if (!match || !Number.isSafeInteger(entityId)) {
     throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid canvas item id");

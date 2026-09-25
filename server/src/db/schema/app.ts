@@ -23,6 +23,7 @@ export const assetTypeEnum = pgEnum("asset_type", [
   "note",
   "link",
   "color",
+  "diagram",
 ]);
 export const collectionNodeTypeEnum = pgEnum("collection_node_type", [
   "asset",
@@ -640,6 +641,32 @@ export const noteAssets = pgTable("note_assets", {
   markdown: text().notNull(),
   isExpanded: boolean("is_expanded").notNull().default(false),
 });
+
+export const diagramAssets = pgTable(
+  "diagram_assets",
+  {
+    assetId: integer("asset_id")
+      .primaryKey()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    source: text().notNull(),
+    frameWidth: integer("frame_width").notNull().default(480),
+    frameHeight: integer("frame_height").notNull().default(320),
+  },
+  (table) => [
+    check(
+      "diagram_assets_source_length_chk",
+      sql`length(${table.source}) BETWEEN 1 AND 50000`,
+    ),
+    check(
+      "diagram_assets_width_chk",
+      sql`${table.frameWidth} BETWEEN 280 AND 1200`,
+    ),
+    check(
+      "diagram_assets_height_chk",
+      sql`${table.frameHeight} BETWEEN 180 AND 900`,
+    ),
+  ],
+);
 
 export const noteReferences = pgTable(
   "note_references",

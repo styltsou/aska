@@ -1,5 +1,6 @@
 import {
   createInboxNote,
+  createInboxDiagram,
   createInboxColor,
   cropImage,
   deleteAsset,
@@ -8,6 +9,7 @@ import {
   getInboxContents,
   markInboxSeen,
   updateNote,
+  updateDiagram,
   updateColor,
   updateImage,
   updateLink,
@@ -19,9 +21,11 @@ const assetRoutes = factory
   .get("/workspace/:workspaceSlug/inbox", ...getInboxContents)
   .post("/workspace/:workspaceSlug/inbox/seen", ...markInboxSeen)
   .post("/workspace/:workspaceSlug/inbox/notes", ...createInboxNote)
+  .post("/workspace/:workspaceSlug/inbox/diagrams", ...createInboxDiagram)
   .post("/workspace/:workspaceSlug/inbox/colors", ...createInboxColor)
   .get("/workspace/:workspaceSlug/assets/:assetId", ...getPeekableAsset)
   .patch("/workspace/:workspaceSlug/assets/:assetId/note", ...updateNote)
+  .patch("/workspace/:workspaceSlug/assets/:assetId/diagram", ...updateDiagram)
   .patch("/workspace/:workspaceSlug/assets/:assetId/color", ...updateColor)
   .patch("/workspace/:workspaceSlug/assets/:assetId/image", ...updateImage)
   .patch("/workspace/:workspaceSlug/assets/:assetId/link", ...updateLink)

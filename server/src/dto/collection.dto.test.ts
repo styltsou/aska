@@ -6,6 +6,8 @@ import {
   CollectionNodePathParamSchema,
   CreateFolderSchema,
   CreateNoteSchema,
+  CreateDiagramSchema,
+  UpdateDiagramSchema,
   AssetPathParamSchema,
   CollectionAssetNodePathParamSchema,
   CollectionContentsQuerySchema,
@@ -23,6 +25,22 @@ import {
 } from "./collection.dto";
 
 describe("collection board position DTOs", () => {
+  it("bounds Mermaid source and frame dimensions", () => {
+    expect(
+      CreateDiagramSchema.parse({ source: "flowchart LR\nA-->B" }),
+    ).toMatchObject({ frameWidth: 480, frameHeight: 320 });
+    expect(CreateDiagramSchema.safeParse({ source: "  " }).success).toBe(false);
+    expect(
+      CreateDiagramSchema.safeParse({ source: "x".repeat(50_001) }).success,
+    ).toBe(false);
+    expect(UpdateDiagramSchema.safeParse({ frameWidth: 279 }).success).toBe(
+      false,
+    );
+    expect(UpdateDiagramSchema.safeParse({ frameHeight: 901 }).success).toBe(
+      false,
+    );
+    expect(UpdateDiagramSchema.safeParse({}).success).toBe(false);
+  });
   it("accepts signed integer canvas coordinates", () => {
     expect(BoardPositionSchema.parse({ x: -48, y: 96 })).toEqual({
       x: -48,

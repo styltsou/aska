@@ -39,6 +39,18 @@ export interface NoteAsset {
   updatedAt?: string;
 }
 
+export interface DiagramAsset {
+  id: string;
+  type: "diagram";
+  source: string;
+  title: string | null;
+  frameWidth: number;
+  frameHeight: number;
+  isFavorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface LinkAsset {
   id: string;
   type: "link";
@@ -99,7 +111,7 @@ export interface ColorAsset {
 
 export interface FolderAssetPreview {
   assetId: string;
-  type: "image" | "note" | "link" | "color";
+  type: "image" | "note" | "link" | "color" | "diagram";
   url?: string;
   blurDataURL?: string | null;
   snippet?: string;
@@ -124,6 +136,7 @@ export interface FolderAsset {
 export type Asset =
   | ImageAsset
   | NoteAsset
+  | DiagramAsset
   | LinkAsset
   | ColorAsset
   | FolderAsset;

@@ -1,6 +1,6 @@
 const STORAGE_PREFIX = "aska.workspace-recent-assets:";
 const MAX_RECENT_ASSETS = 12;
-const ASSET_ID = /^(?:image|note|link|color)-\d+$/;
+const ASSET_ID = /^(?:image|note|link|color|diagram)-\d+$/;
 
 export function getRecentWorkspaceAssetIds(workspaceSlug: string): string[] {
   try {

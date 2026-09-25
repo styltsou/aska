@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ScanIcon } from "lucide-react";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
+import { DiagramEditorDialog } from "./diagram-editor-dialog";
+import { classifyDiagramPaste } from "@/lib/diagram";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
@@ -58,13 +60,16 @@ export function BoardContextMenu({
         : getBoardViewportCenterPlacement(visibleBounds),
     [position, visibleBounds],
   );
-  const { addClipboardAsset, isPending } = useBoardAssetActions({
-    workspaceSlug,
-    collectionPath,
-    target,
-    placement,
-  });
+  const { addClipboardAsset, createDiagramFromSource, isPending } =
+    useBoardAssetActions({
+      workspaceSlug,
+      collectionPath,
+      target,
+      placement,
+    });
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+  const [diagramDialogOpen, setDiagramDialogOpen] = useState(false);
+  const [diagramInitialSource, setDiagramInitialSource] = useState<string>();
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const hasActiveModalLayer = useActiveModalLayer();
@@ -95,7 +100,17 @@ export function BoardContextMenu({
 
   async function handlePasteAsset() {
     try {
-      await addClipboardAsset(await readClipboardAssetPayload());
+      const payload = await readClipboardAssetPayload();
+      const diagram =
+        payload.kind === "text-note"
+          ? classifyDiagramPaste(payload.content)
+          : undefined;
+      if (diagram?.confidence === "fenced")
+        await createDiagramFromSource(diagram.source);
+      else if (diagram) {
+        setDiagramInitialSource(diagram.source);
+        setDiagramDialogOpen(true);
+      } else await addClipboardAsset(payload);
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Unable to paste from clipboard.",
@@ -144,6 +159,9 @@ export function BoardContextMenu({
                   {formatPlatformShortcut("⇧+N")}
                 </ContextMenuShortcut>
               </ContextMenuItem>
+              <ContextMenuItem onClick={() => setDiagramDialogOpen(true)}>
+                New diagram
+              </ContextMenuItem>
               <ContextMenuItem onClick={() => setColorDialogOpen(true)}>
                 New color
               </ContextMenuItem>
@@ -186,6 +204,9 @@ export function BoardContextMenu({
                 Alignment guides
               </ContextMenuCheckboxItem>
               <ContextMenuSeparator />
+              <ContextMenuItem onClick={() => setDiagramDialogOpen(true)}>
+                New diagram
+              </ContextMenuItem>
               {pasteItem}
             </>
           )}
@@ -218,6 +239,18 @@ export function BoardContextMenu({
           />
         </>
       ) : null}
+      <DiagramEditorDialog
+        workspaceSlug={workspaceSlug}
+        collectionPath={collectionPath}
+        target={target}
+        placement={placement}
+        initialSource={diagramInitialSource}
+        open={diagramDialogOpen}
+        onOpenChange={(open) => {
+          setDiagramDialogOpen(open);
+          if (!open) setDiagramInitialSource(undefined);
+        }}
+      />
     </>
   );
 }

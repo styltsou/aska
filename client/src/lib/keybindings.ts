@@ -1,6 +1,7 @@
 export type GlobalShortcut =
   | "toggle-command-palette"
   | "new-note"
+  | "new-diagram"
   | "new-color"
   | "canvas-text-tool"
   | "canvas-arrow-tool"
@@ -26,6 +27,7 @@ export interface Keybinding {
 export const KEYBINDINGS: Keybinding[] = [
   { command: "toggle-command-palette", key: "k", metaOrCtrl: true },
   { command: "new-note", code: "KeyN", shiftKey: true },
+  { command: "new-diagram", code: "KeyM", shiftKey: true },
   { command: "new-color", code: "KeyC", shiftKey: true },
   { command: "canvas-text-tool", code: "KeyT", shiftKey: true },
   { command: "new-folder", code: "KeyD", shiftKey: true },

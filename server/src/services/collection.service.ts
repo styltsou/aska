@@ -3,12 +3,14 @@ import type {
   CanvasArrowObject,
   CanvasTextObject,
   CollectionColorNode,
+  CollectionDiagramNode,
   ContentTypeFilter,
   CollectionNoteNode,
   CreateCollectionInput,
   CreateCanvasArrowInput,
   CreateCanvasTextInput,
   CreateColorInput,
+  CreateDiagramInput,
   CreateFolderInput,
   CreateNoteInput,
   CreatedFolder,
@@ -77,6 +79,12 @@ export interface ICollectionService {
     collectionSlug: string,
     data: CreateColorInput,
   ): Promise<CollectionColorNode>;
+  createDiagram(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: CreateDiagramInput,
+  ): Promise<CollectionDiagramNode>;
   createCanvasText(
     orgId: string,
     userId: string,
@@ -252,6 +260,15 @@ export class CollectionService implements ICollectionService {
     data: CreateColorInput,
   ): Promise<CollectionColorNode> {
     return this.mutations.createColor(orgId, userId, collectionSlug, data);
+  }
+
+  createDiagram(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: CreateDiagramInput,
+  ): Promise<CollectionDiagramNode> {
+    return this.mutations.createDiagram(orgId, userId, collectionSlug, data);
   }
 
   createCanvasText(

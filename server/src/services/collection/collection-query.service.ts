@@ -15,6 +15,7 @@ import {
   collectionNodes,
   collectionsTable,
   colorAssets,
+  diagramAssets,
   externalResources,
   folders,
   imageAssets,
@@ -220,6 +221,12 @@ export class CollectionQueryService {
           title: row.assetTitle,
           snippet,
         };
+      } else if (row.assetType === "diagram") {
+        preview = {
+          assetId: `diagram-${row.assetId}`,
+          type: "diagram",
+          title: row.assetTitle,
+        };
       } else if (row.assetType === "link" && row.linkHostname) {
         const media = row.linkResourceId
           ? resourceMedia.get(row.linkResourceId)
@@ -280,7 +287,8 @@ export class CollectionQueryService {
       target.parentFolderId,
     );
     const assetTypes = types?.filter(
-      (type): type is "image" | "note" | "link" | "color" => type !== "folder",
+      (type): type is "image" | "note" | "link" | "color" | "diagram" =>
+        type !== "folder",
     );
     const typeCondition =
       types === undefined
@@ -319,6 +327,9 @@ export class CollectionQueryService {
         createdAt: collectionNodes.createdAt,
         noteContent: noteAssets.markdown,
         noteIsExpanded: noteAssets.isExpanded,
+        diagramSource: diagramAssets.source,
+        diagramFrameWidth: diagramAssets.frameWidth,
+        diagramFrameHeight: diagramAssets.frameHeight,
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
         colorNote: colorAssets.note,
@@ -345,6 +356,7 @@ export class CollectionQueryService {
       .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
+      .leftJoin(diagramAssets, eq(diagramAssets.assetId, assets.id))
       .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
       .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
       .leftJoin(
@@ -556,6 +568,28 @@ export class CollectionQueryService {
           isFavorite: child.isFavorite ?? false,
           createdAt: child.createdAt.toISOString(),
           updatedAt: child.assetUpdatedAt?.toISOString(),
+          position,
+          frontIndex: child.frontIndex,
+        };
+      }
+
+      if (
+        child.assetType === "diagram" &&
+        child.assetId &&
+        child.diagramSource !== null
+      ) {
+        return {
+          id: `diagram-${child.assetId}`,
+          type: "diagram" as const,
+          source: child.diagramSource,
+          title: child.title,
+          frameWidth: child.diagramFrameWidth ?? 480,
+          frameHeight: child.diagramFrameHeight ?? 320,
+          isFavorite: child.isFavorite ?? false,
+          createdAt: child.createdAt.toISOString(),
+          updatedAt:
+            child.assetUpdatedAt?.toISOString() ??
+            child.createdAt.toISOString(),
           position,
           frontIndex: child.frontIndex,
         };

@@ -445,7 +445,16 @@ export function AssetContextMenu({
       >
         <ContextMenuTrigger
           render={(triggerProps, state) => (
-            <div {...triggerProps}>{children(state.open, displayAsset)}</div>
+            <div
+              {...triggerProps}
+              className={
+                asset.type === "diagram"
+                  ? `${triggerProps.className ?? ""} h-full`
+                  : triggerProps.className
+              }
+            >
+              {children(state.open, displayAsset)}
+            </div>
           )}
         />
         <ContextMenuContent data-canvas-menu={canvasBoardKey}>
@@ -508,6 +517,19 @@ export function AssetContextMenu({
                     peekNote(asset, peekLocation);
                   })}
                 </>
+              ) : asset.type === "diagram" ? (
+                <ContextMenuItem
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(asset.source)
+                      .then(() => toast.success("Copied Mermaid source."))
+                      .catch(() =>
+                        toast.error("Unable to copy Mermaid source."),
+                      )
+                  }
+                >
+                  Copy Mermaid source
+                </ContextMenuItem>
               ) : (
                 linkActions(
                   asset,

@@ -102,6 +102,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.assets.id,
       to: r.noteAssets.assetId,
     }),
+    diagram: r.one.diagramAssets({
+      from: r.assets.id,
+      to: r.diagramAssets.assetId,
+    }),
     link: r.one.linkAssets({
       from: r.assets.id,
       to: r.linkAssets.assetId,
@@ -151,6 +155,13 @@ export const relations = defineRelations(schema, (r) => ({
   noteAssets: {
     asset: r.one.assets({
       from: r.noteAssets.assetId,
+      to: r.assets.id,
+    }),
+  },
+
+  diagramAssets: {
+    asset: r.one.assets({
+      from: r.diagramAssets.assetId,
       to: r.assets.id,
     }),
   },

@@ -87,6 +87,20 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
     };
   }
 
+  if (node.type === "diagram") {
+    return {
+      id: node.id,
+      type: "diagram",
+      source: node.source,
+      title: node.title,
+      frameWidth: node.frameWidth,
+      frameHeight: node.frameHeight,
+      isFavorite: node.isFavorite,
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
+    };
+  }
+
   return {
     id: node.id,
     type: "note",

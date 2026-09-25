@@ -14,6 +14,7 @@ import {
   PaletteIcon,
   TagIcon,
   XIcon,
+  WorkflowIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -431,6 +432,7 @@ const ASSET_TYPE_OPTIONS: Array<{
 }> = [
   { type: "image", label: "Images", icon: ImageIcon },
   { type: "note", label: "Notes", icon: FileTextIcon },
+  { type: "diagram", label: "Diagrams", icon: WorkflowIcon },
   { type: "link", label: "Links", icon: Link2Icon },
   { type: "color", label: "Colors", icon: PaletteIcon },
   { type: "folder", label: "Folders", icon: FolderIcon },

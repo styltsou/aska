@@ -33,7 +33,7 @@ export const CanvasArrowRoutingSchema = z.enum(["straight", "smooth"]);
 
 const CanvasBindableIdSchema = z
   .string()
-  .regex(/^(folder|image|note|link|color|text|arrow)-\d+$/);
+  .regex(/^(folder|image|note|link|color|diagram|text|arrow)-\d+$/);
 
 export const CanvasArrowEndpointSchema = z.object({
   position: BoardPositionSchema,
@@ -160,7 +160,7 @@ export type LightCollection = z.infer<typeof LightCollectionSchema>;
 
 export const FolderChildPreviewSchema = z.object({
   assetId: z.string(),
-  type: z.enum(["image", "note", "link", "color"]),
+  type: z.enum(["image", "note", "link", "color", "diagram"]),
   url: z.string().optional(),
   blurDataURL: z.string().nullable().optional(),
   hex: z.string().optional(),
@@ -218,6 +218,33 @@ export const CreateNoteSchema = z
   );
 
 export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
+
+const DiagramFrameWidthSchema = z.number().int().min(280).max(1200);
+const DiagramFrameHeightSchema = z.number().int().min(180).max(900);
+const DiagramSourceSchema = z
+  .string()
+  .max(50_000)
+  .refine((value) => value.trim().length > 0, "Diagram source is required");
+
+export const CreateDiagramSchema = z.object({
+  source: DiagramSourceSchema,
+  title: z.string().max(255).nullable().optional(),
+  frameWidth: DiagramFrameWidthSchema.default(480),
+  frameHeight: DiagramFrameHeightSchema.default(320),
+  parentFolderPath: z.string().optional(),
+  position: BoardPositionSchema.optional(),
+});
+export type CreateDiagramInput = z.infer<typeof CreateDiagramSchema>;
+
+export const UpdateDiagramSchema = z
+  .object({
+    source: DiagramSourceSchema.optional(),
+    title: z.string().max(255).nullable().optional(),
+    frameWidth: DiagramFrameWidthSchema.optional(),
+    frameHeight: DiagramFrameHeightSchema.optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, "No changes supplied");
+export type UpdateDiagramInput = z.infer<typeof UpdateDiagramSchema>;
 
 const HexColorSchema = z
   .string()
@@ -397,6 +424,21 @@ export const CollectionNoteNodeSchema = z.object({
   frontIndex: z.number().int().min(0).max(100_000).nullable(),
 });
 
+export const CollectionDiagramNodeSchema = z.object({
+  id: z.string().regex(/^diagram-\d+$/),
+  type: z.literal("diagram"),
+  source: z.string(),
+  title: z.string().nullable(),
+  frameWidth: DiagramFrameWidthSchema,
+  frameHeight: DiagramFrameHeightSchema,
+  isFavorite: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  position: BoardPositionSchema.nullable(),
+  frontIndex: z.number().int().min(0).max(100_000).nullable(),
+});
+export type CollectionDiagramNode = z.infer<typeof CollectionDiagramNodeSchema>;
+
 export const LinkResolutionStatusSchema = z.enum([
   "queued",
   "resolving",
@@ -490,6 +532,7 @@ export const CollectionNodeSchema = z.discriminatedUnion("type", [
   CollectionFolderNodeSchema,
   CollectionImageNodeSchema,
   CollectionNoteNodeSchema,
+  CollectionDiagramNodeSchema,
   CollectionLinkNodeSchema,
   CollectionColorNodeSchema,
 ]);
@@ -539,17 +582,19 @@ export const InboxContentsResponseSchema =
 
 export type InboxContentsResponse = z.infer<typeof InboxContentsResponseSchema>;
 
-const AssetNodeIdSchema = z.string().regex(/^(image|note|link|color)-\d+$/);
+const AssetNodeIdSchema = z
+  .string()
+  .regex(/^(image|note|link|color|diagram)-\d+$/);
 const CollectionNodeIdSchema = z
   .string()
-  .regex(/^(folder|image|note|link|color)-\d+$/);
+  .regex(/^(folder|image|note|link|color|diagram)-\d+$/);
 const CanvasObjectIdSchema = z.string().regex(/^(text|arrow)-\d+$/);
 const CanvasItemIdSchema = z
   .string()
-  .regex(/^(folder|image|note|link|color|text|arrow)-\d+$/);
+  .regex(/^(folder|image|note|link|color|diagram|text|arrow)-\d+$/);
 const StackableCanvasItemIdSchema = z
   .string()
-  .regex(/^(folder|image|note|link|color|text)-\d+$/);
+  .regex(/^(folder|image|note|link|color|diagram|text)-\d+$/);
 const FolderNodeIdSchema = z.string().regex(/^folder-\d+$/);
 
 export const AssetPathParamSchema = z.object({
@@ -733,6 +778,7 @@ export const ContentTypeFilterSchema = z.enum([
   "note",
   "link",
   "color",
+  "diagram",
   "folder",
 ]);
 export type ContentTypeFilter = z.infer<typeof ContentTypeFilterSchema>;
@@ -742,7 +788,7 @@ const ContentTypesQuerySchema = z.preprocess(
     typeof value === "string" && value.length > 0
       ? value.split(",")
       : undefined,
-  z.array(ContentTypeFilterSchema).min(1).max(5).optional(),
+  z.array(ContentTypeFilterSchema).min(1).max(6).optional(),
 );
 
 export const ContentTypeQuerySchema = z.object({

@@ -106,6 +106,29 @@ describe("folder move placement", () => {
       ),
     ).toEqual({ x: 312, y: 172 });
   });
+
+  it("uses a diagram's saved frame when placing it", () => {
+    expect(
+      getFolderMovePosition([], {
+        ...movedNote,
+        assetType: "diagram",
+        diagramWidth: 640,
+        diagramHeight: 400,
+      }),
+    ).toEqual({ x: 48, y: 48 });
+    expect(
+      getFlattenGroupAnchor([
+        {
+          ...movedNote,
+          assetType: "diagram",
+          diagramWidth: 640,
+          diagramHeight: 400,
+          positionX: 100,
+          positionY: 100,
+        },
+      ]),
+    ).toEqual({ x: 772, y: 100 });
+  });
 });
 
 describe("folder flatten placement", () => {

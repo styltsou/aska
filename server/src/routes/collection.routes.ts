@@ -6,6 +6,7 @@ import {
   createColor,
   createFolder,
   createNote,
+  createDiagram,
   deleteCollection,
   deleteCollectionNode,
   deleteCanvasObject,
@@ -35,6 +36,10 @@ const collectionRoutes = factory
   .post(
     "/workspace/:workspaceSlug/collections/:collectionSlug/notes",
     ...createNote,
+  )
+  .post(
+    "/workspace/:workspaceSlug/collections/:collectionSlug/diagrams",
+    ...createDiagram,
   )
   .post(
     "/workspace/:workspaceSlug/collections/:collectionSlug/colors",

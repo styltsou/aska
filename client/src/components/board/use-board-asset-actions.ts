@@ -1,5 +1,14 @@
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { createDiagram, createInboxDiagram } from "@/api/collection/fetchers";
+import type {
+  CollectionContentsResponse,
+  CollectionNode,
+} from "@/api/collection";
+import { collectionQueryKeys } from "@/api/collection/query-keys";
+import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
+import { renderDiagram } from "@/lib/diagram";
 
 import {
   useCreateInboxNote,
@@ -40,6 +49,7 @@ export function useBoardAssetActions({
   placement?: BoardInsertionPlacement;
   getPlacement?: () => BoardInsertionPlacement | undefined;
 }) {
+  const queryClient = useQueryClient();
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
     .filter(Boolean);
@@ -262,6 +272,69 @@ export function useBoardAssetActions({
     ],
   );
 
+  const createDiagramFromSource = useCallback(
+    async (source: string, actionPlacement?: BoardInsertionPlacement) => {
+      try {
+        await renderDiagram(
+          source,
+          document.documentElement.classList.contains("dark"),
+        );
+        if (target === "inbox") {
+          await createInboxDiagram(workspaceSlug, { source });
+        } else {
+          const current = queryClient.getQueryData<CollectionContentsResponse>(
+            collectionQueryKeys.contents(
+              workspaceSlug,
+              collectionSlug,
+              parentFolderPath,
+            ),
+          );
+          const placeholder: CollectionNode = {
+            id: "diagram-pending",
+            type: "diagram",
+            source,
+            title: null,
+            frameWidth: 480,
+            frameHeight: 320,
+            isFavorite: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            position: null,
+          };
+          const insertionPlacement =
+            actionPlacement ?? getPlacement?.() ?? placement;
+          const position = reserveNodePositions(
+            current?.nodes ?? [],
+            [placeholder],
+            insertionPlacement,
+          )[0];
+          await createDiagram(workspaceSlug, collectionSlug, {
+            source,
+            parentFolderPath,
+            position,
+          });
+        }
+        await queryClient.invalidateQueries({
+          predicate: ({ queryKey }) => queryKey[1] === workspaceSlug,
+        });
+        toast.success("Diagram created");
+      } catch (err) {
+        toast.error(
+          getUserFacingApiErrorMessage(err, "Unable to create diagram."),
+        );
+      }
+    },
+    [
+      collectionSlug,
+      getPlacement,
+      parentFolderPath,
+      placement,
+      queryClient,
+      target,
+      workspaceSlug,
+    ],
+  );
+
   const createColorFromHex = useCallback(
     async (hex: string, actionPlacement?: BoardInsertionPlacement) => {
       try {
@@ -323,6 +396,7 @@ export function useBoardAssetActions({
   return {
     addClipboardAsset,
     createTextNote,
+    createDiagramFromSource,
     createColorFromHex,
     importPexelsPhotos,
     createLinkFromUrl,

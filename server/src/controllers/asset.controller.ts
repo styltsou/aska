@@ -3,11 +3,13 @@ import {
   CropInputSchema,
   ContentTypeQuerySchema,
   CreateNoteSchema,
+  CreateDiagramSchema,
   CreateColorSchema,
   ImageCropPathParamSchema,
   UpdateImageSchema,
   UpdateLinkSchema,
   UpdateNoteSchema,
+  UpdateDiagramSchema,
   UpdateColorSchema,
   WorkspaceParamSchema,
 } from "@/dto/collection.dto";
@@ -82,6 +84,49 @@ export const createInboxNote = factory.createHandlers(
     const note = await assetService.createInboxNote(workspace.id, userId, data);
 
     return c.json(success({ note }), 201);
+  },
+);
+
+export const createInboxDiagram = factory.createHandlers(
+  authMiddleware,
+  validate.param(WorkspaceParamSchema),
+  validate.body(CreateDiagramSchema),
+  async (c) => {
+    const { workspaceSlug } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const diagram = await assetService.createInboxDiagram(
+      workspace.id,
+      userId,
+      data,
+    );
+    return c.json(success({ diagram }), 201);
+  },
+);
+
+export const updateDiagram = factory.createHandlers(
+  authMiddleware,
+  validate.param(AssetPathParamSchema),
+  validate.body(UpdateDiagramSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const data = c.req.valid("json");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const diagram = await assetService.updateDiagram(
+      workspace.id,
+      userId,
+      assetId,
+      data,
+    );
+    return c.json(success({ diagram }));
   },
 );
 

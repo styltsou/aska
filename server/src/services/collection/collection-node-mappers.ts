@@ -77,6 +77,14 @@ export function toFolderPreview(
     };
   }
 
+  if (row.assetType === "diagram") {
+    return {
+      assetId: `diagram-${row.assetId}`,
+      type: "diagram",
+      title: row.assetTitle ?? row.title ?? null,
+    };
+  }
+
   return {
     assetId: `note-${row.assetId}`,
     type: "note",

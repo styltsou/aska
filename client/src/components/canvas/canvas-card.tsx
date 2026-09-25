@@ -3,7 +3,7 @@ import "./canvas-card.css";
 import { LoaderCircleIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { memo, useMemo } from "react";
-import type { Node, NodeProps } from "@xyflow/react";
+import { NodeResizer, type Node, type NodeProps } from "@xyflow/react";
 
 import type { CollectionNode } from "@/api/collection";
 import { AssetContextMenu } from "@/components/board/asset-context-menu";
@@ -12,9 +12,13 @@ import { ImageAssetCard } from "@/components/board/cards/image-asset-card";
 import { NoteAssetCard } from "@/components/board/cards/note-asset-card";
 import { LinkAssetCard } from "@/components/board/cards/link-asset-card";
 import { ColorAssetCard } from "@/components/board/cards/color-asset-card";
+import { DiagramAssetCard } from "@/components/board/cards/diagram-asset-card";
+import { updateDiagram } from "@/api/collection/fetchers";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { cn } from "@/lib/utils";
-import { useTransientStore } from "@/store";
+import { usePersistedStore, useTransientStore } from "@/store";
 import type { LinkAsset } from "@/types/asset";
 
 import type { CanvasDropStackStyle } from "./canvas-drop-stack";
@@ -69,6 +73,16 @@ export const CanvasCard = memo(function CanvasCard({
     (state) => state.canvasViewportActivity[data.boardKey] ?? 0,
   );
   const node = data.collectionNode;
+  const queryClient = useQueryClient();
+  const locked = usePersistedStore(
+    (state) => state.boardLocks[data.boardKey] ?? false,
+  );
+  const isSoleSelection = useTransientStore(
+    (state) =>
+      state.selection.scopeKey === data.boardKey &&
+      state.selection.nodeIds.length === 1 &&
+      state.selection.nodeIds[0] === node.id,
+  );
   const asset = collectionNodeToAsset(node);
   const isPending = isPendingCollectionNode(node);
   const dropStackStyle = data.dropStackStyle;
@@ -86,7 +100,7 @@ export const CanvasCard = memo(function CanvasCard({
   );
 
   const card = (isContextMenuOpen = false, displayAsset = asset) => (
-    <div className="min-w-0">
+    <div className="h-full min-w-0">
       {node.type === "image" && asset.type === "image" ? (
         <ImageAssetCard
           asset={asset}
@@ -102,6 +116,14 @@ export const CanvasCard = memo(function CanvasCard({
           onOpen={isPending ? undefined : () => data.onOpenNote(node)}
           isContextMenuOpen={isContextMenuOpen}
           selected={selected}
+        />
+      ) : null}
+      {node.type === "diagram" && asset.type === "diagram" ? (
+        <DiagramAssetCard
+          asset={asset}
+          isContextMenuOpen={isContextMenuOpen}
+          selected={selected}
+          canvas
         />
       ) : null}
       {node.type === "link" && asset.type === "link" ? (
@@ -138,6 +160,7 @@ export const CanvasCard = memo(function CanvasCard({
     <motion.div
       className={cn(
         "relative w-full rounded-lg transition-[filter,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+        node.type === "diagram" && "h-full",
         dragging && "drop-shadow-xl",
         data.isColorDimmed && "pointer-events-none opacity-30 saturate-50",
         data.isColorFocused && "outline-2 outline-primary outline-offset-2",
@@ -198,6 +221,30 @@ export const CanvasCard = memo(function CanvasCard({
           {card}
         </AssetContextMenu>
       )}
+      {node.type === "diagram" && !locked && selected && isSoleSelection ? (
+        <NodeResizer
+          isVisible
+          minWidth={280}
+          minHeight={180}
+          maxWidth={1200}
+          maxHeight={900}
+          handleClassName="!size-2.5 !rounded-sm !border-2 !border-background !bg-primary"
+          lineClassName="!border-primary"
+          onResizeEnd={(_event, dimensions) => {
+            void updateDiagram(data.deleteContext.workspaceSlug, node.id, {
+              frameWidth: Math.round(dimensions.width),
+              frameHeight: Math.round(dimensions.height),
+            })
+              .then(() =>
+                queryClient.invalidateQueries({
+                  predicate: ({ queryKey }) =>
+                    queryKey[1] === data.deleteContext.workspaceSlug,
+                }),
+              )
+              .catch(() => toast.error("Unable to resize diagram."));
+          }}
+        />
+      ) : null}
       {node.type === "note" && isPending ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5">
           <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
