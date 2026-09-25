@@ -75,6 +75,12 @@ import {
 } from "./board-pointer-position";
 import { getCanvasViewShortcutAction } from "./canvas-view-actions";
 import { getCanvasWheelZoomViewport } from "./canvas-wheel-zoom";
+import {
+  BOARD_VIEWPORT_INSET,
+  CANVAS_FIT_VIEW_PADDING,
+  CANVAS_MAX_ZOOM,
+  CANVAS_MIN_ZOOM,
+} from "./canvas-viewport";
 import { activeCanvasObjectFocus } from "./canvas-object-focus";
 import { useCanvasActions } from "./canvas-actions-context";
 import {
@@ -134,11 +140,7 @@ import {
 } from "./canvas-object-inspector";
 
 const DEFAULT_VIEWPORT = { x: 40, y: 40, zoom: 1.1 };
-const BOARD_VIEWPORT_INSET = 24;
-const FIT_VIEW_MAX_ZOOM = 1.1;
 const VIEWPORT_ANIMATION_DURATION = 150;
-const CANVAS_MIN_ZOOM = 0.15;
-const CANVAS_MAX_ZOOM = 2;
 const PERSISTED_CANVAS_ITEM_ID =
   /^(folder|image|note|link|color|text|arrow)-\d+$/;
 type CanvasFlowNode = CanvasNode | CanvasTextFlowNode;
@@ -886,8 +888,8 @@ function CanvasSurface({
   const fitCanvasView = useCallback(() => {
     startViewportInteraction();
     void fitView({
-      padding: 0.18,
-      maxZoom: FIT_VIEW_MAX_ZOOM,
+      padding: CANVAS_FIT_VIEW_PADDING,
+      maxZoom: CANVAS_MAX_ZOOM,
       duration: VIEWPORT_ANIMATION_DURATION,
     });
   }, [fitView, startViewportInteraction]);
@@ -2228,8 +2230,8 @@ function CanvasSurface({
         nodeTypes={nodeTypes}
         onNodesChange={handleNodesChange}
         defaultViewport={storedViewport ?? DEFAULT_VIEWPORT}
-        minZoom={0.15}
-        maxZoom={2}
+        minZoom={CANVAS_MIN_ZOOM}
+        maxZoom={CANVAS_MAX_ZOOM}
         colorMode={theme}
         deleteKeyCode={null}
         nodesConnectable={false}

@@ -131,9 +131,9 @@ The canvas fills the rounded AppShell content surface and follows the shell's
 outer right and bottom insets; it is not placed inside an additional board
 panel. It uses XYFlow's built-in viewport, background, controls, auto-pan,
 touch gestures, visible-element rendering, and `Panel` placement. The visible
-zoom control uses the existing shadcn button and tooltip primitives and caps
-Fit view at overview scale with composition padding. It does not show a
-minimap. The same control includes a
+zoom control uses the existing shadcn button and tooltip primitives. Fit view
+centers measured node bounds with a fixed 24-pixel edge inset and may zoom up to
+the canvas maximum. It does not show a minimap. The same control includes a
 session-local canvas lock that disables node dragging while keeping navigation
 and creation actions available.
 
