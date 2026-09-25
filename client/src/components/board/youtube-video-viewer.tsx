@@ -528,11 +528,10 @@ export function YouTubeVideoContent({
             alt=""
             aria-hidden="true"
             className={cn(
-              "absolute inset-0 size-full object-cover transition-opacity duration-300 motion-reduce:transition-none",
-              playerLoaded ? "opacity-0" : "opacity-90",
+              "absolute inset-0 size-full scale-105 object-cover blur-md transition-[filter,opacity] duration-300 motion-reduce:transition-none",
+              playerLoaded ? "opacity-0" : "opacity-100",
             )}
           />
-          <div className="absolute inset-0 bg-black/25" aria-hidden="true" />
         </>
       ) : null}
 
