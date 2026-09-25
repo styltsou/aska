@@ -1,8 +1,7 @@
 import "./link-asset-card.css";
 
 import { ExternalLinkIcon, Globe2Icon, PlayIcon } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { useState, type MouseEvent } from "react";
+import type { MouseEvent } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { hasSelectionModifier } from "@/lib/selection";
@@ -10,6 +9,9 @@ import { isYouTubeVideoUrl } from "@/lib/youtube-url";
 import { cn } from "@/lib/utils";
 import type { FolderAssetPreview } from "@/types/asset";
 import type { LinkAsset } from "@/types/asset";
+
+const YOUTUBE_THUMBNAIL_URL = (videoId: string) =>
+  `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 
 export function handleLinkCardNavigationClick(
   event: Pick<
@@ -35,10 +37,18 @@ export function LinkAssetCard({
   isContextMenuOpen?: boolean;
   selected?: boolean;
 }) {
-  const [loadedPreviewUrl, setLoadedPreviewUrl] = useState<string | null>(null);
   const isYoutube =
     asset.video?.provider === "youtube" || isYouTubeVideoUrl(asset.originalUrl);
   const optimisticYoutube = asset.optimisticYouTube;
+  const youtubeVideoId = asset.video?.videoId ?? optimisticYoutube?.videoId;
+  const directYoutubeThumbnail = youtubeVideoId
+    ? YOUTUBE_THUMBNAIL_URL(youtubeVideoId)
+    : undefined;
+  const previewUrl = asset.previewImage?.url ?? directYoutubeThumbnail;
+  const previewFallback =
+    directYoutubeThumbnail && previewUrl !== directYoutubeThumbnail
+      ? directYoutubeThumbnail
+      : undefined;
   const isOptimisticYoutube =
     Boolean(optimisticYoutube) &&
     (asset.resolutionStatus === "queued" ||
@@ -48,8 +58,6 @@ export function LinkAssetCard({
   const isYoutubeDescriptionLoading = isOptimisticYoutube && !asset.description;
   const channelName =
     asset.video?.channelName ?? optimisticYoutube?.channelName;
-
-  const previewLoaded = loadedPreviewUrl === asset.previewImage?.url;
 
   const className = cn(
     "group relative block w-full overflow-hidden rounded-lg border bg-sidebar text-left text-sidebar-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
@@ -61,34 +69,27 @@ export function LinkAssetCard({
     <>
       <div className="min-h-0 p-3">
         <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-muted/40">
-          {asset.previewImage ? (
+          {previewUrl ? (
             <ProgressiveImage
-              src={asset.previewImage.url}
-              blurDataURL={asset.previewImage.blurDataURL}
-              alt={asset.previewImage.alt ?? ""}
+              src={previewUrl}
+              fallbackSrc={previewFallback}
+              blurDataURL={asset.previewImage?.blurDataURL}
+              alt={asset.previewImage?.alt ?? ""}
               className={cn(
-                "size-full object-cover",
+                "absolute inset-0 size-full object-cover",
                 !isYoutube &&
                   "!transition-all duration-150 ease-out group-hover:scale-[1.05] motion-reduce:transition-none",
               )}
-              onLoad={() =>
-                setLoadedPreviewUrl(asset.previewImage?.url ?? null)
-              }
             />
           ) : null}
-          <AnimatePresence initial={false}>
-            {(!asset.previewImage || !previewLoaded) && (
-              <motion.div
-                key="link-preview-placeholder"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-                data-slot="optimistic-link-preview"
-                className="pointer-events-none absolute inset-0 z-10 animate-[link-preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
-              />
-            )}
-          </AnimatePresence>
+          {!previewUrl &&
+          (asset.resolutionStatus === "queued" ||
+            asset.resolutionStatus === "resolving") ? (
+            <div
+              data-slot="optimistic-link-preview"
+              className="pointer-events-none absolute inset-0 z-10 animate-[link-preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
+            />
+          ) : null}
           {onOpen ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <span className="flex size-11 items-center justify-center rounded-full border border-border/70 bg-popover/85 text-popover-foreground shadow-lg ring-1 ring-border/30 backdrop-blur-sm transition-[background-color,transform] duration-150 group-hover:scale-105 group-hover:bg-popover motion-reduce:transition-none">
@@ -151,7 +152,7 @@ export function LinkAssetCard({
           </div>
         )}
         {asset.description ? (
-          <p className="line-clamp-2 text-xs leading-relaxed text-sidebar-foreground/60">
+          <p className="line-clamp-2 text-xs leading-relaxed whitespace-pre-line text-sidebar-foreground/60">
             {asset.description}
           </p>
         ) : isYoutubeDescriptionLoading ? (
@@ -222,9 +223,6 @@ type LinkCardPreviewData = Pick<
 > &
   Partial<Pick<FolderAssetPreview, "assetId" | "type">>;
 
-const YOUTUBE_THUMBNAIL_URL = (videoId: string) =>
-  `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-
 /** Full-size card content, sized to fill its container and clipped by it. */
 export function LinkCardPreview({
   preview,
@@ -285,7 +283,7 @@ export function LinkCardPreview({
           {displayTitle}
         </div>
         {preview.description?.trim() ? (
-          <div className="line-clamp-3 text-xs leading-snug text-muted-foreground">
+          <div className="line-clamp-3 text-xs leading-snug whitespace-pre-line text-muted-foreground">
             {preview.description.trim()}
           </div>
         ) : null}

@@ -149,7 +149,10 @@ export function ProgressiveImage({
           src={fallbackSrc}
           alt=""
           aria-hidden="true"
-          className={cn(className, "pointer-events-none transition-opacity")}
+          className={cn(
+            className,
+            "pointer-events-none transition-opacity duration-150 ease-out motion-reduce:transition-none",
+          )}
           style={{ ...style, opacity: showFallback ? 1 : 0 }}
         />
       ) : null}
@@ -158,7 +161,10 @@ export function ProgressiveImage({
           src={previousDecodedSrc}
           alt=""
           aria-hidden="true"
-          className={cn(className, "pointer-events-none transition-opacity")}
+          className={cn(
+            className,
+            "pointer-events-none transition-opacity duration-150 ease-out motion-reduce:transition-none",
+          )}
           style={{ ...style, opacity: 1 }}
         />
       ) : null}
@@ -166,7 +172,10 @@ export function ProgressiveImage({
         {...props}
         src={src}
         alt={alt}
-        className={cn(className, "transition-opacity")}
+        className={cn(
+          className,
+          "transition-opacity duration-150 ease-out motion-reduce:transition-none",
+        )}
         style={{
           ...style,
           opacity:
