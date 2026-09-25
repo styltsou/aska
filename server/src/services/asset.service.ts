@@ -583,14 +583,12 @@ export class AssetService implements IAssetService {
           ErrorCode.INTERNAL_ERROR,
           "Failed to create diagram",
         );
-      await tx
-        .insert(diagramAssets)
-        .values({
-          assetId: created.id,
-          source: data.source,
-          frameWidth: data.frameWidth,
-          frameHeight: data.frameHeight,
-        });
+      await tx.insert(diagramAssets).values({
+        assetId: created.id,
+        source: data.source,
+        frameWidth: data.frameWidth,
+        frameHeight: data.frameHeight,
+      });
       return created;
     });
     return {
