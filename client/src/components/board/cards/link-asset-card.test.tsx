@@ -153,20 +153,60 @@ describe("LinkAssetCard", () => {
 
     expect(html).toContain("aspect-video w-full");
     expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
-    expect(html).toContain(
-      "animate-[link-preview-shimmer_1.6s_linear_infinite]",
-    );
+    expect(html).not.toContain('data-slot="optimistic-link-preview"');
     expect(html).toContain('aria-label="Loading video description"');
     expect(html).not.toContain("group-hover:scale-[1.05]");
   });
 
-  it("offers preview refresh only after an unfurl failure", () => {
-    expect(shouldShowLinkPreviewRefresh({ ...asset, video: undefined })).toBe(
-      false,
+  it("keeps the direct YouTube thumbnail under a stored rendition", () => {
+    const html = renderToStaticMarkup(
+      <LinkAssetCard
+        asset={{
+          ...asset,
+          previewImage: {
+            url: "https://media.example/stored-thumbnail.webp",
+            width: 960,
+            height: 540,
+          },
+        }}
+      />,
     );
+
+    expect(html).toContain("https://media.example/stored-thumbnail.webp");
+    expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
+    expect(html).not.toContain('data-slot="optimistic-link-preview"');
+    expect(html).toContain("absolute inset-0 size-full object-cover");
+    expect(html).toContain("transition-opacity duration-150 ease-out");
+  });
+
+  it("keeps using the direct thumbnail when stored media is unavailable", () => {
+    const html = renderToStaticMarkup(
+      <LinkAssetCard
+        asset={{
+          ...asset,
+          resolutionStatus: "partial",
+          previewImage: undefined,
+        }}
+      />,
+    );
+
+    expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
+    expect(html).not.toContain('data-slot="optimistic-link-preview"');
+  });
+
+  it("offers refresh for completed YouTube cards and failed links", () => {
+    expect(shouldShowLinkPreviewRefresh(asset)).toBe(true);
     expect(
       shouldShowLinkPreviewRefresh({
         ...asset,
+        originalUrl: "https://example.com/article",
+        video: undefined,
+      }),
+    ).toBe(false);
+    expect(
+      shouldShowLinkPreviewRefresh({
+        ...asset,
+        originalUrl: "https://example.com/article",
         video: undefined,
         resolutionStatus: "failed",
       }),
@@ -174,8 +214,7 @@ describe("LinkAssetCard", () => {
     expect(
       shouldShowLinkPreviewRefresh({
         ...asset,
-        video: undefined,
-        resolutionStatus: "partial",
+        resolutionStatus: "resolving",
       }),
     ).toBe(false);
     expect(
