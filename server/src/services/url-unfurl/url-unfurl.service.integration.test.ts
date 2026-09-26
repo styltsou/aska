@@ -151,7 +151,7 @@ describe("UrlUnfurlService integration", () => {
   });
 
   it.each(["youtube-oembed", "generic-html"])(
-    "upgrades a fresh legacy YouTube resource resolved by %s",
+    "does not surface a legacy YouTube description resolved by %s",
     async (legacyResolverKey) => {
       const url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
       await service.createInboxLink(fixture.organizationId, fixture.userId, {
@@ -166,7 +166,7 @@ describe("UrlUnfurlService integration", () => {
         resolverVersion: "1",
         finalUrl: url,
         canonicalUrl: url,
-        title: "A video",
+        title: null,
         description: "Enjoy the videos and music you love.",
         siteName: "YouTube",
         resourceKind:
@@ -192,24 +192,11 @@ describe("UrlUnfurlService integration", () => {
       );
 
       expect(duplicate).toMatchObject({
-        resolutionStatus: "queued",
+        resolutionStatus: "ready",
+        title: "Title unavailable",
         description: null,
       });
-      expect(resolutionTasks).toHaveLength(2);
-      const upgradedTask = resolutionTasks[1]!;
-      const [attempt] = await db
-        .select({
-          trigger: resourceResolutionAttempts.trigger,
-          resolverKey: resourceResolutionAttempts.resolverKey,
-          resolverVersion: resourceResolutionAttempts.resolverVersion,
-        })
-        .from(resourceResolutionAttempts)
-        .where(eq(resourceResolutionAttempts.id, upgradedTask.id));
-      expect(attempt).toEqual({
-        trigger: "resolver_version",
-        resolverKey: "youtube-data-api",
-        resolverVersion: "3",
-      });
+      expect(resolutionTasks).toHaveLength(1);
     },
   );
 

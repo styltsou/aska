@@ -245,21 +245,17 @@ export class UrlUnfurlService {
         resource.updatedAt.getTime() +
           env.URL_UNFURL_FAILURE_TTL_SECONDS * 1000 <=
           Date.now();
-      const expectedResolver = expectedResolverForUrl(resource.normalizedUrl);
-      const needsResolverUpgrade =
-        resource.resolverKey !== expectedResolver.key ||
-        resource.resolverVersion !== expectedResolver.version;
       let queuedGeneration = resource.resolutionGeneration;
       if (
         normalized.resolutionAllowed &&
-        (isNew ||
-          (!active && (isStale || retryableFailure || needsResolverUpgrade)))
+        (isNew || (!active && (isStale || retryableFailure)))
       ) {
         const generation = isNew
           ? resource.resolutionGeneration
           : resource.resolutionGeneration + 1;
         queuedGeneration = generation;
         await this.assertWorkspaceAttemptQuota(tx, orgId);
+        const expectedResolver = expectedResolverForUrl(resource.normalizedUrl);
         if (!isNew) {
           await tx
             .update(externalResources)
@@ -276,11 +272,7 @@ export class UrlUnfurlService {
             organizationId: orgId,
             resourceId: resource.id,
             generation,
-            trigger: isNew
-              ? "paste"
-              : needsResolverUpgrade
-                ? "resolver_version"
-                : "stale_revalidation",
+            trigger: isNew ? "paste" : "stale_revalidation",
             resolverKey: expectedResolver.key,
             resolverVersion: expectedResolver.version,
           })
@@ -320,6 +312,19 @@ export class UrlUnfurlService {
     );
     if (!row) throw new AppError(ErrorCode.NOT_FOUND, "Link not found");
 
+    await this.refreshResource(orgId, row.resourceId);
+    return this.getLinkNode(orgId, parsed.entityId, null);
+  }
+
+  async refreshResource(
+    orgId: string,
+    resourceId: number,
+  ): Promise<{
+    attemptId: number;
+    generation: number;
+    queued: boolean;
+    enqueued: boolean;
+  }> {
     const queued = await db.transaction(async (tx) => {
       await this.assertWorkspaceAttemptQuota(tx, orgId);
       const resource = first(
@@ -328,10 +333,11 @@ export class UrlUnfurlService {
           .from(externalResources)
           .where(
             and(
-              eq(externalResources.id, row.resourceId),
+              eq(externalResources.id, resourceId),
               eq(externalResources.organizationId, orgId),
             ),
           )
+          .for("update")
           .limit(1),
       );
       if (!resource)
@@ -365,7 +371,7 @@ export class UrlUnfurlService {
         return {
           attemptId: existing.id,
           generation: existing.generation,
-          enqueue: false,
+          queued: false,
         };
 
       const generation = resource.resolutionGeneration + 1;
@@ -391,11 +397,14 @@ export class UrlUnfurlService {
         .returning({ id: resourceResolutionAttempts.id });
       if (!attempt)
         throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to queue refresh");
-      return { attemptId: attempt.id, generation, enqueue: true };
+      return { attemptId: attempt.id, generation, queued: true };
     });
-    if (queued.enqueue)
-      await this.enqueueResolutionOrFail(queued.attemptId, queued.generation);
-    return this.getLinkNode(orgId, parsed.entityId, null);
+    if (!queued.queued) return { ...queued, enqueued: false };
+    const enqueued = await this.enqueueResolutionOrFail(
+      queued.attemptId,
+      queued.generation,
+    );
+    return { ...queued, enqueued };
   }
 
   async claimResolution(
@@ -1040,7 +1049,10 @@ export class UrlUnfurlService {
     );
   }
 
-  private async enqueueResolutionOrFail(attemptId: number, generation: number) {
+  private async enqueueResolutionOrFail(
+    attemptId: number,
+    generation: number,
+  ): Promise<boolean> {
     try {
       if (!(await this.queue.enqueueResolution(attemptId, generation)))
         throw new Error("resolution_queue_unavailable");
@@ -1048,6 +1060,7 @@ export class UrlUnfurlService {
         .update(resourceResolutionAttempts)
         .set({ enqueuedAt: new Date() })
         .where(eq(resourceResolutionAttempts.id, attemptId));
+      return true;
     } catch {
       await this.handleResolutionResult({
         event: "resource.metadata.failed",
@@ -1056,6 +1069,7 @@ export class UrlUnfurlService {
         failureCategory: "queue_unavailable",
         diagnosticCode: "resolution_queue_unavailable",
       });
+      return false;
     }
   }
 
@@ -1150,7 +1164,7 @@ export class UrlUnfurlService {
   }
 }
 
-function expectedResolverForUrl(url: string) {
+export function expectedResolverForUrl(url: string) {
   return isYouTubeVideoUrl(url)
     ? { key: YOUTUBE_RESOLVER_KEY, version: YOUTUBE_RESOLVER_VERSION }
     : { key: RESOLVER_KEY, version: RESOLVER_VERSION };
