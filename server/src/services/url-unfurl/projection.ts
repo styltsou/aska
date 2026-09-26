@@ -5,6 +5,10 @@ import { externalResourceMedia, type ResourceMediaVariants } from "@/db/schema";
 import type { CollectionLinkNode } from "@/dto/collection.dto";
 import { LinkVideoSchema } from "@/dto/collection.dto";
 import type { IObjectStorageService } from "@/services/object-storage.service";
+import {
+  isYouTubeVideoUrl,
+  YOUTUBE_RESOLVER_KEY,
+} from "../../../../services/url-unfurl-shared/src/youtube-url";
 
 export type LinkProjectionRow = {
   assetId: number;
@@ -23,7 +27,9 @@ export type LinkProjectionRow = {
   failureCategory: string | null;
   resolvedAt: Date | null;
   staleAt: Date | null;
-  createdAt: Date;
+  /** When the asset row was created, independent of when it joined a board. */
+  assetCreatedAt: Date;
+  assetUpdatedAt: Date | null;
 };
 
 export type ProjectedMedia = {
@@ -98,14 +104,19 @@ export function projectLinkNode(
   position: CollectionLinkNode["position"],
   frontIndex: CollectionLinkNode["frontIndex"] = null,
 ): CollectionLinkNode {
+  const isYouTubeVideo = isYouTubeVideoUrl(row.originalUrl);
+  const hasAuthoritativeYouTubeDescription =
+    !isYouTubeVideo || row.resolverKey === YOUTUBE_RESOLVER_KEY;
   return {
     id: `link-${row.assetId}`,
     type: "link",
     originalUrl: row.originalUrl,
     canonicalUrl: row.canonicalUrl,
     hostname: row.hostname,
-    title: row.resourceTitle?.trim() || row.hostname,
-    description: row.description,
+    title:
+      row.resourceTitle?.trim() ||
+      (isYouTubeVideo ? "Title unavailable" : row.hostname),
+    description: hasAuthoritativeYouTubeDescription ? row.description : null,
     note: row.note,
     siteName: row.siteName,
     resourceKind: row.resourceKind,
@@ -116,7 +127,8 @@ export function projectLinkNode(
     previewImage: media?.previewImage ?? null,
     favicon: media?.favicon ?? null,
     video: projectLinkVideo(row),
-    createdAt: row.createdAt.toISOString(),
+    createdAt: row.assetCreatedAt.toISOString(),
+    updatedAt: row.assetUpdatedAt?.toISOString(),
     position,
     frontIndex,
   };

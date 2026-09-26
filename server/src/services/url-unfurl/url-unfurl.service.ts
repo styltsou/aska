@@ -50,6 +50,11 @@ import {
   TASK_CLAIM_LEASE_MS,
   TASK_MAINTENANCE_REQUEUE_AFTER_MS,
 } from "../../../../services/image-shared/src/task-timing";
+import {
+  isYouTubeVideoUrl,
+  YOUTUBE_RESOLVER_KEY,
+  YOUTUBE_RESOLVER_VERSION,
+} from "../../../../services/url-unfurl-shared/src/youtube-url";
 
 const RESOLVER_KEY = "generic-html";
 const RESOLVER_VERSION = "1";
@@ -240,10 +245,15 @@ export class UrlUnfurlService {
         resource.updatedAt.getTime() +
           env.URL_UNFURL_FAILURE_TTL_SECONDS * 1000 <=
           Date.now();
+      const expectedResolver = expectedResolverForUrl(resource.normalizedUrl);
+      const needsResolverUpgrade =
+        resource.resolverKey !== expectedResolver.key ||
+        resource.resolverVersion !== expectedResolver.version;
       let queuedGeneration = resource.resolutionGeneration;
       if (
         normalized.resolutionAllowed &&
-        (isNew || (!active && (isStale || retryableFailure)))
+        (isNew ||
+          (!active && (isStale || retryableFailure || needsResolverUpgrade)))
       ) {
         const generation = isNew
           ? resource.resolutionGeneration
@@ -266,9 +276,13 @@ export class UrlUnfurlService {
             organizationId: orgId,
             resourceId: resource.id,
             generation,
-            trigger: isNew ? "paste" : "stale_revalidation",
-            resolverKey: RESOLVER_KEY,
-            resolverVersion: RESOLVER_VERSION,
+            trigger: isNew
+              ? "paste"
+              : needsResolverUpgrade
+                ? "resolver_version"
+                : "stale_revalidation",
+            resolverKey: expectedResolver.key,
+            resolverVersion: expectedResolver.version,
           })
           .returning({ id: resourceResolutionAttempts.id });
         attemptId = attempt?.id;
@@ -355,6 +369,7 @@ export class UrlUnfurlService {
         };
 
       const generation = resource.resolutionGeneration + 1;
+      const expectedResolver = expectedResolverForUrl(resource.normalizedUrl);
       await tx
         .update(externalResources)
         .set({
@@ -370,8 +385,8 @@ export class UrlUnfurlService {
           resourceId: resource.id,
           generation,
           trigger: "manual_refresh",
-          resolverKey: RESOLVER_KEY,
-          resolverVersion: RESOLVER_VERSION,
+          resolverKey: expectedResolver.key,
+          resolverVersion: expectedResolver.version,
         })
         .returning({ id: resourceResolutionAttempts.id });
       if (!attempt)
@@ -995,7 +1010,8 @@ export class UrlUnfurlService {
           failureCategory: externalResources.failureCategory,
           resolvedAt: externalResources.resolvedAt,
           staleAt: externalResources.staleAt,
-          createdAt: assets.createdAt,
+          assetCreatedAt: assets.createdAt,
+          assetUpdatedAt: assets.updatedAt,
         })
         .from(assets)
         .innerJoin(linkAssets, eq(linkAssets.assetId, assets.id))
@@ -1132,6 +1148,12 @@ export class UrlUnfurlService {
         "URL resolution limit reached. Try again later.",
       );
   }
+}
+
+function expectedResolverForUrl(url: string) {
+  return isYouTubeVideoUrl(url)
+    ? { key: YOUTUBE_RESOLVER_KEY, version: YOUTUBE_RESOLVER_VERSION }
+    : { key: RESOLVER_KEY, version: RESOLVER_VERSION };
 }
 
 function sqlIncrement(column: typeof resourceResolutionAttempts.attempts) {

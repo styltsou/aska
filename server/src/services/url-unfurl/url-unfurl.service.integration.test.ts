@@ -150,6 +150,69 @@ describe("UrlUnfurlService integration", () => {
     expect(Number(resourceCount?.value)).toBe(1);
   });
 
+  it.each(["youtube-oembed", "generic-html"])(
+    "upgrades a fresh legacy YouTube resource resolved by %s",
+    async (legacyResolverKey) => {
+      const url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+      await service.createInboxLink(fixture.organizationId, fixture.userId, {
+        url,
+      });
+      const firstTask = resolutionTasks[0]!;
+      await service.handleResolutionResult({
+        event: "resource.metadata.completed",
+        id: firstTask.id,
+        generation: firstTask.generation,
+        resolverKey: legacyResolverKey,
+        resolverVersion: "1",
+        finalUrl: url,
+        canonicalUrl: url,
+        title: "A video",
+        description: "Enjoy the videos and music you love.",
+        siteName: "YouTube",
+        resourceKind:
+          legacyResolverKey === "youtube-oembed" ? "video" : "web_page",
+        fieldProvenance: {},
+        providerExtensions:
+          legacyResolverKey === "youtube-oembed"
+            ? {
+                youtube: {
+                  videoId: "dQw4w9WgXcQ",
+                  channelName: "A channel",
+                  channelUrl: null,
+                },
+              }
+            : {},
+        media: [],
+      });
+
+      const duplicate = await service.createInboxLink(
+        fixture.organizationId,
+        fixture.userId,
+        { url },
+      );
+
+      expect(duplicate).toMatchObject({
+        resolutionStatus: "queued",
+        description: null,
+      });
+      expect(resolutionTasks).toHaveLength(2);
+      const upgradedTask = resolutionTasks[1]!;
+      const [attempt] = await db
+        .select({
+          trigger: resourceResolutionAttempts.trigger,
+          resolverKey: resourceResolutionAttempts.resolverKey,
+          resolverVersion: resourceResolutionAttempts.resolverVersion,
+        })
+        .from(resourceResolutionAttempts)
+        .where(eq(resourceResolutionAttempts.id, upgradedTask.id));
+      expect(attempt).toEqual({
+        trigger: "resolver_version",
+        resolverKey: "youtube-data-api",
+        resolverVersion: "3",
+      });
+    },
+  );
+
   it("publishes metadata before media and degrades preview failure to partial", async () => {
     const link = await service.createInboxLink(
       fixture.organizationId,

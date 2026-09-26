@@ -378,6 +378,7 @@ export const CollectionImageNodeSchema = z.object({
   paletteStatus: z.enum(["processing", "completed", "failed"]).optional(),
   sizeBytes: z.number().optional(),
   createdAt: z.string(),
+  updatedAt: z.string().optional(),
   position: BoardPositionSchema.nullable(),
   frontIndex: z.number().int().min(0).max(100_000).nullable(),
 });
@@ -462,6 +463,7 @@ export const CollectionLinkNodeSchema = z.object({
     .nullable(),
   video: LinkVideoSchema.nullable(),
   createdAt: z.string(),
+  updatedAt: z.string().optional(),
   position: BoardPositionSchema.nullable(),
   frontIndex: z.number().int().min(0).max(100_000).nullable(),
 });

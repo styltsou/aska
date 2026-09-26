@@ -1083,6 +1083,7 @@ export class AssetService implements IAssetService {
           dominantColors: row.imageDominantColors ?? undefined,
           sizeBytes: rendition.sizeBytes,
           createdAt: row.createdAt.toISOString(),
+          updatedAt: row.updatedAt.toISOString(),
           position: null,
           frontIndex: null,
         } satisfies CollectionImageNode);
@@ -1115,7 +1116,8 @@ export class AssetService implements IAssetService {
               failureCategory: row.linkFailureCategory,
               resolvedAt: row.linkResolvedAt,
               staleAt: row.linkStaleAt,
-              createdAt: row.createdAt,
+              assetCreatedAt: row.createdAt,
+              assetUpdatedAt: row.updatedAt,
             },
             resourceMedia.get(row.linkResourceId),
             null,

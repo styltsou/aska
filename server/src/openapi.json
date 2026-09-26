@@ -2425,6 +2425,11 @@
             "type": "string",
             "format": "date-time"
           },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last time a person edited the asset. Absent when it has never been edited."
+          },
           "position": {
             "$ref": "#/components/schemas/NullableBoardPosition"
           }
@@ -2536,6 +2541,11 @@
             ]
           },
           "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last time a person edited the asset. Absent when it has never been edited."
+          },
           "position": { "$ref": "#/components/schemas/NullableBoardPosition" }
         }
       },
