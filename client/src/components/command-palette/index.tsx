@@ -325,7 +325,6 @@ export function CommandPalette() {
 
   function changeMode(nextMode: PaletteMode) {
     setMode(nextMode);
-    setQuery("");
     setActiveCommandId(undefined);
     setActiveSearchResultId(undefined);
   }
