@@ -3,6 +3,7 @@ import "./note-rich-text.css";
 
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useLayoutEffect,
@@ -50,6 +51,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import { TableKit } from "@tiptap/extension-table";
 import { Markdown } from "@tiptap/markdown";
+import { PluginKey, TextSelection, type EditorState } from "@tiptap/pm/state";
 import {
   EditorContent,
   NodeViewContent,
@@ -78,6 +80,12 @@ import {
   type OpenNoteMentionTarget,
 } from "@/components/board/note-mentions";
 import { NoteSelectionMenuSurface } from "@/components/board/note-selection-actions";
+import {
+  blockStyleLabel,
+  resolveBlockStyle,
+  type BlockStyleValue,
+} from "@/components/board/note-block-style";
+import { NoteCutListItemCleanup } from "@/components/board/note-cut-cleanup";
 import { AskaTaskItem } from "@/components/board/task-item";
 import { Button } from "@/components/ui/button";
 import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
@@ -888,6 +896,7 @@ const BASE_NOTE_EXTENSIONS = [
   TableKit.configure({ table: { resizable: true } }),
   TaskList,
   AskaTaskItem.configure({ nested: true }),
+  NoteCutListItemCleanup,
   NoteHighlight,
   Placeholder.configure({
     // Notes can intentionally start with a blank paragraph. Only show the
@@ -908,77 +917,19 @@ const BASE_NOTE_EXTENSIONS = [
   SlashCommands,
 ];
 
-type ActiveBlockStyle = {
-  taskList: boolean;
-  orderedList: boolean;
-  bulletList: boolean;
-  heading1: boolean;
-  heading2: boolean;
-  heading3: boolean;
-  heading4: boolean;
+const BLOCK_STYLE_ICONS: Record<BlockStyleValue, typeof CaseSensitiveIcon> = {
+  "task-list": CheckSquareIcon,
+  "ordered-list": ListOrderedIcon,
+  "bullet-list": ListIcon,
+  "heading-1": Heading1Icon,
+  "heading-2": Heading2Icon,
+  "heading-3": Heading3Icon,
+  "heading-4": Heading4Icon,
+  paragraph: CaseSensitiveIcon,
 };
 
-type BlockStyleValue =
-  | "paragraph"
-  | "heading-1"
-  | "heading-2"
-  | "heading-3"
-  | "heading-4"
-  | "bullet-list"
-  | "ordered-list"
-  | "task-list";
-
-function currentBlockStyle(active: ActiveBlockStyle) {
-  switch (true) {
-    case active.taskList:
-      return {
-        value: "task-list" as const,
-        label: "To-do list",
-        Icon: CheckSquareIcon,
-      };
-    case active.orderedList:
-      return {
-        value: "ordered-list" as const,
-        label: "Numbered list",
-        Icon: ListOrderedIcon,
-      };
-    case active.bulletList:
-      return {
-        value: "bullet-list" as const,
-        label: "Bullet list",
-        Icon: ListIcon,
-      };
-    case active.heading1:
-      return {
-        value: "heading-1" as const,
-        label: "Heading 1",
-        Icon: Heading1Icon,
-      };
-    case active.heading2:
-      return {
-        value: "heading-2" as const,
-        label: "Heading 2",
-        Icon: Heading2Icon,
-      };
-    case active.heading3:
-      return {
-        value: "heading-3" as const,
-        label: "Heading 3",
-        Icon: Heading3Icon,
-      };
-    case active.heading4:
-      return {
-        value: "heading-4" as const,
-        label: "Heading 4",
-        Icon: Heading4Icon,
-      };
-    default:
-      return {
-        value: "paragraph" as const,
-        label: "Text",
-        Icon: CaseSensitiveIcon,
-      };
-  }
+function blockStylePresentation(value: BlockStyleValue) {
+  return { label: blockStyleLabel(value), Icon: BLOCK_STYLE_ICONS[value] };
 }
 
 function applyBlockStyle(editor: Editor, value: BlockStyleValue) {
@@ -1012,15 +963,20 @@ function applyBlockStyle(editor: Editor, value: BlockStyleValue) {
 function InlineFormattingMenu({
   editor,
   onExtractSelection,
+  blockStyleMenuOpen,
+  onBlockStyleMenuOpenChange,
+  menuRef,
 }: {
   editor: Editor;
   onExtractSelection?: (content: string) => void;
+  blockStyleMenuOpen: boolean;
+  onBlockStyleMenuOpenChange: (open: boolean) => void;
+  menuRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [highlightPaletteOpen, setHighlightPaletteOpen] = useState(false);
   const [selectionCopied, setSelectionCopied] = useState(false);
   const [href, setHref] = useState("");
-  const menuRef = useRef<HTMLDivElement>(null);
   const active = useEditorState({
     editor,
     selector: ({ editor: currentEditor }) => ({
@@ -1030,14 +986,8 @@ function InlineFormattingMenu({
       link: currentEditor.isActive("link"),
       strike: currentEditor.isActive("strike"),
       underline: currentEditor.isActive("underline"),
-      heading1: currentEditor.isActive("heading", { level: 1 }),
-      heading2: currentEditor.isActive("heading", { level: 2 }),
-      heading3: currentEditor.isActive("heading", { level: 3 }),
-      heading4: currentEditor.isActive("heading", { level: 4 }),
       blockquote: currentEditor.isActive("blockquote"),
-      bulletList: currentEditor.isActive("bulletList"),
-      orderedList: currentEditor.isActive("orderedList"),
-      taskList: currentEditor.isActive("taskList"),
+      block: resolveBlockStyle(currentEditor.state.selection),
       highlight: hasHighlightInSelection(currentEditor),
     }),
   }) ?? {
@@ -1047,14 +997,8 @@ function InlineFormattingMenu({
     link: false,
     strike: false,
     underline: false,
-    heading1: false,
-    heading2: false,
-    heading3: false,
-    heading4: false,
     blockquote: false,
-    bulletList: false,
-    orderedList: false,
-    taskList: false,
+    block: "paragraph" as BlockStyleValue,
     highlight: false,
   };
 
@@ -1108,7 +1052,7 @@ function InlineFormattingMenu({
     document.addEventListener("pointerdown", handlePointerDown, true);
     return () =>
       document.removeEventListener("pointerdown", handlePointerDown, true);
-  }, [linkOpen]);
+  }, [linkOpen, menuRef]);
 
   useEffect(() => {
     if (!selectionCopied) return;
@@ -1241,13 +1185,15 @@ function InlineFormattingMenu({
     }
   }
 
-  const currentBlock = currentBlockStyle(active);
+  const currentBlock = blockStylePresentation(active.block);
   const BlockIcon = currentBlock.Icon;
 
   return (
-    <div ref={menuRef}>
+    <div ref={menuRef} data-note-bubble-menu="">
       <Select
-        value={currentBlock.value}
+        value={active.block}
+        open={blockStyleMenuOpen}
+        onOpenChange={onBlockStyleMenuOpenChange}
         modal={false}
         onValueChange={(value) => {
           if (!value) return;
@@ -1262,7 +1208,7 @@ function InlineFormattingMenu({
                   render={
                     <SelectTrigger
                       size="sm"
-                      className="h-7 gap-1 rounded-md border-0 bg-transparent px-1.5 text-xs font-medium text-foreground hover:bg-foreground/5 hover:text-foreground data-popup-open:bg-foreground/5 data-popup-open:text-foreground"
+                      className="h-7 gap-1 rounded-md border-0 bg-transparent px-1.5 text-xs font-medium text-foreground hover:bg-foreground/5 aria-expanded:bg-foreground/5 aria-expanded:text-foreground dark:bg-transparent dark:hover:bg-secondary/50 dark:aria-expanded:bg-secondary/50"
                       aria-label="Text style"
                       onMouseDown={(event) => event.preventDefault()}
                     >
@@ -2121,6 +2067,120 @@ export const NoteRichText = forwardRef<
     [editor, markdown],
   );
 
+  const [blockStyleMenuOpen, setBlockStyleMenuOpen] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  // The menu keeps focus while it is being used: opening a popup moves focus
+  // into a portal, and closing one hands it back to a button in the menu.
+  const barOwnsFocus = useCallback(() => {
+    const bar = barRef.current;
+    const active = document.activeElement;
+    return Boolean(bar && active && bar.contains(active));
+  }, []);
+
+  const shouldShowBubbleMenu = useCallback(
+    ({ editor: currentEditor }: { state: EditorState; editor: Editor }) =>
+      (currentEditor.isFocused || blockStyleMenuOpen || barOwnsFocus()) &&
+      !highlightMode &&
+      // The plugin hands over the state from before the transaction it is
+      // reacting to, so the emptiness check has to read the live selection.
+      // Otherwise the first transaction of a fresh selection is judged against
+      // the empty selection it replaced and the menu never appears.
+      !currentEditor.state.selection.empty &&
+      !currentEditor.isActive("codeBlock"),
+    [barOwnsFocus, blockStyleMenuOpen, highlightMode],
+  );
+
+  const noteBubbleMenuKey = useMemo(() => new PluginKey("noteBubbleMenu"), []);
+
+  const dismissSelection = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
+    const { state, view } = editor;
+    if (state.selection.empty) return;
+    view.dispatch(
+      state.tr
+        .setSelection(TextSelection.near(state.doc.resolve(state.selection.to)))
+        .setMeta(noteBubbleMenuKey, "hide")
+        .setMeta("addToHistory", false),
+    );
+  }, [editor, noteBubbleMenuKey]);
+
+  // Closing the popup on its own leaves the selection and the menu alone, so the
+  // popup can be opened again without re-selecting anything.
+  const handleBlockStyleOpenChange = useCallback((open: boolean) => {
+    setBlockStyleMenuOpen(open);
+  }, []);
+
+  useEffect(() => {
+    if (!blockStyleMenuOpen) return;
+    // The first Escape belongs to the popup: it closes the popup and leaves the
+    // selection mounted, and the enclosing note surface must not read the press
+    // as a request to close the note. The next Escape is the app's own, and it
+    // drops the selection and the menu.
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.repeat) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setBlockStyleMenuOpen(false);
+      editor?.commands.focus();
+    };
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [blockStyleMenuOpen, editor]);
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    // Clicking away is the other way to drop the selection: leaving the editor,
+    // its menu and any open popup behind means there is nothing left to act on
+    // the selection, so it goes with the menu.
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (editor.view.dom.contains(target)) return;
+      if (target.closest("[data-note-bubble-menu]")) return;
+      if (target.closest("[data-base-ui-portal]")) return;
+      dismissSelection();
+    };
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () =>
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [editor, dismissSelection]);
+
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    // The bubble menu plugin only re-evaluates `shouldShow` on editor
+    // transactions and on editor focus/blur. Anything that moves focus to a
+    // popup outside the editor (the block style popup, highlight mode) leaves
+    // its last decision in place, so re-assert it whenever those inputs change.
+    const view = editor.view;
+    const assert = (value: "show" | "hide") =>
+      view.dispatch(
+        view.state.tr
+          .setMeta(noteBubbleMenuKey, value)
+          .setMeta("addToHistory", false),
+      );
+    if (
+      editor.state.selection.empty ||
+      editor.isActive("codeBlock") ||
+      highlightMode
+    ) {
+      assert("hide");
+      return;
+    }
+    // Focus on its own must never hide the menu. Closing a popup hands focus
+    // over for a moment before it lands back on the editor or on a button in the
+    // menu, and hiding on the way through unmounts and remounts the menu in the
+    // middle of one press. The plugin settles where the focus really ended up.
+    if (editor.isFocused || blockStyleMenuOpen || barOwnsFocus())
+      assert("show");
+  }, [
+    editor,
+    noteBubbleMenuKey,
+    blockStyleMenuOpen,
+    highlightMode,
+    barOwnsFocus,
+  ]);
+
   if (!editor) return null;
 
   return (
@@ -2134,18 +2194,17 @@ export const NoteRichText = forwardRef<
         <>
           <BubbleMenu
             editor={editor}
+            pluginKey={noteBubbleMenuKey}
             className="z-[80]"
             options={{ placement: "top", offset: 8 }}
-            shouldShow={({ state, editor: currentEditor }) =>
-              currentEditor.isFocused &&
-              !highlightMode &&
-              !state.selection.empty &&
-              !currentEditor.isActive("codeBlock")
-            }
+            shouldShow={shouldShowBubbleMenu}
           >
             <InlineFormattingMenu
               editor={editor}
               onExtractSelection={onExtractSelection}
+              blockStyleMenuOpen={blockStyleMenuOpen}
+              onBlockStyleMenuOpenChange={handleBlockStyleOpenChange}
+              menuRef={barRef}
             />
           </BubbleMenu>
           <LinkInteractionPopover editor={editor} />
