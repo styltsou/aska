@@ -251,7 +251,11 @@ export function WorkspacePeekProvider({
     undefined,
   );
   const assetPromotionHandlerRef = useRef<
-    ((assetId: string) => Promise<boolean>) | undefined
+    | ((
+        assetId: string,
+        options?: { presentation: "fullscreen" },
+      ) => Promise<boolean>)
+    | undefined
   >(undefined);
   const noteSwapHandlerRef = useRef<(() => Promise<void>) | undefined>(
     undefined,
