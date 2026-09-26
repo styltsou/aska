@@ -156,7 +156,10 @@ type WorkspacePeekContextValue = {
   setMainNoteLeaveHandler: (handler?: () => Promise<boolean>) => void;
   promotePeekedAsset: () => Promise<void>;
   setAssetPromotionHandler: (
-    handler?: (assetId: string) => Promise<boolean>,
+    handler?: (
+      assetId: string,
+      options?: { presentation: "fullscreen" },
+    ) => Promise<boolean>,
   ) => void;
   showPeekedAsset: () => Promise<void>;
   showAssetInBoard: (assetId: string, location: AssetLocation) => Promise<void>;
@@ -530,7 +533,12 @@ export function WorkspacePeekProvider({
         const promoted =
           target.type === "note" && notePromotionHandlerRef.current
             ? await notePromotionHandlerRef.current(target.asset)
-            : await assetPromotionHandlerRef.current?.(target.asset.id);
+            : await assetPromotionHandlerRef.current?.(
+                target.asset.id,
+                target.type === "link"
+                  ? { presentation: "fullscreen" }
+                  : undefined,
+              );
         if (promoted) {
           setIsRailReserved(false);
           setTarget(undefined);

@@ -47,6 +47,7 @@ import { useCommittedPathname } from "./use-committed-pathname";
 
 type OpenAssetOptions = {
   replace?: boolean;
+  presentation?: "fullscreen";
   initialData?: PeekableAssetResponse;
   imageSiblings?: CollectionImageNode[];
 };
@@ -110,6 +111,13 @@ export function WorkspaceAssetViewProvider({
         currentPresentation?.open &&
         currentPresentation.assetId === nextAssetId
       ) {
+        if (options?.presentation) {
+          setPresentation((current) =>
+            current?.assetId === nextAssetId
+              ? { ...current, presentation: options.presentation }
+              : current,
+          );
+        }
         if (peekTarget?.type === "link" && peekTarget.asset.id === nextAssetId)
           closePeek();
         return Promise.resolve(true);
@@ -134,7 +142,12 @@ export function WorkspaceAssetViewProvider({
         });
       }
       setPresentation(
-        openAssetPresentation(nextAssetId, assetId, options?.imageSiblings),
+        openAssetPresentation(
+          nextAssetId,
+          assetId,
+          options?.imageSiblings,
+          options?.presentation,
+        ),
       );
       openedInAppAssetIdsRef.current.add(nextAssetId);
       recordRecentWorkspaceAsset(workspaceSlug, nextAssetId);
@@ -173,7 +186,7 @@ export function WorkspaceAssetViewProvider({
   );
 
   useEffect(() => {
-    setAssetPromotionHandler((assetId) => openAsset(assetId));
+    setAssetPromotionHandler((assetId, options) => openAsset(assetId, options));
     return () => setAssetPromotionHandler(undefined);
   }, [openAsset, setAssetPromotionHandler]);
 
@@ -220,6 +233,7 @@ export function WorkspaceAssetViewProvider({
             previousPresentation.assetId,
             undefined,
             previousPresentation.imageSiblings,
+            previousPresentation.presentation,
           ),
         );
       }
@@ -473,9 +487,11 @@ function WorkspaceAssetViewController({
       ) : null}
       {requestedType === "link" ? (
         <YouTubeVideoViewer
+          key={`${assetId}:${presentation.presentation ?? "modal"}`}
           asset={asset?.type === "link" ? asset : undefined}
           open={presentation.open}
           loading={loading}
+          initialPresentation={presentation.presentation}
           workspaceSlug={workspaceSlug}
           location={location}
           onShowInBoard={showAction}

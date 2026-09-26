@@ -110,6 +110,7 @@ export function YouTubeVideoViewer({
   onClose,
   onCloseComplete,
   onShowInBoard,
+  initialPresentation,
   workspaceSlug,
   location,
 }: {
@@ -119,13 +120,16 @@ export function YouTubeVideoViewer({
   onClose: () => void;
   onCloseComplete?: () => void;
   onShowInBoard?: () => void;
+  initialPresentation?: "fullscreen";
   workspaceSlug: string;
   location?: AssetLocation;
 }) {
   const isMobile = useIsMobile();
   const reduceMotion = useReducedMotion();
   const { target: peekTarget, peekVideo } = useWorkspacePeek();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(
+    initialPresentation === "fullscreen",
+  );
   const [activeAsset, setActiveAsset] = useState<VideoLinkAsset>();
 
   useEffect(() => {

@@ -4,6 +4,7 @@ export type AssetPresentation = {
   assetId: string;
   open: boolean;
   urlStatus: "pending" | "committed";
+  presentation?: "fullscreen";
   closeOrigin?: "internal" | "external" | "waiting-for-url";
   imageSiblings?: CollectionImageNode[];
 };
@@ -12,11 +13,13 @@ export function openAssetPresentation(
   assetId: string,
   urlAssetId?: string,
   imageSiblings?: CollectionImageNode[],
+  presentation?: "fullscreen",
 ): AssetPresentation {
   return {
     assetId,
     open: true,
     urlStatus: urlAssetId === assetId ? "committed" : "pending",
+    ...(presentation ? { presentation } : {}),
     ...(imageSiblings ? { imageSiblings } : {}),
   };
 }
