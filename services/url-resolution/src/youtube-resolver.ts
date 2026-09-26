@@ -1,19 +1,25 @@
 import { safeFetch } from "../../url-unfurl-shared/src/safe-fetch";
+import {
+  getYouTubeVideoId,
+  YOUTUBE_RESOLVER_KEY,
+  YOUTUBE_RESOLVER_VERSION,
+} from "../../url-unfurl-shared/src/youtube-url";
 import type { ResolverMedia, ResolverResult, UrlResolver } from "./types";
 
 const DATA_API_ORIGIN = "https://www.googleapis.com";
 const YOUTUBE_ORIGIN = "https://www.youtube.com";
 const MAX_RESPONSE_BYTES = 128 * 1024;
-const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
+const MAX_PAGE_BYTES = 2 * 1024 * 1024;
 const CHANNEL_ID = /^[A-Za-z0-9_-]+$/;
-const YOUTUBE_HOSTS = new Set([
-  "youtube.com",
-  "www.youtube.com",
-  "m.youtube.com",
-  "music.youtube.com",
-]);
 
 type YouTubeDataApiResponse = { items?: unknown };
+type YouTubePageVideoDetails = {
+  title?: unknown;
+  shortDescription?: unknown;
+  channelId?: unknown;
+  author?: unknown;
+  thumbnail?: unknown;
+};
 type YouTubeSnippet = {
   title?: unknown;
   description?: unknown;
@@ -23,17 +29,17 @@ type YouTubeSnippet = {
 };
 
 export class YouTubeDataApiResolver implements UrlResolver {
-  readonly key = "youtube-data-api";
-  readonly version = "1";
+  readonly key = YOUTUBE_RESOLVER_KEY;
+  readonly version = YOUTUBE_RESOLVER_VERSION;
 
   constructor(private readonly apiKey: string | undefined) {}
 
   matches(url: URL): boolean {
-    return extractVideoId(url) !== null;
+    return getYouTubeVideoId(url) !== null;
   }
 
   async resolve(url: URL): Promise<ResolverResult> {
-    const videoId = extractVideoId(url);
+    const videoId = getYouTubeVideoId(url);
     if (!videoId) throw new Error("Unsupported YouTube video URL");
 
     try {
@@ -41,9 +47,13 @@ export class YouTubeDataApiResolver implements UrlResolver {
         throw new Error("YouTube Data API key is missing");
       return await this.resolveWithDataApi(videoId);
     } catch {
-      // Do not fall into generic HTML metadata: its description is site-level,
-      // not video-level. The client can still render a useful video card.
-      return minimalYouTubeResult(this.key, this.version, videoId);
+      try {
+        // Keep this provider-specific: the player payload carries the video's
+        // own description, unlike the generic YouTube page metadata.
+        return await this.resolveWithYouTubePage(videoId);
+      } catch {
+        return minimalYouTubeResult(this.key, this.version, videoId);
+      }
     }
   }
 
@@ -70,13 +80,45 @@ export class YouTubeDataApiResolver implements UrlResolver {
       resolverVersion: this.version,
       videoId,
       title: boundedText(snippet.title, 255),
-      description: boundedText(snippet.description, 2_000),
+      description: formatDescription(snippet.description, 2_000),
       channelName: boundedText(snippet.channelTitle, 255),
       channelUrl: channelUrlFor(snippet.channelId),
       thumbnailUrl,
       thumbnailSource: thumbnailUrl
         ? "youtube:data-api:thumbnail"
         : "youtube:fallback:hqdefault",
+      titleSource: "youtube:data-api:title",
+      descriptionSource: "youtube:data-api:description",
+    });
+  }
+
+  private async resolveWithYouTubePage(
+    videoId: string,
+  ): Promise<ResolverResult> {
+    const endpoint = new URL(canonicalVideoUrl(videoId));
+    const response = await safeFetch(endpoint, {
+      accept: "text/html,application/xhtml+xml;q=0.9",
+      allowedContentTypes: ["text/html", "application/xhtml+xml"],
+      maxBytes: MAX_PAGE_BYTES,
+      totalTimeoutMs: 10_000,
+      bodyMode: "full",
+    });
+    const details = parseYouTubePage(response.body, videoId);
+    const thumbnailUrl = selectThumbnailUrl(details.thumbnail);
+    return youtubeResult({
+      resolverKey: this.key,
+      resolverVersion: this.version,
+      videoId,
+      title: boundedText(details.title, 255),
+      description: formatDescription(details.shortDescription, 2_000),
+      channelName: boundedText(details.author, 255),
+      channelUrl: channelUrlFor(details.channelId),
+      thumbnailUrl,
+      thumbnailSource: thumbnailUrl
+        ? "youtube:page:thumbnail"
+        : "youtube:fallback:hqdefault",
+      titleSource: "youtube:page:video-details:title",
+      descriptionSource: "youtube:page:video-details:short-description",
     });
   }
 }
@@ -109,6 +151,8 @@ function youtubeResult(input: {
   channelUrl: string | null;
   thumbnailUrl: string | null;
   thumbnailSource: string;
+  titleSource?: string;
+  descriptionSource?: string;
 }): ResolverResult {
   const canonicalUrl = canonicalVideoUrl(input.videoId);
   const thumbnailUrl = input.thumbnailUrl ?? thumbnailUrlFor(input.videoId);
@@ -131,11 +175,17 @@ function youtubeResult(input: {
     siteName: "YouTube",
     resourceKind: "video",
     fieldProvenance: {
-      title: { resolver: input.resolverKey, source: "youtube:data-api:title" },
-      description: {
-        resolver: input.resolverKey,
-        source: "youtube:data-api:description",
-      },
+      ...(input.titleSource
+        ? { title: { resolver: input.resolverKey, source: input.titleSource } }
+        : {}),
+      ...(input.descriptionSource
+        ? {
+            description: {
+              resolver: input.resolverKey,
+              source: input.descriptionSource,
+            },
+          }
+        : {}),
       siteName: { resolver: input.resolverKey, source: "provider:youtube" },
       resourceKind: { resolver: input.resolverKey, source: "provider:youtube" },
       canonicalUrl: { resolver: input.resolverKey, source: "url:video-id" },
@@ -149,22 +199,6 @@ function youtubeResult(input: {
     },
     media,
   };
-}
-
-function extractVideoId(url: URL): string | null {
-  const host = url.hostname.toLowerCase();
-  let candidate: string | null = null;
-  if (host === "youtu.be") {
-    const segments = url.pathname.split("/").filter(Boolean);
-    candidate = segments.length === 1 ? segments[0]! : null;
-  } else if (YOUTUBE_HOSTS.has(host)) {
-    if (url.pathname === "/watch") candidate = url.searchParams.get("v");
-    else {
-      const match = url.pathname.match(/^\/(?:shorts|live|embed)\/([^/]+)\/?$/);
-      candidate = match?.[1] ?? null;
-    }
-  }
-  return candidate && VIDEO_ID.test(candidate) ? candidate : null;
 }
 
 function canonicalVideoUrl(videoId: string): string {
@@ -200,8 +234,79 @@ function parseSnippet(body: Uint8Array, videoId: string): YouTubeSnippet {
   }
 }
 
+function parseYouTubePage(
+  body: Uint8Array,
+  videoId: string,
+): YouTubePageVideoDetails {
+  try {
+    const html = new TextDecoder().decode(body);
+    const playerResponse = extractJsonObject(html, "ytInitialPlayerResponse");
+    if (
+      !playerResponse ||
+      typeof playerResponse !== "object" ||
+      Array.isArray(playerResponse)
+    )
+      throw new Error("Invalid YouTube page response");
+    const details = (playerResponse as { videoDetails?: unknown }).videoDetails;
+    if (!details || typeof details !== "object" || Array.isArray(details))
+      throw new Error("Invalid YouTube page response");
+    const candidate = details as YouTubePageVideoDetails & {
+      videoId?: unknown;
+    };
+    if (candidate.videoId !== videoId)
+      throw new Error("Unexpected YouTube page video");
+    return candidate;
+  } catch {
+    throw new Error("Invalid YouTube page response");
+  }
+}
+
+function extractJsonObject(html: string, marker: string): unknown {
+  const markerIndex = html.indexOf(marker);
+  if (markerIndex === -1) return null;
+  const start = html.indexOf("{", markerIndex + marker.length);
+  if (start === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = start; index < html.length; index += 1) {
+    const char = html[index]!;
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === "{") depth += 1;
+    else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) return JSON.parse(html.slice(start, index + 1));
+    }
+  }
+  return null;
+}
+
 function selectThumbnailUrl(value: unknown): string | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (Array.isArray(value)) {
+    for (let index = value.length - 1; index >= 0; index -= 1) {
+      const candidate = value[index];
+      if (
+        !candidate ||
+        typeof candidate !== "object" ||
+        Array.isArray(candidate)
+      )
+        continue;
+      const url = safeHttpUrl((candidate as { url?: unknown }).url);
+      if (url) return url;
+    }
+    return null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const nestedThumbnails = (value as { thumbnails?: unknown }).thumbnails;
+  if (Array.isArray(nestedThumbnails))
+    return selectThumbnailUrl(nestedThumbnails);
   for (const key of ["maxres", "standard", "high", "medium", "default"]) {
     const candidate = (value as Record<string, unknown>)[key];
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate))
@@ -223,6 +328,19 @@ function boundedText(value: unknown, maxLength: number): string | null {
   const normalized = value
     .replace(/\p{Cc}+/gu, " ")
     .replace(/\s+/g, " ")
+    .trim();
+  return normalized ? normalized.slice(0, maxLength) : null;
+}
+
+function formatDescription(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\t\f\v ]+/g, " ")
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
   return normalized ? normalized.slice(0, maxLength) : null;
 }

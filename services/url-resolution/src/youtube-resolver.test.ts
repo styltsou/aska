@@ -46,7 +46,7 @@ describe("YouTube Data API resolver", () => {
               id: videoId,
               snippet: {
                 title: "  A video\n title ",
-                description: "A specific video description",
+                description: " First paragraph.\n\nSecond\t paragraph. ",
                 channelId: "UC123",
                 channelTitle: "A channel",
                 thumbnails: {
@@ -78,10 +78,11 @@ describe("YouTube Data API resolver", () => {
     });
     expect(result).toMatchObject({
       resolverKey: "youtube-data-api",
+      resolverVersion: "3",
       finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
       canonicalUrl: `https://www.youtube.com/watch?v=${videoId}`,
       title: "A video title",
-      description: "A specific video description",
+      description: "First paragraph.\n\nSecond paragraph.",
       siteName: "YouTube",
       resourceKind: "video",
       providerExtensions: {
@@ -103,7 +104,89 @@ describe("YouTube Data API resolver", () => {
     ]);
   });
 
-  it("uses the minimal YouTube result when the API is unavailable", async () => {
+  it("uses the YouTube page payload when the Data API is unavailable", async () => {
+    safeFetchMock
+      .mockResolvedValueOnce({
+        body: new TextEncoder().encode("not json"),
+      })
+      .mockResolvedValueOnce({
+        body: new TextEncoder().encode(
+          `<script>var ytInitialPlayerResponse = ${JSON.stringify({
+            videoDetails: {
+              videoId,
+              title: "Fallback title",
+              shortDescription:
+                "First fallback paragraph.\n\nSecond fallback paragraph.",
+              author: "Fallback channel",
+              channelId: "UC123",
+              thumbnail: {
+                thumbnails: [
+                  { url: "https://i.ytimg.com/vi/small.jpg" },
+                  { url: "https://i.ytimg.com/vi/fallback.jpg" },
+                ],
+              },
+            },
+          })};</script>`,
+        ),
+      });
+
+    const result = await new YouTubeDataApiResolver("test-key").resolve(
+      new URL(`https://www.youtube.com/watch?v=${videoId}`),
+    );
+
+    expect(result).toMatchObject({
+      resolverKey: "youtube-data-api",
+      title: "Fallback title",
+      description: "First fallback paragraph.\n\nSecond fallback paragraph.",
+      resourceKind: "video",
+      providerExtensions: {
+        youtube: {
+          videoId,
+          channelName: "Fallback channel",
+          channelUrl: "https://www.youtube.com/channel/UC123",
+        },
+      },
+    });
+    expect(result.media[0]).toMatchObject({
+      sourceUrl: "https://i.ytimg.com/vi/fallback.jpg",
+      sourceMetadata: "youtube:page:thumbnail",
+    });
+    const [endpoint, options] = safeFetchMock.mock.calls[1] as [URL, unknown];
+    expect(endpoint.origin).toBe("https://www.youtube.com");
+    expect(endpoint.pathname).toBe("/watch");
+    expect(endpoint.searchParams.get("v")).toBe(videoId);
+    expect(options).toMatchObject({
+      maxBytes: 2 * 1024 * 1024,
+      bodyMode: "full",
+    });
+  });
+
+  it("uses the YouTube page payload when no Data API key is configured", async () => {
+    safeFetchMock.mockResolvedValue({
+      body: new TextEncoder().encode(
+        `<script>ytInitialPlayerResponse = ${JSON.stringify({
+          videoDetails: {
+            videoId,
+            title: "Fallback title",
+            shortDescription: "A fallback description.",
+          },
+        })};</script>`,
+      ),
+    });
+
+    const result = await new YouTubeDataApiResolver(undefined).resolve(
+      new URL(`https://www.youtube.com/watch?v=${videoId}`),
+    );
+
+    expect(safeFetchMock).toHaveBeenCalledOnce();
+    expect(result.title).toBe("Fallback title");
+    expect(result.description).toBe("A fallback description.");
+    expect(result.media[0]?.sourceUrl).toBe(
+      `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    );
+  });
+
+  it("uses the minimal result only when both YouTube sources fail", async () => {
     safeFetchMock.mockResolvedValue({
       body: new TextEncoder().encode("not json"),
     });
@@ -112,30 +195,11 @@ describe("YouTube Data API resolver", () => {
       new URL(`https://www.youtube.com/watch?v=${videoId}`),
     );
 
-    expect(result).toMatchObject({
-      resolverKey: "youtube-data-api",
-      title: null,
-      description: null,
-      resourceKind: "video",
-      providerExtensions: {
-        youtube: { videoId, channelName: null, channelUrl: null },
-      },
-    });
+    expect(safeFetchMock).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ title: null, description: null });
     expect(result.media[0]).toMatchObject({
       sourceUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
       sourceMetadata: "youtube:fallback:hqdefault",
     });
-  });
-
-  it("uses the same minimal result when no API key is configured", async () => {
-    const result = await new YouTubeDataApiResolver(undefined).resolve(
-      new URL(`https://www.youtube.com/watch?v=${videoId}`),
-    );
-
-    expect(safeFetchMock).not.toHaveBeenCalled();
-    expect(result.description).toBeNull();
-    expect(result.media[0]?.sourceUrl).toBe(
-      `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-    );
   });
 });
