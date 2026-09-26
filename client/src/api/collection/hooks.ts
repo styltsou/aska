@@ -1469,7 +1469,12 @@ function applyUpdatedImageToContents(
     ...current,
     nodes: current.nodes.map((node) =>
       node.type === "image" && node.id === image.id
-        ? { ...node, note: image.note, isFavorite: image.isFavorite }
+        ? {
+            ...node,
+            note: image.note,
+            isFavorite: image.isFavorite,
+            updatedAt: image.updatedAt,
+          }
         : node,
     ),
   };
@@ -1501,7 +1506,7 @@ function applyUpdatedLinkToContents(
     ...current,
     nodes: current.nodes.map((node) =>
       node.type === "link" && node.id === link.id
-        ? { ...node, note: link.note }
+        ? { ...node, note: link.note, updatedAt: link.updatedAt }
         : node,
     ),
   };

@@ -12,7 +12,6 @@ import {
 import {
   ArrowLeftIcon,
   CheckIcon,
-  InfoIcon,
   LocateFixedIcon,
   LoaderCircleIcon,
   PanelRightIcon,
@@ -54,11 +53,7 @@ import {
 } from "@/components/board/note-workspace-dialog";
 import { useBoardInsertionPlacement } from "@/components/canvas";
 import { Button } from "@/components/ui/button";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
+import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Tooltip,
@@ -70,7 +65,6 @@ import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
-import { formatNoteMetadataDateTime } from "@/lib/note-date-format";
 import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
 import {
   clearCreateNoteDraft,
@@ -1038,13 +1032,7 @@ export function NoteDetailDrawer({
     persist,
   ]);
 
-  const createdLabel = activeNote?.createdAt
-    ? formatNoteMetadataDateTime(activeNote.createdAt)
-    : undefined;
   const updatedTimestamp = activeNote?.updatedAt ?? activeNote?.createdAt;
-  const updatedLabel = updatedTimestamp
-    ? formatNoteMetadataDateTime(updatedTimestamp)
-    : undefined;
 
   const extractSelection = useCallback(
     (content: string) => {
@@ -1425,49 +1413,12 @@ export function NoteDetailDrawer({
                 {copied ? "Copied" : "Copy markdown"}
               </TooltipContent>
             </Tooltip>
-            {createdLabel || updatedLabel ? (
-              <>
-                <HoverCard>
-                  <HoverCardTrigger
-                    delay={0}
-                    closeDelay={100}
-                    render={
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 rounded-lg"
-                        aria-label="Note details"
-                      >
-                        <InfoIcon className="size-4" />
-                      </Button>
-                    }
-                  ></HoverCardTrigger>
-                  <HoverCardContent
-                    align="end"
-                    sideOffset={10}
-                    className="w-fit min-w-0 border-border/60 bg-background/95 whitespace-nowrap shadow-2xl backdrop-blur-xl"
-                  >
-                    <div className="flex flex-col gap-1 text-xs">
-                      {createdLabel ? (
-                        <div>
-                          <span className="text-muted-foreground">
-                            Created at{" "}
-                          </span>
-                          <span>{createdLabel}</span>
-                        </div>
-                      ) : null}
-                      {updatedLabel ? (
-                        <div>
-                          <span className="text-muted-foreground">Edited </span>
-                          <span>{updatedLabel}</span>
-                        </div>
-                      ) : null}
-                    </div>
-                  </HoverCardContent>
-                </HoverCard>
-              </>
-            ) : null}
+            <AssetTimestampCard
+              createdAt={activeNote?.createdAt}
+              updatedAt={activeNote?.updatedAt}
+              label="Note details"
+              sideOffset={10}
+            />
           </div>
         </div>
         <div

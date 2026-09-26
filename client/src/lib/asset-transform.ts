@@ -39,6 +39,7 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
       clientId: node.clientId,
       sizeBytes: node.sizeBytes,
       createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
     };
   }
 
@@ -68,6 +69,8 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
       favicon: node.favicon ?? undefined,
       video: node.video ?? undefined,
       optimisticYouTube: node.optimisticYouTube,
+      createdAt: node.createdAt,
+      updatedAt: node.updatedAt,
       clientId: node.clientId,
     };
   }

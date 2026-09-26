@@ -24,6 +24,7 @@ export interface ImageAsset {
   clientId?: string;
   sizeBytes?: number;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface NoteAsset {
@@ -54,6 +55,10 @@ export interface LinkAsset {
   failureCategory?: string;
   resolvedAt?: string;
   staleAt?: string;
+  /** When the link was saved into the workspace, not when it joined a board. */
+  createdAt?: string;
+  /** Last time a person edited the note, absent when it was never edited. */
+  updatedAt?: string;
   previewImage?: {
     url: string;
     width: number;

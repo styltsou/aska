@@ -13,7 +13,6 @@ import {
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
-  InfoIcon,
   ArrowLeftRightIcon,
   LocateFixedIcon,
   Maximize2Icon,
@@ -26,6 +25,7 @@ import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
 import { NoteSaveStatus } from "@/components/board/note-save-status";
+import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import { NoteTitleField } from "@/components/board/note-title-field";
 import { NoteRichText } from "@/components/board/note-rich-text";
 import {
@@ -50,7 +50,6 @@ import {
   OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT,
 } from "@/lib/keybindings";
 import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
-import { formatNoteMetadataDateTime } from "@/lib/note-date-format";
 import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
 import { useWeightedColorImageSearch } from "@/api/color-search";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
@@ -1058,7 +1057,6 @@ function PeekNote({
       })
       .catch(() => toast.error("Unable to copy note."));
   }, [note.content]);
-  const hasDetails = Boolean(note.createdAt || note.updatedAt);
   return (
     <>
       <PeekHeader
@@ -1138,46 +1136,11 @@ function PeekNote({
             {copied ? "Copied" : "Copy markdown"}
           </TooltipContent>
         </Tooltip>
-        {hasDetails ? (
-          <HoverCard>
-            <HoverCardTrigger
-              delay={0}
-              closeDelay={100}
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 rounded-lg"
-                  aria-label="Note details"
-                >
-                  <InfoIcon className="size-4" />
-                </Button>
-              }
-            />
-            <HoverCardContent
-              align="end"
-              side="bottom"
-              sideOffset={8}
-              className="w-fit min-w-0 border-border/60 bg-background/95 whitespace-nowrap shadow-2xl backdrop-blur-xl"
-            >
-              <div className="flex flex-col gap-1 text-xs">
-                {note.createdAt ? (
-                  <div>
-                    <span className="text-muted-foreground">Created at </span>
-                    <span>{formatNoteMetadataDateTime(note.createdAt)}</span>
-                  </div>
-                ) : null}
-                {note.updatedAt ? (
-                  <div>
-                    <span className="text-muted-foreground">Edited </span>
-                    <span>{formatNoteMetadataDateTime(note.updatedAt)}</span>
-                  </div>
-                ) : null}
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-        ) : null}
+        <AssetTimestampCard
+          createdAt={note.createdAt}
+          updatedAt={note.updatedAt}
+          label="Note details"
+        />
       </PeekHeader>
       <div
         ref={contentRef}

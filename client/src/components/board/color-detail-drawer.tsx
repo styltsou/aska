@@ -9,7 +9,6 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   ImageIcon,
   ArrowLeftIcon,
-  InfoIcon,
   LocateFixedIcon,
   LoaderCircleIcon,
   Maximize2Icon,
@@ -28,13 +27,9 @@ import {
 } from "@/api/color-search";
 import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
+import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import { useUpdateColor } from "@/api/collection";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
 import {
   Drawer,
   DrawerClose,
@@ -60,7 +55,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { gradientToCss } from "@/lib/color-gradient";
-import { formatNoteMetadataDateTime } from "@/lib/note-date-format";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { ColorAsset, ImageAsset } from "@/types/asset";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
@@ -289,7 +283,11 @@ export function ColorDetailDrawer({
                   <PencilIcon className="size-4" />
                 </Button>
               ) : null}
-              <ColorInfoHoverCard color={displayedColor} />
+              <AssetTimestampCard
+                createdAt={displayedColor.createdAt}
+                updatedAt={displayedColor.updatedAt}
+                label="Color details"
+              />
               <Tooltip>
                 <TooltipTrigger
                   render={
@@ -610,9 +608,11 @@ function ColorDetailModal({
             </Button>
           ) : null}
           {color ? (
-            <ColorInfoHoverCard
-              color={color}
-              className={onEdit ? undefined : "ml-auto"}
+            <AssetTimestampCard
+              createdAt={color.createdAt}
+              updatedAt={color.updatedAt}
+              label="Color details"
+              triggerClassName={onEdit ? undefined : "ml-auto"}
             />
           ) : null}
         </motion.div>
@@ -625,109 +625,93 @@ function ColorDetailModal({
           )}
         >
           {color ? (
-            <div className="grid h-full min-h-0 min-w-0 grid-cols-[minmax(0,1fr)] [@media(min-width:900px)]:grid-cols-[minmax(0,1fr)_minmax(0,19rem)]">
-              <div className="flex min-h-0 min-w-0 flex-col">
-                <div className="shrink-0 px-4 pt-4 sm:px-5 sm:pt-5">
-                  <button
-                    type="button"
-                    onClick={copyValue}
-                    aria-label={
-                      hasGradient ? "Copy CSS gradient" : "Copy hex color"
-                    }
-                    className="group relative h-[clamp(5rem,20dvh,10rem)] w-full overflow-hidden rounded-xl text-left"
-                    style={
-                      gradientCss
-                        ? { background: gradientCss }
-                        : { backgroundColor: color.hex }
-                    }
-                  >
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-sm font-medium text-white opacity-0 transition group-hover:bg-black/25 group-hover:opacity-100">
-                      <CopyFeedbackIcon
-                        copied={copied}
-                        className="mr-2 size-4"
-                      />
-                      Copy
-                    </span>
-                  </button>
-                  <h2 className="mt-4 text-xl font-medium">{title}</h2>
-                  <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    {hasGradient
-                      ? `${color.gradient?.type === "radial" ? "Radial" : "Linear"} gradient`
-                      : color.hex.toUpperCase()}
-                  </p>
-                  <ColorNoteEditor
-                    asset={color}
-                    workspaceSlug={workspaceSlug}
-                    className="[@media(min-width:900px)]:hidden"
-                  />
-                  <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-                    <span className="text-sm font-medium">Relevant images</span>
-                    {scope.type === "collection" ? (
-                      <Tabs
-                        key={presentation}
-                        value={includeDescendants ? "collection" : "view"}
-                        onValueChange={(value) =>
-                          onIncludeDescendantsChange(value === "collection")
-                        }
-                        variant="segment"
-                        size="sm"
-                      >
-                        <TabsList aria-label="Search scope">
-                          <TabsTrigger value="view">This view</TabsTrigger>
-                          <TabsTrigger value="collection">
-                            Entire collection
-                          </TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                    ) : null}
-                  </div>
+            <div className="flex h-full min-h-0 min-w-0 flex-col">
+              <div className="shrink-0 px-4 pt-4 sm:px-5 sm:pt-5">
+                <button
+                  type="button"
+                  onClick={copyValue}
+                  aria-label={
+                    hasGradient ? "Copy CSS gradient" : "Copy hex color"
+                  }
+                  className="group relative h-[clamp(5rem,20dvh,10rem)] w-full overflow-hidden rounded-xl text-left"
+                  style={
+                    gradientCss
+                      ? { background: gradientCss }
+                      : { backgroundColor: color.hex }
+                  }
+                >
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-sm font-medium text-white opacity-0 transition group-hover:bg-black/25 group-hover:opacity-100">
+                    <CopyFeedbackIcon copied={copied} className="mr-2 size-4" />
+                    Copy
+                  </span>
+                </button>
+                <h2 className="mt-4 text-xl font-medium">{title}</h2>
+                <p className="mt-1 font-mono text-xs text-muted-foreground">
+                  {hasGradient
+                    ? `${color.gradient?.type === "radial" ? "Radial" : "Linear"} gradient`
+                    : color.hex.toUpperCase()}
+                </p>
+                <ColorNoteEditor asset={color} workspaceSlug={workspaceSlug} />
+                <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-sm font-medium">Relevant images</span>
+                  {scope.type === "collection" ? (
+                    <Tabs
+                      key={presentation}
+                      value={includeDescendants ? "collection" : "view"}
+                      onValueChange={(value) =>
+                        onIncludeDescendantsChange(value === "collection")
+                      }
+                      variant="segment"
+                      size="sm"
+                    >
+                      <TabsList aria-label="Search scope">
+                        <TabsTrigger value="view">This view</TabsTrigger>
+                        <TabsTrigger value="collection">
+                          Entire collection
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  ) : null}
                 </div>
-                <ScrollArea className="min-h-0 min-w-0 flex-1">
-                  <div className="px-4 pt-4 pb-5 sm:px-5">
-                    {searching ? (
-                      <ColorResultsSkeleton />
-                    ) : error ? (
-                      <ColorSearchError onRetry={onRetry} />
-                    ) : results.length === 0 ? (
-                      <ColorSearchEmpty />
-                    ) : (
-                      <div className="columns-2 gap-3 lg:columns-3">
-                        {results.map((result) => (
-                          <ImageResultTile
-                            key={result.image.id}
-                            image={result.image}
-                            label={
-                              result.location.type === "collection" &&
-                              result.location.folderNames.length
-                                ? result.location.folderNames.join(" / ")
-                                : result.location.type === "collection"
-                                  ? "Collection root"
-                                  : "Inbox"
-                            }
-                            onOpen={() =>
-                              onOpenImage({
-                                ...result.image,
-                                type: "image",
-                                title: result.image.title ?? undefined,
-                                alt: result.image.alt ?? undefined,
-                                blurDataURL:
-                                  result.image.blurDataURL ?? undefined,
-                              })
-                            }
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
               </div>
-              <aside className="hidden min-h-0 min-w-0 overflow-y-auto bg-background [@media(min-width:900px)]:block">
-                <ColorNoteEditor
-                  asset={color}
-                  workspaceSlug={workspaceSlug}
-                  className="p-5"
-                />
-              </aside>
+              <ScrollArea className="min-h-0 min-w-0 flex-1">
+                <div className="px-4 pt-4 pb-5 sm:px-5">
+                  {searching ? (
+                    <ColorResultsSkeleton />
+                  ) : error ? (
+                    <ColorSearchError onRetry={onRetry} />
+                  ) : results.length === 0 ? (
+                    <ColorSearchEmpty />
+                  ) : (
+                    <div className="columns-2 gap-3 lg:columns-3">
+                      {results.map((result) => (
+                        <ImageResultTile
+                          key={result.image.id}
+                          image={result.image}
+                          label={
+                            result.location.type === "collection" &&
+                            result.location.folderNames.length
+                              ? result.location.folderNames.join(" / ")
+                              : result.location.type === "collection"
+                                ? "Collection root"
+                                : "Inbox"
+                          }
+                          onOpen={() =>
+                            onOpenImage({
+                              ...result.image,
+                              type: "image",
+                              title: result.image.title ?? undefined,
+                              alt: result.image.alt ?? undefined,
+                              blurDataURL:
+                                result.image.blurDataURL ?? undefined,
+                            })
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </div>
           ) : loading ? (
             <ColorResultsSkeleton />
@@ -798,63 +782,6 @@ function ColorNoteEditor({
         className="mt-1 block max-h-28 min-h-6 w-full resize-none overflow-y-auto border-0 bg-transparent p-0 text-sm leading-6 outline-none placeholder:text-muted-foreground/60"
       />
     </div>
-  );
-}
-
-function ColorInfoHoverCard({
-  color,
-  className,
-}: {
-  color: ColorAsset;
-  className?: string;
-}) {
-  const createdLabel = color.createdAt
-    ? formatNoteMetadataDateTime(color.createdAt)
-    : undefined;
-  const updatedTimestamp = color.updatedAt ?? color.createdAt;
-  const updatedLabel = updatedTimestamp
-    ? formatNoteMetadataDateTime(updatedTimestamp)
-    : undefined;
-  if (!createdLabel && !updatedLabel) return null;
-
-  return (
-    <HoverCard>
-      <HoverCardTrigger
-        delay={0}
-        closeDelay={100}
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={cn("size-8 rounded-lg", className)}
-            aria-label="Color details"
-          >
-            <InfoIcon className="size-4" />
-          </Button>
-        }
-      />
-      <HoverCardContent
-        align="end"
-        sideOffset={10}
-        className="w-fit min-w-0 border-border/60 bg-background/95 whitespace-nowrap shadow-2xl backdrop-blur-xl"
-      >
-        <div className="flex flex-col gap-1 text-xs">
-          {createdLabel ? (
-            <div>
-              <span className="text-muted-foreground">Created at </span>
-              <span>{createdLabel}</span>
-            </div>
-          ) : null}
-          {updatedLabel ? (
-            <div>
-              <span className="text-muted-foreground">Edited </span>
-              <span>{updatedLabel}</span>
-            </div>
-          ) : null}
-        </div>
-      </HoverCardContent>
-    </HoverCard>
   );
 }
 

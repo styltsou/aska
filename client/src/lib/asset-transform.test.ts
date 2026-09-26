@@ -29,6 +29,7 @@ describe("collectionNodeToAsset", () => {
       favicon: null,
       video,
       createdAt: "2026-08-31T11:00:00.000Z",
+      updatedAt: "2026-09-01T09:30:00.000Z",
       position: null,
     });
 
@@ -36,6 +37,33 @@ describe("collectionNodeToAsset", () => {
       type: "link",
       video,
       note: "Watch with the design team",
+      createdAt: "2026-08-31T11:00:00.000Z",
+      updatedAt: "2026-09-01T09:30:00.000Z",
+    });
+  });
+
+  it("carries the asset edit time when converting an image node", () => {
+    const asset = collectionNodeToAsset({
+      id: "image-1",
+      type: "image",
+      url: "https://cdn.example.com/one.jpg",
+      width: 1200,
+      height: 800,
+      title: null,
+      alt: null,
+      note: "Crop candidate",
+      sourceLabel: null,
+      sourceUrl: null,
+      isFavorite: false,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-03T00:00:00.000Z",
+      position: null,
+    });
+
+    expect(asset).toMatchObject({
+      type: "image",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-03T00:00:00.000Z",
     });
   });
 

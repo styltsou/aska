@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import {
   ButtonGroup,
   ButtonGroupSeparator,
@@ -2092,6 +2093,12 @@ export function ImageAssetViewer({
                       </TooltipTrigger>
                       <TooltipContent>Download</TooltipContent>
                     </Tooltip>
+                    <AssetTimestampCard
+                      createdAt={asset.createdAt}
+                      updatedAt={asset.updatedAt}
+                      label="Image details"
+                      triggerClassName={VIEWER_HEADER_ICON_BUTTON_CLASS}
+                    />
                   </div>
                 </>
               ) : null}

@@ -256,6 +256,7 @@ export type CollectionImageNode = {
   clientId?: string;
   sizeBytes?: number;
   createdAt: string;
+  updatedAt?: string;
   position: BoardPosition | null;
   frontIndex?: number | null;
 };
@@ -327,6 +328,7 @@ export type CollectionLinkNode = {
   video: LinkVideo | null;
   optimisticYouTube?: OptimisticYouTubeMetadata;
   createdAt: string;
+  updatedAt?: string;
   clientId?: string;
   position: BoardPosition | null;
   frontIndex?: number | null;

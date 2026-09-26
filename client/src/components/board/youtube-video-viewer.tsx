@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -18,6 +19,10 @@ import { toast } from "sonner";
 
 import { useUpdateLink } from "@/api/collection";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  AssetTimestampCard,
+  hasAssetBeenEdited,
+} from "@/components/board/asset-timestamp-card";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Button } from "@/components/ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
@@ -45,6 +50,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 import type { AssetLocation } from "@/api/collection";
 import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
+import { formatNoteHeaderEditTime } from "@/lib/note-date-format";
 import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import type { LinkAsset } from "@/types/asset";
@@ -61,6 +67,16 @@ const VIDEO_VIEWER_ICON_TRANSITION = {
   duration: 0.08,
   ease: [0.22, 1, 0.36, 1] as const,
 };
+const VIDEO_VIEWER_DESCRIPTION_TRANSITION = {
+  duration: 0.18,
+  ease: [0.22, 1, 0.36, 1] as const,
+};
+const FULLSCREEN_TOOLBAR_CHROME_REM = 3;
+const FULLSCREEN_MEDIA_PADDING_TOP_REM = 1;
+const FULLSCREEN_MEDIA_PADDING_BOTTOM_REM = 2;
+const FULLSCREEN_MEDIA_PADDING_X_REM = 1.25;
+const FULLSCREEN_MEDIA_MAX_WIDTH = `calc((100dvh - var(--app-shell-inset) * 2 - ${FULLSCREEN_TOOLBAR_CHROME_REM + FULLSCREEN_MEDIA_PADDING_TOP_REM + FULLSCREEN_MEDIA_PADDING_BOTTOM_REM}rem) * 16 / 9)`;
+const FULLSCREEN_COLUMN_MAX_WIDTH = `calc(${FULLSCREEN_MEDIA_MAX_WIDTH} + ${FULLSCREEN_MEDIA_PADDING_X_REM * 2}rem)`;
 
 function linkNoteStorageKey(workspaceSlug: string, assetId: string) {
   return `${LINK_NOTE_STORAGE_KEY}${JSON.stringify([workspaceSlug, assetId])}`;
@@ -245,10 +261,10 @@ export function YouTubeVideoViewer({
           />
         }
         className={cn(
-          "flex max-h-[calc(100svh-2rem)] flex-col overflow-hidden transition-[background-color,box-shadow,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "flex min-h-0 max-h-[calc(100svh-2rem)] flex-col overflow-hidden transition-[background-color,box-shadow,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
           workspace
             ? "top-0 left-0 h-dvh max-h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
-            : "top-1/2 w-[calc(100vw-2rem)] max-w-[76rem] -translate-y-1/2 rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10",
+            : "top-1/2 h-[min(48rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[76rem] -translate-y-1/2 rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10",
           split &&
             "z-50 w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--workspace-peek-stage-gap))]",
         )}
@@ -339,7 +355,7 @@ function VideoViewerToolbar({
         presentation === "modal" &&
           "rounded-t-xl rounded-b-none bg-transparent",
         presentation === "workspace" &&
-          "mt-[var(--app-shell-inset)] rounded-none bg-background pl-[calc(var(--app-shell-inset)+0.5rem)]",
+          "mt-[var(--app-shell-inset)] mb-[var(--app-shell-inset)] rounded-none bg-background pl-[calc(var(--app-shell-inset)+0.5rem)]",
         presentation === "drawer" && "border-b bg-background",
       )}
     >
@@ -514,6 +530,7 @@ export function YouTubeVideoContent({
       className={cn(
         "relative isolate aspect-video shrink-0 overflow-hidden rounded-md bg-background",
         viewer ? "w-full max-w-[calc((100dvh-5rem)*16/9)]" : "m-2 sm:m-3",
+        workspace && viewer && "max-w-none",
         workspace &&
           !viewer &&
           "w-[calc(100%-1.5rem)] max-w-[calc((100dvh-13rem)*16/9)] self-center",
@@ -571,77 +588,30 @@ export function YouTubeVideoContent({
         layout={animateLayout}
         layoutDependency={layoutDependency ?? workspace}
         transition={{ layout: layoutTransition }}
-        className="[container-type:inline-size] relative flex h-full min-h-0 flex-1 overflow-hidden"
+        className="relative flex h-full min-h-0 flex-1 overflow-hidden"
       >
-        <ScrollArea
-          className="h-full min-h-0 w-full [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-3 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-1.5 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
-          viewportClassName={cn(
-            "min-h-0",
-            workspace && "[@container(min-width:72rem)]:overflow-hidden!",
-          )}
-        >
-          <div
-            className={cn(
-              "min-h-full [@container(min-width:72rem)]:grid",
-              workspace
-                ? "[@container(min-width:72rem)]:h-full [@container(min-width:72rem)]:min-h-0 [@container(min-width:72rem)]:grid-cols-[minmax(0,1fr)_clamp(22rem,28vw,28rem)] [@container(min-width:72rem)]:grid-rows-[minmax(0,1fr)] [@container(min-width:72rem)]:overflow-hidden"
-                : "[@container(min-width:72rem)]:grid-cols-[minmax(0,1fr)_19rem]",
-            )}
-          >
+        <ScrollArea className="h-full min-h-0 w-full [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-3 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-1.5 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm">
+          <div className="min-h-full bg-background">
             <div
-              className={cn(
-                "min-w-0 bg-background",
-                workspace &&
-                  "[@container(min-width:72rem)]:h-full [@container(min-width:72rem)]:min-h-0 [@container(min-width:72rem)]:overflow-hidden",
-              )}
-            >
-              <ScrollArea
-                className={cn(
-                  "h-auto",
-                  workspace &&
-                    "[@container(min-width:72rem)]:h-full [@container(min-width:72rem)]:min-h-0",
-                  "[&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-3 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-1.5 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm",
-                )}
-                viewportClassName={cn(
-                  "h-auto",
-                  workspace &&
-                    "[@container(min-width:72rem)]:h-full [@container(min-width:72rem)]:min-h-0",
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex items-center justify-center p-4",
-                    workspace &&
-                      "[@container(min-width:72rem)]:min-h-[calc(100dvh-12rem)]",
-                  )}
-                >
-                  {media}
-                </div>
-                <div className="px-4 pb-5 sm:px-5">{metadata}</div>
-              </ScrollArea>
-            </div>
-            <aside
-              className={cn(
-                "min-w-0 bg-background [@container(min-width:72rem)]:sticky [@container(min-width:72rem)]:top-0 [@container(min-width:72rem)]:self-start",
+              className="mx-auto w-full px-5"
+              style={
                 workspace
-                  ? "[@container(min-width:72rem)]:h-full [@container(min-width:72rem)]:min-h-0 [@container(min-width:72rem)]:overflow-hidden"
-                  : "[@container(min-width:72rem)]:h-[min(42rem,calc(100dvh-5rem))]",
-              )}
+                  ? { maxWidth: FULLSCREEN_COLUMN_MAX_WIDTH }
+                  : undefined
+              }
             >
-              <ScrollArea
-                className="h-auto [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-3 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-1.5 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm [@container(min-width:72rem)]:h-full [@container(min-width:72rem)]:min-h-0"
-                viewportClassName="h-auto [@container(min-width:72rem)]:h-full [@container(min-width:72rem)]:min-h-0"
-              >
-                <div className="px-4 py-5 sm:px-5">
-                  <VideoLinkNoteEditor
-                    asset={asset}
-                    className="pt-0"
-                    open={open}
-                    workspaceSlug={workspaceSlug}
-                  />
-                </div>
-              </ScrollArea>
-            </aside>
+              <div className="flex items-center justify-start pt-4 pb-8">
+                {media}
+              </div>
+              <div className="space-y-1 pb-5">
+                {metadata}
+                <VideoLinkNoteEditor
+                  asset={asset}
+                  open={open}
+                  workspaceSlug={workspaceSlug}
+                />
+              </div>
+            </div>
           </div>
         </ScrollArea>
       </motion.div>
@@ -682,6 +652,76 @@ function VideoViewerMetadata({
   compact: boolean;
   large: boolean;
 }) {
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  // The clamp is only reapplied once the collapse animation settles, otherwise
+  // the text would snap to three lines while its box is still animating down.
+  const [descriptionClamped, setDescriptionClamped] = useState(true);
+  const reduceMotion = useReducedMotion();
+  const title =
+    asset.title === asset.hostname ? "Title unavailable" : asset.title;
+  const channelName = asset.video.channelName ?? "Channel unavailable";
+  const description = asset.description?.trim();
+  const descriptionIsLong = Boolean(
+    description &&
+    (description.length > 240 || description.split("\n").length > 3),
+  );
+  const descriptionUnavailable =
+    !description &&
+    asset.resolutionStatus !== "queued" &&
+    asset.resolutionStatus !== "resolving";
+  const [descriptionElement, setDescriptionElement] =
+    useState<HTMLParagraphElement | null>(null);
+  const [descriptionHeights, setDescriptionHeights] = useState<{
+    collapsed: number;
+    expanded: number;
+  } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!descriptionElement || !descriptionIsLong) {
+      return;
+    }
+    const measure = () => {
+      // A clamped element reports its clipped height, so read the expanded
+      // height with the clamp lifted (an inline `display: block` is enough,
+      // since `-webkit-line-clamp` only applies to `-webkit-box`).
+      const previousDisplay = descriptionElement.style.display;
+      descriptionElement.style.display = "block";
+      const expandedHeight = descriptionElement.offsetHeight;
+      descriptionElement.style.display = previousDisplay;
+      const lineHeight = Number.parseFloat(
+        getComputedStyle(descriptionElement).lineHeight,
+      );
+      // The collapsed state is a three-line clamp, which lays out as exactly
+      // three line boxes unless the description is shorter than that.
+      const collapsedHeight = Number.isNaN(lineHeight)
+        ? expandedHeight
+        : Math.min(expandedHeight, lineHeight * 3);
+      setDescriptionHeights((current) =>
+        current?.collapsed === collapsedHeight &&
+        current.expanded === expandedHeight
+          ? current
+          : { collapsed: collapsedHeight, expanded: expandedHeight },
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(descriptionElement);
+    return () => observer.disconnect();
+  }, [descriptionElement, description, descriptionIsLong, large, compact]);
+
+  const descriptionParagraph = description ? (
+    <p
+      ref={setDescriptionElement}
+      className={cn(
+        "whitespace-pre-line text-sm leading-relaxed text-pretty text-muted-foreground",
+        large && "text-base! leading-7!",
+        descriptionIsLong && descriptionClamped && "line-clamp-3",
+      )}
+    >
+      {description}
+    </p>
+  ) : null;
+
   return (
     <div className="space-y-1">
       <h2
@@ -691,10 +731,10 @@ function VideoViewerMetadata({
           compact && "text-lg!",
         )}
       >
-        {asset.title}
+        {title}
       </h2>
-      {asset.video.channelName ? (
-        asset.video.channelUrl ? (
+      <div className="flex flex-wrap items-center gap-x-1.5 pt-0.5">
+        {asset.video.channelName && asset.video.channelUrl ? (
           <a
             href={asset.video.channelUrl}
             target="_blank"
@@ -702,33 +742,81 @@ function VideoViewerMetadata({
             className={cn(
               "inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",
               large && "text-base!",
-              "pt-0.5",
             )}
           >
-            {asset.video.channelName}
+            {channelName}
             <ExternalLinkIcon className={cn("size-3.5", large && "size-4!")} />
             <span className="sr-only">Opens channel in a new tab</span>
           </a>
         ) : (
           <p
             className={cn(
-              "pt-0.5 text-sm font-medium text-muted-foreground",
+              "text-sm font-medium text-muted-foreground",
               large && "text-base!",
             )}
           >
-            {asset.video.channelName}
+            {channelName}
           </p>
-        )
-      ) : null}
-      {asset.description ? (
+        )}
+        <AssetTimestampCard
+          createdAt={asset.createdAt}
+          updatedAt={asset.updatedAt}
+          label="Video details"
+          triggerClassName="-my-1 ml-auto"
+        />
+      </div>
+      {description ? (
+        <div className="w-full pt-2">
+          {descriptionHeights ? (
+            <motion.div
+              initial={false}
+              animate={{
+                height: descriptionExpanded
+                  ? descriptionHeights.expanded
+                  : descriptionHeights.collapsed,
+              }}
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : VIDEO_VIEWER_DESCRIPTION_TRANSITION
+              }
+              onAnimationComplete={() => {
+                if (!descriptionExpanded) {
+                  setDescriptionClamped(true);
+                }
+              }}
+              className="overflow-hidden"
+            >
+              {descriptionParagraph}
+            </motion.div>
+          ) : (
+            descriptionParagraph
+          )}
+          {descriptionIsLong ? (
+            <button
+              type="button"
+              className="mt-1 text-sm font-medium text-foreground/70 transition-colors duration-75 ease-[cubic-bezier(0.16,1,0.3,1)] hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
+              aria-expanded={descriptionExpanded}
+              onClick={() => {
+                const expanding = !descriptionExpanded;
+                setDescriptionExpanded(expanding);
+                // Stay unclamped while the box animates, unless motion is
+                // reduced and the clamp can be reapplied immediately.
+                setDescriptionClamped(!expanding && reduceMotion === true);
+              }}
+            >
+              {descriptionExpanded ? "Show less" : "Show more"}
+            </button>
+          ) : null}
+        </div>
+      ) : descriptionUnavailable ? (
         <p
           className={cn(
-            "max-w-3xl text-sm leading-relaxed text-pretty text-muted-foreground",
+            "pt-2 text-sm leading-relaxed text-muted-foreground",
             large && "text-base! leading-7!",
-            "pt-2",
           )}
         >
-          {asset.description}
+          Description unavailable.
         </p>
       ) : null}
     </div>
@@ -750,6 +838,7 @@ function VideoLinkNoteEditor({
   const queryClient = useQueryClient();
   const { syncPeekVideoNote } = useWorkspacePeek();
   const [note, setNote] = useState("");
+  const editedLabel = formatVideoEditedLabel(asset.updatedAt, asset.createdAt);
   const assetIdRef = useRef<string | undefined>(undefined);
   const assetNoteRef = useRef(asset.note);
   const draftRef = useRef("");
@@ -900,6 +989,9 @@ function VideoLinkNoteEditor({
         rows={1}
         className="mt-1 block min-h-6 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
       />
+      {editedLabel ? (
+        <p className="mt-1 text-xs text-muted-foreground/70">{editedLabel}</p>
+      ) : null}
     </div>
   );
 }
@@ -908,6 +1000,20 @@ function isVideoLinkAsset(
   asset: LinkAsset | undefined,
 ): asset is VideoLinkAsset {
   return asset?.video?.provider === "youtube";
+}
+
+/**
+ * Relative edit time for the note editor, matching the note editor's save
+ * status copy. The card in the metadata block carries the absolute timestamps.
+ */
+export function formatVideoEditedLabel(
+  updatedAt: string | undefined,
+  createdAt: string | undefined,
+  now = Date.now(),
+): string | undefined {
+  if (!updatedAt || !hasAssetBeenEdited(createdAt, updatedAt)) return undefined;
+  const time = formatNoteHeaderEditTime(updatedAt, now);
+  return time ? `Edited ${time}` : undefined;
 }
 
 export function youtubeEmbedUrl(videoId: string): string {
