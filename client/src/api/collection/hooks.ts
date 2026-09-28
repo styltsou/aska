@@ -50,6 +50,7 @@ import type {
   CreateRemoteImageInput,
   CreateNoteInput,
   CreateColorInput,
+  DeleteNoteIfUnchangedInput,
   FolderChildPreview,
   ImageUploadStatus,
   InboxContentsResponse,
@@ -72,6 +73,8 @@ import { emitBatchPlacementCompleted } from "@/components/canvas/batch-placement
 import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
 import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
+import { applySavedNoteToWorkspaceAsset } from "./note-asset-cache";
+import type { PeekableAssetResponse } from "./types";
 import { colorSearchQueryKeys } from "@/api/color-search/hooks";
 import {
   invalidateMentionSuggestionQueries,
@@ -1766,6 +1769,10 @@ export function useUpdateNote(workspaceSlug: string) {
       });
     },
     onSuccess: ({ note }, variables) => {
+      queryClient.setQueryData<PeekableAssetResponse>(
+        ["workspace-asset", workspaceSlug, note.id],
+        (current) => applySavedNoteToWorkspaceAsset(current, note),
+      );
       queryClient.setQueriesData<CollectionContentsResponse>(
         {
           predicate: ({ queryKey }) =>
@@ -1889,6 +1896,13 @@ export function useUpdateImage(workspaceSlug: string) {
       queryClient.setQueriesData<CollectionContentsResponse>(
         contentsFilter,
         (current) => applyUpdatedImageToContents(current, image),
+      );
+      queryClient.setQueryData<PeekableAssetResponse>(
+        ["workspace-asset", workspaceSlug, image.id],
+        (current) =>
+          current?.asset.type === "image"
+            ? { ...current, asset: { ...current.asset, ...image } }
+            : current,
       );
     },
   });
@@ -2650,10 +2664,20 @@ export function useUpdateCollectionNodePositions(
 
 export function useDeleteAsset(workspaceSlug: string) {
   const queryClient = useQueryClient();
+  type DeleteRequest =
+    | string
+    | (DeleteNoteIfUnchangedInput & { assetId: string });
 
   return useMutation({
-    mutationFn: (assetId: string) => deleteAsset(workspaceSlug, assetId),
-    onMutate: async (assetId) => {
+    mutationFn: (request: DeleteRequest) =>
+      typeof request === "string"
+        ? deleteAsset(workspaceSlug, request)
+        : deleteAsset(workspaceSlug, request.assetId, request),
+    onMutate: async (request) => {
+      // Keep a conditionally deleted note mounted until the server confirms it.
+      // A conflict must not evict the editor that still holds the user's draft.
+      if (typeof request !== "string") return;
+      const assetId = request;
       const contentsKey = ["collectionContents", workspaceSlug] as const;
       const inboxKey = collectionQueryKeys.inbox(workspaceSlug);
       const collectionsKey = collectionQueryKeys.collections(workspaceSlug);

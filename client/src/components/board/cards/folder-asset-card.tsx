@@ -6,7 +6,7 @@ import { hasSelectionModifier } from "@/lib/selection";
 import type { FolderAsset } from "@/types/asset";
 
 import { LinkCardPreview } from "./link-asset-card";
-import { NoteMarkdown } from "./note-asset-card";
+import { NoteMiniature } from "./note-miniature";
 
 const previewTransition: Transition = {
   duration: 0.07,
@@ -163,12 +163,12 @@ export function FolderAssetCard({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.94 }}
                   transition={previewTransition}
-                  className="flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-sm bg-card p-2 ring-1 ring-sidebar-foreground/5"
+                  className="relative aspect-square overflow-hidden rounded-sm bg-sidebar ring-1 ring-sidebar-foreground/5"
                 >
-                  <NoteMarkdown
+                  <NoteMiniature
                     content={preview.snippet ?? ""}
                     title={preview.title}
-                    compact
+                    size="folder"
                   />
                 </motion.div>
               );

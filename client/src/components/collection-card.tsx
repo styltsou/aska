@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 
 import { LinkCardPreview } from "./board/cards/link-asset-card";
-import { NoteMarkdown } from "./board/cards/note-asset-card";
+import { NoteMiniature } from "./board/cards/note-miniature";
 import { useDeleteCollection } from "@/api/collection";
 import {
   ContextMenu,
@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { FolderChildPreview } from "@/api/collection/types";
+import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";
 
 const PREVIEW_TRANSITION = "transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1)";
 
@@ -52,11 +53,13 @@ interface CollectionCardItem {
 interface CollectionCardProps {
   collection: CollectionCardItem;
   workspaceSlug: string;
+  search: WorkspaceRouteSearch;
 }
 
 export function CollectionCard({
   collection,
   workspaceSlug,
+  search,
 }: CollectionCardProps) {
   const [hovered, setHovered] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -71,7 +74,7 @@ export function CollectionCard({
               <Link
                 {...triggerProps}
                 to="/$workspaceSlug/collections/$"
-                search={{}}
+                search={search}
                 params={{ workspaceSlug, _splat: collection.slug }}
                 className="relative grid aspect-square cursor-pointer grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 data-popup-open:border-sidebar-foreground/20"
                 onMouseEnter={() => setHovered(true)}
@@ -144,7 +147,7 @@ export function CollectionCard({
                       }
                       return (
                         <div
-                          className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
+                          className="absolute aspect-square overflow-hidden rounded-xl bg-sidebar shadow-md ring-1 ring-sidebar-foreground/5"
                           style={{
                             ...PREVIEW_POSITION,
                             zIndex: 0,
@@ -152,10 +155,10 @@ export function CollectionCard({
                             transition: PREVIEW_TRANSITION,
                           }}
                         >
-                          <NoteMarkdown
+                          <NoteMiniature
                             content={preview.snippet ?? ""}
                             title={preview.title}
-                            className="h-full w-full"
+                            size="collection"
                           />
                         </div>
                       );
@@ -235,7 +238,7 @@ export function CollectionCard({
                       return (
                         <div
                           key={preview.assetId}
-                          className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
+                          className="absolute aspect-square overflow-hidden rounded-xl bg-sidebar shadow-md ring-1 ring-sidebar-foreground/5"
                           style={{
                             ...STACKED_POSITION,
                             zIndex: z,
@@ -246,11 +249,10 @@ export function CollectionCard({
                               : `${z * 10}ms`,
                           }}
                         >
-                          <NoteMarkdown
+                          <NoteMiniature
                             content={preview.snippet ?? ""}
                             title={preview.title}
-                            compact
-                            className="h-full w-full"
+                            size="collection"
                           />
                         </div>
                       );

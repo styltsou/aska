@@ -13,6 +13,7 @@ import {
   Maximize2Icon,
   Minimize2Icon,
   PanelRightIcon,
+  XIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ import {
   AssetTimestampCard,
   hasAssetBeenEdited,
 } from "@/components/board/asset-timestamp-card";
+import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Button } from "@/components/ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
@@ -124,9 +126,12 @@ export function YouTubeVideoViewer({
   open: controlledOpen,
   loading = false,
   onClose,
+  onDismissAll,
   onCloseComplete,
   onShowInBoard,
   initialPresentation,
+  view,
+  onViewChange,
   workspaceSlug,
   location,
 }: {
@@ -134,18 +139,22 @@ export function YouTubeVideoViewer({
   open?: boolean;
   loading?: boolean;
   onClose: () => void;
+  onDismissAll?: () => void;
   onCloseComplete?: () => void;
   onShowInBoard?: () => void;
   initialPresentation?: "fullscreen";
+  view?: "modal" | "full";
+  onViewChange?: (view: "modal" | "full") => void;
   workspaceSlug: string;
   location?: AssetLocation;
 }) {
   const isMobile = useIsMobile();
   const reduceMotion = useReducedMotion();
   const { target: peekTarget, peekVideo } = useWorkspacePeek();
-  const [expanded, setExpanded] = useState(
+  const [localExpanded, setLocalExpanded] = useState(
     initialPresentation === "fullscreen",
   );
+  const expanded = view ? view === "full" : localExpanded;
   const [activeAsset, setActiveAsset] = useState<VideoLinkAsset>();
 
   useEffect(() => {
@@ -178,8 +187,11 @@ export function YouTubeVideoViewer({
       }
       event.preventDefault();
       event.stopPropagation();
-      peekVideo(displayedAsset, location);
-      onClose();
+      void peekVideo(displayedAsset, location, { demoteMain: true }).then(
+        (opened) => {
+          if (opened) onClose();
+        },
+      );
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -190,7 +202,13 @@ export function YouTubeVideoViewer({
     return (
       <Drawer
         open={open}
-        onOpenChange={(next) => !next && onClose()}
+        onOpenChange={(next, details) => {
+          if (!next) {
+            if (details.reason === "outside-press" && onDismissAll)
+              onDismissAll();
+            else onClose();
+          }
+        }}
         onOpenChangeComplete={(next) => !next && onCloseComplete?.()}
         swipeDirection="down"
         showSwipeHandle
@@ -214,6 +232,7 @@ export function YouTubeVideoViewer({
           </DrawerDescription>
           <VideoViewerToolbar
             onBack={onClose}
+            onDismissAll={onDismissAll}
             onShowInBoard={onShowInBoard}
             presentation="drawer"
           />
@@ -236,7 +255,13 @@ export function YouTubeVideoViewer({
     <Dialog
       open={open}
       modal={!split}
-      onOpenChange={(next) => !next && onClose()}
+      onOpenChange={(next, details) => {
+        if (!next) {
+          if (details.reason === "outside-press" && onDismissAll)
+            onDismissAll();
+          else onClose();
+        }
+      }}
       onOpenChangeComplete={(next) => !next && onCloseComplete?.()}
     >
       <DialogContent
@@ -276,12 +301,17 @@ export function YouTubeVideoViewer({
           {accessibleDescription}
         </DialogDescription>
         <VideoViewerToolbar
+          asset={displayedAsset}
           onBack={onClose}
+          onDismissAll={onDismissAll}
           onPeek={
             displayedAsset && location
               ? () => {
-                  peekVideo(displayedAsset, location);
-                  onClose();
+                  void peekVideo(displayedAsset, location, {
+                    demoteMain: true,
+                  }).then((opened) => {
+                    if (opened) onClose();
+                  });
                 }
               : undefined
           }
@@ -290,7 +320,12 @@ export function YouTubeVideoViewer({
           presentation={workspace ? "workspace" : "modal"}
           layoutDependency={presentation}
           onToggleExpanded={
-            split ? undefined : () => setExpanded((current) => !current)
+            split
+              ? undefined
+              : () => {
+                  if (onViewChange) onViewChange(expanded ? "modal" : "full");
+                  else setLocalExpanded((current) => !current);
+                }
           }
         />
         <DialogBody
@@ -323,7 +358,9 @@ export function YouTubeVideoViewer({
 }
 
 function VideoViewerToolbar({
+  asset,
   onBack,
+  onDismissAll,
   onPeek,
   onShowInBoard,
   expanded,
@@ -331,7 +368,9 @@ function VideoViewerToolbar({
   layoutDependency,
   onToggleExpanded,
 }: {
+  asset?: VideoLinkAsset;
   onBack: () => void;
+  onDismissAll?: () => void;
   onPeek?: () => void;
   onShowInBoard?: () => void;
   expanded?: boolean;
@@ -339,7 +378,7 @@ function VideoViewerToolbar({
   layoutDependency?: string;
   onToggleExpanded?: () => void;
 }) {
-  const backLabel = "Back to board";
+  const backLabel = "Back";
   const reduceMotion = useReducedMotion();
   const animateLayout = presentation !== "drawer";
 
@@ -366,7 +405,10 @@ function VideoViewerToolbar({
               type="button"
               variant="ghost"
               size="icon"
-              className="size-8 rounded-lg"
+              className={cn(
+                "size-8 rounded-lg",
+                ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+              )}
               aria-label={backLabel}
               onClick={onBack}
             />
@@ -382,6 +424,29 @@ function VideoViewerToolbar({
           </KbdGroup>
         </TooltipContent>
       </Tooltip>
+      {onDismissAll ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "size-8 rounded-lg",
+                  ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                )}
+                aria-label="Close all to board"
+                onClick={onDismissAll}
+              />
+            }
+          >
+            <XIcon className="size-4" />
+            <span className="sr-only">Close all to board</span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Close all to board</TooltipContent>
+        </Tooltip>
+      ) : null}
       {onPeek ? (
         <Tooltip>
           <TooltipTrigger
@@ -390,7 +455,10 @@ function VideoViewerToolbar({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-8 rounded-lg"
+                className={cn(
+                  "size-8 rounded-lg",
+                  ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                )}
                 aria-label="Peek video"
                 onClick={onPeek}
               />
@@ -423,7 +491,10 @@ function VideoViewerToolbar({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-8 rounded-lg"
+                className={cn(
+                  "size-8 rounded-lg",
+                  ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                )}
                 aria-label="Show in board"
                 onClick={onShowInBoard}
               />
@@ -443,7 +514,10 @@ function VideoViewerToolbar({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-8 rounded-lg"
+                className={cn(
+                  "size-8 rounded-lg",
+                  ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                )}
                 aria-label={expanded ? "Return to modal" : "Expand video"}
                 onClick={onToggleExpanded}
               />
@@ -479,6 +553,16 @@ function VideoViewerToolbar({
             {expanded ? "Return to modal" : "Expand video"}
           </TooltipContent>
         </Tooltip>
+      ) : null}
+      {asset ? (
+        <div className="ml-auto flex items-center gap-0.5">
+          <AssetTimestampCard
+            createdAt={asset.createdAt}
+            updatedAt={asset.updatedAt}
+            label="Video details"
+            triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
+          />
+        </div>
       ) : null}
     </motion.div>
   );
@@ -579,6 +663,7 @@ export function YouTubeVideoContent({
       asset={asset}
       compact={compact}
       large={largeMetadata}
+      showTimestamp={!viewer && !compact}
     />
   );
 
@@ -647,10 +732,12 @@ function VideoViewerMetadata({
   asset,
   compact,
   large,
+  showTimestamp,
 }: {
   asset: VideoLinkAsset;
   compact: boolean;
   large: boolean;
+  showTimestamp: boolean;
 }) {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   // The clamp is only reapplied once the collapse animation settles, otherwise
@@ -758,12 +845,14 @@ function VideoViewerMetadata({
             {channelName}
           </p>
         )}
-        <AssetTimestampCard
-          createdAt={asset.createdAt}
-          updatedAt={asset.updatedAt}
-          label="Video details"
-          triggerClassName="-my-1 ml-auto"
-        />
+        {showTimestamp ? (
+          <AssetTimestampCard
+            createdAt={asset.createdAt}
+            updatedAt={asset.updatedAt}
+            label="Video details"
+            triggerClassName="-my-1 ml-auto"
+          />
+        ) : null}
       </div>
       {description ? (
         <div className="w-full pt-2">

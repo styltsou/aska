@@ -1,4 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useParams,
+  useRouterState,
+} from "@tanstack/react-router";
+import { useMemo } from "react";
 import { CollectionCard } from "@/components/collection-card";
 import { CollectionGridSkeleton } from "@/components/collection-grid-skeleton";
 import { CreateCollectionDialog } from "@/components/app-shell/create-collection-dialog";
@@ -6,17 +11,30 @@ import { useCollections } from "@/api/collection";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ResourceLoadError } from "@/components/resource-load-error";
+import { mergeWorkspaceOverlaySearch } from "@/lib/workspace-overlay-search";
+import type { WorkspaceRouteSearch } from "./route";
 
 export const Route = createFileRoute("/$workspaceSlug/")({
   head: () => ({
     meta: [{ title: "Collections | Aska" }],
   }),
-  component: WorkspacePage,
+  component: () => null,
   pendingComponent: CollectionGridSkeleton,
 });
 
-function WorkspacePage() {
-  const { workspaceSlug } = Route.useParams();
+export function WorkspacePage() {
+  const { workspaceSlug } = useParams({ from: "/$workspaceSlug" });
+  const workspaceSearch = useRouterState({
+    select: (state) => state.location.search as WorkspaceRouteSearch,
+  });
+  const boardSearch = useMemo(
+    () =>
+      mergeWorkspaceOverlaySearch(workspaceSearch, {
+        asset: undefined,
+        view: undefined,
+      }),
+    [workspaceSearch],
+  );
   const { data, isLoading, isError, isFetching, refetch } =
     useCollections(workspaceSlug);
 
@@ -60,6 +78,7 @@ function WorkspacePage() {
             key={collection.slug}
             collection={collection}
             workspaceSlug={workspaceSlug}
+            search={boardSearch}
           />
         ))}
       </div>

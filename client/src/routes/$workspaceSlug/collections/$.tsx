@@ -1,10 +1,21 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Activity, useCallback, useEffect, useMemo, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import {
+  Activity,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { collectionQueryKeys } from "@/api/collection/query-keys";
-import { useCollectionContents, type CanvasObject } from "@/api/collection";
+import {
+  useCollectionContents,
+  type CanvasObject,
+  type CollectionNode,
+} from "@/api/collection";
 import { type ColorSearchScope, useColorImageSearch } from "@/api/color-search";
 import {
   BoardActionRail,
@@ -30,9 +41,14 @@ import {
   type BoardShowRequest,
 } from "@/components/app-shell/workspace-peek";
 import { useWorkspaceAssetView } from "@/components/app-shell/workspace-asset-view";
+import { useWorkspaceOverlayNavigation } from "@/components/app-shell/use-workspace-overlay-navigation";
+import { parseWorkspaceAssetPath } from "@/lib/workspace-asset-url";
 
 const EMPTY_COLOR_RESULTS: readonly [] = [];
+const EMPTY_COLLECTION_NODES: CollectionNode[] = [];
 const EMPTY_CANVAS_OBJECTS: readonly CanvasObject[] = [];
+const StableCanvas = memo(Canvas);
+const StableCollectionGridView = memo(CollectionGridView);
 
 export const Route = createFileRoute("/$workspaceSlug/collections/$")({
   head: () => ({
@@ -44,10 +60,12 @@ export const Route = createFileRoute("/$workspaceSlug/collections/$")({
 
 function CollectionPage() {
   const { workspaceSlug, _splat } = Route.useParams();
-  const navigate = useNavigate({ from: Route.fullPath });
+  const navigateOverlay = useWorkspaceOverlayNavigation();
   const { showRequest, consumeShowRequest } = useWorkspacePeek();
   const { openAsset } = useWorkspaceAssetView();
-  const collectionPath = _splat ?? "";
+  const collectionPath = parseWorkspaceAssetPath(
+    `/${workspaceSlug}/collections/${_splat ?? ""}`,
+  ).boardPathname.slice(`/${workspaceSlug}/collections/`.length);
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
     .filter(Boolean);
@@ -103,7 +121,7 @@ function CollectionPage() {
     }
   }, [data, cachedCollectionName]);
 
-  const nodes = data?.nodes ?? [];
+  const nodes = data?.nodes ?? EMPTY_COLLECTION_NODES;
   const activeFolder = data?.breadcrumbs.at(-1);
   const resolvedFolderPath = data?.breadcrumbs
     .map((breadcrumb) => breadcrumb.slug)
@@ -226,6 +244,45 @@ function CollectionPage() {
   ]);
 
   const focusedNodeId = focusedShowRequest?.assetId ?? focusedColorNodeId;
+  const dismissFocusedNode = useCallback(
+    () => setFocusedShowRequest(undefined),
+    [],
+  );
+  const handleOpenFolder = useCallback(
+    (folder: Extract<CollectionNode, { type: "folder" }>) => {
+      void navigateOverlay(
+        `/${workspaceSlug}/collections/${collectionPath}/${folder.slug}`,
+      );
+    },
+    [collectionPath, navigateOverlay, workspaceSlug],
+  );
+  const handleOpenAsset = useCallback(
+    (assetId: string) => {
+      const node = nodes.find((candidate) => candidate.id === assetId);
+      const location = {
+        type: "collection" as const,
+        collectionSlug,
+        folderPath: parentFolderPath,
+      };
+      openAsset(assetId, {
+        initialData:
+          node && node.type !== "folder"
+            ? { asset: node, location }
+            : undefined,
+        imageSiblings: nodes.filter(
+          (
+            candidate,
+          ): candidate is Extract<typeof candidate, { type: "image" }> =>
+            candidate.type === "image",
+        ),
+      });
+    },
+    [collectionSlug, nodes, openAsset, parentFolderPath],
+  );
+  const handleOpenNode = useCallback(
+    (node: { id: string }) => handleOpenAsset(node.id),
+    [handleOpenAsset],
+  );
 
   const isNotFound =
     error instanceof ApiError &&
@@ -264,38 +321,6 @@ function CollectionPage() {
     );
   }
 
-  const handleOpenFolder = (
-    folder: Extract<(typeof nodes)[number], { type: "folder" }>,
-  ) => {
-    void navigate({
-      to: "/$workspaceSlug/collections/$",
-      params: {
-        workspaceSlug,
-        _splat: `${collectionPath}/${folder.slug}`,
-      },
-      search: {},
-    });
-  };
-
-  const handleOpenAsset = (assetId: string) => {
-    const node = nodes.find((candidate) => candidate.id === assetId);
-    const location = {
-      type: "collection" as const,
-      collectionSlug,
-      folderPath: parentFolderPath,
-    };
-    openAsset(assetId, {
-      initialData:
-        node && node.type !== "folder" ? { asset: node, location } : undefined,
-      imageSiblings: nodes.filter(
-        (
-          candidate,
-        ): candidate is Extract<typeof candidate, { type: "image" }> =>
-          candidate.type === "image",
-      ),
-    });
-  };
-
   const loadError =
     isError && (!data || hasStaleRoutePlaceholder) ? (
       <ResourceLoadError
@@ -326,7 +351,7 @@ function CollectionPage() {
                   workspaceSlug={workspaceSlug}
                   collectionPath={collectionPath}
                 />
-                <Canvas
+                <StableCanvas
                   key={boardKey}
                   workspaceSlug={workspaceSlug}
                   collectionSlug={collectionSlug}
@@ -340,7 +365,7 @@ function CollectionPage() {
                   colorMatchNodeIds={colorMatchNodeIds}
                   focusedNodeId={focusedNodeId}
                   focusRequestId={focusedShowRequest?.id}
-                  onDismissFocusedNode={() => setFocusedShowRequest(undefined)}
+                  onDismissFocusedNode={dismissFocusedNode}
                   loadError={loadError}
                   emptyTitle={
                     isTypeFilterActive
@@ -356,17 +381,17 @@ function CollectionPage() {
                         ? "Add images, notes, links, or folders to start arranging this board."
                         : "Add images, notes, links, or folders to start arranging this collection."
                   }
-                  onOpenNote={(note) => handleOpenAsset(note.id)}
-                  onOpenImage={(image) => handleOpenAsset(image.id)}
-                  onOpenColor={(color) => handleOpenAsset(color.id)}
-                  onOpenVideo={(video) => handleOpenAsset(video.id)}
+                  onOpenNote={handleOpenNode}
+                  onOpenImage={handleOpenNode}
+                  onOpenColor={handleOpenNode}
+                  onOpenVideo={handleOpenNode}
                   onOpenFolder={handleOpenFolder}
                 />
               </Activity>
             ) : null}
             {boardView === "grid" || isInactiveViewWarmed ? (
               <Activity mode={boardView === "grid" ? "visible" : "hidden"}>
-                <CollectionGridView
+                <StableCollectionGridView
                   key={boardKey}
                   boardKey={boardKey}
                   workspaceSlug={workspaceSlug}
@@ -380,7 +405,7 @@ function CollectionPage() {
                   colorMatchNodeIds={colorMatchNodeIds}
                   focusedNodeId={focusedNodeId}
                   focusRequestId={focusedShowRequest?.id}
-                  onDismissFocusedNode={() => setFocusedShowRequest(undefined)}
+                  onDismissFocusedNode={dismissFocusedNode}
                   loadError={loadError}
                   emptyTitle={
                     isTypeFilterActive
@@ -396,10 +421,10 @@ function CollectionPage() {
                         ? "Add images, notes, links, or folders to this folder."
                         : "Add images, notes, links, or folders to this collection."
                   }
-                  onOpenNote={(note) => handleOpenAsset(note.id)}
-                  onOpenImage={(image) => handleOpenAsset(image.id)}
-                  onOpenColor={(color) => handleOpenAsset(color.id)}
-                  onOpenVideo={(video) => handleOpenAsset(video.id)}
+                  onOpenNote={handleOpenNode}
+                  onOpenImage={handleOpenNode}
+                  onOpenColor={handleOpenNode}
+                  onOpenVideo={handleOpenNode}
                   onOpenFolder={handleOpenFolder}
                 />
               </Activity>

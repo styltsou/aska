@@ -26,6 +26,7 @@ import type {
   DeleteCollectionResponse,
   FlattenFolderResponse,
   DeleteAssetResponse,
+  DeleteNoteIfUnchangedInput,
   InboxContentsResponse,
   ImageUploadStatusResponse,
   MoveCollectionNodesToFolderInput,
@@ -357,9 +358,11 @@ export async function fetchInboxImageUploadStatus(
 export async function deleteAsset(
   workspaceSlug: string,
   assetId: string,
+  expectedNote?: DeleteNoteIfUnchangedInput,
 ): Promise<DeleteAssetResponse> {
   return apiDelete<DeleteAssetResponse>(
     `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}`,
+    expectedNote,
   );
 }
 

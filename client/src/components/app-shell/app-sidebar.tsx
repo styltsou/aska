@@ -25,6 +25,10 @@ import { useWorkspace } from "@/api/workspace";
 import { useMarkInboxSeen } from "@/api/collection";
 import { getSidebarCollectionLocation } from "@/components/app-shell/sidebar-collection-navigation";
 import { openSettings } from "@/lib/settings-dialog";
+import { parseWorkspaceAssetPath } from "@/lib/workspace-asset-url";
+import { mergeWorkspaceOverlaySearch } from "@/lib/workspace-overlay-search";
+import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";
+import { useMemo } from "react";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const authState = useRouterState({
@@ -33,8 +37,20 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         ?.context as AuthState | undefined,
   });
   const pathname = useRouterState({
-    select: (state) => state.location.pathname,
+    select: (state) =>
+      parseWorkspaceAssetPath(state.location.pathname).boardPathname,
   });
+  const workspaceSearch = useRouterState({
+    select: (state) => state.location.search as WorkspaceRouteSearch,
+  });
+  const boardSearch = useMemo(
+    () =>
+      mergeWorkspaceOverlaySearch(workspaceSearch, {
+        asset: undefined,
+        view: undefined,
+      }),
+    [workspaceSearch],
+  );
 
   const navSecondary = [
     { title: "Support", icon: <LifeBuoyIcon />, disabled: true },
@@ -62,6 +78,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <Link
           to="/$workspaceSlug"
           params={{ workspaceSlug }}
+          search={boardSearch}
           activeOptions={{ exact: true }}
         />
       ),
@@ -80,7 +97,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <Link
           to="/$workspaceSlug/inbox"
           params={{ workspaceSlug }}
-          search={{}}
+          search={boardSearch}
           activeOptions={{ exact: true }}
           onClick={(event) => {
             if (
@@ -109,7 +126,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           workspaceSlug,
           _splat: collection.slug,
         }}
-        search={{}}
+        search={boardSearch}
         activeOptions={{ exact: false }}
       />
     ),

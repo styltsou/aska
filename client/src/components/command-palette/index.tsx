@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -73,6 +73,8 @@ import {
 } from "@/api/workspace-search";
 import { useWorkspaceAssetView } from "@/components/app-shell/workspace-asset-view";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
+import { useWorkspaceOverlayNavigation } from "@/components/app-shell/use-workspace-overlay-navigation";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
@@ -234,10 +236,11 @@ export function CommandPalette() {
   const [uploadImagesOpen, setUploadImagesOpen] = useState(false);
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const hasActiveModalLayer = useActiveModalLayer();
-  const navigate = useNavigate();
+  const navigateOverlay = useWorkspaceOverlayNavigation();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const { openAsset } = useWorkspaceAssetView();
-  const { peekNote, peekColor } = useWorkspacePeek();
+  const { peekNote, peekImage, peekColor } = useWorkspacePeek();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
@@ -350,27 +353,30 @@ export function CommandPalette() {
       return;
     }
     if (result.location.type === "inbox") {
-      void navigate({
-        to: "/$workspaceSlug/inbox",
-        params: { workspaceSlug },
-        search: {},
+      void navigateOverlay(`/${workspaceSlug}/inbox`, {
+        asset: undefined,
+        view: undefined,
       });
       return;
     }
-    void navigate({
-      to: "/$workspaceSlug/collections/$",
-      params: {
-        workspaceSlug,
-        _splat: [result.location.collectionSlug, result.location.folderPath]
-          .filter(Boolean)
-          .join("/"),
-      },
-      search: {},
-    });
+    void navigateOverlay(
+      `/${workspaceSlug}/collections/${[
+        result.location.collectionSlug,
+        result.location.folderPath,
+      ]
+        .filter(Boolean)
+        .join("/")}`,
+      { asset: undefined, view: undefined },
+    );
   }
 
   async function peekSearchResult(result: WorkspaceSearchResult) {
-    if (result.type !== "note" && result.type !== "color") {
+    if (
+      isMobile ||
+      (result.type !== "image" &&
+        result.type !== "note" &&
+        result.type !== "color")
+    ) {
       runSearchResult(result);
       return;
     }
@@ -378,6 +384,10 @@ export function CommandPalette() {
     try {
       const response = await fetchPeekableAsset(workspaceSlug, result.id);
       const asset = collectionNodeToAsset(response.asset);
+      if (asset.type === "image") {
+        void peekImage(asset, response.location);
+        return;
+      }
       if (asset.type === "note") {
         peekNote(asset, response.location);
         return;
@@ -533,18 +543,17 @@ export function CommandPalette() {
       case "open-inbox":
         if (!workspaceSlug) return;
         handleOpenChange(false);
-        void navigate({
-          to: "/$workspaceSlug/inbox",
-          params: { workspaceSlug },
-          search: {},
+        void navigateOverlay(`/${workspaceSlug}/inbox`, {
+          asset: undefined,
+          view: undefined,
         });
         return;
       case "browse-collections":
         if (!workspaceSlug) return;
         handleOpenChange(false);
-        void navigate({
-          to: "/$workspaceSlug",
-          params: { workspaceSlug },
+        void navigateOverlay(`/${workspaceSlug}`, {
+          asset: undefined,
+          view: undefined,
         });
         return;
       case "open-pexels-browser":
@@ -597,7 +606,11 @@ export function CommandPalette() {
                   const result = searchResults.find(
                     (candidate) => candidate.id === activeSearchResultId,
                   );
-                  if (result?.type === "note" || result?.type === "color") {
+                  if (
+                    result?.type === "image" ||
+                    result?.type === "note" ||
+                    result?.type === "color"
+                  ) {
                     event.preventDefault();
                     event.stopPropagation();
                     void peekSearchResult(result);
@@ -756,7 +769,7 @@ export function CommandPalette() {
               <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
                 ⇧ ↵
               </Kbd>
-              <span>to peek notes or colors</span>
+              <span>to peek images, notes, or colors</span>
             </span>
           ) : null}
           <span className="ml-auto inline-flex items-center gap-1">

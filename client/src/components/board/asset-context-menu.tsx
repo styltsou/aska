@@ -70,7 +70,11 @@ async function copyImage(loadImageBlob: () => Promise<Blob>) {
   }
 }
 
-function imageActions(asset: ImageAsset, onCopy: () => void) {
+function imageActions(
+  asset: ImageAsset,
+  onCopy: () => void,
+  onPeek?: () => void,
+) {
   return (
     <>
       {asset.sourceUrl ? (
@@ -83,6 +87,9 @@ function imageActions(asset: ImageAsset, onCopy: () => void) {
         </ContextMenuItem>
       ) : null}
       <ContextMenuItem onClick={onCopy}>Copy image</ContextMenuItem>
+      {onPeek ? (
+        <ContextMenuItem onClick={onPeek}>Peek image</ContextMenuItem>
+      ) : null}
     </>
   );
 }
@@ -169,23 +176,10 @@ export function shouldShowLinkPreviewRefresh(asset: LinkAsset): boolean {
 
 function linkActions(
   asset: LinkAsset,
-  onRefresh: () => void,
-  onOpenVideo?: (asset: LinkAsset) => void,
   onPeekVideo?: (asset: LinkAsset) => void,
 ) {
-  const refreshAllowed = shouldShowLinkPreviewRefresh(asset);
   return (
     <>
-      {asset.video && onOpenVideo ? (
-        <ContextMenuItem onClick={() => onOpenVideo(asset)}>
-          View video
-        </ContextMenuItem>
-      ) : null}
-      {asset.video && onPeekVideo ? (
-        <ContextMenuItem onClick={() => onPeekVideo(asset)}>
-          Peek video
-        </ContextMenuItem>
-      ) : null}
       <ContextMenuItem
         onClick={() =>
           window.open(asset.originalUrl, "_blank", "noopener,noreferrer")
@@ -202,8 +196,10 @@ function linkActions(
       >
         Copy link
       </ContextMenuItem>
-      {refreshAllowed ? (
-        <ContextMenuItem onClick={onRefresh}>Refresh preview</ContextMenuItem>
+      {asset.video && onPeekVideo ? (
+        <ContextMenuItem onClick={() => onPeekVideo(asset)}>
+          Peek video
+        </ContextMenuItem>
       ) : null}
     </>
   );
@@ -214,6 +210,7 @@ export function AssetContextMenu({
   children,
   deleteContext,
   inboxContext,
+  onOpenImage,
   onOpenVideo,
   dismissVersion,
   canvasBoardKey,
@@ -229,13 +226,14 @@ export function AssetContextMenu({
   inboxContext?: {
     workspaceSlug: string;
   };
+  onOpenImage?: (asset: ImageAsset) => void;
   onOpenVideo?: (asset: LinkAsset) => void;
   /** Canvas viewport version that should close an open context menu. */
   dismissVersion?: number;
   /** Marks this portaled menu as belonging to a specific canvas. */
   canvasBoardKey?: string;
 }) {
-  const { peekNote, peekColor, peekVideo } = useWorkspacePeek();
+  const { peekNote, peekImage, peekColor, peekVideo } = useWorkspacePeek();
   const isMobile = useIsMobile();
   const setPexelsBrowserOpen = useSessionStore(
     (state) => state.setPexelsBrowserOpen,
@@ -259,6 +257,8 @@ export function AssetContextMenu({
   const workspaceSlug =
     inboxContext?.workspaceSlug ?? deleteContext?.workspaceSlug;
   const isFavorite = asset.isFavorite ?? false;
+  const showRefreshPreview =
+    asset.type === "link" && shouldShowLinkPreviewRefresh(asset);
   const displayAsset: Asset =
     asset.type === "color" && colorPreview
       ? { ...asset, ...colorPreview }
@@ -445,6 +445,16 @@ export function AssetContextMenu({
     });
   }
 
+  function handleRefreshPreview() {
+    refreshLink.mutate(asset.id, {
+      onError: (error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Unable to refresh link.",
+        );
+      },
+    });
+  }
+
   return (
     <>
       <ContextMenu
@@ -500,7 +510,17 @@ export function AssetContextMenu({
           ) : (
             <>
               {asset.type === "image" ? (
-                imageActions(asset, handleCopyImage)
+                imageActions(
+                  asset,
+                  handleCopyImage,
+                  asset.uploadStatus
+                    ? undefined
+                    : () => {
+                        closePexels();
+                        if (isMobile) onOpenImage?.(asset);
+                        else void peekImage(asset, peekLocation);
+                      },
+                )
               ) : asset.type === "note" ? (
                 <>
                   <ContextMenuItem
@@ -521,18 +541,6 @@ export function AssetContextMenu({
               ) : (
                 linkActions(
                   asset,
-                  () => {
-                    refreshLink.mutate(asset.id, {
-                      onError: (error) => {
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Unable to refresh link.",
-                        );
-                      },
-                    });
-                  },
-                  onOpenVideo,
                   onOpenVideo
                     ? (video) => {
                         closePexels();
@@ -549,6 +557,11 @@ export function AssetContextMenu({
               {moveSource ? (
                 <ContextMenuItem onClick={() => setMoveDialogOpen(true)}>
                   Move to...
+                </ContextMenuItem>
+              ) : null}
+              {showRefreshPreview ? (
+                <ContextMenuItem onClick={handleRefreshPreview}>
+                  Refresh preview
                 </ContextMenuItem>
               ) : null}
             </>

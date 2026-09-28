@@ -31,6 +31,7 @@ import type {
   CollectionNoteNode,
   ContentTypeFilter,
   CreateNoteInput,
+  DeleteNoteIfUnchangedInput,
   CreateColorInput,
   InboxContentsResponse,
   UpdatedNote,
@@ -46,6 +47,7 @@ import type { BulkDeleteResult } from "@/services/collection/collection.types";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { parseAssetNodeId } from "@/lib/collection-node-id";
 import { getColorName, normalizeHexColor } from "@/lib/color-names";
+import { assertNoteEditVersion } from "@/lib/note-edit-version";
 import {
   normalizeColorGradient,
   type StoredColorGradient,
@@ -143,6 +145,7 @@ export interface IAssetService {
   deleteAsset(
     orgId: string,
     assetNodeId: string,
+    expectedNote?: DeleteNoteIfUnchangedInput,
   ): Promise<{ deletedAssetId: string }>;
   downloadAsset(
     orgId: string,
@@ -560,6 +563,34 @@ export class AssetService implements IAssetService {
       );
       const touchesEditedAt =
         data.content !== undefined || data.title !== undefined;
+      const lockedAsset = first(
+        await tx
+          .select(assetSelection)
+          .from(assets)
+          .where(assetCondition)
+          .limit(1)
+          .for("update"),
+      );
+      if (!lockedAsset) {
+        throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
+      }
+      if (touchesEditedAt) {
+        const originalNote = first(
+          await tx
+            .select({ markdown: noteAssets.markdown })
+            .from(noteAssets)
+            .where(eq(noteAssets.assetId, lockedAsset.id))
+            .limit(1)
+            .for("update"),
+        );
+        if (!originalNote) {
+          throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
+        }
+        assertNoteEditVersion(data, {
+          content: originalNote.markdown,
+          title: lockedAsset.title,
+        });
+      }
       const asset = touchesEditedAt
         ? first(
             await tx
@@ -861,9 +892,51 @@ export class AssetService implements IAssetService {
   async deleteAsset(
     orgId: string,
     assetNodeId: string,
+    expectedNote?: DeleteNoteIfUnchangedInput,
   ): Promise<{ deletedAssetId: string }> {
     const target = parseAssetNodeId(assetNodeId);
     const assetId = target.entityId;
+    if (expectedNote) {
+      if (target.assetType !== "note") {
+        throw new AppError(
+          ErrorCode.VALIDATION_ERROR,
+          "Conditional deletion is only available for notes",
+        );
+      }
+      await db.transaction(async (tx) => {
+        const noteAsset = first(
+          await tx
+            .select({ id: assets.id, title: assets.title })
+            .from(assets)
+            .where(
+              and(
+                eq(assets.organizationId, orgId),
+                eq(assets.id, assetId),
+                eq(assets.type, "note"),
+              ),
+            )
+            .limit(1)
+            .for("update"),
+        );
+        if (!noteAsset)
+          throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
+        const body = first(
+          await tx
+            .select({ content: noteAssets.markdown })
+            .from(noteAssets)
+            .where(eq(noteAssets.assetId, noteAsset.id))
+            .limit(1)
+            .for("update"),
+        );
+        if (!body) throw new AppError(ErrorCode.NOT_FOUND, "Note not found");
+        assertNoteEditVersion(expectedNote, {
+          content: body.content,
+          title: noteAsset.title,
+        });
+        await tx.delete(assets).where(eq(assets.id, noteAsset.id));
+      });
+      return { deletedAssetId: assetNodeId };
+    }
     const resourceId =
       target.assetType === "link"
         ? first(

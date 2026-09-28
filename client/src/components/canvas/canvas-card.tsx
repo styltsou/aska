@@ -191,6 +191,9 @@ export const CanvasCard = memo(function CanvasCard({
         <AssetContextMenu
           asset={asset}
           deleteContext={data.deleteContext}
+          onOpenImage={
+            node.type === "image" ? () => data.onOpenImage(node) : undefined
+          }
           onOpenVideo={data.onOpenVideo}
           dismissVersion={viewportActivity}
           canvasBoardKey={data.boardKey}

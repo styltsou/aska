@@ -10,7 +10,8 @@ describe("NoteMarkdown", () => {
     );
 
     expect(html).toContain("<h1");
-    expect(html).toContain(">Project plan</h1><p");
+    expect(html).toContain(">Project plan</h1>");
+    expect(html).toContain("Outline the next steps.");
   });
 
   it("renders compact sizing for small tile previews", () => {
@@ -32,7 +33,7 @@ describe("NoteMarkdown", () => {
       <NoteMarkdown title="Project plan" content="# First section" compact />,
     );
 
-    expect(regularHtml).toContain("mb-2 text-2xl leading-tight");
+    expect(regularHtml).toContain("mb-1.5 text-2xl leading-tight");
     expect(regularHtml).toContain("mb-3 text-xl leading-tight");
     expect(compactHtml).toContain("mb-1 text-base leading-tight");
     expect(compactHtml).toContain("mb-1 text-sm leading-tight");

@@ -433,7 +433,7 @@ export function NoteMarkdown({
           "note-card-preview-title mt-0 font-semibold tracking-tight text-sidebar-foreground",
           compact
             ? "mb-1 text-base leading-tight"
-            : "mb-2 text-2xl leading-tight",
+            : "mb-1.5 text-2xl leading-tight",
           isUntitled &&
             "note-card-preview-title--placeholder text-sidebar-foreground/45",
         )}
@@ -441,15 +441,17 @@ export function NoteMarkdown({
       >
         {displayTitle}
       </h1>
-      <ReactMarkdown
-        components={components}
-        remarkPlugins={[remarkGfm, remarkHighlight]}
-        urlTransform={(url) =>
-          /^(?:note|color):\d+$/.test(url) ? url : defaultUrlTransform(url)
-        }
-      >
-        {linkifyBareUrls(body)}
-      </ReactMarkdown>
+      <div className="flow-root [&>*:first-child]:!mt-0 [&>*:last-child]:!mb-0">
+        <ReactMarkdown
+          components={components}
+          remarkPlugins={[remarkGfm, remarkHighlight]}
+          urlTransform={(url) =>
+            /^(?:note|color):\d+$/.test(url) ? url : defaultUrlTransform(url)
+          }
+        >
+          {linkifyBareUrls(body)}
+        </ReactMarkdown>
+      </div>
     </div>
   );
 }

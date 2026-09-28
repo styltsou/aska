@@ -44,4 +44,16 @@ describe("note save reconciliation", () => {
       snapshot: snapshot("Body", 9, "New title"),
     });
   });
+
+  it("reconciles a revert made while another body is being saved", () => {
+    expect(
+      resolveNoteSaveCompletion(
+        snapshot("Temporary edit", 2),
+        snapshot("Original body", 3),
+      ),
+    ).toEqual({
+      status: "reconcile",
+      snapshot: snapshot("Original body", 3),
+    });
+  });
 });

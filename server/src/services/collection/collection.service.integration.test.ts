@@ -100,7 +100,11 @@ describe("CollectionService integration", () => {
       fixture.organizationId,
       fixture.userId,
       note.id,
-      { content: "A longer **working note** with a ==highlighted idea==." },
+      {
+        content: "A longer **working note** with a ==highlighted idea==.",
+        expectedContent: "Small thought",
+        expectedTitle: null,
+      },
     );
 
     expect(updated).toMatchObject({
@@ -109,6 +113,19 @@ describe("CollectionService integration", () => {
       wordCount: 8,
       readingTimeMinutes: 1,
     });
+    await expect(
+      assetService.updateNote(fixture.organizationId, fixture.userId, note.id, {
+        content: "A stale edit",
+        expectedContent: "Small thought",
+        expectedTitle: null,
+      }),
+    ).rejects.toThrow("This note changed elsewhere");
+    await expect(
+      assetService.deleteAsset(fixture.organizationId, note.id, {
+        expectedContent: "Small thought",
+        expectedTitle: null,
+      }),
+    ).rejects.toThrow("This note changed elsewhere");
     const inbox = await assetService.getInboxContents(fixture.organizationId);
     expect(inbox.nodes).toEqual(
       expect.arrayContaining([
@@ -118,6 +135,15 @@ describe("CollectionService integration", () => {
           wordCount: 8,
         }),
       ]),
+    );
+    await assetService.deleteAsset(fixture.organizationId, note.id, {
+      expectedContent: updated.content,
+      expectedTitle: updated.title,
+    });
+    expect(
+      (await assetService.getInboxContents(fixture.organizationId)).nodes,
+    ).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: note.id })]),
     );
   });
 

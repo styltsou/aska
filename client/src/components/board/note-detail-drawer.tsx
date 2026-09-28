@@ -14,7 +14,10 @@ import {
   CheckIcon,
   LocateFixedIcon,
   LoaderCircleIcon,
+  Maximize2Icon,
+  Minimize2Icon,
   PanelRightIcon,
+  XIcon,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
@@ -54,6 +57,7 @@ import {
 import { useBoardInsertionPlacement } from "@/components/canvas";
 import { Button } from "@/components/ui/button";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
+import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Tooltip,
@@ -78,6 +82,7 @@ import {
   isNoteContentTooLong,
   NOTE_CONTENT_LIMIT_MESSAGE,
 } from "@/lib/note-content";
+import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import type { NoteHighlightColor } from "@/lib/note-highlights";
 import type { ColorAsset, NoteAsset } from "@/types/asset";
@@ -86,6 +91,15 @@ import {
   type PeekColorScope,
 } from "@/components/app-shell/workspace-peek";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useBlocker } from "@tanstack/react-router";
+import { parseWorkspaceAssetPath } from "@/lib/workspace-asset-url";
+import {
+  clearEditDraft,
+  getNoteSaveErrorMessage,
+  loadEditDraft,
+  loadLegacyEditDraft,
+  saveEditDraft,
+} from "@/lib/note-edit-draft";
 
 const AUTOSAVE_DELAY_MS = 700;
 const COPIED_RESET_MS = 1_500;
@@ -113,7 +127,10 @@ export function NoteDetailDrawer({
   onPromote,
   onSwap,
   onBack,
+  onDismissAll,
   onShowInBoard,
+  view,
+  onViewChange,
   loading = false,
   open: controlledOpen,
   onRequestClose,
@@ -138,10 +155,16 @@ export function NoteDetailDrawer({
   };
   onNoteChange?: (note: NoteAsset) => void;
   onOpenReferencedColor?: (color: ColorAsset) => void;
-  onPromote?: (note: NoteAsset, previousNote?: NoteAsset) => void;
-  onSwap?: (note: NoteAsset) => void;
+  onPromote?: (
+    note: NoteAsset,
+    previousNote?: NoteAsset,
+  ) => void | Promise<boolean>;
+  onSwap?: (note: NoteAsset, previousNote: NoteAsset) => Promise<boolean>;
   onBack?: () => void;
+  onDismissAll?: () => void;
   onShowInBoard?: () => void;
+  view?: "modal" | "full";
+  onViewChange?: (view: "modal" | "full") => void;
   loading?: boolean;
   open?: boolean;
   onRequestClose?: () => void;
@@ -162,22 +185,34 @@ export function NoteDetailDrawer({
     setNotePromotionHandler,
     setMainNoteLeaveHandler,
     setNoteSwapHandler,
+    flushPeekNote,
     syncPeekNote,
     isResizing: isPeekResizing,
   } = useWorkspacePeek();
   const isMobile = useIsMobile();
+  const split = Boolean(peekTarget) && !isMobile;
+  const [localView, setLocalView] = useState<"modal" | "full">("full");
+  const expanded = isMobile || split || (view ?? localView) === "full";
+  const toggleExpanded = () => {
+    const nextView = expanded ? "modal" : "full";
+    if (onViewChange) onViewChange(nextView);
+    else setLocalView(nextView);
+  };
   const noteContentRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const richTextRef = useRef<NoteRichTextHandle>(null);
   const draftRef = useRef(note?.content ?? "");
   const titleRef = useRef(note?.title ?? "");
+  const committedNoteRef = useRef<NoteAsset | undefined>(note);
   const editRevisionRef = useRef(0);
   const activeSaveSnapshotRef = useRef<NoteSaveSnapshot | undefined>(undefined);
+  const deletingNoteRef = useRef<string | undefined>(undefined);
   const queuedSaveSnapshotRef = useRef<NoteSaveSnapshot | undefined>(undefined);
   const hasLocalEditRef = useRef(false);
   const syncedNoteIdRef = useRef<string | undefined>(undefined);
   const closeAfterSaveRef = useRef(false);
   const closeRequestedRef = useRef(false);
+  const dismissAllRef = useRef(false);
   const hasRestoredCreateOpenRef = useRef(false);
   const isInitialPageReloadRef = useRef(isPageReload());
   const failedSaveSnapshotRef = useRef<NoteSaveSnapshot | undefined>(undefined);
@@ -185,6 +220,7 @@ export function NoteDetailDrawer({
   const copiedResetTimeoutRef = useRef<number | undefined>(undefined);
   const [draft, setDraft] = useState(note?.content ?? "");
   const [title, setTitle] = useState(note?.title ?? "");
+  const [hydratedNoteId, setHydratedNoteId] = useState<string>();
   const [createdNote, setCreatedNote] = useState<NoteAsset>();
   const [workspaceOpen, setWorkspaceOpen] = useState(
     note !== undefined || Boolean(createOptions?.open),
@@ -192,6 +228,14 @@ export function NoteDetailDrawer({
   const isWorkspaceOpen = controlledOpen ?? workspaceOpen;
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [copied, setCopied] = useState(false);
+  const saveCurrentEditDraft = useCallback(
+    (id: string, content: string, title: string) => {
+      const base = committedNoteRef.current;
+      if (base?.id === id)
+        saveEditDraft(id, content, title, base.content, base.title ?? null);
+    },
+    [],
+  );
   const [highlightColor, setHighlightColor] = useState<NoteHighlightColor>();
   const [highlightMode, setHighlightMode] = useState(false);
   const [canRemoveHighlight, setCanRemoveHighlight] = useState(false);
@@ -228,11 +272,53 @@ export function NoteDetailDrawer({
     closeRequestedRef.current = true;
     setActiveNoteId(undefined);
     if (controlledOpen === undefined) setWorkspaceOpen(false);
-    else onRequestClose?.();
-  }, [controlledOpen, onRequestClose, setActiveNoteId]);
+    else if (dismissAllRef.current) {
+      dismissAllRef.current = false;
+      onDismissAll?.();
+    } else onRequestClose?.();
+  }, [controlledOpen, onDismissAll, onRequestClose, setActiveNoteId]);
   const frontMatter = useMemo(() => parseFrontMatter(draft), [draft]);
   const updateNote = useUpdateNote(workspaceSlug);
-  const deleteAsset = useDeleteAsset(workspaceSlug);
+  const { mutateAsync: deleteAssetAsync } = useDeleteAsset(workspaceSlug);
+  const deleteEmptyNote = useCallback(
+    async (id: string, onDeleted: () => void) => {
+      if (deletingNoteRef.current === id) return false;
+      const base = committedNoteRef.current;
+      if (!base || base.id !== id) return false;
+      deletingNoteRef.current = id;
+      const startedAtRevision = editRevisionRef.current;
+      setSaveState("deleting");
+      try {
+        await deleteAssetAsync({
+          assetId: id,
+          expectedContent: base.content,
+          expectedTitle: base.title ?? null,
+        });
+        if (
+          editRevisionRef.current !== startedAtRevision &&
+          hasSaveableNote(titleRef.current, draftRef.current)
+        ) {
+          saveCurrentEditDraft(id, draftRef.current, titleRef.current);
+          syncedNoteIdRef.current = undefined;
+          setSaveState("error");
+          toast.error(
+            "This note was deleted while you edited it. Your new text remains in the editor; copy it before leaving.",
+          );
+          return false;
+        }
+        clearEditDraft(id);
+        onDeleted();
+        return true;
+      } catch (error) {
+        setSaveState("error");
+        toast.error(getNoteSaveErrorMessage(error, "Could not delete note."));
+        return false;
+      } finally {
+        deletingNoteRef.current = undefined;
+      }
+    },
+    [deleteAssetAsync, saveCurrentEditDraft],
+  );
   const extractionCollectionSlug = noteExtractionTarget?.collectionSlug ?? "";
   const createExtractedCollectionNote = useCreateNote(
     workspaceSlug,
@@ -350,27 +436,6 @@ export function NoteDetailDrawer({
   }, [activeNote?.id, setActiveNoteId]);
 
   useEffect(() => {
-    if (!isWorkspaceOpen || !activeNote || isPeekMirror) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat) return;
-      if (!matchesKeybinding(event, PEEK_ASSET_SHORTCUT)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      peekNote(activeNote, location);
-      closeWorkspace();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    activeNote,
-    closeWorkspace,
-    isPeekMirror,
-    location,
-    peekNote,
-    isWorkspaceOpen,
-  ]);
-
-  useEffect(() => {
     if (activeNote) syncPeekNote(activeNote);
   }, [activeNote, syncPeekNote]);
 
@@ -392,10 +457,45 @@ export function NoteDetailDrawer({
     const noteChanged = syncedNoteIdRef.current !== noteId;
     if (
       !noteChanged &&
+      !hasLocalEditRef.current &&
+      draftRef.current === noteContent &&
+      titleRef.current === (activeNote?.title ?? "")
+    )
+      return;
+    if (
+      !noteChanged &&
       (hasLocalEditRef.current || activeSaveSnapshotRef.current)
     )
       return;
     const recoveredDraft = loadEditDraft(noteId);
+    if (noteChanged) {
+      const legacy = loadLegacyEditDraft(noteId);
+      if (legacy && (legacy.title.trim() || legacy.content.trim()))
+        toast.warning(
+          "An older unsynced draft was found. It was not auto-saved because its original version is unknown.",
+          {
+            action: {
+              label: "Copy draft",
+              onClick: () => {
+                void navigator.clipboard
+                  .writeText(
+                    [legacy.title, legacy.content].filter(Boolean).join("\n\n"),
+                  )
+                  .catch(() => toast.error("Could not copy draft."));
+              },
+            },
+          },
+        );
+    }
+    committedNoteRef.current = activeNote
+      ? recoveredDraft
+        ? {
+            ...activeNote,
+            content: recoveredDraft.baseContent,
+            title: recoveredDraft.baseTitle,
+          }
+        : activeNote
+      : undefined;
     const nextDraft = recoveredDraft?.content ?? noteContent;
     const nextTitle = recoveredDraft?.title ?? activeNote?.title ?? "";
     const hasRecoveredChanges = Boolean(
@@ -410,10 +510,12 @@ export function NoteDetailDrawer({
     hasLocalEditRef.current = hasRecoveredChanges;
     setDraft(nextDraft);
     setTitle(nextTitle);
+    setHydratedNoteId(noteId);
     setSaveState(hasRecoveredChanges ? "saving" : "saved");
     failedSaveSnapshotRef.current = undefined;
     if (noteChanged) reset();
   }, [
+    activeNote,
     activeNote?.title,
     createdNote?.id,
     isCreateMode,
@@ -443,7 +545,13 @@ export function NoteDetailDrawer({
 
   const create = useCallback(
     (content: string, nextTitle = title) => {
-      if (!isCreateMode || activeNote || isCreating) return;
+      if (
+        !isCreateMode ||
+        activeNote ||
+        isCreating ||
+        activeSaveSnapshotRef.current
+      )
+        return;
       const submittedSnapshot: NoteSaveSnapshot = {
         content,
         title: nextTitle,
@@ -464,8 +572,26 @@ export function NoteDetailDrawer({
         if (nextNote.type !== "note") return;
         clearCreateNoteDraft(createDraftId ?? null);
         setCreatedNote(nextNote);
+        committedNoteRef.current = nextNote;
         syncedNoteIdRef.current = nextNote.id;
         const latestSnapshot = getLatestSaveSnapshot();
+        if (!hasSaveableNote(latestSnapshot.title, latestSnapshot.content)) {
+          queuedSaveSnapshotRef.current = undefined;
+          failedSaveSnapshotRef.current = undefined;
+          const shouldClose = closeAfterSaveRef.current;
+          closeAfterSaveRef.current = false;
+          void deleteEmptyNote(nextNote.id, () => {
+            if (shouldClose) {
+              closeWorkspace();
+            } else {
+              setCreatedNote(undefined);
+              committedNoteRef.current = undefined;
+              syncedNoteIdRef.current = undefined;
+              setSaveState("empty");
+            }
+          });
+          return;
+        }
         const completion = resolveNoteSaveCompletion(
           submittedSnapshot,
           latestSnapshot,
@@ -475,17 +601,17 @@ export function NoteDetailDrawer({
           hasLocalEditRef.current = false;
           clearEditDraft(nextNote.id);
           failedSaveSnapshotRef.current = undefined;
-          setSaveState(
-            hasSaveableNote(latestSnapshot.title, latestSnapshot.content)
-              ? "saved"
-              : "empty",
-          );
+          setSaveState("saved");
+          if (closeAfterSaveRef.current) {
+            closeAfterSaveRef.current = false;
+            closeWorkspace();
+          }
           return;
         }
 
         queuedSaveSnapshotRef.current = completion.snapshot;
         hasLocalEditRef.current = true;
-        saveEditDraft(
+        saveCurrentEditDraft(
           nextNote.id,
           completion.snapshot.content,
           completion.snapshot.title,
@@ -507,6 +633,7 @@ export function NoteDetailDrawer({
           return;
         }
         failedSaveSnapshotRef.current = submittedSnapshot;
+        closeAfterSaveRef.current = false;
         setSaveState("error");
         toast.error(
           getUserFacingApiErrorMessage(reason, "Could not create note."),
@@ -537,10 +664,13 @@ export function NoteDetailDrawer({
       createDraftId,
       createOptions?.placement,
       createOptions?.target,
+      closeWorkspace,
+      deleteEmptyNote,
       getLatestSaveSnapshot,
       isCreateMode,
       isCreating,
       parentFolderPath,
+      saveCurrentEditDraft,
       title,
     ],
   );
@@ -552,7 +682,7 @@ export function NoteDetailDrawer({
       nextTitle = title,
       force = false,
     ) => {
-      if (!noteId) return;
+      if (!noteId || syncedNoteIdRef.current !== noteId) return;
       const submittedSnapshot: NoteSaveSnapshot = {
         content,
         title: nextTitle,
@@ -567,10 +697,29 @@ export function NoteDetailDrawer({
         return;
       }
 
+      if (activeSaveSnapshotRef.current || isPending) {
+        queuedSaveSnapshotRef.current = submittedSnapshot;
+        closeAfterSaveRef.current ||= closeAfterSave;
+        return;
+      }
+
+      if (!hasSaveableNote(nextTitle, content)) {
+        queuedSaveSnapshotRef.current = undefined;
+        hasLocalEditRef.current = true;
+        saveCurrentEditDraft(noteId, content, nextTitle);
+        if (closeAfterSave || closeAfterSaveRef.current) {
+          closeAfterSaveRef.current = false;
+          void deleteEmptyNote(noteId, closeWorkspace);
+        } else {
+          setSaveState("empty");
+        }
+        return;
+      }
+
       if (
         !force &&
-        content === noteContent &&
-        (nextTitle.trim() || null) === (activeNote?.title ?? null)
+        content === committedNoteRef.current?.content &&
+        (nextTitle.trim() || null) === (committedNoteRef.current?.title ?? null)
       ) {
         if (isSameSaveSnapshot(submittedSnapshot, getLatestSaveSnapshot())) {
           hasLocalEditRef.current = false;
@@ -582,12 +731,8 @@ export function NoteDetailDrawer({
         return;
       }
 
-      if (activeSaveSnapshotRef.current || isPending) {
-        queuedSaveSnapshotRef.current = submittedSnapshot;
-        closeAfterSaveRef.current ||= closeAfterSave;
-        return;
-      }
-
+      const base = committedNoteRef.current;
+      if (!base || base.id !== noteId) return;
       closeAfterSaveRef.current ||= closeAfterSave;
       activeSaveSnapshotRef.current = submittedSnapshot;
       setSaveState("saving");
@@ -596,10 +741,13 @@ export function NoteDetailDrawer({
           assetId: noteId,
           content,
           title: nextTitle.trim() || null,
+          expectedContent: base.content,
+          expectedTitle: base.title ?? null,
         },
         {
           onSuccess: ({ note: updatedNote }) => {
             activeSaveSnapshotRef.current = undefined;
+            committedNoteRef.current = { ...base, ...updatedNote };
             setCreatedNote((current) =>
               current?.id === updatedNote.id
                 ? { ...current, ...updatedNote }
@@ -611,21 +759,37 @@ export function NoteDetailDrawer({
                 ...updatedNote,
               });
             }
+            syncPeekNote({ ...activeNote, ...updatedNote });
             const latestSnapshot = getLatestSaveSnapshot();
             const completion = resolveNoteSaveCompletion(
               submittedSnapshot,
               latestSnapshot,
             );
+            if (
+              !hasSaveableNote(latestSnapshot.title, latestSnapshot.content)
+            ) {
+              queuedSaveSnapshotRef.current = undefined;
+              hasLocalEditRef.current = true;
+              saveCurrentEditDraft(
+                noteId,
+                latestSnapshot.content,
+                latestSnapshot.title,
+              );
+              failedSaveSnapshotRef.current = undefined;
+              if (closeAfterSaveRef.current) {
+                closeAfterSaveRef.current = false;
+                void deleteEmptyNote(noteId, closeWorkspace);
+              } else {
+                setSaveState("empty");
+              }
+              return;
+            }
             if (completion.status === "acknowledged") {
               hasLocalEditRef.current = false;
               queuedSaveSnapshotRef.current = undefined;
               clearEditDraft(noteId);
               failedSaveSnapshotRef.current = undefined;
-              setSaveState(
-                hasSaveableNote(latestSnapshot.title, latestSnapshot.content)
-                  ? "saved"
-                  : "empty",
-              );
+              setSaveState("saved");
               if (closeAfterSaveRef.current) {
                 closeAfterSaveRef.current = false;
                 closeWorkspace();
@@ -635,7 +799,7 @@ export function NoteDetailDrawer({
 
             queuedSaveSnapshotRef.current = completion.snapshot;
             hasLocalEditRef.current = true;
-            saveEditDraft(
+            saveCurrentEditDraft(
               noteId,
               completion.snapshot.content,
               completion.snapshot.title,
@@ -656,22 +820,22 @@ export function NoteDetailDrawer({
             failedSaveSnapshotRef.current = submittedSnapshot;
             closeAfterSaveRef.current = false;
             setSaveState("error");
-            toast.error(
-              getUserFacingApiErrorMessage(error, "Could not save note."),
-            );
+            toast.error(getNoteSaveErrorMessage(error, "Could not save note."));
           },
         },
       );
     },
     [
       closeWorkspace,
+      deleteEmptyNote,
       isPending,
       mutate,
       activeNote,
       getLatestSaveSnapshot,
-      noteContent,
       noteId,
       onNoteChange,
+      saveCurrentEditDraft,
+      syncPeekNote,
       title,
     ],
   );
@@ -679,11 +843,18 @@ export function NoteDetailDrawer({
   const prepareCurrentNoteForSwitch = useCallback(async (): Promise<
     NoteAsset | false
   > => {
-    if (isCreateMode || isPending || !activeNote) return false;
+    if (
+      isCreateMode ||
+      isPending ||
+      activeSaveSnapshotRef.current ||
+      !activeNote ||
+      syncedNoteIdRef.current !== activeNote.id
+    )
+      return false;
 
-    const content = getSaveableNoteContent(draftRef.current);
-    if (!content) {
-      toast.error("Add some content before opening another note.");
+    const content = draftRef.current;
+    if (!hasSaveableNote(titleRef.current, content)) {
+      toast.error("Add a title or content before opening another note.");
       return false;
     }
     const submittedSnapshot = getLatestSaveSnapshot();
@@ -694,10 +865,12 @@ export function NoteDetailDrawer({
       return false;
     }
 
+    const base = committedNoteRef.current;
+    if (!base || base.id !== activeNote.id) return false;
     let currentMainNote = activeNote;
-    const nextTitle = title.trim() || null;
-    const titleChanged = nextTitle !== (activeNote.title ?? null);
-    if (content !== noteContent || titleChanged) {
+    const nextTitle = titleRef.current.trim() || null;
+    const titleChanged = nextTitle !== (base.title ?? null);
+    if (content !== base.content || titleChanged) {
       activeSaveSnapshotRef.current = submittedSnapshot;
       setSaveState("saving");
       try {
@@ -705,18 +878,22 @@ export function NoteDetailDrawer({
           assetId: activeNote.id,
           content,
           title: nextTitle,
+          expectedContent: base.content,
+          expectedTitle: base.title ?? null,
         });
         currentMainNote = {
           ...activeNote,
           ...updatedNote,
         };
+        committedNoteRef.current = currentMainNote;
         activeSaveSnapshotRef.current = undefined;
         onNoteChange?.(currentMainNote);
+        syncPeekNote(currentMainNote);
         if (!isSameSaveSnapshot(submittedSnapshot, getLatestSaveSnapshot())) {
           const latestSnapshot = getLatestSaveSnapshot();
           queuedSaveSnapshotRef.current = latestSnapshot;
           hasLocalEditRef.current = true;
-          saveEditDraft(
+          saveCurrentEditDraft(
             activeNote.id,
             latestSnapshot.content,
             latestSnapshot.title,
@@ -739,9 +916,7 @@ export function NoteDetailDrawer({
         }
         failedSaveSnapshotRef.current = submittedSnapshot;
         setSaveState("error");
-        toast.error(
-          getUserFacingApiErrorMessage(error, "Could not save note."),
-        );
+        toast.error(getNoteSaveErrorMessage(error, "Could not save note."));
         return false;
       }
     }
@@ -753,23 +928,69 @@ export function NoteDetailDrawer({
     isCreateMode,
     isPending,
     mutateAsync,
-    noteContent,
     onNoteChange,
-    title,
+    saveCurrentEditDraft,
+    syncPeekNote,
   ]);
+
+  useEffect(() => {
+    if (!isWorkspaceOpen || !activeNote || isPeekMirror) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      if (!matchesKeybinding(event, PEEK_ASSET_SHORTCUT)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void (async () => {
+        const saved = await prepareCurrentNoteForSwitch();
+        if (!saved) return;
+        if (await peekNote(saved, location, { demoteMain: true }))
+          closeWorkspace();
+      })();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    activeNote,
+    closeWorkspace,
+    isPeekMirror,
+    isWorkspaceOpen,
+    location,
+    peekNote,
+    prepareCurrentNoteForSwitch,
+  ]);
+
+  useBlocker({
+    shouldBlockFn: async ({ current, next }) => {
+      if (
+        !activeNote ||
+        isCreateMode ||
+        controlledOpen === undefined ||
+        closeRequestedRef.current ||
+        parseWorkspaceAssetPath(current.pathname).assetId !== activeNote.id ||
+        parseWorkspaceAssetPath(next.pathname).assetId === activeNote.id
+      )
+        return false;
+
+      if (!hasSaveableNote(titleRef.current, draftRef.current)) {
+        return !(await deleteEmptyNote(activeNote.id, () =>
+          setSaveState("empty"),
+        ));
+      }
+      return !(await prepareCurrentNoteForSwitch());
+    },
+    enableBeforeUnload: false,
+  });
 
   const promotePeekedNote = useCallback(
     async (nextMainNote: NoteAsset) => {
       if (!onPromote || isCreateMode || isPending) return false;
       if (!activeNote) {
-        onPromote(nextMainNote);
-        return true;
+        return (await onPromote(nextMainNote)) !== false;
       }
       if (nextMainNote.id === activeNote.id) return false;
       const currentMainNote = await prepareCurrentNoteForSwitch();
       if (!currentMainNote) return false;
-      onPromote(nextMainNote, currentMainNote);
-      return true;
+      return (await onPromote(nextMainNote, currentMainNote)) !== false;
     },
     [
       activeNote,
@@ -878,83 +1099,27 @@ export function NoteDetailDrawer({
     )
       return;
 
-    const nextMainNote = peekTarget.asset;
-    const content = getSaveableNoteContent(draftRef.current);
-    if (!content) {
-      toast.error("Add some content before swapping notes.");
+    const nextMainNote = await flushPeekNote(peekTarget.asset.id);
+    if (!nextMainNote) return;
+    const currentMainNote = await prepareCurrentNoteForSwitch();
+    if (!currentMainNote) return;
+    if (!(await peekNote(currentMainNote, location, { skipNavigation: true })))
       return;
+    if (!(await onSwap(nextMainNote, currentMainNote))) {
+      void peekNote(nextMainNote, peekTarget.location ?? location, {
+        skipNavigation: true,
+      });
     }
-    const submittedSnapshot = getLatestSaveSnapshot();
-    if (isNoteContentTooLong(content)) {
-      failedSaveSnapshotRef.current = submittedSnapshot;
-      setSaveState("error");
-      toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
-      return;
-    }
-
-    let currentMainNote = activeNote;
-    if (content !== noteContent) {
-      activeSaveSnapshotRef.current = submittedSnapshot;
-      setSaveState("saving");
-      try {
-        const { note: updatedNote } = await mutateAsync({
-          assetId: activeNote.id,
-          content,
-        });
-        currentMainNote = {
-          ...activeNote,
-          ...updatedNote,
-        };
-        activeSaveSnapshotRef.current = undefined;
-        onNoteChange?.(currentMainNote);
-        if (!isSameSaveSnapshot(submittedSnapshot, getLatestSaveSnapshot())) {
-          const latestSnapshot = getLatestSaveSnapshot();
-          queuedSaveSnapshotRef.current = latestSnapshot;
-          hasLocalEditRef.current = true;
-          saveEditDraft(
-            activeNote.id,
-            latestSnapshot.content,
-            latestSnapshot.title,
-          );
-          setSaveState("saving");
-          return;
-        }
-        hasLocalEditRef.current = false;
-        clearEditDraft(activeNote.id);
-        setSaveState("saved");
-      } catch (error) {
-        activeSaveSnapshotRef.current = undefined;
-        const latestSnapshot = getLatestSaveSnapshot();
-        if (!isSameSaveSnapshot(submittedSnapshot, latestSnapshot)) {
-          queuedSaveSnapshotRef.current = latestSnapshot;
-          hasLocalEditRef.current = true;
-          failedSaveSnapshotRef.current = undefined;
-          setSaveState("saving");
-          return;
-        }
-        failedSaveSnapshotRef.current = submittedSnapshot;
-        setSaveState("error");
-        toast.error(
-          getUserFacingApiErrorMessage(error, "Could not save note."),
-        );
-        return;
-      }
-    }
-
-    peekNote(currentMainNote, location);
-    onSwap(nextMainNote);
   }, [
     activeNote,
-    getLatestSaveSnapshot,
+    flushPeekNote,
     isCreateMode,
     isPending,
     location,
-    mutateAsync,
-    noteContent,
-    onNoteChange,
     onSwap,
     peekNote,
     peekTarget,
+    prepareCurrentNoteForSwitch,
   ]);
 
   useEffect(() => {
@@ -981,7 +1146,11 @@ export function NoteDetailDrawer({
 
   useEffect(() => {
     if (isCreateMode && !activeNote) {
-      if (!hasSaveableNote(title, draft) || isCreating) {
+      if (
+        !hasSaveableNote(title, draft) ||
+        isCreating ||
+        activeSaveSnapshotRef.current
+      ) {
         if (!hasSaveableNote(title, draft) && (title.trim() || draft.trim()))
           setSaveState("empty");
         return;
@@ -995,15 +1164,27 @@ export function NoteDetailDrawer({
       );
       return () => window.clearTimeout(timeout);
     }
-    if (!noteId || isPending || activeSaveSnapshotRef.current) return;
+    if (
+      !noteId ||
+      syncedNoteIdRef.current !== noteId ||
+      isPending ||
+      activeSaveSnapshotRef.current
+    )
+      return;
     const latestSnapshot = getLatestSaveSnapshot();
     const queuedSnapshot = queuedSaveSnapshotRef.current;
     const forceReconciliation = isSameSaveSnapshot(
       queuedSnapshot,
       latestSnapshot,
     );
-    const titleChanged = (title.trim() || null) !== (activeNote?.title ?? null);
-    if (draft === noteContent && !titleChanged && !forceReconciliation) return;
+    const titleChanged =
+      (title.trim() || null) !== (committedNoteRef.current?.title ?? null);
+    if (
+      draft === committedNoteRef.current?.content &&
+      !titleChanged &&
+      !forceReconciliation
+    )
+      return;
     if (!hasSaveableNote(title, draft) && !forceReconciliation) {
       setSaveState("empty");
       return;
@@ -1094,6 +1275,7 @@ export function NoteDetailDrawer({
   );
 
   function handleDraftChange(bodyContent: string) {
+    if (activeNote && syncedNoteIdRef.current !== activeNote.id) return;
     const content = composeFrontMatter(frontMatter, bodyContent);
     editRevisionRef.current += 1;
     draftRef.current = content;
@@ -1106,15 +1288,15 @@ export function NoteDetailDrawer({
     if (activeNote) {
       if (
         !saveIsActive &&
-        content === activeNote.content &&
-        titleRef.current === (activeNote.title ?? "")
+        content === committedNoteRef.current?.content &&
+        titleRef.current === (committedNoteRef.current?.title ?? "")
       ) {
         hasLocalEditRef.current = false;
         queuedSaveSnapshotRef.current = undefined;
         clearEditDraft(activeNote.id);
       } else {
         hasLocalEditRef.current = true;
-        saveEditDraft(activeNote.id, content, titleRef.current);
+        saveCurrentEditDraft(activeNote.id, content, titleRef.current);
         if (saveIsActive || queuedSaveSnapshotRef.current)
           queuedSaveSnapshotRef.current = latestSnapshot;
       }
@@ -1132,6 +1314,7 @@ export function NoteDetailDrawer({
   }
 
   function handleTitleChange(nextTitle: string) {
+    if (activeNote && syncedNoteIdRef.current !== activeNote.id) return;
     editRevisionRef.current += 1;
     titleRef.current = nextTitle;
     setTitle(nextTitle);
@@ -1143,15 +1326,15 @@ export function NoteDetailDrawer({
     if (activeNote) {
       if (
         !saveIsActive &&
-        draftRef.current === activeNote.content &&
-        nextTitle === (activeNote.title ?? "")
+        draftRef.current === committedNoteRef.current?.content &&
+        nextTitle === (committedNoteRef.current?.title ?? "")
       ) {
         hasLocalEditRef.current = false;
         queuedSaveSnapshotRef.current = undefined;
         clearEditDraft(activeNote.id);
       } else {
         hasLocalEditRef.current = true;
-        saveEditDraft(activeNote.id, draftRef.current, nextTitle);
+        saveCurrentEditDraft(activeNote.id, draftRef.current, nextTitle);
         if (saveIsActive || queuedSaveSnapshotRef.current)
           queuedSaveSnapshotRef.current = latestSnapshot;
       }
@@ -1166,31 +1349,41 @@ export function NoteDetailDrawer({
 
   function requestClose() {
     if (!activeNote) {
+      if (
+        isCreateMode &&
+        (activeSaveSnapshotRef.current ||
+          isCreating ||
+          hasSaveableNote(titleRef.current, draftRef.current))
+      ) {
+        closeAfterSaveRef.current = true;
+        if (!activeSaveSnapshotRef.current && !isCreating)
+          create(draftRef.current, titleRef.current);
+        return;
+      }
       closeWorkspace();
       return;
     }
-    const content = getSaveableNoteContent(draftRef.current);
-    if (!hasSaveableNote(title, draftRef.current)) {
-      if (deleteAsset.isPending) return;
-      setSaveState("deleting");
-      closeWorkspace();
-      void deleteAsset.mutateAsync(activeNote.id).catch((error) => {
-        toast.error(
-          getUserFacingApiErrorMessage(error, "Could not delete note."),
-        );
-      });
-      return;
-    }
-    if (
-      content === activeNote.content &&
-      (title.trim() || null) === (activeNote.title ?? null)
-    )
-      return closeWorkspace();
-    if (updateNote.isPending) {
+    const content = draftRef.current;
+    if (activeSaveSnapshotRef.current || updateNote.isPending) {
       closeAfterSaveRef.current = true;
       return;
     }
-    persist(content ?? "", true, title);
+    if (!hasSaveableNote(titleRef.current, draftRef.current)) {
+      void deleteEmptyNote(activeNote.id, closeWorkspace);
+      return;
+    }
+    if (
+      content === committedNoteRef.current?.content &&
+      (titleRef.current.trim() || null) ===
+        (committedNoteRef.current?.title ?? null)
+    )
+      return closeWorkspace();
+    persist(content, true, titleRef.current);
+  }
+
+  function requestDismissAll() {
+    dismissAllRef.current = true;
+    requestClose();
   }
 
   function copyNoteMarkdown() {
@@ -1224,15 +1417,17 @@ export function NoteDetailDrawer({
   return (
     <NoteWorkspace
       open={isWorkspaceOpen}
-      modal={!peekTarget || isMobile}
+      modal={!split}
       disablePointerDismissal={
         (Boolean(peekTarget) && !isMobile) || isPeekResizing
       }
-      onOpenChange={(open) => {
+      onOpenChange={(open, details) => {
         if (!open && isPeekResizing) return;
         if (open) {
           closeRequestedRef.current = false;
           setWorkspaceOpen(true);
+        } else if (details.reason === "outside-press" && onDismissAll) {
+          requestDismissAll();
         } else {
           requestClose();
         }
@@ -1262,18 +1457,41 @@ export function NoteDetailDrawer({
       }}
     >
       {children ? <NoteWorkspaceTrigger render={children} /> : null}
-      <NoteWorkspaceContent className="md:right-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--workspace-peek-stage-gap))] md:w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--workspace-peek-stage-gap))] md:transition-[right,width] md:duration-[150ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none">
+      <NoteWorkspaceContent
+        backdropClassName={split ? "hidden" : undefined}
+        className={cn(
+          "transition-[transform,opacity,top,left,right,width,height,max-width,max-height,border-radius,background-color,box-shadow] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          GLASS_FRAME_CLASS,
+          expanded
+            ? split
+              ? "inset-0 h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
+              : "top-1/2 left-1/2 right-auto bottom-auto h-dvh w-dvw max-w-none -translate-x-1/2 -translate-y-1/2 rounded-none bg-background shadow-none ring-1 ring-transparent"
+            : "top-1/2 left-1/2 right-auto bottom-auto h-[min(52rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[64rem] -translate-x-1/2 -translate-y-1/2 rounded-xl shadow-2xl",
+          split &&
+            "md:right-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--workspace-peek-stage-gap))] md:w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--workspace-peek-stage-gap))]",
+        )}
+      >
         <NoteWorkspaceTitle>
           {activeNote ? "Note" : loading ? "Loading note" : "New note"}
         </NoteWorkspaceTitle>
-        <div className="relative z-20 mt-[var(--app-shell-inset)] flex shrink-0 items-center justify-between gap-3 rounded-t-xl rounded-b-none p-2 text-xs font-medium text-muted-foreground">
-          <div className="ml-[var(--app-shell-inset)] flex items-center gap-0.5">
+        <div
+          className={cn(
+            "relative z-20 flex shrink-0 items-center justify-between gap-3 p-2 text-xs font-medium text-muted-foreground transition-[background-color,border-color,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            expanded
+              ? "mt-[var(--app-shell-inset)] mb-[var(--app-shell-inset)] bg-background pl-[calc(var(--app-shell-inset)+0.5rem)]"
+              : "bg-transparent",
+          )}
+        >
+          <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger
                 render={
                   <Button
                     type="button"
-                    className="size-8 rounded-lg"
+                    className={cn(
+                      "size-8 rounded-lg",
+                      ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                    )}
                     variant="ghost"
                     size="icon"
                     aria-label="Go back"
@@ -1291,6 +1509,30 @@ export function NoteDetailDrawer({
                 </KbdGroup>
               </TooltipContent>
             </Tooltip>
+            {onDismissAll ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      className={cn(
+                        "size-8 rounded-lg",
+                        ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                      )}
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Close all to board"
+                      onClick={requestDismissAll}
+                    >
+                      <XIcon className="size-4" />
+                    </Button>
+                  }
+                />
+                <TooltipContent side="bottom">
+                  Close all to board
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
             {!isPeekMirror ? (
               <Tooltip>
                 <TooltipTrigger
@@ -1299,13 +1541,23 @@ export function NoteDetailDrawer({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-8 rounded-lg"
+                      className={cn(
+                        "size-8 rounded-lg",
+                        ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                      )}
                       aria-label="Peek note"
                       disabled={!activeNote}
                       onClick={() => {
-                        if (!activeNote) return;
-                        peekNote(activeNote, location);
-                        closeWorkspace();
+                        void (async () => {
+                          const saved = await prepareCurrentNoteForSwitch();
+                          if (!saved) return;
+                          if (
+                            await peekNote(saved, location, {
+                              demoteMain: true,
+                            })
+                          )
+                            closeWorkspace();
+                        })();
                       }}
                     >
                       <PanelRightIcon className="size-4" />
@@ -1337,7 +1589,10 @@ export function NoteDetailDrawer({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-8 rounded-lg"
+                      className={cn(
+                        "size-8 rounded-lg",
+                        ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                      )}
                       aria-label="Show in board"
                       onClick={onShowInBoard}
                     />
@@ -1347,6 +1602,34 @@ export function NoteDetailDrawer({
                   <span className="sr-only">Show in board</span>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">Show in board</TooltipContent>
+              </Tooltip>
+            ) : null}
+            {!isMobile && !split ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        "size-8 rounded-lg",
+                        ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                      )}
+                      aria-label={expanded ? "Exit full screen" : "Full screen"}
+                      onClick={toggleExpanded}
+                    />
+                  }
+                >
+                  {expanded ? (
+                    <Minimize2Icon className="size-4" />
+                  ) : (
+                    <Maximize2Icon className="size-4" />
+                  )}
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  {expanded ? "Exit full screen" : "Full screen"}
+                </TooltipContent>
               </Tooltip>
             ) : null}
           </div>
@@ -1381,7 +1664,7 @@ export function NoteDetailDrawer({
               </motion.div>
             ) : null}
           </AnimatePresence>
-          <div className="mr-[var(--app-shell-inset)] flex min-w-0 items-center justify-end gap-0.5">
+          <div className="flex min-w-0 items-center justify-end gap-0.5">
             <NoteSaveStatus state={saveState} updatedAt={updatedTimestamp} />
             <NoteHighlightControl
               editorRef={richTextRef}
@@ -1398,7 +1681,10 @@ export function NoteDetailDrawer({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="size-8 rounded-lg"
+                    className={cn(
+                      "size-8 rounded-lg",
+                      ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                    )}
                     aria-label={copied ? "Note copied" : "Copy markdown"}
                     onClick={copyNoteMarkdown}
                   >
@@ -1418,15 +1704,20 @@ export function NoteDetailDrawer({
               updatedAt={activeNote?.updatedAt}
               label="Note details"
               sideOffset={10}
+              triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
             />
           </div>
         </div>
         <div
           ref={noteContentRef}
-          className="note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto"
+          className={cn(
+            "note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto border-t bg-background transition-[border-color,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            expanded ? "border-transparent" : "rounded-t-xl border-border",
+          )}
         >
-          <div className="mx-auto min-h-full w-full max-w-5xl px-5 sm:px-10 lg:px-16 [&_.ProseMirror]:!pt-8">
-            {loading && !activeNote ? (
+          <div className="mx-auto min-h-full w-full max-w-5xl px-5 sm:px-10 lg:px-16 [&_.ProseMirror]:!pt-2">
+            {(!isCreateMode && hydratedNoteId !== noteId) ||
+            (loading && !activeNote) ? (
               <NoteEditorLoading />
             ) : isCreateMode || activeNote ? (
               <Suspense fallback={<NoteEditorLoading />}>
@@ -1437,6 +1728,7 @@ export function NoteDetailDrawer({
                     onChange={handleTitleChange}
                     onEnter={() => richTextRef.current?.focus()}
                     autoFocus={isCreateMode}
+                    readOnly={saveState === "deleting"}
                     className="pt-8"
                   />
                   {!isCreateMode ? (
@@ -1456,7 +1748,7 @@ export function NoteDetailDrawer({
                       onOpenMention={(identity, resolved) =>
                         void openMentionTarget(identity, resolved)
                       }
-                      editable
+                      editable={saveState !== "deleting"}
                       autoFocus={!isCreateMode}
                       scrollContainerRef={noteContentRef}
                       onExtractSelection={
@@ -1493,46 +1785,6 @@ export function NoteDetailDrawer({
       </NoteWorkspaceContent>
     </NoteWorkspace>
   );
-}
-
-function editDraftKey(noteId: string) {
-  return `aska.edit-note-draft:${noteId}`;
-}
-
-type EditNoteDraft = { content: string; title: string };
-
-function loadEditDraft(noteId: string): EditNoteDraft | undefined {
-  try {
-    const value = localStorage.getItem(editDraftKey(noteId));
-    if (!value) return undefined;
-    const parsed: unknown = JSON.parse(value);
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      typeof (parsed as Partial<EditNoteDraft>).content === "string" &&
-      typeof (parsed as Partial<EditNoteDraft>).title === "string"
-    ) {
-      return parsed as EditNoteDraft;
-    }
-    return { content: value, title: "" };
-  } catch {
-    return undefined;
-  }
-}
-
-function saveEditDraft(noteId: string, content: string, title: string) {
-  try {
-    localStorage.setItem(
-      editDraftKey(noteId),
-      JSON.stringify({ content, title }),
-    );
-  } catch {}
-}
-
-function clearEditDraft(noteId: string) {
-  try {
-    localStorage.removeItem(editDraftKey(noteId));
-  } catch {}
 }
 
 function isPageReload(): boolean {

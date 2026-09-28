@@ -100,8 +100,9 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   });
 }
 
-export async function apiDelete<T>(path: string): Promise<T> {
+export async function apiDelete<T>(path: string, body?: unknown): Promise<T> {
   return request<T>(path, {
     method: "DELETE",
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
 }

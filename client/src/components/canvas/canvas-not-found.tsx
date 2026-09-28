@@ -1,8 +1,8 @@
-import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeftIcon, FolderXIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useWorkspaceOverlayNavigation } from "@/components/app-shell/use-workspace-overlay-navigation";
 
 type NotFoundProps = {
   workspaceSlug: string;
@@ -60,7 +60,7 @@ export function CollectionNotFound({
   workspaceSlug,
   collectionName,
 }: Omit<NotFoundProps, "collectionSlug">) {
-  const navigate = useNavigate();
+  const navigateOverlay = useWorkspaceOverlayNavigation();
   return (
     <NotFoundShell
       title="Collection not found"
@@ -73,7 +73,10 @@ export function CollectionNotFound({
         <Button
           size="lg"
           onClick={() =>
-            void navigate({ to: "/$workspaceSlug", params: { workspaceSlug } })
+            void navigateOverlay(`/${workspaceSlug}`, {
+              asset: undefined,
+              view: undefined,
+            })
           }
         >
           <ArrowLeftIcon />
@@ -89,7 +92,7 @@ export function FolderNotFound({
   collectionSlug,
   collectionName,
 }: NotFoundProps) {
-  const navigate = useNavigate();
+  const navigateOverlay = useWorkspaceOverlayNavigation();
   return (
     <NotFoundShell
       title="Folder not found"
@@ -103,11 +106,10 @@ export function FolderNotFound({
           <Button
             size="lg"
             onClick={() =>
-              void navigate({
-                to: "/$workspaceSlug/collections/$",
-                params: { workspaceSlug, _splat: collectionSlug },
-                search: {},
-              })
+              void navigateOverlay(
+                `/${workspaceSlug}/collections/${collectionSlug}`,
+                { asset: undefined, view: undefined },
+              )
             }
           >
             <ArrowLeftIcon />

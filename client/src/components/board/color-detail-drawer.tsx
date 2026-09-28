@@ -28,6 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
+import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
 import { useUpdateColor } from "@/api/collection";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
@@ -71,10 +72,13 @@ export function ColorDetailDrawer({
   workspaceSlug,
   scope,
   onClose,
+  onDismissAll,
   onCloseComplete,
   onOpenImage,
   onEdit,
   onShowInBoard,
+  view,
+  onViewChange,
   open = color !== undefined,
   loading = false,
 }: {
@@ -82,10 +86,13 @@ export function ColorDetailDrawer({
   workspaceSlug: string;
   scope: ColorSearchScope;
   onClose: () => void;
+  onDismissAll?: () => void;
   onCloseComplete?: () => void;
   onOpenImage: (image: ImageAsset) => void;
   onEdit?: () => void;
   onShowInBoard?: () => void;
+  view?: "modal" | "full";
+  onViewChange?: (view: "modal" | "full") => void;
   open?: boolean;
   loading?: boolean;
 }) {
@@ -111,7 +118,12 @@ export function ColorDetailDrawer({
   const displayedColor = color ?? (loading ? undefined : activeColor);
   const [includeDescendants, setIncludeDescendants] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [localExpanded, setLocalExpanded] = useState(false);
+  const expanded = view ? view === "full" : localExpanded;
+  const setExpanded = (value: boolean) => {
+    if (onViewChange) onViewChange(value ? "full" : "modal");
+    else setLocalExpanded(value);
+  };
   const copiedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchColors = useMemo(
     () => (displayedColor ? colorAssetToSearchColors(displayedColor) : []),
@@ -165,14 +177,18 @@ export function ColorDetailDrawer({
         expanded={expanded}
         onExpandedChange={setExpanded}
         onClose={onClose}
+        onDismissAll={onDismissAll}
         onCloseComplete={onCloseComplete}
         onEdit={onEdit}
         onShowInBoard={onShowInBoard}
         onPeek={
           displayedColor
             ? () => {
-                peekColor(displayedColor, effectiveScope);
-                onClose();
+                void peekColor(displayedColor, effectiveScope, {
+                  demoteMain: true,
+                }).then((opened) => {
+                  if (opened) onClose();
+                });
               }
             : undefined
         }
@@ -197,7 +213,13 @@ export function ColorDetailDrawer({
     <Drawer
       open={open}
       modal={!split}
-      onOpenChange={(next) => !next && onClose()}
+      onOpenChange={(next, details) => {
+        if (!next) {
+          if (details.reason === "outside-press" && onDismissAll)
+            onDismissAll();
+          else onClose();
+        }
+      }}
       onOpenChangeComplete={(next) => !next && onCloseComplete?.()}
       swipeDirection={isMobile ? "down" : "right"}
       fast
@@ -239,6 +261,17 @@ export function ColorDetailDrawer({
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
+              {onDismissAll ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Close all to board"
+                  onClick={onDismissAll}
+                >
+                  <XIcon className="size-4" />
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"
@@ -247,8 +280,11 @@ export function ColorDetailDrawer({
                 title="Peek color"
                 onClick={() => {
                   if (!displayedColor) return;
-                  peekColor(displayedColor, effectiveScope);
-                  onClose();
+                  void peekColor(displayedColor, effectiveScope, {
+                    demoteMain: true,
+                  }).then((opened) => {
+                    if (opened) onClose();
+                  });
                 }}
               >
                 <PanelRightIcon className="size-4" />
@@ -427,6 +463,7 @@ function ColorDetailModal({
   expanded,
   onExpandedChange,
   onClose,
+  onDismissAll,
   onCloseComplete,
   onEdit,
   onShowInBoard,
@@ -451,6 +488,7 @@ function ColorDetailModal({
   expanded: boolean;
   onExpandedChange: (value: boolean) => void;
   onClose: () => void;
+  onDismissAll?: () => void;
   onCloseComplete?: () => void;
   onEdit?: () => void;
   onShowInBoard?: () => void;
@@ -491,7 +529,13 @@ function ColorDetailModal({
   return (
     <Dialog
       open={open}
-      onOpenChange={(next) => !next && onClose()}
+      onOpenChange={(next, details) => {
+        if (!next) {
+          if (details.reason === "outside-press" && onDismissAll)
+            onDismissAll();
+          else onClose();
+        }
+      }}
       onOpenChangeComplete={(next) => !next && onCloseComplete?.()}
     >
       <DialogContent
@@ -538,17 +582,37 @@ function ColorDetailModal({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8 rounded-lg"
-            aria-label="Back to board"
+            className={cn(
+              "size-8 rounded-lg",
+              ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+            )}
+            aria-label="Back"
             onClick={onClose}
           >
             <ArrowLeftIcon className="size-4" />
           </Button>
+          {onDismissAll ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "size-8 rounded-lg",
+                ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+              )}
+              aria-label="Close all to board"
+              onClick={onDismissAll}
+            >
+              <XIcon className="size-4" />
+            </Button>
+          ) : null}
           {onPeek ? (
             <Button
               variant="ghost"
               size="icon"
-              className="size-8 rounded-lg"
+              className={cn(
+                "size-8 rounded-lg",
+                ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+              )}
               aria-label="Peek color"
               onClick={onPeek}
             >
@@ -559,7 +623,10 @@ function ColorDetailModal({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8 rounded-lg"
+              className={cn(
+                "size-8 rounded-lg",
+                ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+              )}
               aria-label="Show in board"
               onClick={onShowInBoard}
             >
@@ -569,7 +636,10 @@ function ColorDetailModal({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8 rounded-lg"
+            className={cn(
+              "size-8 rounded-lg",
+              ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+            )}
             aria-label={expanded ? "Return to modal" : "Expand color"}
             onClick={() => onExpandedChange(!expanded)}
           >
@@ -600,7 +670,10 @@ function ColorDetailModal({
             <Button
               variant="ghost"
               size="icon"
-              className="ml-auto size-8 rounded-lg"
+              className={cn(
+                "ml-auto size-8 rounded-lg",
+                ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+              )}
               aria-label="Edit color"
               onClick={onEdit}
             >
@@ -612,7 +685,7 @@ function ColorDetailModal({
               createdAt={color.createdAt}
               updatedAt={color.updatedAt}
               label="Color details"
-              triggerClassName={onEdit ? undefined : "ml-auto"}
+              triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
             />
           ) : null}
         </motion.div>
@@ -732,6 +805,8 @@ function ColorNoteEditor({
   className?: string;
 }) {
   const { mutate } = useUpdateColor(workspaceSlug);
+  const mutateRef = useRef(mutate);
+  mutateRef.current = mutate;
   const [note, setNote] = useState(asset.note ?? "");
   const timer = useRef<number | undefined>(undefined);
   const assetIdRef = useRef(asset.id);
@@ -751,7 +826,15 @@ function ColorNoteEditor({
   }, [asset.id, asset.note]);
   useEffect(
     () => () => {
-      if (timer.current !== undefined) window.clearTimeout(timer.current);
+      if (timer.current !== undefined) {
+        window.clearTimeout(timer.current);
+        timer.current = undefined;
+        const value = draftRef.current;
+        mutateRef.current({
+          assetId: assetIdRef.current,
+          note: value.trim() ? value : null,
+        });
+      }
     },
     [],
   );
@@ -769,13 +852,20 @@ function ColorNoteEditor({
         id={`color-note-${asset.id}`}
         spellCheck={false}
         value={note}
-        onBlur={() => save(note)}
+        onBlur={() => {
+          if (timer.current !== undefined) window.clearTimeout(timer.current);
+          timer.current = undefined;
+          save(note);
+        }}
         onChange={(event) => {
           const value = event.target.value;
           draftRef.current = value;
           setNote(value);
           if (timer.current !== undefined) window.clearTimeout(timer.current);
-          timer.current = window.setTimeout(() => save(value), 350);
+          timer.current = window.setTimeout(() => {
+            timer.current = undefined;
+            save(value);
+          }, 350);
         }}
         placeholder="Add a note"
         rows={1}

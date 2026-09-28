@@ -16,7 +16,9 @@ import { Route as WorkspaceSlugRouteRouteImport } from './routes/$workspaceSlug/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkspaceSlugIndexRouteImport } from './routes/$workspaceSlug/index'
 import { Route as WorkspaceSlugInboxRouteImport } from './routes/$workspaceSlug/inbox'
+import { Route as WorkspaceSlugInboxSplatRouteImport } from './routes/$workspaceSlug/inbox.$'
 import { Route as WorkspaceSlugCollectionsSplatRouteImport } from './routes/$workspaceSlug/collections/$'
+import { Route as WorkspaceSlugAssetAssetIdRouteImport } from './routes/$workspaceSlug/asset.$assetId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -53,10 +55,21 @@ const WorkspaceSlugInboxRoute = WorkspaceSlugInboxRouteImport.update({
   path: '/inbox',
   getParentRoute: () => WorkspaceSlugRouteRoute,
 } as any)
+const WorkspaceSlugInboxSplatRoute = WorkspaceSlugInboxSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => WorkspaceSlugInboxRoute,
+} as any)
 const WorkspaceSlugCollectionsSplatRoute =
   WorkspaceSlugCollectionsSplatRouteImport.update({
     id: '/collections/$',
     path: '/collections/$',
+    getParentRoute: () => WorkspaceSlugRouteRoute,
+  } as any)
+const WorkspaceSlugAssetAssetIdRoute =
+  WorkspaceSlugAssetAssetIdRouteImport.update({
+    id: '/asset/$assetId',
+    path: '/asset/$assetId',
     getParentRoute: () => WorkspaceSlugRouteRoute,
   } as any)
 
@@ -66,18 +79,22 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
-  '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRoute
+  '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRouteWithChildren
   '/$workspaceSlug/': typeof WorkspaceSlugIndexRoute
+  '/$workspaceSlug/asset/$assetId': typeof WorkspaceSlugAssetAssetIdRoute
   '/$workspaceSlug/collections/$': typeof WorkspaceSlugCollectionsSplatRoute
+  '/$workspaceSlug/inbox/$': typeof WorkspaceSlugInboxSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
-  '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRoute
+  '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRouteWithChildren
   '/$workspaceSlug': typeof WorkspaceSlugIndexRoute
+  '/$workspaceSlug/asset/$assetId': typeof WorkspaceSlugAssetAssetIdRoute
   '/$workspaceSlug/collections/$': typeof WorkspaceSlugCollectionsSplatRoute
+  '/$workspaceSlug/inbox/$': typeof WorkspaceSlugInboxSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -86,9 +103,11 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
-  '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRoute
+  '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRouteWithChildren
   '/$workspaceSlug/': typeof WorkspaceSlugIndexRoute
+  '/$workspaceSlug/asset/$assetId': typeof WorkspaceSlugAssetAssetIdRoute
   '/$workspaceSlug/collections/$': typeof WorkspaceSlugCollectionsSplatRoute
+  '/$workspaceSlug/inbox/$': typeof WorkspaceSlugInboxSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -100,7 +119,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/$workspaceSlug/inbox'
     | '/$workspaceSlug/'
+    | '/$workspaceSlug/asset/$assetId'
     | '/$workspaceSlug/collections/$'
+    | '/$workspaceSlug/inbox/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -109,7 +130,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/$workspaceSlug/inbox'
     | '/$workspaceSlug'
+    | '/$workspaceSlug/asset/$assetId'
     | '/$workspaceSlug/collections/$'
+    | '/$workspaceSlug/inbox/$'
   id:
     | '__root__'
     | '/'
@@ -119,7 +142,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/$workspaceSlug/inbox'
     | '/$workspaceSlug/'
+    | '/$workspaceSlug/asset/$assetId'
     | '/$workspaceSlug/collections/$'
+    | '/$workspaceSlug/inbox/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -181,6 +206,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceSlugInboxRouteImport
       parentRoute: typeof WorkspaceSlugRouteRoute
     }
+    '/$workspaceSlug/inbox/$': {
+      id: '/$workspaceSlug/inbox/$'
+      path: '/$'
+      fullPath: '/$workspaceSlug/inbox/$'
+      preLoaderRoute: typeof WorkspaceSlugInboxSplatRouteImport
+      parentRoute: typeof WorkspaceSlugInboxRoute
+    }
     '/$workspaceSlug/collections/$': {
       id: '/$workspaceSlug/collections/$'
       path: '/collections/$'
@@ -188,18 +220,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceSlugCollectionsSplatRouteImport
       parentRoute: typeof WorkspaceSlugRouteRoute
     }
+    '/$workspaceSlug/asset/$assetId': {
+      id: '/$workspaceSlug/asset/$assetId'
+      path: '/asset/$assetId'
+      fullPath: '/$workspaceSlug/asset/$assetId'
+      preLoaderRoute: typeof WorkspaceSlugAssetAssetIdRouteImport
+      parentRoute: typeof WorkspaceSlugRouteRoute
+    }
   }
 }
 
+interface WorkspaceSlugInboxRouteChildren {
+  WorkspaceSlugInboxSplatRoute: typeof WorkspaceSlugInboxSplatRoute
+}
+
+const WorkspaceSlugInboxRouteChildren: WorkspaceSlugInboxRouteChildren = {
+  WorkspaceSlugInboxSplatRoute: WorkspaceSlugInboxSplatRoute,
+}
+
+const WorkspaceSlugInboxRouteWithChildren =
+  WorkspaceSlugInboxRoute._addFileChildren(WorkspaceSlugInboxRouteChildren)
+
 interface WorkspaceSlugRouteRouteChildren {
-  WorkspaceSlugInboxRoute: typeof WorkspaceSlugInboxRoute
+  WorkspaceSlugInboxRoute: typeof WorkspaceSlugInboxRouteWithChildren
   WorkspaceSlugIndexRoute: typeof WorkspaceSlugIndexRoute
+  WorkspaceSlugAssetAssetIdRoute: typeof WorkspaceSlugAssetAssetIdRoute
   WorkspaceSlugCollectionsSplatRoute: typeof WorkspaceSlugCollectionsSplatRoute
 }
 
 const WorkspaceSlugRouteRouteChildren: WorkspaceSlugRouteRouteChildren = {
-  WorkspaceSlugInboxRoute: WorkspaceSlugInboxRoute,
+  WorkspaceSlugInboxRoute: WorkspaceSlugInboxRouteWithChildren,
   WorkspaceSlugIndexRoute: WorkspaceSlugIndexRoute,
+  WorkspaceSlugAssetAssetIdRoute: WorkspaceSlugAssetAssetIdRoute,
   WorkspaceSlugCollectionsSplatRoute: WorkspaceSlugCollectionsSplatRoute,
 }
 

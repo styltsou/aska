@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { LoaderCircleIcon } from "lucide-react";
 import { useCreateCollection } from "@/api/collection";
+import { useWorkspaceOverlayNavigation } from "./use-workspace-overlay-navigation";
 
 export function CreateCollectionDialog({
   workspaceSlug,
@@ -24,7 +24,7 @@ export function CreateCollectionDialog({
   workspaceSlug: string;
   children: React.ReactElement;
 }) {
-  const navigate = useNavigate();
+  const navigateOverlay = useWorkspaceOverlayNavigation();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -48,11 +48,10 @@ export function CreateCollectionDialog({
       const data = await createCollection.mutateAsync({ name });
       setIsNavigating(true);
 
-      await navigate({
-        to: "/$workspaceSlug/collections/$",
-        params: { workspaceSlug, _splat: data.collection.slug },
-        search: {},
-      });
+      await navigateOverlay(
+        `/${workspaceSlug}/collections/${data.collection.slug}`,
+        { asset: undefined, view: undefined },
+      );
       handleOpenChange(false);
     } catch (err) {
       setError(

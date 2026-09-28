@@ -1,5 +1,5 @@
-import { Fragment } from "react";
-import { Link } from "@tanstack/react-router";
+import { Fragment, useMemo } from "react";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,9 +19,22 @@ import { getCollectionViewScope, useSessionStore } from "@/store";
 import { makeBoardKey } from "@/components/canvas/canvas-key";
 import { CollectionViewMenu } from "@/components/collection-view-menu";
 import { useCommittedPathname } from "./use-committed-pathname";
+import { mergeWorkspaceOverlaySearch } from "@/lib/workspace-overlay-search";
+import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";
 
 function AppBreadcrumbs() {
   const pathname = useCommittedPathname();
+  const workspaceSearch = useRouterState({
+    select: (state) => state.location.search as WorkspaceRouteSearch,
+  });
+  const boardSearch = useMemo(
+    () =>
+      mergeWorkspaceOverlaySearch(workspaceSearch, {
+        asset: undefined,
+        view: undefined,
+      }),
+    [workspaceSearch],
+  );
   const [, workspaceSlug, collectionsSegment, ...pathSegments] =
     pathname.split("/");
   const isInboxPath = collectionsSegment === "inbox";
@@ -60,6 +73,7 @@ function AppBreadcrumbs() {
                 <Link
                   to="/$workspaceSlug"
                   params={{ workspaceSlug }}
+                  search={boardSearch}
                   activeOptions={{ exact: true }}
                 />
               }
@@ -90,7 +104,7 @@ function AppBreadcrumbs() {
                           workspaceSlug,
                           _splat: segment.path,
                         }}
-                        search={{}}
+                        search={boardSearch}
                         activeOptions={{ exact: true }}
                       />
                     }

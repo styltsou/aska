@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useInboxContents, useMarkInboxSeen } from "@/api/collection";
@@ -14,7 +14,7 @@ import { FilterBar } from "@/components/filter-bar";
 import { MasonryGridSkeleton } from "@/components/masonry-grid-skeleton";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { useSessionStore } from "@/store";
-import type { ImageAsset } from "@/types/asset";
+import type { Asset, ImageAsset } from "@/types/asset";
 import { ResourceLoadError } from "@/components/resource-load-error";
 import {
   useWorkspacePeek,
@@ -22,13 +22,25 @@ import {
 } from "@/components/app-shell/workspace-peek";
 import { useWorkspaceAssetView } from "@/components/app-shell/workspace-asset-view";
 
+const EMPTY_ASSETS: Asset[] = [];
+const StableAssetBoard = memo(AssetBoard);
+
 export const Route = createFileRoute("/$workspaceSlug/inbox")({
   head: () => ({
     meta: [{ title: "Inbox | Aska" }],
   }),
-  component: InboxPage,
+  component: InboxLayout,
   pendingComponent: MasonryGridSkeleton,
 });
+
+function InboxLayout() {
+  return (
+    <>
+      <InboxPage />
+      <Outlet />
+    </>
+  );
+}
 
 function InboxPage() {
   const { workspaceSlug } = Route.useParams();
@@ -60,12 +72,20 @@ function InboxPage() {
     if (data) markInboxSeen();
   }, [data, markInboxSeen]);
 
-  const assets = data?.nodes.map(collectionNodeToAsset) ?? [];
+  const assets = useMemo(
+    () => data?.nodes.map(collectionNodeToAsset) ?? EMPTY_ASSETS,
+    [data?.nodes],
+  );
   const hasResolvedColorSearch =
     selectedColorHexes.length > 0 && colorSearch.data !== undefined;
-  const displayAssets = hasResolvedColorSearch
-    ? colorSearch.data.results.map(colorSearchResultToImageAsset)
-    : assets;
+  const displayAssets = useMemo(
+    () =>
+      hasResolvedColorSearch
+        ? (colorSearch.data?.results ?? []).map(colorSearchResultToImageAsset)
+        : assets,
+    [assets, colorSearch.data?.results, hasResolvedColorSearch],
+  );
+  const inboxContext = useMemo(() => ({ workspaceSlug }), [workspaceSlug]);
 
   useEffect(() => {
     if (!showRequest || showRequest.scopeKey !== filterScope || !data) return;
@@ -80,6 +100,33 @@ function InboxPage() {
     consumeShowRequest(showRequest.id);
   }, [consumeShowRequest, data, filterScope, isFetching, showRequest]);
 
+  const dismissFocusedAsset = useCallback(
+    () => setFocusedShowRequest(undefined),
+    [],
+  );
+  const handleOpenAsset = useCallback(
+    (assetId: string) => {
+      const node = data?.nodes.find((candidate) => candidate.id === assetId);
+      openAsset(assetId, {
+        initialData:
+          node && node.type !== "folder"
+            ? { asset: node, location: { type: "inbox" } }
+            : undefined,
+        imageSiblings: data?.nodes.filter(
+          (
+            candidate,
+          ): candidate is Extract<typeof candidate, { type: "image" }> =>
+            candidate.type === "image",
+        ),
+      });
+    },
+    [data?.nodes, openAsset],
+  );
+  const handleOpenNode = useCallback(
+    (node: { id: string }) => handleOpenAsset(node.id),
+    [handleOpenAsset],
+  );
+
   if (isLoading) return <MasonryGridSkeleton />;
 
   if (isError && !data) {
@@ -92,22 +139,6 @@ function InboxPage() {
     );
   }
 
-  const handleOpenAsset = (assetId: string) => {
-    const node = data?.nodes.find((candidate) => candidate.id === assetId);
-    openAsset(assetId, {
-      initialData:
-        node && node.type !== "folder"
-          ? { asset: node, location: { type: "inbox" } }
-          : undefined,
-      imageSiblings: data?.nodes.filter(
-        (
-          candidate,
-        ): candidate is Extract<typeof candidate, { type: "image" }> =>
-          candidate.type === "image",
-      ),
-    });
-  };
-
   return (
     <BoardContextMenu
       workspaceSlug={workspaceSlug}
@@ -119,16 +150,16 @@ function InboxPage() {
         collectionPath=""
         target="inbox"
       >
-        <AssetBoard
+        <StableAssetBoard
           assets={displayAssets}
-          inboxContext={{ workspaceSlug }}
+          inboxContext={inboxContext}
           focusedAssetId={focusedShowRequest?.assetId}
           focusRequestId={focusedShowRequest?.id}
-          onDismissFocusedAsset={() => setFocusedShowRequest(undefined)}
-          onOpenNote={(note) => handleOpenAsset(note.id)}
-          onOpenImage={(image) => handleOpenAsset(image.id)}
-          onOpenColor={(color) => handleOpenAsset(color.id)}
-          onOpenVideo={(video) => handleOpenAsset(video.id)}
+          onDismissFocusedAsset={dismissFocusedAsset}
+          onOpenNote={handleOpenNode}
+          onOpenImage={handleOpenNode}
+          onOpenColor={handleOpenNode}
+          onOpenVideo={handleOpenNode}
           emptyTitle={
             hasResolvedColorSearch || isTypeFilterActive
               ? "No matching assets"

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import {
   Dialog,
   DialogBody,
@@ -25,7 +26,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
-import { isSettingsOpen, closeSettings } from "@/lib/settings-dialog";
+import { SETTINGS_REQUEST_EVENT, closeSettings } from "@/lib/settings-dialog";
+import { useWorkspaceOverlayNavigation } from "@/components/app-shell/use-workspace-overlay-navigation";
 
 const THEMES = [
   { value: "system", icon: MonitorIcon },
@@ -97,19 +99,26 @@ function GeneralSection() {
 }
 
 export function SettingsDialog() {
-  const [open, setOpen] = useState(isSettingsOpen);
+  const navigateOverlay = useWorkspaceOverlayNavigation();
+  const location = useRouterState({ select: (state) => state.location });
+  const open = (location.search as { settings?: boolean }).settings === true;
 
   useEffect(() => {
-    function onUrlChange() {
-      setOpen(isSettingsOpen());
+    function onRequest(event: Event) {
+      const requestedOpen = (event as CustomEvent<boolean>).detail;
+      void navigateOverlay(
+        location.pathname,
+        {
+          settings: requestedOpen || undefined,
+        },
+        true,
+      );
     }
-    window.addEventListener("popstate", onUrlChange);
-    window.addEventListener("settings-changed", onUrlChange);
+    window.addEventListener(SETTINGS_REQUEST_EVENT, onRequest);
     return () => {
-      window.removeEventListener("popstate", onUrlChange);
-      window.removeEventListener("settings-changed", onUrlChange);
+      window.removeEventListener(SETTINGS_REQUEST_EVENT, onRequest);
     };
-  }, []);
+  }, [location.pathname, navigateOverlay]);
 
   return (
     <Dialog

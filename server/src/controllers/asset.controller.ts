@@ -4,6 +4,7 @@ import {
   ContentTypeQuerySchema,
   CreateNoteSchema,
   CreateColorSchema,
+  DeleteNoteIfUnchangedSchema,
   ImageCropPathParamSchema,
   UpdateImageSchema,
   UpdateLinkSchema,
@@ -13,6 +14,7 @@ import {
 } from "@/dto/collection.dto";
 import { factory } from "@/factory";
 import { success } from "@/lib/response";
+import { AppError, ErrorCode } from "@/lib/errors";
 import { authMiddleware } from "@/middleware";
 import { validate } from "@/middleware/validate";
 
@@ -248,7 +250,34 @@ export const deleteAsset = factory.createHandlers(
       workspaceSlug,
       userId,
     );
-    const result = await assetService.deleteAsset(workspace.id, assetId);
+    const body = await c.req.text();
+    let expectedNote:
+      | { expectedContent: string; expectedTitle: string | null }
+      | undefined;
+    if (body) {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(body);
+      } catch {
+        throw new AppError(
+          ErrorCode.VALIDATION_ERROR,
+          "Invalid note delete precondition",
+        );
+      }
+      const validated = DeleteNoteIfUnchangedSchema.safeParse(parsed);
+      if (!validated.success) {
+        throw new AppError(
+          ErrorCode.VALIDATION_ERROR,
+          "Invalid note delete precondition",
+        );
+      }
+      expectedNote = validated.data;
+    }
+    const result = await assetService.deleteAsset(
+      workspace.id,
+      assetId,
+      expectedNote,
+    );
 
     return c.json(success(result));
   },

@@ -1,4 +1,5 @@
 import { useRouterState } from "@tanstack/react-router";
+import { parseWorkspaceAssetPath } from "@/lib/workspace-asset-url";
 
 /**
  * Keep shell chrome aligned with the route currently rendered by the Outlet.
@@ -7,6 +8,9 @@ import { useRouterState } from "@tanstack/react-router";
  */
 export function useCommittedPathname() {
   return useRouterState({
-    select: (state) => (state.resolvedLocation ?? state.location).pathname,
+    select: (state) =>
+      parseWorkspaceAssetPath(
+        (state.resolvedLocation ?? state.location).pathname,
+      ).boardPathname,
   });
 }

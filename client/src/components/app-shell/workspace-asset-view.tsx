@@ -3,12 +3,13 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -28,7 +29,13 @@ import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { ApiError, getUserFacingApiErrorMessage } from "@/lib/api";
-import { parseWorkspaceAssetId } from "@/lib/workspace-asset-url";
+import {
+  parseWorkspaceAssetId,
+  parseWorkspaceAssetPath,
+  workspaceAssetPath,
+} from "@/lib/workspace-asset-url";
+import { readOverlayTrail } from "@/lib/workspace-overlay-history";
+import { openMainAssetSearchPatch } from "@/lib/workspace-overlay-search";
 import { recordRecentWorkspaceAsset } from "@/lib/workspace-recent-assets";
 import type { ImageAsset } from "@/types/asset";
 import {
@@ -37,25 +44,23 @@ import {
   useWorkspacePeek,
 } from "./workspace-peek";
 import {
-  completeAssetPresentationClose,
   openAssetPresentation,
-  requestAssetPresentationClose,
   syncAssetPresentationToUrl,
   type AssetPresentation,
 } from "./workspace-asset-view-state";
 import { useCommittedPathname } from "./use-committed-pathname";
+import { useWorkspaceOverlayNavigation } from "./use-workspace-overlay-navigation";
 
 type OpenAssetOptions = {
   replace?: boolean;
   presentation?: "fullscreen";
+  peekAfter?: string;
   initialData?: PeekableAssetResponse;
   imageSiblings?: CollectionImageNode[];
 };
 
 type WorkspaceAssetViewContextValue = {
-  assetId?: string;
-  openAsset: (assetId: string, options?: OpenAssetOptions) => void;
-  closeAsset: () => void;
+  openAsset: (assetId: string, options?: OpenAssetOptions) => Promise<boolean>;
 };
 
 const WorkspaceAssetViewContext =
@@ -83,63 +88,106 @@ export function WorkspaceAssetViewProvider({
   workspaceSlug: string;
   children: ReactNode;
 }) {
-  const navigate = useNavigate({ from: "/$workspaceSlug" });
-  const pathname = useCommittedPathname();
-  const rawAssetId = useRouterState({
-    select: (state) => (state.location.search as { asset?: unknown }).asset,
-  });
-  const assetId = parseWorkspaceAssetId(rawAssetId);
-  const queryClient = useQueryClient();
+  const router = useRouter();
+  const navigateOverlay = useWorkspaceOverlayNavigation();
   const {
     target: peekTarget,
-    closePeek,
-    setAssetPromotionHandler,
+    flushPeekImage,
+    flushPeekNote,
+    prepareMainNoteLeave,
   } = useWorkspacePeek();
-  const openedInAppAssetIdsRef = useRef(new Set<string>());
-  const presentationStackRef = useRef<AssetPresentation[]>([]);
+  const location = useRouterState({ select: (state) => state.location });
+  const { assetId, boardPathname } = parseWorkspaceAssetPath(location.pathname);
+  const search = location.search as {
+    asset?: string;
+    peek?: string;
+    view?: "modal" | "full";
+    peekScope?: string;
+    peekDescendants?: boolean;
+  };
+  const queryClient = useQueryClient();
+  const { consumePendingDemotion, setAssetPromotionHandler } =
+    useWorkspacePeek();
+  const pendingPeekTransferRef = useRef<
+    | {
+        boardPathname: string;
+        sourceIndex: number;
+        closeToBoard?: boolean;
+        peek?: string;
+        peekScope?: string;
+        peekDescendants?: boolean;
+      }
+    | undefined
+  >(undefined);
+  const pendingCloseNavigationRef = useRef<
+    | {
+        assetId: string;
+        sourceHref: string;
+        run: () => void;
+      }
+    | undefined
+  >(undefined);
   const [presentation, setPresentation] = useState<AssetPresentation | null>(
-    () => (assetId ? { assetId, open: true, urlStatus: "committed" } : null),
+    () =>
+      assetId
+        ? {
+            assetId,
+            open: true,
+            urlStatus: "committed",
+            presentation: search.view === "full" ? "fullscreen" : undefined,
+          }
+        : null,
   );
   const presentationRef = useRef(presentation);
   presentationRef.current = presentation;
+  const locationRef = useRef(location);
+  locationRef.current = location;
 
-  const openAsset = useCallback(
-    (nextAssetId: string, options?: OpenAssetOptions) => {
+  const openAssetImpl = useCallback(
+    async (nextAssetId: string, options?: OpenAssetOptions) => {
       if (!parseWorkspaceAssetId(nextAssetId)) return Promise.resolve(false);
       const currentPresentation = presentationRef.current;
       if (
+        assetId === nextAssetId &&
         currentPresentation?.open &&
         currentPresentation.assetId === nextAssetId
       ) {
-        if (options?.presentation) {
-          setPresentation((current) =>
-            current?.assetId === nextAssetId
-              ? { ...current, presentation: options.presentation }
-              : current,
-          );
+        if (options?.presentation || search.peek === nextAssetId) {
+          return navigateOverlay(
+            location.pathname,
+            {
+              view: options?.presentation ? "full" : search.view,
+              ...(search.peek === nextAssetId
+                ? {
+                    peek: undefined,
+                    peekScope: undefined,
+                    peekDescendants: undefined,
+                  }
+                : {}),
+            },
+            true,
+          )
+            .then(() => true)
+            .catch(() => false);
         }
-        if (peekTarget?.type === "link" && peekTarget.asset.id === nextAssetId)
-          closePeek();
         return Promise.resolve(true);
       }
       if (
-        !options?.replace &&
-        currentPresentation?.open &&
-        currentPresentation.assetId !== nextAssetId
-      ) {
-        presentationStackRef.current.push(currentPresentation);
+        peekTarget?.type === "note" &&
+        peekTarget.asset.id === nextAssetId &&
+        !(await flushPeekNote(nextAssetId))
+      )
+        return false;
+      if (peekTarget?.type === "image" && peekTarget.asset.id === nextAssetId) {
+        await flushPeekImage();
       }
+      if (assetId && !(await prepareMainNoteLeave())) return false;
       const queryKey = workspaceAssetQueryKey(workspaceSlug, nextAssetId);
-      if (options?.initialData) {
+      if (options?.initialData && !queryClient.getQueryData(queryKey)) {
         queryClient.setQueryData<PeekableAssetResponse>(
           queryKey,
-          (current) => current ?? options.initialData,
+          options.initialData,
         );
-        void queryClient.invalidateQueries({
-          queryKey,
-          exact: true,
-          refetchType: "none",
-        });
       }
       setPresentation(
         openAssetPresentation(
@@ -149,25 +197,19 @@ export function WorkspaceAssetViewProvider({
           options?.presentation,
         ),
       );
-      openedInAppAssetIdsRef.current.add(nextAssetId);
       recordRecentWorkspaceAsset(workspaceSlug, nextAssetId);
-      return navigate({
-        // The workspace route owns the validated search schema, but using it as
-        // an implicit destination would collapse nested routes to its index.
-        to: pathname as "/$workspaceSlug",
-        search: (previous) => ({ ...previous, asset: nextAssetId }),
-        replace: options?.replace,
-      })
-        .then(() => {
-          if (
-            peekTarget?.type === "link" &&
-            peekTarget.asset.id === nextAssetId
-          )
-            closePeek();
-          return true;
-        })
+      return navigateOverlay(
+        workspaceAssetPath(boardPathname, nextAssetId),
+        openMainAssetSearchPatch({
+          currentPeekId: search.peek,
+          nextAssetId,
+          peekAfter: options?.peekAfter,
+          fullscreen: options?.presentation === "fullscreen",
+        }),
+        options?.replace,
+      )
+        .then(() => true)
         .catch(() => {
-          openedInAppAssetIdsRef.current.delete(nextAssetId);
           setPresentation(
             assetId ? openAssetPresentation(assetId, assetId) : null,
           );
@@ -176,13 +218,27 @@ export function WorkspaceAssetViewProvider({
     },
     [
       assetId,
-      closePeek,
-      navigate,
-      pathname,
+      boardPathname,
+      flushPeekImage,
+      flushPeekNote,
+      location.pathname,
+      navigateOverlay,
       peekTarget,
+      prepareMainNoteLeave,
       queryClient,
+      search.peek,
+      search.view,
       workspaceSlug,
     ],
+  );
+  const openAssetRef = useRef(openAssetImpl);
+  useLayoutEffect(() => {
+    openAssetRef.current = openAssetImpl;
+  }, [openAssetImpl]);
+  const openAsset = useCallback(
+    (nextAssetId: string, options?: OpenAssetOptions) =>
+      openAssetRef.current(nextAssetId, options),
+    [],
   );
 
   useEffect(() => {
@@ -191,76 +247,181 @@ export function WorkspaceAssetViewProvider({
   }, [openAsset, setAssetPromotionHandler]);
 
   useEffect(() => {
-    if (
-      presentation?.open &&
-      assetId === presentation.assetId &&
-      peekTarget?.type === "link" &&
-      peekTarget.asset.id === assetId
-    ) {
-      closePeek();
-    }
-  }, [assetId, closePeek, peekTarget, presentation]);
+    if (assetId || !search.asset) return;
+    void navigateOverlay(
+      workspaceAssetPath(boardPathname, search.asset),
+      { asset: undefined },
+      true,
+    );
+  }, [assetId, boardPathname, navigateOverlay, search.asset]);
 
   const removeAssetFromUrl = useCallback(
     (replace = true) =>
-      navigate({
-        to: pathname as "/$workspaceSlug",
-        search: (previous) => {
-          const { asset: _asset, ...rest } = previous;
-          return rest;
-        },
+      navigateOverlay(
+        boardPathname,
+        { asset: undefined, view: undefined },
         replace,
-      }),
-    [navigate, pathname],
+      ),
+    [boardPathname, navigateOverlay],
+  );
+
+  const beginAssetClose = useCallback(
+    (run: () => void) => {
+      const current = presentationRef.current;
+      if (!current?.open) return;
+      pendingCloseNavigationRef.current = {
+        assetId: current.assetId,
+        sourceHref: location.href,
+        run,
+      };
+      setPresentation({ ...current, open: false });
+    },
+    [location.href],
   );
 
   const closeAsset = useCallback(() => {
-    setPresentation(requestAssetPresentationClose);
-  }, []);
-
-  const completeAssetClose = useCallback(() => {
-    const current = presentationRef.current;
-    const completed = completeAssetPresentationClose(current);
-    setPresentation(completed.presentation);
-    if (!completed.shouldCleanupUrl || !current) return;
-
-    const openedHere = openedInAppAssetIdsRef.current.delete(current.assetId);
-    if (openedHere && window.history.length > 1) {
-      const previousPresentation = presentationStackRef.current.pop();
-      if (previousPresentation) {
-        setPresentation(
-          openAssetPresentation(
-            previousPresentation.assetId,
-            undefined,
-            previousPresentation.imageSiblings,
-            previousPresentation.presentation,
-          ),
+    const demotion = consumePendingDemotion();
+    beginAssetClose(() => {
+      const trail = readOverlayTrail(location.state);
+      const distance =
+        trail?.previousMainDistance ??
+        trail?.boardDistance ??
+        trail?.directDistance;
+      if (distance && trail?.boardPathname === boardPathname) {
+        if (
+          demotion ||
+          (!trail?.previousMainDistance && trail?.directDistance)
+        ) {
+          pendingPeekTransferRef.current = {
+            boardPathname,
+            sourceIndex: location.state.__TSR_index,
+            closeToBoard:
+              !trail?.previousMainDistance && Boolean(trail?.directDistance),
+            ...(demotion ?? {
+              peek: search.peek,
+              peekScope: search.peekScope,
+              peekDescendants: search.peekDescendants,
+            }),
+          };
+        }
+        router.history.go(-distance);
+      } else if (demotion) {
+        void navigateOverlay(
+          boardPathname,
+          {
+            asset: undefined,
+            view: undefined,
+            ...demotion,
+          },
+          true,
         );
+      } else {
+        void removeAssetFromUrl(true);
       }
-      window.history.back();
-      return;
-    }
-    void removeAssetFromUrl(true);
-  }, [removeAssetFromUrl]);
+    });
+  }, [
+    beginAssetClose,
+    boardPathname,
+    consumePendingDemotion,
+    location.state,
+    navigateOverlay,
+    removeAssetFromUrl,
+    router.history,
+    search.peek,
+    search.peekDescendants,
+    search.peekScope,
+  ]);
+
+  const closeAllAssets = useCallback(() => {
+    beginAssetClose(() => {
+      const trail = readOverlayTrail(location.state);
+      const distance = trail?.boardDistance ?? trail?.directDistance;
+      if (distance && trail?.boardPathname === boardPathname) {
+        pendingPeekTransferRef.current = {
+          boardPathname,
+          sourceIndex: location.state.__TSR_index,
+          closeToBoard: Boolean(trail.directDistance),
+          peek: search.peek,
+          peekScope: search.peekScope,
+          peekDescendants: search.peekDescendants,
+        };
+        router.history.go(-distance);
+      } else {
+        void removeAssetFromUrl(true);
+      }
+    });
+  }, [
+    beginAssetClose,
+    boardPathname,
+    location.state,
+    removeAssetFromUrl,
+    router.history,
+    search.peek,
+    search.peekDescendants,
+    search.peekScope,
+  ]);
 
   useEffect(() => {
-    const current = presentationRef.current;
-    if (assetId && current && current.assetId !== assetId) {
-      const previous = presentationStackRef.current.at(-1);
-      if (previous?.assetId === assetId) presentationStackRef.current.pop();
-      else presentationStackRef.current.length = 0;
+    const pending = pendingPeekTransferRef.current;
+    if (!pending || location.state.__TSR_index === pending.sourceIndex) return;
+    pendingPeekTransferRef.current = undefined;
+    if (boardPathname !== pending.boardPathname) return;
+    if (
+      pending.closeToBoard ||
+      search.peek !== pending.peek ||
+      search.peekScope !== pending.peekScope ||
+      search.peekDescendants !== pending.peekDescendants
+    ) {
+      void navigateOverlay(
+        pending.closeToBoard ? boardPathname : location.pathname,
+        {
+          asset: undefined,
+          view: pending.closeToBoard ? undefined : search.view,
+          peek: pending.peek,
+          peekScope: pending.peekScope,
+          peekDescendants: pending.peekDescendants,
+        },
+        true,
+      );
     }
-    setPresentation((current) => syncAssetPresentationToUrl(current, assetId));
-    if (!assetId) {
-      openedInAppAssetIdsRef.current.clear();
-      presentationStackRef.current.length = 0;
-    }
-  }, [assetId]);
+  }, [
+    boardPathname,
+    location.pathname,
+    location.state.__TSR_index,
+    navigateOverlay,
+    search.peek,
+    search.peekDescendants,
+    search.peekScope,
+    search.view,
+  ]);
 
-  const value = useMemo(
-    () => ({ assetId: presentation?.assetId, openAsset, closeAsset }),
-    [closeAsset, openAsset, presentation?.assetId],
-  );
+  useEffect(() => {
+    setPresentation((current) => {
+      const synced = syncAssetPresentationToUrl(current, assetId);
+      return synced && assetId
+        ? {
+            ...synced,
+            presentation: search.view === "full" ? "fullscreen" : undefined,
+          }
+        : synced;
+    });
+  }, [assetId, search.view]);
+
+  const completeAssetClose = useCallback(() => {
+    const pending = pendingCloseNavigationRef.current;
+    pendingCloseNavigationRef.current = undefined;
+    if (presentationRef.current?.open) return;
+    setPresentation(null);
+    if (
+      pending &&
+      pending.assetId === presentationRef.current?.assetId &&
+      pending.sourceHref === locationRef.current.href
+    ) {
+      pending.run();
+    }
+  }, []);
+
+  const value = useMemo(() => ({ openAsset }), [openAsset]);
 
   return (
     <WorkspaceAssetViewContext.Provider value={value}>
@@ -270,6 +431,7 @@ export function WorkspaceAssetViewProvider({
         presentation={presentation}
         openAsset={openAsset}
         closeAsset={closeAsset}
+        closeAllAssets={closeAllAssets}
         completeAssetClose={completeAssetClose}
         removeAssetFromUrl={removeAssetFromUrl}
       />
@@ -282,6 +444,7 @@ function WorkspaceAssetViewController({
   presentation,
   openAsset,
   closeAsset,
+  closeAllAssets,
   completeAssetClose,
   removeAssetFromUrl,
 }: {
@@ -289,11 +452,19 @@ function WorkspaceAssetViewController({
   presentation: AssetPresentation | null;
   openAsset: WorkspaceAssetViewContextValue["openAsset"];
   closeAsset: () => void;
+  closeAllAssets: () => void;
   completeAssetClose: () => void;
   removeAssetFromUrl: (replace?: boolean) => Promise<void>;
 }) {
   const assetId = presentation?.assetId;
   const pathname = useCommittedPathname();
+  const overlayPathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const navigateOverlay = useWorkspaceOverlayNavigation();
+  const currentSearch = useRouterState({
+    select: (state) => state.location.search as { view?: "modal" | "full" },
+  });
   const queryClient = useQueryClient();
   const { showAssetInBoard } = useWorkspacePeek();
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
@@ -421,6 +592,7 @@ function WorkspaceAssetViewController({
     <>
       {requestedType === "note" ? (
         <NoteDetailDrawer
+          key={assetId}
           note={asset?.type === "note" ? asset : undefined}
           workspaceSlug={workspaceSlug}
           location={resolvedLocation}
@@ -430,6 +602,7 @@ function WorkspaceAssetViewController({
           loading={loading}
           open={presentation.open}
           onRequestClose={closeAsset}
+          onDismissAll={closeAllAssets}
           onNoteChange={(note) => {
             void queryClient.invalidateQueries({
               queryKey: workspaceAssetQueryKey(workspaceSlug, note.id),
@@ -437,8 +610,14 @@ function WorkspaceAssetViewController({
           }}
           onOpenReferencedColor={(color) => openAsset(color.id)}
           onPromote={(note) => openAsset(note.id)}
-          onSwap={(note) => openAsset(note.id, { replace: true })}
+          onSwap={(note, previousNote) =>
+            openAsset(note.id, { replace: true, peekAfter: previousNote.id })
+          }
           onShowInBoard={showAction}
+          view={currentSearch.view ?? "modal"}
+          onViewChange={(view) => {
+            void navigateOverlay(overlayPathname, { view }, true);
+          }}
           onClose={completeAssetClose}
         />
       ) : null}
@@ -449,7 +628,13 @@ function WorkspaceAssetViewController({
           open={presentation.open}
           loading={loading}
           workspaceSlug={workspaceSlug}
+          location={location}
+          view={currentSearch.view ?? "modal"}
+          onViewChange={(view) => {
+            void navigateOverlay(overlayPathname, { view }, true);
+          }}
           onShowInBoard={showAction}
+          onDismissAll={closeAllAssets}
           onAssetChange={(image) => {
             const node = siblingImageNodes.find(
               (candidate) => candidate.id === image.id,
@@ -479,6 +664,11 @@ function WorkspaceAssetViewController({
           workspaceSlug={workspaceSlug}
           scope={colorSearchScope(resolvedLocation)}
           onClose={closeAsset}
+          onDismissAll={closeAllAssets}
+          view={currentSearch.view ?? "modal"}
+          onViewChange={(view) => {
+            void navigateOverlay(overlayPathname, { view }, true);
+          }}
           onCloseComplete={completeAssetClose}
           onShowInBoard={showAction}
           onOpenImage={(image) => openAsset(image.id)}
@@ -487,15 +677,20 @@ function WorkspaceAssetViewController({
       ) : null}
       {requestedType === "link" ? (
         <YouTubeVideoViewer
-          key={`${assetId}:${presentation.presentation ?? "modal"}`}
+          key={assetId}
           asset={asset?.type === "link" ? asset : undefined}
           open={presentation.open}
           loading={loading}
           initialPresentation={presentation.presentation}
+          view={currentSearch.view ?? "modal"}
+          onViewChange={(view) => {
+            void navigateOverlay(overlayPathname, { view }, true);
+          }}
           workspaceSlug={workspaceSlug}
           location={location}
           onShowInBoard={showAction}
           onClose={closeAsset}
+          onDismissAll={closeAllAssets}
           onCloseComplete={completeAssetClose}
         />
       ) : null}

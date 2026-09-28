@@ -312,10 +312,21 @@ export type UpdatedLink = {
 export const UpdateNoteSchema = z.object({
   content: z.string().max(NOTE_CONTENT_MAX_LENGTH).optional(),
   title: z.string().max(255).nullable().optional(),
+  expectedContent: z.string().max(NOTE_CONTENT_MAX_LENGTH).optional(),
+  expectedTitle: z.string().max(255).nullable().optional(),
   isExpanded: z.boolean().optional(),
 });
 
 export type UpdateNoteInput = z.infer<typeof UpdateNoteSchema>;
+
+export const DeleteNoteIfUnchangedSchema = z.object({
+  expectedContent: z.string().max(NOTE_CONTENT_MAX_LENGTH),
+  expectedTitle: z.string().max(255).nullable(),
+});
+
+export type DeleteNoteIfUnchangedInput = z.infer<
+  typeof DeleteNoteIfUnchangedSchema
+>;
 
 export type UpdatedNote = {
   id: string;

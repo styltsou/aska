@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  completeAssetPresentationClose,
   openAssetPresentation,
-  requestAssetPresentationClose,
   syncAssetPresentationToUrl,
 } from "./workspace-asset-view-state";
 
@@ -36,32 +34,12 @@ describe("workspace asset presentation", () => {
     });
   });
 
-  it("retains an internally closed presentation until URL cleanup", () => {
-    const current = openAssetPresentation("note-3", "note-3");
-    const closing = requestAssetPresentationClose(current);
-    const completed = completeAssetPresentationClose(closing);
-
-    expect(completed.shouldCleanupUrl).toBe(true);
-    expect(completed.presentation).toMatchObject({
-      assetId: "note-3",
-      open: false,
-      closeOrigin: "waiting-for-url",
-    });
-    expect(syncAssetPresentationToUrl(completed.presentation)).toBeNull();
-  });
-
-  it("animates an external URL close without another history mutation", () => {
+  it("animates a URL close without another history mutation", () => {
     const current = openAssetPresentation("image-8", "image-8");
     const closing = syncAssetPresentationToUrl(current);
 
-    expect(closing).toMatchObject({
-      open: false,
-      closeOrigin: "external",
-    });
-    expect(completeAssetPresentationClose(closing)).toEqual({
-      presentation: null,
-      shouldCleanupUrl: false,
-    });
+    expect(closing).toMatchObject({ open: false });
+    expect(syncAssetPresentationToUrl(closing, "image-8")).toEqual(current);
   });
 
   it("does not mistake the pre-commit URL for an external navigation", () => {

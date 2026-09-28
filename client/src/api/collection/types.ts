@@ -209,7 +209,14 @@ export type CreateNoteInput = {
 export type UpdateNoteInput = {
   content?: string;
   title?: string | null;
+  expectedContent?: string;
+  expectedTitle?: string | null;
   isExpanded?: boolean;
+};
+
+export type DeleteNoteIfUnchangedInput = {
+  expectedContent: string;
+  expectedTitle: string | null;
 };
 
 export type UpdatedNote = {
