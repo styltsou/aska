@@ -30,6 +30,7 @@ import { remarkHighlight } from "@/lib/remark-highlight";
 import { useUpdateNote } from "@/api/collection/hooks";
 import { NOTE_MENTION_CHIP_CLASS } from "@/components/board/note-mentions";
 import { NoteMermaidPreview } from "@/components/board/note-mermaid-preview";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { NoteAsset } from "@/types/asset";
 
 const BARE_URL_RE = /(^|[^[(])(https?:\/\/[^\s<"'>)\]]+)/gi;
@@ -117,6 +118,24 @@ function getCodeBlockLanguage(children: ReactNode): string {
     : "Plain text";
 }
 
+function taskItemIsChecked(node: unknown): boolean {
+  if (!node || typeof node !== "object" || !("children" in node)) return false;
+
+  const children = (node as { children?: unknown }).children;
+  if (!Array.isArray(children)) return false;
+
+  return children.some(
+    (child) =>
+      child &&
+      typeof child === "object" &&
+      "tagName" in child &&
+      child.tagName === "input" &&
+      "properties" in child &&
+      (child as { properties?: { checked?: boolean } }).properties?.checked ===
+        true,
+  );
+}
+
 function createMDComponents(compact: boolean): Components {
   return {
     h1: ({ className, ...props }) => (
@@ -199,16 +218,28 @@ function createMDComponents(compact: boolean): Components {
         {...props}
       />
     ),
-    ul: ({ className, ...props }) => (
-      <ul
-        className={cn(
-          "text-sidebar-foreground/80 marker:text-sidebar-foreground/35 list-disc",
-          compact ? "my-1 ml-3 space-y-0.5" : "my-3 ml-4 space-y-1.5",
-          className,
-        )}
-        {...props}
-      />
-    ),
+    ul: ({ className, node: _node, ...props }) => {
+      const isTaskList = className?.includes("contains-task-list");
+
+      return (
+        <ul
+          className={cn(
+            isTaskList
+              ? "note-task-list ml-0 list-none pl-0 text-sidebar-foreground/80"
+              : "text-sidebar-foreground/80 marker:text-sidebar-foreground/35 list-disc",
+            isTaskList
+              ? compact
+                ? "my-1 space-y-0.5"
+                : "my-3 space-y-1.5"
+              : compact
+                ? "my-1 ml-3 space-y-0.5"
+                : "my-3 ml-4 space-y-1.5",
+            className,
+          )}
+          {...props}
+        />
+      );
+    },
     ol: ({ className, ...props }) => (
       <ol
         className={cn(
@@ -219,22 +250,44 @@ function createMDComponents(compact: boolean): Components {
         {...props}
       />
     ),
-    li: ({ className, ...props }) => (
-      <li
-        className={cn(
-          "pl-1 [&>p]:my-0",
-          compact ? "leading-[1.35]" : "leading-6",
-          className,
-        )}
-        {...props}
-      />
-    ),
-    input: ({ className, ...props }) => (
-      <input
-        className={cn("mr-2 size-3.5 accent-primary", className)}
-        {...props}
-      />
-    ),
+    li: ({ className, children, node, ...props }) => {
+      const isTaskItem = className?.includes("task-list-item");
+      const isChecked = taskItemIsChecked(node);
+
+      return (
+        <li
+          className={cn(
+            isTaskItem
+              ? "note-task-item ml-0 flex items-center gap-2 pl-0"
+              : "pl-1",
+            isTaskItem &&
+              isChecked &&
+              "text-sidebar-foreground/50 line-through",
+            "[&>p]:my-0",
+            compact ? "leading-[1.35]" : "leading-6",
+            className,
+          )}
+          {...props}
+        >
+          {children}
+        </li>
+      );
+    },
+    input: ({ checked, className, node: _node, type, ...props }) => {
+      if (type !== "checkbox") {
+        return <input className={className} type={type} {...props} />;
+      }
+
+      return (
+        <Checkbox
+          aria-label={checked ? "Completed task" : "Incomplete task"}
+          checked={checked === true}
+          className={cn("pointer-events-none shrink-0", className)}
+          onCheckedChange={() => undefined}
+          tabIndex={-1}
+        />
+      );
+    },
     a: ({ className, href, children, ...props }) => {
       const mention = /^(note|color):(\d+)$/.exec(href ?? "");
       if (mention) {
@@ -520,7 +573,7 @@ export function NoteAssetCard({
         },
       }}
       className={cn(
-        "group relative min-w-0 overflow-hidden rounded-lg border bg-sidebar px-4 py-2.5 text-sm transition-[border-color,background-color,filter,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "group relative min-w-0 overflow-hidden rounded-lg border bg-sidebar px-4 py-4 text-sm transition-[border-color,background-color,filter,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
         !cardHeights && !isExpanded && "max-h-80",
         effectiveOnOpen && "cursor-pointer",
         !selected && "hover:border-sidebar-foreground/20",
@@ -568,7 +621,7 @@ export function NoteAssetCard({
       {hasOverflow ? (
         <div
           className={cn(
-            "absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5 transition-transform duration-100 ease-[cubic-bezier(0.4,0,0.2,1)]",
+            "absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-4 transition-transform duration-100 ease-[cubic-bezier(0.4,0,0.2,1)]",
             isPillDismissed
               ? "pointer-events-none translate-y-full"
               : "pointer-events-none translate-y-full group-hover:pointer-events-auto group-hover:translate-y-0",

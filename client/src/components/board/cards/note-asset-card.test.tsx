@@ -66,13 +66,17 @@ describe("NoteMarkdown", () => {
     expect(html).not.toContain("bg-amber");
   });
 
-  it("renders task-list checkboxes", () => {
+  it("renders task lists without bullets and matches the editor check state", () => {
     const html = renderToStaticMarkup(
       <NoteMarkdown content={"- [ ] Open\n- [x] Finished"} />,
     );
 
-    expect(html).toContain('type="checkbox"');
-    expect(html).toContain("checked");
+    expect(html).toContain("contains-task-list");
+    expect(html).toContain("note-task-list ml-0 list-none pl-0");
+    expect(html).toContain("task-list-item");
+    expect(html).toContain("note-task-item ml-0 flex items-center gap-2 pl-0");
+    expect(html).toContain("text-sidebar-foreground/50 line-through");
+    expect(html).toContain('data-slot="checkbox"');
   });
 
   it("uses the editor's lowlight classes for code blocks", () => {
