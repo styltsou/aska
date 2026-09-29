@@ -75,7 +75,7 @@ describe("NoteMarkdown", () => {
     expect(html).toContain("contains-task-list");
     expect(html).toContain("note-task-list ml-0 list-none pl-0");
     expect(html).toContain("task-list-item");
-    expect(html).toContain("note-task-item ml-0 flex items-center gap-2 pl-0");
+    expect(html).toContain("note-task-item ml-0 flex items-start gap-2 pl-0");
     expect(html).toContain("text-sidebar-foreground/50 line-through");
     expect(html).toContain('data-slot="checkbox"');
   });

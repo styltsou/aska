@@ -258,7 +258,7 @@ function createMDComponents(compact: boolean): Components {
         <li
           className={cn(
             isTaskItem
-              ? "note-task-item ml-0 flex items-center gap-2 pl-0"
+              ? "note-task-item ml-0 flex items-start gap-2 pl-0"
               : "pl-1",
             isTaskItem &&
               isChecked &&
@@ -282,7 +282,14 @@ function createMDComponents(compact: boolean): Components {
         <Checkbox
           aria-label={checked ? "Completed task" : "Incomplete task"}
           checked={checked === true}
-          className={cn("pointer-events-none shrink-0", className)}
+          className={cn(
+            "pointer-events-none shrink-0",
+            // Nudge the 1rem box onto the first line's optical centre: the
+            // regular row is a 1.5rem line box, the compact one is shorter
+            // than the checkbox so it already sits flush.
+            compact ? "mt-0" : "mt-[0.25rem]",
+            className,
+          )}
           onCheckedChange={() => undefined}
           tabIndex={-1}
         />
