@@ -2434,7 +2434,16 @@ export function ImageAssetViewer({
                       layoutTransition={fullscreenLayoutTransition}
                     />
                   ) : loading ? (
-                    <Skeleton className="h-[min(68cqh,42rem)] w-[min(70cqw,64rem)] rounded-lg bg-white/10" />
+                    <Skeleton
+                      data-asset-modal-hero
+                      className="rounded-lg bg-white/10"
+                      style={{
+                        width: "min(100cqw, calc(100cqh * 1.333333), 64rem)",
+                        height: "min(100cqh, calc(100cqw / 1.333333), 48rem)",
+                      }}
+                      role="status"
+                      aria-label="Loading image"
+                    />
                   ) : null}
                 </div>
               )}
@@ -2620,11 +2629,7 @@ export function ImageAssetViewer({
                             </p>
                           </div>
                         ) : loading ? (
-                          <div className="space-y-3">
-                            <Skeleton className="h-4 w-16" />
-                            <Skeleton className="h-5 w-3/4" />
-                            <Skeleton className="h-20 w-full" />
-                          </div>
+                          <ImageViewerDetailsLoading />
                         ) : null}
                         {asset?.sourceUrl ? (
                           <div className="mb-5">
@@ -2686,6 +2691,8 @@ export function ImageAssetViewer({
                           <ImageMetadataDetails asset={asset} />
                         </div>
                       </footer>
+                    ) : loading ? (
+                      <ImageMetadataLoading />
                     ) : null}
                   </div>
                 </motion.div>
@@ -2695,5 +2702,43 @@ export function ImageAssetViewer({
         </DialogBody>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ImageViewerDetailsLoading() {
+  return (
+    <div role="status" aria-label="Loading image details">
+      <div className="mb-5">
+        <Skeleton className="h-3 w-10" />
+        <Skeleton className="mt-2 h-4 w-3/4" />
+      </div>
+      <div className="mb-5 space-y-2">
+        <Skeleton className="h-3 w-12" />
+        <div className="flex gap-1.5" aria-hidden="true">
+          {Array.from({ length: 5 }, (_, index) => (
+            <Skeleton key={index} className="size-8 rounded-sm" />
+          ))}
+        </div>
+      </div>
+      <div className="mb-5">
+        <Skeleton className="h-3 w-10" />
+        <Skeleton className="mt-2 h-4 w-32" />
+      </div>
+    </div>
+  );
+}
+
+function ImageMetadataLoading() {
+  return (
+    <footer className="shrink-0 px-4 pb-4 lg:px-5" aria-hidden="true">
+      <div className="space-y-3 border-t border-border pt-4">
+        {Array.from({ length: 3 }, (_, index) => (
+          <div key={index} className="flex items-center justify-between gap-5">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        ))}
+      </div>
+    </footer>
   );
 }

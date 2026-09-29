@@ -452,7 +452,7 @@ export function YouTubeVideoViewer({
               viewer
             />
           ) : (
-            <VideoViewerLoading />
+            <VideoViewerLoading workspace={workspace} viewer />
           )}
         </DialogBody>
       </DialogContent>
@@ -680,12 +680,73 @@ function VideoViewerToolbar({
   );
 }
 
-function VideoViewerLoading() {
+function VideoViewerLoading({
+  workspace = false,
+  viewer = false,
+}: {
+  workspace?: boolean;
+  viewer?: boolean;
+}) {
+  const metadata = (
+    <div className="space-y-3" aria-hidden="true">
+      <Skeleton className={cn("h-6 w-2/3", workspace && "h-8 w-3/4")} />
+      <Skeleton className={cn("h-4 w-36", workspace && "h-5 w-44")} />
+      <div className="space-y-2 pt-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-[88%]" />
+        <Skeleton className="h-4 w-[62%]" />
+      </div>
+      <div className="space-y-2 pt-3">
+        <Skeleton className="h-3 w-12" />
+        <Skeleton className="h-4 w-40" />
+      </div>
+    </div>
+  );
+
+  if (viewer) {
+    return (
+      <div
+        className="relative flex h-full min-h-0 flex-1 overflow-hidden"
+        role="status"
+        aria-label="Loading video details"
+      >
+        <ScrollArea className="h-full min-h-0 w-full">
+          <div className="min-h-full bg-background">
+            <div
+              className="mx-auto w-full px-5"
+              style={
+                workspace
+                  ? { maxWidth: FULLSCREEN_COLUMN_MAX_WIDTH }
+                  : undefined
+              }
+            >
+              <div className="flex items-center justify-start pt-4 pb-8">
+                <Skeleton
+                  data-asset-modal-hero
+                  className={cn(
+                    "aspect-video w-full rounded-md",
+                    workspace
+                      ? "max-w-none"
+                      : "max-w-[calc((100dvh-5rem)*16/9)]",
+                  )}
+                />
+              </div>
+              <div className="pb-5">{metadata}</div>
+            </div>
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4 p-3 sm:p-4">
+    <div
+      className="space-y-4 p-3 sm:p-4"
+      role="status"
+      aria-label="Loading video details"
+    >
       <Skeleton className="aspect-video w-full rounded-md" />
-      <Skeleton className="h-6 w-2/3" />
-      <Skeleton className="h-4 w-36" />
+      {metadata}
     </div>
   );
 }

@@ -1,17 +1,17 @@
-import "./note-editor-loading.css";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function NoteEditorLoading() {
   return (
-    <p
-      className="inline-flex items-baseline gap-[0.1em] py-14 text-sm font-medium"
-      role="status"
-    >
-      <span className="animate-[note-editor-loading-shimmer_1.8s_linear_infinite] bg-[linear-gradient(100deg,var(--muted-foreground)_0%,color-mix(in_oklch,var(--muted-foreground)_86%,var(--foreground))_45%,var(--muted-foreground)_90%)] [background-size:220%_100%] bg-clip-text text-transparent motion-reduce:animate-none motion-reduce:bg-none motion-reduce:text-muted-foreground">
-        Opening note
-      </span>
-      <span className="text-muted-foreground" aria-hidden="true">
-        …
-      </span>
-    </p>
+    <div className="py-8" role="status" aria-label="Opening note">
+      <Skeleton className="h-10 w-[min(32rem,78%)] rounded-lg sm:h-11" />
+      <div className="mt-20 space-y-3.5" aria-hidden="true">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-[92%]" />
+        <Skeleton className="h-4 w-[68%]" />
+        <div className="h-4" />
+        <Skeleton className="h-4 w-[84%]" />
+        <Skeleton className="h-4 w-[76%]" />
+      </div>
+    </div>
   );
 }

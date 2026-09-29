@@ -446,20 +446,7 @@ export function ColorDetailDrawer({
           <DrawerDescription className="sr-only">
             Loading color details.
           </DrawerDescription>
-          <div className="space-y-4 border-b p-4">
-            <div className="flex items-center gap-3.5">
-              <Skeleton className="size-12 rounded-xl" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-20" />
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 p-4">
-            {Array.from({ length: 6 }, (_, index) => (
-              <Skeleton key={index} className="aspect-square rounded-lg" />
-            ))}
-          </div>
+          <ColorDetailLoading mobile scope={scope} />
         </DrawerContent>
       ) : null}
     </Drawer>
@@ -838,7 +825,7 @@ function ColorDetailModal({
               </ScrollArea>
             </div>
           ) : loading ? (
-            <ColorResultsSkeleton />
+            <ColorDetailLoading scope={scope} />
           ) : null}
         </DialogBody>
       </DialogContent>
@@ -997,6 +984,79 @@ function ColorResultsSkeleton() {
           )}
         />
       ))}
+    </div>
+  );
+}
+
+function ColorDetailLoading({
+  scope,
+  mobile = false,
+}: {
+  scope: ColorSearchScope;
+  mobile?: boolean;
+}) {
+  if (mobile) {
+    return (
+      <div
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+        role="status"
+        aria-label="Loading color details"
+      >
+        <div className="flex items-center gap-3.5 border-b p-4">
+          <Skeleton className="size-12 shrink-0 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <div className="flex gap-1.5" aria-hidden="true">
+            <Skeleton className="size-8 rounded-lg" />
+            <Skeleton className="size-8 rounded-lg" />
+          </div>
+        </div>
+        <div className="border-b px-4 py-4">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="mt-2 h-4 w-40" />
+        </div>
+        <div className="flex items-center justify-between gap-3 px-4 py-4">
+          <Skeleton className="h-4 w-28" />
+          {scope.type === "collection" ? (
+            <Skeleton className="h-8 w-52 rounded-lg" />
+          ) : null}
+        </div>
+        <div className="min-h-0 flex-1 overflow-hidden px-4 pb-4">
+          <ColorResultsSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="flex h-full min-h-0 min-w-0 flex-col"
+      role="status"
+      aria-label="Loading color details"
+    >
+      <div className="shrink-0 px-4 pt-4 sm:px-5 sm:pt-5">
+        <Skeleton
+          data-asset-modal-hero
+          className="h-[clamp(5rem,20dvh,10rem)] w-full rounded-xl"
+        />
+        <Skeleton className="mt-4 h-6 w-48" />
+        <Skeleton className="mt-2 h-3 w-24" />
+        <div className="mt-5">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="mt-2 h-4 w-40" />
+        </div>
+        <div className="mt-8 flex items-center justify-between gap-3">
+          <Skeleton className="h-4 w-28" />
+          {scope.type === "collection" ? (
+            <Skeleton className="h-8 w-52 rounded-lg" />
+          ) : null}
+        </div>
+      </div>
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden px-4 pt-4 pb-5 sm:px-5">
+        <ColorResultsSkeleton />
+      </div>
     </div>
   );
 }
