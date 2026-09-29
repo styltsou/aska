@@ -198,7 +198,9 @@ export function NoteDetailDrawer({
   } = useWorkspacePeek();
   const isMobile = useIsMobile();
   const split = Boolean(peekTarget) && !isMobile;
-  const [localView, setLocalView] = useState<"modal" | "full">("full");
+  const [localView, setLocalView] = useState<"modal" | "full">(
+    isCreateMode ? "modal" : "full",
+  );
   const expanded = isMobile || split || (view ?? localView) === "full";
   const {
     panelRef: fullscreenPanelRef,

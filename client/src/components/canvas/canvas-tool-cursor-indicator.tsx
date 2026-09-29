@@ -1,5 +1,5 @@
 import { useEffect, useRef, type RefObject } from "react";
-import { ArrowUpRightIcon, TypeIcon } from "lucide-react";
+import { TypeIcon } from "lucide-react";
 
 import type { CanvasTool } from "@/store/slices/board-slice";
 
@@ -25,13 +25,7 @@ function CanvasToolCursorIndicator({
       ? document.elementFromPoint(pointer.x, pointer.y)
       : null;
 
-    if (
-      !indicator ||
-      (tool !== "text" && tool !== "arrow") ||
-      !pointer ||
-      !pane ||
-      target !== pane
-    ) {
+    if (!indicator || tool !== "text" || !pointer || !pane || target !== pane) {
       if (indicator) indicator.style.opacity = "0";
       return;
     }
@@ -68,7 +62,7 @@ function CanvasToolCursorIndicator({
     syncIndicatorRef.current();
   }, [tool]);
 
-  if (tool !== "text" && tool !== "arrow") return null;
+  if (tool !== "text") return null;
 
   return (
     <div
@@ -77,11 +71,7 @@ function CanvasToolCursorIndicator({
       aria-hidden="true"
     >
       <span className="flex size-7 items-center justify-center rounded-full border border-primary/30 bg-background/95 text-primary shadow-sm">
-        {tool === "text" ? (
-          <TypeIcon className="size-3" />
-        ) : (
-          <ArrowUpRightIcon className="size-4" />
-        )}
+        <TypeIcon className="size-3" />
       </span>
     </div>
   );

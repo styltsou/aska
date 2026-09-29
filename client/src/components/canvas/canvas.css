@@ -44,3 +44,22 @@
   --canvas-object-violet-marker: #000;
   --canvas-object-fuchsia-marker: #000;
 }
+
+.aska-flow[data-canvas-tool="arrow"] {
+  --canvas-tool-cursor: crosshair;
+}
+
+.aska-flow[data-canvas-tool="text"] {
+  --canvas-tool-cursor: text;
+}
+
+.aska-flow[data-canvas-tool] .react-flow__pane,
+.aska-flow[data-canvas-tool] .react-flow__pane.draggable,
+.aska-flow[data-canvas-tool] .react-flow__pane.selection,
+.aska-flow[data-canvas-tool] .react-flow__node,
+.aska-flow[data-canvas-tool] .react-flow__node.selectable,
+.aska-flow[data-canvas-tool] .react-flow__node.draggable,
+.aska-flow[data-canvas-tool] .react-flow__node-asset,
+.aska-flow[data-canvas-tool] .react-flow__node-asset.dragging {
+  cursor: var(--canvas-tool-cursor);
+}

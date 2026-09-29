@@ -2226,6 +2226,7 @@ function CanvasSurface({
       <CanvasToolCursorIndicator tool={activeTool} boardRef={boardRef} />
       <ReactFlow<CanvasFlowNode>
         className="aska-flow"
+        data-canvas-tool={activeTool}
         nodes={flowNodes}
         nodeTypes={nodeTypes}
         onNodesChange={handleNodesChange}
