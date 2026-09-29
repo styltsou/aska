@@ -2221,6 +2221,25 @@ function CanvasSurface({
       onClickCapture={(event) => {
         marquee.consumeClick(event);
       }}
+      onDoubleClickCapture={(event) => {
+        // Only bare canvas counts as empty space: cards, canvas objects and
+        // arrow handles all sit above the pane and would be the target, so
+        // requiring the pane itself keeps double-clicks on a card inert.
+        if (
+          isCanvasLocked ||
+          activeTool !== "select" ||
+          draftText !== undefined ||
+          event.button !== 0 ||
+          !(event.target instanceof Element) ||
+          !event.target.classList.contains("react-flow__pane")
+        )
+          return;
+        event.preventDefault();
+        event.stopPropagation();
+        beginTextDraft(
+          screenToFlowPosition({ x: event.clientX, y: event.clientY }),
+        );
+      }}
     >
       <ReactFlow<CanvasFlowNode>
         className="aska-flow"
