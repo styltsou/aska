@@ -125,14 +125,18 @@ export function CollectionViewMenu({
             value={value}
             onValueChange={(nextValue) => onChange(nextValue as BoardView)}
           >
-            <DropdownMenuRadioItem value="canvas" className="pr-1.5">
+            <DropdownMenuRadioItem
+              value="canvas"
+              closeOnClick
+              className="pr-1.5"
+            >
               <PanelsTopLeftIcon />
               Canvas
               {value === "grid" ? (
                 <DropdownMenuShortcut>{viewShortcut}</DropdownMenuShortcut>
               ) : null}
             </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="grid" className="pr-1.5">
+            <DropdownMenuRadioItem value="grid" closeOnClick className="pr-1.5">
               <LayoutGridIcon />
               Grid
               {value === "canvas" ? (
@@ -215,7 +219,6 @@ export function CollectionViewMenu({
             <DropdownMenuGroup>
               <DropdownMenuLabel>Canvas</DropdownMenuLabel>
               <DropdownMenuItem
-                closeOnClick={false}
                 onClick={() => canvasActions.current?.fitView()}
               >
                 <ScanIcon />
