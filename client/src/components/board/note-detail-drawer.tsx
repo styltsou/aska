@@ -55,6 +55,7 @@ import {
   NoteWorkspaceTrigger,
 } from "@/components/board/note-workspace-dialog";
 import { useBoardInsertionPlacement } from "@/components/canvas";
+import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 import { Button } from "@/components/ui/button";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
@@ -199,7 +200,19 @@ export function NoteDetailDrawer({
   const split = Boolean(peekTarget) && !isMobile;
   const [localView, setLocalView] = useState<"modal" | "full">("full");
   const expanded = isMobile || split || (view ?? localView) === "full";
+  const {
+    panelRef: fullscreenPanelRef,
+    captureCurrentRect: captureFullscreenPanel,
+  } = useAssetFullscreenMorph(
+    Boolean(assetModalId) &&
+      controlledOpen !== false &&
+      !isMobile &&
+      !split &&
+      !sharedMorphing,
+    expanded,
+  );
   const toggleExpanded = () => {
+    captureFullscreenPanel();
     const nextView = expanded ? "modal" : "full";
     if (onViewChange) onViewChange(nextView);
     else setLocalView(nextView);
@@ -1464,6 +1477,7 @@ export function NoteDetailDrawer({
     >
       {children ? <NoteWorkspaceTrigger render={children} /> : null}
       <NoteWorkspaceContent
+        ref={fullscreenPanelRef}
         data-workspace-asset-modal={assetModalId}
         data-canvas-shared-entry={sharedEntry || undefined}
         backdropClassName={
@@ -1494,7 +1508,12 @@ export function NoteDetailDrawer({
         </NoteWorkspaceTitle>
         <div
           className={cn(
-            "relative z-20 flex shrink-0 items-center justify-between gap-3 p-2 text-xs font-medium text-muted-foreground transition-[background-color,border-color,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            "relative z-20 flex shrink-0 items-center justify-between gap-3 p-2 text-xs font-medium text-muted-foreground transition-[margin,padding,background-color,border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            assetModalId
+              ? expanded
+                ? "duration-[400ms]"
+                : "duration-[350ms]"
+              : "duration-[180ms]",
             expanded
               ? "mt-[var(--app-shell-inset)] mb-[var(--app-shell-inset)] bg-background pl-[calc(var(--app-shell-inset)+0.5rem)]"
               : "bg-transparent",
@@ -1729,7 +1748,12 @@ export function NoteDetailDrawer({
         <div
           ref={noteContentRef}
           className={cn(
-            "note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto border-t bg-background transition-[border-color,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            "note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto border-t bg-background transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            assetModalId
+              ? expanded
+                ? "duration-[400ms]"
+                : "duration-[350ms]"
+              : "duration-[180ms]",
             expanded ? "border-transparent" : "rounded-t-xl border-border",
           )}
         >

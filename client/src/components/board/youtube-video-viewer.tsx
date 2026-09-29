@@ -25,6 +25,7 @@ import {
   hasAssetBeenEdited,
 } from "@/components/board/asset-timestamp-card";
 import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
+import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Button } from "@/components/ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
@@ -134,6 +135,9 @@ export function YouTubeVideoViewer({
   onViewChange,
   workspaceSlug,
   location,
+  assetModalId,
+  sharedEntry = false,
+  sharedMorphing = false,
 }: {
   asset?: LinkAsset;
   open?: boolean;
@@ -147,6 +151,9 @@ export function YouTubeVideoViewer({
   onViewChange?: (view: "modal" | "full") => void;
   workspaceSlug: string;
   location?: AssetLocation;
+  assetModalId?: string;
+  sharedEntry?: boolean;
+  sharedMorphing?: boolean;
 }) {
   const isMobile = useIsMobile();
   const reduceMotion = useReducedMotion();
@@ -171,6 +178,13 @@ export function YouTubeVideoViewer({
   const split = Boolean(peekTarget) && !isMobile;
   const presentation = split ? "split" : expanded ? "fullscreen" : "modal";
   const workspace = presentation !== "modal";
+  const {
+    panelRef: fullscreenPanelRef,
+    captureCurrentRect: captureFullscreenPanel,
+  } = useAssetFullscreenMorph(
+    Boolean(assetModalId) && open && !isMobile && !split && !sharedMorphing,
+    expanded,
+  );
   const layoutTransition = reduceMotion
     ? { duration: 0 }
     : VIDEO_VIEWER_LAYOUT_TRANSITION;
@@ -265,22 +279,33 @@ export function YouTubeVideoViewer({
       onOpenChangeComplete={(next) => !next && onCloseComplete?.()}
     >
       <DialogContent
+        ref={fullscreenPanelRef}
+        data-workspace-asset-modal={assetModalId}
+        data-canvas-shared-entry={sharedEntry || undefined}
         showCloseButton={false}
-        overlayClassName={split ? "hidden" : undefined}
+        overlayClassName={cn(
+          assetModalId && "workspace-asset-view-backdrop",
+          sharedEntry && "canvas-shared-entry",
+          split && "hidden",
+        )}
         render={
           <motion.div
-            layout
+            layout={!sharedMorphing && !assetModalId}
             layoutDependency={presentation}
-            initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
+            initial={
+              reduceMotion || sharedEntry ? false : { opacity: 0, scale: 0.96 }
+            }
             animate={{ opacity: open ? 1 : 0, scale: open ? 1 : 0.96 }}
             transition={{
               layout: layoutTransition,
-              opacity: reduceMotion
-                ? { duration: 0 }
-                : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
-              scale: reduceMotion
-                ? { duration: 0 }
-                : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
+              opacity:
+                reduceMotion || (sharedEntry && open)
+                  ? { duration: 0 }
+                  : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
+              scale:
+                reduceMotion || (sharedEntry && open)
+                  ? { duration: 0 }
+                  : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
             }}
             style={{ transformOrigin: "center center" }}
           />
@@ -319,10 +344,15 @@ export function YouTubeVideoViewer({
           expanded={workspace}
           presentation={workspace ? "workspace" : "modal"}
           layoutDependency={presentation}
+          disableLayout={sharedMorphing || Boolean(assetModalId)}
+          fullscreenMorphDuration={
+            assetModalId ? (expanded ? "400ms" : "350ms") : undefined
+          }
           onToggleExpanded={
             split
               ? undefined
               : () => {
+                  captureFullscreenPanel();
                   if (onViewChange) onViewChange(expanded ? "modal" : "full");
                   else setLocalExpanded((current) => !current);
                 }
@@ -330,7 +360,12 @@ export function YouTubeVideoViewer({
         />
         <DialogBody
           className={cn(
-            "min-h-0 flex-1 overflow-hidden border-t border-b-0 bg-background p-0 transition-[border-color,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            "min-h-0 flex-1 overflow-hidden border-t border-b-0 bg-background p-0 transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            assetModalId
+              ? expanded
+                ? "duration-[400ms]"
+                : "duration-[350ms]"
+              : "duration-[180ms]",
             workspace
               ? "rounded-none border-transparent"
               : "rounded-t-xl rounded-b-none border-border",
@@ -343,7 +378,7 @@ export function YouTubeVideoViewer({
               open={open}
               workspaceSlug={workspaceSlug}
               workspace={workspace}
-              animateLayout
+              animateLayout={!sharedMorphing && !assetModalId}
               layoutDependency={presentation}
               largeMetadata={presentation === "fullscreen"}
               viewer
@@ -366,6 +401,8 @@ function VideoViewerToolbar({
   expanded,
   presentation,
   layoutDependency,
+  disableLayout = false,
+  fullscreenMorphDuration,
   onToggleExpanded,
 }: {
   asset?: VideoLinkAsset;
@@ -376,11 +413,13 @@ function VideoViewerToolbar({
   expanded?: boolean;
   presentation: "drawer" | "modal" | "workspace";
   layoutDependency?: string;
+  disableLayout?: boolean;
+  fullscreenMorphDuration?: "400ms" | "350ms";
   onToggleExpanded?: () => void;
 }) {
   const backLabel = "Back";
   const reduceMotion = useReducedMotion();
-  const animateLayout = presentation !== "drawer";
+  const animateLayout = presentation !== "drawer" && !disableLayout;
 
   return (
     <motion.div
@@ -390,7 +429,12 @@ function VideoViewerToolbar({
         layout: reduceMotion ? { duration: 0 } : VIDEO_VIEWER_LAYOUT_TRANSITION,
       }}
       className={cn(
-        "relative z-20 flex shrink-0 items-center gap-0.5 p-2 transition-[background-color,border-color,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+        "relative z-20 flex shrink-0 items-center gap-0.5 p-2 transition-[margin,padding,background-color,border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+        fullscreenMorphDuration === "400ms"
+          ? "duration-[400ms]"
+          : fullscreenMorphDuration === "350ms"
+            ? "duration-[350ms]"
+            : "duration-[180ms]",
         presentation === "modal" &&
           "rounded-t-xl rounded-b-none bg-transparent",
         presentation === "workspace" &&
@@ -608,6 +652,7 @@ export function YouTubeVideoContent({
 
   const media = (
     <motion.div
+      data-video-modal-hero={viewer || undefined}
       layout={animateLayout}
       layoutDependency={layoutDependency ?? workspace}
       transition={{ layout: layoutTransition }}

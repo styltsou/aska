@@ -149,9 +149,7 @@ export function WorkspaceAssetViewProvider({
   const [sharedEntryAssetId, setSharedEntryAssetId] = useState<
     string | undefined
   >();
-  const [morphingNoteAssetId, setMorphingNoteAssetId] = useState<
-    string | undefined
-  >();
+  const [morphingAssetId, setMorphingAssetId] = useState<string | undefined>();
   const activeMorphRef = useRef<ReturnType<typeof startAssetModalMorph> | null>(
     null,
   );
@@ -234,7 +232,7 @@ export function WorkspaceAssetViewProvider({
       activeMorphRef.current?.cancel();
       activeMorphRef.current = null;
       releaseHiddenSourceCard();
-      setMorphingNoteAssetId(undefined);
+      setMorphingAssetId(undefined);
       const queryKey = workspaceAssetQueryKey(workspaceSlug, nextAssetId);
       if (options?.initialData && !queryClient.getQueryData(queryKey)) {
         queryClient.setQueryData<PeekableAssetResponse>(
@@ -250,7 +248,7 @@ export function WorkspaceAssetViewProvider({
       );
       const sourceCard =
         options?.origin &&
-        nextAssetId.startsWith("note-") &&
+        (nextAssetId.startsWith("note-") || nextAssetId.startsWith("link-")) &&
         !options.presentation &&
         !document.querySelector("[data-workspace-asset-modal]") &&
         canMorphAssetModal()
@@ -260,8 +258,7 @@ export function WorkspaceAssetViewProvider({
         const sourceVisibility = sourceCard.style.visibility;
         flushSync(() => {
           setSharedEntryAssetId(nextAssetId);
-          if (nextAssetId.startsWith("note-"))
-            setMorphingNoteAssetId(nextAssetId);
+          setMorphingAssetId(nextAssetId);
           setPresentation(nextPresentation);
         });
         const modal = findAssetModal(nextAssetId);
@@ -278,12 +275,13 @@ export function WorkspaceAssetViewProvider({
           void morph.finished.then(() => {
             if (activeMorphRef.current !== morph) return;
             activeMorphRef.current = null;
-            setMorphingNoteAssetId((current) =>
+            setMorphingAssetId((current) =>
               current === nextAssetId ? undefined : current,
             );
           });
         } else {
-          setMorphingNoteAssetId((current) =>
+          setSharedEntryAssetId(undefined);
+          setMorphingAssetId((current) =>
             current === nextAssetId ? undefined : current,
           );
         }
@@ -309,7 +307,7 @@ export function WorkspaceAssetViewProvider({
           activeMorphRef.current = null;
           releaseHiddenSourceCard();
           setSharedEntryAssetId(undefined);
-          setMorphingNoteAssetId(undefined);
+          setMorphingAssetId(undefined);
           setPresentation(
             assetId ? openAssetPresentation(assetId, assetId) : null,
           );
@@ -372,7 +370,7 @@ export function WorkspaceAssetViewProvider({
     if (current?.open) return;
     const pending = pendingCloseNavigationRef.current;
     pendingCloseNavigationRef.current = undefined;
-    setMorphingNoteAssetId(undefined);
+    setMorphingAssetId(undefined);
     setSharedEntryAssetId(undefined);
     setPresentation(null);
     releaseHiddenSourceCard();
@@ -401,7 +399,8 @@ export function WorkspaceAssetViewProvider({
       };
       const sourceCard =
         sharedEntryAssetId === current.assetId &&
-        current.assetId.startsWith("note-") &&
+        (current.assetId.startsWith("note-") ||
+          current.assetId.startsWith("link-")) &&
         current.urlStatus === "committed" &&
         current.presentation !== "fullscreen" &&
         search.view !== "full" &&
@@ -568,7 +567,7 @@ export function WorkspaceAssetViewProvider({
         workspaceSlug={workspaceSlug}
         presentation={presentation}
         sharedEntryAssetId={sharedEntryAssetId}
-        morphingNoteAssetId={morphingNoteAssetId}
+        morphingAssetId={morphingAssetId}
         openAsset={openAsset}
         closeAsset={closeAsset}
         closeAllAssets={closeAllAssets}
@@ -583,7 +582,7 @@ function WorkspaceAssetViewController({
   workspaceSlug,
   presentation,
   sharedEntryAssetId,
-  morphingNoteAssetId,
+  morphingAssetId,
   openAsset,
   closeAsset,
   closeAllAssets,
@@ -593,7 +592,7 @@ function WorkspaceAssetViewController({
   workspaceSlug: string;
   presentation: AssetPresentation | null;
   sharedEntryAssetId?: string;
-  morphingNoteAssetId?: string;
+  morphingAssetId?: string;
   openAsset: WorkspaceAssetViewContextValue["openAsset"];
   closeAsset: () => void;
   closeAllAssets: () => void;
@@ -738,7 +737,7 @@ function WorkspaceAssetViewController({
         <NoteDetailDrawer
           assetModalId={assetId}
           sharedEntry={sharedEntryAssetId === assetId}
-          sharedMorphing={morphingNoteAssetId === assetId}
+          sharedMorphing={morphingAssetId === assetId}
           key={assetId}
           note={asset?.type === "note" ? asset : undefined}
           workspaceSlug={workspaceSlug}
@@ -824,6 +823,9 @@ function WorkspaceAssetViewController({
       ) : null}
       {requestedType === "link" ? (
         <YouTubeVideoViewer
+          assetModalId={assetId}
+          sharedEntry={sharedEntryAssetId === assetId}
+          sharedMorphing={morphingAssetId === assetId}
           key={assetId}
           asset={asset?.type === "link" ? asset : undefined}
           open={presentation.open}

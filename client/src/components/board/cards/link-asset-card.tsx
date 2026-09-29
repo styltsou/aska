@@ -68,7 +68,10 @@ export function LinkAssetCard({
   const contents = (
     <>
       <div className="min-h-0 p-3">
-        <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-muted/40">
+        <div
+          data-video-card-hero={onOpen ? "" : undefined}
+          className="relative aspect-video w-full overflow-hidden rounded-sm bg-muted/40"
+        >
           {previewUrl ? (
             <ProgressiveImage
               src={previewUrl}
@@ -189,6 +192,7 @@ export function LinkAssetCard({
 
   return (
     <div
+      data-video-card-surface
       role="button"
       tabIndex={0}
       className={className}

@@ -99,6 +99,7 @@ describe("asset modal morph", () => {
     const modal = {
       dataset: {},
       style: { cssText: "" },
+      querySelector: () => null,
       parentElement: { querySelector: () => backdrop },
       getBoundingClientRect: () => ({
         left: 250,
@@ -147,5 +148,119 @@ describe("asset modal morph", () => {
     expect(previewAnimation.cancel).toHaveBeenCalledOnce();
     expect(preview.remove).toHaveBeenCalledOnce();
     expect(backdropAnimation.cancel).toHaveBeenCalledOnce();
+  });
+
+  it("carries a video thumbnail into the modal player area", async () => {
+    const animation = () => ({ finished: Promise.resolve(), cancel: vi.fn() });
+    const panelAnimation = animation();
+    const previewAnimation = animation();
+    const heroAnimation = animation();
+    const modalHeroAnimation = animation();
+    const clone = () => ({
+      style: {},
+      removeAttribute: vi.fn(),
+      querySelectorAll: () => [],
+    });
+    const cardHero = {
+      offsetWidth: 160,
+      offsetHeight: 90,
+      cloneNode: clone,
+      getBoundingClientRect: () => ({
+        left: 32,
+        top: 48,
+        width: 160,
+        height: 90,
+      }),
+    };
+    const clonedHero = { style: {} };
+    const cardClone = {
+      ...clone(),
+      querySelector: () => clonedHero,
+    };
+    const cardSurface = {
+      offsetWidth: 200,
+      offsetHeight: 150,
+      cloneNode: () => cardClone,
+      querySelector: () => cardHero,
+      getBoundingClientRect: () => ({
+        left: 20,
+        top: 20,
+        width: 200,
+        height: 150,
+      }),
+    };
+    const card = {
+      style: { visibility: "" },
+      querySelector: () => cardSurface,
+    } as unknown as HTMLElement;
+    const modalHero = {
+      getBoundingClientRect: () => ({
+        left: 290,
+        top: 190,
+        width: 640,
+        height: 360,
+      }),
+      animate: vi.fn(() => modalHeroAnimation),
+    };
+    const preview = {
+      dataset: {},
+      style: {},
+      setAttribute: vi.fn(),
+      append: vi.fn(),
+      animate: vi.fn(() => previewAnimation),
+      remove: vi.fn(),
+    };
+    const heroPreview = {
+      dataset: {},
+      style: {},
+      setAttribute: vi.fn(),
+      append: vi.fn(),
+      animate: vi.fn(() => heroAnimation),
+      remove: vi.fn(),
+    };
+    const modal = {
+      dataset: {},
+      style: { cssText: "" },
+      querySelector: () => modalHero,
+      parentElement: { querySelector: () => null },
+      getBoundingClientRect: () => ({
+        left: 200,
+        top: 100,
+        width: 800,
+        height: 600,
+      }),
+      animate: vi.fn(() => panelAnimation),
+    } as unknown as HTMLElement;
+    vi.stubGlobal("getComputedStyle", () => ({
+      borderRadius: "8px",
+      backgroundColor: "rgb(20, 20, 20)",
+      boxShadow: "none",
+    }));
+    vi.stubGlobal("document", {
+      body: { append: vi.fn() },
+      createElement: vi
+        .fn()
+        .mockReturnValueOnce(preview)
+        .mockReturnValueOnce(heroPreview),
+      querySelector: () => null,
+    });
+
+    const morph = startAssetModalMorph("open", card, modal);
+    expect(morph).toBeDefined();
+    expect(clonedHero.style).toEqual({ visibility: "hidden" });
+    expect(heroPreview.animate).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ top: "48px", left: "32px" }),
+        expect.objectContaining({ top: "190px", left: "290px" }),
+      ]),
+      expect.objectContaining({ fill: "both" }),
+    );
+    expect(modalHero.animate).toHaveBeenCalled();
+
+    await morph?.finished;
+    expect(card.style.visibility).toBe("hidden");
+    expect(heroPreview.remove).toHaveBeenCalledOnce();
+    expect(heroAnimation.cancel).toHaveBeenCalledOnce();
+    expect(modalHeroAnimation.cancel).toHaveBeenCalledOnce();
   });
 });

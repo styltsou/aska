@@ -4,6 +4,20 @@ const MORPH_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 type AssetOrigin = "canvas" | "grid";
 
+function inertClone(source: HTMLElement) {
+  const clone = source.cloneNode(true) as HTMLElement;
+  clone.removeAttribute("id");
+  clone
+    .querySelectorAll("[id]")
+    .forEach((element) => element.removeAttribute("id"));
+  clone
+    .querySelectorAll<HTMLElement>("a, button, input, [tabindex]")
+    .forEach((element) => {
+      element.tabIndex = -1;
+    });
+  return clone;
+}
+
 function visibleArea(element: HTMLElement) {
   const rect = element.getBoundingClientRect();
   const viewport =
@@ -60,7 +74,9 @@ export function startAssetModalMorph(
   modal: HTMLElement,
 ) {
   const cardSurface =
-    card.querySelector<HTMLElement>("[data-note-card-surface]") ?? card;
+    card.querySelector<HTMLElement>(
+      "[data-note-card-surface], [data-video-card-surface]",
+    ) ?? card;
   const surfaceRect = cardSurface.getBoundingClientRect();
   const modalRect = modal.getBoundingClientRect();
   if (
@@ -96,8 +112,22 @@ export function startAssetModalMorph(
   const modalBackground = modalStyle.backgroundColor;
   const cardShadow = cardStyle.boxShadow;
   const modalShadow = modalStyle.boxShadow;
+  const cardHero = cardSurface.querySelector<HTMLElement>(
+    "[data-video-card-hero]",
+  );
+  const modalHero = modal.querySelector<HTMLElement>("[data-video-modal-hero]");
+  const cardHeroRect = cardHero?.getBoundingClientRect();
+  const modalHeroRect = modalHero?.getBoundingClientRect();
+  const morphHero = Boolean(
+    cardHero &&
+    modalHero &&
+    cardHeroRect?.width &&
+    cardHeroRect.height &&
+    modalHeroRect?.width &&
+    modalHeroRect.height,
+  );
   const preview = document.createElement("div");
-  const cardClone = cardSurface.cloneNode(true) as HTMLElement;
+  const cardClone = inertClone(cardSurface);
   preview.dataset.assetMorphPreview = "";
   preview.setAttribute("aria-hidden", "true");
   preview.inert = true;
@@ -112,15 +142,12 @@ export function startAssetModalMorph(
     overflow: "hidden",
     pointerEvents: "none",
   });
-  cardClone.removeAttribute("id");
-  cardClone
-    .querySelectorAll("[id]")
-    .forEach((element) => element.removeAttribute("id"));
-  cardClone
-    .querySelectorAll<HTMLElement>("a, button, input, [tabindex]")
-    .forEach((element) => {
-      element.tabIndex = -1;
-    });
+  if (morphHero) {
+    const clonedHero = cardClone.querySelector<HTMLElement>(
+      "[data-video-card-hero]",
+    );
+    if (clonedHero) clonedHero.style.visibility = "hidden";
+  }
   Object.assign(cardClone.style, {
     width: `${100 / sourceScaleX}%`,
     height: `${100 / sourceScaleY}%`,
@@ -135,8 +162,48 @@ export function startAssetModalMorph(
   preview.append(cardClone);
   document.body.append(preview);
 
-  // Move the live note dialog's actual edges. Scaling the full-size editor
-  // distorts its text and makes the handoff from the card visibly jump.
+  let heroPreview: HTMLElement | undefined;
+  if (morphHero && cardHero && cardHeroRect && modalHeroRect) {
+    const heroFrom = direction === "open" ? cardHeroRect : modalHeroRect;
+    const heroClone = inertClone(cardHero);
+    const heroScaleX = cardHero.offsetWidth
+      ? cardHeroRect.width / cardHero.offsetWidth
+      : 1;
+    const heroScaleY = cardHero.offsetHeight
+      ? cardHeroRect.height / cardHero.offsetHeight
+      : heroScaleX;
+    heroPreview = document.createElement("div");
+    heroPreview.dataset.assetMorphHero = "";
+    heroPreview.setAttribute("aria-hidden", "true");
+    heroPreview.inert = true;
+    Object.assign(heroPreview.style, {
+      position: "fixed",
+      top: `${heroFrom.top}px`,
+      left: `${heroFrom.left}px`,
+      width: `${heroFrom.width}px`,
+      height: `${heroFrom.height}px`,
+      borderRadius: getComputedStyle(cardHero).borderRadius,
+      zIndex: "111",
+      overflow: "hidden",
+      pointerEvents: "none",
+    });
+    Object.assign(heroClone.style, {
+      width: `${100 / heroScaleX}%`,
+      height: `${100 / heroScaleY}%`,
+      maxWidth: "none",
+      maxHeight: "none",
+      margin: "0",
+      transform: `scale(${heroScaleX}, ${heroScaleY})`,
+      transformOrigin: "top left",
+      translate: "none",
+      pointerEvents: "none",
+    });
+    heroPreview.append(heroClone);
+    document.body.append(heroPreview);
+  }
+
+  // Move the live dialog's actual edges. Scaling a full-size modal distorts
+  // its content and makes the handoff from the card visibly jump.
   modal.dataset.assetMorphing = direction;
   modal.style.pointerEvents = "none";
   card.style.visibility = "hidden";
@@ -159,6 +226,8 @@ export function startAssetModalMorph(
   let panelAnimation: Animation | undefined;
   let previewAnimation: Animation | undefined;
   let backdropAnimation: Animation | undefined;
+  let heroAnimation: Animation | undefined;
+  let modalHeroAnimation: Animation | undefined;
   try {
     panelAnimation = modal.animate(
       [
@@ -245,12 +314,79 @@ export function startAssetModalMorph(
         : [{ opacity: 1 }, { opacity: 0 }],
       { duration: direction === "open" ? 250 : 150, fill: "both" },
     );
+    if (heroPreview && cardHeroRect && modalHeroRect && modalHero) {
+      const heroFrom = direction === "open" ? cardHeroRect : modalHeroRect;
+      const heroTo = direction === "open" ? modalHeroRect : cardHeroRect;
+      const duration = direction === "open" ? OPEN_DURATION : CLOSE_DURATION;
+      heroAnimation = heroPreview.animate(
+        direction === "open"
+          ? [
+              {
+                top: `${heroFrom.top}px`,
+                left: `${heroFrom.left}px`,
+                width: `${heroFrom.width}px`,
+                height: `${heroFrom.height}px`,
+                opacity: 1,
+                offset: 0,
+              },
+              { opacity: 1, offset: 0.65 },
+              {
+                top: `${heroTo.top}px`,
+                left: `${heroTo.left}px`,
+                width: `${heroTo.width}px`,
+                height: `${heroTo.height}px`,
+                opacity: 0,
+                offset: 1,
+              },
+            ]
+          : [
+              {
+                top: `${heroFrom.top}px`,
+                left: `${heroFrom.left}px`,
+                width: `${heroFrom.width}px`,
+                height: `${heroFrom.height}px`,
+                opacity: 0,
+                offset: 0,
+              },
+              { opacity: 1, offset: 0.35 },
+              {
+                top: `${heroTo.top}px`,
+                left: `${heroTo.left}px`,
+                width: `${heroTo.width}px`,
+                height: `${heroTo.height}px`,
+                opacity: 1,
+                offset: 1,
+              },
+            ],
+        { duration, easing: MORPH_EASING, fill: "both" },
+      );
+      modalHeroAnimation = modalHero.animate(
+        direction === "open"
+          ? [
+              { opacity: 0, offset: 0 },
+              { opacity: 0, offset: 0.65 },
+              { opacity: 1, offset: 1 },
+            ]
+          : [
+              { opacity: 1, offset: 0 },
+              { opacity: 0, offset: 0.35 },
+              { opacity: 0, offset: 1 },
+            ],
+        { duration, easing: "linear", fill: "both" },
+      );
+    }
     void previewAnimation?.finished.catch(() => undefined);
     void backdropAnimation?.finished.catch(() => undefined);
+    void heroAnimation?.finished.catch(() => undefined);
+    void modalHeroAnimation?.finished.catch(() => undefined);
   } catch {
     panelAnimation?.cancel();
     previewAnimation?.cancel();
+    backdropAnimation?.cancel();
+    heroAnimation?.cancel();
+    modalHeroAnimation?.cancel();
     preview.remove();
+    heroPreview?.remove();
     modal.style.cssText = previousModalStyle;
     modal.style.pointerEvents = previousPointerEvents;
     card.style.visibility = previousCardVisibility;
@@ -267,7 +403,10 @@ export function startAssetModalMorph(
     panelAnimation.cancel();
     previewAnimation?.cancel();
     backdropAnimation?.cancel();
+    heroAnimation?.cancel();
+    modalHeroAnimation?.cancel();
     preview.remove();
+    heroPreview?.remove();
     modal.style.cssText = previousModalStyle;
     modal.style.pointerEvents = previousPointerEvents;
     if (restoreCard) card.style.visibility = previousCardVisibility;
