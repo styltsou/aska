@@ -1,9 +1,10 @@
 import "./link-asset-card.css";
 
-import { ExternalLinkIcon, Globe2Icon, PlayIcon } from "lucide-react";
+import { Globe2Icon, PlayIcon } from "lucide-react";
 import type { MouseEvent } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
+import { YouTubeDescription } from "@/components/board/youtube-description";
 import { hasSelectionModifier } from "@/lib/selection";
 import { isYouTubeVideoUrl } from "@/lib/youtube-url";
 import { cn } from "@/lib/utils";
@@ -100,25 +101,6 @@ export function LinkAssetCard({
               </span>
             </div>
           ) : null}
-          {onOpen ? (
-            <a
-              href={asset.originalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="absolute top-2 right-2 z-10 flex size-7 items-center justify-center rounded-lg border border-border/70 bg-popover/85 text-popover-foreground opacity-100 shadow-sm backdrop-blur-sm transition-[background-color,opacity] hover:bg-popover focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:opacity-0 sm:group-hover:opacity-100"
-              onClick={(event) => event.stopPropagation()}
-              aria-label="Open on YouTube in a new tab"
-            >
-              <ExternalLinkIcon className="size-3.5" />
-            </a>
-          ) : (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute top-2 right-2 z-10 flex size-7 items-center justify-center rounded-lg border border-border/70 bg-popover/85 text-popover-foreground opacity-100 shadow-sm backdrop-blur-sm transition-[background-color,opacity] duration-150 ease-out group-hover:bg-popover sm:opacity-0 sm:group-hover:opacity-100"
-            >
-              <ExternalLinkIcon className="size-3.5" />
-            </span>
-          )}
         </div>
       </div>
       <div className="space-y-1 bg-sidebar px-3 pb-3">
@@ -155,9 +137,18 @@ export function LinkAssetCard({
           </div>
         )}
         {asset.description ? (
-          <p className="line-clamp-2 text-xs leading-relaxed whitespace-pre-line text-sidebar-foreground/60">
-            {asset.description}
-          </p>
+          youtubeVideoId ? (
+            <YouTubeDescription
+              description={asset.description}
+              videoId={youtubeVideoId}
+              interactive={false}
+              className="line-clamp-2 text-xs leading-relaxed whitespace-pre-line text-sidebar-foreground/60"
+            />
+          ) : (
+            <p className="line-clamp-2 text-xs leading-relaxed whitespace-pre-line text-sidebar-foreground/60">
+              {asset.description}
+            </p>
+          )
         ) : isYoutubeDescriptionLoading ? (
           <div
             className="space-y-1.5 pt-1"
@@ -287,9 +278,18 @@ export function LinkCardPreview({
           {displayTitle}
         </div>
         {preview.description?.trim() ? (
-          <div className="line-clamp-3 text-xs leading-snug whitespace-pre-line text-muted-foreground">
-            {preview.description.trim()}
-          </div>
+          preview.videoId ? (
+            <YouTubeDescription
+              description={preview.description.trim()}
+              videoId={preview.videoId}
+              interactive={false}
+              className="line-clamp-3 text-xs leading-snug whitespace-pre-line text-muted-foreground"
+            />
+          ) : (
+            <div className="line-clamp-3 text-xs leading-snug whitespace-pre-line text-muted-foreground">
+              {preview.description.trim()}
+            </div>
+          )
         ) : null}
       </div>
     </div>

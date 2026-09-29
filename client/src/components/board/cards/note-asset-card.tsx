@@ -302,18 +302,15 @@ function createMDComponents(compact: boolean): Components {
         );
       }
       return (
-        <a
+        <span
           className={cn(
-            "text-primary hover:text-primary/75 font-medium break-words underline underline-offset-4 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+            "text-primary font-medium break-words underline underline-offset-4",
             className,
           )}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
           {...props}
         >
           {children}
-        </a>
+        </span>
       );
     },
     blockquote: ({ className, ...props }) => (

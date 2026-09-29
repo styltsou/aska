@@ -125,4 +125,14 @@ describe("NoteMarkdown", () => {
     expect(html).toContain('data-asset-mention="note"');
     expect(html).not.toContain('href="note:12"');
   });
+
+  it("renders external note links as styled, non-interactive card text", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown content="Read [the source](https://example.com)." />,
+    );
+
+    expect(html).toContain("the source");
+    expect(html).toContain("text-primary");
+    expect(html).not.toContain('href="https://example.com"');
+  });
 });

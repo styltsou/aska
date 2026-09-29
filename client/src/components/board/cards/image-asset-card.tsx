@@ -88,16 +88,10 @@ export function ImageAssetCard({
             className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
           >
             <div className="group/pill inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-sidebar-foreground/25">
-              <a
-                href={asset.sourceUrl ?? asset.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(event) => event.stopPropagation()}
-                className="inline-flex min-w-0 items-center gap-1"
-              >
+              <span className="inline-flex min-w-0 items-center gap-1">
                 <ExternalLink className="size-3 shrink-0" />
                 <span className="truncate">{asset.sourceLabel}</span>
-              </a>
+              </span>
             </div>
           </motion.div>
         ) : null}

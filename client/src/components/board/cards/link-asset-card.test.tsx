@@ -65,7 +65,6 @@ describe("LinkAssetCard", () => {
 
     expect(html).toContain('role="button"');
     expect(html).toContain('aria-label="Open video details: A video"');
-    expect(html).toContain('aria-label="Open on YouTube in a new tab"');
     expect(html).toContain("aspect-video w-full");
     expect(html).not.toContain("aspect-square");
     expect(html).toContain("bg-sidebar");
@@ -75,7 +74,29 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("bg-popover/85");
     expect(html).toContain("text-popover-foreground");
     expect(html).toContain("YouTube · A channel");
-    expect(html).toContain(`href="${asset.originalUrl}"`);
+    expect(html).not.toContain(`href="${asset.originalUrl}"`);
+  });
+
+  it("keeps links and timestamps in a YouTube card preview non-interactive", () => {
+    const html = renderToStaticMarkup(
+      <LinkAssetCard
+        asset={{
+          ...asset,
+          description:
+            "Watch at 1:23 or 1:02:03. More at https://example.com #research",
+        }}
+        onOpen={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("Watch at ");
+    expect(html).toContain("1:23");
+    expect(html).toContain("1:02:03");
+    expect(html).toContain("https://example.com");
+    expect(html).toContain("#research");
+    expect(html).not.toContain('href="https://www.youtube.com/watch');
+    expect(html).not.toContain('href="https://example.com"');
+    expect(html).toContain("font-semibold text-primary/90");
   });
 
   it("keeps an ordinary link card as an external anchor", () => {
@@ -102,11 +123,7 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("bg-sidebar");
     expect(html).toContain("group-hover:scale-[1.05]");
     expect(html).toContain("!transition-all duration-150 ease-out");
-    expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain("absolute top-2 right-2 z-10 flex size-7");
-    expect(html).toContain(
-      "transition-[background-color,opacity] duration-150",
-    );
+    expect(html).not.toContain("lucide-external-link");
   });
 
   it("uses a 16:9 shimmer placeholder while a generic preview resolves", () => {

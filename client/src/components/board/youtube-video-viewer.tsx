@@ -52,6 +52,8 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 import type { AssetLocation } from "@/api/collection";
+import { YouTubeDescription } from "@/components/board/youtube-description";
+import { createYouTubePlayerSeekController } from "@/components/board/youtube-player-seek";
 import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
 import { formatNoteHeaderEditTime } from "@/lib/note-date-format";
 import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
@@ -59,6 +61,72 @@ import { cn } from "@/lib/utils";
 import type { LinkAsset } from "@/types/asset";
 
 type VideoLinkAsset = LinkAsset & { video: NonNullable<LinkAsset["video"]> };
+
+type YouTubeIframePlayer = {
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  destroy: () => void;
+};
+
+type YouTubeIframeApi = {
+  Player: new (
+    element: HTMLIFrameElement,
+    options: {
+      events: {
+        onReady: (event: { target: YouTubeIframePlayer }) => void;
+        onError: () => void;
+      };
+    },
+  ) => YouTubeIframePlayer;
+};
+
+declare global {
+  interface Window {
+    YT?: YouTubeIframeApi;
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+let youtubeIframeApiPromise: Promise<YouTubeIframeApi> | undefined;
+
+function loadYouTubeIframeApi(): Promise<YouTubeIframeApi> {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (youtubeIframeApiPromise) return youtubeIframeApiPromise;
+
+  youtubeIframeApiPromise = new Promise<YouTubeIframeApi>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://www.youtube.com/iframe_api";
+    script.async = true;
+
+    const previousReady = window.onYouTubeIframeAPIReady;
+    const timeoutId = window.setTimeout(() => {
+      window.onYouTubeIframeAPIReady = previousReady;
+      reject(new Error("YouTube IFrame API did not become ready"));
+    }, 15_000);
+
+    window.onYouTubeIframeAPIReady = () => {
+      window.clearTimeout(timeoutId);
+      window.onYouTubeIframeAPIReady = previousReady;
+      try {
+        previousReady?.();
+      } finally {
+        if (window.YT?.Player) resolve(window.YT);
+        else reject(new Error("YouTube IFrame API is unavailable"));
+      }
+    };
+
+    script.onerror = () => {
+      window.clearTimeout(timeoutId);
+      window.onYouTubeIframeAPIReady = previousReady;
+      reject(new Error("Unable to load YouTube IFrame API"));
+    };
+    document.head.append(script);
+  }).catch((error: unknown) => {
+    youtubeIframeApiPromise = undefined;
+    throw error;
+  });
+
+  return youtubeIframeApiPromise;
+}
 
 const LINK_NOTE_AUTOSAVE_DELAY_MS = 350;
 const LINK_NOTE_STORAGE_KEY = "aska:link-note:v1:";
@@ -645,10 +713,65 @@ export function YouTubeVideoContent({
 }) {
   const reduceMotion = useReducedMotion();
   const [playerLoaded, setPlayerLoaded] = useState(false);
-  const embedUrl = youtubeEmbedUrl(asset.video.videoId);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const playerRef = useRef<YouTubeIframePlayer | null>(null);
+  const seekControllerRef = useRef<ReturnType<
+    typeof createYouTubePlayerSeekController
+  > | null>(null);
+  if (!seekControllerRef.current) {
+    seekControllerRef.current = createYouTubePlayerSeekController();
+  }
+  const embedUrl = youtubeEmbedUrl(
+    asset.video.videoId,
+    typeof window === "undefined" ? undefined : window.location.origin,
+  );
   const layoutTransition = reduceMotion
     ? { duration: 0 }
     : VIDEO_VIEWER_LAYOUT_TRANSITION;
+
+  const seekTimestamp = useCallback(
+    (seconds: number) => seekControllerRef.current?.seek(seconds) ?? false,
+    [],
+  );
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!open || !iframe) {
+      seekControllerRef.current?.setUnavailable();
+      return;
+    }
+
+    let cancelled = false;
+    seekControllerRef.current?.beginLoading();
+    void loadYouTubeIframeApi()
+      .then((api) => {
+        if (cancelled || iframeRef.current !== iframe) return;
+        const player = new api.Player(iframe, {
+          events: {
+            onReady: (event) => {
+              if (cancelled) return;
+              playerRef.current = event.target;
+              seekControllerRef.current?.setReady(event.target);
+            },
+            onError: () => {
+              seekControllerRef.current?.setUnavailable();
+            },
+          },
+        });
+        playerRef.current = player;
+      })
+      .catch(() => {
+        if (cancelled) return;
+        seekControllerRef.current?.setUnavailable();
+      });
+
+    return () => {
+      cancelled = true;
+      seekControllerRef.current?.setUnavailable();
+      playerRef.current?.destroy();
+      playerRef.current = null;
+    };
+  }, [asset.video.videoId, open]);
 
   const media = (
     <motion.div
@@ -687,6 +810,7 @@ export function YouTubeVideoContent({
 
       {open ? (
         <iframe
+          ref={iframeRef}
           src={embedUrl}
           title={asset.title}
           loading="eager"
@@ -709,6 +833,7 @@ export function YouTubeVideoContent({
       compact={compact}
       large={largeMetadata}
       showTimestamp={!viewer && !compact}
+      onTimestampSeek={open ? seekTimestamp : undefined}
     />
   );
 
@@ -778,11 +903,13 @@ function VideoViewerMetadata({
   compact,
   large,
   showTimestamp,
+  onTimestampSeek,
 }: {
   asset: VideoLinkAsset;
   compact: boolean;
   large: boolean;
   showTimestamp: boolean;
+  onTimestampSeek?: (seconds: number) => boolean;
 }) {
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   // The clamp is only reapplied once the collapse animation settles, otherwise
@@ -842,16 +969,17 @@ function VideoViewerMetadata({
   }, [descriptionElement, description, descriptionIsLong, large, compact]);
 
   const descriptionParagraph = description ? (
-    <p
+    <YouTubeDescription
+      description={description}
+      videoId={asset.video.videoId}
       ref={setDescriptionElement}
       className={cn(
         "whitespace-pre-line text-sm leading-relaxed text-pretty text-muted-foreground",
         large && "text-base! leading-7!",
         descriptionIsLong && descriptionClamped && "line-clamp-3",
       )}
-    >
-      {description}
-    </p>
+      onTimestampSeek={onTimestampSeek}
+    />
   ) : null;
 
   return (
@@ -1150,6 +1278,13 @@ export function formatVideoEditedLabel(
   return time ? `Edited ${time}` : undefined;
 }
 
-export function youtubeEmbedUrl(videoId: string): string {
-  return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1`;
+export function youtubeEmbedUrl(videoId: string, origin?: string): string {
+  const params = new URLSearchParams({
+    rel: "0",
+    modestbranding: "1",
+    playsinline: "1",
+    enablejsapi: "1",
+  });
+  if (origin) params.set("origin", origin);
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
 }
