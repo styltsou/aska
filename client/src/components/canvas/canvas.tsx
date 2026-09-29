@@ -65,7 +65,6 @@ import { toast } from "sonner";
 
 import { formatPlatformShortcut, getPlatformModifier } from "@/lib/platform";
 import { cn } from "@/lib/utils";
-import { CanvasToolCursorIndicator } from "./canvas-tool-cursor-indicator";
 import { makeBoardKey } from "./canvas-key";
 import { onBatchPlacementCompleted } from "./batch-placement-completed";
 import {
@@ -2223,7 +2222,6 @@ function CanvasSurface({
         marquee.consumeClick(event);
       }}
     >
-      <CanvasToolCursorIndicator tool={activeTool} boardRef={boardRef} />
       <ReactFlow<CanvasFlowNode>
         className="aska-flow"
         data-canvas-tool={activeTool}
