@@ -22,10 +22,11 @@ export function ImageAssetCard({
 
   return (
     <div
+      data-asset-card-surface
       role={onOpen ? "button" : undefined}
       tabIndex={onOpen ? 0 : undefined}
       className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-lg border border-transparent transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "group relative cursor-pointer overflow-hidden rounded-lg border border-transparent transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
         !selected && "hover:border-sidebar-foreground/20",
         isContextMenuOpen && "border-sidebar-foreground/20",
       )}
@@ -46,7 +47,10 @@ export function ImageAssetCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div className="absolute inset-0 overflow-hidden rounded-[6px]">
+      <div
+        data-asset-card-hero="image"
+        className="absolute inset-0 overflow-hidden rounded-[6px]"
+      >
         <ProgressiveImage
           src={asset.url}
           fallbackSrc={asset.localPreviewUrl}
@@ -76,6 +80,7 @@ export function ImageAssetCard({
       <AnimatePresence>
         {hovered && hasBar && !asset.uploadStatus ? (
           <motion.div
+            data-asset-morph-omit
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}

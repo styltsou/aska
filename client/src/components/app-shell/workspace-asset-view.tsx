@@ -250,7 +250,8 @@ export function WorkspaceAssetViewProvider({
         options?.origin &&
         (nextAssetId.startsWith("note-") ||
           nextAssetId.startsWith("link-") ||
-          nextAssetId.startsWith("color-")) &&
+          nextAssetId.startsWith("color-") ||
+          nextAssetId.startsWith("image-")) &&
         !options.presentation &&
         !document.querySelector("[data-workspace-asset-modal]") &&
         canMorphAssetModal()
@@ -403,7 +404,8 @@ export function WorkspaceAssetViewProvider({
         sharedEntryAssetId === current.assetId &&
         (current.assetId.startsWith("note-") ||
           current.assetId.startsWith("link-") ||
-          current.assetId.startsWith("color-")) &&
+          current.assetId.startsWith("color-") ||
+          current.assetId.startsWith("image-")) &&
         current.urlStatus === "committed" &&
         current.presentation !== "fullscreen" &&
         search.view !== "full" &&
@@ -779,6 +781,9 @@ function WorkspaceAssetViewController({
       ) : null}
       {requestedType === "image" ? (
         <ImageAssetViewer
+          assetModalId={assetId}
+          sharedEntry={sharedEntryAssetId === assetId}
+          sharedMorphing={morphingAssetId === assetId}
           asset={asset?.type === "image" ? asset : undefined}
           assets={viewerAssets}
           open={presentation.open}

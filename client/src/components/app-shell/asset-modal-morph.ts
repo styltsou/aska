@@ -120,6 +120,8 @@ export function startAssetModalMorph(
     "[data-asset-card-hero]",
   );
   const isColorSwatch = cardHero?.dataset.assetCardHero === "color";
+  const keepsOpaqueHero =
+    isColorSwatch || cardHero?.dataset.assetCardHero === "image";
   const modalHero = modal.querySelector<HTMLElement>("[data-asset-modal-hero]");
   const cardHeroRect = cardHero?.getBoundingClientRect();
   const modalHeroRect = modalHero?.getBoundingClientRect();
@@ -331,8 +333,8 @@ export function startAssetModalMorph(
       const heroFrom = direction === "open" ? cardHeroRect : modalHeroRect;
       const heroTo = direction === "open" ? modalHeroRect : cardHeroRect;
       const duration = direction === "open" ? OPEN_DURATION : CLOSE_DURATION;
-      // A translucent crossfade changes the perceived color of a swatch.
-      // Keep one opaque swatch visible until the real element takes over.
+      // Keep visual media opaque until the live element takes over. A
+      // translucent crossfade visibly changes colors and image contrast.
       heroAnimation = heroPreview.animate(
         direction === "open"
           ? [
@@ -345,14 +347,14 @@ export function startAssetModalMorph(
                 opacity: 1,
                 offset: 0,
               },
-              ...(isColorSwatch ? [] : [{ opacity: 1, offset: 0.65 }]),
+              ...(keepsOpaqueHero ? [] : [{ opacity: 1, offset: 0.65 }]),
               {
                 top: `${heroTo.top}px`,
                 left: `${heroTo.left}px`,
                 width: `${heroTo.width}px`,
                 height: `${heroTo.height}px`,
                 borderRadius: modalHeroRadius,
-                opacity: isColorSwatch ? 1 : 0,
+                opacity: keepsOpaqueHero ? 1 : 0,
                 offset: 1,
               },
             ]
@@ -363,10 +365,10 @@ export function startAssetModalMorph(
                 width: `${heroFrom.width}px`,
                 height: `${heroFrom.height}px`,
                 borderRadius: modalHeroRadius,
-                opacity: isColorSwatch ? 1 : 0,
+                opacity: keepsOpaqueHero ? 1 : 0,
                 offset: 0,
               },
-              ...(isColorSwatch ? [] : [{ opacity: 1, offset: 0.35 }]),
+              ...(keepsOpaqueHero ? [] : [{ opacity: 1, offset: 0.35 }]),
               {
                 top: `${heroTo.top}px`,
                 left: `${heroTo.left}px`,
@@ -380,7 +382,7 @@ export function startAssetModalMorph(
         { duration, easing: MORPH_EASING, fill: "both" },
       );
       modalHeroAnimation = modalHero.animate(
-        isColorSwatch
+        keepsOpaqueHero
           ? [{ opacity: 0 }, { opacity: 0 }]
           : direction === "open"
             ? [
@@ -397,7 +399,7 @@ export function startAssetModalMorph(
       );
     }
     if (
-      isColorSwatch &&
+      keepsOpaqueHero &&
       direction === "close" &&
       restoredCardVisibility !== undefined
     ) {

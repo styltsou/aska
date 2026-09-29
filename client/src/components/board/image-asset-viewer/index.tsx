@@ -60,7 +60,12 @@ import { apiPost } from "@/lib/api";
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
 import { collectionQueryKeys } from "@/api/collection/query-keys";
 import { useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Transition,
+} from "motion/react";
 import { copyImageToClipboard } from "@/lib/clipboard";
 import { GLASS_FRAME_CLASS, GLASS_ISLAND_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
@@ -70,6 +75,7 @@ import type { AssetLocation } from "@/api/collection";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
+import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 
 const MIN_FREE_CROP_SIZE = 80;
 const COLOR_PREVIEW_GAP = 14;
@@ -548,6 +554,9 @@ function ProgressiveViewerImage({
   pickMode,
   onPick,
   loadSamplingCanvas,
+  animateLayout = false,
+  layoutDependency,
+  layoutTransition,
 }: {
   displayUrl: string;
   originalUrl?: string;
@@ -557,6 +566,9 @@ function ProgressiveViewerImage({
   pickMode?: boolean;
   onPick?: (hex: string) => void;
   loadSamplingCanvas?: () => Promise<HTMLCanvasElement | null>;
+  animateLayout?: boolean;
+  layoutDependency?: string;
+  layoutTransition?: Transition;
 }) {
   const maxViewerImageHeight = MAX_VIEWER_IMAGE_WIDTH / aspectRatio;
   const [shouldLoadOriginal, setShouldLoadOriginal] = useState(false);
@@ -790,7 +802,11 @@ function ProgressiveViewerImage({
   }, []);
 
   return (
-    <div
+    <motion.div
+      data-asset-modal-hero
+      layout={animateLayout}
+      layoutDependency={layoutDependency}
+      transition={{ layout: layoutTransition }}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       onClick={handleClick}
@@ -851,7 +867,7 @@ function ProgressiveViewerImage({
           </div>
         </div>
       ) : null}
-    </div>
+    </motion.div>
   );
 }
 
@@ -1164,6 +1180,9 @@ function ImageViewerModalHeaderControls({
 }
 
 export function ImageAssetViewer({
+  assetModalId,
+  sharedEntry = false,
+  sharedMorphing = false,
   asset: selectedAsset,
   assets = [],
   open,
@@ -1180,6 +1199,9 @@ export function ImageAssetViewer({
   workspaceSlug,
   location,
 }: {
+  assetModalId?: string;
+  sharedEntry?: boolean;
+  sharedMorphing?: boolean;
   asset?: ImageAsset;
   assets?: ImageAsset[];
   open: boolean;
@@ -1281,12 +1303,32 @@ export function ImageAssetViewer({
   const expanded = view ? view === "full" : localExpanded;
   const split = Boolean(peekTarget) && !isMobile;
   const workspace = expanded || split;
+  const {
+    panelRef: fullscreenPanelRef,
+    captureCurrentRect: captureFullscreenPanel,
+  } = useAssetFullscreenMorph(
+    Boolean(assetModalId) && open && !isMobile && !split && !sharedMorphing,
+    expanded,
+  );
+  const fullscreenTransitionDuration = assetModalId
+    ? expanded
+      ? "duration-[400ms]"
+      : "duration-[350ms]"
+    : "duration-[180ms]";
+  const fullscreenLayoutTransition: Transition = shouldReduceMotion
+    ? { duration: 0 }
+    : {
+        duration: expanded ? 0.4 : 0.35,
+        ease: [0.22, 1, 0.36, 1],
+      };
+  const presentation = split ? "split" : expanded ? "fullscreen" : "modal";
   const headerControlButtonClass = VIEWER_HEADER_ICON_BUTTON_CLASS;
   const toggleExpanded = useCallback(() => {
+    captureFullscreenPanel();
     const nextView = expanded ? "modal" : "full";
     if (onViewChange) onViewChange(nextView);
     else setLocalExpanded((current) => !current);
-  }, [expanded, onViewChange]);
+  }, [captureFullscreenPanel, expanded, onViewChange]);
   const cropperContainerRef = useRef<HTMLDivElement>(null);
   const naturalMediaSizeRef = useRef<Size | null>(null);
   const measuredMediaSizeRef = useRef<Size | null>(null);
@@ -2013,17 +2055,22 @@ export function ImageAssetViewer({
       onOpenChangeComplete={onOpenChangeComplete}
     >
       <DialogContent
+        ref={fullscreenPanelRef}
+        data-workspace-asset-modal={assetModalId}
+        data-canvas-shared-entry={sharedEntry || undefined}
         showCloseButton={false}
         data-command-palette-allowed="true"
-        overlayClassName={
-          split
-            ? "hidden"
-            : expanded
-              ? "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 bg-background duration-150"
-              : undefined
-        }
+        overlayClassName={cn(
+          assetModalId && "workspace-asset-view-backdrop",
+          sharedEntry && "canvas-shared-entry",
+          split && "hidden",
+          !split &&
+            expanded &&
+            "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 bg-background duration-150",
+        )}
         className={cn(
-          "top-1/2 flex min-h-0 -translate-y-1/2 flex-col overflow-hidden transition-[transform,opacity,top,width,height,max-width,border-radius,background-color,box-shadow] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:animate-none",
+          "top-1/2 flex min-h-0 -translate-y-1/2 flex-col overflow-hidden transition-[transform,opacity,top,width,height,max-width,border-radius,background-color,box-shadow] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:animate-none",
+          fullscreenTransitionDuration,
           workspace
             ? "h-[100svh] w-screen max-w-none rounded-none bg-transparent shadow-none ring-0 data-ending-style:scale-100 data-ending-style:opacity-100 data-starting-style:scale-100 data-starting-style:opacity-100"
             : "h-[min(52rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[88rem] rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
@@ -2382,6 +2429,9 @@ export function ImageAssetViewer({
                       pickMode={isEyeDropping}
                       onPick={handlePickColorResult}
                       loadSamplingCanvas={loadSamplingCanvas}
+                      animateLayout={Boolean(assetModalId) && !sharedMorphing}
+                      layoutDependency={presentation}
+                      layoutTransition={fullscreenLayoutTransition}
                     />
                   ) : loading ? (
                     <Skeleton className="h-[min(68cqh,42rem)] w-[min(70cqw,64rem)] rounded-lg bg-white/10" />
@@ -2390,7 +2440,10 @@ export function ImageAssetViewer({
               )}
             </div>
 
-            <aside
+            <motion.aside
+              layout={Boolean(assetModalId) && !sharedMorphing}
+              layoutDependency={presentation}
+              transition={{ layout: fullscreenLayoutTransition }}
               className={cn(
                 "pointer-events-auto z-20 flex min-h-0 flex-col overflow-hidden",
                 expanded
@@ -2637,7 +2690,7 @@ export function ImageAssetViewer({
                   </div>
                 </motion.div>
               </div>
-            </aside>
+            </motion.aside>
           </div>
         </DialogBody>
       </DialogContent>
