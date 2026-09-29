@@ -248,7 +248,9 @@ export function WorkspaceAssetViewProvider({
       );
       const sourceCard =
         options?.origin &&
-        (nextAssetId.startsWith("note-") || nextAssetId.startsWith("link-")) &&
+        (nextAssetId.startsWith("note-") ||
+          nextAssetId.startsWith("link-") ||
+          nextAssetId.startsWith("color-")) &&
         !options.presentation &&
         !document.querySelector("[data-workspace-asset-modal]") &&
         canMorphAssetModal()
@@ -400,7 +402,8 @@ export function WorkspaceAssetViewProvider({
       const sourceCard =
         sharedEntryAssetId === current.assetId &&
         (current.assetId.startsWith("note-") ||
-          current.assetId.startsWith("link-")) &&
+          current.assetId.startsWith("link-") ||
+          current.assetId.startsWith("color-")) &&
         current.urlStatus === "committed" &&
         current.presentation !== "fullscreen" &&
         search.view !== "full" &&
@@ -411,7 +414,14 @@ export function WorkspaceAssetViewProvider({
       const modal = sourceCard ? findAssetModal(current.assetId) : undefined;
       const morph =
         sourceCard && modal
-          ? startAssetModalMorph("close", sourceCard, modal)
+          ? startAssetModalMorph(
+              "close",
+              sourceCard,
+              modal,
+              hiddenSourceCardRef.current?.card === sourceCard
+                ? hiddenSourceCardRef.current.visibility
+                : sourceCard.style.visibility,
+            )
           : undefined;
       if (morph) {
         activeMorphRef.current = morph;
@@ -804,6 +814,9 @@ function WorkspaceAssetViewController({
       ) : null}
       {requestedType === "color" ? (
         <ColorDetailDrawer
+          assetModalId={assetId}
+          sharedEntry={sharedEntryAssetId === assetId}
+          sharedMorphing={morphingAssetId === assetId}
           color={asset?.type === "color" ? asset : undefined}
           open={presentation.open}
           loading={loading}

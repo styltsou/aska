@@ -11,6 +11,9 @@ function inertClone(source: HTMLElement) {
     .querySelectorAll("[id]")
     .forEach((element) => element.removeAttribute("id"));
   clone
+    .querySelectorAll("[data-asset-morph-omit]")
+    .forEach((element) => element.remove());
+  clone
     .querySelectorAll<HTMLElement>("a, button, input, [tabindex]")
     .forEach((element) => {
       element.tabIndex = -1;
@@ -72,11 +75,10 @@ export function startAssetModalMorph(
   direction: "open" | "close",
   card: HTMLElement,
   modal: HTMLElement,
+  restoredCardVisibility?: string,
 ) {
   const cardSurface =
-    card.querySelector<HTMLElement>(
-      "[data-note-card-surface], [data-video-card-surface]",
-    ) ?? card;
+    card.querySelector<HTMLElement>("[data-asset-card-surface]") ?? card;
   const surfaceRect = cardSurface.getBoundingClientRect();
   const modalRect = modal.getBoundingClientRect();
   if (
@@ -96,6 +98,8 @@ export function startAssetModalMorph(
   const modalStyle = getComputedStyle(modal);
   const previousModalStyle = modal.style.cssText;
   const previousCardVisibility = card.style.visibility;
+  const previousCardOpacity = card.style.opacity;
+  const previousCardPointerEvents = card.style.pointerEvents;
   const previousMorphing = modal.dataset.assetMorphing;
   const previousPointerEvents = modal.style.pointerEvents;
   const from = direction === "open" ? surfaceRect : modalRect;
@@ -113,9 +117,10 @@ export function startAssetModalMorph(
   const cardShadow = cardStyle.boxShadow;
   const modalShadow = modalStyle.boxShadow;
   const cardHero = cardSurface.querySelector<HTMLElement>(
-    "[data-video-card-hero]",
+    "[data-asset-card-hero]",
   );
-  const modalHero = modal.querySelector<HTMLElement>("[data-video-modal-hero]");
+  const isColorSwatch = cardHero?.dataset.assetCardHero === "color";
+  const modalHero = modal.querySelector<HTMLElement>("[data-asset-modal-hero]");
   const cardHeroRect = cardHero?.getBoundingClientRect();
   const modalHeroRect = modalHero?.getBoundingClientRect();
   const morphHero = Boolean(
@@ -144,7 +149,7 @@ export function startAssetModalMorph(
   });
   if (morphHero) {
     const clonedHero = cardClone.querySelector<HTMLElement>(
-      "[data-video-card-hero]",
+      "[data-asset-card-hero]",
     );
     if (clonedHero) clonedHero.style.visibility = "hidden";
   }
@@ -163,6 +168,12 @@ export function startAssetModalMorph(
   document.body.append(preview);
 
   let heroPreview: HTMLElement | undefined;
+  const cardHeroRadius = cardHero
+    ? getComputedStyle(cardHero).borderRadius
+    : "";
+  const modalHeroRadius = modalHero
+    ? getComputedStyle(modalHero).borderRadius
+    : "";
   if (morphHero && cardHero && cardHeroRect && modalHeroRect) {
     const heroFrom = direction === "open" ? cardHeroRect : modalHeroRect;
     const heroClone = inertClone(cardHero);
@@ -182,7 +193,7 @@ export function startAssetModalMorph(
       left: `${heroFrom.left}px`,
       width: `${heroFrom.width}px`,
       height: `${heroFrom.height}px`,
-      borderRadius: getComputedStyle(cardHero).borderRadius,
+      borderRadius: direction === "open" ? cardHeroRadius : modalHeroRadius,
       zIndex: "111",
       overflow: "hidden",
       pointerEvents: "none",
@@ -228,6 +239,7 @@ export function startAssetModalMorph(
   let backdropAnimation: Animation | undefined;
   let heroAnimation: Animation | undefined;
   let modalHeroAnimation: Animation | undefined;
+  let cardRevealAnimation: Animation | undefined;
   try {
     panelAnimation = modal.animate(
       [
@@ -271,6 +283,7 @@ export function startAssetModalMorph(
               offset: 0,
             },
             { opacity: 1, offset: 0.18 },
+            ...(isColorSwatch ? [{ opacity: 0, offset: 0.6 }] : []),
             {
               top: `${to.top}px`,
               left: `${to.left}px`,
@@ -291,7 +304,7 @@ export function startAssetModalMorph(
               opacity: 0,
               offset: 0,
             },
-            { opacity: 0, offset: 0.3 },
+            { opacity: 0, offset: isColorSwatch ? 0.4 : 0.3 },
             {
               top: `${to.top}px`,
               left: `${to.left}px`,
@@ -318,6 +331,8 @@ export function startAssetModalMorph(
       const heroFrom = direction === "open" ? cardHeroRect : modalHeroRect;
       const heroTo = direction === "open" ? modalHeroRect : cardHeroRect;
       const duration = direction === "open" ? OPEN_DURATION : CLOSE_DURATION;
+      // A translucent crossfade changes the perceived color of a swatch.
+      // Keep one opaque swatch visible until the real element takes over.
       heroAnimation = heroPreview.animate(
         direction === "open"
           ? [
@@ -326,16 +341,18 @@ export function startAssetModalMorph(
                 left: `${heroFrom.left}px`,
                 width: `${heroFrom.width}px`,
                 height: `${heroFrom.height}px`,
+                borderRadius: cardHeroRadius,
                 opacity: 1,
                 offset: 0,
               },
-              { opacity: 1, offset: 0.65 },
+              ...(isColorSwatch ? [] : [{ opacity: 1, offset: 0.65 }]),
               {
                 top: `${heroTo.top}px`,
                 left: `${heroTo.left}px`,
                 width: `${heroTo.width}px`,
                 height: `${heroTo.height}px`,
-                opacity: 0,
+                borderRadius: modalHeroRadius,
+                opacity: isColorSwatch ? 1 : 0,
                 offset: 1,
               },
             ]
@@ -345,15 +362,17 @@ export function startAssetModalMorph(
                 left: `${heroFrom.left}px`,
                 width: `${heroFrom.width}px`,
                 height: `${heroFrom.height}px`,
-                opacity: 0,
+                borderRadius: modalHeroRadius,
+                opacity: isColorSwatch ? 1 : 0,
                 offset: 0,
               },
-              { opacity: 1, offset: 0.35 },
+              ...(isColorSwatch ? [] : [{ opacity: 1, offset: 0.35 }]),
               {
                 top: `${heroTo.top}px`,
                 left: `${heroTo.left}px`,
                 width: `${heroTo.width}px`,
                 height: `${heroTo.height}px`,
+                borderRadius: cardHeroRadius,
                 opacity: 1,
                 offset: 1,
               },
@@ -361,35 +380,60 @@ export function startAssetModalMorph(
         { duration, easing: MORPH_EASING, fill: "both" },
       );
       modalHeroAnimation = modalHero.animate(
-        direction === "open"
-          ? [
-              { opacity: 0, offset: 0 },
-              { opacity: 0, offset: 0.65 },
-              { opacity: 1, offset: 1 },
-            ]
-          : [
-              { opacity: 1, offset: 0 },
-              { opacity: 0, offset: 0.35 },
-              { opacity: 0, offset: 1 },
-            ],
+        isColorSwatch
+          ? [{ opacity: 0 }, { opacity: 0 }]
+          : direction === "open"
+            ? [
+                { opacity: 0, offset: 0 },
+                { opacity: 0, offset: 0.65 },
+                { opacity: 1, offset: 1 },
+              ]
+            : [
+                { opacity: 1, offset: 0 },
+                { opacity: 0, offset: 0.35 },
+                { opacity: 0, offset: 1 },
+              ],
         { duration, easing: "linear", fill: "both" },
+      );
+    }
+    if (
+      isColorSwatch &&
+      direction === "close" &&
+      restoredCardVisibility !== undefined
+    ) {
+      // Give the real card a painted frame before removing its moving copy.
+      card.style.visibility = restoredCardVisibility;
+      card.style.opacity = "0.01";
+      card.style.pointerEvents = "none";
+      cardRevealAnimation = card.animate(
+        [
+          { opacity: 0.01, offset: 0 },
+          { opacity: 0.01, offset: 0.75 },
+          { opacity: 1, offset: 0.92 },
+          { opacity: 1, offset: 1 },
+        ],
+        { duration: CLOSE_DURATION, easing: "linear", fill: "both" },
       );
     }
     void previewAnimation?.finished.catch(() => undefined);
     void backdropAnimation?.finished.catch(() => undefined);
     void heroAnimation?.finished.catch(() => undefined);
     void modalHeroAnimation?.finished.catch(() => undefined);
+    void cardRevealAnimation?.finished.catch(() => undefined);
   } catch {
     panelAnimation?.cancel();
     previewAnimation?.cancel();
     backdropAnimation?.cancel();
     heroAnimation?.cancel();
     modalHeroAnimation?.cancel();
+    cardRevealAnimation?.cancel();
     preview.remove();
     heroPreview?.remove();
     modal.style.cssText = previousModalStyle;
     modal.style.pointerEvents = previousPointerEvents;
     card.style.visibility = previousCardVisibility;
+    card.style.opacity = previousCardOpacity;
+    card.style.pointerEvents = previousCardPointerEvents;
     if (previousMorphing === undefined) delete modal.dataset.assetMorphing;
     else modal.dataset.assetMorphing = previousMorphing;
     return undefined;
@@ -397,7 +441,10 @@ export function startAssetModalMorph(
   if (!panelAnimation) return undefined;
 
   let cleanedUp = false;
-  const cleanup = (restoreCard: boolean) => {
+  const cleanup = (
+    restoreCard: boolean,
+    cardVisibility = previousCardVisibility,
+  ) => {
     if (cleanedUp) return;
     cleanedUp = true;
     panelAnimation.cancel();
@@ -405,16 +452,19 @@ export function startAssetModalMorph(
     backdropAnimation?.cancel();
     heroAnimation?.cancel();
     modalHeroAnimation?.cancel();
+    cardRevealAnimation?.cancel();
+    if (restoreCard) card.style.visibility = cardVisibility;
+    card.style.opacity = previousCardOpacity;
+    card.style.pointerEvents = previousCardPointerEvents;
     preview.remove();
     heroPreview?.remove();
     modal.style.cssText = previousModalStyle;
     modal.style.pointerEvents = previousPointerEvents;
-    if (restoreCard) card.style.visibility = previousCardVisibility;
     if (previousMorphing === undefined) delete modal.dataset.assetMorphing;
     else modal.dataset.assetMorphing = previousMorphing;
   };
   const finished = panelAnimation.finished.then(
-    () => cleanup(direction === "close"),
+    () => cleanup(direction === "close", restoredCardVisibility),
     () => cleanup(true),
   );
   return { finished, cancel: () => cleanup(true) };

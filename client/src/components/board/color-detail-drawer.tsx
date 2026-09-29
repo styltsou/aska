@@ -59,6 +59,7 @@ import { gradientToCss } from "@/lib/color-gradient";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { ColorAsset, ImageAsset } from "@/types/asset";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
+import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 import { cn } from "@/lib/utils";
 
 const EMPTY_RESULTS: never[] = [];
@@ -68,6 +69,9 @@ const COLOR_VIEWER_LAYOUT_TRANSITION = {
 };
 
 export function ColorDetailDrawer({
+  assetModalId,
+  sharedEntry = false,
+  sharedMorphing = false,
   color,
   workspaceSlug,
   scope,
@@ -82,6 +86,9 @@ export function ColorDetailDrawer({
   open = color !== undefined,
   loading = false,
 }: {
+  assetModalId?: string;
+  sharedEntry?: boolean;
+  sharedMorphing?: boolean;
   color?: ColorAsset;
   workspaceSlug: string;
   scope: ColorSearchScope;
@@ -171,6 +178,9 @@ export function ColorDetailDrawer({
   if (!isMobile) {
     return (
       <ColorDetailModal
+        assetModalId={assetModalId}
+        sharedEntry={sharedEntry}
+        sharedMorphing={sharedMorphing}
         color={displayedColor}
         loading={loading}
         open={open}
@@ -457,6 +467,9 @@ export function ColorDetailDrawer({
 }
 
 function ColorDetailModal({
+  assetModalId,
+  sharedEntry,
+  sharedMorphing,
   color,
   loading,
   open,
@@ -482,6 +495,9 @@ function ColorDetailModal({
   onOpenImage,
   workspaceSlug,
 }: {
+  assetModalId?: string;
+  sharedEntry: boolean;
+  sharedMorphing: boolean;
   color?: ColorAsset;
   loading: boolean;
   open: boolean;
@@ -521,11 +537,24 @@ function ColorDetailModal({
 }) {
   const title =
     color?.title?.trim() || color?.hex.toUpperCase() || "Loading color";
+  const hasAlpha = color?.hex.length === 9 && !color.hex.endsWith("ff");
   const reduceMotion = useReducedMotion();
   const presentation = expanded ? "fullscreen" : "modal";
   const layoutTransition = reduceMotion
     ? { duration: 0 }
     : COLOR_VIEWER_LAYOUT_TRANSITION;
+  const fullscreenTransitionDuration = assetModalId
+    ? expanded
+      ? "duration-[400ms]"
+      : "duration-[350ms]"
+    : "duration-[180ms]";
+  const {
+    panelRef: fullscreenPanelRef,
+    captureCurrentRect: captureFullscreenPanel,
+  } = useAssetFullscreenMorph(
+    Boolean(assetModalId) && open && !sharedMorphing,
+    expanded,
+  );
   return (
     <Dialog
       open={open}
@@ -539,27 +568,39 @@ function ColorDetailModal({
       onOpenChangeComplete={(next) => !next && onCloseComplete?.()}
     >
       <DialogContent
+        ref={fullscreenPanelRef}
+        data-workspace-asset-modal={assetModalId}
+        data-canvas-shared-entry={sharedEntry || undefined}
         showCloseButton={false}
+        overlayClassName={cn(
+          assetModalId && "workspace-asset-view-backdrop",
+          sharedEntry && "canvas-shared-entry",
+        )}
         render={
           <motion.div
-            layout
+            layout={!sharedMorphing && !assetModalId}
             layoutDependency={presentation}
-            initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
+            initial={
+              reduceMotion || sharedEntry ? false : { opacity: 0, scale: 0.96 }
+            }
             animate={{ opacity: open ? 1 : 0, scale: open ? 1 : 0.96 }}
             transition={{
               layout: layoutTransition,
-              opacity: reduceMotion
-                ? { duration: 0 }
-                : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
-              scale: reduceMotion
-                ? { duration: 0 }
-                : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
+              opacity:
+                reduceMotion || (sharedEntry && open)
+                  ? { duration: 0 }
+                  : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
+              scale:
+                reduceMotion || (sharedEntry && open)
+                  ? { duration: 0 }
+                  : { duration: open ? 0.25 : 0.15, ease: [0.22, 1, 0.36, 1] },
             }}
             style={{ transformOrigin: "center center" }}
           />
         }
         className={cn(
-          "flex min-h-0 max-h-[calc(100svh-2rem)] flex-col overflow-hidden transition-[background-color,box-shadow,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "flex min-h-0 max-h-[calc(100svh-2rem)] flex-col overflow-hidden transition-[background-color,box-shadow,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          fullscreenTransitionDuration,
           expanded
             ? "top-0 left-0 h-dvh max-h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
             : "top-1/2 h-[min(48rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[76rem] -translate-y-1/2 rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10",
@@ -570,11 +611,12 @@ function ColorDetailModal({
           Color details and relevant images.
         </DialogDescription>
         <motion.div
-          layout
+          layout={!sharedMorphing && !assetModalId}
           layoutDependency={presentation}
           transition={{ layout: layoutTransition }}
           className={cn(
-            "flex shrink-0 items-center gap-0.5 p-2 transition-[background-color,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            "flex shrink-0 items-center gap-0.5 p-2 transition-[background-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            fullscreenTransitionDuration,
             expanded &&
               "mt-[var(--app-shell-inset)] bg-background pl-[calc(var(--app-shell-inset)+0.5rem)]",
           )}
@@ -641,7 +683,10 @@ function ColorDetailModal({
               ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
             )}
             aria-label={expanded ? "Return to modal" : "Expand color"}
-            onClick={() => onExpandedChange(!expanded)}
+            onClick={() => {
+              captureFullscreenPanel();
+              onExpandedChange(!expanded);
+            }}
           >
             <span className="relative size-4">
               <AnimatePresence initial={false}>
@@ -691,7 +736,8 @@ function ColorDetailModal({
         </motion.div>
         <DialogBody
           className={cn(
-            "min-h-0 flex-1 overflow-hidden border-t border-b-0 bg-background p-0 transition-[border-color,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            "min-h-0 flex-1 overflow-hidden border-t border-b-0 bg-background p-0 transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            fullscreenTransitionDuration,
             expanded
               ? "rounded-none border-transparent"
               : "rounded-t-xl border-border",
@@ -701,12 +747,17 @@ function ColorDetailModal({
             <div className="flex h-full min-h-0 min-w-0 flex-col">
               <div className="shrink-0 px-4 pt-4 sm:px-5 sm:pt-5">
                 <button
+                  data-asset-modal-hero
                   type="button"
                   onClick={copyValue}
                   aria-label={
                     hasGradient ? "Copy CSS gradient" : "Copy hex color"
                   }
-                  className="group relative h-[clamp(5rem,20dvh,10rem)] w-full overflow-hidden rounded-xl text-left"
+                  className={cn(
+                    "group relative h-[clamp(5rem,20dvh,10rem)] w-full overflow-hidden rounded-xl text-left",
+                    hasAlpha &&
+                      "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
+                  )}
                   style={
                     gradientCss
                       ? { background: gradientCss }

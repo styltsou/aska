@@ -69,7 +69,7 @@ export function LinkAssetCard({
     <>
       <div className="min-h-0 p-3">
         <div
-          data-video-card-hero={onOpen ? "" : undefined}
+          data-asset-card-hero={onOpen ? "" : undefined}
           className="relative aspect-video w-full overflow-hidden rounded-sm bg-muted/40"
         >
           {previewUrl ? (
@@ -192,7 +192,7 @@ export function LinkAssetCard({
 
   return (
     <div
-      data-video-card-surface
+      data-asset-card-surface
       role="button"
       tabIndex={0}
       className={className}

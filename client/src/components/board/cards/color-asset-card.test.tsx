@@ -20,6 +20,8 @@ describe("ColorAssetCard", () => {
     expect(html).toContain("aspect-square w-full");
     expect(html).toContain('class="p-3"');
     expect(html).toContain("hover:border-sidebar-foreground/20");
+    expect(html).toContain("transition-colors duration-100");
+    expect(html).not.toContain("transition-all");
     expect(html).toContain(
       "flex min-w-0 items-center gap-3 bg-sidebar px-3 pb-3",
     );

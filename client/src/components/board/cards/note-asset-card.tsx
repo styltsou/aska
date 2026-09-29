@@ -564,7 +564,7 @@ export function NoteAssetCard({
   return (
     <motion.div
       ref={cardRef}
-      data-note-card-surface
+      data-asset-card-surface
       initial={false}
       animate={
         measuredHeight === undefined ? undefined : { height: measuredHeight }

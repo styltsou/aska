@@ -61,8 +61,9 @@ export function ColorAssetCard({
 
   return (
     <div
+      data-asset-card-surface
       className={cn(
-        "group relative w-full overflow-hidden rounded-lg border bg-sidebar transition-all duration-100",
+        "group relative w-full overflow-hidden rounded-lg border bg-sidebar transition-colors duration-100",
         onOpen && "cursor-pointer",
         !selected && "hover:border-sidebar-foreground/20",
         isContextMenuOpen && "border-sidebar-foreground/20",
@@ -87,6 +88,7 @@ export function ColorAssetCard({
       ) : null}
       <div className="p-3">
         <div
+          data-asset-card-hero="color"
           className={cn(
             "group/surface pointer-events-none relative z-10 aspect-square w-full overflow-hidden rounded-sm",
             hasAlpha &&
@@ -97,6 +99,7 @@ export function ColorAssetCard({
           <AnimatePresence>
             {surfaceHovered ? (
               <motion.div
+                data-asset-morph-omit
                 initial={{ y: "100%" }}
                 animate={{ y: 0 }}
                 exit={{ y: "100%" }}

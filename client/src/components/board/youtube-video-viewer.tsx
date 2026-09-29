@@ -652,7 +652,7 @@ export function YouTubeVideoContent({
 
   const media = (
     <motion.div
-      data-video-modal-hero={viewer || undefined}
+      data-asset-modal-hero={viewer || undefined}
       layout={animateLayout}
       layoutDependency={layoutDependency ?? workspace}
       transition={{ layout: layoutTransition }}
