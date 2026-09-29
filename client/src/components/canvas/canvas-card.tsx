@@ -154,6 +154,9 @@ export const CanvasCard = memo(function CanvasCard({
       }}
       style={{ transformOrigin: "bottom center" }}
       aria-busy={isPending || undefined}
+      data-canvas-asset-id={
+        !isPending && node.type !== "folder" ? node.id : undefined
+      }
       data-selection-node-id={
         !isPending && !data.isColorDimmed ? node.id : undefined
       }

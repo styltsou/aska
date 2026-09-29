@@ -7,6 +7,28 @@
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource-variable/inter";
 
+[data-asset-morphing] {
+  animation: none !important;
+  transition: none !important;
+  scale: 1 !important;
+  opacity: 1 !important;
+}
+
+[data-workspace-asset-modal][data-canvas-shared-entry][data-open],
+.workspace-asset-view-backdrop.canvas-shared-entry[data-open] {
+  animation: none !important;
+}
+
+[data-workspace-asset-modal][data-canvas-shared-entry][data-starting-style] {
+  transition: none !important;
+  scale: 1 !important;
+  opacity: 1 !important;
+}
+
+.workspace-asset-view-backdrop.canvas-shared-entry[data-starting-style] {
+  transition: none !important;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

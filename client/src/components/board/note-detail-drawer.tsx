@@ -135,6 +135,9 @@ export function NoteDetailDrawer({
   open: controlledOpen,
   onRequestClose,
   onClose,
+  assetModalId,
+  sharedEntry = false,
+  sharedMorphing = false,
 }: {
   note: NoteAsset | undefined;
   workspaceSlug: string;
@@ -169,6 +172,9 @@ export function NoteDetailDrawer({
   open?: boolean;
   onRequestClose?: () => void;
   onClose: () => void;
+  assetModalId?: string;
+  sharedEntry?: boolean;
+  sharedMorphing?: boolean;
 }) {
   const isCreateMode = createOptions !== undefined;
   const [collectionSlug = "", ...folderSegments] = (
@@ -1458,7 +1464,19 @@ export function NoteDetailDrawer({
     >
       {children ? <NoteWorkspaceTrigger render={children} /> : null}
       <NoteWorkspaceContent
-        backdropClassName={split ? "hidden" : undefined}
+        data-workspace-asset-modal={assetModalId}
+        data-canvas-shared-entry={sharedEntry || undefined}
+        backdropClassName={
+          assetModalId
+            ? cn(
+                "workspace-asset-view-backdrop",
+                sharedEntry && "canvas-shared-entry",
+                split && "hidden",
+              )
+            : split
+              ? "hidden"
+              : undefined
+        }
         className={cn(
           "transition-[transform,opacity,top,left,right,width,height,max-width,max-height,border-radius,background-color,box-shadow] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
           GLASS_FRAME_CLASS,
@@ -1749,7 +1767,7 @@ export function NoteDetailDrawer({
                         void openMentionTarget(identity, resolved)
                       }
                       editable={saveState !== "deleting"}
-                      autoFocus={!isCreateMode}
+                      autoFocus={!isCreateMode && !sharedMorphing}
                       scrollContainerRef={noteContentRef}
                       onExtractSelection={
                         noteExtractionTarget ? extractSelection : undefined

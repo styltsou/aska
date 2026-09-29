@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { flushSync } from "react-dom";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -50,8 +51,15 @@ import {
 } from "./workspace-asset-view-state";
 import { useCommittedPathname } from "./use-committed-pathname";
 import { useWorkspaceOverlayNavigation } from "./use-workspace-overlay-navigation";
+import {
+  canMorphAssetModal,
+  findAssetModal,
+  findVisibleAssetCard,
+  startAssetModalMorph,
+} from "./asset-modal-morph";
 
 type OpenAssetOptions = {
+  origin?: "canvas" | "grid";
   replace?: boolean;
   presentation?: "fullscreen";
   peekAfter?: string;
@@ -138,10 +146,49 @@ export function WorkspaceAssetViewProvider({
           }
         : null,
   );
+  const [sharedEntryAssetId, setSharedEntryAssetId] = useState<
+    string | undefined
+  >();
+  const [morphingNoteAssetId, setMorphingNoteAssetId] = useState<
+    string | undefined
+  >();
+  const activeMorphRef = useRef<ReturnType<typeof startAssetModalMorph> | null>(
+    null,
+  );
+  const hiddenSourceCardRef = useRef<{
+    assetId: string;
+    card: HTMLElement;
+    visibility: string;
+  } | null>(null);
+  const closingTransitionRef = useRef(false);
   const presentationRef = useRef(presentation);
   presentationRef.current = presentation;
   const locationRef = useRef(location);
   locationRef.current = location;
+
+  const releaseHiddenSourceCard = useCallback(() => {
+    const hidden = hiddenSourceCardRef.current;
+    if (!hidden) return;
+    hidden.card.style.visibility = hidden.visibility;
+    hiddenSourceCardRef.current = null;
+  }, []);
+
+  useEffect(
+    () => () => {
+      activeMorphRef.current?.cancel();
+      releaseHiddenSourceCard();
+    },
+    [releaseHiddenSourceCard],
+  );
+
+  useEffect(() => {
+    if (
+      hiddenSourceCardRef.current &&
+      hiddenSourceCardRef.current.assetId !== presentation?.assetId
+    ) {
+      releaseHiddenSourceCard();
+    }
+  }, [presentation?.assetId, releaseHiddenSourceCard]);
 
   const openAssetImpl = useCallback(
     async (nextAssetId: string, options?: OpenAssetOptions) => {
@@ -182,6 +229,12 @@ export function WorkspaceAssetViewProvider({
         await flushPeekImage();
       }
       if (assetId && !(await prepareMainNoteLeave())) return false;
+      pendingCloseNavigationRef.current = undefined;
+      closingTransitionRef.current = false;
+      activeMorphRef.current?.cancel();
+      activeMorphRef.current = null;
+      releaseHiddenSourceCard();
+      setMorphingNoteAssetId(undefined);
       const queryKey = workspaceAssetQueryKey(workspaceSlug, nextAssetId);
       if (options?.initialData && !queryClient.getQueryData(queryKey)) {
         queryClient.setQueryData<PeekableAssetResponse>(
@@ -189,14 +242,56 @@ export function WorkspaceAssetViewProvider({
           options.initialData,
         );
       }
-      setPresentation(
-        openAssetPresentation(
-          nextAssetId,
-          assetId,
-          options?.imageSiblings,
-          options?.presentation,
-        ),
+      const nextPresentation = openAssetPresentation(
+        nextAssetId,
+        assetId,
+        options?.imageSiblings,
+        options?.presentation,
       );
+      const sourceCard =
+        options?.origin &&
+        nextAssetId.startsWith("note-") &&
+        !options.presentation &&
+        !document.querySelector("[data-workspace-asset-modal]") &&
+        canMorphAssetModal()
+          ? findVisibleAssetCard(nextAssetId, options.origin)
+          : undefined;
+      if (sourceCard) {
+        const sourceVisibility = sourceCard.style.visibility;
+        flushSync(() => {
+          setSharedEntryAssetId(nextAssetId);
+          if (nextAssetId.startsWith("note-"))
+            setMorphingNoteAssetId(nextAssetId);
+          setPresentation(nextPresentation);
+        });
+        const modal = findAssetModal(nextAssetId);
+        const morph = modal
+          ? startAssetModalMorph("open", sourceCard, modal)
+          : undefined;
+        if (morph) {
+          activeMorphRef.current = morph;
+          hiddenSourceCardRef.current = {
+            assetId: nextAssetId,
+            card: sourceCard,
+            visibility: sourceVisibility,
+          };
+          void morph.finished.then(() => {
+            if (activeMorphRef.current !== morph) return;
+            activeMorphRef.current = null;
+            setMorphingNoteAssetId((current) =>
+              current === nextAssetId ? undefined : current,
+            );
+          });
+        } else {
+          setMorphingNoteAssetId((current) =>
+            current === nextAssetId ? undefined : current,
+          );
+        }
+      }
+      if (!sourceCard) {
+        setSharedEntryAssetId(undefined);
+        setPresentation(nextPresentation);
+      }
       recordRecentWorkspaceAsset(workspaceSlug, nextAssetId);
       return navigateOverlay(
         workspaceAssetPath(boardPathname, nextAssetId),
@@ -210,6 +305,11 @@ export function WorkspaceAssetViewProvider({
       )
         .then(() => true)
         .catch(() => {
+          activeMorphRef.current?.cancel();
+          activeMorphRef.current = null;
+          releaseHiddenSourceCard();
+          setSharedEntryAssetId(undefined);
+          setMorphingNoteAssetId(undefined);
           setPresentation(
             assetId ? openAssetPresentation(assetId, assetId) : null,
           );
@@ -226,6 +326,7 @@ export function WorkspaceAssetViewProvider({
       peekTarget,
       prepareMainNoteLeave,
       queryClient,
+      releaseHiddenSourceCard,
       search.peek,
       search.view,
       workspaceSlug,
@@ -265,18 +366,69 @@ export function WorkspaceAssetViewProvider({
     [boardPathname, navigateOverlay],
   );
 
+  const completeAssetClose = useCallback(() => {
+    if (closingTransitionRef.current) return;
+    const current = presentationRef.current;
+    if (current?.open) return;
+    const pending = pendingCloseNavigationRef.current;
+    pendingCloseNavigationRef.current = undefined;
+    setMorphingNoteAssetId(undefined);
+    setSharedEntryAssetId(undefined);
+    setPresentation(null);
+    releaseHiddenSourceCard();
+    if (
+      pending &&
+      (!current || pending.assetId === current.assetId) &&
+      pending.sourceHref === locationRef.current.href
+    ) {
+      pending.run();
+    }
+  }, [releaseHiddenSourceCard]);
+
   const beginAssetClose = useCallback(
     (run: () => void) => {
       const current = presentationRef.current;
       if (!current?.open) return;
+      const interruptedMorph = Boolean(activeMorphRef.current);
+      activeMorphRef.current?.cancel();
+      activeMorphRef.current = null;
+      if (hiddenSourceCardRef.current?.assetId === current.assetId)
+        hiddenSourceCardRef.current.card.style.visibility = "hidden";
       pendingCloseNavigationRef.current = {
         assetId: current.assetId,
         sourceHref: location.href,
         run,
       };
+      const sourceCard =
+        sharedEntryAssetId === current.assetId &&
+        current.assetId.startsWith("note-") &&
+        current.urlStatus === "committed" &&
+        current.presentation !== "fullscreen" &&
+        search.view !== "full" &&
+        !interruptedMorph &&
+        canMorphAssetModal()
+          ? findVisibleAssetCard(current.assetId)
+          : undefined;
+      const modal = sourceCard ? findAssetModal(current.assetId) : undefined;
+      const morph =
+        sourceCard && modal
+          ? startAssetModalMorph("close", sourceCard, modal)
+          : undefined;
+      if (morph) {
+        activeMorphRef.current = morph;
+        closingTransitionRef.current = true;
+        void morph.finished.then(() => {
+          if (activeMorphRef.current !== morph) return;
+          activeMorphRef.current = null;
+          flushSync(() => setPresentation(null));
+          closingTransitionRef.current = false;
+          completeAssetClose();
+        });
+        return;
+      }
       setPresentation({ ...current, open: false });
     },
-    [location.href],
+    [completeAssetClose, location.href, search.view, sharedEntryAssetId],
   );
 
   const closeAsset = useCallback(() => {
@@ -407,20 +559,6 @@ export function WorkspaceAssetViewProvider({
     });
   }, [assetId, search.view]);
 
-  const completeAssetClose = useCallback(() => {
-    const pending = pendingCloseNavigationRef.current;
-    pendingCloseNavigationRef.current = undefined;
-    if (presentationRef.current?.open) return;
-    setPresentation(null);
-    if (
-      pending &&
-      pending.assetId === presentationRef.current?.assetId &&
-      pending.sourceHref === locationRef.current.href
-    ) {
-      pending.run();
-    }
-  }, []);
-
   const value = useMemo(() => ({ openAsset }), [openAsset]);
 
   return (
@@ -429,6 +567,8 @@ export function WorkspaceAssetViewProvider({
       <WorkspaceAssetViewController
         workspaceSlug={workspaceSlug}
         presentation={presentation}
+        sharedEntryAssetId={sharedEntryAssetId}
+        morphingNoteAssetId={morphingNoteAssetId}
         openAsset={openAsset}
         closeAsset={closeAsset}
         closeAllAssets={closeAllAssets}
@@ -442,6 +582,8 @@ export function WorkspaceAssetViewProvider({
 function WorkspaceAssetViewController({
   workspaceSlug,
   presentation,
+  sharedEntryAssetId,
+  morphingNoteAssetId,
   openAsset,
   closeAsset,
   closeAllAssets,
@@ -450,6 +592,8 @@ function WorkspaceAssetViewController({
 }: {
   workspaceSlug: string;
   presentation: AssetPresentation | null;
+  sharedEntryAssetId?: string;
+  morphingNoteAssetId?: string;
   openAsset: WorkspaceAssetViewContextValue["openAsset"];
   closeAsset: () => void;
   closeAllAssets: () => void;
@@ -592,6 +736,9 @@ function WorkspaceAssetViewController({
     <>
       {requestedType === "note" ? (
         <NoteDetailDrawer
+          assetModalId={assetId}
+          sharedEntry={sharedEntryAssetId === assetId}
+          sharedMorphing={morphingNoteAssetId === assetId}
           key={assetId}
           note={asset?.type === "note" ? asset : undefined}
           workspaceSlug={workspaceSlug}

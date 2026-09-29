@@ -257,7 +257,7 @@ function CollectionPage() {
     [collectionPath, navigateOverlay, workspaceSlug],
   );
   const handleOpenAsset = useCallback(
-    (assetId: string) => {
+    (assetId: string, origin?: "canvas" | "grid") => {
       const node = nodes.find((candidate) => candidate.id === assetId);
       const location = {
         type: "collection" as const,
@@ -265,6 +265,7 @@ function CollectionPage() {
         folderPath: parentFolderPath,
       };
       openAsset(assetId, {
+        origin,
         initialData:
           node && node.type !== "folder"
             ? { asset: node, location }
@@ -279,8 +280,12 @@ function CollectionPage() {
     },
     [collectionSlug, nodes, openAsset, parentFolderPath],
   );
+  const handleOpenCanvasNode = useCallback(
+    (node: { id: string }) => handleOpenAsset(node.id, "canvas"),
+    [handleOpenAsset],
+  );
   const handleOpenNode = useCallback(
-    (node: { id: string }) => handleOpenAsset(node.id),
+    (node: { id: string }) => handleOpenAsset(node.id, "grid"),
     [handleOpenAsset],
   );
 
@@ -381,10 +386,10 @@ function CollectionPage() {
                         ? "Add images, notes, links, or folders to start arranging this board."
                         : "Add images, notes, links, or folders to start arranging this collection."
                   }
-                  onOpenNote={handleOpenNode}
-                  onOpenImage={handleOpenNode}
-                  onOpenColor={handleOpenNode}
-                  onOpenVideo={handleOpenNode}
+                  onOpenNote={handleOpenCanvasNode}
+                  onOpenImage={handleOpenCanvasNode}
+                  onOpenColor={handleOpenCanvasNode}
+                  onOpenVideo={handleOpenCanvasNode}
                   onOpenFolder={handleOpenFolder}
                 />
               </Activity>

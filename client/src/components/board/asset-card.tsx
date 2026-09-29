@@ -67,6 +67,7 @@ export const AssetCard = memo(function AssetCard({
   return (
     <div
       className={cn("relative min-w-0 rounded-lg")}
+      data-asset-card-id={asset.id}
       data-selection-node-id={selectable ? asset.id : undefined}
       aria-selected={selectable ? isSelected : undefined}
       onClick={(event) => {
