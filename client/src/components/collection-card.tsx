@@ -1,6 +1,13 @@
-import { useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { Link } from "@tanstack/react-router";
-import { ProgressiveImage } from "@/components/ui/progressive-image";
+import { FolderOpenIcon } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 
 import { LinkCardPreview } from "./board/cards/link-asset-card";
 import { NoteMiniature } from "./board/cards/note-miniature";
@@ -26,21 +33,7 @@ import {
 import type { FolderChildPreview } from "@/api/collection/types";
 import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";
 
-const PREVIEW_TRANSITION = "transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1)";
-
-const PREVIEW_POSITION: CSSProperties = {
-  inset: 0,
-  margin: "auto",
-  width: "54%",
-  transformOrigin: "bottom center",
-};
-
-const STACKED_POSITION: CSSProperties = {
-  inset: 0,
-  margin: "auto",
-  width: "54%",
-  transformOrigin: "bottom center",
-};
+const MAX_VISIBLE_PREVIEWS = 4;
 
 interface CollectionCardItem {
   id: number;
@@ -61,209 +54,111 @@ export function CollectionCard({
   workspaceSlug,
   search,
 }: CollectionCardProps) {
-  const [hovered, setHovered] = useState(false);
+  const [pointerOver, setPointerOver] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const pointerExitTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deleteCollection = useDeleteCollection(workspaceSlug);
+  const previews = collection.previews.slice(0, MAX_VISIBLE_PREVIEWS);
+  const active = pointerOver || focused;
+  const stackDirection = (hashString(collection.slug) & 1) === 0 ? 1 : -1;
+
+  useEffect(
+    () => () => {
+      if (pointerExitTimeout.current) clearTimeout(pointerExitTimeout.current);
+    },
+    [],
+  );
+
+  const handleHoverTargetEnter = () => {
+    if (pointerExitTimeout.current) clearTimeout(pointerExitTimeout.current);
+    pointerExitTimeout.current = null;
+    setPointerOver(true);
+  };
+
+  const handleHoverTargetLeave = (event: ReactPointerEvent<HTMLElement>) => {
+    const nextTarget = event.relatedTarget;
+    if (
+      nextTarget instanceof Element &&
+      nextTarget.closest("[data-collection-hover-target]")
+    ) {
+      return;
+    }
+
+    if (pointerExitTimeout.current) clearTimeout(pointerExitTimeout.current);
+    pointerExitTimeout.current = setTimeout(() => {
+      pointerExitTimeout.current = null;
+      setPointerOver(false);
+    }, 80);
+  };
 
   return (
     <>
       <ContextMenu>
         <ContextMenuTrigger
           render={(triggerProps) => (
-            <div className="relative aspect-square">
+            <div className="relative">
               <Link
                 {...triggerProps}
                 to="/$workspaceSlug/collections/$"
                 search={search}
                 params={{ workspaceSlug, _splat: collection.slug }}
-                className="relative grid aspect-square cursor-pointer grid-rows-[minmax(0,1fr)_auto] overflow-hidden rounded-lg border bg-sidebar transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 data-popup-open:border-sidebar-foreground/20"
-                onMouseEnter={() => setHovered(true)}
-                onMouseLeave={() => setHovered(false)}
+                className="group/card relative flex w-full min-w-0 cursor-pointer flex-col items-center gap-2.5 rounded-xl p-1.5 text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
+                onFocus={(event) =>
+                  setFocused(event.currentTarget.matches(":focus-visible"))
+                }
+                onBlur={() => setFocused(false)}
               >
-                <div className="relative flex min-h-0 items-center justify-center overflow-hidden bg-sidebar">
-                  {collection.previews.length === 0 ? (
-                    <div className="grid grid-cols-2 gap-1 opacity-20">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="size-5 rounded border border-sidebar-foreground/40"
-                        />
-                      ))}
-                    </div>
-                  ) : collection.previews.length === 1 ? (
-                    (() => {
-                      const preview = collection.previews[0];
-                      if (preview.type === "image" && preview.url) {
-                        return (
-                          <div
-                            style={{
-                              ...PREVIEW_POSITION,
-                              zIndex: 0,
-                              transform: `rotate(-3deg) scale(${hovered ? 1.02 : 1})`,
-                              transition: PREVIEW_TRANSITION,
-                            }}
-                            className="absolute aspect-square"
-                          >
-                            <ProgressiveImage
-                              src={preview.url}
-                              blurDataURL={preview.blurDataURL}
-                              alt=""
-                              className="size-full rounded-xl object-cover shadow-md ring-1 ring-sidebar-foreground/5"
-                            />
-                          </div>
-                        );
-                      }
-                      if (preview.type === "link") {
-                        return (
-                          <div
-                            className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
-                            style={{
-                              ...PREVIEW_POSITION,
-                              zIndex: 0,
-                              transform: `rotate(-3deg) scale(${hovered ? 1.02 : 1})`,
-                              transition: PREVIEW_TRANSITION,
-                            }}
-                          >
-                            <LinkCardPreview
-                              preview={preview}
-                              className="h-full w-full"
-                            />
-                          </div>
-                        );
-                      }
-                      if (preview.type === "color") {
-                        return (
-                          <div
-                            className="absolute aspect-square rounded-xl shadow-md ring-1 ring-sidebar-foreground/5"
-                            style={{
-                              ...PREVIEW_POSITION,
-                              zIndex: 0,
-                              backgroundColor: preview.hex,
-                              transform: `rotate(-3deg) scale(${hovered ? 1.02 : 1})`,
-                              transition: PREVIEW_TRANSITION,
-                            }}
-                          />
-                        );
-                      }
-                      return (
-                        <div
-                          className="absolute aspect-square overflow-hidden rounded-xl bg-sidebar shadow-md ring-1 ring-sidebar-foreground/5"
-                          style={{
-                            ...PREVIEW_POSITION,
-                            zIndex: 0,
-                            transform: `rotate(-3deg) scale(${hovered ? 1.02 : 1})`,
-                            transition: PREVIEW_TRANSITION,
-                          }}
-                        >
-                          <NoteMiniature
-                            content={preview.snippet ?? ""}
-                            title={preview.title}
-                            size="collection"
-                          />
-                        </div>
-                      );
-                    })()
-                  ) : (
-                    collection.previews.map((preview, i) => {
-                      const count = collection.previews.length;
-                      const deg = (i - (count - 1) / 2) * 3;
-                      const hovDeg = (i - (count - 1) / 2) * 9;
-                      const x = (i - (count - 1) / 2) * 4;
-                      const y = i * 5;
-                      const hoverX = (i - (count - 1) / 2) * 12;
-                      const hoverY = Math.abs(i - (count - 1) / 2) * 3 - 3;
-                      const z = count - 1 - i;
-
-                      if (preview.type === "image" && preview.url) {
-                        return (
-                          <div
-                            key={preview.assetId}
-                            style={{
-                              ...STACKED_POSITION,
-                              zIndex: z,
-                              transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
-                              transition: PREVIEW_TRANSITION,
-                              transitionDelay: hovered
-                                ? `${(count - 1 - z) * 10}ms`
-                                : `${z * 10}ms`,
-                            }}
-                            className="absolute aspect-square"
-                          >
-                            <ProgressiveImage
-                              src={preview.url}
-                              blurDataURL={preview.blurDataURL}
-                              alt=""
-                              className="size-full rounded-xl object-cover shadow-md ring-1 ring-sidebar-foreground/5"
-                            />
-                          </div>
-                        );
-                      }
-                      if (preview.type === "link") {
-                        return (
-                          <div
-                            key={preview.assetId}
-                            className="absolute flex aspect-square flex-col items-start justify-start gap-0.5 overflow-hidden rounded-xl bg-card px-3 pt-3 pb-0 shadow-md ring-1 ring-sidebar-foreground/5"
-                            style={{
-                              ...STACKED_POSITION,
-                              zIndex: z,
-                              transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
-                              transition: PREVIEW_TRANSITION,
-                            }}
-                          >
-                            <LinkCardPreview
-                              preview={preview}
-                              className="h-full w-full"
-                            />
-                          </div>
-                        );
-                      }
-                      if (preview.type === "color") {
-                        return (
-                          <div
-                            key={preview.assetId}
-                            className="absolute aspect-square rounded-xl shadow-md ring-1 ring-sidebar-foreground/5"
-                            style={{
-                              ...STACKED_POSITION,
-                              zIndex: z,
-                              backgroundColor: preview.hex,
-                              transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
-                              transition: PREVIEW_TRANSITION,
-                              transitionDelay: hovered
-                                ? `${(count - 1 - z) * 10}ms`
-                                : `${z * 10}ms`,
-                            }}
-                          />
-                        );
-                      }
-                      return (
-                        <div
+                <div className="pointer-events-none relative z-10 aspect-[3/2] w-full @min-[64rem]:max-h-[calc((100svh-13.75rem)/2)]">
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ containerType: "size" }}
+                  >
+                    {previews.length === 0 ? (
+                      <EmptyCollectionPreview
+                        active={active}
+                        onPointerEnter={handleHoverTargetEnter}
+                        onPointerLeave={handleHoverTargetLeave}
+                      />
+                    ) : (
+                      previews.map((preview, index) => (
+                        <CollectionPreviewCard
                           key={preview.assetId}
-                          className="absolute aspect-square overflow-hidden rounded-xl bg-sidebar shadow-md ring-1 ring-sidebar-foreground/5"
-                          style={{
-                            ...STACKED_POSITION,
-                            zIndex: z,
-                            transform: `translate(${hovered ? hoverX : x}px, ${hovered ? hoverY : y}px) rotate(${hovered ? hovDeg : deg}deg) scale(${hovered ? 1.02 : 1})`,
-                            transition: PREVIEW_TRANSITION,
-                            transitionDelay: hovered
-                              ? `${(count - 1 - z) * 10}ms`
-                              : `${z * 10}ms`,
-                          }}
-                        >
-                          <NoteMiniature
-                            content={preview.snippet ?? ""}
-                            title={preview.title}
-                            size="collection"
-                          />
-                        </div>
-                      );
-                    })
-                  )}
+                          preview={preview}
+                          index={index}
+                          count={previews.length}
+                          stackDirection={stackDirection}
+                          active={active}
+                          onPointerEnter={handleHoverTargetEnter}
+                          onPointerLeave={handleHoverTargetLeave}
+                        />
+                      ))
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 bg-sidebar px-3 py-2.5">
-                  <span className="truncate text-sm font-medium">
+
+                <div
+                  aria-hidden="true"
+                  data-collection-hover-target
+                  onPointerEnter={handleHoverTargetEnter}
+                  onPointerLeave={handleHoverTargetLeave}
+                  className="absolute top-[64%] bottom-0 left-1/2 z-0 w-[68%] -translate-x-1/2"
+                />
+
+                <div
+                  data-collection-hover-target
+                  data-active={active}
+                  onPointerEnter={handleHoverTargetEnter}
+                  onPointerLeave={handleHoverTargetLeave}
+                  className="relative z-10 flex max-w-full min-w-0 items-center gap-5 rounded-md bg-sidebar px-3 py-1.5 transition-colors duration-150 ease-out group-focus-visible/card:bg-sidebar-active data-[active=true]:bg-sidebar-active motion-reduce:transition-none"
+                >
+                  <span className="min-w-0 truncate text-sm font-medium">
                     {collection.name}
                   </span>
-                  <span className="ml-auto text-xs text-sidebar-foreground/40">
+                  <span
+                    aria-label={`${collection.assetCount} items`}
+                    className="ml-auto shrink-0 text-xs text-sidebar-foreground/55 tabular-nums"
+                  >
                     {collection.assetCount}
                   </span>
                 </div>
@@ -312,4 +207,171 @@ export function CollectionCard({
       </AlertDialog>
     </>
   );
+}
+
+function EmptyCollectionPreview({
+  active,
+  onPointerEnter,
+  onPointerLeave,
+}: {
+  active: boolean;
+  onPointerEnter: () => void;
+  onPointerLeave: (event: ReactPointerEvent<HTMLElement>) => void;
+}) {
+  return (
+    <div
+      aria-hidden="true"
+      data-collection-hover-target
+      data-active={active}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+      className="pointer-events-auto flex aspect-[4/3] shrink-0 flex-col items-center justify-center gap-2 rounded-lg border border-border bg-sidebar px-3 text-sidebar-foreground/55 transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-[active=true]:scale-105 data-[active=true]:rotate-2 motion-reduce:transition-none"
+      style={{ width: "min(68cqw, 95cqh, 12rem)" }}
+    >
+      <FolderOpenIcon
+        className="size-7 text-sidebar-foreground/35"
+        strokeWidth={1.5}
+      />
+      <span className="text-xs font-medium">No items yet</span>
+    </div>
+  );
+}
+
+function CollectionPreviewCard({
+  preview,
+  index,
+  count,
+  stackDirection,
+  active,
+  onPointerEnter,
+  onPointerLeave,
+}: {
+  preview: FolderChildPreview;
+  index: number;
+  count: number;
+  stackDirection: number;
+  active: boolean;
+  onPointerEnter: () => void;
+  onPointerLeave: (event: ReactPointerEvent<HTMLElement>) => void;
+}) {
+  const reduceMotion = useReducedMotion();
+  const seed = hashString(preview.assetId);
+  const isSinglePreview = count === 1;
+  const side = (index % 2 === 0 ? 1 : -1) * stackDirection;
+  const horizontalDrift = (((seed >>> 4) & 7) - 3.5) * 0.15;
+  const verticalDrift = (((seed >>> 8) & 7) - 3.5) * 0.12;
+  const rotationDrift = (((seed >>> 12) & 7) - 3.5) * 0.08;
+  const restingX =
+    (isSinglePreview || index === 0 ? 0 : side * (4 + index * 3)) +
+    (isSinglePreview ? 0 : horizontalDrift);
+  const restingY =
+    (isSinglePreview || index === 0 ? 0 : 1 + index * 1.3) +
+    (isSinglePreview ? 0 : verticalDrift);
+  const restingRotation =
+    (isSinglePreview ? 0 : side * (index === 0 ? 0.8 : 2 + index * 1.2)) +
+    rotationDrift;
+  const hoverX = isSinglePreview
+    ? restingX
+    : side * (index === 0 ? 3 : 8 + index * 3) + horizontalDrift;
+  const hoverY = isSinglePreview
+    ? restingY
+    : restingY - (index === 0 ? 1.5 : 1);
+  const hoverRotation = isSinglePreview
+    ? restingRotation + side * 2
+    : side * (index === 0 ? 3 : 5 + Math.min(index, 2) * 0.8) + rotationDrift;
+  const translateX = active ? hoverX : restingX;
+  const translateY = active ? hoverY : restingY;
+  const rotation = active ? hoverRotation : restingRotation;
+  const scale = active
+    ? isSinglePreview
+      ? 1.05
+      : 1.015
+    : 0.94 + ((seed >>> 21) & 7) / 100;
+
+  const positionStyle: CSSProperties = {
+    left: "50%",
+    top: "50%",
+    zIndex: count - index,
+  };
+  const motionPosition = {
+    x: `calc(-50% + ${translateX}cqw)`,
+    y: `calc(-50% + ${translateY}cqh)`,
+    rotate: rotation,
+    scale,
+  };
+  const motionTransition = reduceMotion
+    ? { duration: 0 }
+    : {
+        type: "spring" as const,
+        duration: 0.2,
+        bounce: 0.42,
+        delay: active ? index * 0.004 : 0,
+      };
+
+  if (preview.type === "image") {
+    return preview.url ? (
+      <motion.img
+        data-collection-hover-target
+        src={preview.url}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        aria-hidden="true"
+        initial={false}
+        animate={motionPosition}
+        transition={motionTransition}
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
+        className="pointer-events-auto absolute block h-auto max-h-[75cqh] w-auto max-w-[62cqw] rounded-lg border border-transparent object-contain"
+        style={positionStyle}
+      />
+    ) : null;
+  }
+
+  const ratio = preview.type === "note" ? 0.82 : 1;
+  const style: CSSProperties = {
+    ...positionStyle,
+    width:
+      preview.type === "link"
+        ? "min(64cqw, 62cqh)"
+        : `min(62cqw, ${ratio * 75}cqh)`,
+    aspectRatio: preview.type === "link" ? undefined : ratio,
+  };
+
+  return (
+    <motion.div
+      data-collection-hover-target
+      aria-hidden="true"
+      initial={false}
+      animate={motionPosition}
+      transition={motionTransition}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+      className="pointer-events-auto absolute overflow-hidden rounded-lg border border-border bg-card"
+      style={style}
+    >
+      {preview.type === "link" ? (
+        <LinkCardPreview preview={preview} variant="collection" />
+      ) : preview.type === "color" ? (
+        <div className="size-full" style={{ backgroundColor: preview.hex }} />
+      ) : (
+        <div className="size-full overflow-hidden bg-sidebar">
+          <NoteMiniature
+            content={preview.snippet ?? ""}
+            title={preview.title}
+            size="collection"
+          />
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+function hashString(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }

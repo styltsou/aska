@@ -8,10 +8,12 @@ function ScrollArea({
   children,
   viewportClassName,
   viewportRef,
+  contentClassName,
   ...props
 }: ScrollAreaPrimitive.Root.Props & {
   viewportClassName?: string;
   viewportRef?: React.Ref<HTMLDivElement>;
+  contentClassName?: string;
 }) {
   return (
     <ScrollAreaPrimitive.Root
@@ -24,7 +26,16 @@ function ScrollArea({
         data-slot="scroll-area-viewport"
         className={cn("h-full w-full rounded-[inherit]", viewportClassName)}
       >
-        {children}
+        {contentClassName ? (
+          <ScrollAreaPrimitive.Content
+            className={cn("w-full min-w-0", contentClassName)}
+            style={{ minWidth: 0 }}
+          >
+            {children}
+          </ScrollAreaPrimitive.Content>
+        ) : (
+          children
+        )}
       </ScrollAreaPrimitive.Viewport>
       <ScrollAreaPrimitive.Scrollbar
         data-slot="scroll-area-scrollbar"

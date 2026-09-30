@@ -72,7 +72,7 @@ export function WorkspacePage() {
 
   return (
     <div className="@container">
-      <div className="grid grid-cols-1 gap-3 @min-[25rem]:grid-cols-2 @min-[38rem]:grid-cols-3 @min-[50rem]:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 @min-[38rem]:grid-cols-2 @min-[64rem]:grid-cols-3 @min-[120rem]:grid-cols-4">
         {collections.map((collection) => (
           <CollectionCard
             key={collection.slug}

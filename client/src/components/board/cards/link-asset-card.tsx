@@ -222,10 +222,13 @@ type LinkCardPreviewData = Pick<
 export function LinkCardPreview({
   preview,
   className,
+  variant = "default",
 }: {
   preview: LinkCardPreviewData;
   className?: string;
+  variant?: "default" | "collection";
 }) {
+  const compact = variant === "collection";
   const isYoutube = Boolean(preview.videoId);
   const thumbnailUrl =
     preview.url ??
@@ -233,20 +236,29 @@ export function LinkCardPreview({
       ? YOUTUBE_THUMBNAIL_URL(preview.videoId)
       : undefined);
   const displayTitle = preview.title?.trim() || "Untitled link";
-  const hostname = preview.hostname ?? "Link";
+  const hostname = preview.hostname ?? (isYoutube ? "YouTube" : "Link");
 
   return (
     <div
-      className={cn("flex h-full w-full min-w-0 flex-col bg-card", className)}
+      className={cn(
+        "flex w-full min-w-0 flex-col bg-card",
+        compact ? "overflow-hidden bg-sidebar" : "h-full",
+        className,
+      )}
     >
-      <div className="relative aspect-video w-full shrink-0 overflow-hidden rounded-sm bg-muted/40">
+      <div
+        className={cn(
+          "relative shrink-0 overflow-hidden rounded-sm bg-muted/40",
+          compact ? "mx-2 mt-2 aspect-video" : "aspect-video w-full",
+        )}
+      >
         {thumbnailUrl ? (
           <ProgressiveImage
             src={thumbnailUrl}
             blurDataURL={preview.blurDataURL}
             alt=""
             loading="lazy"
-            className="size-full object-cover"
+            className="absolute inset-0 size-full object-cover"
           />
         ) : (
           <div className="flex size-full items-center justify-center">
@@ -255,14 +267,29 @@ export function LinkCardPreview({
         )}
         {isYoutube ? (
           <span className="absolute inset-0 flex items-center justify-center">
-            <span className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-popover/85 text-popover-foreground shadow-lg ring-1 ring-border/30 backdrop-blur-sm">
-              <PlayIcon className="ml-0.5 size-4 fill-current" />
+            <span
+              className={cn(
+                "flex items-center justify-center rounded-full border border-border/70 bg-popover/85 text-popover-foreground shadow-lg ring-1 ring-border/30 backdrop-blur-sm",
+                compact ? "size-7" : "size-9",
+              )}
+            >
+              <PlayIcon
+                className={cn(
+                  "ml-0.5 fill-current",
+                  compact ? "size-3" : "size-4",
+                )}
+              />
             </span>
           </span>
         ) : null}
       </div>
-      <div className="flex flex-col gap-1 px-2 pt-1.5 pb-2">
-        <div className="flex items-center gap-1.5 text-[11px] text-sidebar-foreground/60">
+      <div
+        className={cn(
+          "flex flex-col",
+          compact ? "gap-0.5 px-2 pt-1 pb-2" : "gap-1 px-2 pt-1.5 pb-2",
+        )}
+      >
+        <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-sidebar-foreground/60">
           {preview.favicon ? (
             <img
               src={preview.favicon}
@@ -274,7 +301,14 @@ export function LinkCardPreview({
           )}
           <span className="truncate">{hostname}</span>
         </div>
-        <div className="line-clamp-2 text-sm leading-snug font-medium text-sidebar-foreground">
+        <div
+          className={cn(
+            "font-medium text-sidebar-foreground",
+            compact
+              ? "shrink-0 truncate text-xs leading-snug"
+              : "line-clamp-2 text-sm leading-snug",
+          )}
+        >
           {displayTitle}
         </div>
         {preview.description?.trim() ? (
@@ -283,10 +317,22 @@ export function LinkCardPreview({
               description={preview.description.trim()}
               videoId={preview.videoId}
               interactive={false}
-              className="line-clamp-3 text-xs leading-snug whitespace-pre-line text-muted-foreground"
+              className={cn(
+                "text-muted-foreground",
+                compact
+                  ? "line-clamp-3 text-[11px] leading-snug whitespace-pre-line"
+                  : "line-clamp-3 text-xs leading-snug whitespace-pre-line",
+              )}
             />
           ) : (
-            <div className="line-clamp-3 text-xs leading-snug whitespace-pre-line text-muted-foreground">
+            <div
+              className={cn(
+                "text-muted-foreground",
+                compact
+                  ? "line-clamp-3 text-[11px] leading-snug whitespace-pre-line"
+                  : "line-clamp-3 text-xs leading-snug whitespace-pre-line",
+              )}
+            >
               {preview.description.trim()}
             </div>
           )
