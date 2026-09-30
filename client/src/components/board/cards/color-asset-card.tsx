@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { gradientToCss } from "@/lib/color-gradient";
+import { resolveGradientCss } from "@/lib/color-gradient";
 import { hasSelectionModifier } from "@/lib/selection";
 import type { ColorAsset } from "@/types/asset";
 
@@ -25,26 +25,10 @@ export function ColorAssetCard({
     ? `${asset.gradient.type === "radial" ? "Radial" : "Linear"} gradient`
     : null;
   const surfaceStyle = asset.gradient
-    ? {
-        background: gradientToCss(
-          asset.gradient.stops ?? [
-            { color: asset.gradient.from, position: 0 },
-            { color: asset.gradient.to, position: 100 },
-          ],
-          asset.gradient.type ?? "linear",
-          asset.gradient.angle,
-        ),
-      }
+    ? { background: resolveGradientCss(asset.gradient) }
     : { backgroundColor: asset.hex };
   const copiedValue = asset.gradient
-    ? gradientToCss(
-        asset.gradient.stops ?? [
-          { color: asset.gradient.from, position: 0 },
-          { color: asset.gradient.to, position: 100 },
-        ],
-        asset.gradient.type ?? "linear",
-        asset.gradient.angle,
-      )
+    ? resolveGradientCss(asset.gradient)
     : asset.hex;
   const copyLabel = asset.gradient ? "Copy CSS gradient" : "Copy hex color";
 

@@ -28,10 +28,14 @@ import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
 import { remarkHighlight } from "@/lib/remark-highlight";
 import { useUpdateNote } from "@/api/collection/hooks";
-import { NOTE_MENTION_CHIP_CLASS } from "@/components/board/note-mentions";
+import {
+  NOTE_MENTION_CHIP_CLASS,
+  MentionPillBody,
+} from "@/components/board/note-mentions";
 import { NoteMermaidPreview } from "@/components/board/note-mermaid-preview";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { NoteAsset } from "@/types/asset";
+import type { NoteMentionType } from "@/api/note-mentions/types";
 
 const BARE_URL_RE = /(^|[^[(])(https?:\/\/[^\s<"'>)\]]+)/gi;
 const CARD_MAX_HEIGHT = 320;
@@ -298,13 +302,13 @@ function createMDComponents(compact: boolean): Components {
     a: ({ className, href, children, ...props }) => {
       const mention = /^(note|color):(\d+)$/.exec(href ?? "");
       if (mention) {
+        const assetType = mention[1] as NoteMentionType;
         return (
           <span
             className={cn(NOTE_MENTION_CHIP_CLASS, "cursor-inherit", className)}
-            data-asset-mention={mention[1]}
+            data-asset-mention={assetType}
           >
-            <span aria-hidden="true">@</span>
-            <span className="truncate">{children}</span>
+            <MentionPillBody assetType={assetType} label={children} />
           </span>
         );
       }

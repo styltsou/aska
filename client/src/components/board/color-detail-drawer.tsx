@@ -55,7 +55,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
-import { gradientToCss } from "@/lib/color-gradient";
+import { resolveGradientCss } from "@/lib/color-gradient";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { ColorAsset, ImageAsset } from "@/types/asset";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
@@ -150,14 +150,7 @@ export function ColorDetailDrawer({
   const hasGradient =
     displayedColor?.gradient !== undefined && displayedColor?.gradient !== null;
   const gradientCss = hasGradient
-    ? gradientToCss(
-        displayedColor!.gradient?.stops ?? [
-          { color: displayedColor!.gradient!.from, position: 0 },
-          { color: displayedColor!.gradient!.to, position: 100 },
-        ],
-        displayedColor!.gradient?.type ?? "linear",
-        displayedColor!.gradient?.angle ?? 90,
-      )
+    ? resolveGradientCss(displayedColor!.gradient!)
     : undefined;
 
   useEffect(() => setIncludeDescendants(false), [displayedColor?.id]);

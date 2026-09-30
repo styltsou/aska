@@ -25,6 +25,33 @@ export function gradientToCss(
     : `linear-gradient(${angle}deg, ${stopList})`;
 }
 
+export type GradientSpec = {
+  from: string;
+  to: string;
+  angle?: number;
+  type?: GradientType;
+  stops?: GradientStop[] | Array<Pick<GradientStop, "color" | "position">>;
+};
+
+export function resolveGradientCss(gradient: GradientSpec) {
+  return gradientToCss(
+    gradient.stops ?? [
+      { color: gradient.from, position: 0 },
+      { color: gradient.to, position: 100 },
+    ],
+    gradient.type ?? "linear",
+    gradient.angle ?? 90,
+  );
+}
+
+export function gradientRepresentativeColor(gradient: GradientSpec) {
+  const stops = gradient.stops;
+  if (stops?.length) {
+    return [...stops].sort((a, b) => a.position - b.position)[0]!.color;
+  }
+  return gradient.from;
+}
+
 export function colorAtPosition(stops: GradientStop[], position: number) {
   const sorted = sortGradientStops(stops);
   const nextIndex = sorted.findIndex((stop) => stop.position >= position);

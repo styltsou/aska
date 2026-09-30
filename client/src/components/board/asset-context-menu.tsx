@@ -34,7 +34,7 @@ import {
   type MoveToDialogSource,
 } from "@/components/move-to-dialog";
 import { copyImageToClipboard } from "@/lib/clipboard";
-import { gradientToCss } from "@/lib/color-gradient";
+import { resolveGradientCss } from "@/lib/color-gradient";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import {
   useWorkspacePeek,
@@ -116,14 +116,7 @@ function colorActions(
   onPeek?: () => void,
 ) {
   const copiedValue = asset.gradient
-    ? gradientToCss(
-        asset.gradient.stops ?? [
-          { color: asset.gradient.from, position: 0 },
-          { color: asset.gradient.to, position: 100 },
-        ],
-        asset.gradient.type ?? "linear",
-        asset.gradient.angle,
-      )
+    ? resolveGradientCss(asset.gradient)
     : asset.hex;
   const copyLabel = asset.gradient ? "Copy CSS" : "Copy hex";
 
