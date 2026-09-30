@@ -158,6 +158,45 @@ export const LightCollectionSchema = z.object({
 
 export type LightCollection = z.infer<typeof LightCollectionSchema>;
 
+const HexColorSchema = z
+  .string()
+  .regex(
+    /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i,
+    "Must be a hex color like #rrggbb or #rrggbbaa",
+  );
+
+const ColorGradientSchema = z.object({
+  from: HexColorSchema,
+  to: HexColorSchema,
+  angle: z.number().int().min(0).max(360),
+  type: z.enum(["linear", "radial"]).optional(),
+  stops: z
+    .array(
+      z.object({
+        color: HexColorSchema,
+        position: z.number().min(0).max(100),
+      }),
+    )
+    .min(2)
+    .max(12)
+    .optional(),
+});
+
+const MentionColorSchema = z.object({
+  hex: z.string().nullable(),
+  gradient: ColorGradientSchema.nullable(),
+});
+
+/**
+ * Color values of the assets a note references, keyed by the markdown
+ * destination (`"color:7"`), so read-only renderers can draw mention swatches
+ * without a resolve request. Only colors are included: note pills need no
+ * extra data to render.
+ */
+export const MentionColorsSchema = z.record(z.string(), MentionColorSchema);
+
+export type MentionColors = z.infer<typeof MentionColorsSchema>;
+
 export const FolderChildPreviewSchema = z.object({
   assetId: z.string(),
   type: z.enum(["image", "video", "note", "link", "color"]),
@@ -166,12 +205,14 @@ export const FolderChildPreviewSchema = z.object({
   height: z.number().optional(),
   blurDataURL: z.string().nullable().optional(),
   hex: z.string().optional(),
+  gradient: ColorGradientSchema.nullable().optional(),
   snippet: z.string().optional(),
   hostname: z.string().optional(),
   title: z.string().nullable().optional(),
   favicon: z.string().optional(),
   videoId: z.string().optional(),
   description: z.string().nullable().optional(),
+  mentionColors: MentionColorsSchema.optional(),
 });
 
 export type FolderChildPreview = z.infer<typeof FolderChildPreviewSchema>;
@@ -220,30 +261,6 @@ export const CreateNoteSchema = z
   );
 
 export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
-
-const HexColorSchema = z
-  .string()
-  .regex(
-    /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i,
-    "Must be a hex color like #rrggbb or #rrggbbaa",
-  );
-
-const ColorGradientSchema = z.object({
-  from: HexColorSchema,
-  to: HexColorSchema,
-  angle: z.number().int().min(0).max(360),
-  type: z.enum(["linear", "radial"]).optional(),
-  stops: z
-    .array(
-      z.object({
-        color: HexColorSchema,
-        position: z.number().min(0).max(100),
-      }),
-    )
-    .min(2)
-    .max(12)
-    .optional(),
-});
 
 export const CreateColorSchema = z.object({
   hex: HexColorSchema,
@@ -444,6 +461,7 @@ export const CollectionNoteNodeSchema = z.object({
   updatedAt: z.string().optional(),
   position: BoardPositionSchema.nullable(),
   frontIndex: z.number().int().min(0).max(100_000).nullable(),
+  mentionColors: MentionColorsSchema.optional(),
 });
 
 export const LinkResolutionStatusSchema = z.enum([

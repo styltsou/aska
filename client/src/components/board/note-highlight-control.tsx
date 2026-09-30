@@ -31,6 +31,7 @@ export function NoteHighlightControl({
   canRemoveHighlight,
   onColorChange,
   onHighlightingChange,
+  className,
 }: {
   editorRef: RefObject<NoteRichTextHandle | null>;
   color?: NoteHighlightColor;
@@ -38,6 +39,7 @@ export function NoteHighlightControl({
   canRemoveHighlight: boolean;
   onColorChange: (color?: NoteHighlightColor) => void;
   onHighlightingChange: (active: boolean) => void;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const isMarkerActive = isHighlighting && Boolean(color);
@@ -70,9 +72,10 @@ export function NoteHighlightControl({
                   variant="ghost"
                   size="default"
                   className={cn(
-                    "relative h-8 rounded-lg p-0 transition-[width,background-color,color] duration-150 ease-out",
+                    "relative h-8 rounded-lg p-0",
+                    className,
+                    "transition-[width,background-color,color] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)]",
                     isMarkerActive ? "w-13" : "w-8",
-                    isHighlighting && "bg-secondary text-foreground",
                   )}
                   aria-label={
                     isHighlighting

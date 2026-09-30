@@ -1400,7 +1400,76 @@ function applyNoteDraftToContents(
   };
 }
 
-function applyUpdatedColorToContents(
+/** `"color-7"` (client asset id) -> `"color:7"` (markdown destination). */
+function mentionColorKey(assetId: string) {
+  return `color:${assetId.replace(/^color-/, "")}`;
+}
+
+/**
+ * Repaints a folder child preview after a saved color edit. Handles the color
+ * card itself and any note preview that mentions it.
+ */
+function applySavedColorToPreview(
+  preview: FolderChildPreview,
+  color: UpdatedColor,
+): FolderChildPreview {
+  if (preview.type === "color" && preview.assetId === color.id) {
+    return {
+      ...preview,
+      hex: color.hex,
+      title: color.title,
+      gradient: color.gradient ?? null,
+    };
+  }
+
+  if (preview.type !== "note" || !preview.mentionColors) return preview;
+
+  const key = mentionColorKey(color.id);
+  const entry = preview.mentionColors[key];
+  if (!entry) return preview;
+
+  return {
+    ...preview,
+    mentionColors: {
+      ...preview.mentionColors,
+      [key]: { hex: color.hex, gradient: color.gradient ?? null },
+    },
+  };
+}
+
+/** Repaints a folder child preview from an in-flight color edit. */
+function applyColorDraftToPreview(
+  preview: FolderChildPreview,
+  draft: UpdateColorInput & { assetId: string },
+): FolderChildPreview {
+  if (preview.type === "color" && preview.assetId === draft.assetId) {
+    return {
+      ...preview,
+      ...(draft.hex === undefined ? {} : { hex: draft.hex, title: null }),
+      ...(draft.gradient === undefined ? {} : { gradient: draft.gradient }),
+    };
+  }
+
+  if (preview.type !== "note" || !preview.mentionColors) return preview;
+
+  const key = mentionColorKey(draft.assetId);
+  const entry = preview.mentionColors[key];
+  if (!entry) return preview;
+
+  return {
+    ...preview,
+    mentionColors: {
+      ...preview.mentionColors,
+      [key]: {
+        hex: draft.hex ?? entry.hex,
+        gradient:
+          draft.gradient === undefined ? entry.gradient : draft.gradient,
+      },
+    },
+  };
+}
+
+export function applyUpdatedColorToContents(
   current: CollectionContentsResponse | undefined,
   color: UpdatedColor,
 ): CollectionContentsResponse | undefined {
@@ -1412,21 +1481,31 @@ function applyUpdatedColorToContents(
       if (node.type === "color" && node.id === color.id) {
         return { ...node, ...color };
       }
+      if (node.type === "note" && node.mentionColors) {
+        const key = mentionColorKey(color.id);
+        const entry = node.mentionColors[key];
+        if (!entry) return node;
+        return {
+          ...node,
+          mentionColors: {
+            ...node.mentionColors,
+            [key]: { hex: color.hex, gradient: color.gradient ?? null },
+          },
+        };
+      }
       if (node.type !== "folder") return node;
 
       return {
         ...node,
         previews: node.previews.map((preview) =>
-          preview.type === "color" && preview.assetId === color.id
-            ? { ...preview, hex: color.hex, title: color.title }
-            : preview,
+          applySavedColorToPreview(preview, color),
         ),
       };
     }),
   };
 }
 
-function applyColorDraftToContents(
+export function applyColorDraftToContents(
   current: CollectionContentsResponse | undefined,
   draft: UpdateColorInput & { assetId: string },
 ): CollectionContentsResponse | undefined {
@@ -1443,19 +1522,28 @@ function applyColorDraftToContents(
           ...(draft.gradient === undefined ? {} : { gradient: draft.gradient }),
         };
       }
+      if (node.type === "note" && node.mentionColors) {
+        const key = mentionColorKey(draft.assetId);
+        const entry = node.mentionColors[key];
+        if (!entry) return node;
+        return {
+          ...node,
+          mentionColors: {
+            ...node.mentionColors,
+            [key]: {
+              hex: draft.hex ?? entry.hex,
+              gradient:
+                draft.gradient === undefined ? entry.gradient : draft.gradient,
+            },
+          },
+        };
+      }
       if (node.type !== "folder") return node;
 
       return {
         ...node,
         previews: node.previews.map((preview) =>
-          preview.type === "color" && preview.assetId === draft.assetId
-            ? {
-                ...preview,
-                ...(draft.hex === undefined
-                  ? {}
-                  : { hex: draft.hex, title: null }),
-              }
-            : preview,
+          applyColorDraftToPreview(preview, draft),
         ),
       };
     }),

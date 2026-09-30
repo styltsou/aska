@@ -58,7 +58,10 @@ import { useBoardInsertionPlacement } from "@/components/canvas";
 import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 import { Button } from "@/components/ui/button";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
-import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
+import {
+  ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+  ASSET_VIEWER_HEADER_ICON_TOGGLE_BUTTON_CLASS,
+} from "@/components/board/asset-viewer-control-styles";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Tooltip,
@@ -1712,6 +1715,7 @@ export function NoteDetailDrawer({
               canRemoveHighlight={canRemoveHighlight}
               onColorChange={setHighlightColor}
               onHighlightingChange={handleHighlightModeChange}
+              className={ASSET_VIEWER_HEADER_ICON_TOGGLE_BUTTON_CLASS}
             />
             <Tooltip>
               <TooltipTrigger
@@ -1748,74 +1752,84 @@ export function NoteDetailDrawer({
           </div>
         </div>
         <div
-          ref={noteContentRef}
-          className={cn(
-            "note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto border-t bg-background transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-            assetModalId
-              ? expanded
-                ? "duration-[400ms]"
-                : "duration-[350ms]"
-              : "duration-[180ms]",
-            expanded ? "border-transparent" : "rounded-t-xl border-border",
-          )}
+          data-slot="note-workspace-main-content"
+          className="relative flex min-h-0 flex-1 flex-col"
         >
-          <div className="mx-auto min-h-full w-full max-w-5xl px-5 sm:px-10 lg:px-16 [&_.ProseMirror]:!pt-2">
-            {(!isCreateMode && hydratedNoteId !== noteId) ||
-            (loading && !activeNote) ? (
-              <NoteEditorLoading />
-            ) : isCreateMode || activeNote ? (
-              <Suspense fallback={<NoteEditorLoading />}>
-                <NoteEditorErrorBoundary noteId={activeNote?.id ?? "new-note"}>
-                  <NoteTitleField
-                    ref={titleInputRef}
-                    value={title}
-                    onChange={handleTitleChange}
-                    onEnter={() => richTextRef.current?.focus()}
-                    autoFocus={isCreateMode}
-                    readOnly={saveState === "deleting"}
-                    className="pt-8"
-                  />
-                  {!isCreateMode ? (
-                    <NoteBacklinks
-                      workspaceSlug={workspaceSlug}
-                      assetId={activeNote?.id}
-                      onOpen={openBacklink}
+          <div
+            ref={noteContentRef}
+            className={cn(
+              "note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto border-t bg-background transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+              assetModalId
+                ? expanded
+                  ? "duration-[400ms]"
+                  : "duration-[350ms]"
+                : "duration-[180ms]",
+              expanded ? "border-transparent" : "rounded-t-xl border-border",
+            )}
+          >
+            <div className="mx-auto min-h-full w-full max-w-5xl px-5 sm:px-10 lg:px-16 [&_.ProseMirror]:!pt-2">
+              {(!isCreateMode && hydratedNoteId !== noteId) ||
+              (loading && !activeNote) ? (
+                <NoteEditorLoading />
+              ) : isCreateMode || activeNote ? (
+                <Suspense fallback={<NoteEditorLoading />}>
+                  <NoteEditorErrorBoundary
+                    noteId={activeNote?.id ?? "new-note"}
+                  >
+                    <NoteTitleField
+                      ref={titleInputRef}
+                      value={title}
+                      onChange={handleTitleChange}
+                      onEnter={() => richTextRef.current?.focus()}
+                      autoFocus={isCreateMode}
+                      readOnly={saveState === "deleting"}
+                      className="pt-8"
                     />
-                  ) : null}
-                  <div>
-                    <NoteRichText
-                      key={isCreateMode ? "create-note-editor" : activeNote?.id}
-                      ref={richTextRef}
-                      markdown={frontMatter.body}
-                      workspaceSlug={workspaceSlug}
-                      sourceNoteId={activeNote?.id}
-                      onOpenMention={(identity, resolved) =>
-                        void openMentionTarget(identity, resolved)
-                      }
-                      editable={saveState !== "deleting"}
-                      autoFocus={!isCreateMode && !sharedMorphing}
-                      scrollContainerRef={noteContentRef}
-                      onExtractSelection={
-                        noteExtractionTarget ? extractSelection : undefined
-                      }
-                      highlightColor={highlightColor}
-                      highlightMode={highlightMode}
-                      onHighlightModeChange={handleHighlightModeChange}
-                      onHighlightSelectionChange={setCanRemoveHighlight}
-                      onChange={handleDraftChange}
-                      onSaveShortcut={() => {
-                        const content = getSaveableNoteContent(
-                          draftRef.current,
-                        );
-                        if (!content) return;
-                        if (isCreateMode && !activeNote) create(content, title);
-                        else persist(content, false, title);
-                      }}
-                    />
-                  </div>
-                </NoteEditorErrorBoundary>
-              </Suspense>
-            ) : null}
+                    {!isCreateMode ? (
+                      <NoteBacklinks
+                        workspaceSlug={workspaceSlug}
+                        assetId={activeNote?.id}
+                        onOpen={openBacklink}
+                      />
+                    ) : null}
+                    <div>
+                      <NoteRichText
+                        key={
+                          isCreateMode ? "create-note-editor" : activeNote?.id
+                        }
+                        ref={richTextRef}
+                        markdown={frontMatter.body}
+                        workspaceSlug={workspaceSlug}
+                        sourceNoteId={activeNote?.id}
+                        onOpenMention={(identity, resolved) =>
+                          void openMentionTarget(identity, resolved)
+                        }
+                        editable={saveState !== "deleting"}
+                        autoFocus={!isCreateMode && !sharedMorphing}
+                        scrollContainerRef={noteContentRef}
+                        onExtractSelection={
+                          noteExtractionTarget ? extractSelection : undefined
+                        }
+                        highlightColor={highlightColor}
+                        highlightMode={highlightMode}
+                        onHighlightModeChange={handleHighlightModeChange}
+                        onHighlightSelectionChange={setCanRemoveHighlight}
+                        onChange={handleDraftChange}
+                        onSaveShortcut={() => {
+                          const content = getSaveableNoteContent(
+                            draftRef.current,
+                          );
+                          if (!content) return;
+                          if (isCreateMode && !activeNote)
+                            create(content, title);
+                          else persist(content, false, title);
+                        }}
+                      />
+                    </div>
+                  </NoteEditorErrorBoundary>
+                </Suspense>
+              ) : null}
+            </div>
           </div>
         </div>
         {saveState === "error" ? (

@@ -5,6 +5,7 @@ import {
   Children,
   createElement,
   isValidElement,
+  type CSSProperties,
   type ReactElement,
   type ReactNode,
   useCallback,
@@ -26,12 +27,21 @@ import type { RootContent } from "hast";
 import { parseFrontMatter } from "@/lib/front-matter";
 import { cn } from "@/lib/utils";
 import { hasSelectionModifier } from "@/lib/selection";
+import {
+  gradientRepresentativeColor,
+  resolveGradientCss,
+} from "@/lib/color-gradient";
 import { remarkHighlight } from "@/lib/remark-highlight";
 import { useUpdateNote } from "@/api/collection/hooks";
-import { NOTE_MENTION_CHIP_CLASS } from "@/components/board/note-mentions";
+import {
+  NOTE_MENTION_CHIP_CLASS,
+  MentionPillBody,
+} from "@/components/board/note-mentions";
 import { NoteMermaidPreview } from "@/components/board/note-mermaid-preview";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { NoteAsset } from "@/types/asset";
+import type { NoteMentionType } from "@/api/note-mentions/types";
+import type { MentionColors } from "@/api/collection/types";
 
 const BARE_URL_RE = /(^|[^[(])(https?:\/\/[^\s<"'>)\]]+)/gi;
 const CARD_MAX_HEIGHT = 320;
@@ -136,7 +146,10 @@ function taskItemIsChecked(node: unknown): boolean {
   );
 }
 
-function createMDComponents(compact: boolean): Components {
+function createMDComponents(
+  compact: boolean,
+  mentionColors: MentionColors | undefined,
+): Components {
   return {
     h1: ({ className, ...props }) => (
       <h1
@@ -298,13 +311,28 @@ function createMDComponents(compact: boolean): Components {
     a: ({ className, href, children, ...props }) => {
       const mention = /^(note|color):(\d+)$/.exec(href ?? "");
       if (mention) {
+        const assetType = mention[1] as NoteMentionType;
+        const color = mentionColors?.[href!];
+        const tint = color?.gradient
+          ? gradientRepresentativeColor(color.gradient)
+          : (color?.hex ?? undefined);
         return (
           <span
             className={cn(NOTE_MENTION_CHIP_CLASS, "cursor-inherit", className)}
-            data-asset-mention={mention[1]}
+            data-asset-mention={assetType}
+            style={
+              tint ? ({ "--mention-tint": tint } as CSSProperties) : undefined
+            }
           >
-            <span aria-hidden="true">@</span>
-            <span className="truncate">{children}</span>
+            <MentionPillBody
+              assetType={assetType}
+              label={children}
+              swatchBackground={
+                color?.gradient
+                  ? resolveGradientCss(color.gradient)
+                  : (color?.hex ?? undefined)
+              }
+            />
           </span>
         );
       }
@@ -413,16 +441,21 @@ export function NoteMarkdown({
   title,
   className,
   compact = false,
+  mentionColors,
 }: {
   content: string;
   title?: string | null;
   className?: string;
   compact?: boolean;
+  mentionColors?: MentionColors;
 }) {
   const body = useMemo(() => parseFrontMatter(content).body, [content]);
   const displayTitle = title?.trim() || "Untitled";
   const isUntitled = !title?.trim();
-  const components = useMemo(() => createMDComponents(compact), [compact]);
+  const components = useMemo(
+    () => createMDComponents(compact, mentionColors),
+    [compact, mentionColors],
+  );
 
   return (
     <div
@@ -619,6 +652,7 @@ export function NoteAssetCard({
             content={asset.content}
             title={asset.title}
             className="min-w-0"
+            mentionColors={asset.mentionColors}
           />
         </div>
       </div>

@@ -1,4 +1,11 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { Node } from "@tiptap/core";
 import {
@@ -7,24 +14,30 @@ import {
   type ReactNodeViewProps,
 } from "@tiptap/react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
+import { motion } from "motion/react";
 import {
   CheckIcon,
   CodeIcon,
   CopyIcon,
   DownloadIcon,
-  EyeIcon,
   Maximize2Icon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   RotateCcwIcon,
-  Trash2Icon,
   XIcon,
   ZoomInIcon,
   ZoomOutIcon,
+  WorkflowIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import { useDiagramPreview } from "./note-mermaid-preview";
 
 const DiagramCodeEditor = lazy(() =>
@@ -95,7 +108,6 @@ async function downloadPng(svg: string) {
 function MermaidBlockView({
   node,
   updateAttributes,
-  deleteNode,
   editor,
 }: ReactNodeViewProps) {
   const source = typeof node.attrs.source === "string" ? node.attrs.source : "";
@@ -105,14 +117,26 @@ function MermaidBlockView({
   const [copied, setCopied] = useState(false);
   const [portalTarget, setPortalTarget] = useState<HTMLElement>();
   const openButtonRef = useRef<HTMLButtonElement>(null);
-  const fullViewRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState<number>();
   const { svg, error } = useDiagramPreview(source);
+
+  useLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+    const updateHeight = () =>
+      setContentHeight(content.getBoundingClientRect().height);
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const wrapper = editor.view.dom;
     setPortalTarget(
       wrapper.closest<HTMLElement>(
-        "[data-slot='note-workspace-content'], [data-slot='dialog-content']",
+        "[data-slot='note-workspace-main-content'], [data-slot='dialog-content']",
       ) ?? document.body,
     );
   }, [editor]);
@@ -151,155 +175,73 @@ function MermaidBlockView({
       contentEditable={false}
     >
       <div className="note-mermaid-toolbar">
-        <span className="note-mermaid-label">Mermaid diagram</span>
-        <div className="note-mermaid-actions">
-          {showInlineCode ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={copied ? "Copied source" : "Copy Mermaid source"}
-              onClick={() => void copySource()}
-            >
-              {copied ? <CheckIcon /> : <CopyIcon />}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Download PNG"
-              disabled={!svg}
-              onClick={exportPng}
-            >
-              <DownloadIcon />
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={showInlineCode ? "Show diagram" : "Edit Mermaid code"}
-            onClick={() => setShowInlineCode(!showInlineCode)}
-          >
-            {showInlineCode ? <EyeIcon /> : <CodeIcon />}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Open diagram full view"
-            ref={openButtonRef}
-            onClick={() => {
-              setShowCodePane(true);
-              setFullView(true);
-            }}
-          >
-            <Maximize2Icon />
-          </Button>
-          {editor.isEditable ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Delete diagram"
-              onClick={deleteNode}
-            >
-              <Trash2Icon />
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      {showInlineCode ? (
-        <textarea
-          className="note-mermaid-inline-source"
-          aria-label="Mermaid source"
-          spellCheck={false}
-          value={source}
-          onChange={(event) => updateAttributes({ source: event.target.value })}
-          onKeyDown={(event) => event.stopPropagation()}
-          readOnly={!editor.isEditable}
-        />
-      ) : (
         <div
-          className="note-mermaid-preview"
-          onDoubleClick={() => setFullView(true)}
+          aria-label="Mermaid view"
+          className="note-mermaid-view-toggle"
+          role="tablist"
         >
-          {svg ? (
-            <div
-              className="note-mermaid-svg"
-              dangerouslySetInnerHTML={{ __html: svg }}
-            />
-          ) : (
-            <span className="note-mermaid-message">
-              {error ??
-                (source.trim() ? "Rendering diagram…" : "Empty diagram")}
-            </span>
-          )}
-        </div>
-      )}
-      {error ? (
-        <div className="note-mermaid-error" role="status">
-          {error}
-        </div>
-      ) : null}
-      {fullView && portalTarget
-        ? createPortal(
-            <div
-              ref={fullViewRef}
-              className="note-mermaid-full"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Mermaid diagram editor"
-              onKeyDown={(event) => {
-                event.stopPropagation();
-                if (event.key !== "Tab") return;
-                const focusable =
-                  fullViewRef.current?.querySelectorAll<HTMLElement>(
-                    'button:not(:disabled), [contenteditable="true"], [tabindex="0"]',
-                  );
-                if (!focusable?.length) return;
-                const first = focusable[0];
-                const last = focusable[focusable.length - 1];
-                if (event.shiftKey && document.activeElement === first) {
-                  event.preventDefault();
-                  last.focus();
-                } else if (!event.shiftKey && document.activeElement === last) {
-                  event.preventDefault();
-                  first.focus();
-                }
-              }}
-            >
-              <div className="note-mermaid-full-header">
+          <motion.span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0.5 left-0.5 z-0 w-[calc((100%_-_0.375rem)/2)] rounded-[calc(var(--radius-md)-2px)] bg-linear-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]"
+            initial={false}
+            animate={{ x: showInlineCode ? "calc(100% + 0.125rem)" : 0 }}
+            transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
+          />
+          <Tooltip>
+            <TooltipTrigger
+              render={
                 <Button
+                  aria-label="Show diagram"
+                  aria-selected={!showInlineCode}
+                  className={cn(
+                    "relative isolate z-10",
+                    !showInlineCode
+                      ? "text-foreground hover:!bg-transparent hover:!text-foreground active:!bg-transparent"
+                      : "text-muted-foreground transition-colors duration-[50ms] hover:!bg-transparent hover:text-foreground active:!bg-transparent active:text-foreground",
+                  )}
+                  role="tab"
+                  size="icon-xs"
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
-                  aria-label="Close diagram view"
+                  onClick={() => setShowInlineCode(false)}
+                >
+                  <WorkflowIcon />
+                </Button>
+              }
+            />
+            <TooltipContent>Show diagram</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  aria-label="Show Mermaid code"
+                  aria-selected={showInlineCode}
+                  className={cn(
+                    "relative isolate z-10",
+                    showInlineCode
+                      ? "text-foreground hover:!bg-transparent hover:!text-foreground active:!bg-transparent"
+                      : "text-muted-foreground transition-colors duration-[50ms] hover:!bg-transparent hover:text-foreground active:!bg-transparent active:text-foreground",
+                  )}
+                  role="tab"
+                  size="icon-xs"
+                  type="button"
+                  variant="ghost"
                   onClick={() => {
-                    setFullView(false);
-                    window.requestAnimationFrame(() =>
-                      openButtonRef.current?.focus(),
-                    );
+                    setShowInlineCode(true);
                   }}
                 >
-                  <XIcon />
+                  <CodeIcon />
                 </Button>
-                <span className="note-mermaid-label">Mermaid diagram</span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowCodePane(!showCodePane)}
-                >
-                  {showCodePane ? (
-                    <PanelLeftCloseIcon />
-                  ) : (
-                    <PanelLeftOpenIcon />
-                  )}
-                  {showCodePane ? "Hide code" : "Show code"}
-                </Button>
-                <div className="note-mermaid-full-header-spacer" />
+              }
+            />
+            <TooltipContent>Show Mermaid code</TooltipContent>
+          </Tooltip>
+        </div>
+        <div className="note-mermaid-actions">
+          <Tooltip>
+            <TooltipTrigger
+              render={
                 <Button
                   type="button"
                   variant="ghost"
@@ -309,6 +251,15 @@ function MermaidBlockView({
                 >
                   {copied ? <CheckIcon /> : <CopyIcon />}
                 </Button>
+              }
+            />
+            <TooltipContent>
+              {copied ? "Copied source" : "Copy source"}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
                 <Button
                   type="button"
                   variant="ghost"
@@ -319,6 +270,177 @@ function MermaidBlockView({
                 >
                   <DownloadIcon />
                 </Button>
+              }
+            />
+            <TooltipContent>Download PNG</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Expand diagram"
+                  ref={openButtonRef}
+                  onClick={() => {
+                    setShowCodePane(true);
+                    setFullView(true);
+                  }}
+                >
+                  <Maximize2Icon />
+                </Button>
+              }
+            />
+            <TooltipContent>Expand diagram</TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+      <motion.div
+        className="note-mermaid-content"
+        initial={false}
+        animate={{ height: contentHeight ?? "auto" }}
+        transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div ref={contentRef}>
+          {showInlineCode ? (
+            <div
+              className="note-mermaid-inline-source"
+              data-error={error ? "true" : undefined}
+            >
+              <Suspense
+                fallback={
+                  <div className="note-mermaid-inline-loading note-mermaid-message">
+                    Loading editor…
+                  </div>
+                }
+              >
+                <DiagramCodeEditor
+                  value={source}
+                  lineNumbers={false}
+                  readOnly={!editor.isEditable}
+                  onChange={(value) => {
+                    if (editor.isEditable) updateAttributes({ source: value });
+                  }}
+                />
+              </Suspense>
+              {error ? (
+                <div className="note-mermaid-inline-error" role="status">
+                  {error}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div
+              className="note-mermaid-preview"
+              onDoubleClick={() => setFullView(true)}
+            >
+              {svg ? (
+                <div
+                  className="note-mermaid-svg"
+                  dangerouslySetInnerHTML={{ __html: svg }}
+                />
+              ) : (
+                <span className="note-mermaid-message">
+                  {error ??
+                    (source.trim() ? "Rendering diagram…" : "Empty diagram")}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+      {fullView && portalTarget
+        ? createPortal(
+            <div
+              className="note-mermaid-full"
+              role="region"
+              aria-label="Expanded Mermaid diagram editor"
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <div className="note-mermaid-full-header">
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Collapse diagram"
+                        onClick={() => {
+                          setFullView(false);
+                          window.requestAnimationFrame(() =>
+                            openButtonRef.current?.focus(),
+                          );
+                        }}
+                      >
+                        <XIcon />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent>Collapse diagram</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label={showCodePane ? "Hide code" : "Show code"}
+                        onClick={() => setShowCodePane(!showCodePane)}
+                      >
+                        {showCodePane ? (
+                          <PanelLeftCloseIcon />
+                        ) : (
+                          <PanelLeftOpenIcon />
+                        )}
+                        {showCodePane ? "Hide code" : "Show code"}
+                      </Button>
+                    }
+                  />
+                  <TooltipContent>
+                    {showCodePane ? "Hide source pane" : "Show source pane"}
+                  </TooltipContent>
+                </Tooltip>
+                <div className="note-mermaid-full-header-spacer" />
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={
+                          copied ? "Copied source" : "Copy Mermaid source"
+                        }
+                        onClick={() => void copySource()}
+                      >
+                        {copied ? <CheckIcon /> : <CopyIcon />}
+                      </Button>
+                    }
+                  />
+                  <TooltipContent>
+                    {copied ? "Copied source" : "Copy source"}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Download PNG"
+                        disabled={!svg}
+                        onClick={exportPng}
+                      >
+                        <DownloadIcon />
+                      </Button>
+                    }
+                  />
+                  <TooltipContent>Download PNG</TooltipContent>
+                </Tooltip>
               </div>
               <div className="note-mermaid-full-body">
                 {showCodePane ? (

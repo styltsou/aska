@@ -8,7 +8,9 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type CSSProperties,
 } from "react";
+import "./note-mentions.css";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   ArrowDownIcon,
@@ -43,9 +45,11 @@ import type {
   NoteMentionType,
 } from "@/api/note-mentions/types";
 import {
+  createHoverCardHandle,
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
+  HoverCardViewport,
 } from "@/components/ui/hover-card";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
@@ -53,7 +57,10 @@ import {
   SUGGESTION_MENU_EXIT_FALLBACK_MS,
   type SuggestionMenuTransitionProps,
 } from "@/components/board/suggestion-menu-transition";
-import { gradientToCss } from "@/lib/color-gradient";
+import {
+  gradientRepresentativeColor,
+  resolveGradientCss,
+} from "@/lib/color-gradient";
 import { FLOATING_GLASS_BACKDROP_CLASS, GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 
@@ -75,12 +82,97 @@ const MentionContext = createContext<MentionContextValue>({
 const mentionSuggestionPluginKey = new PluginKey("assetMentionSuggestion");
 
 export const NOTE_MENTION_CHIP_CLASS =
-  "mx-[0.08em] inline-flex max-w-full cursor-pointer items-center gap-1 rounded-md border border-foreground/10 bg-[color-mix(in_srgb,var(--muted)_18%,transparent)] px-1.5 py-0.5 align-baseline text-[0.875em] leading-none font-medium text-foreground no-underline transition-[background-color,border-color,box-shadow,opacity] duration-100 hover:border-foreground/20 hover:bg-[color-mix(in_srgb,var(--muted)_28%,transparent)]";
+  "mx-[0.08em] inline-flex max-w-full cursor-pointer items-center gap-1 rounded-md border border-foreground/10 bg-[color-mix(in_oklab,var(--background)_90%,var(--mention-tint,var(--foreground)))] px-1.5 py-0.5 align-baseline text-[0.875em] leading-none font-medium text-foreground no-underline transition-[background-color,border-color,box-shadow,opacity] duration-100 hover:border-foreground/20 hover:bg-[color-mix(in_oklab,var(--background)_80%,var(--mention-tint,var(--foreground)))]";
 export const NOTE_MENTION_SELECTED_CLASS = "ring-2 ring-ring/35";
 export const NOTE_MENTION_UNAVAILABLE_CLASS =
   "cursor-default border-transparent bg-muted/45 text-muted-foreground opacity-65 grayscale";
-export const NOTE_MENTION_SWATCH_CLASS =
-  "size-3 shrink-0 rounded-[0.2rem] border border-foreground/15";
+export const NOTE_MENTION_GLYPH_CLASS = "size-3 shrink-0";
+export const NOTE_MENTION_SWATCH_CLASS = `${NOTE_MENTION_GLYPH_CLASS} rounded-[0.2rem] border border-foreground/15`;
+
+// One preview card serves every mention in the editor: the triggers point at it
+// through a handle, so Base UI can hand the card from pill to pill instead of
+// tearing it down and rebuilding it between them. The motion itself lives in
+// note-mentions.css — the shared hover card ships directional slide keyframes,
+// and this card is scale-only by design.
+const MENTION_HOVER_CARD_CLASS =
+  "note-mention-preview-card group w-80 overflow-hidden border-border/60 bg-background/95 p-0 backdrop-blur-xl";
+
+const MENTION_HOVER_CARD_POSITIONER_CLASS =
+  "note-mention-preview-card-positioner";
+
+const MENTION_HOVER_CARD_VIEWPORT_CLASS = "note-mention-preview-card-content";
+
+// The contents wait out the first half of the inflation before popping in, so the
+// card reads as an empty shell filling up rather than text appearing in a box.
+// Each row scales up in place — no slide, so nothing implies a direction.
+const MENTION_HOVER_CARD_REVEAL_BASE =
+  "motion-reduce:animate-none [--tw-ease:cubic-bezier(0.22,1,0.36,1)] group-data-open:animate-in group-data-open:fill-mode-both group-data-open:fade-in-0 group-data-open:zoom-in-92 group-data-open:duration-150";
+const MENTION_HOVER_CARD_REVEAL = [
+  `${MENTION_HOVER_CARD_REVEAL_BASE} group-data-open:delay-[60ms]`,
+  `${MENTION_HOVER_CARD_REVEAL_BASE} group-data-open:delay-[100ms]`,
+  `${MENTION_HOVER_CARD_REVEAL_BASE} group-data-open:delay-[140ms]`,
+] as const;
+
+const noteMentionPreviewCard = createHoverCardHandle<ReactNode>();
+
+export function MentionGlyph({
+  assetType,
+  swatchBackground,
+}: {
+  assetType: NoteMentionType;
+  swatchBackground?: string;
+}) {
+  if (assetType === "note") {
+    return (
+      <FileTextIcon
+        aria-hidden="true"
+        className={NOTE_MENTION_GLYPH_CLASS}
+        strokeWidth={2.5}
+      />
+    );
+  }
+  if (!swatchBackground) return null;
+  return (
+    <span
+      aria-hidden="true"
+      className={NOTE_MENTION_SWATCH_CLASS}
+      style={{ background: swatchBackground }}
+    />
+  );
+}
+
+export function MentionPillBody({
+  assetType,
+  label,
+  swatchBackground,
+}: {
+  assetType: NoteMentionType;
+  label: ReactNode;
+  swatchBackground?: string;
+}) {
+  return (
+    <>
+      <MentionGlyph assetType={assetType} swatchBackground={swatchBackground} />
+      <span className="max-w-64 truncate leading-[1.2]">{label}</span>
+    </>
+  );
+}
+
+export function mentionSwatchBackground(resolved?: NoteMentionTarget) {
+  if (!resolved) return undefined;
+  if (resolved.gradient) return resolveGradientCss(resolved.gradient);
+  return resolved.hex ?? undefined;
+}
+
+export function mentionTint(
+  assetType: NoteMentionType,
+  resolved?: NoteMentionTarget,
+) {
+  if (assetType !== "color" || !resolved) return null;
+  return resolved.gradient
+    ? gradientRepresentativeColor(resolved.gradient)
+    : resolved.hex;
+}
 
 export const AssetMention = Node.create({
   name: "assetMention",
@@ -109,7 +201,7 @@ export const AssetMention = Node.create({
         "data-target-asset-id": String(node.attrs.targetAssetId),
         "data-fallback-label": node.attrs.fallbackLabel,
       },
-      `@${node.attrs.fallbackLabel}`,
+      node.attrs.fallbackLabel,
     ];
   },
   parseMarkdown(token, helpers) {
@@ -222,7 +314,30 @@ export function NoteMentionProvider({
   );
 
   return (
-    <MentionContext.Provider value={value}>{children}</MentionContext.Provider>
+    <MentionContext.Provider value={value}>
+      {children}
+      <NoteMentionPreviewCard />
+    </MentionContext.Provider>
+  );
+}
+
+function NoteMentionPreviewCard() {
+  return (
+    <HoverCard handle={noteMentionPreviewCard}>
+      {({ payload }: { payload: ReactNode }) => (
+        <HoverCardContent
+          side="top"
+          align="start"
+          sideOffset={8}
+          positionerClassName={MENTION_HOVER_CARD_POSITIONER_CLASS}
+          className={MENTION_HOVER_CARD_CLASS}
+        >
+          <HoverCardViewport className={MENTION_HOVER_CARD_VIEWPORT_CLASS}>
+            {payload}
+          </HoverCardViewport>
+        </HoverCardContent>
+      )}
+    </HoverCard>
   );
 }
 
@@ -234,6 +349,7 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
   const resolved = targets.get(`${assetType}:${assetId}`);
   const unavailable = resolutionComplete && !resolved;
   const label = resolved?.label || fallbackLabel;
+  const tint = mentionTint(assetType, resolved);
   const chip = (
     <button
       type="button"
@@ -243,67 +359,125 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
         selected && NOTE_MENTION_SELECTED_CLASS,
         unavailable && NOTE_MENTION_UNAVAILABLE_CLASS,
       )}
+      style={tint ? ({ "--mention-tint": tint } as CSSProperties) : undefined}
       aria-label={`${unavailable ? "Unavailable reference" : "Open reference"}: ${label}`}
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => onOpen?.({ assetId, assetType }, resolved)}
     >
-      <span aria-hidden="true">@</span>
-      {assetType === "color" ? (
-        <span
-          aria-hidden="true"
-          className={NOTE_MENTION_SWATCH_CLASS}
-          style={{
-            background: resolved?.gradient
-              ? gradientToCss(
-                  resolved.gradient.stops ?? [
-                    { color: resolved.gradient.from, position: 0 },
-                    { color: resolved.gradient.to, position: 100 },
-                  ],
-                  resolved.gradient.type ?? "linear",
-                  resolved.gradient.angle,
-                )
-              : (resolved?.hex ?? "currentColor"),
-          }}
-        />
-      ) : null}
-      <span className="max-w-64 truncate">{label}</span>
+      <MentionPillBody
+        assetType={assetType}
+        label={label}
+        swatchBackground={mentionSwatchBackground(resolved)}
+      />
     </button>
   );
 
   return (
     <NodeViewWrapper as="span" className="inline" contentEditable={false}>
-      {assetType === "note" && resolved ? (
-        <HoverCard>
-          <HoverCardTrigger delay={260} closeDelay={80} render={chip} />
-          <HoverCardContent
-            side="top"
-            align="start"
-            sideOffset={8}
-            className="w-80 overflow-hidden border-border/60 bg-background/95 p-0 shadow-2xl backdrop-blur-xl"
-          >
-            <div className="p-3.5">
-              <p className="truncate text-sm font-semibold text-foreground">
-                {resolved.label}
-              </p>
-              <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                {resolved.locationLabel}
-              </p>
-              <div className="relative mt-3 h-10 overflow-hidden">
-                <p className="text-xs leading-5 text-muted-foreground">
-                  {resolved.snippet || "No note preview yet."}
-                </p>
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-b from-transparent to-background/95"
-                />
-              </div>
-            </div>
-          </HoverCardContent>
-        </HoverCard>
+      {resolved ? (
+        <HoverCardTrigger
+          handle={noteMentionPreviewCard}
+          delay={80}
+          closeDelay={80}
+          payload={
+            assetType === "note" ? (
+              <NoteMentionHoverCard target={resolved} />
+            ) : (
+              <ColorMentionHoverCard target={resolved} />
+            )
+          }
+          render={chip}
+        />
       ) : (
         chip
       )}
     </NodeViewWrapper>
+  );
+}
+
+function NoteMentionHoverCard({ target }: { target: NoteMentionTarget }) {
+  return (
+    <div className="p-3.5">
+      <p
+        className={cn(
+          MENTION_HOVER_CARD_REVEAL[0],
+          "truncate text-sm font-semibold text-foreground",
+        )}
+      >
+        {target.label}
+      </p>
+      <p
+        className={cn(
+          MENTION_HOVER_CARD_REVEAL[1],
+          "mt-0.5 truncate text-[11px] text-muted-foreground",
+        )}
+      >
+        {target.locationLabel}
+      </p>
+      <div
+        className={cn(
+          MENTION_HOVER_CARD_REVEAL[2],
+          "relative mt-3 h-10 overflow-hidden",
+        )}
+      >
+        <p className="text-xs leading-5 text-muted-foreground">
+          {target.snippet || "No note preview yet."}
+        </p>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-b from-transparent to-background/95"
+        />
+      </div>
+    </div>
+  );
+}
+
+function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
+  const colorLabel = target.gradient
+    ? `${target.gradient.type === "radial" ? "Radial" : "Linear"} gradient`
+    : (target.hex?.toUpperCase() ?? "Color");
+  const background = target.gradient
+    ? resolveGradientCss(target.gradient)
+    : (target.hex ?? "currentColor");
+
+  return (
+    <div className="flex items-center gap-3 p-3.5">
+      <div
+        aria-hidden="true"
+        className={cn(
+          MENTION_HOVER_CARD_REVEAL[0],
+          "relative size-14 shrink-0 overflow-hidden rounded-md border border-foreground/10 bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)] bg-size-[16px_16px]",
+        )}
+      >
+        <div className="absolute inset-0" style={{ background }} />
+      </div>
+      <div className="min-w-0">
+        <p
+          className={cn(
+            MENTION_HOVER_CARD_REVEAL[0],
+            "truncate text-sm font-semibold text-foreground",
+          )}
+        >
+          {target.label}
+        </p>
+        <p
+          className={cn(
+            MENTION_HOVER_CARD_REVEAL[1],
+            "mt-0.5 truncate font-mono text-[11px] text-muted-foreground",
+          )}
+        >
+          {colorLabel}
+        </p>
+        <p
+          className={cn(
+            MENTION_HOVER_CARD_REVEAL[2],
+            "mt-1.5 truncate text-[11px] text-muted-foreground/75",
+          )}
+        >
+          {target.locationLabel}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -642,14 +816,7 @@ function MentionGroup({
                 className="size-7 rounded-md"
                 style={{
                   background: item.gradient
-                    ? gradientToCss(
-                        item.gradient.stops ?? [
-                          { color: item.gradient.from, position: 0 },
-                          { color: item.gradient.to, position: 100 },
-                        ],
-                        item.gradient.type ?? "linear",
-                        item.gradient.angle,
-                      )
+                    ? resolveGradientCss(item.gradient)
                     : (item.hex ?? "var(--muted)"),
                 }}
               />

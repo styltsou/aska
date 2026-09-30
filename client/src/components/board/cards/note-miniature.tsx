@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import type { MentionColors } from "@/api/collection/types";
+
 import { NoteMarkdown } from "./note-asset-card";
 
 const MINIATURE_STYLES: Record<"folder" | "collection", CSSProperties> = {
@@ -19,10 +21,12 @@ export function NoteMiniature({
   content,
   title,
   size,
+  mentionColors,
 }: {
   content: string;
   title?: string | null;
   size: "folder" | "collection";
+  mentionColors?: MentionColors;
 }) {
   return (
     <div
@@ -33,7 +37,11 @@ export function NoteMiniature({
         className="box-border p-4 [&_.note-card-preview-title]:mb-3"
         style={MINIATURE_STYLES[size]}
       >
-        <NoteMarkdown content={content} title={title} />
+        <NoteMarkdown
+          content={content}
+          title={title}
+          mentionColors={mentionColors}
+        />
       </div>
     </div>
   );

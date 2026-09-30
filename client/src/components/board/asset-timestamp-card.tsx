@@ -78,7 +78,7 @@ export function AssetTimestampCard({
         align={align}
         side={side}
         sideOffset={sideOffset}
-        className="w-fit min-w-0 border-border/60 bg-background/95 whitespace-nowrap shadow-2xl backdrop-blur-xl"
+        className="w-fit min-w-0 border-border/60 bg-background/95 whitespace-nowrap backdrop-blur-xl"
       >
         <div className="flex flex-col gap-1 text-xs">
           {createdLabel ? (

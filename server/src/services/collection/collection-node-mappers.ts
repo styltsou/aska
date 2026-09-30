@@ -1,5 +1,10 @@
 import type { ImageAssetVariants } from "@/db/schema";
-import type { BoardPosition, FolderChildPreview } from "@/dto/collection.dto";
+import type {
+  BoardPosition,
+  FolderChildPreview,
+  MentionColors,
+} from "@/dto/collection.dto";
+import type { StoredColorGradient } from "@/lib/color-gradient";
 import type { ProjectedMedia } from "@/services/url-unfurl/projection";
 
 export type ImageVariantLookup = Map<
@@ -19,6 +24,7 @@ export type FolderPreviewRow = {
   assetType: string | null;
   assetId: number | null;
   hex?: string | null;
+  gradient?: StoredColorGradient | null;
   content: string | null;
   resourceId?: number | null;
   hostname?: string | null;
@@ -41,6 +47,7 @@ export function toFolderPreview(
   row: FolderPreviewRow,
   imageVariants: ImageVariantLookup,
   linkMedia?: LinkMediaLookup,
+  mentionColors?: Map<number, MentionColors>,
 ): FolderChildPreview {
   const variants = row.assetId ? imageVariants.get(row.assetId) : undefined;
   const previewUrl = variants?.preview?.url ?? variants?.original?.url;
@@ -81,6 +88,7 @@ export function toFolderPreview(
       assetId: `color-${row.assetId}`,
       type: "color",
       hex: row.hex,
+      gradient: row.gradient ?? null,
       title: row.title ?? null,
     };
   }
@@ -90,6 +98,7 @@ export function toFolderPreview(
     type: "note",
     title: row.assetTitle ?? row.title ?? null,
     snippet: row.content ? makeSnippet(row.content) : undefined,
+    mentionColors: row.assetId ? mentionColors?.get(row.assetId) : undefined,
   };
 }
 

@@ -46,7 +46,7 @@ import {
 } from "@/api/collection";
 import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import type { NoteMentionTarget } from "@/api/note-mentions/types";
-import { gradientToCss } from "@/lib/color-gradient";
+import { resolveGradientCss } from "@/lib/color-gradient";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { parseFrontMatter } from "@/lib/front-matter";
 import {
@@ -1772,7 +1772,7 @@ function PeekNote({
                 align="end"
                 side="bottom"
                 sideOffset={8}
-                className="w-64 border-border/60 bg-background/95 shadow-2xl backdrop-blur-xl"
+                className="w-64 border-border/60 bg-background/95 backdrop-blur-xl"
               >
                 <p className="text-sm font-medium">Read-only Peek</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -1881,14 +1881,7 @@ function PeekColor({
   workspaceSlug: string;
 }) {
   const gradient = color.gradient
-    ? gradientToCss(
-        color.gradient.stops ?? [
-          { color: color.gradient.from, position: 0 },
-          { color: color.gradient.to, position: 100 },
-        ],
-        color.gradient.type ?? "linear",
-        color.gradient.angle,
-      )
+    ? resolveGradientCss(color.gradient)
     : undefined;
   const search = useWeightedColorImageSearch(
     workspaceSlug,

@@ -1,3 +1,5 @@
+import type { ColorGradient, MentionColors } from "@/api/collection/types";
+
 export interface ImageAsset {
   id: string;
   type: "image";
@@ -58,6 +60,7 @@ export interface NoteAsset {
   readingTimeMinutes?: number;
   createdAt?: string;
   updatedAt?: string;
+  mentionColors?: MentionColors;
 }
 
 export interface LinkAsset {
@@ -133,9 +136,11 @@ export interface FolderAssetPreview {
   hostname?: string;
   title?: string | null;
   hex?: string;
+  gradient?: ColorGradient | null;
   favicon?: string;
   videoId?: string;
   description?: string | null;
+  mentionColors?: MentionColors;
 }
 
 export interface FolderAsset {

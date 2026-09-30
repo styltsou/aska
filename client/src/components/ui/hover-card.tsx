@@ -2,9 +2,13 @@ import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card
 
 import { cn } from "@/lib/utils";
 
-function HoverCard({ ...props }: PreviewCardPrimitive.Root.Props) {
+function HoverCard<Payload>({
+  ...props
+}: PreviewCardPrimitive.Root.Props<Payload>) {
   return <PreviewCardPrimitive.Root data-slot="hover-card" {...props} />;
 }
+
+const createHoverCardHandle = PreviewCardPrimitive.createHandle;
 
 function HoverCardTrigger({ ...props }: PreviewCardPrimitive.Trigger.Props) {
   return (
@@ -12,8 +16,15 @@ function HoverCardTrigger({ ...props }: PreviewCardPrimitive.Trigger.Props) {
   );
 }
 
+function HoverCardViewport({ ...props }: PreviewCardPrimitive.Viewport.Props) {
+  return (
+    <PreviewCardPrimitive.Viewport data-slot="hover-card-viewport" {...props} />
+  );
+}
+
 function HoverCardContent({
   className,
+  positionerClassName,
   side = "bottom",
   sideOffset = 4,
   align = "center",
@@ -23,7 +34,9 @@ function HoverCardContent({
   Pick<
     PreviewCardPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  > & {
+    positionerClassName?: string;
+  }) {
   return (
     <PreviewCardPrimitive.Portal data-slot="hover-card-portal">
       <PreviewCardPrimitive.Positioner
@@ -31,7 +44,7 @@ function HoverCardContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-[110]"
+        className={cn("isolate z-[110]", positionerClassName)}
       >
         <PreviewCardPrimitive.Popup
           data-slot="hover-card-content"
@@ -46,4 +59,10 @@ function HoverCardContent({
   );
 }
 
-export { HoverCard, HoverCardTrigger, HoverCardContent };
+export {
+  createHoverCardHandle,
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+  HoverCardViewport,
+};
