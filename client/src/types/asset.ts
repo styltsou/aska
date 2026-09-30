@@ -104,8 +104,10 @@ export interface ColorAsset {
 
 export interface FolderAssetPreview {
   assetId: string;
-  type: "image" | "note" | "link" | "color";
+  type: "image" | "video" | "note" | "link" | "color";
   url?: string;
+  width?: number;
+  height?: number;
   blurDataURL?: string | null;
   snippet?: string;
   hostname?: string;
