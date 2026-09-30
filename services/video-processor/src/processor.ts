@@ -31,97 +31,93 @@ const FFMPEG =
   process.env.FFMPEG_PATH && existsSync(process.env.FFMPEG_PATH)
     ? process.env.FFMPEG_PATH
     : "/usr/bin/ffmpeg";
-const FFPROBE =
-  process.env.FFPROBE_PATH && existsSync(process.env.FFPROBE_PATH)
-    ? process.env.FFPROBE_PATH
-    : "/usr/bin/ffprobe";
 
 export class InvalidVideoError extends Error {
   readonly retryable = false;
 }
 
 type VideoProbe = { width: number; height: number; durationSeconds: number };
-type ProbeJson = {
-  format?: { format_name?: string; duration?: string };
-  streams?: Array<{
-    codec_type?: string;
-    codec_name?: string;
-    pix_fmt?: string;
-    profile?: string;
-    width?: number;
-    height?: number;
-    duration?: string;
-  }>;
-};
 
 /** Validate the actual streams; names and declared MIME are not authoritative. */
 export async function probeVideo(
   filePath: string,
   contentType: VideoMime,
 ): Promise<VideoProbe> {
-  let parsed: ProbeJson;
+  let output: string;
   try {
-    const { stdout } = await run(
-      FFPROBE,
-      [
-        "-v",
-        "error",
-        "-show_entries",
-        "format=format_name,duration:stream=codec_type,codec_name,pix_fmt,profile,width,height,duration",
-        "-of",
-        "json",
-        filePath,
-      ],
+    const { stderr } = await run(
+      FFMPEG,
+      ["-hide_banner", "-i", filePath, "-frames:v", "1", "-f", "null", "-"],
       { timeout: 30_000, maxBuffer: 1024 * 1024 },
     );
-    parsed = JSON.parse(stdout) as ProbeJson;
+    output = stderr;
   } catch {
     throw new InvalidVideoError("The file is not a readable video");
   }
-  const streams = parsed.streams ?? [];
-  const videos = streams.filter((stream) => stream.codec_type === "video");
-  const audios = streams.filter((stream) => stream.codec_type === "audio");
-  if (videos.length !== 1 || audios.length > 1)
+  // FFmpeg repeats stream descriptions for its output after this marker. Only
+  // inspect the source section so an extracted frame is not counted as a
+  // second video stream.
+  const sourceInfo = output.split("Stream mapping:")[0]!;
+  const input = sourceInfo.match(/^Input #0, (.+), from /m);
+  const duration = sourceInfo.match(/\bDuration:\s*(\d+):(\d+):([\d.]+)/);
+  const videoLines = sourceInfo.match(/^\s*Stream #.+:\s*Video:.+$/gm) ?? [];
+  const audioLines = sourceInfo.match(/^\s*Stream #.+:\s*Audio:.+$/gm) ?? [];
+  const video = videoLines[0]?.match(
+    /Video:\s*([^\s,(]+)(?:\s*\([^)]*\))*\s*,\s*([^\s,(]+)(?:\([^)]*\))?\s*,\s*(\d+)x(\d+)/,
+  );
+  if (
+    !input ||
+    !duration ||
+    videoLines.length !== 1 ||
+    audioLines.length > 1 ||
+    !video
+  )
     throw new InvalidVideoError(
       "Use a video with one video track and at most one audio track",
     );
-  const video = videos[0]!;
-  const container = parsed.format?.format_name?.split(",") ?? [];
+  const [, codec, pixelFormat, widthString, heightString] = video;
+  const container = input[1].split(",").map((name) => name.trim());
+  const audioCodecs = audioLines.map(
+    (line) => line.match(/Audio:\s*([^\s,(]+)/)?.[1],
+  );
   if (contentType === "video/mp4") {
     if (
       !container.some((name) =>
         ["mov", "mp4", "m4a", "3gp", "3g2", "mj2"].includes(name),
       ) ||
-      video.codec_name !== "h264" ||
-      !["yuv420p", "yuvj420p"].includes(video.pix_fmt ?? "") ||
-      audios.some((audio) => audio.codec_name !== "aac")
+      codec !== "h264" ||
+      !["yuv420p", "yuvj420p"].includes(pixelFormat) ||
+      audioCodecs.some((codec) => codec !== "aac")
     )
       throw new InvalidVideoError(
         "MP4 videos must use H.264 video and optional AAC audio",
       );
   } else if (
     (!container.includes("matroska") && !container.includes("webm")) ||
-    !["vp8", "vp9"].includes(video.codec_name ?? "") ||
-    video.pix_fmt !== "yuv420p" ||
-    audios.some((audio) => !["opus", "vorbis"].includes(audio.codec_name ?? ""))
+    !["vp8", "vp9"].includes(codec) ||
+    pixelFormat !== "yuv420p" ||
+    audioCodecs.some((codec) => !["opus", "vorbis"].includes(codec ?? ""))
   ) {
     throw new InvalidVideoError(
       "WebM videos must use VP8 or VP9 video and optional Opus or Vorbis audio",
     );
   }
-  const durationSeconds = Number(video.duration ?? parsed.format?.duration);
+  const durationSeconds =
+    Number(duration[1]) * 3600 + Number(duration[2]) * 60 + Number(duration[3]);
+  const width = Number(widthString);
+  const height = Number(heightString);
   if (
-    !video.width ||
-    !video.height ||
+    !width ||
+    !height ||
     !Number.isFinite(durationSeconds) ||
     durationSeconds <= 0
   )
     throw new InvalidVideoError(
       "Video dimensions or duration could not be read",
     );
-  if (video.width * video.height > 40_000_000)
+  if (width * height > 40_000_000)
     throw new InvalidVideoError("Video frame resolution is too large");
-  return { width: video.width, height: video.height, durationSeconds };
+  return { width, height, durationSeconds };
 }
 
 function videoType(contentType: string | undefined): VideoMime {

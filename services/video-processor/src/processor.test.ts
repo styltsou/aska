@@ -10,8 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { InvalidVideoError, probeVideo } from "./processor";
 
 const run = promisify(execFile);
-const canProbe =
-  existsSync("/usr/bin/ffmpeg") && existsSync("/usr/bin/ffprobe");
+const canProbe = existsSync("/usr/bin/ffmpeg");
 let folder: string;
 
 describe.skipIf(!canProbe)("actual video stream validation", () => {

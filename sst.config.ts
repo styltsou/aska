@@ -444,7 +444,6 @@ export default $config({
             from: item.from.replace("services/image-variants", "services/video-processor"),
           })),
           { from: "services/video-processor/node_modules/ffmpeg-static/ffmpeg", to: "bin/ffmpeg" },
-          { from: "services/video-processor/node_modules/@derhuerst/ffprobe-static/ffprobe", to: "bin/ffprobe" },
         ],
         environment: {
           NODE_OPTIONS: "--enable-source-maps",
@@ -453,7 +452,6 @@ export default $config({
           PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
           S3_BUCKET: assets.name,
           FFMPEG_PATH: "/var/task/bin/ffmpeg",
-          FFPROBE_PATH: "/var/task/bin/ffprobe",
           ...getSentryEnvironment("video-processor", sentryDsn.value),
         },
       },
