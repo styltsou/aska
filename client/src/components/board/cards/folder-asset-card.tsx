@@ -4,12 +4,15 @@ import { useState, type CSSProperties } from "react";
 
 import { getCanvasDropFanOffset } from "@/components/canvas/canvas-drop-stack";
 import { BOARD_CARD_WIDTH } from "@/components/canvas/canvas-node-layout";
-import { resolveGradientCss } from "@/lib/color-gradient";
 import { hasSelectionModifier } from "@/lib/selection";
 import { cn } from "@/lib/utils";
 import type { FolderAsset, FolderAssetPreview } from "@/types/asset";
 
 import { LinkCardPreview } from "./link-asset-card";
+import {
+  COLOR_CARD_PREVIEW_ASPECT_RATIO,
+  ColorCardPreview,
+} from "./color-card-preview";
 import { NoteMiniature } from "./note-miniature";
 
 const MAX_VISIBLE_PREVIEWS = 4;
@@ -84,7 +87,7 @@ export function FolderAssetCard({
         style={{ containerType: "size" }}
       >
         <div
-          className="absolute inset-0 transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+          className="absolute inset-0 transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none"
           style={{
             transform: `translateY(-${(stackLift / BOARD_CARD_WIDTH) * 100}cqw)`,
           }}
@@ -182,7 +185,7 @@ function FolderPreviewCard({
   if ((preview.type === "image" || preview.type === "video") && preview.url) {
     return (
       <div
-        className="absolute top-1/2 left-1/2 w-max max-w-[65cqw] overflow-hidden rounded-lg bg-card shadow-sm ring-1 ring-border/30 transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+        className="absolute top-1/2 left-1/2 w-max max-w-[65cqw] overflow-hidden rounded-lg bg-card shadow-sm ring-1 ring-border/30 transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none"
         style={positionStyle}
       >
         <img
@@ -205,7 +208,12 @@ function FolderPreviewCard({
     );
   }
 
-  const ratio = preview.type === "note" ? 0.82 : 1;
+  const ratio =
+    preview.type === "color"
+      ? COLOR_CARD_PREVIEW_ASPECT_RATIO
+      : preview.type === "note"
+        ? 0.82
+        : 1;
   const style: CSSProperties = {
     ...positionStyle,
     width:
@@ -218,19 +226,16 @@ function FolderPreviewCard({
 
   return (
     <div
-      className="absolute top-1/2 left-1/2 overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+      className="absolute top-1/2 left-1/2 overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none"
       style={style}
     >
       {preview.type === "link" ? (
         <LinkCardPreview preview={preview} variant="collection" />
       ) : preview.type === "color" ? (
-        <div
-          className="size-full"
-          style={{
-            background: preview.gradient
-              ? resolveGradientCss(preview.gradient)
-              : preview.hex,
-          }}
+        <ColorCardPreview
+          hex={preview.hex}
+          gradient={preview.gradient}
+          title={preview.title}
         />
       ) : preview.type === "video" ? (
         <div className="flex size-full items-center justify-center bg-sidebar-foreground/5">

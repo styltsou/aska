@@ -1,0 +1,59 @@
+import type { ColorGradient } from "@/api/collection/types";
+import { resolveGradientCss } from "@/lib/color-gradient";
+import { cn } from "@/lib/utils";
+
+/** Matches the 280 × 329 canvas color-card footprint. */
+export const COLOR_CARD_PREVIEW_ASPECT_RATIO = 280 / 329;
+
+export function ColorCardPreview({
+  hex,
+  gradient,
+  title,
+}: {
+  hex?: string;
+  gradient?: ColorGradient | null;
+  title?: string | null;
+}) {
+  const name = title?.trim();
+  const displayHex = hex?.toUpperCase() ?? "Color";
+  const gradientLabel = gradient
+    ? `${gradient.type === "radial" ? "Radial" : "Linear"} gradient`
+    : null;
+  const hasAlpha = Boolean(hex && hex.length === 9 && !hex.endsWith("ff"));
+
+  return (
+    <div
+      data-color-card-preview
+      className="flex size-full min-h-0 flex-col bg-sidebar text-sidebar-foreground"
+    >
+      <div className="min-h-0 flex-1 p-[4.3%]">
+        <div
+          data-color-card-preview-swatch
+          className={cn(
+            "size-full rounded-sm",
+            hasAlpha &&
+              "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
+          )}
+          style={{
+            background: gradient ? resolveGradientCss(gradient) : hex,
+          }}
+        />
+      </div>
+      <div className="flex min-w-0 items-center gap-[4.3%] bg-sidebar px-[4.3%] pb-[4.3%] text-[clamp(0.625rem,4.6cqw,1rem)] leading-tight">
+        <span
+          className={cn(
+            "min-w-0 truncate font-medium",
+            !name && !gradientLabel && "font-mono font-semibold tracking-tight",
+          )}
+        >
+          {name ?? gradientLabel ?? displayHex}
+        </span>
+        {name && !gradientLabel ? (
+          <span className="ml-auto shrink-0 font-mono text-[0.875em] font-semibold tracking-tight text-sidebar-foreground/70">
+            {displayHex}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}

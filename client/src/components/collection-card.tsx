@@ -10,6 +10,10 @@ import { FolderOpenIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
 import { LinkCardPreview } from "./board/cards/link-asset-card";
+import {
+  COLOR_CARD_PREVIEW_ASPECT_RATIO,
+  ColorCardPreview,
+} from "./board/cards/color-card-preview";
 import { NoteMiniature } from "./board/cards/note-miniature";
 import { useDeleteCollection } from "@/api/collection";
 import {
@@ -31,7 +35,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { FolderChildPreview } from "@/api/collection/types";
-import { resolveGradientCss } from "@/lib/color-gradient";
 import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";
 
 const MAX_VISIBLE_PREVIEWS = 4;
@@ -304,8 +307,8 @@ function CollectionPreviewCard({
     ? { duration: 0 }
     : {
         type: "spring" as const,
-        duration: 0.2,
-        bounce: 0.42,
+        duration: 0.26,
+        bounce: 0.5,
         delay: active ? index * 0.004 : 0,
       };
 
@@ -329,7 +332,12 @@ function CollectionPreviewCard({
     ) : null;
   }
 
-  const ratio = preview.type === "note" ? 0.82 : 1;
+  const ratio =
+    preview.type === "color"
+      ? COLOR_CARD_PREVIEW_ASPECT_RATIO
+      : preview.type === "note"
+        ? 0.82
+        : 1;
   const style: CSSProperties = {
     ...positionStyle,
     width:
@@ -354,13 +362,10 @@ function CollectionPreviewCard({
       {preview.type === "link" ? (
         <LinkCardPreview preview={preview} variant="collection" />
       ) : preview.type === "color" ? (
-        <div
-          className="size-full"
-          style={{
-            background: preview.gradient
-              ? resolveGradientCss(preview.gradient)
-              : preview.hex,
-          }}
+        <ColorCardPreview
+          hex={preview.hex}
+          gradient={preview.gradient}
+          title={preview.title}
         />
       ) : (
         <div className="size-full overflow-hidden bg-sidebar">

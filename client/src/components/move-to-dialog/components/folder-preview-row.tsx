@@ -2,6 +2,7 @@ import { FolderIcon, Globe2Icon } from "lucide-react";
 
 import type { FolderChildPreview } from "@/api/collection";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
+import { resolveGradientCss } from "@/lib/color-gradient";
 
 export function FolderPreviewRow({
   previews,
@@ -46,7 +47,11 @@ export function FolderPreviewRow({
           <div
             key={preview.assetId}
             className="size-8 shrink-0 rounded-[3px] border"
-            style={{ backgroundColor: preview.hex }}
+            style={{
+              background: preview.gradient
+                ? resolveGradientCss(preview.gradient)
+                : preview.hex,
+            }}
             title={preview.title ?? preview.hex}
           />
         ) : (
