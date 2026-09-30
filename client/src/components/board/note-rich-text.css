@@ -125,7 +125,10 @@
   }
 
   .note-rich-text-content pre {
-    @apply my-3 overflow-x-auto rounded-lg border border-sidebar-border bg-card p-3 font-mono text-xs leading-5 text-sidebar-foreground;
+    @apply my-3 overflow-x-auto rounded-lg border border-sidebar-border bg-card p-3 font-mono leading-5 text-sidebar-foreground;
+    /* IBM Plex Mono reads visually larger than the proportional paragraph
+       text at the same size, so give it a small optical correction. */
+    font-size: 0.875em;
   }
 
   .note-rich-text-content .note-code-block {
