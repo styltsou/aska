@@ -1,6 +1,7 @@
 import dns from "node:dns/promises";
-import { Readable } from "node:stream";
-import type http from "node:http";
+import http from "node:http";
+import { EventEmitter } from "node:events";
+import { PassThrough, Readable } from "node:stream";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +10,7 @@ import {
   isPublicAddress,
   readBoundedBody,
   safeFetch,
+  safeInspectContentType,
   validateNetworkUrl,
 } from "./safe-fetch";
 
@@ -88,6 +90,48 @@ describe("safe remote fetch address policy", () => {
         totalTimeoutMs: 1_000,
       }),
     ).rejects.toMatchObject({ category: "unsafe_url", retryable: false });
+  });
+
+  it("applies the same address policy while inspecting media headers", async () => {
+    vi.spyOn(dns, "lookup").mockResolvedValue([
+      { address: "1.1.1.1", family: 4 },
+      { address: "127.0.0.1", family: 4 },
+    ] as never);
+
+    await expect(
+      safeInspectContentType("https://example.test/video"),
+    ).rejects.toMatchObject({ category: "unsafe_url" });
+  });
+
+  it("follows a safe redirect and identifies media from headers without reading the body", async () => {
+    vi.spyOn(dns, "lookup").mockResolvedValue([
+      { address: "1.1.1.1", family: 4 },
+    ] as never);
+    const request = vi
+      .spyOn(http, "request")
+      .mockImplementation((url, _options, callback) => {
+        const outgoing = new EventEmitter() as ReturnType<typeof http.request>;
+        outgoing.setTimeout = vi.fn() as never;
+        outgoing.end = (() => {
+          const incoming = new PassThrough() as unknown as http.IncomingMessage;
+          const redirected = String(url).endsWith("/original");
+          incoming.statusCode = redirected ? 302 : 200;
+          incoming.headers = redirected
+            ? { location: "/without-extension" }
+            : { "content-type": "video/mp4; charset=binary" };
+          callback!(incoming);
+          return outgoing;
+        }) as never;
+        return outgoing;
+      });
+
+    await expect(
+      safeInspectContentType("http://example.test/original", 1_000),
+    ).resolves.toEqual({
+      contentType: "video/mp4",
+      finalUrl: "http://example.test/without-extension",
+    });
+    expect(request).toHaveBeenCalledTimes(2);
   });
 });
 

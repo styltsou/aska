@@ -122,6 +122,7 @@ type UploadLocalImagesMutationInput = {
   parentFolderPath?: string;
   position?: { x: number; y: number };
   placement?: BoardInsertionPlacement;
+  positions?: { x: number; y: number }[];
 };
 
 export function collectionsQueryOptions(workspaceSlug: string) {
@@ -2046,6 +2047,7 @@ export function useUploadLocalImages(
       parentFolderPath,
       position,
       placement,
+      positions: requestedPositions,
     }: UploadLocalImagesMutationInput) => {
       const contentsKey = collectionQueryKeys.contents(
         workspaceSlug,
@@ -2077,11 +2079,13 @@ export function useUploadLocalImages(
       const optimisticImages = files.map((file, index) =>
         makeOptimisticImageNode(file, index, imageDimensions[index]),
       );
-      const positions = reserveNodePositions(
-        previousContents?.nodes ?? [],
-        optimisticImages,
-        placement ?? position,
-      );
+      const positions =
+        requestedPositions ??
+        reserveNodePositions(
+          previousContents?.nodes ?? [],
+          optimisticImages,
+          placement ?? position,
+        );
       for (const [index, image] of optimisticImages.entries()) {
         image.position = positions[index] ?? null;
       }

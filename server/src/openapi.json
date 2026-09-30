@@ -42,11 +42,78 @@
       "description": "Direct MP4/WebM uploads and imports from direct video URLs, scoped to a collection or the inbox."
     },
     {
+      "name": "Media Uploads",
+      "description": "Classify direct image and video URLs before importing them."
+    },
+    {
       "name": "Link Unfurling",
       "description": "Optimistic link-card creation and asynchronous external metadata resolution."
     }
   ],
   "paths": {
+    "/api/v1/workspace/{workspaceSlug}/media/resolve": {
+      "post": {
+        "operationId": "resolveMediaUrl",
+        "tags": ["Media Uploads"],
+        "summary": "Identify a direct image or video URL by its response content type",
+        "description": "Follows safe public redirects and inspects response headers without downloading the body. Unsupported media and unsafe destinations are rejected.",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceSlug" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["url"],
+                "properties": {
+                  "url": { "type": "string", "format": "uri" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Supported media type identified.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data"],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": ["kind", "contentType"],
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": ["image", "video"]
+                        },
+                        "contentType": {
+                          "type": "string",
+                          "enum": [
+                            "image/jpeg",
+                            "image/png",
+                            "image/webp",
+                            "image/gif",
+                            "video/mp4",
+                            "video/webm"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/health": {
       "get": {
         "operationId": "getHealth",

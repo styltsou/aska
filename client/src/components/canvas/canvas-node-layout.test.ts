@@ -40,6 +40,13 @@ const portraitImage: CollectionNode = {
   position: null,
 };
 
+const pendingVideo = {
+  id: "video-pending",
+  type: "video",
+  width: 16,
+  height: 9,
+} as CollectionNode;
+
 describe("infinite canvas node placement", () => {
   it("preserves signed persisted positions without snapping", () => {
     expect(
@@ -61,6 +68,21 @@ describe("infinite canvas node placement", () => {
     ).toEqual([
       { x: -51, y: 74 },
       { x: -51 + BOARD_CARD_WIDTH + BOARD_ITEM_GAP, y: 74 },
+    ]);
+  });
+
+  it("reserves positions for images and videos in their selected order", () => {
+    const positions = reserveNodePositions(
+      [],
+      [portraitImage, pendingVideo, portraitImage, pendingVideo, portraitImage],
+      { position: { x: 100, y: 200 } },
+    );
+    expect(positions).toEqual([
+      { x: 100, y: 200 },
+      { x: 412, y: 200 },
+      { x: 724, y: 200 },
+      { x: 1036, y: 200 },
+      { x: 100, y: 792 },
     ]);
   });
 

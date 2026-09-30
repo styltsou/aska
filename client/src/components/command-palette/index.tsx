@@ -42,7 +42,7 @@ import { DialogBody } from "@/components/ui/dialog";
 import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
-import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
+import { UploadMediaDialog } from "@/components/app-shell/upload-media-dialog";
 import {
   collectionsQueryOptions,
   inboxContentsQueryOptions,
@@ -90,7 +90,7 @@ type CommandId =
   | "canvas-text-tool"
   | "canvas-arrow-tool"
   | "new-folder"
-  | "upload-images"
+  | "upload-media"
   | "open-scratchpad"
   | "open-inbox"
   | "browse-collections"
@@ -132,8 +132,8 @@ const COMMAND_GROUPS = [
         shortcut: "⇧+D",
       },
       {
-        id: "upload-images",
-        label: "Upload images",
+        id: "upload-media",
+        label: "Upload",
         icon: ImagePlusIcon,
         shortcut: "⇧+U",
       },
@@ -233,7 +233,7 @@ export function CommandPalette() {
   const [activeCommandId, setActiveCommandId] = useState<CommandId>();
   const [createNoteOpen, setCreateNoteOpen] = useState(false);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
-  const [uploadImagesOpen, setUploadImagesOpen] = useState(false);
+  const [uploadMediaOpen, setUploadMediaOpen] = useState(false);
   const [colorEditorOpen, setColorEditorOpen] = useState(false);
   const hasActiveModalLayer = useActiveModalLayer();
   const navigateOverlay = useWorkspaceOverlayNavigation();
@@ -293,6 +293,7 @@ export function CommandPalette() {
   const canCreateNote = view === "inbox" || Boolean(collectionPath);
   const canCreateFolder = Boolean(collectionPath);
   const canCreateColor = canCreateNote;
+  const canUploadMedia = canCreateNote;
   const canToggleCollectionView = Boolean(collectionViewScope);
   const boardKey =
     workspaceSlug && view === "collections" && viewPath[0]
@@ -487,10 +488,10 @@ export function CommandPalette() {
         handleOpenChange(false);
         setCreateFolderOpen(true);
         return;
-      case "upload-images":
-        if (!canCreateFolder) return;
+      case "upload-media":
+        if (!canUploadMedia) return;
         handleOpenChange(false);
-        setUploadImagesOpen(true);
+        setUploadMediaOpen(true);
         return;
       case "open-scratchpad":
         if (!workspaceSlug) return;
@@ -669,7 +670,7 @@ export function CommandPalette() {
                           (item.id !== "new-note" || canCreateNote) &&
                           (item.id !== "new-color" || canCreateColor) &&
                           (item.id !== "new-folder" || canCreateFolder) &&
-                          (item.id !== "upload-images" || canCreateFolder) &&
+                          (item.id !== "upload-media" || canUploadMedia) &&
                           (item.id !== "toggle-collection-view" ||
                             canToggleCollectionView) &&
                           (item.id !== "toggle-alignment-guides" ||
@@ -806,11 +807,12 @@ export function CommandPalette() {
         onOpenChange={setCreateFolderOpen}
         placement={placement}
       />
-      <UploadImagesDialog
+      <UploadMediaDialog
         workspaceSlug={workspaceSlug ?? ""}
         collectionPath={collectionPath}
-        open={uploadImagesOpen}
-        onOpenChange={setUploadImagesOpen}
+        target={view === "inbox" ? "inbox" : "collection"}
+        open={uploadMediaOpen}
+        onOpenChange={setUploadMediaOpen}
         placement={placement}
       />
       <ColorEditorDialog

@@ -13,6 +13,7 @@ import noteMentionRoutes from "./note-mention.routes";
 import workspaceSearchRoutes from "./workspace-search.routes";
 import videoUploadRoutes from "./video-upload.routes";
 import videoPipelineRoutes from "./video-pipeline.routes";
+import mediaResolutionRoutes from "./media-resolution.routes";
 
 export const apiRoutes = factory
   .createApp()
@@ -24,6 +25,7 @@ export const apiRoutes = factory
   .route("/", colorSearchRoutes)
   .route("/", imageUploadRoutes)
   .route("/", videoUploadRoutes)
+  .route("/", mediaResolutionRoutes)
   .route("/", videoPipelineRoutes)
   .route("/", pexelsRoutes)
   .route("/", imagePipelineRoutes)

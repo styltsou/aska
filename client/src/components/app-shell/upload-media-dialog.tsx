@@ -7,21 +7,34 @@ import React, {
 } from "react";
 import {
   CloudIcon,
+  ClapperboardIcon,
   ImagePlusIcon,
   LinkIcon,
   MonitorUpIcon,
+  PlayIcon,
   XIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
-import { useCreateRemoteImage, useUploadLocalImages } from "@/api/collection";
-import type { BoardInsertionPlacement } from "@/api/collection";
-import { Button } from "@/components/ui/button";
 import {
-  SUPPORTED_IMAGE_ACCEPT,
-  SUPPORTED_IMAGE_MIME_TYPE_SET,
-} from "@/constants";
+  useCreateInboxRemoteImage,
+  useCreateRemoteImage,
+  useUploadInboxImages,
+  useUploadLocalImages,
+} from "@/api/collection";
+import { collectionQueryKeys } from "@/api/collection/query-keys";
+import type {
+  BoardInsertionPlacement,
+  CollectionContentsResponse,
+  CollectionNode,
+} from "@/api/collection";
+import { resolveMediaUrl, type ResolvedMediaUrl } from "@/api/media";
+import { useVideoAssets } from "@/api/video";
+import { Button } from "@/components/ui/button";
+import { SUPPORTED_MEDIA_ACCEPT } from "@/constants";
+import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
 import {
   Dialog,
   DialogBody,
@@ -42,11 +55,21 @@ import {
   loadUploadImagesDraft,
   saveUploadImagesDraft,
 } from "@/lib/upload-images-draft";
+import {
+  isUploadableMediaFile,
+  localMediaKind,
+  reserveLocalMediaPositions,
+} from "@/lib/media-upload";
 import { cn, parseHttpUrl } from "@/lib/utils";
 
-export function UploadImagesDialog({
+type RemoteResolution =
+  | { status: "ready"; media: ResolvedMediaUrl }
+  | { status: "error"; message: string };
+
+export function UploadMediaDialog({
   workspaceSlug,
   collectionPath,
+  target = "collection",
   children,
   open: controlledOpen,
   onOpenChange,
@@ -55,6 +78,7 @@ export function UploadImagesDialog({
 }: {
   workspaceSlug: string;
   collectionPath: string;
+  target?: "collection" | "inbox";
   children?: React.ReactElement;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -65,12 +89,23 @@ export function UploadImagesDialog({
     .split("/")
     .filter(Boolean);
   const parentFolderPath = folderSegments.join("/") || undefined;
+  const queryClient = useQueryClient();
   const uploadLocalImages = useUploadLocalImages(workspaceSlug, collectionSlug);
+  const uploadInboxImages = useUploadInboxImages(workspaceSlug);
   const createRemoteImage = useCreateRemoteImage(workspaceSlug, collectionSlug);
+  const createInboxRemoteImage = useCreateInboxRemoteImage(workspaceSlug);
+  const videos = useVideoAssets({
+    workspaceSlug,
+    collectionSlug: target === "collection" ? collectionSlug : undefined,
+    parentFolderPath: target === "collection" ? parentFolderPath : undefined,
+  });
   const [internalOpen, setInternalOpen] = useState(false);
   const [mode, setMode] = useState<"local" | "remote" | "cloud">("local");
   const [remoteUrl, setRemoteUrl] = useState("");
   const [remoteUrls, setRemoteUrls] = useState<string[]>([]);
+  const [remoteResolutions, setRemoteResolutions] = useState<
+    Record<string, RemoteResolution>
+  >({});
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [isDraggingFiles, setIsDraggingFiles] = useState(false);
@@ -82,14 +117,25 @@ export function UploadImagesDialog({
   const previousSelectedFileCount = useRef(0);
   const isHydratingDraftRef = useRef(false);
   const restoreVersionRef = useRef(0);
+  const resolutionVersionRef = useRef(0);
+  const resolvingUrlsRef = useRef(new Set<string>());
   const open = controlledOpen ?? internalOpen;
   const isSubmitting =
-    uploadLocalImages.isPending || createRemoteImage.isPending;
+    uploadLocalImages.isPending ||
+    uploadInboxImages.isPending ||
+    createRemoteImage.isPending ||
+    createInboxRemoteImage.isPending ||
+    videos.upload.isPending ||
+    videos.importUrl.isPending;
   const isInteractionDisabled = isSubmitting || isRestoringDraft;
-  const draftScope = `${workspaceSlug}\u0000${collectionPath}`;
+  const draftScope = `${workspaceSlug}\u0000${target}\u0000${collectionPath}`;
   const draftId = useMemo(
-    () => getUploadImagesDraftId(workspaceSlug, collectionPath),
-    [workspaceSlug, collectionPath],
+    () =>
+      getUploadImagesDraftId(
+        workspaceSlug,
+        target === "collection" ? collectionPath : `inbox:${collectionPath}`,
+      ),
+    [workspaceSlug, target, collectionPath],
   );
   const previousDraftScopeRef = useRef(draftScope);
   const previousDraftIdRef = useRef(draftId);
@@ -112,6 +158,41 @@ export function UploadImagesDialog({
       nextPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [selectedFiles]);
+
+  useEffect(() => {
+    if (!open) return;
+    const version = resolutionVersionRef.current;
+    for (const url of remoteUrls) {
+      if (remoteResolutions[url] || resolvingUrlsRef.current.has(url)) continue;
+      resolvingUrlsRef.current.add(url);
+      void resolveMediaUrl(workspaceSlug, url)
+        .then((media) => {
+          if (resolutionVersionRef.current !== version) return;
+          setRemoteResolutions((current) => ({
+            ...current,
+            [url]: { status: "ready", media },
+          }));
+        })
+        .catch((cause) => {
+          if (resolutionVersionRef.current !== version) return;
+          setRemoteResolutions((current) => ({
+            ...current,
+            [url]: {
+              status: "error",
+              message:
+                cause instanceof Error
+                  ? cause.message
+                  : "Could not identify this media URL",
+            },
+          }));
+        })
+        .finally(() => {
+          if (resolutionVersionRef.current === version) {
+            resolvingUrlsRef.current.delete(url);
+          }
+        });
+    }
+  }, [open, remoteResolutions, remoteUrls, workspaceSlug]);
 
   useLayoutEffect(() => {
     const textarea = remoteUrlTextareaRef.current;
@@ -189,6 +270,9 @@ export function UploadImagesDialog({
     setMode("local");
     setRemoteUrl("");
     setRemoteUrls([]);
+    setRemoteResolutions({});
+    resolutionVersionRef.current += 1;
+    resolvingUrlsRef.current.clear();
     setSelectedFiles([]);
     setError(null);
     onOpenChange?.(false);
@@ -243,13 +327,20 @@ export function UploadImagesDialog({
       setIsRestoringDraft(false);
       setRemoteUrl("");
       setRemoteUrls([]);
+      setRemoteResolutions({});
+      resolutionVersionRef.current += 1;
+      resolvingUrlsRef.current.clear();
       setSelectedFiles([]);
       setIsDraggingFiles(false);
       setError(null);
       // More has no draftable source yet. Revisit this when provider imports can resume.
       setMode("local");
       uploadLocalImages.reset();
+      uploadInboxImages.reset();
       createRemoteImage.reset();
+      createInboxRemoteImage.reset();
+      videos.upload.reset();
+      videos.importUrl.reset();
       if (draftId) {
         void clearUploadImagesDraft(draftId).catch(() => undefined);
       }
@@ -262,16 +353,15 @@ export function UploadImagesDialog({
 
   function addFiles(files: File[]) {
     setError(null);
-    const imageFiles = files.filter((file) =>
-      SUPPORTED_IMAGE_MIME_TYPE_SET.has(file.type),
-    );
-
-    if (imageFiles.length === 0) {
-      setError("Choose JPEG, PNG, WebP, or GIF images.");
-      return;
+    const validFiles = files.filter(isUploadableMediaFile);
+    if (validFiles.length !== files.length) {
+      setError(
+        "Some files were skipped. Use JPEG, PNG, WebP, or GIF images up to 20 MB, or MP4 and WebM videos up to 250 MB.",
+      );
     }
-
-    setSelectedFiles((currentFiles) => [...currentFiles, ...imageFiles]);
+    if (validFiles.length > 0) {
+      setSelectedFiles((currentFiles) => [...currentFiles, ...validFiles]);
+    }
   }
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -295,7 +385,7 @@ export function UploadImagesDialog({
     const urls: string[] = [];
     let hasInvalidUrl = false;
 
-    for (const candidate of value.split(" ")) {
+    for (const candidate of value.split(/\s+/)) {
       if (!candidate) continue;
       const url = parseHttpUrl(candidate);
       if (!url) {
@@ -311,7 +401,7 @@ export function UploadImagesDialog({
   function addRemoteUrls(value: string) {
     const { hasInvalidUrl, urls } = parseRemoteUrls(value);
     if (hasInvalidUrl) {
-      setError("Use complete http or https image URLs.");
+      setError("Use complete http or https media URLs.");
     } else if (urls.length > 0) {
       setError(null);
     }
@@ -329,7 +419,7 @@ export function UploadImagesDialog({
   ) {
     setError(null);
     const value = event.target.value;
-    const values = value.split(" ");
+    const values = value.split(/\s+/);
 
     if (values.length === 1) {
       setRemoteUrl(value);
@@ -365,6 +455,11 @@ export function UploadImagesDialog({
     setRemoteUrls((currentUrls) =>
       currentUrls.filter((currentUrl) => currentUrl !== url),
     );
+    setRemoteResolutions((current) => {
+      const next = { ...current };
+      delete next[url];
+      return next;
+    });
   }
 
   function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
@@ -386,6 +481,109 @@ export function UploadImagesDialog({
     if (!isInteractionDisabled) addFiles(Array.from(event.dataTransfer.files));
   }
 
+  async function reserveLocalPositions(files: File[]) {
+    if (target === "inbox") return [];
+    const existing = queryClient.getQueryData<CollectionContentsResponse>(
+      collectionQueryKeys.contents(
+        workspaceSlug,
+        collectionSlug,
+        parentFolderPath,
+      ),
+    );
+    return reserveLocalMediaPositions(files, existing?.nodes ?? [], placement);
+  }
+
+  async function uploadLocalMedia(files: File[]) {
+    const positions = await reserveLocalPositions(files);
+    const images = files.flatMap((file, index) =>
+      localMediaKind(file) === "image"
+        ? [{ file, position: positions[index] }]
+        : [],
+    );
+    const videoFiles = files.flatMap((file, index) =>
+      localMediaKind(file) === "video"
+        ? [{ file, position: positions[index] }]
+        : [],
+    );
+    if (images.length > 0) {
+      const imageGroups =
+        videoFiles.length > 0 ? images.map((image) => [image]) : [images];
+      for (const group of imageGroups) {
+        try {
+          if (target === "inbox") {
+            await uploadInboxImages.mutateAsync({
+              files: group.map(({ file }) => file),
+            });
+          } else {
+            await uploadLocalImages.mutateAsync({
+              files: group.map(({ file }) => file),
+              parentFolderPath,
+              placement,
+              positions: group.map(({ position }) => position!),
+            });
+          }
+        } catch {
+          // The image upload mutation reports its failure; continue the mixed batch.
+        }
+      }
+    }
+    const results = await Promise.allSettled(
+      videoFiles.map(({ file, position }) =>
+        videos.upload.mutateAsync({ file, position }),
+      ),
+    );
+    reportMediaFailures(results, "video", "uploaded");
+  }
+
+  async function importRemoteMedia(urls: string[]) {
+    const entries = urls.map((url) => {
+      const resolution = remoteResolutions[url];
+      if (resolution?.status !== "ready")
+        throw new Error("A media URL has not been identified");
+      return { url, kind: resolution.media.kind };
+    });
+    const existing =
+      target === "collection"
+        ? queryClient.getQueryData<CollectionContentsResponse>(
+            collectionQueryKeys.contents(
+              workspaceSlug,
+              collectionSlug,
+              parentFolderPath,
+            ),
+          )
+        : undefined;
+    const nodes = entries.map(({ kind }, index) => ({
+      id: `pending-media-url-${index}`,
+      type: kind,
+      width: kind === "video" ? 16 : 1,
+      height: kind === "video" ? 9 : 1,
+    })) as CollectionNode[];
+    const positions =
+      target === "collection"
+        ? reserveNodePositions(existing?.nodes ?? [], nodes, placement)
+        : [];
+    const results = await Promise.allSettled(
+      entries.map(({ url, kind }, index) => {
+        if (kind === "video") {
+          return videos.importUrl.mutateAsync({
+            url,
+            position: positions[index],
+          });
+        }
+        if (target === "inbox")
+          return createInboxRemoteImage.mutateAsync({ url });
+        return createRemoteImage.mutateAsync({
+          url,
+          parentFolderPath,
+          placement: positions[index]
+            ? { position: positions[index] }
+            : placement,
+        });
+      }),
+    );
+    reportMediaFailures(results, "media URL", "imported");
+  }
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -393,22 +591,22 @@ export function UploadImagesDialog({
     try {
       if (mode === "local") {
         if (selectedFiles.length === 0) {
-          setError("Choose at least one image.");
+          setError("Choose at least one image or video.");
           return;
         }
-
-        const mutation = uploadLocalImages.mutateAsync({
-          files: selectedFiles,
-          parentFolderPath,
-          placement,
-        });
+        void uploadLocalMedia(selectedFiles).catch((cause) =>
+          toast.error(
+            cause instanceof Error
+              ? cause.message
+              : "Media could not be uploaded",
+          ),
+        );
         handleOpenChange(false);
-        void mutation.catch(() => undefined);
         return;
       } else if (mode === "remote") {
         const parsedUrls = parseRemoteUrls(remoteUrl);
         if (parsedUrls.hasInvalidUrl) {
-          setError("Use complete http or https image URLs.");
+          setError("Use complete http or https media URLs.");
           return;
         }
         const urls = [
@@ -416,45 +614,36 @@ export function UploadImagesDialog({
           ...parsedUrls.urls.filter((url) => !remoteUrls.includes(url)),
         ];
         if (urls.length === 0) {
-          setError("Enter at least one image URL.");
+          setError("Enter at least one image or video URL.");
           return;
         }
-
-        const mutations = urls.map((url, index) =>
-          createRemoteImage.mutateAsync({
-            url,
-            parentFolderPath,
-            placement: placement
-              ? { ...placement, batch: { index, size: urls.length } }
-              : undefined,
-          }),
+        if (urls.some((url) => remoteResolutions[url]?.status !== "ready")) {
+          setRemoteUrls(urls);
+          setRemoteUrl("");
+          return;
+        }
+        void importRemoteMedia(urls).catch((cause) =>
+          toast.error(
+            cause instanceof Error
+              ? cause.message
+              : "Media could not be imported",
+          ),
         );
         handleOpenChange(false);
-        void Promise.allSettled(mutations).then((results) => {
-          const failures = results.filter(
-            (result): result is PromiseRejectedResult =>
-              result.status === "rejected",
-          );
-          if (failures.length === 0) return;
-
-          const failure = failures[0]?.reason;
-          toast.error(
-            failures.length === 1 && failure instanceof Error
-              ? failure.message
-              : `${failures.length} image${failures.length === 1 ? "" : "s"} could not be imported.`,
-          );
-        });
         return;
       } else {
         setError("Cloud uploads are not available yet.");
         return;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to upload image.");
+      setError(err instanceof Error ? err.message : "Unable to upload media.");
     }
   }
 
   const shouldScrollPreviews = selectedFiles.length >= 8;
+  const unresolvedRemoteUrls = remoteUrls.some(
+    (url) => remoteResolutions[url]?.status !== "ready",
+  );
   const textareaSpansUrlGrid = remoteUrls.length % 2 === 0;
   const textareaSharesUrlRow = !textareaSpansUrlGrid;
 
@@ -477,11 +666,30 @@ export function UploadImagesDialog({
           key={`${file.name}-${file.lastModified}-${index}`}
           className="group relative aspect-square overflow-hidden rounded-md border border-border/60 bg-muted shadow-sm"
         >
-          <img
-            alt=""
-            className="size-full object-cover"
-            src={previewUrls[index]}
-          />
+          {localMediaKind(file) === "video" ? (
+            <>
+              <video
+                aria-label={file.name}
+                className="size-full object-cover"
+                muted
+                playsInline
+                preload="metadata"
+                src={previewUrls[index]}
+              />
+              <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/15 text-white">
+                <PlayIcon className="size-7 fill-current" />
+              </span>
+              <span className="pointer-events-none absolute right-1.5 bottom-1.5 left-1.5 truncate rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">
+                {file.name}
+              </span>
+            </>
+          ) : (
+            <img
+              alt={file.name}
+              className="size-full object-cover"
+              src={previewUrls[index]}
+            />
+          )}
           <Button
             aria-label={`Remove ${file.name}`}
             className="absolute top-1.5 right-1.5 bg-background/70 text-foreground shadow-sm ring-1 ring-foreground/10 backdrop-blur-md transition-colors duration-[50ms] hover:bg-background"
@@ -496,7 +704,7 @@ export function UploadImagesDialog({
         </div>
       ))}
       <button
-        aria-label="Add more images"
+        aria-label="Add more images or videos"
         className="flex aspect-square items-center justify-center rounded-md border border-dashed border-border/80 bg-background/45 text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
         disabled={isInteractionDisabled}
         type="button"
@@ -518,9 +726,9 @@ export function UploadImagesDialog({
           <AnimatedDialogPanel>
             <DialogBody className="flex flex-col gap-4">
               <DialogHeader>
-                <DialogTitle>Upload images</DialogTitle>
+                <DialogTitle>Upload images and videos</DialogTitle>
                 <DialogDescription>
-                  Add images from this computer or from a URL.
+                  Add images and videos from this computer or from a URL.
                 </DialogDescription>
               </DialogHeader>
 
@@ -531,7 +739,7 @@ export function UploadImagesDialog({
                 }
               >
                 <TabsList
-                  aria-label="Image source"
+                  aria-label="Media source"
                   className="grid w-full grid-cols-3"
                 >
                   <TabsTrigger
@@ -565,7 +773,7 @@ export function UploadImagesDialog({
                 <div className="space-y-1.5">
                   {selectedFiles.length > 0 ? (
                     <p className="text-right text-xs text-muted-foreground">
-                      {selectedFiles.length} image
+                      {selectedFiles.length} file
                       {selectedFiles.length === 1 ? "" : "s"} selected
                     </p>
                   ) : null}
@@ -580,7 +788,7 @@ export function UploadImagesDialog({
                       ref={fileInputRef}
                       className="sr-only"
                       type="file"
-                      accept={SUPPORTED_IMAGE_ACCEPT}
+                      accept={SUPPORTED_MEDIA_ACCEPT}
                       multiple
                       disabled={isInteractionDisabled}
                       onChange={handleFileChange}
@@ -593,14 +801,15 @@ export function UploadImagesDialog({
                         onClick={() => fileInputRef.current?.click()}
                       >
                         <span className="flex size-10 items-center justify-center rounded-lg border border-border/70 bg-background/65 text-muted-foreground shadow-sm backdrop-blur-sm">
-                          <ImagePlusIcon className="size-4" />
+                          <ClapperboardIcon className="size-4" />
                         </span>
                         <span className="space-y-1">
                           <span className="block text-sm font-medium text-foreground">
-                            Drop images here or browse
+                            Drop images or videos here, or browse
                           </span>
                           <span className="block text-xs text-muted-foreground">
-                            Select one or more JPEG, PNG, WebP, or GIF images
+                            Select JPEG, PNG, WebP, or GIF images and MP4 or
+                            WebM videos
                           </span>
                         </span>
                       </button>
@@ -625,6 +834,15 @@ export function UploadImagesDialog({
                           key={url}
                           className="flex min-w-0 items-center gap-1 rounded-sm border border-border/70 bg-background/85 pr-0 pl-1.5 text-xs text-foreground shadow-[0_1px_1px_rgb(0_0_0_/_0.025)]"
                         >
+                          <span className="shrink-0 text-muted-foreground">
+                            {remoteResolutions[url]?.status === "ready"
+                              ? remoteResolutions[url].media.kind === "video"
+                                ? "Video"
+                                : "Image"
+                              : remoteResolutions[url]?.status === "error"
+                                ? "Unsupported"
+                                : "Checking…"}
+                          </span>
                           <span className="min-w-0 flex-1 truncate" title={url}>
                             {url}
                           </span>
@@ -643,8 +861,8 @@ export function UploadImagesDialog({
                       ))}
                       <Textarea
                         ref={remoteUrlTextareaRef}
-                        aria-label="Image URLs"
-                        id="remote-image-url"
+                        aria-label="Image or video URLs"
+                        id="remote-media-url"
                         className={cn(
                           "min-h-16 min-w-0 resize-none overflow-hidden border-0 bg-transparent px-1 py-0 text-sm leading-5 shadow-none focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent",
                           textareaSpansUrlGrid && "col-span-2",
@@ -655,7 +873,7 @@ export function UploadImagesDialog({
                         placeholder={
                           remoteUrls.length > 0
                             ? "Add another URL"
-                            : "https://example.com/image.jpg"
+                            : "https://example.com/media"
                         }
                         rows={3}
                         value={remoteUrl}
@@ -672,8 +890,16 @@ export function UploadImagesDialog({
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Separate URLs with a space.
+                    Separate URLs with a space. Direct image and video links are
+                    identified automatically.
                   </p>
+                  {remoteUrls.map((url) =>
+                    remoteResolutions[url]?.status === "error" ? (
+                      <p key={url} className="text-xs text-destructive">
+                        {url}: {remoteResolutions[url].message}
+                      </p>
+                    ) : null,
+                  )}
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-3">
@@ -734,7 +960,11 @@ export function UploadImagesDialog({
               Cancel
             </DialogClose>
             <Button
-              disabled={isInteractionDisabled || mode === "cloud"}
+              disabled={
+                isInteractionDisabled ||
+                mode === "cloud" ||
+                (mode === "remote" && unresolvedRemoteUrls)
+              }
               type="submit"
             >
               {isSubmitting ? "Uploading" : "Upload"}
@@ -788,6 +1018,23 @@ function getDraftMode(
   if (mode === "local" && hasLocalDraft) return "local";
 
   return hasLocalDraft ? "local" : "remote";
+}
+
+function reportMediaFailures(
+  results: PromiseSettledResult<unknown>[],
+  label: string,
+  action: string,
+) {
+  const failures = results.filter(
+    (result): result is PromiseRejectedResult => result.status === "rejected",
+  );
+  if (failures.length === 0) return;
+  const cause = failures[0]?.reason;
+  toast.error(
+    failures.length === 1 && cause instanceof Error
+      ? cause.message
+      : `${failures.length} ${label}${failures.length === 1 ? "" : "s"} could not be ${action}.`,
+  );
 }
 
 function GoogleDriveIcon({ className }: { className?: string }) {

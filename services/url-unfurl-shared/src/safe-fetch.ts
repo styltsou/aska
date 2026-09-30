@@ -60,6 +60,69 @@ export type SafeFetchResult = {
   redirectCount: number;
 };
 
+/** Reads only response headers, with the same DNS pinning and redirect policy as downloads. */
+export async function safeInspectContentType(
+  input: string | URL,
+  totalTimeoutMs = 10_000,
+): Promise<{ contentType: string; finalUrl: string }> {
+  let current = validateNetworkUrl(input);
+  const visited = new Set<string>();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), totalTimeoutMs);
+  const options: SafeFetchOptions = {
+    accept: "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm",
+    allowedContentTypes: [],
+    maxBytes: 0,
+    totalTimeoutMs,
+    bodyMode: "html-head",
+  };
+
+  try {
+    for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+      if (visited.has(current.toString()))
+        throw new SafeFetchError("redirect_limit", "Redirect loop", false);
+      visited.add(current.toString());
+      const response = await requestPinned(current, options, controller.signal);
+      response.stream.destroy();
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.location;
+        if (!location || redirects === MAX_REDIRECTS)
+          throw new SafeFetchError(
+            "redirect_limit",
+            "Redirect limit exceeded",
+            false,
+          );
+        current = validateNetworkUrl(new URL(location, current));
+        continue;
+      }
+      if (response.status < 200 || response.status >= 300)
+        throw new SafeFetchError(
+          "http_error",
+          `Remote request returned ${response.status}`,
+          response.status === 408 ||
+            response.status === 429 ||
+            response.status >= 500,
+          response.status,
+        );
+
+      const contentType = normalizeContentType(
+        response.headers["content-type"],
+      );
+      if (!contentType)
+        throw new SafeFetchError("content_type", "Missing content type", false);
+      return { contentType, finalUrl: current.toString() };
+    }
+    throw new SafeFetchError(
+      "redirect_limit",
+      "Redirect limit exceeded",
+      false,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Downloads a bounded public resource without retaining its body in memory. */
 export async function safeFetchToFile(
   input: string | URL,

@@ -2,8 +2,9 @@
 
 Video is a first-class asset in collections and the inbox. A user can upload a
 local file or import a public, direct file URL. Pasting a URL whose pathname
-ends in `.mp4` or `.webm` selects the video import path; the explicit Add Video
-dialog accepts a URL even when its path has no such suffix. Provider pages,
+ends in `.mp4` or `.webm` selects the video import path. The unified Upload
+dialog accepts mixed local images and videos and classifies direct URLs using
+a safe server-side content-type check, including URLs without file suffixes. Provider pages,
 embeds, HLS/DASH, transcoding, and inline board playback are out of scope.
 
 ## Accepted media

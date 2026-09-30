@@ -29,3 +29,5 @@ export const SUPPORTED_IMAGE_ACCEPT = [
   ".webp",
   ".gif",
 ].join(",");
+export const SUPPORTED_MEDIA_ACCEPT = `${SUPPORTED_IMAGE_ACCEPT},${SUPPORTED_VIDEO_ACCEPT}`;
+export const MAX_IMAGE_UPLOAD_BYTES = 20 * 1024 * 1024;

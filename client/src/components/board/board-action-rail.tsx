@@ -5,7 +5,6 @@ import {
   ImageIcon,
   PaletteIcon,
   UploadIcon,
-  VideoIcon,
   TypeIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -39,8 +38,7 @@ import {
 import { CreateFolderDialog } from "@/components/app-shell/create-folder-dialog";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
-import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
-import { AddVideoDialog } from "@/components/app-shell/add-video-dialog";
+import { UploadMediaDialog } from "@/components/app-shell/upload-media-dialog";
 
 const RAIL_BUTTON_CLASS =
   "rounded-[calc(var(--radius-md)-1px)] text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80";
@@ -130,7 +128,7 @@ export function BoardActionRail({
                 <div className={GLASS_ISLAND_CLASS}>
                   <ButtonGroup>
                     <Tooltip>
-                      <UploadImagesDialog
+                      <UploadMediaDialog
                         workspaceSlug={workspaceSlug}
                         collectionPath={collectionPath}
                         restoreOpen
@@ -142,41 +140,18 @@ export function BoardActionRail({
                               type="button"
                               size="icon-lg"
                               variant="ghost"
-                              aria-label="Upload images"
+                              aria-label="Upload"
                               className={RAIL_BUTTON_CLASS}
                             >
                               <UploadIcon />
                             </Button>
                           }
                         />
-                      </UploadImagesDialog>
+                      </UploadMediaDialog>
                       <TooltipContent side="top">
-                        <span>Upload images</span>
+                        <span>Upload</span>
                         <RailShortcut keys="U" />
                       </TooltipContent>
-                    </Tooltip>
-                    <ButtonGroupSeparator />
-                    <Tooltip>
-                      <AddVideoDialog
-                        workspaceSlug={workspaceSlug}
-                        collectionPath={collectionPath}
-                        placement={placement}
-                      >
-                        <TooltipTrigger
-                          render={
-                            <Button
-                              type="button"
-                              size="icon-lg"
-                              variant="ghost"
-                              aria-label="Add video"
-                              className={RAIL_BUTTON_CLASS}
-                            >
-                              <VideoIcon />
-                            </Button>
-                          }
-                        />
-                      </AddVideoDialog>
-                      <TooltipContent side="top">Add video</TooltipContent>
                     </Tooltip>
                     <ButtonGroupSeparator />
                     <Tooltip>

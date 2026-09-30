@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useVideoAssets } from "@/api/video";
 
@@ -14,10 +15,16 @@ import {
 } from "@/api/collection";
 import { useCreateInboxLink, useCreateLink } from "@/api/url-unfurl";
 import type { BoardInsertionPlacement } from "@/api/collection";
+import type { CollectionContentsResponse } from "@/api/collection";
+import { collectionQueryKeys } from "@/api/collection/query-keys";
 import type { PexelsPhoto } from "@/api/pexels";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
-import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
-import { inferVideoMime, isDirectVideoUrl } from "@/lib/video-url";
+import { isDirectVideoUrl } from "@/lib/video-url";
+import {
+  isUploadableMediaFile,
+  localMediaKind,
+  reserveLocalMediaPositions,
+} from "@/lib/media-upload";
 import type { ClipboardAssetPayload } from "@/lib/clipboard";
 import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
 import { parseHttpUrl } from "@/lib/utils";
@@ -46,6 +53,7 @@ export function useBoardAssetActions({
     .split("/")
     .filter(Boolean);
   const parentFolderPath = folderSegments.join("/") || undefined;
+  const queryClient = useQueryClient();
   const createNote = useCreateNote(workspaceSlug, collectionSlug);
   const uploadLocalImages = useUploadLocalImages(workspaceSlug, collectionSlug);
   const createRemoteImage = useCreateRemoteImage(workspaceSlug, collectionSlug);
@@ -72,8 +80,9 @@ export function useBoardAssetActions({
     createLink.isPending ||
     createInboxLink.isPending ||
     createColor.isPending ||
-    createInboxColor.isPending;
-  // Video mutations are tracked separately below to keep image flows intact.
+    createInboxColor.isPending ||
+    videos.upload.isPending ||
+    videos.importUrl.isPending;
 
   const statusText = useMemo(() => {
     if (uploadLocalImages.isPending) return "Uploading images";
@@ -81,6 +90,8 @@ export function useBoardAssetActions({
     if (createRemoteImage.isPending) return "Importing image";
     if (createInboxNote.isPending) return "Creating note";
     if (uploadInboxImages.isPending) return "Uploading images";
+    if (videos.upload.isPending) return "Uploading video";
+    if (videos.importUrl.isPending) return "Importing video";
     if (createInboxRemoteImage.isPending) return "Importing image";
     if (createLink.isPending || createInboxLink.isPending) return "Adding link";
     if (createColor.isPending || createInboxColor.isPending)
@@ -97,42 +108,86 @@ export function useBoardAssetActions({
     createInboxColor.isPending,
     uploadInboxImages.isPending,
     uploadLocalImages.isPending,
+    videos.upload.isPending,
+    videos.importUrl.isPending,
   ]);
 
   const uploadFiles = useCallback(
     async (files: File[], actionPlacement?: BoardInsertionPlacement) => {
-      const imageFiles = files.filter((file) =>
-        SUPPORTED_IMAGE_MIME_TYPE_SET.has(file.type),
-      );
-      const videoFiles = files.filter(
-        (file) =>
-          !SUPPORTED_IMAGE_MIME_TYPE_SET.has(file.type) &&
-          !!inferVideoMime(file),
-      );
-      if (imageFiles.length === 0 && videoFiles.length === 0) return;
+      const mediaFiles = files.filter(isUploadableMediaFile);
+      if (mediaFiles.length !== files.length) {
+        toast.error(
+          "Some files were skipped. Use images up to 20 MB or MP4/WebM videos up to 250 MB.",
+        );
+      }
+      if (mediaFiles.length === 0) return;
 
       try {
         const insertionPlacement =
           actionPlacement ?? getPlacement?.() ?? placement;
-        if (imageFiles.length > 0 && target === "inbox") {
-          await uploadInboxImages.mutateAsync({
-            files: imageFiles,
-          });
-        } else if (imageFiles.length > 0) {
-          await uploadLocalImages.mutateAsync({
-            files: imageFiles,
-            parentFolderPath,
-            placement: insertionPlacement,
-          });
+        const existing =
+          target === "collection"
+            ? queryClient.getQueryData<CollectionContentsResponse>(
+                collectionQueryKeys.contents(
+                  workspaceSlug,
+                  collectionSlug,
+                  parentFolderPath,
+                ),
+              )
+            : undefined;
+        const positions =
+          target === "collection"
+            ? await reserveLocalMediaPositions(
+                mediaFiles,
+                existing?.nodes ?? [],
+                insertionPlacement,
+              )
+            : [];
+        const images = mediaFiles.flatMap((file, index) =>
+          localMediaKind(file) === "image"
+            ? [{ file, position: positions[index] }]
+            : [],
+        );
+        const videoFiles = mediaFiles.flatMap((file, index) =>
+          localMediaKind(file) === "video"
+            ? [{ file, position: positions[index] }]
+            : [],
+        );
+        const imageGroups =
+          videoFiles.length > 0 ? images.map((image) => [image]) : [images];
+        for (const group of imageGroups) {
+          if (group.length === 0) continue;
+          try {
+            if (target === "inbox") {
+              await uploadInboxImages.mutateAsync({
+                files: group.map(({ file }) => file),
+              });
+            } else {
+              await uploadLocalImages.mutateAsync({
+                files: group.map(({ file }) => file),
+                parentFolderPath,
+                placement: insertionPlacement,
+                positions: group.map(({ position }) => position!),
+              });
+            }
+          } catch {
+            // The image mutation reports its failure; later media still upload.
+          }
         }
-        for (const file of videoFiles)
-          await videos.upload.mutateAsync({
-            file,
-            position: insertionPlacement?.position,
-          });
+        for (const { file, position } of videoFiles) {
+          try {
+            await videos.upload.mutateAsync({ file, position });
+          } catch (error) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Unable to upload video.",
+            );
+          }
+        }
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : "Unable to upload images.",
+          err instanceof Error ? err.message : "Unable to upload media.",
         );
       }
     },
@@ -140,10 +195,13 @@ export function useBoardAssetActions({
       getPlacement,
       parentFolderPath,
       placement,
+      queryClient,
       target,
       uploadInboxImages,
       uploadLocalImages,
       videos.upload,
+      workspaceSlug,
+      collectionSlug,
     ],
   );
 

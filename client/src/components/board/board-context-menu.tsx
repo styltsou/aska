@@ -3,8 +3,7 @@ import { toast } from "sonner";
 import { ScanIcon } from "lucide-react";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
-import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
-import { AddVideoDialog } from "@/components/app-shell/add-video-dialog";
+import { UploadMediaDialog } from "@/components/app-shell/upload-media-dialog";
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { readClipboardAssetPayload } from "@/lib/clipboard";
 import { useBoardAssetActions } from "./use-board-asset-actions";
@@ -68,7 +67,6 @@ export function BoardContextMenu({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const hasActiveModalLayer = useActiveModalLayer();
 
   const canvasActions = useCanvasActions();
@@ -136,13 +134,10 @@ export function BoardContextMenu({
           {target === "inbox" ? (
             <>
               <ContextMenuItem onClick={() => setUploadDialogOpen(true)}>
-                Upload images
+                Upload
                 <ContextMenuShortcut>
                   {formatPlatformShortcut("⇧+U")}
                 </ContextMenuShortcut>
-              </ContextMenuItem>
-              <ContextMenuItem onClick={() => setVideoDialogOpen(true)}>
-                Add video
               </ContextMenuItem>
               <ContextMenuItem onClick={() => setNoteDialogOpen(true)}>
                 New note
@@ -155,9 +150,6 @@ export function BoardContextMenu({
               </ContextMenuItem>
               <ContextMenuSeparator />
               {pasteItem}
-              <ContextMenuItem onClick={() => setVideoDialogOpen(true)}>
-                Add video
-              </ContextMenuItem>
             </>
           ) : (
             <>
@@ -200,14 +192,6 @@ export function BoardContextMenu({
           )}
         </ContextMenuContent>
       </ContextMenu>
-      <AddVideoDialog
-        workspaceSlug={workspaceSlug}
-        collectionPath={collectionPath}
-        target={target}
-        placement={placement}
-        open={videoDialogOpen}
-        onOpenChange={setVideoDialogOpen}
-      />
       {target === "inbox" ? (
         <>
           <CreateNoteDialog
@@ -226,9 +210,10 @@ export function BoardContextMenu({
             onOpenChange={setColorDialogOpen}
             placement={placement}
           />
-          <UploadImagesDialog
+          <UploadMediaDialog
             workspaceSlug={workspaceSlug}
             collectionPath={collectionPath}
+            target={target}
             open={uploadDialogOpen}
             onOpenChange={setUploadDialogOpen}
             placement={placement}
