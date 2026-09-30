@@ -159,7 +159,7 @@
 }
 
 .note-mermaid-full {
-  @apply fixed inset-0 z-[110] flex flex-col overflow-hidden bg-sidebar text-sidebar-foreground;
+  @apply absolute inset-0 z-20 flex min-h-0 flex-col overflow-hidden overscroll-contain bg-sidebar text-sidebar-foreground;
 }
 
 .note-mermaid-full-header {

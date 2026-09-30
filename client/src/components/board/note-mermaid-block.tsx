@@ -117,7 +117,6 @@ function MermaidBlockView({
   const [copied, setCopied] = useState(false);
   const [portalTarget, setPortalTarget] = useState<HTMLElement>();
   const openButtonRef = useRef<HTMLButtonElement>(null);
-  const fullViewRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number>();
   const { svg, error } = useDiagramPreview(source);
@@ -137,7 +136,7 @@ function MermaidBlockView({
     const wrapper = editor.view.dom;
     setPortalTarget(
       wrapper.closest<HTMLElement>(
-        "[data-slot='note-workspace-content'], [data-slot='dialog-content']",
+        "[data-slot='note-workspace-main-content'], [data-slot='dialog-content']",
       ) ?? document.body,
     );
   }, [editor]);
@@ -282,7 +281,7 @@ function MermaidBlockView({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
-                  aria-label="Open diagram full view"
+                  aria-label="Expand diagram"
                   ref={openButtonRef}
                   onClick={() => {
                     setShowCodePane(true);
@@ -293,7 +292,7 @@ function MermaidBlockView({
                 </Button>
               }
             />
-            <TooltipContent>Open full view</TooltipContent>
+            <TooltipContent>Expand diagram</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -354,29 +353,10 @@ function MermaidBlockView({
       {fullView && portalTarget
         ? createPortal(
             <div
-              ref={fullViewRef}
               className="note-mermaid-full"
-              role="dialog"
-              aria-modal="true"
-              aria-label="Mermaid diagram editor"
-              onKeyDown={(event) => {
-                event.stopPropagation();
-                if (event.key !== "Tab") return;
-                const focusable =
-                  fullViewRef.current?.querySelectorAll<HTMLElement>(
-                    'button:not(:disabled), [contenteditable="true"], [tabindex="0"]',
-                  );
-                if (!focusable?.length) return;
-                const first = focusable[0];
-                const last = focusable[focusable.length - 1];
-                if (event.shiftKey && document.activeElement === first) {
-                  event.preventDefault();
-                  last.focus();
-                } else if (!event.shiftKey && document.activeElement === last) {
-                  event.preventDefault();
-                  first.focus();
-                }
-              }}
+              role="region"
+              aria-label="Expanded Mermaid diagram editor"
+              onKeyDown={(event) => event.stopPropagation()}
             >
               <div className="note-mermaid-full-header">
                 <Tooltip>
@@ -386,7 +366,7 @@ function MermaidBlockView({
                         type="button"
                         variant="ghost"
                         size="icon-sm"
-                        aria-label="Close diagram view"
+                        aria-label="Collapse diagram"
                         onClick={() => {
                           setFullView(false);
                           window.requestAnimationFrame(() =>
@@ -398,7 +378,7 @@ function MermaidBlockView({
                       </Button>
                     }
                   />
-                  <TooltipContent>Close full view</TooltipContent>
+                  <TooltipContent>Collapse diagram</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger
