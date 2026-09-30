@@ -81,8 +81,13 @@ const MentionContext = createContext<MentionContextValue>({
 });
 const mentionSuggestionPluginKey = new PluginKey("assetMentionSuggestion");
 
-export const NOTE_MENTION_CHIP_CLASS =
-  "mx-[0.08em] inline-flex max-w-full cursor-pointer items-center gap-1 rounded-md border border-foreground/10 bg-[color-mix(in_oklab,var(--background)_90%,var(--mention-tint,var(--foreground)))] px-1.5 py-0.5 align-baseline text-[0.875em] leading-none font-medium text-foreground no-underline transition-[background-color,border-color,box-shadow,opacity] duration-100 hover:border-foreground/20 hover:bg-[color-mix(in_oklab,var(--background)_80%,var(--mention-tint,var(--foreground)))]";
+// Static pills (canvas cards, folder and collection previews) are read-only, so
+// the base class carries no hover. Only the editor's interactive pill opts in.
+const MENTION_CHIP_BASE_CLASS =
+  "mx-[0.08em] inline-flex max-w-full items-center gap-1 rounded-md border border-foreground/10 bg-[color-mix(in_oklab,var(--background)_90%,var(--mention-tint,var(--foreground)))] px-1.5 py-0.5 align-baseline text-[0.875em] leading-none font-medium text-foreground no-underline transition-[background-color,border-color,box-shadow,opacity] duration-100";
+export const NOTE_MENTION_CHIP_CLASS = MENTION_CHIP_BASE_CLASS;
+export const NOTE_MENTION_CHIP_HOVER_CLASS =
+  "cursor-pointer hover:border-foreground/20 hover:bg-[color-mix(in_oklab,var(--background)_80%,var(--mention-tint,var(--foreground)))]";
 export const NOTE_MENTION_SELECTED_CLASS = "ring-2 ring-ring/35";
 export const NOTE_MENTION_UNAVAILABLE_CLASS =
   "cursor-default border-transparent bg-muted/45 text-muted-foreground opacity-65 grayscale";
@@ -356,6 +361,7 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
       disabled={unavailable || !onOpen}
       className={cn(
         NOTE_MENTION_CHIP_CLASS,
+        NOTE_MENTION_CHIP_HOVER_CLASS,
         selected && NOTE_MENTION_SELECTED_CLASS,
         unavailable && NOTE_MENTION_UNAVAILABLE_CLASS,
       )}

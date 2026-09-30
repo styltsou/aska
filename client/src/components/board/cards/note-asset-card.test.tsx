@@ -156,7 +156,7 @@ describe("NoteMarkdown", () => {
     expect(html).toContain("background:#0a5");
   });
 
-  it("tints a color pill on hover using the payload color", () => {
+  it("exposes the payload color as a tint variable", () => {
     const html = renderToStaticMarkup(
       <NoteMarkdown
         content="Use [Ocean](color:7)."
@@ -165,6 +165,19 @@ describe("NoteMarkdown", () => {
     );
 
     expect(html).toContain("--mention-tint:#0a5");
+  });
+
+  it("renders static preview pills without hover affordances", () => {
+    for (const content of ["Use [Ocean](color:7).", "See [Other](note:9)."]) {
+      const html = renderToStaticMarkup(
+        <NoteMarkdown
+          content={content}
+          mentionColors={{ "color:7": { hex: "#0a5", gradient: null } }}
+        />,
+      );
+
+      expect(html).not.toContain("hover:");
+    }
   });
 
   it("resolves a gradient mention into both swatch and tint", () => {

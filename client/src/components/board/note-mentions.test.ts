@@ -9,6 +9,8 @@ import Suggestion from "@tiptap/suggestion";
 
 import {
   AssetMention,
+  NOTE_MENTION_CHIP_CLASS,
+  NOTE_MENTION_CHIP_HOVER_CLASS,
   NoteMentionProvider,
   createMentionScopeQuery,
   createMentionsExtension,
@@ -39,6 +41,13 @@ const target = {
 };
 
 describe("mention query parsing", () => {
+  it("keeps hover affordances off the shared base pill", () => {
+    expect(NOTE_MENTION_CHIP_CLASS).not.toContain("hover:");
+    expect(NOTE_MENTION_CHIP_CLASS).not.toContain("cursor-pointer");
+    expect(NOTE_MENTION_CHIP_HOVER_CLASS).toContain("cursor-pointer");
+    expect(NOTE_MENTION_CHIP_HOVER_CLASS).toContain("hover:");
+  });
+
   it("uses exact cached matches or retained results while a search is loading", () => {
     expect(
       getMentionMenuDisplayItems({
