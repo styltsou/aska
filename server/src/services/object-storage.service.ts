@@ -37,11 +37,13 @@ export interface IObjectStorageService {
     key: string;
     contentType: string;
     expiresInSeconds?: number;
+    ifNoneMatch?: boolean;
   }): Promise<PresignedPutUrl>;
   createPresignedGetUrl(
     key: string,
     expiresInSeconds?: number,
   ): Promise<PresignedGetUrl>;
+  createPresignedDownloadUrl?(key: string, filename: string): Promise<string>;
   createPresignedGetUrls(
     keys: Iterable<string>,
     expiresInSeconds?: number,
@@ -63,6 +65,7 @@ export class ObjectStorageService implements IObjectStorageService {
     key: string;
     contentType: string;
     expiresInSeconds?: number;
+    ifNoneMatch?: boolean;
   }): Promise<PresignedPutUrl> {
     const { bucket } = this.getRequiredConfig();
     const expiresInSeconds =
@@ -72,6 +75,7 @@ export class ObjectStorageService implements IObjectStorageService {
       Key: input.key,
       ContentType: input.contentType,
       CacheControl: IMMUTABLE_MEDIA_CACHE_CONTROL,
+      IfNoneMatch: input.ifNoneMatch ? "*" : undefined,
     });
 
     const url = await getSignedUrl(this.getClient(), command, {
@@ -83,6 +87,7 @@ export class ObjectStorageService implements IObjectStorageService {
       headers: {
         "Content-Type": input.contentType,
         "Cache-Control": IMMUTABLE_MEDIA_CACHE_CONTROL,
+        ...(input.ifNoneMatch ? { "If-None-Match": "*" } : {}),
       },
       expiresAt: new Date(Date.now() + expiresInSeconds * 1000),
     };
@@ -120,6 +125,20 @@ export class ObjectStorageService implements IObjectStorageService {
       url,
       expiresAt: new Date(Date.now() + expiresInSeconds * 1000),
     };
+  }
+
+  async createPresignedDownloadUrl(
+    key: string,
+    filename: string,
+  ): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.getRequiredConfig().bucket,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${filename.replace(/["\r\n;]/g, "_")}"`,
+    });
+    return getSignedUrl(this.getClient(), command, {
+      expiresIn: env.S3_PRESIGNED_READ_EXPIRES_SECONDS,
+    });
   }
 
   async createPresignedGetUrls(
@@ -247,7 +266,7 @@ export class ObjectStorageService implements IObjectStorageService {
 }
 
 function isMediaObjectKey(key: string): boolean {
-  return /^[^/]+\/[^/]+\/(?:original\.[a-z0-9]+|master\.webp|display\.webp|preview\.webp)$/i.test(
+  return /^[^/]+\/(?:[^/]+\/(?:original\.[a-z0-9]+|master\.webp|display\.webp|preview\.webp)|video\/[^/]+\/(?:original\.(?:mp4|webm)|poster(?:-display|-preview)?\.webp))$/i.test(
     key,
   );
 }

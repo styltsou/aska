@@ -30,7 +30,7 @@ export type WorkspaceSearchLocation =
 
 export type WorkspaceSearchResult = {
   id: string;
-  type: "image" | "note" | "link" | "color" | "folder" | "collection";
+  type: "image" | "video" | "note" | "link" | "color" | "folder" | "collection";
   label: string;
   snippet: string | null;
   locationLabel: string;

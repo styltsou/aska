@@ -60,6 +60,14 @@ export function toFolderPreview(
     };
   }
 
+  if (row.assetType === "video") {
+    return {
+      assetId: `video-${row.assetId}`,
+      type: "video",
+      title: row.assetTitle ?? null,
+    };
+  }
+
   if (row.assetType === "link" && row.hostname) {
     const media = row.resourceId ? linkMedia?.get(row.resourceId) : undefined;
     return {

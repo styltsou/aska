@@ -20,6 +20,7 @@ jobs:
       image-shared: ${{ steps.filter.outputs.image-shared }}
       url-unfurl-shared: ${{ steps.filter.outputs.url-unfurl-shared }}
       url-resolution: ${{ steps.filter.outputs.url-resolution }}
+      video-processor: ${{ steps.filter.outputs.video-processor }}
       infra: ${{ steps.filter.outputs.infra }}
       deploy: ${{ steps.filter.outputs.deploy }}
     steps:
@@ -50,6 +51,11 @@ jobs:
               - '.github/workflows/ci.yml'
             url-resolution:
               - 'services/url-resolution/**'
+              - '.github/workflows/ci.yml'
+            video-processor:
+              - 'services/video-processor/**'
+              - 'services/image-shared/**'
+              - 'services/url-unfurl-shared/**'
               - '.github/workflows/ci.yml'
             infra:
               - 'sst.config.ts'
@@ -108,6 +114,10 @@ jobs:
             directory: services/url-resolution
             command: bun install --frozen-lockfile --cwd ../url-unfurl-shared && bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
             changed: ${{ needs.changes.outputs.url-resolution || needs.changes.outputs.url-unfurl-shared || needs.changes.outputs.image-shared }}
+          - name: Video processor
+            directory: services/video-processor
+            command: bun install --frozen-lockfile --cwd ../image-shared && bun install --frozen-lockfile --cwd ../url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.video-processor || needs.changes.outputs.image-shared || needs.changes.outputs.url-unfurl-shared }}
     defaults:
       run:
         working-directory: ${{ matrix.directory }}
@@ -175,6 +185,7 @@ jobs:
           bun install --frozen-lockfile --cwd services/image-palette
           bun install --frozen-lockfile --cwd services/url-unfurl-shared
           bun install --frozen-lockfile --cwd services/url-resolution
+          bun install --frozen-lockfile --cwd services/video-processor
       # Targeted SST deploys still validate the static site's output, but do
       # not run its builder. The full deploy below rebuilds it with its final
       # SST-provided environment.

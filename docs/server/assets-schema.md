@@ -10,6 +10,8 @@ For the design rationale and tradeoffs, see
 
 - `assets`: shared row for archived content.
 - `image_assets`: image-specific fields keyed by `asset_id`.
+- `video_assets`: validated original, poster variants, metadata, note, and processing state.
+- `video_uploads`: direct-upload and remote-import workflow state.
 - `link_assets`: card-specific original URL and normalized-resource reference.
 - `external_resources`: workspace-scoped resolved URL identity and metadata.
 - `resource_resolution_attempts`: generation-guarded URL resolution work.
@@ -43,6 +45,13 @@ access scope, not folder or collection location. Folder and collection moves
 update database placement only and never rename media objects.
 `image_assets.blur_data_url` stores the inline blurred WebP shown while those
 URLs decode.
+
+Videos use `{workspaceId}/video/{storageId}/original.mp4` or `.webm`, with
+`poster.webp`, `poster-display.webp`, and `poster-preview.webp` alongside it.
+The poster is extracted at native frame resolution; display and preview cap
+width at 960 and 320 pixels without enlargement. `video_assets.poster` stores
+the `original`, `display`, and `preview` records. The video original is null
+until validation succeeds; a failed import remains a removable asset card.
 
 Resource-media keys use the same authorization namespace and immutable-storage
 convention: `{workspaceId}/{storageId}/master.webp` plus optional
@@ -89,6 +98,7 @@ Use class-table inheritance for real asset variants:
 ```txt
 assets
   image_assets
+  video_assets
   note_assets
   link_assets -> external_resources
 ```
@@ -104,9 +114,9 @@ Folders are not assets. A folder is placed into a collection through a
 
 Assets are placed into a collection through a `collection_nodes` row with
 `node_type = "asset"` and `asset_id` set. Asset nodes can point to any asset
-subtype, currently images, notes, and links.
+subtype, currently images, videos, notes, links, and colors.
 
-This keeps the collection view as one spatial stream of image, note, link, and
+This keeps the collection view as one spatial stream of image, video, note, link, and
 folder nodes instead of forcing folders to the top.
 
 Child nodes use `parent_folder_id`, not `parent_node_id`, because only folders
@@ -135,7 +145,7 @@ Use slugs for reads and IDs for mutations.
 ## Asset Counts
 
 Displayed counts always mean assets, never folders. A collection count includes
-every image, note, and link placed anywhere in that collection. A folder count
+every image, video, note, link, and color placed anywhere in that collection. A folder count
 includes every asset in that folder and all nested folders.
 
 The read service computes collection counts with `collection_id` and

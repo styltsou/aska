@@ -17,14 +17,17 @@ import {
   collectionNodes,
   externalResources,
   imageAssets,
+  videoAssets,
   linkAssets,
   member,
   noteAssets,
   uploads,
+  videoUploads,
   type ImageAssetVariants,
 } from "@/db/schema";
 import type {
   CollectionImageNode,
+  CollectionVideoNode,
   CollectionColorNode,
   CollectionLinkNode,
   CollectionNode,
@@ -38,6 +41,8 @@ import type {
   UpdateNoteInput,
   UpdatedImage,
   UpdateImageInput,
+  UpdateVideoInput,
+  UpdatedVideo,
   UpdatedLink,
   UpdateLinkInput,
   UpdateColorInput,
@@ -95,6 +100,7 @@ export interface IAssetService {
     assetNodeId: string,
   ): Promise<
     | CollectionImageNode
+    | CollectionVideoNode
     | CollectionNoteNode
     | CollectionLinkNode
     | CollectionColorNode
@@ -137,6 +143,12 @@ export interface IAssetService {
     assetNodeId: string,
     data: UpdateImageInput,
   ): Promise<UpdatedImage>;
+  updateVideo(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    data: UpdateVideoInput,
+  ): Promise<UpdatedVideo>;
   updateLink(
     orgId: string,
     userId: string,
@@ -153,6 +165,7 @@ export interface IAssetService {
     assetNodeId: string,
     signal?: AbortSignal,
   ): Promise<AssetDownload>;
+  downloadVideo(orgId: string, assetNodeId: string): Promise<string>;
   bulkDeleteAssets(orgId: string, nodeIds: string[]): Promise<BulkDeleteResult>;
 }
 
@@ -170,6 +183,7 @@ export class AssetService implements IAssetService {
     assetNodeId: string,
   ): Promise<
     | CollectionImageNode
+    | CollectionVideoNode
     | CollectionNoteNode
     | CollectionLinkNode
     | CollectionColorNode
@@ -188,6 +202,16 @@ export class AssetService implements IAssetService {
         sourceLabel: imageAssets.sourceLabel,
         sourceUrl: imageAssets.sourceUrl,
         imageVariants: imageAssets.variants,
+        videoOriginal: videoAssets.original,
+        videoPoster: videoAssets.poster,
+        videoWidth: videoAssets.width,
+        videoHeight: videoAssets.height,
+        videoDurationSeconds: videoAssets.durationSeconds,
+        videoNote: videoAssets.note,
+        videoSourceLabel: videoAssets.sourceLabel,
+        videoSourceUrl: videoAssets.sourceUrl,
+        videoProcessingStatus: videoAssets.processingStatus,
+        videoProcessingError: videoAssets.processingError,
         imageBlurDataURL: imageAssets.blurDataURL,
         imageDominantColors: imageAssets.dominantColors,
         noteContent: noteAssets.markdown,
@@ -213,6 +237,7 @@ export class AssetService implements IAssetService {
       })
       .from(assets)
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+      .leftJoin(videoAssets, eq(videoAssets.assetId, assets.id))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
       .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
       .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
@@ -289,7 +314,8 @@ export class AssetService implements IAssetService {
     types?: ContentTypeFilter[],
   ): Promise<InboxContentsResponse> {
     const assetTypes = types?.filter(
-      (type): type is "image" | "note" | "link" | "color" => type !== "folder",
+      (type): type is "image" | "video" | "note" | "link" | "color" =>
+        type !== "folder",
     );
 
     if (types !== undefined && assetTypes?.length === 0) {
@@ -313,6 +339,16 @@ export class AssetService implements IAssetService {
         sourceLabel: imageAssets.sourceLabel,
         sourceUrl: imageAssets.sourceUrl,
         imageVariants: imageAssets.variants,
+        videoOriginal: videoAssets.original,
+        videoPoster: videoAssets.poster,
+        videoWidth: videoAssets.width,
+        videoHeight: videoAssets.height,
+        videoDurationSeconds: videoAssets.durationSeconds,
+        videoNote: videoAssets.note,
+        videoSourceLabel: videoAssets.sourceLabel,
+        videoSourceUrl: videoAssets.sourceUrl,
+        videoProcessingStatus: videoAssets.processingStatus,
+        videoProcessingError: videoAssets.processingError,
         imageBlurDataURL: imageAssets.blurDataURL,
         imageDominantColors: imageAssets.dominantColors,
         noteContent: noteAssets.markdown,
@@ -338,6 +374,7 @@ export class AssetService implements IAssetService {
       })
       .from(assets)
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+      .leftJoin(videoAssets, eq(videoAssets.assetId, assets.id))
       .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
       .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
       .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
@@ -835,6 +872,48 @@ export class AssetService implements IAssetService {
     };
   }
 
+  async updateVideo(
+    orgId: string,
+    userId: string,
+    assetNodeId: string,
+    data: UpdateVideoInput,
+  ): Promise<UpdatedVideo> {
+    const target = parseAssetNodeId(assetNodeId);
+    if (target.assetType !== "video")
+      throw new AppError(ErrorCode.VALIDATION_ERROR, "Asset is not a video");
+    const note = data.note?.trim() ? data.note : null;
+    const updated = await db.transaction(async (tx) => {
+      const [asset] = await tx
+        .update(assets)
+        .set({ updatedByUserId: userId })
+        .where(
+          and(
+            eq(assets.id, target.entityId),
+            eq(assets.organizationId, orgId),
+            eq(assets.type, "video"),
+          ),
+        )
+        .returning({
+          id: assets.id,
+          isFavorite: assets.isFavorite,
+          updatedAt: assets.updatedAt,
+        });
+      if (!asset) throw new AppError(ErrorCode.NOT_FOUND, "Video not found");
+      await tx
+        .update(videoAssets)
+        .set({ note })
+        .where(eq(videoAssets.assetId, asset.id));
+      return { ...asset, note };
+    });
+    return {
+      id: `video-${updated.id}`,
+      type: "video",
+      note: updated.note,
+      isFavorite: updated.isFavorite,
+      updatedAt: updated.updatedAt.toISOString(),
+    };
+  }
+
   async updateLink(
     orgId: string,
     userId: string,
@@ -954,7 +1033,7 @@ export class AssetService implements IAssetService {
           )?.resourceId
         : undefined;
 
-    if (target.assetType === "image") {
+    if (target.assetType === "image" || target.assetType === "video") {
       const keys = await collectAssetObjectKeys(orgId, [assetId]);
       if (keys.length > 0) {
         await this.objectStorageService.deleteObjects(keys);
@@ -1020,6 +1099,45 @@ export class AssetService implements IAssetService {
     return { bytes, contentType: original.contentType, filename };
   }
 
+  async downloadVideo(orgId: string, assetNodeId: string): Promise<string> {
+    const target = parseAssetNodeId(assetNodeId);
+    if (target.assetType !== "video")
+      throw new AppError(ErrorCode.NOT_FOUND, "Video not found");
+    const [row] = await db
+      .select({
+        title: assets.title,
+        original: videoAssets.original,
+        status: videoAssets.processingStatus,
+      })
+      .from(assets)
+      .innerJoin(videoAssets, eq(videoAssets.assetId, assets.id))
+      .where(
+        and(
+          eq(assets.organizationId, orgId),
+          eq(assets.id, target.entityId),
+          eq(assets.type, "video"),
+        ),
+      )
+      .limit(1);
+    if (!row?.original || row.status !== "completed")
+      throw new AppError(
+        ErrorCode.NOT_FOUND,
+        "Video is not ready for download",
+      );
+    const ext = row.original.contentType === "video/webm" ? "webm" : "mp4";
+    const filename = `${sanitizeFilename(row.title ?? "video")}.${ext}`;
+    return this.objectStorageService.createPresignedDownloadUrl
+      ? this.objectStorageService.createPresignedDownloadUrl(
+          row.original.objectKey,
+          filename,
+        )
+      : (
+          await this.objectStorageService.createPresignedGetUrl(
+            row.original.objectKey,
+          )
+        ).url;
+  }
+
   async bulkDeleteAssets(
     orgId: string,
     nodeIds: string[],
@@ -1030,7 +1148,9 @@ export class AssetService implements IAssetService {
     }));
 
     const imageAssetIds = parsed
-      .filter((p) => p.parsed.assetType === "image")
+      .filter(
+        (p) => p.parsed.assetType === "image" || p.parsed.assetType === "video",
+      )
       .map((p) => p.parsed.entityId);
     const linkAssetIds = parsed
       .filter((p) => p.parsed.assetType === "link")
@@ -1080,7 +1200,7 @@ export class AssetService implements IAssetService {
   private async rowsToAssetNodes(
     rows: Array<{
       assetId: number;
-      assetType: "image" | "note" | "link" | "color";
+      assetType: "image" | "video" | "note" | "link" | "color";
       title: string | null;
       isFavorite: boolean;
       createdAt: Date;
@@ -1092,6 +1212,42 @@ export class AssetService implements IAssetService {
       imageVariants: ImageAssetVariants | null;
       imageBlurDataURL: string | null;
       imageDominantColors: string[] | null;
+      videoOriginal: {
+        objectKey: string;
+        contentType: string;
+        sizeBytes: number;
+      } | null;
+      videoPoster: {
+        original: {
+          objectKey: string;
+          contentType: string;
+          width: number;
+          height: number;
+          sizeBytes: number;
+        };
+        display: {
+          objectKey: string;
+          contentType: string;
+          width: number;
+          height: number;
+          sizeBytes: number;
+        };
+        preview: {
+          objectKey: string;
+          contentType: string;
+          width: number;
+          height: number;
+          sizeBytes: number;
+        };
+      } | null;
+      videoWidth: number | null;
+      videoHeight: number | null;
+      videoDurationSeconds: number | null;
+      videoNote: string | null;
+      videoSourceLabel: string | null;
+      videoSourceUrl: string | null;
+      videoProcessingStatus: "processing" | "completed" | "failed" | null;
+      videoProcessingError: string | null;
       noteContent: string | null;
       noteIsExpanded: boolean | null;
       colorHex: string | null;
@@ -1166,6 +1322,44 @@ export class AssetService implements IAssetService {
           position: null,
           frontIndex: null,
         } satisfies CollectionImageNode);
+        continue;
+      }
+
+      if (row.assetType === "video") {
+        const [video, poster] = await Promise.all([
+          row.videoProcessingStatus === "completed" && row.videoOriginal
+            ? this.objectStorageService.createPresignedGetUrl(
+                row.videoOriginal.objectKey,
+              )
+            : undefined,
+          row.videoProcessingStatus === "completed" &&
+          row.videoPoster?.display.objectKey
+            ? this.objectStorageService.createPresignedGetUrl(
+                row.videoPoster.display.objectKey,
+              )
+            : undefined,
+        ]);
+        nodes.push({
+          id: `video-${row.assetId}`,
+          type: "video",
+          url: video?.url ?? null,
+          posterUrl: poster?.url ?? null,
+          contentType: row.videoOriginal?.contentType ?? null,
+          width: row.videoWidth,
+          height: row.videoHeight,
+          durationSeconds: row.videoDurationSeconds,
+          title: row.title,
+          note: row.videoNote,
+          sourceLabel: row.videoSourceLabel,
+          sourceUrl: row.videoSourceUrl,
+          processingStatus: row.videoProcessingStatus ?? "processing",
+          processingError: row.videoProcessingError,
+          isFavorite: row.isFavorite,
+          createdAt: row.createdAt.toISOString(),
+          updatedAt: row.updatedAt.toISOString(),
+          position: null,
+          frontIndex: null,
+        } satisfies CollectionVideoNode);
         continue;
       }
 
@@ -1251,21 +1445,48 @@ export async function collectAssetObjectKeys(
 ): Promise<string[]> {
   if (assetIds.length === 0) return [];
 
-  const [imageRows, uploadRows] = await Promise.all([
-    db
-      .select({ variants: imageAssets.variants })
-      .from(imageAssets)
-      .where(inArray(imageAssets.assetId, assetIds)),
-    db
-      .select({ originalObjectKey: uploads.originalObjectKey })
-      .from(uploads)
-      .where(
-        and(
-          eq(uploads.organizationId, orgId),
-          inArray(uploads.assetId, assetIds),
+  const [imageRows, uploadRows, videoRows, videoUploadRows] = await Promise.all(
+    [
+      db
+        .select({ variants: imageAssets.variants })
+        .from(imageAssets)
+        .innerJoin(assets, eq(assets.id, imageAssets.assetId))
+        .where(
+          and(
+            eq(assets.organizationId, orgId),
+            inArray(imageAssets.assetId, assetIds),
+          ),
         ),
-      ),
-  ]);
+      db
+        .select({ originalObjectKey: uploads.originalObjectKey })
+        .from(uploads)
+        .where(
+          and(
+            eq(uploads.organizationId, orgId),
+            inArray(uploads.assetId, assetIds),
+          ),
+        ),
+      db
+        .select({ original: videoAssets.original, poster: videoAssets.poster })
+        .from(videoAssets)
+        .innerJoin(assets, eq(assets.id, videoAssets.assetId))
+        .where(
+          and(
+            eq(assets.organizationId, orgId),
+            inArray(videoAssets.assetId, assetIds),
+          ),
+        ),
+      db
+        .select({ originalObjectKey: videoUploads.originalObjectKey })
+        .from(videoUploads)
+        .where(
+          and(
+            eq(videoUploads.organizationId, orgId),
+            inArray(videoUploads.assetId, assetIds),
+          ),
+        ),
+    ],
+  );
 
   const keys = new Set<string>();
 
@@ -1281,6 +1502,16 @@ export async function collectAssetObjectKeys(
     if (row.originalObjectKey) {
       keys.add(row.originalObjectKey);
     }
+  }
+
+  for (const row of videoRows) {
+    if (row.original?.objectKey) keys.add(row.original.objectKey);
+    if (row.poster)
+      for (const variant of Object.values(row.poster))
+        keys.add(variant.objectKey);
+  }
+  for (const row of videoUploadRows) {
+    if (row.originalObjectKey) keys.add(row.originalObjectKey);
   }
 
   return [...keys];

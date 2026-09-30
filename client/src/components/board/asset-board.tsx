@@ -59,7 +59,7 @@ export function AssetBoard({
   onOpenNote?: (note: NoteAsset, mode?: "read" | "edit") => void;
   onOpenImage?: (image: ImageAsset) => void;
   onOpenColor?: (color: ColorAsset) => void;
-  onOpenVideo?: (link: Extract<Asset, { type: "link" }>) => void;
+  onOpenVideo?: (video: Extract<Asset, { type: "link" | "video" }>) => void;
   focusedAssetId?: string;
   focusRequestId?: number;
   onDismissFocusedAsset?: () => void;

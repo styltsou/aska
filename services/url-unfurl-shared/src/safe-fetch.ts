@@ -1,7 +1,10 @@
 import dns from "node:dns/promises";
 import http from "node:http";
 import https from "node:https";
+import { createWriteStream } from "node:fs";
 import { isIP, type LookupFunction } from "node:net";
+import { Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 import ipaddr from "ipaddr.js";
 
@@ -56,6 +59,123 @@ export type SafeFetchResult = {
   status: number;
   redirectCount: number;
 };
+
+/** Downloads a bounded public resource without retaining its body in memory. */
+export async function safeFetchToFile(
+  input: string | URL,
+  filePath: string,
+  options: SafeFetchOptions,
+): Promise<Omit<SafeFetchResult, "body"> & { sizeBytes: number }> {
+  let current = validateNetworkUrl(input);
+  const visited = new Set<string>();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.totalTimeoutMs);
+  try {
+    for (
+      let redirectCount = 0;
+      redirectCount <= MAX_REDIRECTS;
+      redirectCount++
+    ) {
+      if (visited.has(current.toString()))
+        throw new SafeFetchError("redirect_limit", "Redirect loop", false);
+      visited.add(current.toString());
+      const response = await requestPinned(current, options, controller.signal);
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.location;
+        response.stream.destroy();
+        if (!location || redirectCount === MAX_REDIRECTS)
+          throw new SafeFetchError(
+            "redirect_limit",
+            "Redirect limit exceeded",
+            false,
+          );
+        current = validateNetworkUrl(new URL(location, current));
+        continue;
+      }
+      if (response.status < 200 || response.status >= 300) {
+        response.stream.destroy();
+        throw new SafeFetchError(
+          "http_error",
+          `Remote request returned ${response.status}`,
+          response.status === 408 ||
+            response.status === 429 ||
+            response.status >= 500,
+          response.status,
+        );
+      }
+      const contentType = normalizeContentType(
+        response.headers["content-type"],
+      );
+      if (!contentType || !options.allowedContentTypes.includes(contentType)) {
+        response.stream.destroy();
+        throw new SafeFetchError(
+          "content_type",
+          "Unsupported remote content type",
+          false,
+        );
+      }
+      const declaredLength = Number(response.headers["content-length"]);
+      if (
+        Number.isFinite(declaredLength) &&
+        declaredLength > options.maxBytes
+      ) {
+        response.stream.destroy();
+        throw new SafeFetchError(
+          "response_too_large",
+          "Remote response is too large",
+          false,
+        );
+      }
+      let sizeBytes = 0;
+      const bounded = new Transform({
+        transform(chunk: Buffer, _encoding, callback) {
+          sizeBytes += chunk.byteLength;
+          if (sizeBytes > options.maxBytes)
+            callback(
+              new SafeFetchError(
+                "response_too_large",
+                "Remote response is too large",
+                false,
+              ),
+            );
+          else callback(null, chunk);
+        },
+      });
+      try {
+        await pipeline(
+          response.stream,
+          bounded,
+          createWriteStream(filePath, { flags: "wx" }),
+          { signal: controller.signal },
+        );
+      } catch (error) {
+        if (controller.signal.aborted)
+          throw new SafeFetchError("timeout", "Remote request timed out", true);
+        throw error;
+      }
+      if (sizeBytes === 0)
+        throw new SafeFetchError(
+          "empty_response",
+          "Remote response was empty",
+          false,
+        );
+      return {
+        contentType,
+        finalUrl: current.toString(),
+        status: response.status,
+        redirectCount,
+        sizeBytes,
+      };
+    }
+    throw new SafeFetchError(
+      "redirect_limit",
+      "Redirect limit exceeded",
+      false,
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function safeFetch(
   input: string | URL,

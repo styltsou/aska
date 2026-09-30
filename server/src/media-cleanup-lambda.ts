@@ -8,6 +8,7 @@ import { ObjectStorageService } from "@/services/object-storage.service";
 import { LoggerService } from "@/services/logger.service";
 import { TaskQueueService } from "@/services/task-queue.service";
 import { UrlUnfurlService } from "@/services/url-unfurl/url-unfurl.service";
+import { VideoUploadService } from "@/services/video-upload.service";
 
 configureEnv(process.env as Record<string, unknown>);
 
@@ -17,13 +18,15 @@ const maintenanceService = new UrlUnfurlService(
   new ObjectStorageService(),
   new LoggerService(),
 );
+const videoMaintenance = new VideoUploadService(new ObjectStorageService());
 
 export const handler = Sentry.wrapHandler(async () => {
-  const [cleanup, resourceMaintenance] = await Promise.all([
+  const [cleanup, resourceMaintenance, staleVideos] = await Promise.all([
     cleanupService.processDueJobs(),
     maintenanceService.runMaintenance(),
+    videoMaintenance.expireStale(),
   ]);
-  const result = { cleanup, resourceMaintenance };
+  const result = { cleanup, resourceMaintenance, staleVideos };
   console.info("media cleanup complete", result);
   return result;
 });

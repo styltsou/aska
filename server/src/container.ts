@@ -12,6 +12,7 @@ import { PexelsService } from "@/services/pexels.service";
 import { TaskQueueService } from "@/services/task-queue.service";
 import { UrlUnfurlService } from "@/services/url-unfurl/url-unfurl.service";
 import { WorkspaceSearchService } from "@/services/workspace-search.service";
+import { VideoUploadService } from "@/services/video-upload.service";
 
 const loggerService = new LoggerService();
 const objectStorageService = new ObjectStorageService();
@@ -43,6 +44,7 @@ export const container = {
     objectStorageService,
     pexelsService,
   ),
+  videoUploadService: new VideoUploadService(objectStorageService),
   imageCropService: new ImageCropService(objectStorageService),
   colorSearchService: new ColorSearchService({
     objectStorageService,

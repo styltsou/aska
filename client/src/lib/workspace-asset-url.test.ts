@@ -7,7 +7,7 @@ import {
 } from "./workspace-asset-url";
 
 describe("parseWorkspaceAssetId", () => {
-  it.each(["image-1", "note-24", "link-8", "color-300"])(
+  it.each(["image-1", "video-3", "note-24", "link-8", "color-300"])(
     "accepts %s",
     (assetId) => {
       expect(parseWorkspaceAssetId(assetId)).toBe(assetId);
@@ -32,6 +32,7 @@ describe("workspace asset paths", () => {
   it.each([
     ["/work", "note-1"],
     ["/work/inbox", "image-2"],
+    ["/work/inbox", "video-4"],
     ["/work/collections/ideas/nested", "color-3"],
   ])("round-trips %s with %s", (boardPathname, assetId) => {
     expect(

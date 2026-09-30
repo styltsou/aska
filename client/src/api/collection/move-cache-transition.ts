@@ -64,6 +64,17 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
     };
   }
 
+  if (node.type === "video") {
+    return {
+      assetId: node.id,
+      type: "video",
+      url: node.posterUrl ?? undefined,
+      width: node.width ?? undefined,
+      height: node.height ?? undefined,
+      title: node.title,
+    };
+  }
+
   return {
     assetId: node.id,
     type: "note",

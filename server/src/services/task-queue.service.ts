@@ -11,6 +11,7 @@ export interface ITaskQueueService {
     mediaId: number,
     generation: number,
   ): Promise<boolean>;
+  enqueueRemoteVideo(uploadId: number): Promise<boolean>;
 }
 
 export class TaskQueueService implements ITaskQueueService {
@@ -33,6 +34,13 @@ export class TaskQueueService implements ITaskQueueService {
     );
   }
 
+  enqueueRemoteVideo(uploadId: number): Promise<boolean> {
+    return this.send(linkedQueueUrl("VideoProcessingQueue", undefined), {
+      kind: "remote-video",
+      uploadId,
+    });
+  }
+
   private async send(
     queueUrl: string | undefined,
     payload: Record<string, unknown>,
@@ -49,7 +57,10 @@ export class TaskQueueService implements ITaskQueueService {
   }
 }
 
-type LinkedQueueName = "UrlResolutionQueue" | "ImageVariantsQueue";
+type LinkedQueueName =
+  | "UrlResolutionQueue"
+  | "ImageVariantsQueue"
+  | "VideoProcessingQueue";
 
 function linkedQueueUrl(
   name: LinkedQueueName,

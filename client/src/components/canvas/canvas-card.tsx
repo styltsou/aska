@@ -11,11 +11,12 @@ import { FolderAssetCard } from "@/components/board/cards/folder-asset-card";
 import { ImageAssetCard } from "@/components/board/cards/image-asset-card";
 import { NoteAssetCard } from "@/components/board/cards/note-asset-card";
 import { LinkAssetCard } from "@/components/board/cards/link-asset-card";
+import { VideoAssetCard } from "@/components/board/cards/video-asset-card";
 import { ColorAssetCard } from "@/components/board/cards/color-asset-card";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { cn } from "@/lib/utils";
 import { useTransientStore } from "@/store";
-import type { LinkAsset } from "@/types/asset";
+import type { LinkAsset, VideoAsset } from "@/types/asset";
 
 import type { CanvasDropStackStyle } from "./canvas-drop-stack";
 
@@ -31,7 +32,7 @@ export type CanvasNodeData = {
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
   onOpenColor: (node: Extract<CollectionNode, { type: "color" }>) => void;
-  onOpenVideo: (asset: LinkAsset) => void;
+  onOpenVideo: (asset: LinkAsset | VideoAsset) => void;
   onOpenNote: (
     node: Extract<CollectionNode, { type: "note" }>,
     mode?: "read" | "edit",
@@ -93,6 +94,12 @@ export const CanvasCard = memo(function CanvasCard({
           onOpen={isPending ? undefined : () => data.onOpenImage(node)}
           isContextMenuOpen={isContextMenuOpen}
           selected={selected}
+        />
+      ) : null}
+      {node.type === "video" && asset.type === "video" ? (
+        <VideoAssetCard
+          asset={asset}
+          onOpen={isPending ? undefined : () => data.onOpenVideo(asset)}
         />
       ) : null}
       {node.type === "note" && asset.type === "note" ? (

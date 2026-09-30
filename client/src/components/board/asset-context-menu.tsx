@@ -26,7 +26,13 @@ import {
 } from "@/api/collection";
 import type { AssetLocation } from "@/api/collection";
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
-import type { Asset, ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
+import type {
+  Asset,
+  ColorAsset,
+  ImageAsset,
+  NoteAsset,
+  VideoAsset,
+} from "@/types/asset";
 import type { LinkAsset } from "@/types/asset";
 import { useRefreshLink } from "@/api/url-unfurl";
 import {
@@ -44,6 +50,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { getPexelsBrowserScope, useSessionStore } from "@/store";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isYouTubeVideoUrl } from "@/lib/youtube-url";
+import { apiUrl } from "@/lib/api";
 
 type ImagePrefetch = {
   controller: AbortController;
@@ -220,7 +227,7 @@ export function AssetContextMenu({
     workspaceSlug: string;
   };
   onOpenImage?: (asset: ImageAsset) => void;
-  onOpenVideo?: (asset: LinkAsset) => void;
+  onOpenVideo?: (asset: LinkAsset | VideoAsset) => void;
   /** Canvas viewport version that should close an open context menu. */
   dismissVersion?: number;
   /** Marks this portaled menu as belonging to a specific canvas. */
@@ -531,7 +538,7 @@ export function AssetContextMenu({
                     peekNote(asset, peekLocation);
                   })}
                 </>
-              ) : (
+              ) : asset.type === "link" ? (
                 linkActions(
                   asset,
                   onOpenVideo
@@ -542,7 +549,28 @@ export function AssetContextMenu({
                       }
                     : undefined,
                 )
-              )}
+              ) : asset.type === "video" ? (
+                <>
+                  <ContextMenuItem onClick={() => onOpenVideo?.(asset)}>
+                    Open video
+                  </ContextMenuItem>
+                  {asset.processingStatus === "completed" && workspaceSlug ? (
+                    <ContextMenuItem
+                      onClick={() =>
+                        window.open(
+                          apiUrl(
+                            `/api/v1/workspace/${encodeURIComponent(workspaceSlug)}/assets/${encodeURIComponent(asset.id)}/download`,
+                          ),
+                          "_blank",
+                          "noopener",
+                        )
+                      }
+                    >
+                      Download original
+                    </ContextMenuItem>
+                  ) : null}
+                </>
+              ) : null}
               <ContextMenuSeparator />
               <ContextMenuItem>
                 {isFavorite ? "Remove from favorites" : "Add to favorites"}

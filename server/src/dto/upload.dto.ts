@@ -10,6 +10,26 @@ export const AllowedImageContentTypes = [
 ] as const;
 
 const DEFAULT_MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
+export const AllowedVideoContentTypes = ["video/mp4", "video/webm"] as const;
+export const MAX_VIDEO_UPLOAD_BYTES = 250 * 1024 * 1024;
+
+export const CreateVideoUploadSchema = z.object({
+  fileName: z.string().min(1).max(255),
+  contentType: z.enum(AllowedVideoContentTypes),
+  sizeBytes: z.number().int().positive().max(MAX_VIDEO_UPLOAD_BYTES),
+  title: z.string().min(1).max(255).optional(),
+  parentFolderPath: z.string().optional(),
+  position: BoardPositionSchema.optional(),
+});
+export type CreateVideoUploadInput = z.infer<typeof CreateVideoUploadSchema>;
+
+export const CreateRemoteVideoSchema = z.object({
+  url: z.url(),
+  title: z.string().min(1).max(255).optional(),
+  parentFolderPath: z.string().optional(),
+  position: BoardPositionSchema.optional(),
+});
+export type CreateRemoteVideoInput = z.infer<typeof CreateRemoteVideoSchema>;
 
 export const CreateImageUploadSchema = z.object({
   fileName: z.string().min(1).max(255),
@@ -33,6 +53,62 @@ const PipelineVariantSchema = z.object({
   contentType: z.literal("image/webp"),
   sizeBytes: z.number().int().positive(),
 });
+
+const VideoPosterVariantSchema = z.object({
+  role: z.enum(["original", "display", "preview"]),
+  objectKey: z.string().min(1),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  contentType: z.literal("image/webp"),
+  sizeBytes: z.number().int().positive(),
+});
+
+const VideoPosterSchema = z.object({
+  original: VideoPosterVariantSchema.extend({ role: z.literal("original") }),
+  display: VideoPosterVariantSchema.extend({ role: z.literal("display") }),
+  preview: VideoPosterVariantSchema.extend({ role: z.literal("preview") }),
+});
+
+export const VideoPipelineCallbackSchema = z.discriminatedUnion("event", [
+  z.object({
+    event: z.literal("video.import.failed"),
+    uploadId: z.number().int().positive(),
+    error: z.string().min(1).max(1000),
+  }),
+  z.object({
+    event: z.literal("video.import.ready"),
+    uploadId: z.number().int().positive(),
+    originalObjectKey: z.string().min(1),
+    contentType: z.enum(AllowedVideoContentTypes),
+    sizeBytes: z.number().int().positive().max(MAX_VIDEO_UPLOAD_BYTES),
+    finalUrl: z.url(),
+  }),
+  z.object({
+    event: z.literal("video.processing.started"),
+    originalObjectKey: z.string().min(1),
+    originalEtag: z.string().min(1),
+  }),
+  z.object({
+    event: z.literal("video.processing.completed"),
+    originalObjectKey: z.string().min(1),
+    originalEtag: z.string().min(1),
+    contentType: z.enum(AllowedVideoContentTypes),
+    sizeBytes: z.number().int().positive().max(MAX_VIDEO_UPLOAD_BYTES),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    durationSeconds: z.number().positive(),
+    poster: VideoPosterSchema,
+  }),
+  z.object({
+    event: z.literal("video.processing.failed"),
+    originalObjectKey: z.string().min(1),
+    originalEtag: z.string().optional(),
+    error: z.string().min(1).max(1000),
+  }),
+]);
+export type VideoPipelineCallbackInput = z.infer<
+  typeof VideoPipelineCallbackSchema
+>;
 
 const PipelineColorSchema = z.object({
   hex: z.string().regex(/^#[0-9a-f]{6}$/i),

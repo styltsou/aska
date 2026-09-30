@@ -4,6 +4,7 @@ import { ScanIcon } from "lucide-react";
 import { CreateNoteDialog } from "@/components/app-shell/create-note-dialog";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { UploadImagesDialog } from "@/components/app-shell/upload-images-dialog";
+import { AddVideoDialog } from "@/components/app-shell/add-video-dialog";
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
 import { readClipboardAssetPayload } from "@/lib/clipboard";
 import { useBoardAssetActions } from "./use-board-asset-actions";
@@ -67,6 +68,7 @@ export function BoardContextMenu({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const hasActiveModalLayer = useActiveModalLayer();
 
   const canvasActions = useCanvasActions();
@@ -139,6 +141,9 @@ export function BoardContextMenu({
                   {formatPlatformShortcut("⇧+U")}
                 </ContextMenuShortcut>
               </ContextMenuItem>
+              <ContextMenuItem onClick={() => setVideoDialogOpen(true)}>
+                Add video
+              </ContextMenuItem>
               <ContextMenuItem onClick={() => setNoteDialogOpen(true)}>
                 New note
                 <ContextMenuShortcut>
@@ -150,6 +155,9 @@ export function BoardContextMenu({
               </ContextMenuItem>
               <ContextMenuSeparator />
               {pasteItem}
+              <ContextMenuItem onClick={() => setVideoDialogOpen(true)}>
+                Add video
+              </ContextMenuItem>
             </>
           ) : (
             <>
@@ -192,6 +200,14 @@ export function BoardContextMenu({
           )}
         </ContextMenuContent>
       </ContextMenu>
+      <AddVideoDialog
+        workspaceSlug={workspaceSlug}
+        collectionPath={collectionPath}
+        target={target}
+        placement={placement}
+        open={videoDialogOpen}
+        onOpenChange={setVideoDialogOpen}
+      />
       {target === "inbox" ? (
         <>
           <CreateNoteDialog

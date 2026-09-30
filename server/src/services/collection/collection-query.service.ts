@@ -18,6 +18,7 @@ import {
   externalResources,
   folders,
   imageAssets,
+  videoAssets,
   linkAssets,
   member,
   noteAssets,
@@ -190,6 +191,11 @@ export class CollectionQueryService {
       .filter((row) => row.assetType === "image")
       .map((row) => row.assetId);
     const imageVariants = await this.getSignedImageVariantLookup(imageAssetIds);
+    const videoVariants = await this.getSignedVideoLookup(
+      selectedPreviewRows
+        .filter((row) => row.assetType === "video")
+        .map((row) => row.assetId),
+    );
     const linkResourceIds = selectedPreviewRows
       .filter((row) => row.assetType === "link" && row.linkResourceId !== null)
       .map((row) => row.linkResourceId!);
@@ -217,6 +223,16 @@ export class CollectionQueryService {
             type: "image",
             url,
             blurDataURL: variants?.blurDataURL,
+          };
+      } else if (row.assetType === "video") {
+        const video = videoVariants.get(row.assetId);
+        if (video?.posterPreviewUrl)
+          preview = {
+            assetId: `video-${row.assetId}`,
+            type: "video",
+            url: video.posterPreviewUrl,
+            width: video.poster?.preview.width,
+            height: video.poster?.preview.height,
           };
       } else if (row.assetType === "note") {
         const snippet = row.noteContent
@@ -473,6 +489,16 @@ export class CollectionQueryService {
         .map((row) => row.assetId!),
     ];
     const imageVariants = await this.getSignedImageVariantLookup(imageAssetIds);
+    const videoVariants = await this.getSignedVideoLookup([
+      ...children
+        .filter(
+          (child) => child.assetType === "video" && child.assetId !== null,
+        )
+        .map((child) => child.assetId!),
+      ...selectedFolderPreviewRows
+        .filter((row) => row.assetType === "video" && row.assetId !== null)
+        .map((row) => row.assetId!),
+    ]);
     const linkResourceIds = [
       ...children
         .filter(
@@ -500,12 +526,19 @@ export class CollectionQueryService {
     for (const row of selectedFolderPreviewRows) {
       if (!row.folderId) continue;
       const list = previewMap.get(row.folderId);
-      const folderPreview = toFolderPreview(
-        row,
-        imageVariants,
-        resourceMedia,
-        mentionColors,
-      );
+      const video =
+        row.assetType === "video" && row.assetId
+          ? videoVariants.get(row.assetId)
+          : undefined;
+      const folderPreview: FolderChildPreview = video?.posterPreviewUrl
+        ? {
+            assetId: `video-${row.assetId}`,
+            type: "video",
+            url: video.posterPreviewUrl,
+            width: video.poster?.preview.width,
+            height: video.poster?.preview.height,
+          }
+        : toFolderPreview(row, imageVariants, resourceMedia, mentionColors);
       if (!list) {
         previewMap.set(row.folderId, [folderPreview]);
       } else if (list.length < 4) {
@@ -564,6 +597,35 @@ export class CollectionQueryService {
           variantStatus: child.imageVariantStatus ?? undefined,
           paletteStatus: child.imagePaletteStatus ?? undefined,
           sizeBytes: display.sizeBytes,
+          createdAt: child.createdAt.toISOString(),
+          updatedAt: child.assetUpdatedAt?.toISOString(),
+          position,
+          frontIndex: child.frontIndex,
+        };
+      }
+
+      if (child.assetType === "video" && child.assetId) {
+        const video = videoVariants.get(child.assetId);
+        return {
+          id: `video-${child.assetId}`,
+          type: "video" as const,
+          url:
+            video?.status === "completed" ? (video.originalUrl ?? null) : null,
+          posterUrl:
+            video?.status === "completed"
+              ? (video.posterDisplayUrl ?? null)
+              : null,
+          contentType: video?.original?.contentType ?? null,
+          width: video?.width ?? null,
+          height: video?.height ?? null,
+          durationSeconds: video?.durationSeconds ?? null,
+          title: child.title,
+          note: video?.note ?? null,
+          sourceLabel: video?.sourceLabel ?? null,
+          sourceUrl: video?.sourceUrl ?? null,
+          processingStatus: video?.status ?? "processing",
+          processingError: video?.error ?? null,
+          isFavorite: child.isFavorite ?? false,
           createdAt: child.createdAt.toISOString(),
           updatedAt: child.assetUpdatedAt?.toISOString(),
           position,
@@ -673,6 +735,73 @@ export class CollectionQueryService {
       nodes,
       canvasObjects: await canvasObjectsPromise,
     };
+  }
+
+  private async getSignedVideoLookup(assetIds: number[]) {
+    const ids = [...new Set(assetIds)];
+    if (ids.length === 0)
+      return new Map<
+        number,
+        {
+          original: typeof videoAssets.$inferSelect.original;
+          poster: typeof videoAssets.$inferSelect.poster;
+          width: number | null;
+          height: number | null;
+          durationSeconds: number | null;
+          note: string | null;
+          sourceLabel: string | null;
+          sourceUrl: string | null;
+          status: "processing" | "completed" | "failed";
+          error: string | null;
+          originalUrl?: string;
+          posterDisplayUrl?: string;
+          posterPreviewUrl?: string;
+        }
+      >();
+    const rows = await db
+      .select()
+      .from(videoAssets)
+      .where(inArray(videoAssets.assetId, ids));
+    const urls = await this.objectStorageService.createPresignedGetUrls(
+      rows.flatMap((row) =>
+        row.processingStatus === "completed"
+          ? [
+              row.original?.objectKey,
+              row.poster?.display.objectKey,
+              row.poster?.preview.objectKey,
+            ].filter((key): key is string => !!key)
+          : [],
+      ),
+    );
+    return new Map(
+      rows.map(
+        (row) =>
+          [
+            row.assetId,
+            {
+              original: row.original,
+              poster: row.poster,
+              width: row.width,
+              height: row.height,
+              durationSeconds: row.durationSeconds,
+              note: row.note,
+              sourceLabel: row.sourceLabel,
+              sourceUrl: row.sourceUrl,
+              status: row.processingStatus,
+              error: row.processingError,
+              originalUrl: row.original
+                ? urls.get(row.original.objectKey)?.url
+                : undefined,
+              posterDisplayUrl: row.poster
+                ? urls.get(row.poster.display.objectKey)?.url
+                : undefined,
+              posterPreviewUrl: row.poster
+                ? urls.get(row.poster.preview.objectKey)?.url
+                : undefined,
+            },
+          ] as const,
+      ),
+    );
   }
 
   private async getSignedImageVariantLookup(

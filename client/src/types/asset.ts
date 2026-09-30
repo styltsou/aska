@@ -29,6 +29,26 @@ export interface ImageAsset {
   updatedAt?: string;
 }
 
+export interface VideoAsset {
+  id: string;
+  type: "video";
+  url: string | null;
+  posterUrl?: string | null;
+  contentType: string | null;
+  width?: number | null;
+  height?: number | null;
+  durationSeconds?: number | null;
+  title?: string | null;
+  note?: string | null;
+  sourceLabel?: string | null;
+  sourceUrl?: string | null;
+  processingStatus: "processing" | "completed" | "failed";
+  processingError?: string | null;
+  isFavorite?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface NoteAsset {
   id: string;
   type: "note";
@@ -135,6 +155,7 @@ export interface FolderAsset {
 
 export type Asset =
   | ImageAsset
+  | VideoAsset
   | NoteAsset
   | LinkAsset
   | ColorAsset

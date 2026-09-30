@@ -20,6 +20,7 @@ import { organization, user } from "./auth";
 
 export const assetTypeEnum = pgEnum("asset_type", [
   "image",
+  "video",
   "note",
   "link",
   "color",
@@ -165,6 +166,19 @@ export type ImageProvenance = {
   };
 };
 
+export type VideoOriginal = {
+  objectKey: string;
+  contentType: string;
+  sizeBytes: number;
+};
+
+/** The full extracted still plus the same display/preview renditions as images. */
+export type VideoPosterVariants = {
+  original: StoredImageObjectVariant;
+  display: StoredImageObjectVariant;
+  preview: StoredImageObjectVariant;
+};
+
 export const collectionsTable = pgTable(
   "collections",
   {
@@ -277,6 +291,38 @@ export const imageAssets = pgTable(
   (table) => [
     check("image_assets_width_positive_chk", sql`${table.width} > 0`),
     check("image_assets_height_positive_chk", sql`${table.height} > 0`),
+  ],
+);
+
+/** A browser-playable source plus its generated still board preview. */
+export const videoAssets = pgTable(
+  "video_assets",
+  {
+    assetId: integer("asset_id")
+      .primaryKey()
+      .references(() => assets.id, { onDelete: "cascade" }),
+    original: jsonb().$type<VideoOriginal>(),
+    poster: jsonb().$type<VideoPosterVariants>(),
+    width: integer(),
+    height: integer(),
+    durationSeconds: doublePrecision("duration_seconds"),
+    note: text(),
+    sourceLabel: varchar("source_label", { length: 120 }),
+    sourceUrl: text("source_url"),
+    processingStatus: imageEnrichmentStatusEnum("processing_status")
+      .notNull()
+      .default("processing"),
+    processingError: text("processing_error"),
+  },
+  (table) => [
+    check(
+      "video_assets_dimensions_positive_chk",
+      sql`(${table.width} is null and ${table.height} is null) or (${table.width} > 0 and ${table.height} > 0)`,
+    ),
+    check(
+      "video_assets_duration_positive_chk",
+      sql`${table.durationSeconds} is null or ${table.durationSeconds} > 0`,
+    ),
   ],
 );
 
@@ -591,6 +637,62 @@ export const uploads = pgTable(
     check("uploads_sizeBytes_positive_chk", sql`${table.sizeBytes} > 0`),
     check(
       "uploads_position_pair_chk",
+      sql`(${table.positionX} is null and ${table.positionY} is null) or (${table.positionX} is not null and ${table.positionY} is not null)`,
+    ),
+  ],
+);
+
+/** Separate from image uploads so image workers can never claim video objects. */
+export const videoUploads = pgTable(
+  "video_uploads",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    collectionId: integer("collection_id").references(
+      () => collectionsTable.id,
+      { onDelete: "cascade" },
+    ),
+    parentFolderPath: text("parent_folder_path"),
+    positionX: integer("position_x"),
+    positionY: integer("position_y"),
+    source: uploadSourceEnum().notNull(),
+    status: uploadStatusEnum().notNull().default("pending"),
+    originalObjectKey: text("original_object_key"),
+    storageId: text("storage_id").notNull(),
+    assetId: integer("asset_id").references(() => assets.id, {
+      onDelete: "set null",
+    }),
+    fileName: varchar("file_name", { length: 255 }).notNull(),
+    title: varchar({ length: 255 }),
+    sourceUrl: text("source_url"),
+    contentType: varchar("content_type", { length: 255 }),
+    sizeBytes: bigint("size_bytes", { mode: "number" }),
+    processingEtag: text("processing_etag"),
+    uploadUrlExpiresAt: timestamp("upload_url_expires_at"),
+    errorMessage: text("error_message"),
+    createdByUserId: text("created_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("video_uploads_originalObjectKey_uidx").on(
+      table.originalObjectKey,
+    ),
+    uniqueIndex("video_uploads_storageId_uidx").on(table.storageId),
+    index("video_uploads_status_idx").on(table.status),
+    check(
+      "video_uploads_sizeBytes_positive_chk",
+      sql`${table.sizeBytes} is null or ${table.sizeBytes} > 0`,
+    ),
+    check(
+      "video_uploads_position_pair_chk",
       sql`(${table.positionX} is null and ${table.positionY} is null) or (${table.positionX} is not null and ${table.positionY} is not null)`,
     ),
   ],

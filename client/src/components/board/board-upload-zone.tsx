@@ -8,13 +8,17 @@ import {
   getBoardPastePlacement,
   getBoardViewportZoom,
 } from "@/components/canvas/board-pointer-position";
-import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
+import {
+  SUPPORTED_IMAGE_MIME_TYPE_SET,
+  SUPPORTED_VIDEO_MIME_TYPE_SET,
+} from "@/constants";
 import {
   PEXELS_CANVAS_DROP_TYPE,
   PEXELS_PHOTO_DRAG_TYPE,
   type PexelsPhotoDragData,
 } from "@/lib/pexels-dnd";
 import { getDroppedHttpUrl, getPreferredClipboardText } from "@/lib/clipboard";
+import { inferVideoMime } from "@/lib/video-url";
 import { useTransientStore } from "@/store";
 import { cn, parseHttpUrl } from "@/lib/utils";
 import { getPexelsDropTopLeft, PexelsDragOverlay } from "./pexels-drag-overlay";
@@ -52,7 +56,7 @@ export function BoardUploadZone({
     target,
     getPlacement,
   });
-  const [draggingKind, setDraggingKind] = useState<"image" | "link" | null>(
+  const [draggingKind, setDraggingKind] = useState<"media" | "link" | null>(
     null,
   );
   const pexelsDropTargetId = `pexels-canvas:${boardKey ?? target}`;
@@ -94,8 +98,8 @@ export function BoardUploadZone({
   });
 
   function handleDragOver(event: React.DragEvent<HTMLDivElement>) {
-    const kind = hasImageFile(event.dataTransfer)
-      ? "image"
+    const kind = hasMediaFile(event.dataTransfer)
+      ? "media"
       : hasDraggedUrl(event.dataTransfer)
         ? "link"
         : null;
@@ -112,15 +116,15 @@ export function BoardUploadZone({
   }
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
-    const hasImage = hasImageFile(event.dataTransfer);
-    const url = hasImage ? undefined : getDroppedHttpUrl(event.dataTransfer);
-    if (!hasImage && !url) return;
+    const hasMedia = hasMediaFile(event.dataTransfer);
+    const url = hasMedia ? undefined : getDroppedHttpUrl(event.dataTransfer);
+    if (!hasMedia && !url) return;
     event.preventDefault();
     setDraggingKind(null);
     const placement = boardKey
       ? getBoardDropPlacement(boardKey, { x: event.clientX, y: event.clientY })
       : {};
-    if (hasImage) {
+    if (hasMedia) {
       void uploadFiles(Array.from(event.dataTransfer.files), placement);
     } else if (url) {
       void createLinkFromUrl(url, placement);
@@ -135,10 +139,11 @@ export function BoardUploadZone({
     )
       return;
     const files = Array.from(event.clipboardData.files);
-    const imageFiles = files.filter((file) =>
-      SUPPORTED_IMAGE_MIME_TYPE_SET.has(file.type),
+    const mediaFiles = files.filter(
+      (file) =>
+        SUPPORTED_IMAGE_MIME_TYPE_SET.has(file.type) || !!inferVideoMime(file),
     );
-    if (imageFiles.length > 0) {
+    if (mediaFiles.length > 0) {
       event.preventDefault();
       void uploadFiles(files);
       return;
@@ -194,7 +199,7 @@ export function BoardUploadZone({
           <span>
             {draggingKind === "link"
               ? "Drop link to add"
-              : "Drop images to add"}
+              : "Drop images or videos to add"}
           </span>
         </div>
       </div>
@@ -232,10 +237,14 @@ function majorityShapeIntersection(
   return overlapRatio >= 0.55 ? { ...collision, value: overlapRatio } : null;
 }
 
-function hasImageFile(dataTransfer: DataTransfer): boolean {
-  return Array.from(dataTransfer.items).some(
-    (item) =>
-      item.kind === "file" && SUPPORTED_IMAGE_MIME_TYPE_SET.has(item.type),
+function hasMediaFile(dataTransfer: DataTransfer): boolean {
+  return (
+    Array.from(dataTransfer.items).some(
+      (item) =>
+        item.kind === "file" &&
+        (SUPPORTED_IMAGE_MIME_TYPE_SET.has(item.type) ||
+          SUPPORTED_VIDEO_MIME_TYPE_SET.has(item.type)),
+    ) || Array.from(dataTransfer.files).some((file) => !!inferVideoMime(file))
   );
 }
 

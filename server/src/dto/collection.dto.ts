@@ -199,8 +199,10 @@ export type MentionColors = z.infer<typeof MentionColorsSchema>;
 
 export const FolderChildPreviewSchema = z.object({
   assetId: z.string(),
-  type: z.enum(["image", "note", "link", "color"]),
+  type: z.enum(["image", "video", "note", "link", "color"]),
   url: z.string().optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
   blurDataURL: z.string().nullable().optional(),
   hex: z.string().optional(),
   gradient: ColorGradientSchema.nullable().optional(),
@@ -312,6 +314,18 @@ export type UpdatedImage = {
   updatedAt: string;
 };
 
+export const UpdateVideoSchema = z.object({
+  note: z.string().max(10_000).nullable(),
+});
+export type UpdateVideoInput = z.infer<typeof UpdateVideoSchema>;
+export type UpdatedVideo = {
+  id: string;
+  type: "video";
+  note: string | null;
+  isFavorite: boolean;
+  updatedAt: string;
+};
+
 export const UpdateLinkSchema = z.object({
   note: z.string().max(10_000).nullable(),
 });
@@ -410,6 +424,29 @@ export const CollectionImageNodeSchema = z.object({
   position: BoardPositionSchema.nullable(),
   frontIndex: z.number().int().min(0).max(100_000).nullable(),
 });
+
+export const CollectionVideoNodeSchema = z.object({
+  id: z.string(),
+  type: z.literal("video"),
+  url: z.string().nullable(),
+  posterUrl: z.string().nullable(),
+  contentType: z.string().nullable(),
+  width: z.number().nullable(),
+  height: z.number().nullable(),
+  durationSeconds: z.number().nullable(),
+  title: z.string().nullable(),
+  note: z.string().nullable(),
+  sourceLabel: z.string().nullable(),
+  sourceUrl: z.string().nullable(),
+  processingStatus: z.enum(["processing", "completed", "failed"]),
+  processingError: z.string().nullable(),
+  isFavorite: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string().optional(),
+  position: BoardPositionSchema.nullable(),
+  frontIndex: z.number().int().min(0).max(100_000).nullable(),
+});
+export type CollectionVideoNode = z.infer<typeof CollectionVideoNodeSchema>;
 
 export const CollectionNoteNodeSchema = z.object({
   id: z.string(),
@@ -520,6 +557,7 @@ export type CollectionColorNode = z.infer<typeof CollectionColorNodeSchema>;
 export const CollectionNodeSchema = z.discriminatedUnion("type", [
   CollectionFolderNodeSchema,
   CollectionImageNodeSchema,
+  CollectionVideoNodeSchema,
   CollectionNoteNodeSchema,
   CollectionLinkNodeSchema,
   CollectionColorNodeSchema,
@@ -570,17 +608,19 @@ export const InboxContentsResponseSchema =
 
 export type InboxContentsResponse = z.infer<typeof InboxContentsResponseSchema>;
 
-const AssetNodeIdSchema = z.string().regex(/^(image|note|link|color)-\d+$/);
+const AssetNodeIdSchema = z
+  .string()
+  .regex(/^(image|video|note|link|color)-\d+$/);
 const CollectionNodeIdSchema = z
   .string()
-  .regex(/^(folder|image|note|link|color)-\d+$/);
+  .regex(/^(folder|image|video|note|link|color)-\d+$/);
 const CanvasObjectIdSchema = z.string().regex(/^(text|arrow)-\d+$/);
 const CanvasItemIdSchema = z
   .string()
-  .regex(/^(folder|image|note|link|color|text|arrow)-\d+$/);
+  .regex(/^(folder|image|video|note|link|color|text|arrow)-\d+$/);
 const StackableCanvasItemIdSchema = z
   .string()
-  .regex(/^(folder|image|note|link|color|text)-\d+$/);
+  .regex(/^(folder|image|video|note|link|color|text)-\d+$/);
 const FolderNodeIdSchema = z.string().regex(/^folder-\d+$/);
 
 export const AssetPathParamSchema = z.object({
@@ -761,6 +801,7 @@ export type CanvasItemFrontIndex = {
 
 export const ContentTypeFilterSchema = z.enum([
   "image",
+  "video",
   "note",
   "link",
   "color",

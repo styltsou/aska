@@ -115,6 +115,13 @@ export default $config({
       queue: urlResolutionQueue,
       deadLetterQueue: urlResolutionDeadLetterQueue,
     } = createWorkerQueue("UrlResolutionQueue", "UrlResolutionDeadLetterQueue");
+    const videoDeadLetterQueue = new sst.aws.Queue("VideoProcessingDeadLetterQueue", {
+      transform: { queue: { messageRetentionSeconds: 1209600 } },
+    });
+    const videoProcessingQueue = new sst.aws.Queue("VideoProcessingQueue", {
+      visibilityTimeout: "16 minutes",
+      dlq: { queue: videoDeadLetterQueue.arn, retry: TASK_DLQ_RECEIVE_LIMIT },
+    });
     const imageUploadTopic = new sst.aws.SnsTopic("ImageUploadTopic");
     const assets = new sst.aws.Bucket("Assets", {
       // SST owns the bucket policy. CloudFront OAC presents its distribution
@@ -147,7 +154,7 @@ export default $config({
           ]
         : [],
       cors: {
-        allowHeaders: ["Content-Type", "Cache-Control"],
+        allowHeaders: ["Content-Type", "Cache-Control", "If-None-Match"],
         allowMethods: ["GET", "PUT"],
         allowOrigins: allowedClientOrigins,
         maxAge: "15 minutes",
@@ -201,6 +208,7 @@ export default $config({
       imageVariantsQueue,
     );
     imageUploadTopic.subscribeQueue("ExtractImagePalette", imagePaletteQueue);
+    imageUploadTopic.subscribeQueue("ProcessVideoUploads", videoProcessingQueue);
     const api = new sst.aws.ApiGatewayV2("Api", {
       ...(stableCloudDomains
         ? {
@@ -234,7 +242,7 @@ export default $config({
       runtime: "nodejs22.x",
       memory: "1024 MB",
       timeout: "29 seconds",
-      link: [assets, urlResolutionQueue, imageVariantsQueue],
+      link: [assets, urlResolutionQueue, imageVariantsQueue, videoProcessingQueue],
       nodejs: {
         sourcemap: true,
         // Crop rendering runs inline in the API and needs Sharp's native
@@ -417,6 +425,36 @@ export default $config({
           PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
           YOUTUBE_DATA_API_KEY: youtubeDataApiKey.value,
           ...getSentryEnvironment("url-resolution", sentryDsn.value),
+        },
+      },
+      { batch: { size: 1, partialResponses: true } },
+    );
+    videoProcessingQueue.subscribe(
+      {
+        handler: "services/video-processor/src/lambda.handler",
+        runtime: "nodejs22.x",
+        memory: "2048 MB",
+        storage: "1 GB",
+        timeout: "15 minutes",
+        link: [assets],
+        nodejs: { sourcemap: true, esbuild: { external: ["sharp"] } },
+        copyFiles: [
+          ...imageWorkerFiles("image-variants").map((item) => ({
+            ...item,
+            from: item.from.replace("services/image-variants", "services/video-processor"),
+          })),
+          { from: "services/video-processor/node_modules/ffmpeg-static/ffmpeg", to: "bin/ffmpeg" },
+          { from: "services/video-processor/node_modules/@derhuerst/ffprobe-static/ffprobe", to: "bin/ffprobe" },
+        ],
+        environment: {
+          NODE_OPTIONS: "--enable-source-maps",
+          NODE_ENV: stableCloudDomains ? "production" : "development",
+          PIPELINE_API_BASE_URL: api.url,
+          PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+          S3_BUCKET: assets.name,
+          FFMPEG_PATH: "/var/task/bin/ffmpeg",
+          FFPROBE_PATH: "/var/task/bin/ffprobe",
+          ...getSentryEnvironment("video-processor", sentryDsn.value),
         },
       },
       { batch: { size: 1, partialResponses: true } },

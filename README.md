@@ -12,7 +12,7 @@ Creative tools are optimized for text. Designers save references via browser boo
 
 ## What it does
 
-Aska ingests image uploads, notes, and generic web links as durable visual
+Aska ingests image and video uploads, direct video URLs, notes, and generic web links as durable visual
 assets. Provider-specific social capture and article extraction are future
 extensions of the implemented URL-resource pipeline.
 The Inbox renders the archive as a masonry grid, while collections provide an
@@ -26,7 +26,7 @@ infinite spatial canvas for composing moodboards.
   or "Spring Palette". This is the main organizational unit.
 - **Folders** — First-class objects on a collection canvas that open nested
   canvases. Folder placement is independent from the placement of its contents.
-- **Assets** — The polymorphic card that currently unifies image uploads,
+- **Assets** — The polymorphic card that currently unifies image and video uploads,
   generic link bookmarks, and notes, with richer resource types added behind
   the same card boundary.
 
@@ -34,6 +34,8 @@ infinite spatial canvas for composing moodboards.
 
 - **Image upload** — Drag and drop into the Inbox or at a chosen collection
   canvas position. Stored in cloud storage, full resolution preserved.
+- **Video upload/import** — Add a local MP4/WebM or a direct file URL. A poster
+  anchors the board card; the original remains available to play and download.
 - **Link bookmark** — Paste or drop an HTTP(S) URL. Aska creates a card
   immediately, resolves generic metadata in the background, and stores safe
   responsive preview variants. The original link remains usable if resolution
@@ -55,7 +57,7 @@ infinite spatial canvas for composing moodboards.
 
 Aska is multi-tenant from day one. Every asset, collection, and folder belongs
 to a workspace and has creator metadata. Collections contain a spatial tree of
-nodes: image, note, and link assets are leaf nodes, while folders organize nested
+nodes: image, video, note, and link assets are leaf nodes, while folders organize nested
 content. Each placement has an authored position on its collection or folder
 canvas. Folders are not assets.
 
