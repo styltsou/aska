@@ -33,9 +33,6 @@ export function VideoAssetViewer({
   const [note, setNote] = useState(asset?.note ?? "");
   const [saving, setSaving] = useState(false);
   useEffect(() => setNote(asset?.note ?? ""), [asset?.id, asset?.note]);
-  useEffect(() => {
-    if (!open) onCloseComplete();
-  }, [open, onCloseComplete]);
   const ready = asset?.processingStatus === "completed" && !!asset.url;
   const save = async () => {
     if (!asset) return;
@@ -68,6 +65,9 @@ export function VideoAssetViewer({
       open={open}
       onOpenChange={(next) => {
         if (!next) onClose();
+      }}
+      onOpenChangeComplete={(next) => {
+        if (!next) onCloseComplete();
       }}
     >
       <DialogContent className="top-[5vh] max-h-[90vh] max-w-4xl overflow-y-auto">

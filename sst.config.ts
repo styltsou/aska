@@ -154,7 +154,7 @@ export default $config({
           ]
         : [],
       cors: {
-        allowHeaders: ["Content-Type", "Cache-Control"],
+        allowHeaders: ["Content-Type", "Cache-Control", "If-None-Match"],
         allowMethods: ["GET", "PUT"],
         allowOrigins: allowedClientOrigins,
         maxAge: "15 minutes",

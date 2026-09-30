@@ -239,12 +239,19 @@ export async function processStoredVideo(input: {
     if (!source.Body || !etag) throw new Error("Video object is missing");
     if (!source.ContentLength || source.ContentLength > MAX_BYTES)
       throw new InvalidVideoError("Video exceeds the 250 MB limit");
-    const started = await callPipeline<{ ignored: boolean }>(CALLBACK_PATH, {
-      event: "video.processing.started",
-      originalObjectKey: input.objectKey,
-      originalEtag: etag,
-    });
-    if (started.ignored) return;
+    const started = await callPipeline<{ ignored: boolean; cleanup?: boolean }>(
+      CALLBACK_PATH,
+      {
+        event: "video.processing.started",
+        originalObjectKey: input.objectKey,
+        originalEtag: etag,
+      },
+    );
+    if (started.ignored) {
+      if (started.cleanup)
+        await removeVideoObjects(input.bucket, input.objectKey);
+      return;
+    }
     const contentType = videoType(source.ContentType);
     const inputPath = path.join(folder, "source");
     const { pipeline } = await import("node:stream/promises");
@@ -261,7 +268,10 @@ export async function processStoredVideo(input: {
       input.bucket,
       prefix,
     );
-    await callPipeline(CALLBACK_PATH, {
+    const completed = await callPipeline<{
+      ignored: boolean;
+      cleanup?: boolean;
+    }>(CALLBACK_PATH, {
       event: "video.processing.completed",
       originalObjectKey: input.objectKey,
       originalEtag: etag,
@@ -270,6 +280,8 @@ export async function processStoredVideo(input: {
       ...probe,
       poster,
     });
+    if (completed.cleanup)
+      await removeVideoObjects(input.bucket, input.objectKey);
   } finally {
     await rm(folder, { recursive: true, force: true });
   }
@@ -317,14 +329,18 @@ export async function processRemoteVideo(uploadId: number): Promise<void> {
     await probeVideo(inputPath, contentType);
     const ext = contentType === "video/mp4" ? "mp4" : "webm";
     const originalObjectKey = `${claim.organizationId}/video/${claim.storageId}/original.${ext}`;
-    await callPipeline(CALLBACK_PATH, {
-      event: "video.import.ready",
-      uploadId,
-      originalObjectKey,
-      contentType,
-      sizeBytes: fetched.sizeBytes,
-      finalUrl: fetched.finalUrl,
-    });
+    const registration = await callPipeline<{ ignored: boolean }>(
+      CALLBACK_PATH,
+      {
+        event: "video.import.ready",
+        uploadId,
+        originalObjectKey,
+        contentType,
+        sizeBytes: fetched.sizeBytes,
+        finalUrl: fetched.finalUrl,
+      },
+    );
+    if (registration.ignored) return;
     try {
       await s3.send(
         new PutObjectCommand({
@@ -358,13 +374,17 @@ export async function reportStoredFailure(
   error: unknown,
 ) {
   const message = userFacingError(error);
-  const result = await callPipeline<{ ignored: boolean }>(CALLBACK_PATH, {
-    event: "video.processing.failed",
-    originalObjectKey: input.objectKey,
-    originalEtag: input.originalEtag,
-    error: message,
-  });
-  if (!result.ignored) await removeVideoObjects(input.bucket, input.objectKey);
+  const result = await callPipeline<{ ignored: boolean; cleanup?: boolean }>(
+    CALLBACK_PATH,
+    {
+      event: "video.processing.failed",
+      originalObjectKey: input.objectKey,
+      originalEtag: input.originalEtag,
+      error: message,
+    },
+  );
+  if (!result.ignored || result.cleanup)
+    await removeVideoObjects(input.bucket, input.objectKey);
 }
 
 async function removeVideoObjects(bucket: string, originalKey: string) {

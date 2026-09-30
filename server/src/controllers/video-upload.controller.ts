@@ -155,6 +155,7 @@ export const failDirectVideoUpload = factory.createHandlers(
       success({
         upload: await videos.markClientFailure(
           workspace.id,
+          c.get("userId"),
           collectionSlug,
           uploadId,
         ),
@@ -174,7 +175,12 @@ export const failInboxDirectVideoUpload = factory.createHandlers(
     );
     return c.json(
       success({
-        upload: await videos.markClientFailure(workspace.id, null, uploadId),
+        upload: await videos.markClientFailure(
+          workspace.id,
+          c.get("userId"),
+          null,
+          uploadId,
+        ),
       }),
     );
   },

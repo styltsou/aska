@@ -3,11 +3,9 @@ import { toast } from "sonner";
 
 import type { BoardPosition } from "@/api/collection/types";
 import { collectionQueryKeys } from "@/api/collection/query-keys";
-import {
-  MAX_VIDEO_UPLOAD_BYTES,
-  SUPPORTED_VIDEO_MIME_TYPE_SET,
-} from "@/constants";
-import { apiGet, apiPost } from "@/lib/api";
+import { MAX_VIDEO_UPLOAD_BYTES } from "@/constants";
+import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { inferVideoMime } from "@/lib/video-url";
 
 type VideoScope = {
   workspaceSlug: string;
@@ -36,16 +34,9 @@ function basePath(scope: VideoScope) {
 }
 
 function videoMime(file: File): "video/mp4" | "video/webm" {
-  const mime =
-    file.type ||
-    (/\.webm$/i.test(file.name)
-      ? "video/webm"
-      : /\.mp4$/i.test(file.name)
-        ? "video/mp4"
-        : "");
-  if (!SUPPORTED_VIDEO_MIME_TYPE_SET.has(mime))
-    throw new Error("Choose an MP4 or WebM video");
-  return mime as "video/mp4" | "video/webm";
+  const mime = inferVideoMime(file);
+  if (!mime) throw new Error("Choose an MP4 or WebM video");
+  return mime;
 }
 
 function putFile(
@@ -96,7 +87,14 @@ export function useVideoAssets(scope: VideoScope) {
         ({ upload } = await apiGet<{ upload: Status }>(
           `${path}/uploads/${id}`,
         ));
-      } catch {
+      } catch (error) {
+        if (
+          error instanceof ApiError &&
+          [401, 403, 404].includes(error.status)
+        ) {
+          refresh();
+          return;
+        }
         // A temporary network failure should not abandon a still-processing asset.
         continue;
       }

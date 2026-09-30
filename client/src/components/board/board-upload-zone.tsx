@@ -18,6 +18,7 @@ import {
   type PexelsPhotoDragData,
 } from "@/lib/pexels-dnd";
 import { getDroppedHttpUrl, getPreferredClipboardText } from "@/lib/clipboard";
+import { inferVideoMime } from "@/lib/video-url";
 import { useTransientStore } from "@/store";
 import { cn, parseHttpUrl } from "@/lib/utils";
 import { getPexelsDropTopLeft, PexelsDragOverlay } from "./pexels-drag-overlay";
@@ -140,9 +141,7 @@ export function BoardUploadZone({
     const files = Array.from(event.clipboardData.files);
     const mediaFiles = files.filter(
       (file) =>
-        SUPPORTED_IMAGE_MIME_TYPE_SET.has(file.type) ||
-        SUPPORTED_VIDEO_MIME_TYPE_SET.has(file.type) ||
-        (file.type === "" && /\.(mp4|webm)$/i.test(file.name)),
+        SUPPORTED_IMAGE_MIME_TYPE_SET.has(file.type) || !!inferVideoMime(file),
     );
     if (mediaFiles.length > 0) {
       event.preventDefault();
@@ -239,11 +238,13 @@ function majorityShapeIntersection(
 }
 
 function hasMediaFile(dataTransfer: DataTransfer): boolean {
-  return Array.from(dataTransfer.items).some(
-    (item) =>
-      item.kind === "file" &&
-      (SUPPORTED_IMAGE_MIME_TYPE_SET.has(item.type) ||
-        SUPPORTED_VIDEO_MIME_TYPE_SET.has(item.type)),
+  return (
+    Array.from(dataTransfer.items).some(
+      (item) =>
+        item.kind === "file" &&
+        (SUPPORTED_IMAGE_MIME_TYPE_SET.has(item.type) ||
+          SUPPORTED_VIDEO_MIME_TYPE_SET.has(item.type)),
+    ) || Array.from(dataTransfer.files).some((file) => !!inferVideoMime(file))
   );
 }
 

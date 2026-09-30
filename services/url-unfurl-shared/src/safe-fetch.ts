@@ -114,6 +114,18 @@ export async function safeFetchToFile(
           false,
         );
       }
+      const declaredLength = Number(response.headers["content-length"]);
+      if (
+        Number.isFinite(declaredLength) &&
+        declaredLength > options.maxBytes
+      ) {
+        response.stream.destroy();
+        throw new SafeFetchError(
+          "response_too_large",
+          "Remote response is too large",
+          false,
+        );
+      }
       let sizeBytes = 0;
       const bounded = new Transform({
         transform(chunk: Buffer, _encoding, callback) {

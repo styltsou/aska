@@ -16,11 +16,8 @@ import { useCreateInboxLink, useCreateLink } from "@/api/url-unfurl";
 import type { BoardInsertionPlacement } from "@/api/collection";
 import type { PexelsPhoto } from "@/api/pexels";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
-import {
-  SUPPORTED_IMAGE_MIME_TYPE_SET,
-  SUPPORTED_VIDEO_MIME_TYPE_SET,
-} from "@/constants";
-import { isDirectVideoUrl } from "@/lib/video-url";
+import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
+import { inferVideoMime, isDirectVideoUrl } from "@/lib/video-url";
 import type { ClipboardAssetPayload } from "@/lib/clipboard";
 import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
 import { parseHttpUrl } from "@/lib/utils";
@@ -109,8 +106,8 @@ export function useBoardAssetActions({
       );
       const videoFiles = files.filter(
         (file) =>
-          SUPPORTED_VIDEO_MIME_TYPE_SET.has(file.type) ||
-          (file.type === "" && /\.(mp4|webm)$/i.test(file.name)),
+          !SUPPORTED_IMAGE_MIME_TYPE_SET.has(file.type) &&
+          !!inferVideoMime(file),
       );
       if (imageFiles.length === 0 && videoFiles.length === 0) return;
 

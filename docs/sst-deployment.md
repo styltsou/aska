@@ -6,9 +6,9 @@ One stage creates one isolated AWS copy:
 ```text
 stage dev
   API Gateway -> Hono Lambda
-  private S3 assets bucket -> SNS -> two SQS queues -> variants and palette Lambdas
+  private S3 assets bucket -> SNS -> three SQS queues -> image variants, image palette, and video processor Lambdas
   API -> URL-resolution SQS -> resolver Lambda -> image-variants SQS -> shared renderer -> S3
-  EventBridge Scheduler -> media-cleanup Lambda -> cleanup + stale resource-work recovery
+  EventBridge Scheduler -> media-cleanup Lambda -> cleanup + stale resource/video-work recovery
   private S3 client bucket -> CloudFront -> React/Vite client
   dead-letter queue, IAM permissions, and stage-specific SST secrets
 ```
@@ -46,12 +46,20 @@ run, set the four `hybrid` stage secrets listed below.
 
 Both SST modes are real end-to-end AWS flows. With live development, an image
 uploaded from the browser goes to the real S3 bucket, publishes one SNS event,
-and SNS creates one message in each image-processing queue for the variants and
-palette workers. In the stable CI deployment, those same workers run in AWS.
+and SNS creates one message in each processing queue. Each worker ignores keys
+outside its own media type. The image variants and palette workers run as before;
+the video worker validates video originals and creates poster variants. In the
+stable CI deployment, those workers run in AWS.
 Both test the actual permissions, event shape, queue flow, and callback path.
 Pasting a URL additionally exercises the resolution queue and sends discovered
 media commands to the shared variants queue. Signed claims, safe external
 retrieval, and private S3 variant delivery remain independent progressive steps.
+
+Video imports also use the video queue directly. The worker copies a bounded,
+public MP4/WebM URL into the private assets bucket; the resulting S3 event
+starts the same validation/poster path as a browser upload. The worker ships
+FFmpeg, FFprobe, and Sharp with its Lambda bundle. See
+[Video Assets](./server/video-assets.md) for the v1 contract and smoke test.
 
 ## One-time stable `dev` setup
 

@@ -49,6 +49,8 @@ link back out to `specs/`.
 - [Image Upload and Processing Pipeline](./server/image-upload-implementation-plan.md)
   and [Image Pipeline Reliability](./server/image-pipeline-reliability.md) —
   browser-to-S3 ingestion, asynchronous work, retries, and callbacks.
+- [Video Assets](./server/video-assets.md) — direct MP4/WebM uploads and URL
+  imports, processing, storage, limits, and deployment smoke test.
 - [URL Unfurling and External Resources](./server/url-unfurling.md) — optimistic
   link cards, generic resolution, SSRF-safe retrieval, resource media, caching,
   lifecycle, and resolver extension boundaries.

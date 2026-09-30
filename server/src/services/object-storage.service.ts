@@ -37,6 +37,7 @@ export interface IObjectStorageService {
     key: string;
     contentType: string;
     expiresInSeconds?: number;
+    ifNoneMatch?: boolean;
   }): Promise<PresignedPutUrl>;
   createPresignedGetUrl(
     key: string,
@@ -64,6 +65,7 @@ export class ObjectStorageService implements IObjectStorageService {
     key: string;
     contentType: string;
     expiresInSeconds?: number;
+    ifNoneMatch?: boolean;
   }): Promise<PresignedPutUrl> {
     const { bucket } = this.getRequiredConfig();
     const expiresInSeconds =
@@ -73,6 +75,7 @@ export class ObjectStorageService implements IObjectStorageService {
       Key: input.key,
       ContentType: input.contentType,
       CacheControl: IMMUTABLE_MEDIA_CACHE_CONTROL,
+      IfNoneMatch: input.ifNoneMatch ? "*" : undefined,
     });
 
     const url = await getSignedUrl(this.getClient(), command, {
@@ -84,6 +87,7 @@ export class ObjectStorageService implements IObjectStorageService {
       headers: {
         "Content-Type": input.contentType,
         "Cache-Control": IMMUTABLE_MEDIA_CACHE_CONTROL,
+        ...(input.ifNoneMatch ? { "If-None-Match": "*" } : {}),
       },
       expiresAt: new Date(Date.now() + expiresInSeconds * 1000),
     };

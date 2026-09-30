@@ -1,4 +1,4 @@
-import { and, eq, isNull, lt, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -48,6 +48,7 @@ export class VideoUploadService {
     const put = await this.storage.createPresignedPutUrl({
       key: objectKey,
       contentType: data.contentType,
+      ifNoneMatch: true,
     });
     const { id } = await db.transaction(async (tx) => {
       const [asset] = await tx
@@ -243,15 +244,30 @@ export class VideoUploadService {
 
   async markClientFailure(
     orgId: string,
+    userId: string,
     collectionSlug: string | null,
     id: number,
   ): Promise<VideoUploadStatus> {
     const existing = await this.status(orgId, collectionSlug, id);
+    const [row] = await db
+      .select({
+        source: videoUploads.source,
+        createdByUserId: videoUploads.createdByUserId,
+      })
+      .from(videoUploads)
+      .where(eq(videoUploads.id, id))
+      .limit(1);
+    if (row?.source !== "direct" || row.createdByUserId !== userId)
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        "Only the uploader can fail this direct upload",
+      );
     if (existing.status === "pending")
       await this.failUpload(
         id,
         Number(existing.assetId.slice(6)),
         "Upload failed",
+        ["pending"],
       );
     return this.status(orgId, collectionSlug, id);
   }
@@ -278,14 +294,17 @@ export class VideoUploadService {
           ),
         ),
       );
+    let failed = 0;
     for (const row of stale)
       if (row.assetId)
-        await this.failUpload(
-          row.id,
-          row.assetId,
-          "Video processing timed out",
+        failed += Number(
+          await this.failUpload(
+            row.id,
+            row.assetId,
+            "Video processing timed out",
+          ),
         );
-    return stale.length;
+    return failed;
   }
 
   async getRemoteClaim(uploadId: number) {
@@ -314,7 +333,7 @@ export class VideoUploadService {
 
   async handleCallback(
     input: VideoPipelineCallbackInput,
-  ): Promise<{ ignored: boolean }> {
+  ): Promise<{ ignored: boolean; cleanup?: boolean }> {
     if (input.event === "video.import.failed") {
       const [row] = await db
         .select()
@@ -327,8 +346,9 @@ export class VideoUploadService {
         row.status === "failed"
       )
         return { ignored: true };
-      await this.failUpload(row.id, row.assetId, input.error);
-      return { ignored: false };
+      return {
+        ignored: !(await this.failUpload(row.id, row.assetId, input.error)),
+      };
     }
     if (input.event === "video.import.ready") {
       const [row] = await db
@@ -353,8 +373,8 @@ export class VideoUploadService {
           ErrorCode.VALIDATION_ERROR,
           "Invalid video object key",
         );
-      await db.transaction(async (tx) => {
-        await tx
+      const updated = await db.transaction(async (tx) => {
+        const [claimed] = await tx
           .update(videoUploads)
           .set({
             originalObjectKey: input.originalObjectKey,
@@ -362,7 +382,14 @@ export class VideoUploadService {
             sizeBytes: input.sizeBytes,
             status: "uploaded",
           })
-          .where(eq(videoUploads.id, row.id));
+          .where(
+            and(
+              eq(videoUploads.id, row.id),
+              inArray(videoUploads.status, ["pending", "uploaded"]),
+            ),
+          )
+          .returning({ id: videoUploads.id });
+        if (!claimed) return false;
         await tx
           .update(videoAssets)
           .set({
@@ -374,8 +401,9 @@ export class VideoUploadService {
             sourceLabel: new URL(input.finalUrl).hostname.slice(0, 120),
           })
           .where(eq(videoAssets.assetId, row.assetId!));
+        return true;
       });
-      return { ignored: false };
+      return { ignored: !updated };
     }
     const [row] = await db
       .select()
@@ -388,7 +416,10 @@ export class VideoUploadService {
       row.status === "completed" ||
       row.status === "failed"
     )
-      return { ignored: true };
+      return {
+        ignored: true,
+        cleanup: row?.status === "failed" || (!!row && !row.assetId),
+      };
     if (input.event === "video.processing.started") {
       if (
         row.status === "processing" &&
@@ -396,11 +427,17 @@ export class VideoUploadService {
         row.updatedAt.getTime() > Date.now() - 11 * 60_000
       )
         return { ignored: true };
-      await db
+      const [started] = await db
         .update(videoUploads)
         .set({ status: "processing", processingEtag: input.originalEtag })
-        .where(eq(videoUploads.id, row.id));
-      return { ignored: false };
+        .where(
+          and(
+            eq(videoUploads.id, row.id),
+            inArray(videoUploads.status, ["pending", "uploaded", "processing"]),
+          ),
+        )
+        .returning({ id: videoUploads.id });
+      return { ignored: !started };
     }
     if (
       input.originalEtag &&
@@ -409,11 +446,12 @@ export class VideoUploadService {
     )
       return { ignored: true };
     if (input.event === "video.processing.failed") {
-      await this.failUpload(row.id, row.assetId, input.error);
-      return { ignored: false };
+      return {
+        ignored: !(await this.failUpload(row.id, row.assetId, input.error)),
+      };
     }
-    await db.transaction(async (tx) => {
-      await tx
+    const completed = await db.transaction(async (tx) => {
+      const [claimed] = await tx
         .update(videoUploads)
         .set({
           status: "completed",
@@ -422,7 +460,14 @@ export class VideoUploadService {
           sizeBytes: input.sizeBytes,
           errorMessage: null,
         })
-        .where(eq(videoUploads.id, row.id));
+        .where(
+          and(
+            eq(videoUploads.id, row.id),
+            inArray(videoUploads.status, ["pending", "uploaded", "processing"]),
+          ),
+        )
+        .returning({ id: videoUploads.id });
+      if (!claimed) return false;
       await tx
         .update(videoAssets)
         .set({
@@ -439,16 +484,33 @@ export class VideoUploadService {
           processingError: null,
         })
         .where(eq(videoAssets.assetId, row.assetId!));
+      return true;
     });
-    return { ignored: false };
+    return { ignored: !completed };
   }
 
-  private async failUpload(id: number, assetId: number, message: string) {
-    await db.transaction(async (tx) => {
-      await tx
+  private async failUpload(
+    id: number,
+    assetId: number,
+    message: string,
+    allowedStatuses: Array<"pending" | "uploaded" | "processing"> = [
+      "pending",
+      "uploaded",
+      "processing",
+    ],
+  ): Promise<boolean> {
+    return db.transaction(async (tx) => {
+      const [claimed] = await tx
         .update(videoUploads)
         .set({ status: "failed", errorMessage: message.slice(0, 1000) })
-        .where(eq(videoUploads.id, id));
+        .where(
+          and(
+            eq(videoUploads.id, id),
+            inArray(videoUploads.status, allowedStatuses),
+          ),
+        )
+        .returning({ id: videoUploads.id });
+      if (!claimed) return false;
       await tx
         .update(videoAssets)
         .set({
@@ -456,6 +518,7 @@ export class VideoUploadService {
           processingError: message.slice(0, 1000),
         })
         .where(eq(videoAssets.assetId, assetId));
+      return true;
     });
   }
 }

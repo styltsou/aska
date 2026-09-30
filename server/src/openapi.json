@@ -3,7 +3,7 @@
   "info": {
     "title": "Aska API",
     "summary": "Backend API for Aska's visual workspace and archive.",
-    "description": "Aska is a multi-tenant visual workspace. Workspaces contain collections, folders, and assets such as images, notes, and links. Assets can be organised within collection folder trees or live in the inbox (unplaced).\n\nAll endpoints under `/api/v1` require authentication via `authMiddleware`. The authenticated session must belong to the workspace's organisation.",
+    "description": "Aska is a multi-tenant visual workspace. Workspaces contain collections, folders, and assets such as images, videos, notes, and links. Assets can be organised within collection folder trees or live in the inbox (unplaced).\n\nPublic endpoints under `/api/v1` require authentication via `authMiddleware`; internal pipeline endpoints use signed callbacks. The authenticated session must belong to the workspace's organisation.",
     "version": "0.1.0"
   },
   "servers": [
@@ -36,6 +36,10 @@
     {
       "name": "Image Uploads",
       "description": "Direct upload (presigned URL) and remote URL ingestion for images, scoped to a collection or the inbox."
+    },
+    {
+      "name": "Video Uploads",
+      "description": "Direct MP4/WebM uploads and imports from direct video URLs, scoped to a collection or the inbox."
     },
     {
       "name": "Link Unfurling",
@@ -655,7 +659,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "enum": ["image", "note", "link", "folder"]
+                "enum": ["image", "video", "note", "link", "folder"]
               },
               "minItems": 1,
               "maxItems": 3
@@ -705,7 +709,7 @@
             "description": "Node identifier in the form `{kind}-{id}`, e.g. `folder-42` or `image-7`.",
             "schema": {
               "type": "string",
-              "pattern": "^(folder|image|note|link)-\\d+$"
+              "pattern": "^(folder|image|video|note|link)-\\d+$"
             }
           }
         ],
@@ -805,7 +809,7 @@
             "description": "Node identifier in the form `{kind}-{id}`, e.g. `folder-42` or `image-7`.",
             "schema": {
               "type": "string",
-              "pattern": "^(folder|image|note|link)-\\d+$"
+              "pattern": "^(folder|image|video|note|link)-\\d+$"
             }
           }
         ],
@@ -922,7 +926,7 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "enum": ["image", "note", "link", "folder"]
+                "enum": ["image", "video", "note", "link", "folder"]
               },
               "minItems": 1,
               "maxItems": 3
@@ -1274,7 +1278,7 @@
             "description": "Asset identifier in the form `{kind}-{id}`, e.g. `image-42`, `note-17`, or `link-9`.",
             "schema": {
               "type": "string",
-              "pattern": "^(image|note|link)-\\d+$"
+              "pattern": "^(image|video|note|link)-\\d+$"
             }
           }
         ],
@@ -1701,6 +1705,287 @@
           }
         }
       }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/videos/uploads": {
+      "post": {
+        "operationId": "createDirectVideoUpload",
+        "tags": ["Video Uploads"],
+        "summary": "Create a collection video card and presigned upload URL",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVideoUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload session created; PUT the file to the returned URL.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateVideoUploadResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/videos/uploads/{uploadId}": {
+      "get": {
+        "operationId": "getDirectVideoUploadStatus",
+        "tags": ["Video Uploads"],
+        "summary": "Get collection video upload status",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" },
+          { "$ref": "#/components/parameters/UploadId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current upload state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoUploadStatusResponse"
+                }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/videos/uploads/{uploadId}/fail": {
+      "post": {
+        "operationId": "failDirectVideoUpload",
+        "tags": ["Video Uploads"],
+        "summary": "Record a failed browser upload",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" },
+          { "$ref": "#/components/parameters/UploadId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current upload state; a failed card remains removable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoUploadStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/videos/remote": {
+      "post": {
+        "operationId": "createCollectionRemoteVideo",
+        "tags": ["Video Uploads"],
+        "summary": "Import a direct video file URL into a collection",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRemoteVideoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Import queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoUploadStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/inbox/videos/uploads": {
+      "post": {
+        "operationId": "createInboxDirectVideoUpload",
+        "tags": ["Video Uploads"],
+        "summary": "Create an inbox video card and presigned upload URL",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceSlug" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVideoUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload session created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateVideoUploadResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/inbox/videos/uploads/{uploadId}": {
+      "get": {
+        "operationId": "getInboxVideoUploadStatus",
+        "tags": ["Video Uploads"],
+        "summary": "Get inbox video upload status",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/UploadId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current upload state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoUploadStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/inbox/videos/uploads/{uploadId}/fail": {
+      "post": {
+        "operationId": "failInboxDirectVideoUpload",
+        "tags": ["Video Uploads"],
+        "summary": "Record a failed inbox browser upload",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/UploadId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current upload state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoUploadStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/inbox/videos/remote": {
+      "post": {
+        "operationId": "createInboxRemoteVideo",
+        "tags": ["Video Uploads"],
+        "summary": "Import a direct video file URL into the inbox",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceSlug" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRemoteVideoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Import queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VideoUploadStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/assets/{assetId}/video": {
+      "patch": {
+        "operationId": "updateVideoNote",
+        "tags": ["Assets"],
+        "summary": "Replace a video note",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^video-\\d+$" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateVideoRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated video note.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UpdateVideoResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/assets/{assetId}/download": {
+      "get": {
+        "operationId": "downloadAssetOriginal",
+        "tags": ["Assets"],
+        "summary": "Download an image or video original",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^(image|video)-\\d+$" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Original image bytes." },
+          "302": {
+            "description": "Redirect to a short-lived S3 video attachment URL."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1722,6 +2007,12 @@
         "schema": {
           "type": "string"
         }
+      },
+      "UploadId": {
+        "name": "uploadId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer", "minimum": 1 }
       }
     },
     "responses": {
@@ -1960,11 +2251,19 @@
           },
           "type": {
             "type": "string",
-            "enum": ["image", "note", "link", "color"]
+            "enum": ["image", "video", "note", "link", "color"]
           },
           "url": {
             "type": "string",
-            "description": "Stable CloudFront URL for generated image previews when media delivery is configured; otherwise a presigned S3 URL."
+            "description": "Stable CloudFront URL for generated image or video-poster previews when configured; otherwise a presigned S3 URL."
+          },
+          "width": {
+            "type": "integer",
+            "description": "Preview width for image and video posters."
+          },
+          "height": {
+            "type": "integer",
+            "description": "Preview height for image and video posters."
           },
           "blurDataURL": {
             "type": "string",
@@ -2260,6 +2559,13 @@
           }
         }
       },
+      "UpdateVideoRequest": {
+        "type": "object",
+        "required": ["note"],
+        "properties": {
+          "note": { "type": ["string", "null"], "maxLength": 10000 }
+        }
+      },
       "UpdateLinkRequest": {
         "type": "object",
         "required": ["note"],
@@ -2433,6 +2739,48 @@
           "position": {
             "$ref": "#/components/schemas/NullableBoardPosition"
           }
+        }
+      },
+      "CollectionVideoNode": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "url",
+          "posterUrl",
+          "processingStatus",
+          "isFavorite",
+          "createdAt",
+          "position"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^video-\\d+$" },
+          "type": { "const": "video" },
+          "url": {
+            "type": ["string", "null"],
+            "format": "uri",
+            "description": "Playable original, or null until processing completes."
+          },
+          "posterUrl": { "type": ["string", "null"], "format": "uri" },
+          "contentType": {
+            "type": ["string", "null"],
+            "enum": ["video/mp4", "video/webm", null]
+          },
+          "width": { "type": ["integer", "null"] },
+          "height": { "type": ["integer", "null"] },
+          "durationSeconds": { "type": ["number", "null"] },
+          "title": { "type": ["string", "null"] },
+          "note": { "type": ["string", "null"] },
+          "sourceLabel": { "type": ["string", "null"] },
+          "sourceUrl": { "type": ["string", "null"], "format": "uri" },
+          "processingStatus": {
+            "type": "string",
+            "enum": ["processing", "completed", "failed"]
+          },
+          "processingError": { "type": ["string", "null"] },
+          "isFavorite": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "position": { "$ref": "#/components/schemas/NullableBoardPosition" }
         }
       },
       "CollectionNoteNode": {
@@ -2829,6 +3177,9 @@
                       "$ref": "#/components/schemas/CollectionImageNode"
                     },
                     {
+                      "$ref": "#/components/schemas/CollectionVideoNode"
+                    },
+                    {
                       "$ref": "#/components/schemas/CollectionNoteNode"
                     },
                     {
@@ -2840,6 +3191,7 @@
                     "mapping": {
                       "folder": "#/components/schemas/CollectionFolderNode",
                       "image": "#/components/schemas/CollectionImageNode",
+                      "video": "#/components/schemas/CollectionVideoNode",
                       "note": "#/components/schemas/CollectionNoteNode",
                       "link": "#/components/schemas/CollectionLinkNode"
                     }
@@ -2925,6 +3277,30 @@
             "required": ["image"],
             "properties": {
               "image": { "$ref": "#/components/schemas/UpdatedImage" }
+            }
+          }
+        }
+      },
+      "UpdatedVideo": {
+        "type": "object",
+        "required": ["id", "type", "note", "isFavorite", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^video-\\d+$" },
+          "type": { "const": "video" },
+          "note": { "type": ["string", "null"] },
+          "isFavorite": { "type": "boolean" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UpdateVideoResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["video"],
+            "properties": {
+              "video": { "$ref": "#/components/schemas/UpdatedVideo" }
             }
           }
         }
@@ -3046,7 +3422,7 @@
               "properties": {
                 "nodeId": {
                   "type": "string",
-                  "pattern": "^(folder|image|note|link)-\\d+$"
+                  "pattern": "^(folder|image|video|note|link)-\\d+$"
                 },
                 "position": {
                   "$ref": "#/components/schemas/BoardPosition"
@@ -3099,7 +3475,7 @@
             "uniqueItems": true,
             "items": {
               "type": "string",
-              "pattern": "^(folder|image|note|link)-\\d+$"
+              "pattern": "^(folder|image|video|note|link)-\\d+$"
             }
           },
           "targetFolderNodeId": {
@@ -3191,6 +3567,104 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/DeleteAssetResult"
+          }
+        }
+      },
+      "CreateVideoUploadRequest": {
+        "type": "object",
+        "required": ["fileName", "contentType", "sizeBytes"],
+        "properties": {
+          "fileName": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "contentType": {
+            "type": "string",
+            "enum": ["video/mp4", "video/webm"]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 262144000
+          },
+          "title": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "parentFolderPath": { "type": "string" },
+          "position": { "$ref": "#/components/schemas/BoardPosition" }
+        }
+      },
+      "CreateRemoteVideoRequest": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Public direct MP4 or WebM file URL, not a video-platform page."
+          },
+          "title": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "parentFolderPath": { "type": "string" },
+          "position": { "$ref": "#/components/schemas/BoardPosition" }
+        }
+      },
+      "CreateVideoUploadResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["upload"],
+            "properties": {
+              "upload": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "objectKey",
+                  "url",
+                  "headers",
+                  "expiresAt",
+                  "maxSizeBytes"
+                ],
+                "properties": {
+                  "id": { "type": "integer" },
+                  "objectKey": { "type": "string" },
+                  "url": { "type": "string", "format": "uri" },
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": { "type": "string" }
+                  },
+                  "expiresAt": { "type": "string", "format": "date-time" },
+                  "maxSizeBytes": { "type": "integer", "const": 262144000 }
+                }
+              }
+            }
+          }
+        }
+      },
+      "VideoUploadStatusResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["upload"],
+            "properties": {
+              "upload": {
+                "type": "object",
+                "required": ["id", "status", "errorMessage", "assetId"],
+                "properties": {
+                  "id": { "type": "integer" },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "uploaded",
+                      "processing",
+                      "completed",
+                      "failed"
+                    ]
+                  },
+                  "errorMessage": { "type": ["string", "null"] },
+                  "assetId": { "type": "string", "pattern": "^video-\\d+$" }
+                }
+              }
+            }
           }
         }
       },
