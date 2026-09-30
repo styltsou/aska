@@ -184,7 +184,7 @@ export function FilterBar({
           }}
           transition={FLOATING_TOOLBAR_ENTER_TRANSITION}
           style={{ transformOrigin: "top left" }}
-          className="pointer-events-none absolute top-2 left-2 z-40 flex"
+          className="pointer-events-none absolute top-3 left-3 z-40 flex"
         >
           <div className="pointer-events-auto relative w-fit">
             <div
