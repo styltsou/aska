@@ -53,6 +53,7 @@ import {
   projectLinkNode,
 } from "@/services/url-unfurl/projection";
 import { CanvasObjectService } from "./canvas-object.service";
+import { fetchMentionColorsBySource } from "./mention-colors";
 
 type Deps = {
   objectStorageService: IObjectStorageService;
@@ -196,6 +197,13 @@ export class CollectionQueryService {
       linkResourceIds,
       this.objectStorageService,
     );
+    const mentionColors = await fetchMentionColorsBySource(
+      orgId,
+      selectedPreviewRows
+        .filter((row) => row.assetType === "note")
+        .map((row) => row.assetId),
+    );
+
     const previewMap = new Map<number, FolderChildPreview[]>();
     for (const row of selectedPreviewRows) {
       let preview: FolderChildPreview | undefined;
@@ -219,6 +227,7 @@ export class CollectionQueryService {
           type: "note",
           title: row.assetTitle,
           snippet,
+          mentionColors: mentionColors.get(row.assetId),
         };
       } else if (row.assetType === "link" && row.linkHostname) {
         const media = row.linkResourceId
@@ -240,6 +249,7 @@ export class CollectionQueryService {
           assetId: `color-${row.assetId}`,
           type: "color",
           hex: row.colorHex,
+          gradient: row.colorGradient ?? null,
           title: row.assetTitle,
         };
       }
@@ -419,6 +429,7 @@ export class CollectionQueryService {
           assetId: assets.id,
           assetTitle: assets.title,
           hex: colorAssets.hex,
+          gradient: colorAssets.gradient,
           content: noteAssets.markdown,
           resourceId: externalResources.id,
           hostname: externalResources.hostname,
@@ -477,11 +488,24 @@ export class CollectionQueryService {
       linkResourceIds,
       this.objectStorageService,
     );
+    const mentionColors = await fetchMentionColorsBySource(orgId, [
+      ...children
+        .filter((child) => child.assetType === "note")
+        .map((child) => child.assetId),
+      ...selectedFolderPreviewRows
+        .filter((row) => row.assetType === "note" && row.assetId !== null)
+        .map((row) => row.assetId),
+    ]);
 
     for (const row of selectedFolderPreviewRows) {
       if (!row.folderId) continue;
       const list = previewMap.get(row.folderId);
-      const folderPreview = toFolderPreview(row, imageVariants, resourceMedia);
+      const folderPreview = toFolderPreview(
+        row,
+        imageVariants,
+        resourceMedia,
+        mentionColors,
+      );
       if (!list) {
         previewMap.set(row.folderId, [folderPreview]);
       } else if (list.length < 4) {
@@ -616,6 +640,7 @@ export class CollectionQueryService {
           child.assetUpdatedAt?.toISOString() ?? child.createdAt.toISOString(),
         position,
         frontIndex: child.frontIndex,
+        mentionColors: mentionColors.get(child.assetId!),
       };
     });
 

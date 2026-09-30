@@ -135,4 +135,73 @@ describe("NoteMarkdown", () => {
     expect(html).toContain("text-primary");
     expect(html).not.toContain('href="https://example.com"');
   });
+
+  it("renders a note pill with a leading note icon", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown content="See [Project plan](note:12)." />,
+    );
+
+    expect(html).toContain("<svg");
+  });
+
+  it("draws a color pill swatch from payload mention colors", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown
+        content="Use [Ocean](color:7)."
+        mentionColors={{ "color:7": { hex: "#0a5", gradient: null } }}
+      />,
+    );
+
+    expect(html).toContain('data-asset-mention="color"');
+    expect(html).toContain("background:#0a5");
+  });
+
+  it("tints a color pill on hover using the payload color", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown
+        content="Use [Ocean](color:7)."
+        mentionColors={{ "color:7": { hex: "#0a5", gradient: null } }}
+      />,
+    );
+
+    expect(html).toContain("--mention-tint:#0a5");
+  });
+
+  it("resolves a gradient mention into both swatch and tint", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown
+        content="Use [Dusk](color:7)."
+        mentionColors={{
+          "color:7": {
+            hex: null,
+            gradient: { from: "#ff0000", to: "#0000ff", angle: 90 },
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain("linear-gradient(90deg, #ff0000 0%, #0000ff 100%)");
+    expect(html).toContain("--mention-tint:#ff0000");
+  });
+
+  it("omits the swatch for a color pill with no payload data", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown content="Use [Ocean](color:7)." />,
+    );
+
+    expect(html).toContain('data-asset-mention="color"');
+    expect(html).not.toContain("background:");
+  });
+
+  it("ignores mention colors belonging to a different asset", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown
+        content="Use [Ocean](color:7)."
+        mentionColors={{ "color:99": { hex: "#0a5", gradient: null } }}
+      />,
+    );
+
+    expect(html).toContain('data-asset-mention="color"');
+    expect(html).not.toContain("background:#0a5");
+  });
 });

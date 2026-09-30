@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { FolderChildPreview } from "@/api/collection/types";
+import { resolveGradientCss } from "@/lib/color-gradient";
 import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";
 
 const MAX_VISIBLE_PREVIEWS = 4;
@@ -353,13 +354,21 @@ function CollectionPreviewCard({
       {preview.type === "link" ? (
         <LinkCardPreview preview={preview} variant="collection" />
       ) : preview.type === "color" ? (
-        <div className="size-full" style={{ backgroundColor: preview.hex }} />
+        <div
+          className="size-full"
+          style={{
+            background: preview.gradient
+              ? resolveGradientCss(preview.gradient)
+              : preview.hex,
+          }}
+        />
       ) : (
         <div className="size-full overflow-hidden bg-sidebar">
           <NoteMiniature
             content={preview.snippet ?? ""}
             title={preview.title}
             size="collection"
+            mentionColors={preview.mentionColors}
           />
         </div>
       )}

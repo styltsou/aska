@@ -7,9 +7,11 @@ export type FolderChildPreview = {
   hostname?: string;
   title?: string | null;
   hex?: string;
+  gradient?: ColorGradient | null;
   favicon?: string;
   videoId?: string;
   description?: string | null;
+  mentionColors?: MentionColors;
 };
 
 export type BoardPosition = { x: number; y: number };
@@ -282,6 +284,7 @@ export type CollectionNoteNode = {
   clientId?: string;
   position: BoardPosition | null;
   frontIndex?: number | null;
+  mentionColors?: MentionColors;
 };
 
 export type LinkResolutionStatus =
@@ -459,6 +462,16 @@ export type ColorGradient = {
   type?: "linear" | "radial";
   stops?: Array<{ color: string; position: number }>;
 };
+
+/**
+ * Color values of the assets a note references, keyed by markdown destination
+ * (`"color:7"`). Ships with the card payload so read-only mention pills can
+ * draw swatches without a resolve request.
+ */
+export type MentionColors = Record<
+  string,
+  { hex: string | null; gradient: ColorGradient | null }
+>;
 
 export type CreateImageUploadInput = {
   fileName: string;

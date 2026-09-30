@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from "react";
 
 import { getCanvasDropFanOffset } from "@/components/canvas/canvas-drop-stack";
 import { BOARD_CARD_WIDTH } from "@/components/canvas/canvas-node-layout";
+import { resolveGradientCss } from "@/lib/color-gradient";
 import { hasSelectionModifier } from "@/lib/selection";
 import { cn } from "@/lib/utils";
 import type { FolderAsset, FolderAssetPreview } from "@/types/asset";
@@ -223,7 +224,14 @@ function FolderPreviewCard({
       {preview.type === "link" ? (
         <LinkCardPreview preview={preview} variant="collection" />
       ) : preview.type === "color" ? (
-        <div className="size-full" style={{ backgroundColor: preview.hex }} />
+        <div
+          className="size-full"
+          style={{
+            background: preview.gradient
+              ? resolveGradientCss(preview.gradient)
+              : preview.hex,
+          }}
+        />
       ) : preview.type === "video" ? (
         <div className="flex size-full items-center justify-center bg-sidebar-foreground/5">
           <PlayIcon className="size-7 text-sidebar-foreground/30" />
@@ -234,6 +242,7 @@ function FolderPreviewCard({
             content={preview.snippet ?? ""}
             title={preview.title}
             size="collection"
+            mentionColors={preview.mentionColors}
           />
         </div>
       )}

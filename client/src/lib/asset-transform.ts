@@ -101,5 +101,6 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
     readingTimeMinutes: node.readingTimeMinutes,
     createdAt: node.createdAt,
     updatedAt: node.updatedAt,
+    mentionColors: node.mentionColors,
   };
 }

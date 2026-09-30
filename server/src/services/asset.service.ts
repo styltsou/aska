@@ -44,6 +44,7 @@ import type {
   UpdatedColor,
 } from "@/dto/collection.dto";
 import type { BulkDeleteResult } from "@/services/collection/collection.types";
+import { fetchMentionColorsBySource } from "@/services/collection/mention-colors";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { parseAssetNodeId } from "@/lib/collection-node-id";
 import { getColorName, normalizeHexColor } from "@/lib/color-names";
@@ -227,7 +228,7 @@ export class AssetService implements IAssetService {
         ),
       )
       .limit(1);
-    const [asset] = await this.rowsToAssetNodes(rows);
+    const [asset] = await this.rowsToAssetNodes(rows, orgId);
     if (!asset || asset.type === "folder") {
       throw new AppError(ErrorCode.NOT_FOUND, "Asset not found");
     }
@@ -373,7 +374,7 @@ export class AssetService implements IAssetService {
         slug: "inbox",
       },
       breadcrumbs: [],
-      nodes: await this.rowsToAssetNodes(rows),
+      nodes: await this.rowsToAssetNodes(rows, orgId),
     };
   }
 
@@ -1112,6 +1113,7 @@ export class AssetService implements IAssetService {
       linkResolvedAt: Date | null;
       linkStaleAt: Date | null;
     }>,
+    orgId: string,
   ): Promise<CollectionNode[]> {
     const nodes: CollectionNode[] = [];
     const resourceMedia = await getResourceMediaLookup(
@@ -1121,6 +1123,10 @@ export class AssetService implements IAssetService {
           : [],
       ),
       this.objectStorageService,
+    );
+    const mentionColors = await fetchMentionColorsBySource(
+      orgId,
+      rows.filter((row) => row.assetType === "note").map((row) => row.assetId),
     );
 
     for (const row of rows) {
@@ -1231,6 +1237,7 @@ export class AssetService implements IAssetService {
         updatedAt: row.updatedAt.toISOString(),
         position: null,
         frontIndex: null,
+        mentionColors: mentionColors.get(row.assetId),
       } satisfies CollectionNoteNode);
     }
 
