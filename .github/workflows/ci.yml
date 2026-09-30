@@ -186,23 +186,16 @@ jobs:
           bun install --frozen-lockfile --cwd services/url-unfurl-shared
           bun install --frozen-lockfile --cwd services/url-resolution
           bun install --frozen-lockfile --cwd services/video-processor
-      # Targeted SST deploys still validate the static site's output, but do
-      # not run its builder. The full deploy below rebuilds it with its final
-      # SST-provided environment.
-      - name: Build client for targeted secret deployment
-        run: bun run --cwd client build
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-region: eu-central-1
           role-to-assume: arn:aws:iam::089972278413:role/aska-github-actions-deploy
           role-session-name: aska-github-actions-deploy
-      - name: Apply database secret
-        run: bunx sst deploy --stage dev --target DatabaseUrl
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
-          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      # `sst secret set` updates the stage state synchronously. The migration
+      # shell can read that staged value directly; a targeted deploy here is
+      # unsafe because SST still evaluates all subscriptions, including new
+      # queues that are not part of the DatabaseUrl target.
       - name: Apply database migrations
         run: bunx sst shell --stage dev -- bun run scripts/migrate-stage.ts
         env:
