@@ -16,6 +16,18 @@ export type CanvasDropStackStyle = {
 
 const DROP_STACK_SCALE = 0.72;
 
+/** The fan shared by cards in flight and previews resting inside a folder. */
+export function getCanvasDropFanOffset(depth: number, trailingCount: number) {
+  const depthProgress = depth / trailingCount;
+  const direction = depth % 2 === 1 ? -1 : 1;
+
+  return {
+    x: direction * (7 + depthProgress * 16),
+    y: 10 + depthProgress * 72,
+    rotation: direction * (2 + depthProgress * 3),
+  };
+}
+
 export function makeCanvasDropStackStyles(
   primaryNodeId: string,
   origins: ReadonlyMap<string, CanvasDropStackPoint>,
@@ -43,20 +55,17 @@ export function makeCanvasDropStackStyles(
     if (!origin) return;
 
     const depth = index + 1;
-    const depthProgress = depth / trailingNodeIds.length;
-    const direction = index % 2 === 0 ? -1 : 1;
-    const fanX = direction * (7 + depthProgress * 16);
-    const fanY = 10 + depthProgress * 72;
+    const fan = getCanvasDropFanOffset(depth, trailingNodeIds.length);
     const scaleHeightCompensation =
       ((primaryOrigin.height ?? 0) - (origin.height ?? 0)) *
       (1 - DROP_STACK_SCALE);
 
     styles.set(nodeId, {
-      translateX: primaryOrigin.x - origin.x + fanX,
+      translateX: primaryOrigin.x - origin.x + fan.x,
       // Cards scale from bottom center. Without this compensation, taller
       // portrait cards' top edges settle lower than landscape cards in the fan.
-      translateY: primaryOrigin.y - origin.y + fanY + scaleHeightCompensation,
-      rotation: direction * (2 + depthProgress * 3),
+      translateY: primaryOrigin.y - origin.y + fan.y + scaleHeightCompensation,
+      rotation: fan.rotation,
       scale: DROP_STACK_SCALE,
       stackOrder: origins.size - index,
       delayMs: Math.min(index * 8, 32),

@@ -159,15 +159,25 @@ function LoadingCard({ type, height }: (typeof LOADING_CARDS)[number]) {
   if (type === "folder") {
     return (
       <div
-        className={`relative ${widthClass} overflow-hidden rounded-lg border bg-sidebar`}
+        className={`relative ${widthClass} aspect-square overflow-hidden rounded-lg border bg-sidebar`}
       >
-        <div className="grid grid-cols-2 gap-3 p-3 pb-12">
-          <Skeleton className="aspect-square rounded-sm" />
-          <Skeleton className="aspect-square rounded-sm" />
-          <Skeleton className="aspect-square rounded-sm" />
-          <Skeleton className="aspect-square rounded-sm" />
+        <div className="absolute inset-0" style={{ containerType: "size" }}>
+          {[
+            { x: -8, y: 14, rotation: -3 },
+            { x: 8, y: 24, rotation: 3 },
+            { x: 0, y: 0, rotation: 0 },
+          ].map((layer, index) => (
+            <Skeleton
+              key={index}
+              className="absolute top-[44%] left-1/2 aspect-[4/3] w-[min(65%,11rem)] rounded-lg"
+              style={{
+                zIndex: index === 2 ? 3 : index + 1,
+                transform: `translate(calc(-50% + ${(layer.x / CARD_WIDTH) * 100}cqw), calc(-50% + ${(layer.y / CARD_WIDTH) * 100}cqw)) rotate(${layer.rotation}deg)`,
+              }}
+            />
+          ))}
         </div>
-        <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-sidebar/80 px-3 py-2.5">
+        <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-linear-to-b from-sidebar/0 via-sidebar/85 to-sidebar px-3 pt-7 pb-2.5">
           <Skeleton className="size-5 shrink-0 rounded-sm" />
           <Skeleton className="h-4 w-24" />
           <Skeleton className="ml-auto h-3 w-5" />
