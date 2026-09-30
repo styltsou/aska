@@ -11,8 +11,14 @@ export function useDiagramPreview(source: string) {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (!source.trim()) return;
     let active = true;
+    setError(undefined);
+    if (!source.trim()) {
+      setSvg(undefined);
+      return () => {
+        active = false;
+      };
+    }
     const timer = window.setTimeout(() => {
       renderDiagram(source, dark).then(
         (result) => {
@@ -30,7 +36,7 @@ export function useDiagramPreview(source: string) {
           );
         },
       );
-    }, 180);
+    }, 500);
     return () => {
       active = false;
       window.clearTimeout(timer);

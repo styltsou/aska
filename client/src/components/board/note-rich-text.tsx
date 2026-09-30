@@ -2082,6 +2082,7 @@ export const NoteRichText = forwardRef<
     ({ editor: currentEditor }: { state: EditorState; editor: Editor }) =>
       (currentEditor.isFocused || blockStyleMenuOpen || barOwnsFocus()) &&
       !highlightMode &&
+      currentEditor.state.selection instanceof TextSelection &&
       // The plugin hands over the state from before the transaction it is
       // reacting to, so the emptiness check has to read the live selection.
       // Otherwise the first transaction of a fresh selection is judged against
@@ -2160,6 +2161,7 @@ export const NoteRichText = forwardRef<
           .setMeta("addToHistory", false),
       );
     if (
+      !(editor.state.selection instanceof TextSelection) ||
       editor.state.selection.empty ||
       editor.isActive("codeBlock") ||
       highlightMode

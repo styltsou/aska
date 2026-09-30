@@ -7,7 +7,15 @@
 
 .note-mermaid-toolbar,
 .note-mermaid-full-header {
-  @apply flex items-center gap-2 border-b border-sidebar-border bg-background px-2 py-1.5;
+  @apply flex items-center gap-2 bg-background px-2 py-1.5;
+}
+
+.note-mermaid-full-header {
+  @apply border-b border-sidebar-border;
+}
+
+.note-mermaid-toolbar {
+  @apply p-2;
 }
 
 .note-mermaid-label,
@@ -19,8 +27,21 @@
   @apply ml-auto flex items-center gap-0.5;
 }
 
+.note-mermaid-view-toggle {
+  @apply relative grid w-fit grid-cols-2 gap-0.5 rounded-md border border-border/60 bg-muted p-0.5 shadow-[0_1px_1px_rgb(0_0_0_/_0.02)] ring-1 ring-foreground/[0.025] backdrop-blur-sm;
+}
+
 .note-mermaid-preview {
-  @apply flex min-h-48 w-full items-center justify-center overflow-hidden bg-card p-5;
+  @apply flex min-h-48 w-full items-center justify-center overflow-hidden rounded-t-lg rounded-b-none border-t border-sidebar-border bg-card p-5;
+}
+
+.note-mermaid-content {
+  @apply overflow-hidden;
+  background: linear-gradient(
+    to bottom,
+    transparent 0 var(--radius-lg),
+    var(--card) var(--radius-lg) 100%
+  );
 }
 
 .note-mermaid-preview--compact {
@@ -43,8 +64,94 @@
   @apply px-4 py-6 text-center text-xs text-muted-foreground;
 }
 
+.note-mermaid-inline-loading {
+  @apply flex flex-1 items-center justify-center;
+}
+
 .note-mermaid-inline-source {
-  @apply block min-h-40 w-full resize-y bg-card p-4 font-mono text-xs leading-5 text-sidebar-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  @apply relative flex max-h-80 min-h-40 w-full overflow-hidden rounded-t-lg rounded-b-none border-t border-sidebar-border bg-card text-sidebar-foreground;
+}
+
+.note-mermaid-inline-source .cm-editor,
+.note-mermaid-inline-source .cm-scroller,
+.note-mermaid-inline-source .cm-gutters {
+  @apply !bg-card;
+}
+
+.note-mermaid-inline-source .cm-gutters {
+  @apply border-sidebar-border;
+}
+
+.note-mermaid-inline-source .cm-content {
+  @apply !p-3;
+}
+
+.note-mermaid-inline-source[data-error] .cm-content {
+  @apply !pb-14;
+}
+
+.note-mermaid-inline-source .cm-activeLine,
+.note-mermaid-inline-source .cm-activeLineGutter {
+  @apply !bg-muted;
+}
+
+.note-mermaid-inline-source .cm-selectionBackground,
+.note-mermaid-inline-source
+  .cm-focused
+  > .cm-scroller
+  > .cm-selectionLayer
+  .cm-selectionBackground {
+  background-color: color-mix(
+    in oklch,
+    var(--foreground) 14%,
+    var(--card)
+  ) !important;
+}
+
+.note-mermaid-inline-source .cm-content ::selection {
+  background: color-mix(in oklch, var(--foreground) 14%, var(--card));
+  color: inherit;
+}
+
+.note-mermaid-inline-error {
+  @apply pointer-events-none absolute inset-x-3 bottom-3 z-10 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive shadow-sm backdrop-blur-sm;
+}
+
+.note-mermaid-inline-source .cm-scroller {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.note-mermaid-inline-source:hover .cm-scroller {
+  scrollbar-color: color-mix(
+      in oklch,
+      var(--sidebar-foreground) 28%,
+      transparent
+    )
+    transparent;
+}
+
+.note-mermaid-inline-source .cm-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.note-mermaid-inline-source .cm-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.note-mermaid-inline-source .cm-scroller::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.note-mermaid-inline-source:hover .cm-scroller::-webkit-scrollbar-thumb {
+  background-color: color-mix(
+    in oklch,
+    var(--sidebar-foreground) 28%,
+    transparent
+  );
 }
 
 .note-mermaid-error {
