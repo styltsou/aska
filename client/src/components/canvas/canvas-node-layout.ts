@@ -160,9 +160,17 @@ function getNodeHeight(node: CanvasLayoutNode): number {
 
   if (node.type === "text") return 40;
 
-  if (node.type === "image" && node.width > 0 && node.height > 0) {
+  if (
+    (node.type === "image" || node.type === "video") &&
+    node.width &&
+    node.height &&
+    node.width > 0 &&
+    node.height > 0
+  ) {
     return BOARD_CARD_WIDTH * (node.height / node.width);
   }
+
+  if (node.type === "video") return (BOARD_CARD_WIDTH * 9) / 16;
 
   if (node.type === "note") return NOTE_CARD_MAX_HEIGHT;
   if (node.type === "color") return COLOR_CARD_HEIGHT;

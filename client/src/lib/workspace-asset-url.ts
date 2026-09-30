@@ -1,4 +1,4 @@
-const WORKSPACE_ASSET_ID = /^(?:image|note|link|color)-\d+$/;
+const WORKSPACE_ASSET_ID = /^(?:image|video|note|link|color)-\d+$/;
 const ASSET_SEGMENT = "asset";
 
 export function parseWorkspaceAssetId(value: unknown): string | undefined {

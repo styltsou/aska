@@ -37,7 +37,7 @@ import {
 } from "@/lib/selection";
 import { cn } from "@/lib/utils";
 import { useTransientStore } from "@/store";
-import type { LinkAsset } from "@/types/asset";
+import type { LinkAsset, VideoAsset } from "@/types/asset";
 
 const INITIAL_ASSET_COUNT = 12;
 const ASSET_PAGE_SIZE = 24;
@@ -71,7 +71,7 @@ type CollectionGridViewProps = {
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
   onOpenColor: (node: Extract<CollectionNode, { type: "color" }>) => void;
-  onOpenVideo: (asset: LinkAsset) => void;
+  onOpenVideo: (asset: LinkAsset | VideoAsset) => void;
   onOpenNote: (
     node: Extract<CollectionNode, { type: "note" }>,
     mode?: "read" | "edit",
@@ -515,7 +515,7 @@ function GridNodeCard({
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
   onOpenColor: (node: Extract<CollectionNode, { type: "color" }>) => void;
-  onOpenVideo: (asset: LinkAsset) => void;
+  onOpenVideo: (asset: LinkAsset | VideoAsset) => void;
   onOpenNote: (
     node: Extract<CollectionNode, { type: "note" }>,
     mode?: "read" | "edit",

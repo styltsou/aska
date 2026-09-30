@@ -83,6 +83,9 @@ beforeEach(async () => {
       mediaTasks.push({ id, generation });
       return true;
     },
+    async enqueueRemoteVideo() {
+      return true;
+    },
   };
   service = new UrlUnfurlService(queue, objectStorage, logger);
   assetService = new AssetService({

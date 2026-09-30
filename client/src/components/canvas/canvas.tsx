@@ -32,7 +32,7 @@ import type {
   CanvasTextObject,
   CollectionNode,
 } from "@/api/collection";
-import type { LinkAsset } from "@/types/asset";
+import type { LinkAsset, VideoAsset } from "@/types/asset";
 import type { UpdateCanvasItemsGeometryInput } from "@/api/collection/types";
 import {
   useBulkDelete,
@@ -163,7 +163,7 @@ type CanvasProps = {
   onOpenFolder: (node: Extract<CollectionNode, { type: "folder" }>) => void;
   onOpenImage: (node: Extract<CollectionNode, { type: "image" }>) => void;
   onOpenColor: (node: Extract<CollectionNode, { type: "color" }>) => void;
-  onOpenVideo: (asset: LinkAsset) => void;
+  onOpenVideo: (asset: LinkAsset | VideoAsset) => void;
   onOpenNote: (
     node: Extract<CollectionNode, { type: "note" }>,
     mode?: "read" | "edit",
@@ -2809,7 +2809,9 @@ function getCanvasCardHeight(node: CanvasFlowNode): number {
 
   if (node.type !== "asset") return 80;
   const collectionNode = node.data.collectionNode;
-  if (collectionNode.type === "image") {
+  if (collectionNode.type === "image" || collectionNode.type === "video") {
+    if (!collectionNode.width || !collectionNode.height)
+      return (BOARD_CARD_WIDTH * 9) / 16;
     return (BOARD_CARD_WIDTH * collectionNode.height) / collectionNode.width;
   }
 

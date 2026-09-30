@@ -42,6 +42,7 @@ export interface IObjectStorageService {
     key: string,
     expiresInSeconds?: number,
   ): Promise<PresignedGetUrl>;
+  createPresignedDownloadUrl?(key: string, filename: string): Promise<string>;
   createPresignedGetUrls(
     keys: Iterable<string>,
     expiresInSeconds?: number,
@@ -120,6 +121,20 @@ export class ObjectStorageService implements IObjectStorageService {
       url,
       expiresAt: new Date(Date.now() + expiresInSeconds * 1000),
     };
+  }
+
+  async createPresignedDownloadUrl(
+    key: string,
+    filename: string,
+  ): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.getRequiredConfig().bucket,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${filename.replace(/["\r\n;]/g, "_")}"`,
+    });
+    return getSignedUrl(this.getClient(), command, {
+      expiresIn: env.S3_PRESIGNED_READ_EXPIRES_SECONDS,
+    });
   }
 
   async createPresignedGetUrls(
@@ -247,7 +262,7 @@ export class ObjectStorageService implements IObjectStorageService {
 }
 
 function isMediaObjectKey(key: string): boolean {
-  return /^[^/]+\/[^/]+\/(?:original\.[a-z0-9]+|master\.webp|display\.webp|preview\.webp)$/i.test(
+  return /^[^/]+\/(?:[^/]+\/(?:original\.[a-z0-9]+|master\.webp|display\.webp|preview\.webp)|video\/[^/]+\/(?:original\.(?:mp4|webm)|poster(?:-display|-preview)?\.webp))$/i.test(
     key,
   );
 }

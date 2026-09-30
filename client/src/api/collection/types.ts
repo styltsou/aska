@@ -1,7 +1,9 @@
 export type FolderChildPreview = {
   assetId: string;
-  type: "image" | "note" | "link" | "color";
+  type: "image" | "video" | "note" | "link" | "color";
   url?: string;
+  width?: number;
+  height?: number;
   blurDataURL?: string | null;
   snippet?: string;
   hostname?: string;
@@ -102,7 +104,13 @@ export type UpdateCanvasArrowInput = Partial<
   >
 >;
 export type CanvasObjectResponse = { object: CanvasObject };
-export type ContentTypeFilter = "image" | "note" | "link" | "color" | "folder";
+export type ContentTypeFilter =
+  | "image"
+  | "video"
+  | "note"
+  | "link"
+  | "color"
+  | "folder";
 
 export type BoardVisibleBounds = {
   left: number;
@@ -268,6 +276,28 @@ export type CollectionImageNode = {
   frontIndex?: number | null;
 };
 
+export type CollectionVideoNode = {
+  id: string;
+  type: "video";
+  url: string | null;
+  posterUrl: string | null;
+  contentType: string | null;
+  width: number | null;
+  height: number | null;
+  durationSeconds: number | null;
+  title: string | null;
+  note: string | null;
+  sourceLabel: string | null;
+  sourceUrl: string | null;
+  processingStatus: "processing" | "completed" | "failed";
+  processingError: string | null;
+  isFavorite: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  position: BoardPosition | null;
+  frontIndex?: number | null;
+};
+
 export type CollectionNoteNode = {
   id: string;
   type: "note";
@@ -356,6 +386,7 @@ export type CreateNoteResponse = {
 export type PeekableAssetResponse = {
   asset:
     | CollectionImageNode
+    | CollectionVideoNode
     | CollectionNoteNode
     | CollectionLinkNode
     | CollectionColorNode;
@@ -620,6 +651,7 @@ export type FlattenFolderResponse = {
 export type CollectionNode =
   | CollectionFolderNode
   | CollectionImageNode
+  | CollectionVideoNode
   | CollectionNoteNode
   | CollectionLinkNode
   | CollectionColorNode;

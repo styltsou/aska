@@ -7,6 +7,7 @@ import {
   DeleteNoteIfUnchangedSchema,
   ImageCropPathParamSchema,
   UpdateImageSchema,
+  UpdateVideoSchema,
   UpdateLinkSchema,
   UpdateNoteSchema,
   UpdateColorSchema,
@@ -176,6 +177,27 @@ export const updateImage = factory.createHandlers(
   },
 );
 
+export const updateVideo = factory.createHandlers(
+  authMiddleware,
+  validate.param(AssetPathParamSchema),
+  validate.body(UpdateVideoSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const video = await assetService.updateVideo(
+      workspace.id,
+      userId,
+      assetId,
+      c.req.valid("json"),
+    );
+    return c.json(success({ video }));
+  },
+);
+
 export const updateLink = factory.createHandlers(
   authMiddleware,
   validate.param(AssetPathParamSchema),
@@ -294,6 +316,11 @@ export const downloadAsset = factory.createHandlers(
       workspaceSlug,
       userId,
     );
+    if (assetId.startsWith("video-")) {
+      const url = await assetService.downloadVideo(workspace.id, assetId);
+      c.header("Cache-Control", "private, no-store");
+      return c.redirect(url, 302);
+    }
     const { bytes, contentType, filename } = await assetService.downloadAsset(
       workspace.id,
       assetId,

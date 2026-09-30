@@ -6,8 +6,10 @@ import type {
   FolderAsset,
   ImageAsset,
   NoteAsset,
+  VideoAsset,
 } from "@/types/asset";
 import { ImageAssetCard } from "@/components/board/cards/image-asset-card";
+import { VideoAssetCard } from "@/components/board/cards/video-asset-card";
 import { NoteAssetCard } from "@/components/board/cards/note-asset-card";
 import { FolderAssetCard } from "@/components/board/cards/folder-asset-card";
 import { LinkAssetCard } from "@/components/board/cards/link-asset-card";
@@ -39,7 +41,7 @@ export const AssetCard = memo(function AssetCard({
   onOpenImage?: (asset: ImageAsset) => void;
   onOpenNote?: (asset: NoteAsset, mode?: "read" | "edit") => void;
   onOpenColor?: (asset: ColorAsset) => void;
-  onOpenVideo?: (asset: Extract<Asset, { type: "link" }>) => void;
+  onOpenVideo?: (asset: Extract<Asset, { type: "link" }> | VideoAsset) => void;
   deleteContext?: {
     workspaceSlug: string;
     collectionSlug: string;
@@ -95,6 +97,12 @@ export const AssetCard = memo(function AssetCard({
                 asset={asset}
                 onOpen={onOpenImage ? () => onOpenImage(asset) : undefined}
                 isContextMenuOpen={isContextMenuOpen}
+              />
+            )}
+            {asset.type === "video" && (
+              <VideoAssetCard
+                asset={asset}
+                onOpen={onOpenVideo ? () => onOpenVideo(asset) : undefined}
               />
             )}
             {asset.type === "note" && (

@@ -233,9 +233,9 @@ describe("collection board position DTOs", () => {
         types: "image,note",
       }),
     ).toEqual({ folderPath: "references", types: ["image", "note"] });
-    expect(
-      CollectionContentsQuerySchema.safeParse({ types: "video" }).success,
-    ).toBe(false);
+    expect(CollectionContentsQuerySchema.parse({ types: "video" })).toEqual({
+      types: ["video"],
+    });
   });
 });
 

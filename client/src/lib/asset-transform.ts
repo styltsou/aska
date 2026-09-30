@@ -43,6 +43,10 @@ export function collectionNodeToAsset(node: CollectionNode): Asset {
     };
   }
 
+  if (node.type === "video") {
+    return { ...node };
+  }
+
   if (node.type === "link") {
     return {
       id: node.id,

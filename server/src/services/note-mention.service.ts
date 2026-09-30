@@ -44,7 +44,7 @@ type Executor = typeof db | DatabaseTransaction;
 
 type MentionRow = {
   assetId: number;
-  assetType: "image" | "note" | "link" | "color";
+  assetType: "image" | "video" | "note" | "link" | "color";
   title: string | null;
   updatedAt: Date;
   markdown: string | null;

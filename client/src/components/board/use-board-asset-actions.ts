@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
+import { useVideoAssets } from "@/api/video";
 
 import {
   useCreateInboxNote,
@@ -15,7 +16,11 @@ import { useCreateInboxLink, useCreateLink } from "@/api/url-unfurl";
 import type { BoardInsertionPlacement } from "@/api/collection";
 import type { PexelsPhoto } from "@/api/pexels";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
-import { SUPPORTED_IMAGE_MIME_TYPE_SET } from "@/constants";
+import {
+  SUPPORTED_IMAGE_MIME_TYPE_SET,
+  SUPPORTED_VIDEO_MIME_TYPE_SET,
+} from "@/constants";
+import { isDirectVideoUrl } from "@/lib/video-url";
 import type { ClipboardAssetPayload } from "@/lib/clipboard";
 import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
 import { parseHttpUrl } from "@/lib/utils";
@@ -54,6 +59,11 @@ export function useBoardAssetActions({
   const createInboxRemoteImage = useCreateInboxRemoteImage(workspaceSlug);
   const createLink = useCreateLink(workspaceSlug, collectionSlug);
   const createInboxLink = useCreateInboxLink(workspaceSlug);
+  const videos = useVideoAssets({
+    workspaceSlug,
+    collectionSlug: target === "collection" ? collectionSlug : undefined,
+    parentFolderPath: target === "collection" ? parentFolderPath : undefined,
+  });
 
   const isPending =
     createNote.isPending ||
@@ -66,6 +76,7 @@ export function useBoardAssetActions({
     createInboxLink.isPending ||
     createColor.isPending ||
     createInboxColor.isPending;
+  // Video mutations are tracked separately below to keep image flows intact.
 
   const statusText = useMemo(() => {
     if (uploadLocalImages.isPending) return "Uploading images";
@@ -96,22 +107,32 @@ export function useBoardAssetActions({
       const imageFiles = files.filter((file) =>
         SUPPORTED_IMAGE_MIME_TYPE_SET.has(file.type),
       );
-      if (imageFiles.length === 0) return;
+      const videoFiles = files.filter(
+        (file) =>
+          SUPPORTED_VIDEO_MIME_TYPE_SET.has(file.type) ||
+          (file.type === "" && /\.(mp4|webm)$/i.test(file.name)),
+      );
+      if (imageFiles.length === 0 && videoFiles.length === 0) return;
 
       try {
         const insertionPlacement =
           actionPlacement ?? getPlacement?.() ?? placement;
-        if (target === "inbox") {
+        if (imageFiles.length > 0 && target === "inbox") {
           await uploadInboxImages.mutateAsync({
             files: imageFiles,
           });
-        } else {
+        } else if (imageFiles.length > 0) {
           await uploadLocalImages.mutateAsync({
             files: imageFiles,
             parentFolderPath,
             placement: insertionPlacement,
           });
         }
+        for (const file of videoFiles)
+          await videos.upload.mutateAsync({
+            file,
+            position: insertionPlacement?.position,
+          });
       } catch (err) {
         toast.error(
           err instanceof Error ? err.message : "Unable to upload images.",
@@ -125,6 +146,7 @@ export function useBoardAssetActions({
       target,
       uploadInboxImages,
       uploadLocalImages,
+      videos.upload,
     ],
   );
 
@@ -132,6 +154,22 @@ export function useBoardAssetActions({
     async (value: string, actionPlacement?: BoardInsertionPlacement) => {
       const url = parseHttpUrl(value);
       if (!url) return;
+
+      if (isDirectVideoUrl(url)) {
+        try {
+          const insertionPlacement =
+            actionPlacement ?? getPlacement?.() ?? placement;
+          await videos.importUrl.mutateAsync({
+            url,
+            position: insertionPlacement?.position,
+          });
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Unable to import video.",
+          );
+        }
+        return;
+      }
 
       try {
         const insertionPlacement =
@@ -159,6 +197,7 @@ export function useBoardAssetActions({
       parentFolderPath,
       placement,
       target,
+      videos.importUrl,
     ],
   );
 
@@ -326,8 +365,18 @@ export function useBoardAssetActions({
     createColorFromHex,
     importPexelsPhotos,
     createLinkFromUrl,
-    isPending,
-    statusText,
+    importVideoFromUrl: (url: string) =>
+      videos.importUrl.mutateAsync({
+        url,
+        position: (getPlacement?.() ?? placement)?.position,
+      }),
+    isPending:
+      isPending || videos.upload.isPending || videos.importUrl.isPending,
+    statusText: videos.upload.isPending
+      ? "Uploading video"
+      : videos.importUrl.isPending
+        ? "Importing video"
+        : statusText,
     uploadFiles,
   };
 }
