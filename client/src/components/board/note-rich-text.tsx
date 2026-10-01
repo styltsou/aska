@@ -166,6 +166,15 @@ type SlashCommandGroup = {
 
 const noteLowlight = createLowlight(common);
 
+const NON_RICH_TEXT_WIDGET_SELECTOR = [
+  ".note-code-block",
+  "[data-type='mermaid-block']",
+  ".note-task-checkbox",
+  ".note-asset-mention",
+  ".column-resize-handle",
+  "hr",
+].join(", ");
+
 function trailingEmptyParagraphPosition(editor: Editor): number | undefined {
   const { doc } = editor.state;
   const lastNode = doc.lastChild;
@@ -1869,6 +1878,8 @@ export const NoteRichText = forwardRef<
     );
   }, [queryClient, sourceAssetId, workspaceSlug]);
 
+  const noteBubbleMenuKey = useMemo(() => new PluginKey("noteBubbleMenu"), []);
+
   const editorProps = useMemo(
     () => ({
       attributes: {
@@ -1916,6 +1927,35 @@ export const NoteRichText = forwardRef<
       },
       handleDOMEvents: {
         mousedown: (_view: unknown, event: Event) => {
+          const target = event.target;
+          const isNonRichTextWidget =
+            target instanceof Element &&
+            Boolean(target.closest(NON_RICH_TEXT_WIDGET_SELECTOR));
+          const currentEditor = editorInstanceRef.current;
+
+          // Node views can take focus without replacing the previous
+          // TextSelection. Clear that stale selection before the browser
+          // processes the click, otherwise the formatting menu remains pinned
+          // to text the user is no longer interacting with.
+          if (
+            isNonRichTextWidget &&
+            currentEditor &&
+            !currentEditor.state.selection.empty
+          ) {
+            currentEditor.view.dispatch(
+              currentEditor.state.tr
+                .setSelection(
+                  TextSelection.near(
+                    currentEditor.state.doc.resolve(
+                      currentEditor.state.selection.to,
+                    ),
+                  ),
+                )
+                .setMeta(noteBubbleMenuKey, "hide")
+                .setMeta("addToHistory", false),
+            );
+          }
+
           if (
             editableRef.current &&
             highlightModeRef.current &&
@@ -1964,7 +2004,7 @@ export const NoteRichText = forwardRef<
         return true;
       },
     }),
-    [],
+    [noteBubbleMenuKey],
   );
 
   const editor = useEditor({
@@ -2091,8 +2131,6 @@ export const NoteRichText = forwardRef<
       !currentEditor.isActive("codeBlock"),
     [barOwnsFocus, blockStyleMenuOpen, highlightMode],
   );
-
-  const noteBubbleMenuKey = useMemo(() => new PluginKey("noteBubbleMenu"), []);
 
   const dismissSelection = useCallback(() => {
     if (!editor || editor.isDestroyed) return;

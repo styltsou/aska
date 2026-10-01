@@ -379,7 +379,11 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
   );
 
   return (
-    <NodeViewWrapper as="span" className="inline" contentEditable={false}>
+    <NodeViewWrapper
+      as="span"
+      className="note-asset-mention inline"
+      contentEditable={false}
+    >
       {resolved ? (
         <HoverCardTrigger
           handle={noteMentionPreviewCard}
