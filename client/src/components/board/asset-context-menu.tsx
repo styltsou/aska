@@ -51,6 +51,7 @@ import { getPexelsBrowserScope, useSessionStore } from "@/store";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isYouTubeVideoUrl } from "@/lib/youtube-url";
 import { apiUrl } from "@/lib/api";
+import { clearDeletedNoteDrafts } from "@/lib/note-edit-draft";
 
 type ImagePrefetch = {
   controller: AbortController;
@@ -419,6 +420,9 @@ export function AssetContextMenu({
       });
     } else {
       deleteAsset.mutate(asset.id, {
+        onSuccess: () => {
+          if (asset.type === "note") clearDeletedNoteDrafts(asset.id);
+        },
         onError: (err) => {
           toast.error(
             err instanceof Error ? err.message : "Unable to delete asset.",
@@ -606,7 +610,9 @@ export function AssetContextMenu({
               <AlertDialogDescription>
                 {asset.type === "folder"
                   ? "This deletes the folder. Assets inside it will move back to Inbox."
-                  : "Are you sure you want to delete this asset? This action cannot be undone."}
+                  : asset.type === "note"
+                    ? "This permanently deletes the note and any unsaved changes. This action cannot be undone."
+                    : "Are you sure you want to delete this asset? This action cannot be undone."}
               </AlertDialogDescription>
             </AlertDialogHeader>
           </AlertDialogBody>

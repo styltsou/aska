@@ -51,9 +51,11 @@ import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { parseFrontMatter } from "@/lib/front-matter";
 import {
   clearEditDraft,
+  clearDeletedNoteDrafts,
   getNoteSaveErrorMessage,
   loadEditDraft,
   loadLegacyEditDraft,
+  pruneRedundantEditDrafts,
   saveEditDraft,
 } from "@/lib/note-edit-draft";
 import {
@@ -1423,6 +1425,7 @@ function PeekNote({
   showEnabled: boolean;
   readOnly: boolean;
 }) {
+  useEffect(() => pruneRedundantEditDrafts(), []);
   const { peekNote, peekColor, setPeekNoteFlushHandler, syncPeekNote } =
     useWorkspacePeek();
   const { mutateAsync: updateNoteAsync } = useUpdateNote(workspaceSlug);
@@ -1519,7 +1522,7 @@ function PeekNote({
               }
               committedNote.current = { ...current, content, title: nextTitle };
               wasDeleted.current = true;
-              clearEditDraft(note.id);
+              clearDeletedNoteDrafts(note.id);
               closeRequested.current = false;
               setSaveState("saved");
               return committedNote.current;
@@ -1537,7 +1540,7 @@ function PeekNote({
             nextTitle === (current.title ?? null)
           ) {
             closeRequested.current = false;
-            clearEditDraft(note.id);
+            clearEditDraft(note.id, current);
             setSaveState("saved");
             return current;
           }
@@ -1572,7 +1575,7 @@ function PeekNote({
             (latestTitle.current.trim() || null) === nextTitle
           ) {
             closeRequested.current = false;
-            clearEditDraft(note.id);
+            clearEditDraft(note.id, committedNote.current);
             setSaveState("saved");
             return committedNote.current;
           }
@@ -1603,16 +1606,16 @@ function PeekNote({
     const legacy = loadLegacyEditDraft(note.id);
     if (!legacy || (!legacy.title.trim() && !legacy.content.trim())) return;
     toast.warning(
-      "An older unsynced draft was found. It was not auto-saved because its original version is unknown.",
+      "We found earlier changes that couldn’t be restored automatically. Copy them if you still need them.",
       {
         action: {
-          label: "Copy draft",
+          label: "Copy changes",
           onClick: () => {
             void navigator.clipboard
               .writeText(
                 [legacy.title, legacy.content].filter(Boolean).join("\n\n"),
               )
-              .catch(() => toast.error("Could not copy draft."));
+              .catch(() => toast.error("Could not copy changes."));
           },
         },
       },

@@ -15,6 +15,9 @@ describe("getNoteSaveStatusLabel", () => {
   it("overrides the edit label for active and failure states", () => {
     expect(getNoteSaveStatusLabel("saving", undefined)).toBe("Saving…");
     expect(getNoteSaveStatusLabel("error", undefined)).toBe("Save failed");
+    expect(getNoteSaveStatusLabel("conflict", undefined)).toBe(
+      "Review changes",
+    );
     expect(getNoteSaveStatusLabel("empty", undefined)).toBeUndefined();
   });
 });

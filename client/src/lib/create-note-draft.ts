@@ -14,12 +14,34 @@ export function getCreateNoteDraftId(
   target: "collection" | "inbox",
 ): string | null {
   if (typeof window === "undefined") return null;
+  pruneExpiredCreateNoteDrafts();
 
   return `${STORAGE_KEY_PREFIX}${JSON.stringify([
     workspaceSlug,
     target,
     target === "inbox" ? "" : collectionPath,
   ])}`;
+}
+
+function pruneExpiredCreateNoteDrafts() {
+  try {
+    const storage = window.sessionStorage;
+    for (let index = storage.length - 1; index >= 0; index--) {
+      const key = storage.key(index);
+      if (!key?.startsWith(STORAGE_KEY_PREFIX)) continue;
+      const value = storage.getItem(key);
+      let draft: unknown;
+      try {
+        draft = value ? JSON.parse(value) : null;
+      } catch {
+        draft = null;
+      }
+      if (!isValidDraft(draft) || isExpired(draft.updatedAt))
+        storage.removeItem(key);
+    }
+  } catch {
+    // Storage may be unavailable in private or restricted browser contexts.
+  }
 }
 
 export function loadCreateNoteDraft(id: string | null): CreateNoteDraft | null {

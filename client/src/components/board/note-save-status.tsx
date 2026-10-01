@@ -3,7 +3,13 @@ import { useEffect, useState } from "react";
 import { formatNoteHeaderEditTime } from "@/lib/note-date-format";
 import { cn } from "@/lib/utils";
 
-type NoteSaveStatusState = "saved" | "saving" | "deleting" | "error" | "empty";
+type NoteSaveStatusState =
+  | "saved"
+  | "saving"
+  | "deleting"
+  | "error"
+  | "conflict"
+  | "empty";
 
 export function NoteSaveStatus({
   state,
@@ -32,7 +38,7 @@ export function NoteSaveStatus({
     <span
       className={cn(
         "inline-block shrink-0 overflow-hidden px-2 text-right text-xs whitespace-nowrap text-muted-foreground",
-        state === "error" && "text-destructive",
+        (state === "error" || state === "conflict") && "text-destructive",
         className,
       )}
     >
@@ -49,6 +55,7 @@ export function getNoteSaveStatusLabel(
   if (state === "saving") return "Saving…";
   if (state === "deleting") return "Deleting…";
   if (state === "error") return "Save failed";
+  if (state === "conflict") return "Review changes";
   if (!updatedAt) return undefined;
   const headerTime = formatNoteHeaderEditTime(updatedAt, now);
   return headerTime ? `Edited ${headerTime}` : undefined;
