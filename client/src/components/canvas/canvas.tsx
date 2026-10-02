@@ -67,6 +67,7 @@ import { formatPlatformShortcut, getPlatformModifier } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import { makeBoardKey } from "./canvas-key";
 import { onBatchPlacementCompleted } from "./batch-placement-completed";
+import { consumeCanvasCardEntranceSuppression } from "./canvas-card-entrance";
 import {
   setBoardFlowPositionConverter,
   setBoardPointerPosition,
@@ -313,6 +314,15 @@ function CanvasSurface({
   const alignmentBypassRef = useRef(false);
   const dragVersionRef = useRef(new Map<string, number>());
   const pendingNodePositionsRef = useRef(new Map<string, XYPosition>());
+  const seenCanvasCardIdentitiesRef = useRef(
+    new Set(nodes.map(canvasCardIdentity)),
+  );
+  const presenceCompletionRef = useRef<
+    ((nodeId: string, presence: "entering" | "exiting") => void) | undefined
+  >(undefined);
+  const exitStartRef = useRef<((nodeId: string) => void) | undefined>(
+    undefined,
+  );
   const expandedNoteOrderRef = useRef(updateExpandedNoteOrder([], nodes));
   const persistPositionRef = useRef<
     (save: QueuedPositionSave) => Promise<void>
@@ -517,6 +527,7 @@ function CanvasSurface({
       clearSelection(boardKey);
       return;
     }
+    persistedIds.forEach((id) => exitStartRef.current?.(id));
     bulkDelete.mutate(
       { nodeIds: persistedIds, collectionSlug },
       {
@@ -1340,7 +1351,10 @@ function CanvasSurface({
   );
 
   const makeNodeData = useCallback(
-    (collectionNode: CollectionNode): CanvasNodeData => {
+    (
+      collectionNode: CollectionNode,
+      presence?: CanvasNodeData["presence"],
+    ): CanvasNodeData => {
       const isHoveredDropTarget =
         collectionNode.type === "folder" &&
         collectionNode.id === dropTargetNodeId;
@@ -1382,6 +1396,10 @@ function CanvasSurface({
             ? dragSessionRef.current?.origins.size
             : undefined,
         dropStackStyle: dropStackStylesRef.current.get(collectionNode.id),
+        presence,
+        onPresenceComplete: (nodeId, completedPresence) =>
+          presenceCompletionRef.current?.(nodeId, completedPresence),
+        onExitStart: (nodeId) => exitStartRef.current?.(nodeId),
         onContextMenu: handleNodeContextMenu,
       };
     },
@@ -1479,6 +1497,54 @@ function CanvasSurface({
       .filter((object): object is CanvasTextObject => object.type === "text")
       .map((object) => makeTextFlowNode(object, makeTextNodeData(object))),
   ]);
+  const [exitingNodes, setExitingNodes] = useState<CanvasNode[]>([]);
+  const flowNodesRef = useRef(flowNodes);
+  flowNodesRef.current = flowNodes;
+  const completeCardPresence = useCallback(
+    (nodeId: string, presence: "entering" | "exiting") => {
+      if (presence === "exiting") {
+        setExitingNodes((current) =>
+          current.filter((node) => node.id !== nodeId),
+        );
+        return;
+      }
+
+      setFlowNodes((current) =>
+        current.map((node) =>
+          node.id === nodeId && node.type === "asset"
+            ? { ...node, data: { ...node.data, presence: undefined } }
+            : node,
+        ),
+      );
+    },
+    [],
+  );
+  const beginCardExit = useCallback((nodeId: string) => {
+    const node = flowNodesRef.current.find(
+      (candidate): candidate is CanvasNode =>
+        candidate.id === nodeId && candidate.type === "asset",
+    );
+    if (!node) return;
+
+    setExitingNodes((current) =>
+      current.some((candidate) => candidate.id === nodeId)
+        ? current
+        : [
+            ...current,
+            { ...node, data: { ...node.data, presence: "exiting" } },
+          ],
+    );
+  }, []);
+  presenceCompletionRef.current = completeCardPresence;
+  exitStartRef.current = beginCardExit;
+  const renderedFlowNodes = useMemo(() => {
+    const exitingById = new Map(exitingNodes.map((node) => [node.id, node]));
+    const liveIds = new Set(flowNodes.map((node) => node.id));
+    return [
+      ...flowNodes.map((node) => exitingById.get(node.id) ?? node),
+      ...exitingNodes.filter((node) => !liveIds.has(node.id)),
+    ];
+  }, [exitingNodes, flowNodes]);
   const editingTextNode = editingTextId
     ? flowNodes.find(
         (node): node is CanvasTextFlowNode =>
@@ -1647,18 +1713,28 @@ function CanvasSurface({
         }
       });
 
-      const assetNodes = nodes.map((node, index) =>
-        makeFlowNode(
+      const assetNodes = nodes.map((node, index) => {
+        const identity = canvasCardIdentity(node);
+        const currentNode = (currentById.get(node.id) ??
+          currentByClientId.get(getNodeClientId(node) ?? "")) as
+          | CanvasNode
+          | undefined;
+        const isNew = !seenCanvasCardIdentitiesRef.current.has(identity);
+        seenCanvasCardIdentitiesRef.current.add(identity);
+        const entranceSuppressed =
+          isNew && consumeCanvasCardEntranceSuppression(identity);
+        return makeFlowNode(
           node,
           index,
-          makeNodeData(node),
+          makeNodeData(
+            node,
+            currentNode?.data.presence ??
+              (isNew && !entranceSuppressed ? "entering" : undefined),
+          ),
           expandedNoteOrder,
-          (currentById.get(node.id) ??
-            currentByClientId.get(getNodeClientId(node) ?? "")) as
-            | CanvasNode
-            | undefined,
-        ),
-      );
+          currentNode,
+        );
+      });
       const textObjects = canvasObjects.filter(
         (object): object is CanvasTextObject => object.type === "text",
       );
@@ -2244,7 +2320,7 @@ function CanvasSurface({
       <ReactFlow<CanvasFlowNode>
         className="aska-flow"
         data-canvas-tool={activeTool}
-        nodes={flowNodes}
+        nodes={renderedFlowNodes}
         nodeTypes={nodeTypes}
         onNodesChange={handleNodesChange}
         defaultViewport={storedViewport ?? DEFAULT_VIEWPORT}
@@ -2994,4 +3070,8 @@ function getNodeClientId(node: CollectionNode): string | undefined {
   }
 
   return undefined;
+}
+
+function canvasCardIdentity(node: CollectionNode): string {
+  return getNodeClientId(node) ?? node.id;
 }

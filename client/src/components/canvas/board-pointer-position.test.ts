@@ -21,6 +21,7 @@ describe("board event placement", () => {
 
     expect(getBoardDropPlacement(boardKey, { x: 420.8, y: 125.2 })).toEqual({
       position: { x: 320, y: 146 },
+      anchor: "center",
       collisionBehavior: "preserve-anchor",
     });
 
@@ -33,6 +34,7 @@ describe("board event placement", () => {
 
     expect(getBoardPastePlacement(boardKey, visibleBounds)).toEqual({
       position: { x: -120, y: 340 },
+      anchor: "center",
       collisionBehavior: "preserve-anchor",
     });
   });
@@ -46,6 +48,7 @@ describe("board event placement", () => {
   it("resolves a viewport anchor in the browser before calling placement", () => {
     expect(getBoardViewportCenterPlacement(visibleBounds)).toEqual({
       position: { x: 500, y: 400 },
+      anchor: "center",
     });
   });
 
@@ -71,9 +74,28 @@ describe("board event placement", () => {
 
     expect(getBoardDropPlacement(boardKey, { x: 0, y: 0 })).toEqual({
       position: { x: 2, y: 2 },
+      anchor: "center",
       collisionBehavior: "preserve-anchor",
     });
 
     clearNewConverter();
+  });
+
+  it("keeps callers that preserve a drag offset top-left anchored", () => {
+    const boardKey = "drag-offset";
+    const clearConverter = setBoardFlowPositionConverter(
+      boardKey,
+      ({ x, y }) => ({ x, y }),
+    );
+
+    expect(
+      getBoardDropPlacement(boardKey, { x: 240, y: 180 }, "top-left"),
+    ).toEqual({
+      position: { x: 240, y: 180 },
+      anchor: "top-left",
+      collisionBehavior: "preserve-anchor",
+    });
+
+    clearConverter();
   });
 });

@@ -71,6 +71,27 @@ describe("infinite canvas node placement", () => {
     ]);
   });
 
+  it("centers the first inserted card at a center anchor", () => {
+    expect(
+      reserveNodePositions([], [note, { ...note, id: "note-2" }], {
+        position: { x: 500, y: 400 },
+        anchor: "center",
+      }),
+    ).toEqual([
+      { x: 360, y: 240 },
+      { x: 360 + BOARD_CARD_WIDTH + BOARD_ITEM_GAP, y: 240 },
+    ]);
+  });
+
+  it("uses known media height when centering the first inserted card", () => {
+    expect(
+      reserveNodePositions([], [portraitImage], {
+        position: { x: 500, y: 400 },
+        anchor: "center",
+      }),
+    ).toEqual([{ x: 360, y: 120 }]);
+  });
+
   it("reserves positions for images and videos in their selected order", () => {
     const positions = reserveNodePositions(
       [],

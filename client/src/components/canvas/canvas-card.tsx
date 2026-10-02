@@ -1,8 +1,8 @@
 import "./canvas-card.css";
 
 import { LoaderCircleIcon } from "lucide-react";
-import { motion } from "motion/react";
-import { memo, useMemo } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import { type Node, type NodeProps } from "@xyflow/react";
 
 import type { CollectionNode } from "@/api/collection";
@@ -45,6 +45,12 @@ export type CanvasNodeData = {
   incomingDropAssetId?: string;
   incomingDropCount?: number;
   dropStackStyle?: CanvasDropStackStyle;
+  presence?: "entering" | "exiting";
+  onPresenceComplete: (
+    nodeId: string,
+    presence: "entering" | "exiting",
+  ) => void;
+  onExitStart: (nodeId: string) => void;
   onContextMenu: (id: string, event: React.MouseEvent) => void;
 };
 
@@ -66,10 +72,14 @@ export const CanvasCard = memo(function CanvasCard({
   dragging,
   selected,
 }: NodeProps<CanvasNode>) {
+  const reduceMotion = useReducedMotion();
+  const completedPresence = useRef<CanvasNodeData["presence"]>(undefined);
   const viewportActivity = useTransientStore(
     (state) => state.canvasViewportActivity[data.boardKey] ?? 0,
   );
   const node = data.collectionNode;
+  const isEntering = data.presence === "entering";
+  const isExiting = data.presence === "exiting";
   const asset = collectionNodeToAsset(node);
   const isPending = isPendingCollectionNode(node);
   const dropStackStyle = data.dropStackStyle;
@@ -141,11 +151,24 @@ export const CanvasCard = memo(function CanvasCard({
     </div>
   );
 
+  useEffect(() => {
+    if (data.presence) return;
+    completedPresence.current = undefined;
+  }, [data.presence]);
+
+  useEffect(() => {
+    if (!reduceMotion || !isExiting || completedPresence.current === "exiting")
+      return;
+    completedPresence.current = "exiting";
+    data.onPresenceComplete(node.id, "exiting");
+  }, [data, isExiting, node.id, reduceMotion]);
+
   return (
     <motion.div
       className={cn(
         "relative w-full rounded-lg transition-[filter,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
         dragging && "drop-shadow-xl",
+        isExiting && "pointer-events-none",
         data.isColorDimmed && "pointer-events-none opacity-30 saturate-50",
         data.isColorFocused && "outline-2 outline-primary outline-offset-2",
         node.type === "folder" &&
@@ -195,43 +218,67 @@ export const CanvasCard = memo(function CanvasCard({
       }}
       onContextMenuCapture={(event) => data.onContextMenu(node.id, event)}
     >
-      {isPending ? (
-        card()
-      ) : (
-        <AssetContextMenu
-          asset={asset}
-          deleteContext={data.deleteContext}
-          onOpenImage={
-            node.type === "image" ? () => data.onOpenImage(node) : undefined
-          }
-          onOpenVideo={data.onOpenVideo}
-          dismissVersion={viewportActivity}
-          canvasBoardKey={data.boardKey}
-        >
-          {card}
-        </AssetContextMenu>
-      )}
-      {node.type === "note" && isPending ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5">
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
-            <LoaderCircleIcon className="size-3 animate-spin" />
-            <span>Saving</span>
+      <motion.div
+        className={cn(isExiting && "pointer-events-none")}
+        initial={
+          reduceMotion || !isEntering ? false : { opacity: 0, scale: 0.98 }
+        }
+        animate={
+          isExiting && !reduceMotion
+            ? { opacity: 0, scale: 0.99 }
+            : { opacity: 1, scale: 1 }
+        }
+        transition={{
+          duration: reduceMotion ? 0 : isExiting ? 0.15 : 0.25,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        style={{ transformOrigin: "center" }}
+        onAnimationComplete={() => {
+          if (!data.presence || completedPresence.current === data.presence)
+            return;
+          completedPresence.current = data.presence;
+          data.onPresenceComplete(node.id, data.presence);
+        }}
+      >
+        {isPending ? (
+          card()
+        ) : (
+          <AssetContextMenu
+            asset={asset}
+            deleteContext={data.deleteContext}
+            onOpenImage={
+              node.type === "image" ? () => data.onOpenImage(node) : undefined
+            }
+            onOpenVideo={data.onOpenVideo}
+            dismissVersion={viewportActivity}
+            canvasBoardKey={data.boardKey}
+            onBeforeDelete={() => data.onExitStart(node.id)}
+          >
+            {card}
+          </AssetContextMenu>
+        )}
+        {node.type === "note" && isPending ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5">
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
+              <LoaderCircleIcon className="size-3 animate-spin" />
+              <span>Saving</span>
+            </div>
           </div>
-        </div>
-      ) : node.type === "folder" && node.flattenStatus === "pending" ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5">
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
-            <LoaderCircleIcon className="size-3 animate-spin" />
-            <span>Flattening…</span>
+        ) : node.type === "folder" && node.flattenStatus === "pending" ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5">
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
+              <LoaderCircleIcon className="size-3 animate-spin" />
+              <span>Flattening…</span>
+            </div>
           </div>
-        </div>
-      ) : null}
-      {selected ? (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-card"
-        />
-      ) : null}
+        ) : null}
+        {selected ? (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-primary ring-offset-2 ring-offset-card"
+          />
+        ) : null}
+      </motion.div>
     </motion.div>
   );
 }, canvasCardPropsEqual);

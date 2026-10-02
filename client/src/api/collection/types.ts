@@ -128,7 +128,14 @@ export type BoardInsertionPlacement = {
    */
   position?: BoardPosition;
   /**
-   * Keeps an explicit pointer-based placement at its requested coordinate,
+   * How the supplied position relates to the first inserted card. Positions
+   * are still persisted as the card's top-left corner after client layout.
+   */
+  anchor?: "center" | "top-left";
+  /** Skips the card entrance when another visual already represents it. */
+  entranceAnimation?: "none";
+  /**
+   * Keeps an explicit pointer-based placement anchored at its requested coordinate,
    * even when it overlaps an existing card. This is client-only metadata and
    * is resolved before the position is persisted.
    */

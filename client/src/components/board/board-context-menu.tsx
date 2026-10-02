@@ -54,7 +54,11 @@ export function BoardContextMenu({
   const placement = useMemo(
     () =>
       position
-        ? { position, collisionBehavior: "preserve-anchor" as const }
+        ? {
+            position,
+            anchor: "center" as const,
+            collisionBehavior: "preserve-anchor" as const,
+          }
         : getBoardViewportCenterPlacement(visibleBounds),
     [position, visibleBounds],
   );

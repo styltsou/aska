@@ -85,6 +85,7 @@ export function reserveNodePositions(
 ): BoardPosition[] {
   const { position: requested, collisionBehavior } =
     normalizePlacement(placement);
+  const anchorKind = placementAnchor(placement);
   const occupied = existingNodes.map((node, index) =>
     getNodeBounds(node, getInitialNodePosition(node, index)),
   );
@@ -92,7 +93,7 @@ export function reserveNodePositions(
   const batchStartIndex = getBatchStartIndex(placement);
   const anchor = requested;
   const preferredPositions = anchor
-    ? getInsertionGridPositions(placementNodes, anchor).slice(
+    ? getInsertionGridPositions(placementNodes, anchor, anchorKind).slice(
         batchStartIndex,
         batchStartIndex + newNodes.length,
       )
@@ -189,6 +190,13 @@ function normalizePlacement(
   return placement;
 }
 
+function placementAnchor(
+  placement: BoardPosition | BoardInsertionPlacement | undefined,
+): BoardInsertionPlacement["anchor"] {
+  if (!placement || "x" in placement || !placement.anchor) return "top-left";
+  return placement.anchor;
+}
+
 function getPlacementNodes(
   newNodes: CollectionNode[],
   placement: BoardPosition | BoardInsertionPlacement | undefined,
@@ -230,6 +238,7 @@ function getBatchStartIndex(
 function getInsertionGridPositions(
   nodes: CollectionNode[],
   anchor: BoardPosition,
+  anchorKind: BoardInsertionPlacement["anchor"],
 ): BoardPosition[] {
   if (nodes.length === 0) return [];
   const rowHeights = getRowHeights(nodes, INSERTION_GRID_COLUMNS);
@@ -244,7 +253,15 @@ function getInsertionGridPositions(
       ),
   );
   const positions: BoardPosition[] = [];
-  let rowTop = Math.round(anchor.y);
+  const firstNode = nodes[0]!;
+  const origin =
+    anchorKind === "center"
+      ? {
+          x: anchor.x - getNodeWidth(firstNode) / 2,
+          y: anchor.y - getNodeHeight(firstNode) / 2,
+        }
+      : anchor;
+  let rowTop = Math.round(origin.y);
 
   for (let index = 0; index < nodes.length; index += 1) {
     const row = Math.floor(index / INSERTION_GRID_COLUMNS);
@@ -256,7 +273,7 @@ function getInsertionGridPositions(
 
     positions.push({
       x: Math.round(
-        anchor.x +
+        origin.x +
           columnWidths
             .slice(0, column)
             .reduce((sum, width) => sum + width + BOARD_ITEM_GAP, 0),

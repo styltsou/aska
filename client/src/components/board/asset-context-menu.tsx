@@ -215,6 +215,7 @@ export function AssetContextMenu({
   onOpenVideo,
   dismissVersion,
   canvasBoardKey,
+  onBeforeDelete,
 }: {
   asset: Asset;
   children: (isContextMenuOpen: boolean, asset: Asset) => React.ReactNode;
@@ -233,6 +234,8 @@ export function AssetContextMenu({
   dismissVersion?: number;
   /** Marks this portaled menu as belonging to a specific canvas. */
   canvasBoardKey?: string;
+  /** Lets a canvas retain a visual card briefly during optimistic deletion. */
+  onBeforeDelete?: () => void;
 }) {
   const { peekNote, peekImage, peekColor, peekVideo } = useWorkspacePeek();
   const isMobile = useIsMobile();
@@ -410,6 +413,7 @@ export function AssetContextMenu({
 
   function handleDelete() {
     setDeleteDialogOpen(false);
+    onBeforeDelete?.();
     if (asset.type === "folder") {
       removeNode.mutate(asset.id, {
         onError: (err) => {

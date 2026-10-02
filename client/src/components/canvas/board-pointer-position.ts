@@ -64,11 +64,13 @@ export function getBoardViewportZoom(boardKey: string) {
 export function getBoardDropPlacement(
   boardKey: string,
   clientPosition: BoardPosition,
+  anchor: BoardInsertionPlacement["anchor"] = "center",
 ): BoardInsertionPlacement {
   const position = getBoardFlowPosition(boardKey, clientPosition);
   if (position) {
     return {
       position: { x: Math.round(position.x), y: Math.round(position.y) },
+      anchor,
       collisionBehavior: "preserve-anchor",
     };
   }
@@ -82,7 +84,7 @@ export function getBoardPastePlacement(
 ): BoardInsertionPlacement | undefined {
   const position = getBoardPointerPosition(boardKey);
   return position
-    ? { position, collisionBehavior: "preserve-anchor" }
+    ? { position, anchor: "center", collisionBehavior: "preserve-anchor" }
     : getBoardViewportCenterPlacement(visibleBounds);
 }
 
@@ -96,5 +98,6 @@ export function getBoardViewportCenterPlacement(
       x: Math.round((visibleBounds.left + visibleBounds.right) / 2),
       y: Math.round((visibleBounds.top + visibleBounds.bottom) / 2),
     },
+    anchor: "center",
   };
 }

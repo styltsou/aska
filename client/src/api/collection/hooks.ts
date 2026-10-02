@@ -70,6 +70,7 @@ import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
 import { BOARD_CARD_WIDTH } from "@/components/canvas/canvas-node-layout";
 import { makeBoardKey } from "@/components/canvas/canvas-key";
 import { emitBatchPlacementCompleted } from "@/components/canvas/batch-placement-completed";
+import { suppressNextCanvasCardEntrance } from "@/components/canvas/canvas-card-entrance";
 import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
 import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
@@ -2447,6 +2448,9 @@ export function useCreateRemoteImage(
         createdAt: new Date().toISOString(),
         position: null,
       };
+      if (placement?.entranceAnimation === "none") {
+        suppressNextCanvasCardEntrance(optimisticImage.clientId);
+      }
       const reservedPosition = reserveNodePositions(
         current?.nodes ?? [],
         [optimisticImage],

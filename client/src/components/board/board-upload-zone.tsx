@@ -90,7 +90,9 @@ export function BoardUploadZone({
                 photo: photos[0],
                 zoom: getBoardViewportZoom(boardKey),
               }),
+              "top-left",
             ),
+            entranceAnimation: "none" as const,
           }
         : {};
       void importPexelsPhotos(photos, placement);
