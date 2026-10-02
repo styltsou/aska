@@ -30,10 +30,19 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--border-radius": "var(--radius)",
         } as React.CSSProperties
       }
-      position="top-right"
+      position="bottom-right"
+      offset={{
+        right:
+          "calc(var(--workspace-peek-rail-width, 0px) + var(--workspace-peek-stage-gap, 0px) + var(--pexels-browser-toast-offset, 0px) + var(--toast-container-inset, 16px))",
+        bottom: "var(--toast-container-inset, 16px)",
+      }}
+      mobileOffset={{
+        right: "var(--toast-container-inset, 16px)",
+        bottom: "var(--toast-container-inset, 16px)",
+      }}
       toastOptions={{
         classNames: {
-          toast: "cn-toast",
+          toast: "cn-toast shadow-md!",
         },
       }}
       {...props}

@@ -398,6 +398,19 @@ export function PexelsBrowserPanel({
   }, [closePeek, open]);
 
   useEffect(() => {
+    const root = document.documentElement;
+    if (open) {
+      root.style.setProperty("--pexels-browser-toast-offset", `${width}px`);
+    } else {
+      root.style.removeProperty("--pexels-browser-toast-offset");
+    }
+
+    return () => {
+      root.style.removeProperty("--pexels-browser-toast-offset");
+    };
+  }, [open, width]);
+
+  useEffect(() => {
     setInput(savedQuery);
     setQuery(savedQuery);
     setSelected(savedSelected);
