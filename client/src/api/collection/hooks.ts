@@ -2449,7 +2449,7 @@ export function useCreateRemoteImage(
         position: null,
       };
       if (placement?.entranceAnimation === "none") {
-        suppressNextCanvasCardEntrance(optimisticImage.clientId);
+        suppressNextCanvasCardEntrance(optimisticId);
       }
       const reservedPosition = reserveNodePositions(
         current?.nodes ?? [],
