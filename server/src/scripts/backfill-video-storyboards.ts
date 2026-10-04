@@ -6,7 +6,14 @@ import { Resource } from "sst";
 
 import { videoAssets } from "@/db/schema";
 
-const databaseUrl = Resource.DatabaseUrl.value;
+// CI typechecks without generated SST resource declarations. The shell still
+// supplies these linked resources at runtime.
+const resources = Resource as unknown as {
+  DatabaseUrl: { value: string };
+  Assets: { name: string };
+  VideoProcessingQueue: { url: string };
+};
+const databaseUrl = resources.DatabaseUrl.value;
 if (!databaseUrl) throw new Error("The linked DatabaseUrl secret is empty");
 const pool = new Pool({ connectionString: databaseUrl, max: 1 });
 const db = drizzle({ client: pool });
@@ -31,11 +38,8 @@ try {
       `Found ${originalKeys.length} completed videos without seek previews. Run with --enqueue to queue backfill jobs.`,
     );
   } else {
-    const bucket = Resource.Assets.name;
-    // The generated SST types predate this queue; the deployed stage links it.
-    const queueUrl = (
-      Resource as unknown as { VideoProcessingQueue: { url: string } }
-    ).VideoProcessingQueue.url;
+    const bucket = resources.Assets.name;
+    const queueUrl = resources.VideoProcessingQueue.url;
     if (!bucket || !queueUrl)
       throw new Error("Run this backfill inside the deployed SST environment");
     const client = new SQSClient({
