@@ -121,7 +121,9 @@ export function startAssetModalMorph(
   );
   const isColorSwatch = cardHero?.dataset.assetCardHero === "color";
   const keepsOpaqueHero =
-    isColorSwatch || cardHero?.dataset.assetCardHero === "image";
+    isColorSwatch ||
+    cardHero?.dataset.assetCardHero === "image" ||
+    cardHero?.dataset.assetCardHero === "video";
   const modalHero = modal.querySelector<HTMLElement>("[data-asset-modal-hero]");
   const cardHeroRect = cardHero?.getBoundingClientRect();
   const modalHeroRect = modalHero?.getBoundingClientRect();

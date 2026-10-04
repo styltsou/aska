@@ -204,6 +204,7 @@ export class AssetService implements IAssetService {
         imageVariants: imageAssets.variants,
         videoOriginal: videoAssets.original,
         videoPoster: videoAssets.poster,
+        videoStoryboard: videoAssets.storyboard,
         videoWidth: videoAssets.width,
         videoHeight: videoAssets.height,
         videoDurationSeconds: videoAssets.durationSeconds,
@@ -341,6 +342,7 @@ export class AssetService implements IAssetService {
         imageVariants: imageAssets.variants,
         videoOriginal: videoAssets.original,
         videoPoster: videoAssets.poster,
+        videoStoryboard: videoAssets.storyboard,
         videoWidth: videoAssets.width,
         videoHeight: videoAssets.height,
         videoDurationSeconds: videoAssets.durationSeconds,
@@ -1240,6 +1242,7 @@ export class AssetService implements IAssetService {
           sizeBytes: number;
         };
       } | null;
+      videoStoryboard: typeof videoAssets.$inferSelect.storyboard;
       videoWidth: number | null;
       videoHeight: number | null;
       videoDurationSeconds: number | null;
@@ -1326,7 +1329,7 @@ export class AssetService implements IAssetService {
       }
 
       if (row.assetType === "video") {
-        const [video, poster] = await Promise.all([
+        const [video, poster, storyboard] = await Promise.all([
           row.videoProcessingStatus === "completed" && row.videoOriginal
             ? this.objectStorageService.createPresignedGetUrl(
                 row.videoOriginal.objectKey,
@@ -1338,12 +1341,29 @@ export class AssetService implements IAssetService {
                 row.videoPoster.display.objectKey,
               )
             : undefined,
+          row.videoProcessingStatus === "completed" &&
+          row.videoStoryboard?.objectKey
+            ? this.objectStorageService.createPresignedGetUrl(
+                row.videoStoryboard.objectKey,
+              )
+            : undefined,
         ]);
         nodes.push({
           id: `video-${row.assetId}`,
           type: "video",
           url: video?.url ?? null,
           posterUrl: poster?.url ?? null,
+          storyboard:
+            storyboard && row.videoStoryboard
+              ? {
+                  url: storyboard.url,
+                  frameCount: row.videoStoryboard.frameCount,
+                  columns: row.videoStoryboard.columns,
+                  tileWidth: row.videoStoryboard.tileWidth,
+                  tileHeight: row.videoStoryboard.tileHeight,
+                  intervalSeconds: row.videoStoryboard.intervalSeconds,
+                }
+              : null,
           contentType: row.videoOriginal?.contentType ?? null,
           width: row.videoWidth,
           height: row.videoHeight,
@@ -1467,7 +1487,11 @@ export async function collectAssetObjectKeys(
           ),
         ),
       db
-        .select({ original: videoAssets.original, poster: videoAssets.poster })
+        .select({
+          original: videoAssets.original,
+          poster: videoAssets.poster,
+          storyboard: videoAssets.storyboard,
+        })
         .from(videoAssets)
         .innerJoin(assets, eq(assets.id, videoAssets.assetId))
         .where(
@@ -1509,6 +1533,7 @@ export async function collectAssetObjectKeys(
     if (row.poster)
       for (const variant of Object.values(row.poster))
         keys.add(variant.objectKey);
+    if (row.storyboard?.objectKey) keys.add(row.storyboard.objectKey);
   }
   for (const row of videoUploadRows) {
     if (row.originalObjectKey) keys.add(row.originalObjectKey);

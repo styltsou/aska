@@ -50,7 +50,7 @@ export class VideoUploadService {
       contentType: data.contentType,
       ifNoneMatch: true,
     });
-    const { id } = await db.transaction(async (tx) => {
+    const { id, assetId } = await db.transaction(async (tx) => {
       const [asset] = await tx
         .insert(assets)
         .values({
@@ -104,10 +104,11 @@ export class VideoUploadService {
           ErrorCode.INTERNAL_ERROR,
           "Unable to create video upload",
         );
-      return upload;
+      return { ...upload, assetId: asset.id };
     });
     return {
       id,
+      assetId: `video-${assetId}`,
       objectKey,
       url: put.url,
       headers: put.headers,
@@ -413,12 +414,16 @@ export class VideoUploadService {
     if (
       !row ||
       !row.assetId ||
-      row.status === "completed" ||
+      (row.status === "completed" &&
+        input.event !== "video.storyboard.completed") ||
       row.status === "failed"
     )
       return {
         ignored: true,
-        cleanup: row?.status === "failed" || (!!row && !row.assetId),
+        cleanup:
+          row?.status === "failed" ||
+          (!!row && !row.assetId) ||
+          (input.event === "video.storyboard.completed" && !row),
       };
     if (input.event === "video.processing.started") {
       if (
@@ -445,6 +450,27 @@ export class VideoUploadService {
       row.processingEtag !== input.originalEtag
     )
       return { ignored: true };
+    if (input.event === "video.storyboard.completed") {
+      const expectedKey = `${input.originalObjectKey.slice(0, input.originalObjectKey.lastIndexOf("/"))}/storyboard.webp`;
+      if (input.storyboard.objectKey !== expectedKey)
+        throw new AppError(
+          ErrorCode.VALIDATION_ERROR,
+          "Invalid video storyboard key",
+        );
+      if (row.status !== "completed") return { ignored: true };
+      const [updated] = await db
+        .update(videoAssets)
+        .set({ storyboard: input.storyboard })
+        .where(
+          and(
+            eq(videoAssets.assetId, row.assetId),
+            eq(videoAssets.processingStatus, "completed"),
+            isNull(videoAssets.storyboard),
+          ),
+        )
+        .returning({ assetId: videoAssets.assetId });
+      return { ignored: !updated };
+    }
     if (input.event === "video.processing.failed") {
       return {
         ignored: !(await this.failUpload(row.id, row.assetId, input.error)),
@@ -480,6 +506,7 @@ export class VideoUploadService {
           height: input.height,
           durationSeconds: input.durationSeconds,
           poster: input.poster,
+          storyboard: input.storyboard ?? null,
           processingStatus: "completed",
           processingError: null,
         })

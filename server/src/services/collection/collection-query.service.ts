@@ -615,6 +615,19 @@ export class CollectionQueryService {
             video?.status === "completed"
               ? (video.posterDisplayUrl ?? null)
               : null,
+          storyboard:
+            video?.status === "completed" &&
+            video.storyboard &&
+            video.storyboardUrl
+              ? {
+                  url: video.storyboardUrl,
+                  frameCount: video.storyboard.frameCount,
+                  columns: video.storyboard.columns,
+                  tileWidth: video.storyboard.tileWidth,
+                  tileHeight: video.storyboard.tileHeight,
+                  intervalSeconds: video.storyboard.intervalSeconds,
+                }
+              : null,
           contentType: video?.original?.contentType ?? null,
           width: video?.width ?? null,
           height: video?.height ?? null,
@@ -745,6 +758,7 @@ export class CollectionQueryService {
         {
           original: typeof videoAssets.$inferSelect.original;
           poster: typeof videoAssets.$inferSelect.poster;
+          storyboard: typeof videoAssets.$inferSelect.storyboard;
           width: number | null;
           height: number | null;
           durationSeconds: number | null;
@@ -756,6 +770,7 @@ export class CollectionQueryService {
           originalUrl?: string;
           posterDisplayUrl?: string;
           posterPreviewUrl?: string;
+          storyboardUrl?: string;
         }
       >();
     const rows = await db
@@ -769,6 +784,7 @@ export class CollectionQueryService {
               row.original?.objectKey,
               row.poster?.display.objectKey,
               row.poster?.preview.objectKey,
+              row.storyboard?.objectKey,
             ].filter((key): key is string => !!key)
           : [],
       ),
@@ -781,6 +797,7 @@ export class CollectionQueryService {
             {
               original: row.original,
               poster: row.poster,
+              storyboard: row.storyboard,
               width: row.width,
               height: row.height,
               durationSeconds: row.durationSeconds,
@@ -797,6 +814,9 @@ export class CollectionQueryService {
                 : undefined,
               posterPreviewUrl: row.poster
                 ? urls.get(row.poster.preview.objectKey)?.url
+                : undefined,
+              storyboardUrl: row.storyboard
+                ? urls.get(row.storyboard.objectKey)?.url
                 : undefined,
             },
           ] as const,

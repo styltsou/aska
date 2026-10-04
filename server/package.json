@@ -12,6 +12,7 @@
     "test": "node ./node_modules/vitest/vitest.mjs run",
     "test:integration": "RUN_INTEGRATION_TESTS=true vitest run --config vitest.integration.config.ts",
     "backfill:resolver-version": "bun run src/scripts/backfill-resolver-version.ts",
+    "backfill:video-storyboards": "bun run src/scripts/backfill-video-storyboards.ts",
     "test:watch": "vitest",
     "lambda:typecheck": "node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.lambda.json"
   },

@@ -430,6 +430,16 @@ export const CollectionVideoNodeSchema = z.object({
   type: z.literal("video"),
   url: z.string().nullable(),
   posterUrl: z.string().nullable(),
+  storyboard: z
+    .object({
+      url: z.string(),
+      frameCount: z.number().int().positive(),
+      columns: z.number().int().positive(),
+      tileWidth: z.number().int().positive(),
+      tileHeight: z.number().int().positive(),
+      intervalSeconds: z.number().positive(),
+    })
+    .nullable(),
   contentType: z.string().nullable(),
   width: z.number().nullable(),
   height: z.number().nullable(),

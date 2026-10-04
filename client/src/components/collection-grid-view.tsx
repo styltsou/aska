@@ -569,6 +569,7 @@ function GridNodeCard({
         asset={asset}
         deleteContext={deleteContext}
         isSelected={isSelected}
+        isDragging={isPartOfActiveDrag || isDragging}
         onToggleSelection={onToggleSelection}
         onSelectionContextMenu={onSelectionContextMenu}
         folderDropState={

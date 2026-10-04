@@ -290,6 +290,14 @@ export type CollectionVideoNode = {
   type: "video";
   url: string | null;
   posterUrl: string | null;
+  storyboard: {
+    url: string;
+    frameCount: number;
+    columns: number;
+    tileWidth: number;
+    tileHeight: number;
+    intervalSeconds: number;
+  } | null;
   contentType: string | null;
   width: number | null;
   height: number | null;

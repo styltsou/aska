@@ -252,7 +252,8 @@ export function WorkspaceAssetViewProvider({
         (nextAssetId.startsWith("note-") ||
           nextAssetId.startsWith("link-") ||
           nextAssetId.startsWith("color-") ||
-          nextAssetId.startsWith("image-")) &&
+          nextAssetId.startsWith("image-") ||
+          nextAssetId.startsWith("video-")) &&
         !options.presentation &&
         !document.querySelector("[data-workspace-asset-modal]") &&
         canMorphAssetModal()
@@ -406,7 +407,8 @@ export function WorkspaceAssetViewProvider({
         (current.assetId.startsWith("note-") ||
           current.assetId.startsWith("link-") ||
           current.assetId.startsWith("color-") ||
-          current.assetId.startsWith("image-")) &&
+          current.assetId.startsWith("image-") ||
+          current.assetId.startsWith("video-")) &&
         current.urlStatus === "committed" &&
         current.presentation !== "fullscreen" &&
         search.view !== "full" &&
@@ -864,9 +866,21 @@ function WorkspaceAssetViewController({
       ) : null}
       {requestedType === "video" ? (
         <VideoAssetViewer
+          key={assetId}
+          assetModalId={assetId}
+          sharedEntry={sharedEntryAssetId === assetId}
+          sharedMorphing={morphingAssetId === assetId}
           workspaceSlug={workspaceSlug}
           asset={asset?.type === "video" ? asset : undefined}
           open={presentation.open}
+          loading={loading}
+          initialPresentation={presentation.presentation}
+          view={currentSearch.view ?? "modal"}
+          onViewChange={(view) => {
+            void navigateOverlay(overlayPathname, { view }, true);
+          }}
+          onShowInBoard={showAction}
+          onDismissAll={closeAllAssets}
           onClose={closeAsset}
           onCloseComplete={completeAssetClose}
         />

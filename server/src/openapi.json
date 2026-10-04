@@ -2815,6 +2815,7 @@
           "type",
           "url",
           "posterUrl",
+          "storyboard",
           "processingStatus",
           "isFavorite",
           "createdAt",
@@ -2829,6 +2830,26 @@
             "description": "Playable original, or null until processing completes."
           },
           "posterUrl": { "type": ["string", "null"], "format": "uri" },
+          "storyboard": {
+            "type": ["object", "null"],
+            "description": "Seek preview sheet and frame layout. Null when previews are unavailable.",
+            "properties": {
+              "url": { "type": "string", "format": "uri" },
+              "frameCount": { "type": "integer" },
+              "columns": { "type": "integer" },
+              "tileWidth": { "type": "integer" },
+              "tileHeight": { "type": "integer" },
+              "intervalSeconds": { "type": "number" }
+            },
+            "required": [
+              "url",
+              "frameCount",
+              "columns",
+              "tileWidth",
+              "tileHeight",
+              "intervalSeconds"
+            ]
+          },
           "contentType": {
             "type": ["string", "null"],
             "enum": ["video/mp4", "video/webm", null]

@@ -1,12 +1,13 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { createReadStream } from "node:fs";
 import { existsSync } from "node:fs";
 
 import {
+  DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -27,6 +28,9 @@ const MAX_BYTES = 250 * 1024 * 1024;
 const MIME_TYPES = ["video/mp4", "video/webm"] as const;
 type VideoMime = (typeof MIME_TYPES)[number];
 const CALLBACK_PATH = "/api/v1/internal/video-pipeline/callback";
+const STORYBOARD_MAX_TILE_DIMENSION = 160;
+const STORYBOARD_COLUMNS = 10;
+const STORYBOARD_MAX_FRAMES = 100;
 const FFMPEG =
   process.env.FFMPEG_PATH && existsSync(process.env.FFMPEG_PATH)
     ? process.env.FFMPEG_PATH
@@ -218,6 +222,98 @@ async function posterVariants(
   return { original, display, preview };
 }
 
+async function createStoryboard(
+  filePath: string,
+  probe: VideoProbe,
+  folder: string,
+  bucket: string,
+  prefix: string,
+) {
+  const { durationSeconds } = probe;
+  const tileWidth = Math.max(
+    1,
+    Math.round(
+      (STORYBOARD_MAX_TILE_DIMENSION * probe.width) /
+        Math.max(probe.width, probe.height),
+    ),
+  );
+  const tileHeight = Math.max(
+    1,
+    Math.round(
+      (STORYBOARD_MAX_TILE_DIMENSION * probe.height) /
+        Math.max(probe.width, probe.height),
+    ),
+  );
+  const requestedFrames = Math.min(
+    STORYBOARD_MAX_FRAMES,
+    Math.max(1, Math.ceil(durationSeconds / 3)),
+  );
+  const intervalSeconds = durationSeconds / requestedFrames;
+  const framePattern = path.join(folder, "storyboard-%03d.png");
+  await run(
+    FFMPEG,
+    [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-i",
+      filePath,
+      "-an",
+      "-vf",
+      `fps=${(requestedFrames / durationSeconds).toFixed(8)},scale=${tileWidth}:${tileHeight}`,
+      "-frames:v",
+      String(requestedFrames),
+      "-vsync",
+      "vfr",
+      framePattern,
+    ],
+    { timeout: 120_000, maxBuffer: 1024 * 1024 },
+  );
+
+  const frames = (await readdir(folder))
+    .filter((name) => /^storyboard-\d{3}\.png$/.test(name))
+    .sort()
+    .slice(0, requestedFrames);
+  if (frames.length === 0) throw new Error("No storyboard frames extracted");
+  const columns = Math.min(STORYBOARD_COLUMNS, frames.length);
+  const rows = Math.ceil(frames.length / columns);
+  const bytes = await sharp({
+    create: {
+      width: columns * tileWidth,
+      height: rows * tileHeight,
+      channels: 3,
+      background: "black",
+    },
+  })
+    .composite(
+      frames.map((name, index) => ({
+        input: path.join(folder, name),
+        left: (index % columns) * tileWidth,
+        top: Math.floor(index / columns) * tileHeight,
+      })),
+    )
+    .webp({ quality: 72, effort: 4 })
+    .toBuffer();
+  const objectKey = `${prefix}/storyboard.webp`;
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: objectKey,
+      Body: bytes,
+      ContentType: "image/webp",
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+  return {
+    objectKey,
+    frameCount: frames.length,
+    columns,
+    tileWidth,
+    tileHeight,
+    intervalSeconds,
+  };
+}
+
 export async function processStoredVideo(input: {
   bucket: string;
   objectKey: string;
@@ -264,6 +360,18 @@ export async function processStoredVideo(input: {
       input.bucket,
       prefix,
     );
+    // Seek previews are optional: a slow or unusual file must still become a
+    // playable asset with its poster.
+    const storyboard = await createStoryboard(
+      inputPath,
+      probe,
+      folder,
+      input.bucket,
+      prefix,
+    ).catch((error: unknown) => {
+      console.warn("Video storyboard generation skipped", error);
+      return undefined;
+    });
     const completed = await callPipeline<{
       ignored: boolean;
       cleanup?: boolean;
@@ -275,9 +383,60 @@ export async function processStoredVideo(input: {
       sizeBytes: source.ContentLength,
       ...probe,
       poster,
+      storyboard,
     });
     if (completed.cleanup)
       await removeVideoObjects(input.bucket, input.objectKey);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+}
+
+export async function processExistingVideoStoryboard(input: {
+  bucket: string;
+  objectKey: string;
+}): Promise<void> {
+  const folder = await mkdtemp(path.join(tmpdir(), "aska-storyboard-"));
+  try {
+    const source = await s3.send(
+      new GetObjectCommand({ Bucket: input.bucket, Key: input.objectKey }),
+    );
+    const etag = source.ETag?.replaceAll('"', "");
+    if (!source.Body || !etag) throw new Error("Video object is missing");
+    if (!source.ContentLength || source.ContentLength > MAX_BYTES)
+      throw new InvalidVideoError("Video exceeds the 250 MB limit");
+    const inputPath = path.join(folder, "source");
+    const { pipeline } = await import("node:stream/promises");
+    const { createWriteStream } = await import("node:fs");
+    await pipeline(
+      source.Body as NodeJS.ReadableStream,
+      createWriteStream(inputPath),
+    );
+    const probe = await probeVideo(inputPath, videoType(source.ContentType));
+    const prefix = input.objectKey.slice(0, input.objectKey.lastIndexOf("/"));
+    const storyboard = await createStoryboard(
+      inputPath,
+      probe,
+      folder,
+      input.bucket,
+      prefix,
+    );
+    const result = await callPipeline<{ ignored: boolean; cleanup?: boolean }>(
+      CALLBACK_PATH,
+      {
+        event: "video.storyboard.completed",
+        originalObjectKey: input.objectKey,
+        originalEtag: etag,
+        storyboard,
+      },
+    );
+    if (result.cleanup)
+      await s3.send(
+        new DeleteObjectCommand({
+          Bucket: input.bucket,
+          Key: storyboard.objectKey,
+        }),
+      );
   } finally {
     await rm(folder, { recursive: true, force: true });
   }
@@ -394,6 +553,7 @@ async function removeVideoObjects(bucket: string, originalKey: string) {
           `${prefix}/poster.webp`,
           `${prefix}/poster-display.webp`,
           `${prefix}/poster-preview.webp`,
+          `${prefix}/storyboard.webp`,
         ].map((Key) => ({ Key })),
       },
     }),

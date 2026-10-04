@@ -110,6 +110,9 @@ export const CanvasCard = memo(function CanvasCard({
         <VideoAssetCard
           asset={asset}
           onOpen={isPending ? undefined : () => data.onOpenVideo(asset)}
+          isContextMenuOpen={isContextMenuOpen}
+          selected={selected}
+          dragging={dragging}
         />
       ) : null}
       {node.type === "note" && asset.type === "note" ? (

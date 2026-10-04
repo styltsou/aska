@@ -32,6 +32,7 @@ export const AssetCard = memo(function AssetCard({
   inboxContext,
   isSelected = false,
   isFocused = false,
+  isDragging = false,
   onToggleSelection,
   onSelectionContextMenu,
   folderDropState,
@@ -53,6 +54,7 @@ export const AssetCard = memo(function AssetCard({
   };
   isSelected?: boolean;
   isFocused?: boolean;
+  isDragging?: boolean;
   onToggleSelection?: (assetId: string) => void;
   onSelectionContextMenu?: (
     assetId: string,
@@ -103,6 +105,9 @@ export const AssetCard = memo(function AssetCard({
               <VideoAssetCard
                 asset={asset}
                 onOpen={onOpenVideo ? () => onOpenVideo(asset) : undefined}
+                isContextMenuOpen={isContextMenuOpen}
+                selected={isSelected}
+                dragging={isDragging}
               />
             )}
             {asset.type === "note" && (

@@ -69,6 +69,15 @@ const VideoPosterSchema = z.object({
   preview: VideoPosterVariantSchema.extend({ role: z.literal("preview") }),
 });
 
+const VideoStoryboardSchema = z.object({
+  objectKey: z.string().min(1),
+  frameCount: z.number().int().positive().max(100),
+  columns: z.number().int().positive().max(10),
+  tileWidth: z.number().int().positive(),
+  tileHeight: z.number().int().positive(),
+  intervalSeconds: z.number().positive(),
+});
+
 export const VideoPipelineCallbackSchema = z.discriminatedUnion("event", [
   z.object({
     event: z.literal("video.import.failed"),
@@ -98,6 +107,13 @@ export const VideoPipelineCallbackSchema = z.discriminatedUnion("event", [
     height: z.number().int().positive(),
     durationSeconds: z.number().positive(),
     poster: VideoPosterSchema,
+    storyboard: VideoStoryboardSchema.optional(),
+  }),
+  z.object({
+    event: z.literal("video.storyboard.completed"),
+    originalObjectKey: z.string().min(1),
+    originalEtag: z.string().min(1),
+    storyboard: VideoStoryboardSchema,
   }),
   z.object({
     event: z.literal("video.processing.failed"),

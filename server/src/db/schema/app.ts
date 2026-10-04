@@ -179,6 +179,15 @@ export type VideoPosterVariants = {
   preview: StoredImageObjectVariant;
 };
 
+export type VideoStoryboard = {
+  objectKey: string;
+  frameCount: number;
+  columns: number;
+  tileWidth: number;
+  tileHeight: number;
+  intervalSeconds: number;
+};
+
 export const collectionsTable = pgTable(
   "collections",
   {
@@ -303,6 +312,7 @@ export const videoAssets = pgTable(
       .references(() => assets.id, { onDelete: "cascade" }),
     original: jsonb().$type<VideoOriginal>(),
     poster: jsonb().$type<VideoPosterVariants>(),
+    storyboard: jsonb().$type<VideoStoryboard>(),
     width: integer(),
     height: integer(),
     durationSeconds: doublePrecision("duration_seconds"),

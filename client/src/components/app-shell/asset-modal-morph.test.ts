@@ -238,7 +238,9 @@ describe("asset modal morph", () => {
         querySelectorAll: () => [],
       });
       const cardHero = {
-        dataset: { assetCardHero: name === "color swatch" ? "color" : "" },
+        dataset: {
+          assetCardHero: name === "color swatch" ? "color" : "video",
+        },
         offsetWidth: 160,
         offsetHeight: cardHeight,
         cloneNode: clone,
@@ -346,6 +348,18 @@ describe("asset modal morph", () => {
         expect(heroPreview.animate).toHaveBeenCalledWith(
           expect.arrayContaining([
             expect.objectContaining({ opacity: 1, offset: 0 }),
+            expect.objectContaining({ opacity: 1, offset: 1 }),
+          ]),
+          expect.objectContaining({ fill: "both" }),
+        );
+        expect(modalHero.animate).toHaveBeenCalledWith(
+          [{ opacity: 0 }, { opacity: 0 }],
+          expect.objectContaining({ fill: "both" }),
+        );
+      }
+      if (name === "video thumbnail") {
+        expect(heroPreview.animate).toHaveBeenCalledWith(
+          expect.arrayContaining([
             expect.objectContaining({ opacity: 1, offset: 1 }),
           ]),
           expect.objectContaining({ fill: "both" }),

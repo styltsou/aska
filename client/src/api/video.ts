@@ -6,6 +6,11 @@ import { collectionQueryKeys } from "@/api/collection/query-keys";
 import { MAX_VIDEO_UPLOAD_BYTES } from "@/constants";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import { inferVideoMime } from "@/lib/video-url";
+import {
+  beginVideoUploadPreview,
+  clearVideoUploadPreview,
+  updateVideoUploadPreview,
+} from "@/lib/video-upload-preview";
 
 type VideoScope = {
   workspaceSlug: string;
@@ -15,6 +20,7 @@ type VideoScope = {
 
 type Upload = {
   id: number;
+  assetId: string;
   url: string;
   headers: Record<string, string>;
   maxSizeBytes: number;
@@ -66,20 +72,21 @@ function putFile(
 export function useVideoAssets(scope: VideoScope) {
   const queryClient = useQueryClient();
   const path = basePath(scope);
-  const refresh = () => {
-    void queryClient.invalidateQueries({
-      queryKey: scope.collectionSlug
-        ? collectionQueryKeys.contentScope(
-            scope.workspaceSlug,
-            scope.collectionSlug,
-          )
-        : collectionQueryKeys.inbox(scope.workspaceSlug),
-    });
-    void queryClient.invalidateQueries({
-      queryKey: collectionQueryKeys.collections(scope.workspaceSlug),
-    });
-  };
-  const watch = async (id: number) => {
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: scope.collectionSlug
+          ? collectionQueryKeys.contentScope(
+              scope.workspaceSlug,
+              scope.collectionSlug,
+            )
+          : collectionQueryKeys.inbox(scope.workspaceSlug),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: collectionQueryKeys.collections(scope.workspaceSlug),
+      }),
+    ]);
+  const watch = async (id: number, previewAssetId?: string) => {
     for (let attempt = 0; attempt < 180; attempt++) {
       await new Promise((resolve) => setTimeout(resolve, 2_000));
       let upload: Status;
@@ -92,24 +99,28 @@ export function useVideoAssets(scope: VideoScope) {
           error instanceof ApiError &&
           [401, 403, 404].includes(error.status)
         ) {
-          refresh();
+          await refresh();
+          if (previewAssetId) clearVideoUploadPreview(previewAssetId);
           return;
         }
         // A temporary network failure should not abandon a still-processing asset.
         continue;
       }
       if (upload.status === "completed") {
-        refresh();
+        await refresh();
+        if (previewAssetId) clearVideoUploadPreview(previewAssetId);
         toast.success("Video ready");
         return;
       }
       if (upload.status === "failed") {
-        refresh();
+        await refresh();
+        if (previewAssetId) clearVideoUploadPreview(previewAssetId);
         toast.error(upload.errorMessage ?? "Video processing failed");
         return;
       }
     }
-    refresh();
+    await refresh();
+    if (previewAssetId) clearVideoUploadPreview(previewAssetId);
   };
 
   const upload = useMutation({
@@ -133,21 +144,33 @@ export function useVideoAssets(scope: VideoScope) {
           position,
         },
       );
-      refresh();
+      beginVideoUploadPreview(created.assetId, file);
+      void refresh();
       const toastId = toast.loading(`Uploading ${file.name}…`);
       try {
-        await putFile(file, created, (percent) =>
+        await putFile(file, created, (percent) => {
+          updateVideoUploadPreview(created.assetId, {
+            status: "uploading",
+            progress: percent,
+          });
           toast.loading(`Uploading ${file.name} — ${percent}%`, {
             id: toastId,
-          }),
-        );
+          });
+        });
+        updateVideoUploadPreview(created.assetId, {
+          status: "processing",
+          progress: 100,
+        });
         toast.loading("Processing video…", { id: toastId });
-        void watch(created.id).finally(() => toast.dismiss(toastId));
+        void watch(created.id, created.assetId).finally(() =>
+          toast.dismiss(toastId),
+        );
       } catch (error) {
         await apiPost(`${path}/uploads/${created.id}/fail`).catch(
           () => undefined,
         );
-        refresh();
+        await refresh();
+        clearVideoUploadPreview(created.assetId);
         toast.error(error instanceof Error ? error.message : "Upload failed", {
           id: toastId,
         });
@@ -171,7 +194,7 @@ export function useVideoAssets(scope: VideoScope) {
           position,
         },
       );
-      refresh();
+      void refresh();
       if (created.status === "failed") {
         toast.error(created.errorMessage ?? "Could not start video import");
       } else {

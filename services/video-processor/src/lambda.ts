@@ -2,6 +2,7 @@ import type { S3Event } from "aws-lambda";
 import { initializeSentry } from "../../image-shared/src/observability";
 import { createTaskHandler } from "../../image-shared/src/task-handler";
 import {
+  processExistingVideoStoryboard,
   processRemoteVideo,
   processStoredVideo,
   reportRemoteFailure,
@@ -12,6 +13,7 @@ initializeSentry("video-processor");
 
 type Job =
   | { kind: "remote-video"; uploadId: number }
+  | { kind: "storyboard-video"; bucket: string; objectKey: string }
   | {
       kind: "stored-video";
       bucket: string;
@@ -33,6 +35,23 @@ function parse(body: string): Job[] {
     )
       throw new Error("Invalid video import job");
     return [{ kind: "remote-video", uploadId: Number(envelope.uploadId) }];
+  }
+  if (envelope.kind === "storyboard-video") {
+    const job = envelope as { bucket?: unknown; objectKey?: unknown };
+    if (
+      typeof job.bucket !== "string" ||
+      !job.bucket ||
+      typeof job.objectKey !== "string" ||
+      !/^[^/]+\/video\/[^/]+\/original\.(?:mp4|webm)$/i.test(job.objectKey)
+    )
+      throw new Error("Invalid storyboard backfill job");
+    return [
+      {
+        kind: "storyboard-video",
+        bucket: job.bucket,
+        objectKey: job.objectKey,
+      },
+    ];
   }
   const event = (
     envelope.Message ? JSON.parse(envelope.Message) : envelope
@@ -62,6 +81,8 @@ export const handler = createTaskHandler({
   process: async (jobs) => {
     for (const job of jobs) {
       if (job.kind === "remote-video") await processRemoteVideo(job.uploadId);
+      else if (job.kind === "storyboard-video")
+        await processExistingVideoStoryboard(job);
       else await processStoredVideo(job);
     }
   },
@@ -69,7 +90,7 @@ export const handler = createTaskHandler({
     for (const job of jobs) {
       if (job.kind === "remote-video")
         await reportRemoteFailure(job.uploadId, error);
-      else
+      else if (job.kind === "stored-video")
         await reportStoredFailure(
           {
             bucket: job.bucket,
@@ -78,6 +99,8 @@ export const handler = createTaskHandler({
           },
           error,
         );
+      else
+        console.warn("Video storyboard backfill failed", job.objectKey, error);
     }
   },
 });
