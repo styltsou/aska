@@ -599,85 +599,106 @@ export function NoteAssetCard({
     : undefined;
 
   return (
-    <motion.div
-      ref={cardRef}
-      data-asset-card-surface
-      initial={false}
-      animate={
-        measuredHeight === undefined ? undefined : { height: measuredHeight }
-      }
-      transition={{
-        height: {
-          duration: 0.15,
-          ease: [0.4, 0, 0.2, 1],
-        },
-      }}
-      className={cn(
-        "group relative min-w-0 overflow-hidden rounded-lg border bg-sidebar px-4 py-4 text-sm transition-[border-color,background-color,filter,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        !cardHeights && !isExpanded && "max-h-80",
-        effectiveOnOpen && "cursor-pointer",
-        !selected && "hover:border-sidebar-foreground/20",
-        isContextMenuOpen && "border-sidebar-foreground/20",
-      )}
-      role={effectiveOnOpen ? "button" : undefined}
-      tabIndex={effectiveOnOpen ? 0 : undefined}
-      onClick={(event) => {
-        if (
-          event.target instanceof Element &&
-          event.target.closest("a[href]")
-        ) {
-          return;
+    <div className="group/note-card relative min-w-0">
+      <motion.div
+        ref={cardRef}
+        data-asset-card-surface
+        initial={false}
+        animate={
+          measuredHeight === undefined ? undefined : { height: measuredHeight }
         }
-        if (!hasSelectionModifier(event)) effectiveOnOpen?.();
-      }}
-      onKeyDown={(event) => {
-        if (!effectiveOnOpen || (event.key !== "Enter" && event.key !== " ")) {
-          return;
-        }
+        transition={{
+          height: {
+            duration: 0.15,
+            ease: [0.4, 0, 0.2, 1],
+          },
+        }}
+        className={cn(
+          "group relative min-w-0 overflow-hidden rounded-lg border bg-sidebar px-4 py-4 text-sm transition-[border-color,background-color,filter,opacity] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+          !cardHeights && !isExpanded && "max-h-80",
+          effectiveOnOpen && "cursor-pointer",
+          !selected && "hover:border-sidebar-foreground/20",
+          isContextMenuOpen && "border-sidebar-foreground/20",
+        )}
+        role={effectiveOnOpen ? "button" : undefined}
+        tabIndex={effectiveOnOpen ? 0 : undefined}
+        onClick={(event) => {
+          if (
+            event.target instanceof Element &&
+            event.target.closest("a[href]")
+          ) {
+            return;
+          }
+          if (!hasSelectionModifier(event)) effectiveOnOpen?.();
+        }}
+        onKeyDown={(event) => {
+          if (
+            !effectiveOnOpen ||
+            (event.key !== "Enter" && event.key !== " ")
+          ) {
+            return;
+          }
 
-        event.preventDefault();
-        effectiveOnOpen();
-      }}
-      onMouseEnter={() => setIsPillDismissed(false)}
-    >
-      <div className="relative min-w-0">
-        <div
-          ref={contentRef}
-          className={cn(
-            "note-rich-text-content min-w-0 break-words",
-            hasOverflow && !isExpanded && "pb-8",
-          )}
-        >
-          <NoteMarkdown
-            content={asset.content}
-            title={asset.title}
-            className="min-w-0"
-            mentionColors={asset.mentionColors}
-          />
-        </div>
-      </div>
-      {hasOverflow && !isExpanded ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-b from-sidebar/0 via-sidebar/85 to-sidebar transition-opacity duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-60" />
-      ) : null}
-      {hasOverflow ? (
-        <div
-          className={cn(
-            "absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-4 transition-transform duration-100 ease-[cubic-bezier(0.4,0,0.2,1)]",
-            isPillDismissed
-              ? "pointer-events-none translate-y-full"
-              : "pointer-events-none translate-y-full group-hover:pointer-events-auto group-hover:translate-y-0",
-          )}
-        >
-          <button
-            type="button"
-            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 hover:bg-sidebar hover:ring-1 hover:ring-sidebar-foreground/25 focus-visible:border-sidebar-foreground/20 focus-visible:bg-sidebar focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-            aria-expanded={isExpanded}
-            onClick={toggleExpanded}
+          event.preventDefault();
+          effectiveOnOpen();
+        }}
+        onMouseEnter={() => setIsPillDismissed(false)}
+      >
+        <div className="relative min-w-0">
+          <div
+            ref={contentRef}
+            className={cn(
+              "note-rich-text-content min-w-0 break-words",
+              hasOverflow && !isExpanded && "pb-8",
+            )}
           >
-            <span>{isExpanded ? "Collapse" : "Expand"}</span>
-          </button>
+            <NoteMarkdown
+              content={asset.content}
+              title={asset.title}
+              className="min-w-0"
+              mentionColors={asset.mentionColors}
+            />
+          </div>
         </div>
+        {hasOverflow && !isExpanded ? (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-b from-sidebar/0 via-sidebar/85 to-sidebar transition-opacity duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:opacity-60" />
+        ) : null}
+        {hasOverflow ? (
+          <div
+            className={cn(
+              "absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-4 transition-transform duration-100 ease-[cubic-bezier(0.4,0,0.2,1)]",
+              isPillDismissed
+                ? "pointer-events-none translate-y-full"
+                : "pointer-events-none translate-y-full group-hover:pointer-events-auto group-hover:translate-y-0",
+            )}
+          >
+            <button
+              type="button"
+              className="pointer-events-auto inline-flex items-center gap-1.5 rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-sidebar-foreground/20 hover:bg-sidebar hover:ring-1 hover:ring-sidebar-foreground/25 focus-visible:border-sidebar-foreground/20 focus-visible:bg-sidebar focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              aria-expanded={isExpanded}
+              onClick={toggleExpanded}
+            >
+              <span>{isExpanded ? "Collapse" : "Expand"}</span>
+            </button>
+          </div>
+        ) : null}
+      </motion.div>
+      {hasOverflow && !isExpanded ? (
+        <div
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute inset-0 z-10 rounded-lg border bg-sidebar transition-[border-color] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)]",
+            !selected && "group-hover/note-card:border-sidebar-foreground/20",
+            isContextMenuOpen && "border-sidebar-foreground/20",
+          )}
+          style={{
+            // Paint outside the clipped surface: SVGs can bleed into its border
+            // at fractional display scales, even through an internal fade.
+            maskImage:
+              "linear-gradient(to bottom, transparent calc(100% - 2px), black calc(100% - 2px))",
+          }}
+        />
       ) : null}
-    </motion.div>
+    </div>
   );
 }
