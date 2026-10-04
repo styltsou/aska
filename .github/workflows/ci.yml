@@ -213,7 +213,7 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_RELEASE: aska@${{ github.sha }}
       - name: Queue missing video storyboards
-        run: bunx sst shell --stage dev -- bun run --cwd server backfill:video-storyboards --enqueue
+        run: bunx sst shell --stage dev -- bun run --cwd server backfill:video-storyboards --enqueue --wait
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}

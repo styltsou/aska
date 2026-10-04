@@ -18,7 +18,7 @@ if (!databaseUrl) throw new Error("The linked DatabaseUrl secret is empty");
 const pool = new Pool({ connectionString: databaseUrl, max: 1 });
 const db = drizzle({ client: pool });
 
-try {
+async function missingOriginalKeys(): Promise<string[]> {
   const rows = await db
     .select({ original: videoAssets.original })
     .from(videoAssets)
@@ -29,10 +29,13 @@ try {
         isNull(videoAssets.storyboard),
       ),
     );
-  const originalKeys = rows.flatMap((row) =>
+  return rows.flatMap((row) =>
     row.original?.objectKey ? [row.original.objectKey] : [],
   );
+}
 
+try {
+  const originalKeys = await missingOriginalKeys();
   if (!process.argv.includes("--enqueue")) {
     console.info(
       `Found ${originalKeys.length} completed videos without seek previews. Run with --enqueue to queue backfill jobs.`,
@@ -60,6 +63,22 @@ try {
       queued += 1;
     }
     console.info(`Queued ${queued} video storyboard backfill jobs.`);
+    if (process.argv.includes("--wait")) {
+      const deadline = Date.now() + 20 * 60_000;
+      let remaining = originalKeys.length;
+      while (remaining > 0) {
+        if (Date.now() >= deadline)
+          throw new Error(
+            `${remaining} video storyboards remain after 20 minutes`,
+          );
+        await new Promise((resolve) => setTimeout(resolve, 15_000));
+        const nextRemaining = (await missingOriginalKeys()).length;
+        if (nextRemaining !== remaining)
+          console.info(`${nextRemaining} video storyboards remaining.`);
+        remaining = nextRemaining;
+      }
+      console.info("Video storyboard backfill complete.");
+    }
   }
 } finally {
   await pool.end();

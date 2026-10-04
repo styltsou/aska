@@ -28,8 +28,10 @@ with the asset. Storyboard extraction is best-effort, so a video remains playabl
 if preview generation times out or fails.
 
 Older completed videos can be queued for storyboard generation with
-`sst shell -- bun run --cwd server backfill:video-storyboards --enqueue` after
-the migration and worker deployment. Omit `--enqueue` to inspect the count.
+`sst shell -- bun run --cwd server backfill:video-storyboards --enqueue --wait`
+after the migration and worker deployment. Omit `--enqueue --wait` to inspect
+the count. The deployment pipeline runs this command and waits for the
+remaining count to reach zero.
 
 ## Storage and lifecycle
 
