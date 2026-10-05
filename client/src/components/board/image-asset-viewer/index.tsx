@@ -12,18 +12,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
 import {
-  ButtonGroup,
-  ButtonGroupSeparator,
-} from "@/components/ui/button-group";
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
-  ArrowLeftIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -101,7 +95,7 @@ function fitSizeWithinBounds(size: Size, maxSize: Size): Size {
   };
 }
 
-const VIEWER_CONTROL_FRAME_CLASS = "relative rounded-lg p-1";
+const VIEWER_CONTROL_FRAME_CLASS = "relative rounded-lg p-[3px]";
 
 const VIEWER_HEADER_ICON_BUTTON_CLASS = `rounded-[calc(var(--radius-md)-1px)] ${ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}`;
 
@@ -112,6 +106,9 @@ const COLOR_PICKER_SURFACE_CLASS = cn(
 
 const VIEWER_CANVAS_CLASS =
   "min-h-0 flex-1 px-5 py-14 pr-5 sm:px-8 sm:py-16 sm:pr-8 lg:pr-[27rem]";
+
+const VIEWER_IMAGE_CANVAS_CLASS =
+  "min-h-0 flex-1 py-14 pl-16 pr-16 sm:py-16 sm:pl-20 sm:pr-20";
 
 const CROP_AREA_BASE_CLASS =
   "![border-width:1px] !shadow-none before:content-[''] before:!border-[color-mix(in_srgb,currentcolor_72%,transparent)] before:![border-width:1px] before:transition-opacity before:duration-50 before:ease-[ease] after:content-[''] after:!border-[color-mix(in_srgb,currentcolor_72%,transparent)] after:![border-width:1px] after:transition-opacity after:duration-50 after:ease-[ease] motion-reduce:before:transition-none motion-reduce:after:transition-none";
@@ -1023,32 +1020,18 @@ function ImageViewerModeButton({
 }
 
 function ImageViewerModalHeaderControls({
-  backLabel,
-  onBack,
-  onDismissAll,
+  title,
+  onClose,
   onExpand,
   onPeek,
-  currentAssetIndex,
-  assetCount,
-  previousAsset,
-  nextAsset,
-  onAssetChange,
   onShowInBoard,
 }: {
-  backLabel: string;
-  onBack: () => void;
-  onDismissAll?: () => void;
+  title: string;
+  onClose: () => void;
   onExpand: () => void;
   onPeek?: () => void;
-  currentAssetIndex: number;
-  assetCount: number;
-  previousAsset?: ImageAsset;
-  nextAsset?: ImageAsset;
-  onAssetChange: (asset: ImageAsset) => void;
   onShowInBoard?: () => void;
 }) {
-  const hasImageNavigation = currentAssetIndex >= 0 && assetCount > 1;
-
   return (
     <div className="pointer-events-auto flex items-center gap-1">
       <Tooltip>
@@ -1059,40 +1042,16 @@ function ImageViewerModalHeaderControls({
               variant="ghost"
               size="icon-sm"
               className={VIEWER_HEADER_ICON_BUTTON_CLASS}
-              onClick={onBack}
+              aria-label="Close image"
+              onClick={onClose}
             />
           }
         >
-          <ArrowLeftIcon />
-          <span className="sr-only">{backLabel}</span>
+          <XIcon />
+          <span className="sr-only">Close image</span>
         </TooltipTrigger>
-        <TooltipContent>
-          <span>{backLabel}</span>
-          <KbdGroup className="gap-0.5">
-            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
-          </KbdGroup>
-        </TooltipContent>
+        <TooltipContent>Close image</TooltipContent>
       </Tooltip>
-      {onDismissAll ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className={VIEWER_HEADER_ICON_BUTTON_CLASS}
-                aria-label="Close all to board"
-                onClick={onDismissAll}
-              />
-            }
-          >
-            <XIcon />
-            <span className="sr-only">Close all to board</span>
-          </TooltipTrigger>
-          <TooltipContent>Close all to board</TooltipContent>
-        </Tooltip>
-      ) : null}
       {onPeek ? (
         <Tooltip>
           <TooltipTrigger
@@ -1112,47 +1071,6 @@ function ImageViewerModalHeaderControls({
           </TooltipTrigger>
           <TooltipContent>Peek image</TooltipContent>
         </Tooltip>
-      ) : null}
-      {hasImageNavigation ? (
-        <div className="flex items-center gap-0.5">
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className={VIEWER_HEADER_ICON_BUTTON_CLASS}
-                  disabled={!previousAsset}
-                  onClick={() => previousAsset && onAssetChange(previousAsset)}
-                />
-              }
-            >
-              <ChevronLeftIcon />
-              <span className="sr-only">Previous image</span>
-            </TooltipTrigger>
-            <TooltipContent>Previous image</TooltipContent>
-          </Tooltip>
-          <span className="flex h-7 min-w-8 items-center justify-center px-1 text-xs font-medium text-muted-foreground tabular-nums">
-            {currentAssetIndex + 1} / {assetCount}
-          </span>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className={VIEWER_HEADER_ICON_BUTTON_CLASS}
-                  disabled={!nextAsset}
-                  onClick={() => nextAsset && onAssetChange(nextAsset)}
-                />
-              }
-            >
-              <ChevronRightIcon />
-              <span className="sr-only">Next image</span>
-            </TooltipTrigger>
-            <TooltipContent>Next image</TooltipContent>
-          </Tooltip>
-        </div>
       ) : null}
       {onShowInBoard ? (
         <Tooltip>
@@ -1175,6 +1093,82 @@ function ImageViewerModalHeaderControls({
         </Tooltip>
       ) : null}
       <ImageViewerModeButton expanded={false} onToggleExpanded={onExpand} />
+      <span className="max-w-[min(32rem,calc(100vw-14rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground">
+        {title}
+      </span>
+    </div>
+  );
+}
+
+function ImageNavigationControls({
+  currentAssetIndex,
+  assetCount,
+  previousAsset,
+  nextAsset,
+  expanded,
+  onAssetChange,
+}: {
+  currentAssetIndex: number;
+  assetCount: number;
+  previousAsset?: ImageAsset;
+  nextAsset?: ImageAsset;
+  expanded: boolean;
+  onAssetChange: (asset: ImageAsset, view: "modal" | "full") => void;
+}) {
+  if (currentAssetIndex < 0 || assetCount < 2) return null;
+
+  const navigationInset = expanded
+    ? "right-[27rem] sm:max-lg:right-[21rem] max-sm:right-0"
+    : "right-0";
+  const buttonClassName =
+    "size-10 rounded-lg !border-transparent !bg-neutral-950/55 !text-white shadow-lg backdrop-blur-sm transition-transform hover:!bg-neutral-950/80 active:not-disabled:scale-[0.97]";
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20">
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-y-0 left-0 flex items-center justify-between px-5 sm:px-8",
+          navigationInset,
+        )}
+      >
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-lg"
+          className={cn("pointer-events-auto", buttonClassName)}
+          aria-label="Previous image"
+          disabled={!previousAsset}
+          onClick={() =>
+            previousAsset &&
+            onAssetChange(previousAsset, expanded ? "full" : "modal")
+          }
+        >
+          <ChevronLeftIcon className="size-6 stroke-[2.25]" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-lg"
+          className={cn("pointer-events-auto", buttonClassName)}
+          aria-label="Next image"
+          disabled={!nextAsset}
+          onClick={() =>
+            nextAsset && onAssetChange(nextAsset, expanded ? "full" : "modal")
+          }
+        >
+          <ChevronRightIcon className="size-6 stroke-[2.25]" />
+        </Button>
+      </div>
+      <div
+        className={cn(
+          "pointer-events-none absolute bottom-5 left-0 flex justify-center px-5 sm:px-8",
+          navigationInset,
+        )}
+      >
+        <span className="rounded-lg bg-neutral-950/65 px-3 py-1.5 text-xs font-medium text-white tabular-nums shadow-lg backdrop-blur-sm">
+          {currentAssetIndex + 1} / {assetCount}
+        </span>
+      </div>
     </div>
   );
 }
@@ -1191,7 +1185,6 @@ export function ImageAssetViewer({
   loading = false,
   onBack,
   onDismissAll,
-  backLabel = "Back",
   onAssetChange,
   onShowInBoard,
   view,
@@ -1210,8 +1203,7 @@ export function ImageAssetViewer({
   loading?: boolean;
   onBack?: () => void;
   onDismissAll?: () => void;
-  backLabel?: string;
-  onAssetChange?: (asset: ImageAsset) => void;
+  onAssetChange?: (asset: ImageAsset, view: "modal" | "full") => void;
   onShowInBoard?: () => void;
   view?: "modal" | "full";
   onViewChange?: (view: "modal" | "full") => void;
@@ -1413,8 +1405,8 @@ export function ImageAssetViewer({
   );
 
   const handleAssetChange = useCallback(
-    (nextAsset: ImageAsset) => {
-      void flushImageNote().then(() => onAssetChange?.(nextAsset));
+    (nextAsset: ImageAsset, nextView: "modal" | "full") => {
+      void flushImageNote().then(() => onAssetChange?.(nextAsset, nextView));
     },
     [flushImageNote, onAssetChange],
   );
@@ -1468,6 +1460,11 @@ export function ImageAssetViewer({
     if (!onDismissAll) return;
     void flushImageNote().then(onDismissAll);
   }, [flushImageNote, onDismissAll]);
+
+  const handleClose = useCallback(() => {
+    if (onDismissAll) handleDismissAll();
+    else handleOpenChange(false);
+  }, [handleDismissAll, handleOpenChange, onDismissAll]);
 
   const handleShowInBoard = useCallback(() => {
     if (!onShowInBoard) return;
@@ -2069,10 +2066,10 @@ export function ImageAssetViewer({
             "data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 bg-background duration-150",
         )}
         className={cn(
-          "top-1/2 flex min-h-0 -translate-y-1/2 flex-col overflow-hidden transition-[transform,opacity,top,width,height,max-width,border-radius,background-color,box-shadow] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:animate-none",
+          "top-1/2 flex min-h-0 -translate-y-1/2 flex-col overflow-hidden transition-[transform,opacity,top,width,height,max-width,border-radius,background-color,box-shadow] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:animate-none motion-reduce:transition-none",
           fullscreenTransitionDuration,
           workspace
-            ? "h-[100svh] w-screen max-w-none rounded-none bg-transparent shadow-none ring-0 data-ending-style:scale-100 data-ending-style:opacity-100 data-starting-style:scale-100 data-starting-style:opacity-100"
+            ? "h-[100svh] w-screen max-w-none rounded-none bg-transparent shadow-none ring-0 data-ending-style:scale-100 data-ending-style:opacity-0 data-ending-style:duration-150 data-starting-style:scale-100 data-starting-style:opacity-100"
             : "h-[min(52rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[88rem] rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
           split &&
             "left-0 z-50 w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--workspace-peek-stage-gap))] translate-x-0",
@@ -2099,10 +2096,35 @@ export function ImageAssetViewer({
             )}
           >
             {expanded ? (
-              <div className={VIEWER_CONTROL_FRAME_CLASS}>
-                <div className="pointer-events-auto flex items-center gap-1">
-                  <div className={expanded ? GLASS_ISLAND_CLASS : undefined}>
-                    <ButtonGroup>
+              <div className="pointer-events-auto flex max-w-[calc(100vw-2.5rem)] items-center gap-1.5">
+                <div
+                  className={cn(VIEWER_CONTROL_FRAME_CLASS, GLASS_ISLAND_CLASS)}
+                >
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className={headerControlButtonClass}
+                            aria-label="Close image"
+                            onClick={handleClose}
+                          />
+                        }
+                      >
+                        <XIcon />
+                        <span className="sr-only">Close image</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Close image</TooltipContent>
+                    </Tooltip>
+                    {asset &&
+                    location &&
+                    !asset.uploadStatus &&
+                    !isMobile &&
+                    !cropMode &&
+                    !isSavingCrop ? (
                       <Tooltip>
                         <TooltipTrigger
                           render={
@@ -2111,166 +2133,58 @@ export function ImageAssetViewer({
                               variant="ghost"
                               size="icon-sm"
                               className={headerControlButtonClass}
-                              onClick={() => handleOpenChange(false)}
+                              aria-label="Peek image"
+                              onClick={handlePeek}
                             />
                           }
                         >
-                          <ArrowLeftIcon />
-                          <span className="sr-only">{backLabel}</span>
+                          <PanelRightIcon />
+                          <span className="sr-only">Peek image</span>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          <span>{backLabel}</span>
-                          <KbdGroup className="gap-0.5">
-                            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
-                              Esc
-                            </Kbd>
-                          </KbdGroup>
-                        </TooltipContent>
+                        <TooltipContent>Peek image</TooltipContent>
                       </Tooltip>
-                    </ButtonGroup>
+                    ) : null}
+                    {onShowInBoard ? (
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              className={headerControlButtonClass}
+                              aria-label="Show in board"
+                              onClick={handleShowInBoard}
+                            />
+                          }
+                        >
+                          <LocateFixedIcon />
+                          <span className="sr-only">Show in board</span>
+                        </TooltipTrigger>
+                        <TooltipContent>Show in board</TooltipContent>
+                      </Tooltip>
+                    ) : null}
+                    <ImageViewerModeButton
+                      expanded
+                      onToggleExpanded={toggleExpanded}
+                    />
                   </div>
-                  {onDismissAll ? (
-                    <div className={expanded ? GLASS_ISLAND_CLASS : undefined}>
-                      <ButtonGroup>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                className={headerControlButtonClass}
-                                aria-label="Close all to board"
-                                onClick={handleDismissAll}
-                              />
-                            }
-                          >
-                            <XIcon />
-                            <span className="sr-only">Close all to board</span>
-                          </TooltipTrigger>
-                          <TooltipContent>Close all to board</TooltipContent>
-                        </Tooltip>
-                      </ButtonGroup>
-                    </div>
-                  ) : null}
-                  {asset &&
-                  location &&
-                  !asset.uploadStatus &&
-                  !isMobile &&
-                  !cropMode &&
-                  !isSavingCrop ? (
-                    <div className={GLASS_ISLAND_CLASS}>
-                      <ButtonGroup>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                className={headerControlButtonClass}
-                                aria-label="Peek image"
-                                onClick={handlePeek}
-                              />
-                            }
-                          >
-                            <PanelRightIcon />
-                            <span className="sr-only">Peek image</span>
-                          </TooltipTrigger>
-                          <TooltipContent>Peek image</TooltipContent>
-                        </Tooltip>
-                      </ButtonGroup>
-                    </div>
-                  ) : null}
-                  {hasImageNavigation ? (
-                    <div className={expanded ? GLASS_ISLAND_CLASS : undefined}>
-                      <ButtonGroup>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                className={headerControlButtonClass}
-                                disabled={!previousAsset}
-                                onClick={() =>
-                                  previousAsset &&
-                                  handleAssetChange(previousAsset)
-                                }
-                              />
-                            }
-                          >
-                            <ChevronLeftIcon />
-                            <span className="sr-only">Previous image</span>
-                          </TooltipTrigger>
-                          <TooltipContent>Previous image</TooltipContent>
-                        </Tooltip>
-                        <ButtonGroupSeparator />
-                        <span className="flex h-7 min-w-10 items-center justify-center bg-background px-2 text-xs font-medium text-muted-foreground tabular-nums">
-                          {currentAssetIndex + 1} / {assets.length}
-                        </span>
-                        <ButtonGroupSeparator />
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                className={headerControlButtonClass}
-                                disabled={!nextAsset}
-                                onClick={() =>
-                                  nextAsset && handleAssetChange(nextAsset)
-                                }
-                              />
-                            }
-                          >
-                            <ChevronRightIcon />
-                            <span className="sr-only">Next image</span>
-                          </TooltipTrigger>
-                          <TooltipContent>Next image</TooltipContent>
-                        </Tooltip>
-                      </ButtonGroup>
-                    </div>
-                  ) : null}
-                  {onShowInBoard ? (
-                    <div className={expanded ? GLASS_ISLAND_CLASS : undefined}>
-                      <ButtonGroup>
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                className={headerControlButtonClass}
-                                aria-label="Show in board"
-                                onClick={handleShowInBoard}
-                              />
-                            }
-                          >
-                            <LocateFixedIcon />
-                            <span className="sr-only">Show in board</span>
-                          </TooltipTrigger>
-                          <TooltipContent>Show in board</TooltipContent>
-                        </Tooltip>
-                      </ButtonGroup>
-                    </div>
-                  ) : null}
-                  <div className={expanded ? GLASS_ISLAND_CLASS : undefined}>
-                    <ButtonGroup>
-                      <ImageViewerModeButton
-                        expanded
-                        onToggleExpanded={toggleExpanded}
-                      />
-                    </ButtonGroup>
-                  </div>
+                </div>
+                <div
+                  className={cn(
+                    GLASS_ISLAND_CLASS,
+                    "flex h-9 min-w-0 items-center rounded-lg px-3",
+                  )}
+                >
+                  <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                    {title}
+                  </span>
                 </div>
               </div>
             ) : (
               <ImageViewerModalHeaderControls
-                backLabel={backLabel}
-                onBack={() => handleOpenChange(false)}
-                onDismissAll={onDismissAll ? handleDismissAll : undefined}
+                title={title}
+                onClose={handleClose}
                 onExpand={toggleExpanded}
                 onPeek={
                   asset &&
@@ -2282,11 +2196,6 @@ export function ImageAssetViewer({
                     ? handlePeek
                     : undefined
                 }
-                currentAssetIndex={currentAssetIndex}
-                assetCount={assets.length}
-                previousAsset={previousAsset}
-                nextAsset={nextAsset}
-                onAssetChange={handleAssetChange}
                 onShowInBoard={onShowInBoard ? handleShowInBoard : undefined}
               />
             )}
@@ -2414,11 +2323,12 @@ export function ImageAssetViewer({
                 <div
                   className={cn(
                     "[container-type:size] flex items-center justify-center",
-                    VIEWER_CANVAS_CLASS,
-                    !expanded && "lg:pr-8",
+                    VIEWER_IMAGE_CANVAS_CLASS,
+                    expanded &&
+                      "max-sm:pr-20 sm:max-lg:pr-[26rem] lg:pr-[32rem]",
                   )}
                 >
-                  {open && displayUrl ? (
+                  {displayUrl ? (
                     <ProgressiveViewerImage
                       key={viewerImageUrl}
                       displayUrl={displayUrl}
@@ -2447,6 +2357,16 @@ export function ImageAssetViewer({
                   ) : null}
                 </div>
               )}
+              {hasImageNavigation && !cropMode ? (
+                <ImageNavigationControls
+                  currentAssetIndex={currentAssetIndex}
+                  assetCount={assets.length}
+                  previousAsset={previousAsset}
+                  nextAsset={nextAsset}
+                  expanded={expanded}
+                  onAssetChange={handleAssetChange}
+                />
+              ) : null}
             </div>
 
             <motion.aside
@@ -2619,18 +2539,7 @@ export function ImageAssetViewer({
                             : { duration: 0.18, ease: [0.16, 1, 0.3, 1] }
                         }
                       >
-                        {asset ? (
-                          <div className="mb-5">
-                            <span className="text-xs font-medium text-muted-foreground">
-                              Title
-                            </span>
-                            <p className="mt-1 text-sm font-medium wrap-break-word text-foreground">
-                              {asset.title ?? "Untitled image"}
-                            </p>
-                          </div>
-                        ) : loading ? (
-                          <ImageViewerDetailsLoading />
-                        ) : null}
+                        {loading ? <ImageViewerDetailsLoading /> : null}
                         {asset?.sourceUrl ? (
                           <div className="mb-5">
                             <span className="text-xs font-medium text-muted-foreground">

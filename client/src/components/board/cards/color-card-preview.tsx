@@ -26,20 +26,20 @@ export function ColorCardPreview({
       data-color-card-preview
       className="flex size-full min-h-0 flex-col bg-sidebar text-sidebar-foreground"
     >
-      <div className="min-h-0 flex-1 p-[4.3%]">
-        <div
-          data-color-card-preview-swatch
-          className={cn(
-            "size-full rounded-sm",
-            hasAlpha &&
-              "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
-          )}
-          style={{
-            background: gradient ? resolveGradientCss(gradient) : hex,
-          }}
-        />
-      </div>
-      <div className="flex min-w-0 items-center gap-[4.3%] bg-sidebar px-[4.3%] pb-[4.3%] text-[clamp(0.625rem,4.6cqw,1rem)] leading-tight">
+      <div
+        data-color-card-preview-swatch
+        className={cn(
+          "relative z-10 min-h-0 w-full flex-1 overflow-hidden rounded-b-lg border-b border-border",
+          hasAlpha &&
+            "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
+        )}
+        style={
+          gradient
+            ? { background: resolveGradientCss(gradient) }
+            : { backgroundColor: hex }
+        }
+      />
+      <div className="relative z-0 flex min-w-0 items-center gap-[4.3%] bg-sidebar px-[4.3%] py-[4.3%] text-[clamp(0.625rem,4.6cqw,1rem)] leading-tight">
         <span
           className={cn(
             "min-w-0 truncate font-medium",

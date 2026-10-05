@@ -18,12 +18,15 @@ describe("ColorAssetCard", () => {
     );
 
     expect(html).toContain("aspect-square w-full");
-    expect(html).toContain('class="p-3"');
+    expect(html).toContain("aspect-square w-full overflow-hidden rounded-b-lg");
+    expect(html).toContain("rounded-b-lg border-b border-border");
+    expect(html).not.toContain('class="p-3"');
+    expect(html).toContain("data-asset-card-outline");
     expect(html).toContain("hover:border-sidebar-foreground/20");
     expect(html).toContain("transition-colors duration-100");
     expect(html).not.toContain("transition-all");
     expect(html).toContain(
-      "flex min-w-0 items-center gap-3 bg-sidebar px-3 pb-3",
+      "flex min-w-0 items-center gap-3 bg-sidebar p-3 leading-6",
     );
     expect(html).not.toContain("border-t border-sidebar-foreground/10");
   });

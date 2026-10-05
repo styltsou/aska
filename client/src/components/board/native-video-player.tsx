@@ -1,27 +1,99 @@
 import {
   LoaderCircleIcon,
-  PauseIcon,
+  Maximize2Icon,
+  Minimize2Icon,
   PlayIcon,
-  Volume2Icon,
-  VolumeXIcon,
+  RotateCcwIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
 } from "lucide-react";
+import { Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide";
 import {
   type ChangeEvent,
   type KeyboardEvent,
   type PointerEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
 
-import { VIDEO_CARD_PLAY_BUTTON_CLASS } from "@/components/board/video-card-control-styles";
-import { Button } from "@/components/ui/button";
+import { MorphStateIcon } from "@/components/ui/morph-state-icon";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { FLOATING_MENU_SURFACE_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import type { VideoAsset } from "@/types/asset";
 
 const CONTROL_HIDE_DELAY_MS = 1_800;
-const SEEK_STEP_SECONDS = 5;
+const BUFFERING_SPINNER_DELAY_MS = 180;
+const SEEK_STEP_SECONDS = 10;
+const VIDEO_PLAYER_RAIL_CLASS = "bg-white/20";
+const VIDEO_PLAYER_PREFERENCES_KEY = "aska.video-player-preferences:v2";
+const LEGACY_VIDEO_PLAYER_PREFERENCES_KEY = "aska.video-player-preferences:v1";
+
+type VideoPlayerPreferences = {
+  volume: number;
+  muted: boolean;
+  showRemainingTime: boolean;
+};
+
+const DEFAULT_VIDEO_PLAYER_PREFERENCES: VideoPlayerPreferences = {
+  volume: 1,
+  muted: false,
+  showRemainingTime: false,
+};
+
+function readVideoPlayerPreferences(): VideoPlayerPreferences {
+  try {
+    const raw =
+      window.localStorage.getItem(VIDEO_PLAYER_PREFERENCES_KEY) ??
+      window.localStorage.getItem(LEGACY_VIDEO_PLAYER_PREFERENCES_KEY);
+    if (!raw) return DEFAULT_VIDEO_PLAYER_PREFERENCES;
+
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !("volume" in parsed) ||
+      !("muted" in parsed) ||
+      typeof parsed.volume !== "number" ||
+      !Number.isFinite(parsed.volume) ||
+      parsed.volume < 0 ||
+      parsed.volume > 1 ||
+      typeof parsed.muted !== "boolean"
+    ) {
+      return DEFAULT_VIDEO_PLAYER_PREFERENCES;
+    }
+
+    return {
+      volume: parsed.volume,
+      muted: parsed.muted,
+      showRemainingTime:
+        "showRemainingTime" in parsed &&
+        typeof parsed.showRemainingTime === "boolean"
+          ? parsed.showRemainingTime
+          : false,
+    };
+  } catch {
+    return DEFAULT_VIDEO_PLAYER_PREFERENCES;
+  }
+}
+
+function saveVideoPlayerPreferences(preferences: VideoPlayerPreferences) {
+  try {
+    window.localStorage.setItem(
+      VIDEO_PLAYER_PREFERENCES_KEY,
+      JSON.stringify(preferences),
+    );
+  } catch {
+    // Video playback should still work when browser storage is unavailable.
+  }
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -45,6 +117,7 @@ export function NativeVideoPlayer({
   storyboard,
   initialTime,
   continuePlaying = false,
+  fit = "contain",
 }: {
   src: string;
   poster?: string;
@@ -52,22 +125,41 @@ export function NativeVideoPlayer({
   storyboard?: VideoAsset["storyboard"];
   initialTime?: number;
   continuePlaying?: boolean;
+  fit?: "contain" | "cover";
 }) {
+  const [initialPlayerPreferences] = useState(readVideoPlayerPreferences);
+  const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
   const hideTimerRef = useRef<number | undefined>(undefined);
+  const waitingTimerRef = useRef<number | undefined>(undefined);
   const handoffAppliedRef = useRef(false);
   const [playing, setPlaying] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [ended, setEnded] = useState(false);
   const [bufferedTime, setBufferedTime] = useState(0);
-  const [muted, setMuted] = useState(continuePlaying);
-  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(
+    continuePlaying || initialPlayerPreferences.muted,
+  );
+  const [volume, setVolume] = useState(initialPlayerPreferences.volume);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [playerFullscreen, setPlayerFullscreen] = useState(false);
   const [storyboardReady, setStoryboardReady] = useState(false);
+  const [volumeSliderExpanded, setVolumeSliderExpanded] = useState(false);
+  const [showRemainingTime, setShowRemainingTime] = useState(
+    initialPlayerPreferences.showRemainingTime,
+  );
   const [hover, setHover] = useState<{ seconds: number; percent: number }>();
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.volume = volume;
+    video.muted = muted;
+  }, [muted, volume]);
 
   const clearHideTimer = useCallback(() => {
     if (hideTimerRef.current !== undefined) {
@@ -96,16 +188,57 @@ export function NativeVideoPlayer({
 
   useEffect(() => clearHideTimer, [clearHideTimer]);
 
+  const clearWaiting = useCallback(() => {
+    if (waitingTimerRef.current !== undefined) {
+      window.clearTimeout(waitingTimerRef.current);
+      waitingTimerRef.current = undefined;
+    }
+    setWaiting(false);
+  }, []);
+
+  const delayWaitingIndicator = useCallback(() => {
+    if (waitingTimerRef.current !== undefined) {
+      window.clearTimeout(waitingTimerRef.current);
+    }
+    waitingTimerRef.current = window.setTimeout(() => {
+      waitingTimerRef.current = undefined;
+      setWaiting(true);
+    }, BUFFERING_SPINNER_DELAY_MS);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (waitingTimerRef.current !== undefined) {
+        window.clearTimeout(waitingTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const updateFullscreenState = () => {
+      setPlayerFullscreen(document.fullscreenElement === playerRef.current);
+    };
+    document.addEventListener("fullscreenchange", updateFullscreenState);
+    return () =>
+      document.removeEventListener("fullscreenchange", updateFullscreenState);
+  }, []);
+
   const play = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
+    if (ended || video.ended) {
+      video.currentTime = 0;
+      setCurrentTime(0);
+      setEnded(false);
+    }
     try {
       await video.play();
     } catch {
       setPlaying(false);
       setControlsVisible(true);
     }
-  }, []);
+  }, [ended]);
 
   const togglePlayback = useCallback(() => {
     const video = videoRef.current;
@@ -120,6 +253,7 @@ export function NativeVideoPlayer({
     const next = clamp(seconds, 0, video.duration);
     video.currentTime = next;
     setCurrentTime(next);
+    setEnded(next >= video.duration);
   }, []);
 
   const handleProgressChange = useCallback(
@@ -138,8 +272,13 @@ export function NativeVideoPlayer({
       video.muted = next === 0;
       setVolume(next);
       setMuted(next === 0);
+      saveVideoPlayerPreferences({
+        volume: next,
+        muted: next === 0,
+        showRemainingTime,
+      });
     },
-    [],
+    [showRemainingTime],
   );
 
   const toggleMuted = useCallback(() => {
@@ -152,6 +291,21 @@ export function NativeVideoPlayer({
       setVolume(0.75);
     }
     setMuted(next);
+    saveVideoPlayerPreferences({
+      volume: video.volume,
+      muted: next,
+      showRemainingTime,
+    });
+  }, [showRemainingTime]);
+
+  const togglePlayerFullscreen = useCallback(() => {
+    const player = playerRef.current;
+    if (!player) return;
+    if (document.fullscreenElement === player) {
+      void document.exitFullscreen().catch(() => undefined);
+    } else {
+      void player.requestFullscreen().catch(() => undefined);
+    }
   }, []);
 
   const handleLoadedMetadata = useCallback(() => {
@@ -226,10 +380,11 @@ export function NativeVideoPlayer({
     : 0;
   const volumePercent = muted ? 0 : volume * 100;
   const controlButtonClass =
-    "size-8 rounded-md border-transparent bg-transparent text-white shadow-none hover:bg-white/15 hover:text-white focus-visible:border-white/30 focus-visible:ring-white/35 dark:hover:bg-white/15";
+    "inline-flex size-8 shrink-0 items-center justify-center rounded-md border-0 bg-transparent p-0 text-white/85 shadow-none outline-none transition-colors duration-150 hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60 active:bg-white/15";
 
   return (
     <div
+      ref={playerRef}
       className="group/player absolute inset-0 overflow-hidden bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       tabIndex={0}
       onKeyDown={handleKeyDown}
@@ -257,7 +412,12 @@ export function NativeVideoPlayer({
         muted={muted}
         playsInline
         preload="metadata"
-        className="absolute inset-0 size-full object-contain"
+        className={cn(
+          "absolute inset-0 size-full",
+          fit === "cover" && !playerFullscreen
+            ? "object-cover"
+            : "object-contain",
+        )}
         onLoadedMetadata={handleLoadedMetadata}
         onDurationChange={(event) =>
           setDuration(
@@ -272,24 +432,28 @@ export function NativeVideoPlayer({
         onProgress={updateBufferedTime}
         onPlay={() => {
           setPlaying(true);
-          setWaiting(false);
+          clearWaiting();
+          setEnded(false);
           scheduleControlsHide();
         }}
-        onPlaying={() => setWaiting(false)}
+        onPlaying={clearWaiting}
         onPause={() => {
           clearHideTimer();
+          clearWaiting();
           setPlaying(false);
           setControlsVisible(true);
         }}
-        onWaiting={() => setWaiting(true)}
-        onCanPlay={() => setWaiting(false)}
-        onEnded={() => {
+        onWaiting={delayWaitingIndicator}
+        onCanPlay={clearWaiting}
+        onEnded={(event) => {
           setPlaying(false);
+          setCurrentTime(event.currentTarget.duration);
+          setEnded(true);
           setControlsVisible(true);
         }}
         onError={() => {
           setFailed(true);
-          setWaiting(false);
+          clearWaiting();
         }}
       />
       {storyboard?.url ? (
@@ -307,27 +471,31 @@ export function NativeVideoPlayer({
         <button
           type="button"
           className="absolute inset-0 z-10 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-inset"
-          aria-label={playing ? "Pause video" : "Play video"}
+          aria-label={
+            ended ? "Replay video" : playing ? "Pause video" : "Play video"
+          }
           onClick={togglePlayback}
         >
-          {!playing && !waiting ? (
+          {!playing ? (
             <span
               className={cn(
-                VIDEO_CARD_PLAY_BUTTON_CLASS,
+                "flex size-11 items-center justify-center rounded-full bg-black/45 text-white shadow-lg ring-1 ring-white/10 backdrop-blur-md transition-[background-color,transform,ring-color] duration-150 ease-out hover:scale-[1.04] hover:bg-black/60 hover:ring-white/25 motion-reduce:transition-none",
                 "absolute top-1/2 left-1/2 size-14 -translate-x-1/2 -translate-y-1/2",
               )}
             >
-              <PlayIcon className="ml-0.5 size-5 fill-current" />
+              {ended ? (
+                <RotateCcwIcon className="size-5" />
+              ) : (
+                <PlayIcon className="ml-0.5 size-5 fill-current" />
+              )}
             </span>
           ) : null}
         </button>
       ) : null}
 
-      {waiting && !failed ? (
+      {waiting && playing && !failed ? (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
-          <span className="flex size-11 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white shadow-lg backdrop-blur-md">
-            <LoaderCircleIcon className="size-5 animate-spin" />
-          </span>
+          <LoaderCircleIcon className="size-10 animate-spin stroke-[1.5] text-white" />
         </div>
       ) : null}
 
@@ -341,7 +509,7 @@ export function NativeVideoPlayer({
         <div
           ref={controlsRef}
           className={cn(
-            "absolute inset-x-0 bottom-0 z-30 bg-linear-to-t from-black/80 via-black/35 to-transparent px-2.5 pt-12 pb-2.5 transition-opacity duration-150 motion-reduce:transition-none sm:px-3 sm:pb-3",
+            "absolute inset-x-0 bottom-0 z-30 flex flex-col gap-1 bg-linear-to-t from-black/80 via-black/35 to-transparent px-3 pt-8 pb-2 transition-opacity duration-150 motion-reduce:transition-none sm:pb-3",
             controlsVisible || !playing
               ? "pointer-events-auto opacity-100"
               : "pointer-events-none opacity-0",
@@ -349,137 +517,189 @@ export function NativeVideoPlayer({
           onPointerDown={(event: PointerEvent<HTMLDivElement>) =>
             event.stopPropagation()
           }
+          onPointerLeave={() => setVolumeSliderExpanded(false)}
         >
-          <div className="rounded-xl border border-white/15 bg-black/55 p-2 text-white shadow-lg backdrop-blur-md">
-            <div className="group/progress relative flex h-5 items-center">
-              {hover ? (
-                <div
-                  className="pointer-events-none absolute bottom-full z-40 mb-2 -translate-x-1/2 rounded-lg border border-white/15 bg-black/85 p-1 text-center text-white shadow-xl backdrop-blur-md"
-                  style={{
-                    left: `clamp(5.25rem, ${hover.percent}%, calc(100% - 5.25rem))`,
-                  }}
-                  aria-hidden="true"
-                >
-                  {storyboard && storyboardReady ? (
-                    <div
-                      className="rounded-sm bg-black"
-                      style={{
-                        width: storyboard.tileWidth,
-                        height: storyboard.tileHeight,
-                        backgroundImage: `url(${storyboard.url})`,
-                        backgroundSize: `${storyboard.columns * storyboard.tileWidth}px ${storyboardRows * storyboard.tileHeight}px`,
-                        backgroundPosition: `-${(storyboardIndex % storyboard.columns) * storyboard.tileWidth}px -${Math.floor(storyboardIndex / storyboard.columns) * storyboard.tileHeight}px`,
-                      }}
-                    />
-                  ) : null}
-                  <span className="block px-1 pt-0.5 text-xs font-medium tabular-nums">
-                    {formatTime(hover.seconds)}
-                  </span>
-                </div>
-              ) : null}
-              <div className="pointer-events-none absolute inset-x-0 h-1 overflow-hidden rounded-full bg-white/20 transition-[height] duration-100 group-focus-within/progress:h-1.5 group-hover/progress:h-1.5 motion-reduce:transition-none">
-                <span
-                  className="absolute inset-y-0 left-0 bg-white/30"
-                  style={{ width: `${clamp(buffered, 0, 100)}%` }}
-                />
-                <span
-                  className="absolute inset-y-0 left-0 bg-white"
-                  style={{ width: `${clamp(progress, 0, 100)}%` }}
-                />
+          <div className="group/progress relative flex h-4 min-w-0 items-center">
+            {hover ? (
+              <div
+                className={cn(
+                  "pointer-events-none absolute bottom-full z-40 mb-2 -translate-x-1/2 rounded-lg p-1 text-center",
+                  FLOATING_MENU_SURFACE_CLASS,
+                  "bg-popover/50",
+                )}
+                style={{ left: `${clamp(hover.percent, 0, 100)}%` }}
+                aria-hidden="true"
+              >
+                {storyboard && storyboardReady ? (
+                  <div
+                    className="rounded-sm bg-black"
+                    style={{
+                      width: storyboard.tileWidth,
+                      height: storyboard.tileHeight,
+                      backgroundImage: `url(${storyboard.url})`,
+                      backgroundSize: `${storyboard.columns * storyboard.tileWidth}px ${storyboardRows * storyboard.tileHeight}px`,
+                      backgroundPosition: `-${(storyboardIndex % storyboard.columns) * storyboard.tileWidth}px -${Math.floor(storyboardIndex / storyboard.columns) * storyboard.tileHeight}px`,
+                    }}
+                  />
+                ) : null}
+                <span className="block px-1 pt-0.5 text-xs font-medium tabular-nums">
+                  {formatTime(hover.seconds)}
+                </span>
               </div>
+            ) : null}
+            <div
+              className={cn(
+                "pointer-events-none absolute inset-x-0 h-1.5 overflow-hidden rounded-full transition-[height] duration-150 group-focus-within/progress:h-2.5 group-hover/progress:h-2.5 motion-reduce:transition-none",
+                VIDEO_PLAYER_RAIL_CLASS,
+              )}
+            >
               <span
-                className="pointer-events-none absolute size-3 -translate-x-1/2 rounded-full bg-white opacity-0 shadow transition-opacity duration-100 group-focus-within/progress:opacity-100 group-hover/progress:opacity-100"
-                style={{ left: `${clamp(progress, 0, 100)}%` }}
+                className="absolute inset-y-0 left-0 bg-white/35"
+                style={{ width: `${clamp(buffered, 0, 100)}%` }}
               />
-              <input
-                type="range"
-                min={0}
-                max={Math.max(duration, 0.01)}
-                step="any"
-                value={Math.min(currentTime, duration || 0.01)}
-                disabled={duration <= 0}
-                onChange={handleProgressChange}
-                onPointerDown={() => {
-                  clearHideTimer();
-                  setControlsVisible(true);
-                }}
-                onPointerMove={(event) => {
-                  if (duration <= 0) return;
-                  if (event.pointerType === "touch" && event.buttons === 0)
-                    return;
-                  const bounds = event.currentTarget.getBoundingClientRect();
-                  const percent = clamp(
-                    ((event.clientX - bounds.left) / bounds.width) * 100,
-                    0,
-                    100,
-                  );
-                  setHover({ seconds: (percent / 100) * duration, percent });
-                }}
-                onPointerLeave={() => setHover(undefined)}
-                onPointerUp={(event) => {
-                  if (event.pointerType === "touch") setHover(undefined);
-                  scheduleControlsHide();
-                }}
-                onFocus={() => {
-                  if (duration > 0)
-                    setHover({
-                      seconds: currentTime,
-                      percent: (currentTime / duration) * 100,
-                    });
-                }}
-                onBlur={() => setHover(undefined)}
-                onKeyUp={() => {
-                  if (duration > 0)
-                    setHover({
-                      seconds: videoRef.current?.currentTime ?? currentTime,
-                      percent:
-                        ((videoRef.current?.currentTime ?? currentTime) /
-                          duration) *
-                        100,
-                    });
-                }}
-                className="absolute inset-0 m-0 size-full cursor-pointer opacity-0"
-                aria-label="Video progress"
-                aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
+              <span
+                className="absolute inset-y-0 left-0 bg-white"
+                style={{ width: `${clamp(progress, 0, 100)}%` }}
               />
             </div>
+            <span
+              className="pointer-events-none absolute size-3 -translate-x-1/2 rounded-full bg-white opacity-0 shadow transition-opacity duration-150 group-focus-within/progress:opacity-100 group-hover/progress:opacity-100"
+              style={{ left: `${clamp(progress, 0, 100)}%` }}
+            />
+            <input
+              type="range"
+              min={0}
+              max={Math.max(duration, 0.01)}
+              step="any"
+              value={Math.min(currentTime, duration || 0.01)}
+              disabled={duration <= 0}
+              onChange={handleProgressChange}
+              onPointerDown={() => {
+                clearHideTimer();
+                setControlsVisible(true);
+              }}
+              onPointerMove={(event) => {
+                if (duration <= 0) return;
+                if (event.pointerType === "touch" && event.buttons === 0)
+                  return;
+                const bounds = event.currentTarget.getBoundingClientRect();
+                const percent = clamp(
+                  ((event.clientX - bounds.left) / bounds.width) * 100,
+                  0,
+                  100,
+                );
+                setHover({ seconds: (percent / 100) * duration, percent });
+              }}
+              onPointerLeave={() => setHover(undefined)}
+              onPointerUp={(event) => {
+                if (event.pointerType === "touch") setHover(undefined);
+                scheduleControlsHide();
+              }}
+              onFocus={() => {
+                if (duration > 0)
+                  setHover({
+                    seconds: currentTime,
+                    percent: (currentTime / duration) * 100,
+                  });
+              }}
+              onBlur={() => setHover(undefined)}
+              onKeyUp={() => {
+                if (duration > 0)
+                  setHover({
+                    seconds: videoRef.current?.currentTime ?? currentTime,
+                    percent:
+                      ((videoRef.current?.currentTime ?? currentTime) /
+                        duration) *
+                      100,
+                  });
+              }}
+              className="absolute inset-0 m-0 size-full cursor-pointer opacity-0"
+              aria-label="Video progress"
+              aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
+            />
+          </div>
 
-            <div className="flex h-8 items-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={controlButtonClass}
-                aria-label={playing ? "Pause video" : "Play video"}
-                onClick={togglePlayback}
-              >
-                {playing ? (
-                  <PauseIcon className="size-4 fill-current" />
-                ) : (
-                  <PlayIcon className="ml-0.5 size-4 fill-current" />
-                )}
-              </Button>
-
-              <div className="group/volume flex items-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-0.5">
+              <div className="flex shrink-0 items-center gap-0.5">
+                <PlayerControlButton
+                  label={`Back ${SEEK_STEP_SECONDS} seconds`}
+                  onClick={() => seekTo(currentTime - SEEK_STEP_SECONDS)}
                   className={controlButtonClass}
-                  aria-label={
-                    muted || volume === 0 ? "Unmute video" : "Mute video"
-                  }
-                  onClick={toggleMuted}
                 >
-                  {muted || volume === 0 ? (
-                    <VolumeXIcon className="size-4" />
-                  ) : (
-                    <Volume2Icon className="size-4" />
+                  <SkipBackIcon className="size-4 fill-current" />
+                </PlayerControlButton>
+                <PlayerControlButton
+                  label={
+                    ended
+                      ? "Replay video"
+                      : playing
+                        ? "Pause video"
+                        : "Play video"
+                  }
+                  onClick={togglePlayback}
+                  className={controlButtonClass}
+                >
+                  <MorphStateIcon
+                    icon={ended ? RotateCcw : playing ? Pause : Play}
+                    className={cn("size-4", !ended && "fill-current")}
+                    strokeWidth={ended ? 2.25 : 0}
+                  />
+                </PlayerControlButton>
+                <PlayerControlButton
+                  label={`Forward ${SEEK_STEP_SECONDS} seconds`}
+                  onClick={() => seekTo(currentTime + SEEK_STEP_SECONDS)}
+                  className={controlButtonClass}
+                >
+                  <SkipForwardIcon className="size-4 fill-current" />
+                </PlayerControlButton>
+              </div>
+
+              <div
+                className="group/volume flex items-center rounded-md transition-colors duration-150 focus-within:bg-white/10 hover:bg-white/10"
+                onPointerEnter={() => setVolumeSliderExpanded(true)}
+                onFocusCapture={() => setVolumeSliderExpanded(true)}
+              >
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        type="button"
+                        className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-transparent p-0 text-white/85 shadow-none transition-colors duration-150 outline-none hover:bg-transparent hover:text-white focus-visible:bg-transparent focus-visible:ring-2 focus-visible:ring-white/60 active:bg-transparent"
+                        aria-label={
+                          muted || volume === 0 ? "Unmute video" : "Mute video"
+                        }
+                        onClick={(event) => {
+                          toggleMuted();
+                          event.currentTarget.blur();
+                          scheduleControlsHide();
+                        }}
+                      />
+                    }
+                  >
+                    <MorphStateIcon
+                      icon={muted || volume === 0 ? VolumeX : Volume2}
+                      className="size-4"
+                      strokeWidth={2.25}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    {muted || volume === 0 ? "Unmute video" : "Mute video"}
+                  </TooltipContent>
+                </Tooltip>
+                <div
+                  className={cn(
+                    "relative h-8 overflow-hidden transition-[width,opacity] duration-200 ease-out group-focus-within/volume:w-20 group-focus-within/volume:opacity-100 motion-reduce:transition-none",
+                    volumeSliderExpanded ? "w-20 opacity-100" : "w-0 opacity-0",
                   )}
-                </Button>
-                <div className="relative hidden w-0 overflow-hidden opacity-0 transition-[width,opacity] duration-150 group-focus-within/volume:w-20 group-focus-within/volume:opacity-100 group-hover/volume:w-20 group-hover/volume:opacity-100 motion-reduce:transition-none sm:block">
-                  <div className="relative flex h-8 w-20 items-center px-1">
-                    <div className="pointer-events-none absolute right-1 left-1 h-1 overflow-hidden rounded-full bg-white/20">
+                >
+                  <div className="relative flex size-full items-center px-1">
+                    <div
+                      className={cn(
+                        "pointer-events-none absolute right-1 left-1 h-1.5 overflow-hidden rounded-full transition-[height] duration-150 group-focus-within/volume:h-2 group-hover/volume:h-2 motion-reduce:transition-none",
+                        VIDEO_PLAYER_RAIL_CLASS,
+                      )}
+                    >
                       <span
                         className="absolute inset-y-0 left-0 bg-white"
                         style={{ width: `${volumePercent}%` }}
@@ -492,6 +712,15 @@ export function NativeVideoPlayer({
                       step={0.05}
                       value={muted ? 0 : volume}
                       onChange={handleVolumeChange}
+                      onPointerDown={clearHideTimer}
+                      onPointerUp={(event) => {
+                        event.currentTarget.blur();
+                        scheduleControlsHide();
+                      }}
+                      onPointerCancel={(event) => {
+                        event.currentTarget.blur();
+                        scheduleControlsHide();
+                      }}
                       className="absolute inset-0 m-0 size-full cursor-pointer opacity-0"
                       aria-label="Video volume"
                       aria-valuetext={`${Math.round(volumePercent)}%`}
@@ -500,15 +729,79 @@ export function NativeVideoPlayer({
                 </div>
               </div>
 
-              <span className="ml-0.5 text-xs font-medium text-white/90 tabular-nums">
-                {formatTime(currentTime)}
-                <span className="px-1 text-white/45">/</span>
-                {formatTime(duration)}
-              </span>
+              <button
+                type="button"
+                className="relative top-px inline-flex h-8 shrink-0 cursor-pointer items-center rounded-md px-1 text-xs font-medium text-white/80 tabular-nums transition-colors duration-150 hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none active:bg-white/15 disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-white/80"
+                aria-label="Toggle between elapsed and remaining video time"
+                title="Toggle elapsed/remaining time"
+                disabled={duration <= 0}
+                onClick={() => {
+                  const next = !showRemainingTime;
+                  setShowRemainingTime(next);
+                  saveVideoPlayerPreferences({
+                    volume,
+                    muted,
+                    showRemainingTime: next,
+                  });
+                  scheduleControlsHide();
+                }}
+              >
+                {showRemainingTime
+                  ? `-${formatTime(Math.max(0, duration - currentTime))}`
+                  : formatTime(currentTime)}
+                {` / ${formatTime(duration)}`}
+              </button>
+            </div>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <PlayerControlButton
+                label={
+                  playerFullscreen
+                    ? "Exit player full screen"
+                    : "Full screen player"
+                }
+                onClick={togglePlayerFullscreen}
+                className={controlButtonClass}
+              >
+                {playerFullscreen ? (
+                  <Minimize2Icon className="size-4" />
+                ) : (
+                  <Maximize2Icon className="size-4" />
+                )}
+              </PlayerControlButton>
             </div>
           </div>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function PlayerControlButton({
+  label,
+  onClick,
+  className,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  className: string;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            className={className}
+            aria-label={label}
+            onClick={onClick}
+          />
+        }
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent side="top">{label}</TooltipContent>
+    </Tooltip>
   );
 }

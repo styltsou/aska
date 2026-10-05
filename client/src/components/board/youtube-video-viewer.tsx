@@ -7,7 +7,6 @@ import {
   type CSSProperties,
 } from "react";
 import {
-  ArrowLeftIcon,
   ExternalLinkIcon,
   LocateFixedIcon,
   Maximize2Icon,
@@ -24,6 +23,10 @@ import {
   AssetTimestampCard,
   hasAssetBeenEdited,
 } from "@/components/board/asset-timestamp-card";
+import {
+  AssetNotesButton,
+  AssetNotesPanel,
+} from "@/components/board/asset-notes-panel";
 import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
 import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
@@ -231,6 +234,7 @@ export function YouTubeVideoViewer({
   );
   const expanded = view ? view === "full" : localExpanded;
   const [activeAsset, setActiveAsset] = useState<VideoLinkAsset>();
+  const [notesOpen, setNotesOpen] = useState(false);
 
   useEffect(() => {
     if (isVideoLinkAsset(asset)) setActiveAsset(asset);
@@ -313,8 +317,10 @@ export function YouTubeVideoViewer({
             {accessibleDescription}
           </DrawerDescription>
           <VideoViewerToolbar
-            onBack={onClose}
-            onDismissAll={onDismissAll}
+            asset={displayedAsset}
+            onClose={onDismissAll ?? onClose}
+            notesOpen={notesOpen}
+            onToggleNotes={() => setNotesOpen((current) => !current)}
             onShowInBoard={onShowInBoard}
             presentation="drawer"
           />
@@ -324,6 +330,9 @@ export function YouTubeVideoViewer({
               asset={displayedAsset}
               open={open}
               workspaceSlug={workspaceSlug}
+              notesOpen={notesOpen}
+              onCloseNotes={() => setNotesOpen(false)}
+              viewer
             />
           ) : (
             <VideoViewerLoading />
@@ -395,8 +404,9 @@ export function YouTubeVideoViewer({
         </DialogDescription>
         <VideoViewerToolbar
           asset={displayedAsset}
-          onBack={onClose}
-          onDismissAll={onDismissAll}
+          onClose={onDismissAll ?? onClose}
+          notesOpen={notesOpen}
+          onToggleNotes={() => setNotesOpen((current) => !current)}
           onPeek={
             displayedAsset && location
               ? () => {
@@ -449,6 +459,8 @@ export function YouTubeVideoViewer({
               animateLayout={!sharedMorphing && !assetModalId}
               layoutDependency={presentation}
               largeMetadata={presentation === "fullscreen"}
+              notesOpen={notesOpen}
+              onCloseNotes={() => setNotesOpen(false)}
               viewer
             />
           ) : (
@@ -462,8 +474,9 @@ export function YouTubeVideoViewer({
 
 function VideoViewerToolbar({
   asset,
-  onBack,
-  onDismissAll,
+  onClose,
+  notesOpen,
+  onToggleNotes,
   onPeek,
   onShowInBoard,
   expanded,
@@ -474,8 +487,9 @@ function VideoViewerToolbar({
   onToggleExpanded,
 }: {
   asset?: VideoLinkAsset;
-  onBack: () => void;
-  onDismissAll?: () => void;
+  onClose: () => void;
+  notesOpen: boolean;
+  onToggleNotes: () => void;
   onPeek?: () => void;
   onShowInBoard?: () => void;
   expanded?: boolean;
@@ -485,7 +499,6 @@ function VideoViewerToolbar({
   fullscreenMorphDuration?: "400ms" | "350ms";
   onToggleExpanded?: () => void;
 }) {
-  const backLabel = "Back";
   const reduceMotion = useReducedMotion();
   const animateLayout = presentation !== "drawer" && !disableLayout;
 
@@ -521,44 +534,16 @@ function VideoViewerToolbar({
                 "size-8 rounded-lg",
                 ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
               )}
-              aria-label={backLabel}
-              onClick={onBack}
+              aria-label="Close video"
+              onClick={onClose}
             />
           }
         >
-          <ArrowLeftIcon className="size-4" />
-          <span className="sr-only">{backLabel}</span>
+          <XIcon className="size-4" />
+          <span className="sr-only">Close video</span>
         </TooltipTrigger>
-        <TooltipContent side="bottom">
-          <span>{backLabel}</span>
-          <KbdGroup className="gap-0.5">
-            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
-          </KbdGroup>
-        </TooltipContent>
+        <TooltipContent side="bottom">Close video</TooltipContent>
       </Tooltip>
-      {onDismissAll ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "size-8 rounded-lg",
-                  ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
-                )}
-                aria-label="Close all to board"
-                onClick={onDismissAll}
-              />
-            }
-          >
-            <XIcon className="size-4" />
-            <span className="sr-only">Close all to board</span>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Close all to board</TooltipContent>
-        </Tooltip>
-      ) : null}
       {onPeek ? (
         <Tooltip>
           <TooltipTrigger
@@ -666,16 +651,21 @@ function VideoViewerToolbar({
           </TooltipContent>
         </Tooltip>
       ) : null}
-      {asset ? (
-        <div className="ml-auto flex items-center gap-0.5">
+      <div className="ml-auto flex items-center gap-0.5">
+        <AssetNotesButton
+          hasNote={Boolean(asset?.note?.trim())}
+          open={notesOpen}
+          onClick={onToggleNotes}
+        />
+        {asset ? (
           <AssetTimestampCard
             createdAt={asset.createdAt}
             updatedAt={asset.updatedAt}
             label="Video details"
             triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
           />
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </motion.div>
   );
 }
@@ -761,6 +751,8 @@ export function YouTubeVideoContent({
   layoutDependency,
   largeMetadata = false,
   viewer = false,
+  notesOpen = false,
+  onCloseNotes,
 }: {
   asset: VideoLinkAsset;
   open: boolean;
@@ -771,6 +763,8 @@ export function YouTubeVideoContent({
   layoutDependency?: string;
   largeMetadata?: boolean;
   viewer?: boolean;
+  notesOpen?: boolean;
+  onCloseNotes?: () => void;
 }) {
   const reduceMotion = useReducedMotion();
   const [playerLoaded, setPlayerLoaded] = useState(false);
@@ -906,7 +900,7 @@ export function YouTubeVideoContent({
         transition={{ layout: layoutTransition }}
         className="relative flex h-full min-h-0 flex-1 overflow-hidden"
       >
-        <ScrollArea className="h-full min-h-0 w-full [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-3 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-1.5 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm">
+        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-3 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-1.5 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm">
           <div className="min-h-full bg-background">
             <div
               className="mx-auto w-full px-5"
@@ -919,17 +913,21 @@ export function YouTubeVideoContent({
               <div className="flex items-center justify-start pt-4 pb-8">
                 {media}
               </div>
-              <div className="space-y-1 pb-5">
-                {metadata}
-                <VideoLinkNoteEditor
-                  asset={asset}
-                  open={open}
-                  workspaceSlug={workspaceSlug}
-                />
-              </div>
+              <div className="space-y-1 pb-5">{metadata}</div>
             </div>
           </div>
         </ScrollArea>
+        <AssetNotesPanel
+          open={notesOpen}
+          expanded={workspace}
+          onClose={onCloseNotes ?? (() => undefined)}
+        >
+          <VideoLinkNoteEditor
+            asset={asset}
+            open={open}
+            workspaceSlug={workspaceSlug}
+          />
+        </AssetNotesPanel>
       </motion.div>
     );
   }
@@ -1296,11 +1294,8 @@ function VideoLinkNoteEditor({
   );
 
   return (
-    <div className={cn("pt-3", className)}>
-      <label
-        htmlFor={`link-note-${asset.id}`}
-        className="text-xs font-medium text-muted-foreground"
-      >
+    <div className={className}>
+      <label htmlFor={`link-note-${asset.id}`} className="sr-only">
         Notes
       </label>
       <AutoResizeTextarea
@@ -1310,7 +1305,7 @@ function VideoLinkNoteEditor({
         onChange={(event) => handleChange(event.target.value)}
         placeholder="Add a note"
         rows={1}
-        className="mt-1 block min-h-6 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
+        className="block min-h-6 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
       />
       {editedLabel ? (
         <p className="mt-1 text-xs text-muted-foreground/70">{editedLabel}</p>

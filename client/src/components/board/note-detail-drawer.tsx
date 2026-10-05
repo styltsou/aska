@@ -10,7 +10,6 @@ import {
   useState,
 } from "react";
 import {
-  ArrowLeftIcon,
   CheckIcon,
   LocateFixedIcon,
   LoaderCircleIcon,
@@ -1678,7 +1677,7 @@ export function NoteDetailDrawer({
             ? split
               ? "inset-0 h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
               : "top-1/2 left-1/2 right-auto bottom-auto h-dvh w-dvw max-w-none -translate-x-1/2 -translate-y-1/2 rounded-none bg-background shadow-none ring-1 ring-transparent"
-            : "top-1/2 left-1/2 right-auto bottom-auto h-[min(52rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[64rem] -translate-x-1/2 -translate-y-1/2 rounded-xl shadow-2xl",
+            : "top-1/2 left-1/2 right-auto bottom-auto h-[min(64rem,calc(100dvh-1rem))] w-[calc(100vw-2rem)] max-w-[64rem] -translate-x-1/2 -translate-y-1/2 rounded-xl shadow-2xl",
           split &&
             "md:right-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--workspace-peek-stage-gap))] md:w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--workspace-peek-stage-gap))]",
         )}
@@ -1711,45 +1710,20 @@ export function NoteDetailDrawer({
                     )}
                     variant="ghost"
                     size="icon"
-                    aria-label="Go back"
-                    onClick={onBack ?? requestClose}
+                    aria-label="Close note"
+                    onClick={
+                      onDismissAll
+                        ? requestDismissAll
+                        : (onBack ?? requestClose)
+                    }
                   >
-                    <ArrowLeftIcon />
-                    <span className="sr-only">Go back</span>
+                    <XIcon />
+                    <span className="sr-only">Close note</span>
                   </Button>
                 }
               />
-              <TooltipContent side="bottom">
-                <span>Go back</span>
-                <KbdGroup className="gap-0.5">
-                  <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
-                </KbdGroup>
-              </TooltipContent>
+              <TooltipContent side="bottom">Close note</TooltipContent>
             </Tooltip>
-            {onDismissAll ? (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      type="button"
-                      className={cn(
-                        "size-8 rounded-lg",
-                        ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
-                      )}
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Close all to board"
-                      onClick={requestDismissAll}
-                    >
-                      <XIcon className="size-4" />
-                    </Button>
-                  }
-                />
-                <TooltipContent side="bottom">
-                  Close all to board
-                </TooltipContent>
-              </Tooltip>
-            ) : null}
             {!isPeekMirror ? (
               <Tooltip>
                 <TooltipTrigger

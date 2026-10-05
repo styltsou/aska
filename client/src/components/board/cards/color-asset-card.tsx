@@ -46,8 +46,9 @@ export function ColorAssetCard({
   return (
     <div
       data-asset-card-surface
+      data-asset-card-outline
       className={cn(
-        "group relative w-full overflow-hidden rounded-lg border bg-sidebar transition-colors duration-100",
+        "group relative w-full overflow-hidden rounded-lg border border-border bg-sidebar transition-colors duration-100",
         onOpen && "cursor-pointer",
         !selected && "hover:border-sidebar-foreground/20",
         isContextMenuOpen && "border-sidebar-foreground/20",
@@ -70,44 +71,42 @@ export function ColorAssetCard({
           }}
         />
       ) : null}
-      <div className="p-3">
-        <div
-          data-asset-card-hero="color"
-          className={cn(
-            "group/surface pointer-events-none relative z-10 aspect-square w-full overflow-hidden rounded-sm",
-            hasAlpha &&
-              "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
-          )}
-          style={surfaceStyle}
-        >
-          <AnimatePresence>
-            {surfaceHovered ? (
-              <motion.div
-                data-asset-morph-omit
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ duration: 0.1, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2.5 pb-2.5"
+      <div
+        data-asset-card-hero="color"
+        className={cn(
+          "group/surface pointer-events-none relative z-10 aspect-square w-full overflow-hidden rounded-b-lg border-b border-border",
+          hasAlpha &&
+            "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
+        )}
+        style={surfaceStyle}
+      >
+        <AnimatePresence>
+          {surfaceHovered ? (
+            <motion.div
+              data-asset-morph-omit
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-x-0 bottom-0 z-10 flex justify-center px-2.5 pb-2.5"
+            >
+              <button
+                type="button"
+                className="pointer-events-auto inline-flex items-center rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-1 hover:ring-sidebar-foreground/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void copyColorValue();
+                }}
+                aria-label={copyLabel}
+                title={copyLabel}
               >
-                <button
-                  type="button"
-                  className="pointer-events-auto inline-flex items-center rounded-lg border border-sidebar-foreground/10 bg-sidebar/60 px-3 py-1.5 text-xs font-medium text-sidebar-foreground backdrop-blur-sm transition-all duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-sidebar/90 hover:ring-1 hover:ring-sidebar-foreground/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void copyColorValue();
-                  }}
-                  aria-label={copyLabel}
-                  title={copyLabel}
-                >
-                  {asset.gradient ? "Copy CSS" : "Copy hex"}
-                </button>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
-        </div>
+                {asset.gradient ? "Copy CSS" : "Copy hex"}
+              </button>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
-      <div className="pointer-events-none relative z-10 flex min-w-0 items-center gap-3 bg-sidebar px-3 pb-3">
+      <div className="pointer-events-none relative z-0 flex min-w-0 items-center gap-3 bg-sidebar p-3 leading-6">
         <span
           className={cn(
             "truncate font-medium",

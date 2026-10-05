@@ -799,12 +799,13 @@ function WorkspaceAssetViewController({
           }}
           onShowInBoard={showAction}
           onDismissAll={closeAllAssets}
-          onAssetChange={(image) => {
+          onAssetChange={(image, view) => {
             const node = siblingImageNodes.find(
               (candidate) => candidate.id === image.id,
             );
             openAsset(image.id, {
               replace: true,
+              presentation: view === "full" ? "fullscreen" : undefined,
               initialData:
                 node?.type === "image" && location
                   ? { asset: node, location }

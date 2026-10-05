@@ -8,7 +8,6 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
-  ArrowLeftIcon,
   DownloadIcon,
   ExternalLinkIcon,
   LocateFixedIcon,
@@ -20,6 +19,10 @@ import { toast } from "sonner";
 
 import type { VideoAsset } from "@/types/asset";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
+import {
+  AssetNotesButton,
+  AssetNotesPanel,
+} from "@/components/board/asset-notes-panel";
 import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
 import { NativeVideoPlayer } from "@/components/board/native-video-player";
 import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
@@ -38,7 +41,6 @@ import {
   DrawerDescription,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -97,6 +99,7 @@ export function VideoAssetViewer({
     initialPresentation === "fullscreen",
   );
   const [activeAsset, setActiveAsset] = useState<VideoAsset>();
+  const [notesOpen, setNotesOpen] = useState(false);
   const [initialPlaybackTime] = useState(() => {
     const playbackAssetId = assetModalId ?? asset?.id;
     return playbackAssetId
@@ -122,6 +125,10 @@ export function VideoAssetViewer({
     ? { duration: 0 }
     : VIDEO_VIEWER_LAYOUT_TRANSITION;
   const accessibleTitle = displayedAsset?.title?.trim() || "Video";
+  const videoRatio =
+    displayedAsset?.width && displayedAsset.height
+      ? displayedAsset.width / displayedAsset.height
+      : 16 / 9;
   const accessibleDescription = displayedAsset
     ? `Watch ${accessibleTitle} without leaving Aska.`
     : "Loading video details.";
@@ -170,8 +177,9 @@ export function VideoAssetViewer({
           </DrawerDescription>
           <NativeVideoToolbar
             asset={displayedAsset}
-            onBack={onClose}
-            onDismissAll={onDismissAll}
+            onClose={onDismissAll ?? onClose}
+            onToggleNotes={() => setNotesOpen((current) => !current)}
+            notesOpen={notesOpen}
             onShowInBoard={onShowInBoard}
             onDownload={
               displayedAsset?.processingStatus === "completed" &&
@@ -187,6 +195,8 @@ export function VideoAssetViewer({
               open={open}
               workspaceSlug={workspaceSlug}
               initialPlaybackTime={initialPlaybackTime}
+              notesOpen={notesOpen}
+              onCloseNotes={() => setNotesOpen(false)}
             />
           ) : (
             <NativeVideoLoading />
@@ -245,11 +255,18 @@ export function VideoAssetViewer({
             style={{ transformOrigin: "center center" }}
           />
         }
+        style={
+          expanded
+            ? undefined
+            : {
+                width: `min(calc(100vw - 2rem), 76rem, calc((100dvh - 6rem) * ${videoRatio}))`,
+              }
+        }
         className={cn(
           "flex min-h-0 max-h-[calc(100svh-2rem)] flex-col overflow-hidden transition-[background-color,box-shadow,border-radius] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
           expanded
             ? "top-0 left-0 h-dvh max-h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
-            : "top-1/2 h-[min(48rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[76rem] -translate-y-1/2 rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10",
+            : "top-1/2 h-auto w-auto max-w-none -translate-y-1/2 rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10",
         )}
       >
         <DialogTitle className="sr-only">{accessibleTitle}</DialogTitle>
@@ -258,8 +275,9 @@ export function VideoAssetViewer({
         </DialogDescription>
         <NativeVideoToolbar
           asset={displayedAsset}
-          onBack={onClose}
-          onDismissAll={onDismissAll}
+          onClose={onDismissAll ?? onClose}
+          onToggleNotes={() => setNotesOpen((current) => !current)}
+          notesOpen={notesOpen}
           onShowInBoard={onShowInBoard}
           onDownload={
             displayedAsset?.processingStatus === "completed" &&
@@ -282,7 +300,8 @@ export function VideoAssetViewer({
         />
         <DialogBody
           className={cn(
-            "min-h-0 flex-1 overflow-hidden border-t border-b-0 bg-background p-0 transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            "relative flex min-h-0 overflow-hidden border-t-0 border-b-0 bg-background p-0 transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            expanded ? "flex-1" : "w-full flex-none",
             assetModalId
               ? expanded
                 ? "duration-[400ms]"
@@ -292,6 +311,7 @@ export function VideoAssetViewer({
               ? "rounded-none border-transparent"
               : "rounded-t-xl rounded-b-none border-border",
           )}
+          style={expanded ? undefined : { aspectRatio: `${videoRatio}` }}
         >
           {displayedAsset ? (
             <NativeVideoContent
@@ -303,6 +323,8 @@ export function VideoAssetViewer({
               animateLayout={!sharedMorphing && !assetModalId}
               layoutDependency={presentation}
               initialPlaybackTime={initialPlaybackTime}
+              notesOpen={notesOpen}
+              onCloseNotes={() => setNotesOpen(false)}
               viewer
             />
           ) : (
@@ -316,8 +338,9 @@ export function VideoAssetViewer({
 
 function NativeVideoToolbar({
   asset,
-  onBack,
-  onDismissAll,
+  onClose,
+  onToggleNotes,
+  notesOpen,
   onShowInBoard,
   onDownload,
   expanded,
@@ -328,8 +351,9 @@ function NativeVideoToolbar({
   onToggleExpanded,
 }: {
   asset?: VideoAsset;
-  onBack: () => void;
-  onDismissAll?: () => void;
+  onClose: () => void;
+  onToggleNotes: () => void;
+  notesOpen: boolean;
   onShowInBoard?: () => void;
   onDownload?: () => void;
   expanded?: boolean;
@@ -368,26 +392,12 @@ function NativeVideoToolbar({
       )}
     >
       <ToolbarButton
-        label="Back"
-        onClick={onBack}
+        label="Close video"
+        onClick={onClose}
         className={iconButtonClass}
-        shortcut={
-          <KbdGroup className="gap-0.5">
-            <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
-          </KbdGroup>
-        }
       >
-        <ArrowLeftIcon className="size-4" />
+        <XIcon className="size-4" />
       </ToolbarButton>
-      {onDismissAll ? (
-        <ToolbarButton
-          label="Close all to board"
-          onClick={onDismissAll}
-          className={iconButtonClass}
-        >
-          <XIcon className="size-4" />
-        </ToolbarButton>
-      ) : null}
       {onShowInBoard ? (
         <ToolbarButton
           label="Show in board"
@@ -425,7 +435,15 @@ function NativeVideoToolbar({
           </span>
         </ToolbarButton>
       ) : null}
+      <span className="max-w-[min(32rem,calc(100vw-12rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground">
+        {asset?.title?.trim() || "Untitled video"}
+      </span>
       <div className="ml-auto flex items-center gap-0.5">
+        <AssetNotesButton
+          hasNote={Boolean(asset?.note?.trim())}
+          open={notesOpen}
+          onClick={onToggleNotes}
+        />
         {asset?.sourceUrl ? (
           <Tooltip>
             <TooltipTrigger
@@ -474,13 +492,11 @@ function ToolbarButton({
   label,
   onClick,
   className,
-  shortcut,
   children,
 }: {
   label: string;
   onClick: () => void;
   className: string;
-  shortcut?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -502,7 +518,6 @@ function ToolbarButton({
       </TooltipTrigger>
       <TooltipContent side="bottom" className="flex items-center gap-2">
         <span>{label}</span>
-        {shortcut}
       </TooltipContent>
     </Tooltip>
   );
@@ -516,6 +531,8 @@ function NativeVideoContent({
   animateLayout = false,
   layoutDependency,
   initialPlaybackTime,
+  notesOpen,
+  onCloseNotes,
   viewer = false,
 }: {
   asset: VideoAsset;
@@ -525,6 +542,8 @@ function NativeVideoContent({
   animateLayout?: boolean;
   layoutDependency?: string;
   initialPlaybackTime?: number;
+  notesOpen: boolean;
+  onCloseNotes: () => void;
   viewer?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
@@ -572,13 +591,22 @@ function NativeVideoContent({
       layout={animateLayout}
       layoutDependency={layoutDependency ?? workspace}
       transition={{ layout: layoutTransition }}
-      className="relative isolate flex w-full shrink-0 items-center justify-center overflow-hidden rounded-md bg-black"
-      style={{
-        aspectRatio: `${ratio}`,
-        maxWidth: workspace
-          ? `min(100%, calc((100dvh - 9rem) * ${ratio}))`
-          : `min(100%, calc((100dvh - 12rem) * ${ratio}))`,
-      }}
+      className={cn(
+        "relative isolate flex w-full shrink-0 items-center justify-center overflow-hidden bg-black",
+        viewer && !workspace
+          ? "absolute inset-0 size-full max-w-none"
+          : "rounded-md",
+      )}
+      style={
+        viewer && !workspace
+          ? undefined
+          : {
+              aspectRatio: `${ratio}`,
+              maxWidth: workspace
+                ? `min(100%, calc((100dvh - 9rem) * ${ratio}))`
+                : `min(100%, calc((100dvh - 12rem) * ${ratio}))`,
+            }
+      }
     >
       {ready && open ? (
         <NativeVideoPlayer
@@ -589,6 +617,7 @@ function NativeVideoContent({
           title={asset.title?.trim() || "Untitled video"}
           initialTime={initialPlaybackTime}
           continuePlaying={initialPlaybackTime !== undefined}
+          fit={viewer && !workspace ? "cover" : "contain"}
         />
       ) : asset.processingStatus === "failed" ? (
         <div className="px-6 text-center text-sm text-white/70">
@@ -602,46 +631,62 @@ function NativeVideoContent({
 
   const metadata = (
     <div className="space-y-1">
-      <h2 className="font-heading text-lg leading-snug font-medium text-balance sm:text-xl">
-        {asset.title?.trim() || "Untitled video"}
-      </h2>
       {asset.sourceLabel ? (
         <p className="text-sm text-muted-foreground">{asset.sourceLabel}</p>
       ) : null}
-      <div className="pt-3">
-        <label
-          htmlFor={`video-note-${asset.id}`}
-          className="text-xs font-medium text-muted-foreground"
-        >
-          Notes
-        </label>
-        <AutoResizeTextarea
-          id={`video-note-${asset.id}`}
-          spellCheck={false}
-          value={note}
-          maxLength={10_000}
-          onChange={(event) => setNote(event.target.value)}
-          placeholder="Add a note"
-          rows={1}
-          className="mt-1 block min-h-6 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
-        />
-        {note.trim() !== (asset.note ?? "").trim() ? (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="mt-2"
-            disabled={saving}
-            onClick={() => void save()}
-          >
-            {saving ? "Saving…" : "Save note"}
-          </Button>
-        ) : null}
-      </div>
     </div>
+  );
+  const notesEditor = (
+    <>
+      <label htmlFor={`video-note-${asset.id}`} className="sr-only">
+        Your note
+      </label>
+      <AutoResizeTextarea
+        id={`video-note-${asset.id}`}
+        spellCheck={false}
+        value={note}
+        maxLength={10_000}
+        onChange={(event) => setNote(event.target.value)}
+        placeholder="Add a note about this video"
+        rows={5}
+        className="block min-h-28 w-full resize-y border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
+      />
+      {note.trim() !== (asset.note ?? "").trim() ? (
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="mt-3"
+          disabled={saving}
+          onClick={() => void save()}
+        >
+          {saving ? "Saving…" : "Save note"}
+        </Button>
+      ) : null}
+    </>
   );
 
   if (viewer) {
+    if (!workspace) {
+      return (
+        <motion.div
+          layout={animateLayout}
+          layoutDependency={layoutDependency ?? workspace}
+          transition={{ layout: layoutTransition }}
+          className="absolute inset-0 overflow-hidden bg-black"
+        >
+          {media}
+          <AssetNotesPanel
+            open={notesOpen}
+            expanded={false}
+            onClose={onCloseNotes}
+          >
+            {notesEditor}
+          </AssetNotesPanel>
+        </motion.div>
+      );
+    }
+
     return (
       <motion.div
         layout={animateLayout}
@@ -649,7 +694,7 @@ function NativeVideoContent({
         transition={{ layout: layoutTransition }}
         className="relative flex h-full min-h-0 flex-1 overflow-hidden"
       >
-        <ScrollArea className="h-full min-h-0 w-full [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-3 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-1.5 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35">
+        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-3 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-1.5 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35">
           <div className="min-h-full bg-background">
             <div className="mx-auto w-full max-w-[76rem] px-5">
               <div className="flex items-center justify-center pt-4 pb-8">
@@ -659,17 +704,29 @@ function NativeVideoContent({
             </div>
           </div>
         </ScrollArea>
+        <AssetNotesPanel
+          open={notesOpen}
+          expanded={workspace}
+          onClose={onCloseNotes}
+        >
+          {notesEditor}
+        </AssetNotesPanel>
       </motion.div>
     );
   }
 
   return (
-    <ScrollArea className="h-full min-h-0 w-full">
-      <div className="space-y-5 p-3 sm:p-4">
-        <div className="flex justify-center">{media}</div>
-        {metadata}
-      </div>
-    </ScrollArea>
+    <div className="relative min-h-0 flex-1">
+      <ScrollArea className="h-full min-h-0 w-full">
+        <div className="space-y-5 p-3 sm:p-4">
+          <div className="flex justify-center">{media}</div>
+          {metadata}
+        </div>
+      </ScrollArea>
+      <AssetNotesPanel open={notesOpen} expanded={false} onClose={onCloseNotes}>
+        {notesEditor}
+      </AssetNotesPanel>
+    </div>
   );
 }
 

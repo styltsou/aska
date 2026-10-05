@@ -68,12 +68,21 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("aspect-video w-full");
     expect(html).not.toContain("aspect-square");
     expect(html).toContain("bg-sidebar");
-    expect(html).toContain('class="min-h-0 p-3"');
-    expect(html).toContain("space-y-1 bg-sidebar px-3 pb-3");
-    expect(html).toContain("overflow-hidden rounded-sm bg-muted/40");
-    expect(html).toContain("bg-popover/85");
-    expect(html).toContain("text-popover-foreground");
-    expect(html).toContain("YouTube · A channel");
+    expect(html).toContain("aspect-video w-full overflow-hidden rounded-b-lg");
+    expect(html).toContain("space-y-1 bg-sidebar px-3 pt-3 pb-3");
+    expect(html).toContain("data-asset-card-outline");
+    expect(html).toContain("hover:border-sidebar-foreground/20");
+    expect(html).not.toContain('class="min-h-0 p-3"');
+    expect(html).toContain('viewBox="0 0 68 48"');
+    expect(html).not.toContain("text-popover-foreground");
+    expect(html).toContain("A channel");
+    expect(html.indexOf(">A channel</div>")).toBeGreaterThan(
+      html.indexOf(">A video</div>"),
+    );
+    expect(html).not.toContain("YouTube ·");
+    expect(html).not.toContain("lucide-globe");
+    expect(html).toContain("border-b border-border bg-muted/40");
+    expect(html).not.toContain("shadow-sm");
     expect(html).not.toContain(`href="${asset.originalUrl}"`);
   });
 
@@ -116,7 +125,8 @@ describe("LinkAssetCard", () => {
       />,
     );
 
-    expect(html.startsWith('<a href="https://example.com/article"')).toBe(true);
+    expect(html).toContain('<a data-asset-card-outline="true"');
+    expect(html).toContain('href="https://example.com/article"');
     expect(html).not.toContain("Open video details");
     expect(html).toContain("group relative block w-full");
     expect(html).toContain("aspect-video w-full");
@@ -172,7 +182,7 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
     expect(html).not.toContain('data-slot="optimistic-link-preview"');
     expect(html).toContain('aria-label="Loading video description"');
-    expect(html).not.toContain("group-hover:scale-[1.05]");
+    expect(html).toContain("group-hover:scale-[1.05]");
   });
 
   it("keeps the direct YouTube thumbnail under a stored rendition", () => {
@@ -260,10 +270,12 @@ describe("LinkCardPreview", () => {
     );
 
     expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
-    expect(html).toContain("lucide-play");
-    expect(html).toContain("bg-popover/85");
+    expect(html).toContain('viewBox="0 0 68 48"');
     expect(html).toContain("A video");
-    expect(html).toContain("www.youtube.com");
+    expect(html).not.toContain("www.youtube.com");
+    expect(html).toContain(
+      "aspect-video w-full shrink-0 overflow-hidden rounded-b-lg",
+    );
     expect(html).not.toContain("scale(");
   });
 
@@ -283,10 +295,13 @@ describe("LinkCardPreview", () => {
     );
 
     expect(html).toContain("aspect-video");
+    expect(html).toContain(
+      "aspect-video w-full shrink-0 overflow-hidden rounded-b-lg",
+    );
     expect(html).toContain("A thorough writeup about the topic.");
     expect(html).toContain("https://example.com/preview.jpg");
     expect(html).toContain("https://example.com/favicon.ico");
-    expect(html).not.toContain("lucide-play");
+    expect(html).not.toContain('viewBox="0 0 68 48"');
     expect(html).not.toContain("i.ytimg.com");
   });
 

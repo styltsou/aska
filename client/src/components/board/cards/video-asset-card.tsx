@@ -1,18 +1,13 @@
-import { AlertCircleIcon, LoaderCircleIcon, PlayIcon } from "lucide-react";
+import { AlertCircleIcon, LoaderCircleIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "motion/react";
 
 import type { VideoAsset } from "@/types/asset";
-import {
-  VIDEO_CARD_PLAY_BUTTON_CLASS,
-  VIDEO_CARD_TIME_BADGE_CLASS,
-} from "@/components/board/video-card-control-styles";
+import { VIDEO_CARD_TIME_BADGE_CLASS } from "@/components/board/video-card-control-styles";
 import { hasSelectionModifier } from "@/lib/selection";
 import { recordVideoPlaybackPosition } from "@/lib/video-playback-position";
 import { useVideoUploadPreview } from "@/lib/video-upload-preview";
 import { cn } from "@/lib/utils";
-
-const HOVER_PREVIEW_DELAY_MS = 1_400;
 
 function formatDuration(seconds: number) {
   const whole = Math.floor(seconds);
@@ -39,20 +34,17 @@ export function VideoAssetCard({
   const ready = asset.processingStatus === "completed" && !!asset.url;
   const uploadPreview = useVideoUploadPreview(asset.id);
   const reduceMotion = useReducedMotion();
-  const hoverTimerRef = useRef<number | undefined>(undefined);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const [previewing, setPreviewing] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTime, setPreviewTime] = useState(0);
   const posterUrl = asset.posterUrl ?? uploadPreview?.posterUrl;
   const width = asset.width ?? uploadPreview?.width;
   const height = asset.height ?? uploadPreview?.height;
 
   const stopPreview = () => {
-    if (hoverTimerRef.current !== undefined) {
-      window.clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = undefined;
-    }
     setPreviewing(false);
+    setPreviewVisible(false);
     setPreviewTime(0);
   };
 
@@ -63,22 +55,10 @@ export function VideoAssetCard({
     }
   };
 
-  useEffect(
-    () => () => {
-      if (hoverTimerRef.current !== undefined) {
-        window.clearTimeout(hoverTimerRef.current);
-      }
-    },
-    [],
-  );
-
   useEffect(() => {
     if (!reduceMotion && !dragging) return;
-    if (hoverTimerRef.current !== undefined) {
-      window.clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = undefined;
-    }
     setPreviewing(false);
+    setPreviewVisible(false);
     setPreviewTime(0);
   }, [dragging, reduceMotion]);
 
@@ -111,18 +91,9 @@ export function VideoAssetCard({
       }}
       onMouseEnter={() => {
         if (!ready || reduceMotion || dragging) return;
-        hoverTimerRef.current = window.setTimeout(() => {
-          hoverTimerRef.current = undefined;
-          setPreviewing(true);
-        }, HOVER_PREVIEW_DELAY_MS);
+        setPreviewing(true);
       }}
       onMouseLeave={stopPreview}
-      onPointerDown={() => {
-        if (hoverTimerRef.current !== undefined) {
-          window.clearTimeout(hoverTimerRef.current);
-          hoverTimerRef.current = undefined;
-        }
-      }}
       aria-label={ready ? `Open video: ${asset.title ?? "Video"}` : undefined}
     >
       <div
@@ -157,7 +128,11 @@ export function VideoAssetCard({
             playsInline
             preload="auto"
             aria-hidden="true"
-            className="absolute inset-0 size-full object-cover"
+            className={cn(
+              "absolute inset-0 size-full object-cover transition-opacity duration-200 ease-out will-change-[opacity] motion-reduce:transition-none",
+              previewVisible ? "opacity-100" : "opacity-0",
+            )}
+            onPlaying={() => setPreviewVisible(true)}
             onTimeUpdate={(event) => {
               const seconds = event.currentTarget.currentTime;
               const wholeSeconds = Math.floor(seconds);
@@ -170,15 +145,6 @@ export function VideoAssetCard({
       </div>
       {ready ? (
         <>
-          <span
-            className={cn(
-              "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
-              VIDEO_CARD_PLAY_BUTTON_CLASS,
-              previewing && "opacity-0",
-            )}
-          >
-            <PlayIcon className="ml-0.5 size-4 fill-current" />
-          </span>
           {asset.durationSeconds ? (
             <span
               className={cn(
@@ -186,7 +152,11 @@ export function VideoAssetCard({
                 VIDEO_CARD_TIME_BADGE_CLASS,
               )}
             >
-              {formatDuration(previewing ? previewTime : asset.durationSeconds)}
+              {formatDuration(
+                previewing
+                  ? Math.max(0, asset.durationSeconds - previewTime)
+                  : asset.durationSeconds,
+              )}
             </span>
           ) : null}
         </>

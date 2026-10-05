@@ -11,6 +11,9 @@ describe("ColorCardPreview", () => {
 
     expect(html).toContain("data-color-card-preview");
     expect(html).toContain("data-color-card-preview-swatch");
+    expect(html).toContain("w-full flex-1 overflow-hidden rounded-b-lg");
+    expect(html).toContain("rounded-b-lg border-b border-border");
+    expect(html).toContain("bg-sidebar px-[4.3%] py-[4.3%]");
     expect(html).toContain("Midnight blue");
     expect(html).toContain("#1A2B3C");
   });

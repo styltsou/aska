@@ -8,7 +8,6 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   ImageIcon,
-  ArrowLeftIcon,
   LocateFixedIcon,
   LoaderCircleIcon,
   Maximize2Icon,
@@ -28,12 +27,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
+import {
+  AssetNotesButton,
+  AssetNotesPanel,
+} from "@/components/board/asset-notes-panel";
 import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
 import { useUpdateColor } from "@/api/collection";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
@@ -125,6 +126,7 @@ export function ColorDetailDrawer({
   const displayedColor = color ?? (loading ? undefined : activeColor);
   const [includeDescendants, setIncludeDescendants] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [localExpanded, setLocalExpanded] = useState(false);
   const expanded = view ? view === "full" : localExpanded;
   const setExpanded = (value: boolean) => {
@@ -178,6 +180,8 @@ export function ColorDetailDrawer({
         loading={loading}
         open={open}
         expanded={expanded}
+        notesOpen={notesOpen}
+        onNotesOpenChange={setNotesOpen}
         onExpandedChange={setExpanded}
         onClose={onClose}
         onDismissAll={onDismissAll}
@@ -264,17 +268,20 @@ export function ColorDetailDrawer({
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
-              {onDismissAll ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Close all to board"
-                  onClick={onDismissAll}
-                >
-                  <XIcon className="size-4" />
-                </Button>
-              ) : null}
+              <AssetNotesButton
+                hasNote={Boolean(displayedColor.note?.trim())}
+                open={notesOpen}
+                onClick={() => setNotesOpen((current) => !current)}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Close color"
+                onClick={onDismissAll ?? onClose}
+              >
+                <XIcon className="size-4" />
+              </Button>
               <Button
                 type="button"
                 variant="ghost"
@@ -327,110 +334,93 @@ export function ColorDetailDrawer({
                 updatedAt={displayedColor.updatedAt}
                 label="Color details"
               />
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <DrawerClose
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Close"
-                        />
-                      }
-                    />
-                  }
-                >
-                  <XIcon className="size-4" />
-                  <span className="sr-only">Close</span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <span>Close</span>
-                  <KbdGroup className="gap-0.5">
-                    <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">Esc</Kbd>
-                  </KbdGroup>
-                </TooltipContent>
-              </Tooltip>
             </div>
           </DrawerHeader>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {displayedColor ? (
-              <ColorNoteEditor
-                asset={displayedColor}
-                workspaceSlug={workspaceSlug}
-                className="border-b px-4 pb-4"
-              />
-            ) : null}
-            <div className="flex items-center justify-between gap-3 px-4 py-4">
-              <span className="text-sm font-medium text-primary">
-                Relevant images
-              </span>
-              {scope.type === "collection" ? (
-                <Tabs
-                  value={includeDescendants ? "collection" : "view"}
-                  onValueChange={(value) =>
-                    setIncludeDescendants(value === "collection")
-                  }
-                  variant="segment"
-                  size="sm"
-                >
-                  <TabsList aria-label="Search scope">
-                    <TabsTrigger value="view">This view</TabsTrigger>
-                    <TabsTrigger value="collection">
-                      Entire collection
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              ) : null}
-            </div>
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="flex items-center justify-between gap-3 px-4 py-4">
+                <span className="text-sm font-medium text-primary">
+                  Relevant images
+                </span>
+                {scope.type === "collection" ? (
+                  <Tabs
+                    value={includeDescendants ? "collection" : "view"}
+                    onValueChange={(value) =>
+                      setIncludeDescendants(value === "collection")
+                    }
+                    variant="segment"
+                    size="sm"
+                  >
+                    <TabsList aria-label="Search scope">
+                      <TabsTrigger value="view">This view</TabsTrigger>
+                      <TabsTrigger value="collection">
+                        Entire collection
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                ) : null}
+              </div>
 
-            <div className="relative min-h-0 flex-1">
-              <ScrollArea className="size-full [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-4 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-2 [&_[data-slot=scroll-area-thumb]]:bg-sidebar-foreground/55 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm">
-                <div className="min-h-full px-4 pt-0 pb-4">
-                  {search.isLoading || search.isSearching ? (
-                    <ColorResultsSkeleton />
-                  ) : search.isError ? (
-                    <ColorSearchError onRetry={() => void search.refetch()} />
-                  ) : results.length === 0 ? (
-                    <ColorSearchEmpty />
-                  ) : (
-                    <div className="columns-2 gap-3">
-                      {results.map((result) => {
-                        const location =
-                          result.location.type === "collection" &&
-                          result.location.folderNames.length > 0
-                            ? result.location.folderNames.join(" / ")
-                            : result.location.type === "collection"
-                              ? "Collection root"
-                              : "Inbox";
-                        return (
-                          <ImageResultTile
-                            key={result.image.id}
-                            image={result.image}
-                            label={location}
-                            onOpen={() => {
-                              onOpenImage({
-                                id: result.image.id,
-                                type: "image",
-                                url: result.image.url,
-                                width: result.image.width,
-                                height: result.image.height,
-                                title: result.image.title ?? undefined,
-                                alt: result.image.alt ?? undefined,
-                                blurDataURL:
-                                  result.image.blurDataURL ?? undefined,
-                                dominantColors: result.image.dominantColors,
-                              });
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
+              <div className="relative min-h-0 flex-1">
+                <ScrollArea className="size-full [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-4 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-2 [&_[data-slot=scroll-area-thumb]]:bg-sidebar-foreground/55 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm">
+                  <div className="min-h-full px-4 pt-0 pb-4">
+                    {search.isLoading || search.isSearching ? (
+                      <ColorResultsSkeleton />
+                    ) : search.isError ? (
+                      <ColorSearchError onRetry={() => void search.refetch()} />
+                    ) : results.length === 0 ? (
+                      <ColorSearchEmpty />
+                    ) : (
+                      <div className="columns-2 gap-3">
+                        {results.map((result) => {
+                          const location =
+                            result.location.type === "collection" &&
+                            result.location.folderNames.length > 0
+                              ? result.location.folderNames.join(" / ")
+                              : result.location.type === "collection"
+                                ? "Collection root"
+                                : "Inbox";
+                          return (
+                            <ImageResultTile
+                              key={result.image.id}
+                              image={result.image}
+                              label={location}
+                              onOpen={() => {
+                                onOpenImage({
+                                  id: result.image.id,
+                                  type: "image",
+                                  url: result.image.url,
+                                  width: result.image.width,
+                                  height: result.image.height,
+                                  title: result.image.title ?? undefined,
+                                  alt: result.image.alt ?? undefined,
+                                  blurDataURL:
+                                    result.image.blurDataURL ?? undefined,
+                                  dominantColors: result.image.dominantColors,
+                                });
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
             </div>
+            <AssetNotesPanel
+              open={notesOpen}
+              expanded={false}
+              onClose={() => setNotesOpen(false)}
+            >
+              {displayedColor ? (
+                <ColorNoteEditor
+                  asset={displayedColor}
+                  workspaceSlug={workspaceSlug}
+                />
+              ) : null}
+            </AssetNotesPanel>
           </div>
         </DrawerContent>
       ) : loading ? (
@@ -454,6 +444,8 @@ function ColorDetailModal({
   loading,
   open,
   expanded,
+  notesOpen,
+  onNotesOpenChange,
   onExpandedChange,
   onClose,
   onDismissAll,
@@ -482,6 +474,8 @@ function ColorDetailModal({
   loading: boolean;
   open: boolean;
   expanded: boolean;
+  notesOpen: boolean;
+  onNotesOpenChange: (open: boolean) => void;
   onExpandedChange: (value: boolean) => void;
   onClose: () => void;
   onDismissAll?: () => void;
@@ -608,25 +602,11 @@ function ColorDetailModal({
               "size-8 rounded-lg",
               ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
             )}
-            aria-label="Back"
-            onClick={onClose}
+            aria-label="Close color"
+            onClick={onDismissAll ?? onClose}
           >
-            <ArrowLeftIcon className="size-4" />
+            <XIcon className="size-4" />
           </Button>
-          {onDismissAll ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "size-8 rounded-lg",
-                ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
-              )}
-              aria-label="Close all to board"
-              onClick={onDismissAll}
-            >
-              <XIcon className="size-4" />
-            </Button>
-          ) : null}
           {onPeek ? (
             <Button
               variant="ghost"
@@ -691,12 +671,21 @@ function ColorDetailModal({
               </AnimatePresence>
             </span>
           </Button>
+          <span className="max-w-[min(32rem,calc(100vw-14rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground">
+            {title}
+          </span>
+          <AssetNotesButton
+            hasNote={Boolean(color?.note?.trim())}
+            open={notesOpen}
+            onClick={() => onNotesOpenChange(!notesOpen)}
+            className="ml-auto"
+          />
           {onEdit ? (
             <Button
               variant="ghost"
               size="icon"
               className={cn(
-                "ml-auto size-8 rounded-lg",
+                "size-8 rounded-lg",
                 ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
               )}
               aria-label="Edit color"
@@ -714,113 +703,125 @@ function ColorDetailModal({
             />
           ) : null}
         </motion.div>
-        <DialogBody
-          className={cn(
-            "min-h-0 flex-1 overflow-hidden border-t border-b-0 bg-background p-0 transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-            fullscreenTransitionDuration,
-            expanded
-              ? "rounded-none border-transparent"
-              : "rounded-t-xl border-border",
-          )}
-        >
-          {color ? (
-            <div className="flex h-full min-h-0 min-w-0 flex-col">
-              <div className="shrink-0 px-4 pt-4 sm:px-5 sm:pt-5">
-                <button
-                  data-asset-modal-hero
-                  type="button"
-                  onClick={copyValue}
-                  aria-label={
-                    hasGradient ? "Copy CSS gradient" : "Copy hex color"
-                  }
-                  className={cn(
-                    "group relative h-[clamp(5rem,20dvh,10rem)] w-full overflow-hidden rounded-xl text-left",
-                    hasAlpha &&
-                      "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
-                  )}
-                  style={
-                    gradientCss
-                      ? { background: gradientCss }
-                      : { backgroundColor: color.hex }
-                  }
-                >
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-sm font-medium text-white opacity-0 transition group-hover:bg-black/25 group-hover:opacity-100">
-                    <CopyFeedbackIcon copied={copied} className="mr-2 size-4" />
-                    Copy
-                  </span>
-                </button>
-                <h2 className="mt-4 text-xl font-medium">{title}</h2>
-                <p className="mt-1 font-mono text-xs text-muted-foreground">
-                  {hasGradient
-                    ? `${color.gradient?.type === "radial" ? "Radial" : "Linear"} gradient`
-                    : color.hex.toUpperCase()}
-                </p>
-                <ColorNoteEditor asset={color} workspaceSlug={workspaceSlug} />
-                <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
-                  <span className="text-sm font-medium">Relevant images</span>
-                  {scope.type === "collection" ? (
-                    <Tabs
-                      key={presentation}
-                      value={includeDescendants ? "collection" : "view"}
-                      onValueChange={(value) =>
-                        onIncludeDescendantsChange(value === "collection")
-                      }
-                      variant="segment"
-                      size="sm"
-                    >
-                      <TabsList aria-label="Search scope">
-                        <TabsTrigger value="view">This view</TabsTrigger>
-                        <TabsTrigger value="collection">
-                          Entire collection
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
-                  ) : null}
+        <div className="relative flex min-h-0 flex-1 overflow-hidden">
+          <DialogBody
+            className={cn(
+              "h-full min-h-0 min-w-0 flex-1 overflow-hidden border-t border-b-0 bg-background p-0 transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+              fullscreenTransitionDuration,
+              expanded
+                ? "rounded-none border-transparent"
+                : "rounded-t-xl border-border",
+            )}
+          >
+            {color ? (
+              <div className="flex h-full min-h-0 min-w-0 flex-col">
+                <div className="shrink-0 px-4 pt-4 sm:px-5 sm:pt-5">
+                  <button
+                    data-asset-modal-hero
+                    type="button"
+                    onClick={copyValue}
+                    aria-label={
+                      hasGradient ? "Copy CSS gradient" : "Copy hex color"
+                    }
+                    className={cn(
+                      "group relative h-[clamp(5rem,20dvh,10rem)] w-full overflow-hidden rounded-xl text-left",
+                      hasAlpha &&
+                        "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
+                    )}
+                    style={
+                      gradientCss
+                        ? { background: gradientCss }
+                        : { backgroundColor: color.hex }
+                    }
+                  >
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-sm font-medium text-white opacity-0 transition group-hover:bg-black/25 group-hover:opacity-100">
+                      <CopyFeedbackIcon
+                        copied={copied}
+                        className="mr-2 size-4"
+                      />
+                      Copy
+                    </span>
+                  </button>
+                  <p className="mt-1 font-mono text-xs text-muted-foreground">
+                    {hasGradient
+                      ? `${color.gradient?.type === "radial" ? "Radial" : "Linear"} gradient`
+                      : color.hex.toUpperCase()}
+                  </p>
+                  <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-sm font-medium">Relevant images</span>
+                    {scope.type === "collection" ? (
+                      <Tabs
+                        key={presentation}
+                        value={includeDescendants ? "collection" : "view"}
+                        onValueChange={(value) =>
+                          onIncludeDescendantsChange(value === "collection")
+                        }
+                        variant="segment"
+                        size="sm"
+                      >
+                        <TabsList aria-label="Search scope">
+                          <TabsTrigger value="view">This view</TabsTrigger>
+                          <TabsTrigger value="collection">
+                            Entire collection
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    ) : null}
+                  </div>
                 </div>
+                <ScrollArea className="min-h-0 min-w-0 flex-1">
+                  <div className="px-4 pt-4 pb-5 sm:px-5">
+                    {searching ? (
+                      <ColorResultsSkeleton />
+                    ) : error ? (
+                      <ColorSearchError onRetry={onRetry} />
+                    ) : results.length === 0 ? (
+                      <ColorSearchEmpty />
+                    ) : (
+                      <div className="columns-2 gap-3 lg:columns-3">
+                        {results.map((result) => (
+                          <ImageResultTile
+                            key={result.image.id}
+                            image={result.image}
+                            label={
+                              result.location.type === "collection" &&
+                              result.location.folderNames.length
+                                ? result.location.folderNames.join(" / ")
+                                : result.location.type === "collection"
+                                  ? "Collection root"
+                                  : "Inbox"
+                            }
+                            onOpen={() =>
+                              onOpenImage({
+                                ...result.image,
+                                type: "image",
+                                title: result.image.title ?? undefined,
+                                alt: result.image.alt ?? undefined,
+                                blurDataURL:
+                                  result.image.blurDataURL ?? undefined,
+                              })
+                            }
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
-              <ScrollArea className="min-h-0 min-w-0 flex-1">
-                <div className="px-4 pt-4 pb-5 sm:px-5">
-                  {searching ? (
-                    <ColorResultsSkeleton />
-                  ) : error ? (
-                    <ColorSearchError onRetry={onRetry} />
-                  ) : results.length === 0 ? (
-                    <ColorSearchEmpty />
-                  ) : (
-                    <div className="columns-2 gap-3 lg:columns-3">
-                      {results.map((result) => (
-                        <ImageResultTile
-                          key={result.image.id}
-                          image={result.image}
-                          label={
-                            result.location.type === "collection" &&
-                            result.location.folderNames.length
-                              ? result.location.folderNames.join(" / ")
-                              : result.location.type === "collection"
-                                ? "Collection root"
-                                : "Inbox"
-                          }
-                          onOpen={() =>
-                            onOpenImage({
-                              ...result.image,
-                              type: "image",
-                              title: result.image.title ?? undefined,
-                              alt: result.image.alt ?? undefined,
-                              blurDataURL:
-                                result.image.blurDataURL ?? undefined,
-                            })
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
-          ) : loading ? (
-            <ColorDetailLoading scope={scope} />
-          ) : null}
-        </DialogBody>
+            ) : loading ? (
+              <ColorDetailLoading scope={scope} />
+            ) : null}
+          </DialogBody>
+          <AssetNotesPanel
+            open={notesOpen}
+            expanded={expanded}
+            onClose={() => onNotesOpenChange(false)}
+          >
+            {color ? (
+              <ColorNoteEditor asset={color} workspaceSlug={workspaceSlug} />
+            ) : null}
+          </AssetNotesPanel>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -872,11 +873,8 @@ function ColorNoteEditor({
   const save = (value: string) =>
     mutate({ assetId: asset.id, note: value.trim() ? value : null });
   return (
-    <div className={cn("mt-5", className)}>
-      <label
-        htmlFor={`color-note-${asset.id}`}
-        className="text-xs font-medium text-muted-foreground"
-      >
+    <div className={className}>
+      <label htmlFor={`color-note-${asset.id}`} className="sr-only">
         Notes
       </label>
       <AutoResizeTextarea
