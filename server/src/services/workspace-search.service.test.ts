@@ -171,7 +171,68 @@ describe("WorkspaceSearchService", () => {
     });
   });
 
-  it("returns a signed favicon for link results", async () => {
+  it("returns a signed video poster for video results", async () => {
+    selectMock.mockImplementationOnce(() =>
+      queryReturning([
+        {
+          ...imageRow,
+          assetId: 23,
+          assetType: "video" as const,
+          title: "Demo video",
+          imageAlt: null,
+          imageNote: null,
+          imageBlurDataURL: null,
+          imageVariants: null,
+          videoPoster: {
+            preview: {
+              objectKey: "workspace-1/23/poster-preview.webp",
+              width: 320,
+              height: 180,
+              contentType: "image/webp",
+              sizeBytes: 1000,
+            },
+          },
+        },
+      ]),
+    );
+    selectMock.mockImplementationOnce(() => queryReturning([]));
+    selectMock.mockImplementationOnce(() => queryReturning([]));
+
+    const createPresignedGetUrls = vi.fn().mockResolvedValue(
+      new Map([
+        [
+          "workspace-1/23/poster-preview.webp",
+          {
+            key: "workspace-1/23/poster-preview.webp",
+            url: "https://signed.example/23-poster",
+            expiresAt: new Date("2026-01-02T00:00:00.000Z"),
+          },
+        ],
+      ]),
+    );
+    const service = new WorkspaceSearchService({
+      objectStorageService: {
+        createPresignedGetUrls,
+      } as unknown as IObjectStorageService,
+    });
+
+    const response = await service.search("workspace-1", {
+      q: "demo",
+      limit: 20,
+      recent: [],
+    });
+
+    expect(createPresignedGetUrls).toHaveBeenCalledWith([
+      "workspace-1/23/poster-preview.webp",
+    ]);
+    expect(response.results[0]).toMatchObject({
+      id: "video-23",
+      type: "video",
+      preview: { url: "https://signed.example/23-poster" },
+    });
+  });
+
+  it("returns signed preview media and favicon URLs for link results", async () => {
     selectMock.mockImplementationOnce(() =>
       queryReturning([
         {
@@ -200,6 +261,20 @@ describe("WorkspaceSearchService", () => {
       queryWhereReturning([
         {
           resourceId: 7,
+          role: "preview",
+          variants: {
+            preview: {
+              objectKey: "workspace-1/7/link-preview.webp",
+              width: 320,
+              height: 180,
+              contentType: "image/webp",
+              sizeBytes: 500,
+            },
+          },
+        },
+        {
+          resourceId: 7,
+          role: "icon",
           variants: {
             preview: {
               objectKey: "workspace-1/7/icon-preview.webp",
@@ -215,6 +290,14 @@ describe("WorkspaceSearchService", () => {
 
     const createPresignedGetUrls = vi.fn().mockResolvedValue(
       new Map([
+        [
+          "workspace-1/7/link-preview.webp",
+          {
+            key: "workspace-1/7/link-preview.webp",
+            url: "https://signed.example/7-preview",
+            expiresAt: new Date("2026-01-02T00:00:00.000Z"),
+          },
+        ],
         [
           "workspace-1/7/icon-preview.webp",
           {
@@ -238,9 +321,11 @@ describe("WorkspaceSearchService", () => {
     });
 
     expect(createPresignedGetUrls).toHaveBeenCalledWith([
+      "workspace-1/7/link-preview.webp",
       "workspace-1/7/icon-preview.webp",
     ]);
     expect(response.results[0]?.preview).toMatchObject({
+      url: "https://signed.example/7-preview",
       faviconUrl: "https://signed.example/7-favicon",
       hostname: "example.com",
     });

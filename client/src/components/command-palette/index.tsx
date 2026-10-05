@@ -21,6 +21,7 @@ import {
   SquarePlusIcon,
   PipetteIcon,
   SearchIcon,
+  VideoIcon,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
@@ -971,7 +972,12 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
     );
   }
 
-  if (result.type === "image" && result.preview?.url) {
+  if (
+    (result.type === "image" ||
+      result.type === "video" ||
+      result.type === "link") &&
+    result.preview?.url
+  ) {
     return (
       <span
         aria-hidden="true"
@@ -1015,13 +1021,15 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
       ? FileTextIcon
       : result.type === "image"
         ? ImageIcon
-        : result.type === "link"
-          ? ExternalLinkIcon
-          : result.type === "color"
-            ? PipetteIcon
-            : result.type === "collection"
-              ? PanelsTopLeftIcon
-              : FolderOpenIcon;
+        : result.type === "video"
+          ? VideoIcon
+          : result.type === "link"
+            ? ExternalLinkIcon
+            : result.type === "color"
+              ? PipetteIcon
+              : result.type === "collection"
+                ? PanelsTopLeftIcon
+                : FolderOpenIcon;
 
   return (
     <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">

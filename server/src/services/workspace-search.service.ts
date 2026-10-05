@@ -22,6 +22,7 @@ import {
   imageAssets,
   linkAssets,
   noteAssets,
+  videoAssets,
 } from "@/db/schema";
 import type {
   WorkspaceSearchQuery,
@@ -137,6 +138,7 @@ async function searchAssets(
       imageNote: imageAssets.note,
       imageBlurDataURL: imageAssets.blurDataURL,
       imageVariants: imageAssets.variants,
+      videoPoster: videoAssets.poster,
       colorHex: colorAssets.hex,
       linkOriginalUrl: linkAssets.originalUrl,
       linkResourceId: linkAssets.resourceId,
@@ -156,6 +158,7 @@ async function searchAssets(
     .from(assets)
     .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
     .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+    .leftJoin(videoAssets, eq(videoAssets.assetId, assets.id))
     .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
     .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
     .leftJoin(
@@ -201,13 +204,20 @@ async function searchAssets(
     if (variant?.objectKey)
       imageVariantKeys.set(row.assetId, variant.objectKey);
   }
+  const videoPosterKeys = new Map<number, string>();
+  for (const row of rows) {
+    if (row.assetType !== "video") continue;
+    const variant = row.videoPoster?.preview ?? row.videoPoster?.display;
+    if (variant?.objectKey) videoPosterKeys.set(row.assetId, variant.objectKey);
+  }
   const linkResourceIds = rows.flatMap((row) =>
     row.assetType === "link" && row.linkResourceId ? [row.linkResourceId] : [],
   );
-  const faviconRows = linkResourceIds.length
+  const resourceMediaRows = linkResourceIds.length
     ? await db
         .select({
           resourceId: externalResourceMedia.resourceId,
+          role: externalResourceMedia.role,
           variants: externalResourceMedia.variants,
         })
         .from(externalResourceMedia)
@@ -216,20 +226,30 @@ async function searchAssets(
             inArray(externalResourceMedia.resourceId, [
               ...new Set(linkResourceIds),
             ]),
-            eq(externalResourceMedia.role, "icon"),
+            inArray(externalResourceMedia.role, ["preview", "icon"]),
             eq(externalResourceMedia.status, "ready"),
           ),
         )
     : [];
-  const faviconKeys = new Map<number, string>();
-  for (const row of faviconRows) {
+  const resourceMediaKeys = new Map<
+    number,
+    { preview?: string; icon?: string }
+  >();
+  for (const row of resourceMediaRows) {
     const variant =
       row.variants.preview ?? row.variants.master ?? row.variants.display;
-    if (variant?.objectKey) faviconKeys.set(row.resourceId, variant.objectKey);
+    if (!variant?.objectKey) continue;
+    const current = resourceMediaKeys.get(row.resourceId) ?? {};
+    if (row.role === "preview") current.preview = variant.objectKey;
+    if (row.role === "icon") current.icon = variant.objectKey;
+    resourceMediaKeys.set(row.resourceId, current);
   }
   const signedMedia = await objectStorageService.createPresignedGetUrls([
     ...imageVariantKeys.values(),
-    ...faviconKeys.values(),
+    ...videoPosterKeys.values(),
+    ...[...resourceMediaKeys.values()].flatMap((media) =>
+      [media.preview, media.icon].filter((key): key is string => Boolean(key)),
+    ),
   ]);
 
   return rows.map((row) => {
@@ -241,9 +261,11 @@ async function searchAssets(
       row.colorHex ||
       (type === "image"
         ? "Untitled image"
-        : type === "note"
-          ? "Untitled note"
-          : "Untitled");
+        : type === "video"
+          ? "Untitled video"
+          : type === "note"
+            ? "Untitled note"
+            : "Untitled");
     const location = row.collectionSlug
       ? {
           type: "collection" as const,
@@ -263,8 +285,17 @@ async function searchAssets(
     const imageUrl = imageVariantKey
       ? signedMedia.get(imageVariantKey)?.url
       : undefined;
-    const faviconKey = row.linkResourceId
-      ? faviconKeys.get(row.linkResourceId)
+    const videoPosterKey = videoPosterKeys.get(row.assetId);
+    const videoPosterUrl = videoPosterKey
+      ? signedMedia.get(videoPosterKey)?.url
+      : undefined;
+    const resourceMedia = row.linkResourceId
+      ? resourceMediaKeys.get(row.linkResourceId)
+      : undefined;
+    const previewKey = resourceMedia?.preview;
+    const faviconKey = resourceMedia?.icon;
+    const previewUrl = previewKey
+      ? signedMedia.get(previewKey)?.url
       : undefined;
     const faviconUrl = faviconKey
       ? signedMedia.get(faviconKey)?.url
@@ -294,12 +325,15 @@ async function searchAssets(
                   ? { blurDataURL: row.imageBlurDataURL }
                   : {}),
               }
-            : type === "link" && row.linkHostname
-              ? {
-                  hostname: row.linkHostname,
-                  ...(faviconUrl ? { faviconUrl } : {}),
-                }
-              : null,
+            : type === "video" && videoPosterUrl
+              ? { url: videoPosterUrl }
+              : type === "link" && row.linkHostname
+                ? {
+                    ...(previewUrl ? { url: previewUrl } : {}),
+                    hostname: row.linkHostname,
+                    ...(faviconUrl ? { faviconUrl } : {}),
+                  }
+                : null,
       rank: query
         ? Number(row.rank)
         : recentAssetRanks.has(row.assetId)

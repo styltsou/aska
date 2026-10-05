@@ -2,6 +2,7 @@ import type { AssetLocation } from "@/api/collection/types";
 
 export type WorkspaceSearchResultType =
   | "image"
+  | "video"
   | "note"
   | "link"
   | "color"

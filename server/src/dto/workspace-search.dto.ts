@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const WorkspaceRecentAssetIdSchema = z
   .string()
-  .regex(/^(?:image|note|link|color)-\d+$/);
+  .regex(/^(?:image|video|note|link|color)-\d+$/);
 
 export const WorkspaceSearchQuerySchema = z.object({
   q: z.string().max(120).optional().default(""),
