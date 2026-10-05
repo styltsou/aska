@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -332,9 +332,11 @@ export class VideoUploadService {
     };
   }
 
-  async handleCallback(
-    input: VideoPipelineCallbackInput,
-  ): Promise<{ ignored: boolean; cleanup?: boolean }> {
+  async handleCallback(input: VideoPipelineCallbackInput): Promise<{
+    ignored: boolean;
+    cleanup?: boolean;
+    replacedStoryboardObjectKey?: string;
+  }> {
     if (input.event === "video.import.failed") {
       const [row] = await db
         .select()
@@ -451,13 +453,18 @@ export class VideoUploadService {
     )
       return { ignored: true };
     if (input.event === "video.storyboard.completed") {
-      const expectedKey = `${input.originalObjectKey.slice(0, input.originalObjectKey.lastIndexOf("/"))}/storyboard.webp`;
+      const expectedKey = `${input.originalObjectKey.slice(0, input.originalObjectKey.lastIndexOf("/"))}/storyboard-v2.webp`;
       if (input.storyboard.objectKey !== expectedKey)
         throw new AppError(
           ErrorCode.VALIDATION_ERROR,
           "Invalid video storyboard key",
         );
       if (row.status !== "completed") return { ignored: true };
+      const [current] = await db
+        .select({ storyboard: videoAssets.storyboard })
+        .from(videoAssets)
+        .where(eq(videoAssets.assetId, row.assetId))
+        .limit(1);
       const [updated] = await db
         .update(videoAssets)
         .set({ storyboard: input.storyboard })
@@ -465,11 +472,21 @@ export class VideoUploadService {
           and(
             eq(videoAssets.assetId, row.assetId),
             eq(videoAssets.processingStatus, "completed"),
-            isNull(videoAssets.storyboard),
+            or(
+              isNull(videoAssets.storyboard),
+              sql<boolean>`coalesce(${videoAssets.storyboard}->>'objectKey', '') <> ${expectedKey}`,
+            ),
           ),
         )
         .returning({ assetId: videoAssets.assetId });
-      return { ignored: !updated };
+      return {
+        ignored: !updated,
+        ...(updated &&
+        current?.storyboard?.objectKey &&
+        current.storyboard.objectKey !== input.storyboard.objectKey
+          ? { replacedStoryboardObjectKey: current.storyboard.objectKey }
+          : {}),
+      };
     }
     if (input.event === "video.processing.failed") {
       return {

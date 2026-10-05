@@ -22,12 +22,14 @@ The processor samples early frames and writes native-resolution `poster.webp`
 plus `poster-display.webp` (maximum 960 px width) and
 `poster-preview.webp` (maximum 320 px width). All renditions are WebP and
 never enlarged. The database calls these `original`, `display`, and `preview`.
-The worker also samples up to 100 frames across the video and packs them into
-`storyboard.webp` for seek-bar hover previews. Frame layout metadata is stored
-with the asset. Storyboard extraction is best-effort, so a video remains playable
-if preview generation times out or fails.
+The worker samples one frame per second, up to 240 frames, and packs them into
+`storyboard-v2.webp` for seek-bar hover previews. Past four minutes, samples are
+spread evenly across the video. Frame layout metadata is stored with the asset.
+Storyboard extraction is best-effort, so a video remains playable if preview
+generation times out or fails.
 
-Older completed videos can be queued for storyboard generation with
+Existing completed videos can be queued for storyboard generation or a current
+storyboard upgrade with
 `sst shell -- bun run --cwd server backfill:video-storyboards --enqueue --wait`
 after the migration and worker deployment. Omit `--enqueue --wait` to inspect
 the count. The deployment pipeline runs this command and waits for the

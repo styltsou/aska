@@ -1,6 +1,6 @@
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { Pool } from "@neondatabase/serverless";
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { Resource } from "sst";
 
@@ -17,6 +17,7 @@ const databaseUrl = resources.DatabaseUrl.value;
 if (!databaseUrl) throw new Error("The linked DatabaseUrl secret is empty");
 const pool = new Pool({ connectionString: databaseUrl, max: 1 });
 const db = drizzle({ client: pool });
+const CURRENT_STORYBOARD_FILE_NAME = "storyboard-v2.webp";
 
 async function missingOriginalKeys(): Promise<string[]> {
   const rows = await db
@@ -26,7 +27,10 @@ async function missingOriginalKeys(): Promise<string[]> {
       and(
         eq(videoAssets.processingStatus, "completed"),
         isNotNull(videoAssets.original),
-        isNull(videoAssets.storyboard),
+        or(
+          isNull(videoAssets.storyboard),
+          sql<boolean>`coalesce(${videoAssets.storyboard}->>'objectKey', '') NOT LIKE ${`%/${CURRENT_STORYBOARD_FILE_NAME}`}`,
+        ),
       ),
     );
   return rows.flatMap((row) =>
@@ -38,7 +42,7 @@ try {
   const originalKeys = await missingOriginalKeys();
   if (!process.argv.includes("--enqueue")) {
     console.info(
-      `Found ${originalKeys.length} completed videos without seek previews. Run with --enqueue to queue backfill jobs.`,
+      `Found ${originalKeys.length} completed videos without current seek previews. Run with --enqueue to queue backfill jobs.`,
     );
   } else {
     const bucket = resources.Assets.name;

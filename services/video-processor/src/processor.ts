@@ -30,7 +30,8 @@ type VideoMime = (typeof MIME_TYPES)[number];
 const CALLBACK_PATH = "/api/v1/internal/video-pipeline/callback";
 const STORYBOARD_MAX_TILE_DIMENSION = 160;
 const STORYBOARD_COLUMNS = 10;
-const STORYBOARD_MAX_FRAMES = 100;
+const STORYBOARD_MAX_FRAMES = 240;
+const STORYBOARD_FILE_NAME = "storyboard-v2.webp";
 const FFMPEG =
   process.env.FFMPEG_PATH && existsSync(process.env.FFMPEG_PATH)
     ? process.env.FFMPEG_PATH
@@ -246,7 +247,7 @@ async function createStoryboard(
   );
   const requestedFrames = Math.min(
     STORYBOARD_MAX_FRAMES,
-    Math.max(1, Math.ceil(durationSeconds / 3)),
+    Math.max(1, Math.ceil(durationSeconds)),
   );
   const intervalSeconds = durationSeconds / requestedFrames;
   const framePattern = path.join(folder, "storyboard-%03d.png");
@@ -294,7 +295,7 @@ async function createStoryboard(
     )
     .webp({ quality: 72, effort: 4 })
     .toBuffer();
-  const objectKey = `${prefix}/storyboard.webp`;
+  const objectKey = `${prefix}/${STORYBOARD_FILE_NAME}`;
   await s3.send(
     new PutObjectCommand({
       Bucket: bucket,
@@ -421,20 +422,28 @@ export async function processExistingVideoStoryboard(input: {
       input.bucket,
       prefix,
     );
-    const result = await callPipeline<{ ignored: boolean; cleanup?: boolean }>(
-      CALLBACK_PATH,
-      {
-        event: "video.storyboard.completed",
-        originalObjectKey: input.objectKey,
-        originalEtag: etag,
-        storyboard,
-      },
-    );
+    const result = await callPipeline<{
+      ignored: boolean;
+      cleanup?: boolean;
+      replacedStoryboardObjectKey?: string;
+    }>(CALLBACK_PATH, {
+      event: "video.storyboard.completed",
+      originalObjectKey: input.objectKey,
+      originalEtag: etag,
+      storyboard,
+    });
     if (result.cleanup)
       await s3.send(
         new DeleteObjectCommand({
           Bucket: input.bucket,
           Key: storyboard.objectKey,
+        }),
+      );
+    else if (result.replacedStoryboardObjectKey)
+      await s3.send(
+        new DeleteObjectCommand({
+          Bucket: input.bucket,
+          Key: result.replacedStoryboardObjectKey,
         }),
       );
   } finally {
@@ -554,6 +563,7 @@ async function removeVideoObjects(bucket: string, originalKey: string) {
           `${prefix}/poster-display.webp`,
           `${prefix}/poster-preview.webp`,
           `${prefix}/storyboard.webp`,
+          `${prefix}/${STORYBOARD_FILE_NAME}`,
         ].map((Key) => ({ Key })),
       },
     }),
