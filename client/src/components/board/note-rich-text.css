@@ -143,6 +143,40 @@
     @apply flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-sidebar-foreground/65 transition-colors outline-none hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground focus-visible:bg-sidebar-foreground/8 focus-visible:text-sidebar-foreground data-popup-open:bg-sidebar-foreground/8 data-popup-open:text-sidebar-foreground;
   }
 
+  .note-code-language-menu {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 140ms ease;
+  }
+
+  .note-code-language-menu:hover,
+  .note-code-language-menu:focus-within {
+    scrollbar-color: color-mix(
+        in srgb,
+        var(--sidebar-foreground) 28%,
+        transparent
+      )
+      transparent;
+  }
+
+  .note-code-language-menu::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .note-code-language-menu::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .note-code-language-menu::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: transparent;
+  }
+
+  .note-code-language-menu:hover::-webkit-scrollbar-thumb,
+  .note-code-language-menu:focus-within::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--sidebar-foreground) 28%, transparent);
+  }
+
   .note-rich-text-content .note-code-block-copy {
     @apply text-sidebar-foreground/60 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground;
   }

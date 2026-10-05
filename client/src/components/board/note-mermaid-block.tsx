@@ -182,7 +182,7 @@ function MermaidBlockView({
         >
           <motion.span
             aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0.5 left-0.5 z-0 w-[calc((100%_-_0.375rem)/2)] rounded-[calc(var(--radius-md)-2px)] bg-linear-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]"
+            className="pointer-events-none absolute inset-y-0.5 left-0.5 z-0 w-[calc((100%_-_0.375rem)/2)] rounded-[calc(var(--radius-md)-2px)] border border-border/80 bg-background"
             initial={false}
             animate={{ x: showInlineCode ? "calc(100% + 0.125rem)" : 0 }}
             transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
@@ -333,6 +333,10 @@ function MermaidBlockView({
           ) : (
             <div
               className="note-mermaid-preview"
+              onMouseDownCapture={(event) => {
+                // Keep ProseMirror from placing a caret after this atom block.
+                if (event.button === 0) event.preventDefault();
+              }}
               onDoubleClick={() => setFullView(true)}
             >
               {svg ? (

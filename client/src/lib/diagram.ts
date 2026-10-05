@@ -11,6 +11,97 @@ let sequence = 0;
 let renderQueue: Promise<void> = Promise.resolve();
 const cache = new Map<string, string>();
 
+function getThemeVariables(dark: boolean) {
+  const surface = dark ? "#262626" : "#fafafa";
+  const ink = dark ? "#fafafa" : "#262626";
+  const mutedInk = dark ? "#d4d4d4" : "#525252";
+  const node = dark ? "#333333" : "#ffffff";
+  const secondaryNode = dark ? "#404040" : "#f5f5f5";
+  const tertiaryNode = dark ? "#2f2f2f" : "#ededed";
+  const border = dark ? "#404040" : "#e5e5e5";
+  const quietBorder = dark ? "#525252" : "#d4d4d4";
+  const line = dark ? "#a3a3a3" : "#737373";
+
+  return {
+    background: surface,
+    primaryColor: node,
+    secondaryColor: secondaryNode,
+    tertiaryColor: tertiaryNode,
+    primaryTextColor: ink,
+    secondaryTextColor: ink,
+    tertiaryTextColor: ink,
+    primaryBorderColor: border,
+    secondaryBorderColor: border,
+    tertiaryBorderColor: border,
+    lineColor: line,
+    arrowheadColor: line,
+    textColor: ink,
+    titleColor: ink,
+    nodeBkg: node,
+    nodeBorder: border,
+    nodeTextColor: ink,
+    mainBkg: node,
+    clusterBkg: secondaryNode,
+    clusterBorder: secondaryNode,
+    edgeLabelBackground: surface,
+    labelBackgroundColor: surface,
+    labelTextColor: ink,
+    actorBkg: node,
+    actorBorder: border,
+    actorTextColor: ink,
+    actorLineColor: line,
+    signalColor: line,
+    signalTextColor: ink,
+    noteBkgColor: secondaryNode,
+    noteBorderColor: quietBorder,
+    noteTextColor: ink,
+    taskTextColor: ink,
+    taskTextOutsideColor: mutedInk,
+    stateBkg: node,
+    stateLabelColor: ink,
+    transitionColor: line,
+    transitionLabelColor: ink,
+    relationColor: line,
+    relationLabelBackground: surface,
+    relationLabelColor: ink,
+    fontFamily: '"Inter Variable", Inter, ui-sans-serif, sans-serif',
+    fontSize: "15px",
+    fontWeight: "500",
+    radius: 7,
+    strokeWidth: 1,
+    dropShadow: "none",
+    useGradient: false,
+  };
+}
+
+function getThemeCSS(dark: boolean) {
+  const surface = dark ? "#262626" : "#fafafa";
+
+  return `
+    .edgePaths .path,
+    .flowchart-link {
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .edgeLabel rect,
+    .edgeLabel .background {
+      fill: ${surface} !important;
+      stroke: ${surface} !important;
+      stroke-width: 6px !important;
+      opacity: 1 !important;
+    }
+
+    .cluster rect {
+      stroke-width: 0 !important;
+    }
+
+    [filter] {
+      filter: none !important;
+    }
+  `;
+}
+
 export async function renderDiagram(
   source: string,
   dark: boolean,
@@ -36,28 +127,16 @@ export async function renderDiagram(
       suppressErrorRendering: true,
       maxTextSize: 50_000,
       maxEdges: 500,
+      // SVG text survives our SVG-only sanitizer and exports reliably. Mermaid's
+      // HTML labels are rendered in foreignObject nodes, whose HTML is removed.
+      htmlLabels: false,
       theme: "base",
-      themeVariables: dark
-        ? {
-            background: "#242529",
-            primaryColor: "#34363d",
-            primaryTextColor: "#f2f2f3",
-            primaryBorderColor: "#858b98",
-            lineColor: "#b4bac5",
-            secondaryColor: "#3b4050",
-            tertiaryColor: "#303d3a",
-            fontFamily: "Inter, sans-serif",
-          }
-        : {
-            background: "#ffffff",
-            primaryColor: "#f2f4f8",
-            primaryTextColor: "#232630",
-            primaryBorderColor: "#777f91",
-            lineColor: "#636d7f",
-            secondaryColor: "#e6ebf7",
-            tertiaryColor: "#e8f1ed",
-            fontFamily: "Inter, sans-serif",
-          },
+      // Mermaid's flowchart default is "neo", which dashes off the last few
+      // pixels of each connector and leaves visible gaps before arrowheads.
+      look: "classic",
+      flowchart: { look: "classic" },
+      themeVariables: getThemeVariables(dark),
+      themeCSS: getThemeCSS(dark),
     });
     await mermaid.parse(source);
     const { svg } = await mermaid.render(`aska-diagram-${++sequence}`, source);

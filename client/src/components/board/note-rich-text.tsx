@@ -18,13 +18,13 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   BoldIcon,
-  BracesIcon,
   CaseSensitiveIcon,
   CheckSquareIcon,
   CornerDownLeftIcon,
   CheckIcon,
   ChevronDownIcon,
   CodeIcon,
+  CodeXmlIcon,
   EraserIcon,
   Heading1Icon,
   Heading2Icon,
@@ -42,6 +42,7 @@ import {
   StrikethroughIcon,
   TableIcon,
   UnderlineIcon,
+  WorkflowIcon,
 } from "lucide-react";
 import { Extension, getMarkRange, type Editor, type Range } from "@tiptap/core";
 import Highlight from "@tiptap/extension-highlight";
@@ -335,7 +336,7 @@ const SLASH_COMMAND_GROUPS: SlashCommandGroup[] = [
         description: "Capture a code snippet.",
         keywords: ["codeblock", "snippet", "fence", "pre"],
         syntax: "```",
-        icon: BracesIcon,
+        icon: CodeXmlIcon,
         command: (editor, range) =>
           editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
       },
@@ -343,7 +344,7 @@ const SLASH_COMMAND_GROUPS: SlashCommandGroup[] = [
         title: "Diagram",
         description: "Insert a Mermaid diagram.",
         keywords: ["mermaid", "flowchart", "graph"],
-        icon: BracesIcon,
+        icon: WorkflowIcon,
         command: (editor, range) =>
           editor
             .chain()
@@ -721,13 +722,45 @@ const CODE_BLOCK_LANGUAGES = [
   { value: "diff", label: "Diff" },
 ];
 
-function NoteCodeBlock({ node, updateAttributes }: ReactNodeViewProps) {
+function NoteCodeBlock({ editor, node, updateAttributes }: ReactNodeViewProps) {
   const [copied, setCopied] = useState(false);
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
+  const [languageQuery, setLanguageQuery] = useState("");
   const language =
     typeof node.attrs.language === "string" ? node.attrs.language : "";
   const languageLabel =
     CODE_BLOCK_LANGUAGES.find((option) => option.value === language)?.label ??
     "Plain text";
+  const filteredLanguages = CODE_BLOCK_LANGUAGES.filter((option) =>
+    `${option.label} ${option.value}`.toLowerCase().includes(languageQuery),
+  );
+
+  const handleLanguageMenuKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (event.key === "Escape") {
+      window.requestAnimationFrame(() => editor.commands.focus());
+      return;
+    }
+
+    if (event.key === "Backspace" && languageQuery) {
+      event.preventDefault();
+      event.stopPropagation();
+      setLanguageQuery((query) => query.slice(0, -1));
+      return;
+    }
+
+    if (
+      event.key.length === 1 &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      setLanguageQuery((query) => `${query}${event.key.toLowerCase()}`);
+    }
+  };
 
   useEffect(() => {
     if (!copied) return;
@@ -738,7 +771,13 @@ function NoteCodeBlock({ node, updateAttributes }: ReactNodeViewProps) {
   return (
     <NodeViewWrapper className="note-code-block">
       <div className="note-code-block-header" contentEditable={false}>
-        <DropdownMenu>
+        <DropdownMenu
+          open={languageMenuOpen}
+          onOpenChange={(open) => {
+            setLanguageMenuOpen(open);
+            if (!open) setLanguageQuery("");
+          }}
+        >
           <DropdownMenuTrigger
             render={
               <button
@@ -752,13 +791,20 @@ function NoteCodeBlock({ node, updateAttributes }: ReactNodeViewProps) {
               </button>
             }
           />
-          <DropdownMenuContent align="start" sideOffset={6} className="w-40">
-            {CODE_BLOCK_LANGUAGES.map((option) => (
+          <DropdownMenuContent
+            align="start"
+            sideOffset={6}
+            className="note-code-language-menu max-h-56 w-40"
+            onKeyDown={handleLanguageMenuKeyDown}
+          >
+            {filteredLanguages.map((option) => (
               <DropdownMenuItem
                 key={option.value}
-                onClick={() =>
-                  updateAttributes({ language: option.value || null })
-                }
+                onClick={() => {
+                  updateAttributes({ language: option.value || null });
+                  setLanguageMenuOpen(false);
+                  window.requestAnimationFrame(() => editor.commands.focus());
+                }}
               >
                 <span>{option.label}</span>
                 {option.value === language ? (
@@ -766,6 +812,11 @@ function NoteCodeBlock({ node, updateAttributes }: ReactNodeViewProps) {
                 ) : null}
               </DropdownMenuItem>
             ))}
+            {filteredLanguages.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-sidebar-foreground/50">
+                No languages found
+              </div>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
         <Tooltip>

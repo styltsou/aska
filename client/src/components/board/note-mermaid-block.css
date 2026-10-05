@@ -28,11 +28,11 @@
 }
 
 .note-mermaid-view-toggle {
-  @apply relative grid w-fit grid-cols-2 gap-0.5 rounded-md border border-border/60 bg-muted p-0.5 shadow-[0_1px_1px_rgb(0_0_0_/_0.02)] ring-1 ring-foreground/[0.025] backdrop-blur-sm;
+  @apply relative grid w-fit grid-cols-2 gap-0.5 rounded-md border border-border/60 bg-muted p-0.5;
 }
 
 .note-mermaid-preview {
-  @apply flex min-h-48 w-full items-center justify-center overflow-hidden rounded-t-lg rounded-b-none border-t border-sidebar-border bg-card p-5;
+  @apply flex w-full cursor-default items-center justify-center overflow-hidden rounded-t-lg rounded-b-none border-t border-sidebar-border bg-card p-3;
 }
 
 .note-mermaid-content {
@@ -45,19 +45,44 @@
 }
 
 .note-mermaid-preview--compact {
-  @apply my-2 max-h-48 min-h-28 rounded-md border border-sidebar-border p-2;
+  @apply my-2 min-h-28 rounded-md border border-sidebar-border p-2;
 }
 
 .note-mermaid-svg {
-  @apply pointer-events-none flex min-w-0 items-center justify-center;
+  @apply pointer-events-none flex w-full min-w-0 items-center justify-center;
 }
 
 .note-mermaid-preview .note-mermaid-svg svg {
-  @apply max-h-72 max-w-full;
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  max-width: none !important;
 }
 
 .note-mermaid-preview--compact .note-mermaid-svg svg {
   @apply max-h-44;
+  object-fit: contain;
+}
+
+.note-mermaid-svg svg text,
+.note-mermaid-svg svg .label,
+.note-mermaid-svg svg .nodeLabel,
+.note-mermaid-svg svg .edgeLabel {
+  font-family: var(--font-sans) !important;
+  font-weight: 500;
+  text-rendering: geometricPrecision;
+}
+
+.note-mermaid-svg svg .edgeLabel rect,
+.note-mermaid-svg svg .edgeLabel .background {
+  fill: var(--card) !important;
+  stroke: var(--card) !important;
+  stroke-width: 6px !important;
+  opacity: 1 !important;
+}
+
+.note-mermaid-svg svg * {
+  filter: none !important;
 }
 
 .note-mermaid-message {
@@ -114,7 +139,7 @@
 }
 
 .note-mermaid-inline-error {
-  @apply pointer-events-none absolute inset-x-3 bottom-3 z-10 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive shadow-sm backdrop-blur-sm;
+  @apply pointer-events-none absolute inset-x-3 bottom-3 z-10 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive backdrop-blur-sm;
 }
 
 .note-mermaid-inline-source .cm-scroller {
@@ -191,9 +216,13 @@
 }
 
 .note-mermaid-full-svg {
-  @apply p-8;
+  @apply h-full w-full p-4 md:p-6;
+}
+
+.note-mermaid-full-svg svg {
+  max-height: 100%;
 }
 
 .note-mermaid-zoom-controls {
-  @apply absolute right-4 bottom-4 flex gap-1 rounded-lg border border-sidebar-border bg-background p-1 shadow-sm;
+  @apply absolute right-4 bottom-4 flex gap-1 rounded-lg border border-sidebar-border bg-background p-1;
 }
