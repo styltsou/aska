@@ -15,6 +15,7 @@ import { NotFoundPage } from "@/components/not-found-page";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { formatRootErrorDetails, getRootErrorContent } from "@/lib/root-error";
+import { shouldRenderWithoutAppShell } from "@/lib/root-shell";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -26,23 +27,21 @@ export const Route = createRootRoute({
   notFoundComponent: RootNotFound,
 });
 
-const SHELLLESS_ROUTE_IDS = new Set(["/login", "/signup", "/onboarding"]);
-
 function RootLayout() {
   const isGlobalNotFound = useRouterState({
     select: (state) => state.matches[0]?.globalNotFound ?? false,
   });
 
-  // Base the shell decision on the *committed* match tree rather than the
-  // optimistic `pathname`. The pathname updates to the destination URL the
-  // moment navigation starts, but the Outlet keeps rendering the previous
-  // committed route until the new one resolves. Reading the committed matches
-  // avoids flashing a full auth page (e.g. the AuthPageLayout) inside the app
-  // shell while a signed-in workspace route loads.
+  // Prefer the committed match while navigating. During a brief match gap,
+  // fall back to the committed pathname so a workspace Outlet keeps its
+  // providers instead of being treated as a shellless route.
   const isShelllessRoute = useRouterState({
     select: (state) => {
       const topLevel = state.matches[1];
-      return topLevel ? SHELLLESS_ROUTE_IDS.has(topLevel.routeId) : true;
+      return shouldRenderWithoutAppShell(
+        topLevel?.routeId,
+        (state.resolvedLocation ?? state.location).pathname,
+      );
     },
   });
 
