@@ -6,10 +6,12 @@ import type {
   CollectionLinkNode,
   ContentTypeFilter,
   CollectionsData,
+  CollectionPropertiesResponse,
   CreateCollectionInput,
   CreateCanvasArrowInput,
   CreateCanvasTextInput,
   CreateCollectionResponse,
+  RenameCollectionResponse,
   CreateFolderInput,
   CreateFolderResponse,
   CreateImageUploadInput,
@@ -140,6 +142,26 @@ export async function createCollection(
   return apiPost<CreateCollectionResponse>(
     `/api/v1/workspace/${workspaceSlug}/collections`,
     data,
+  );
+}
+
+export async function renameCollection(
+  workspaceSlug: string,
+  collectionSlug: string,
+  name: string,
+): Promise<RenameCollectionResponse> {
+  return apiPatch<RenameCollectionResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${encodeURIComponent(collectionSlug)}`,
+    { name },
+  );
+}
+
+export async function fetchCollectionProperties(
+  workspaceSlug: string,
+  collectionSlug: string,
+): Promise<CollectionPropertiesResponse> {
+  return apiGet<CollectionPropertiesResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${encodeURIComponent(collectionSlug)}/properties`,
   );
 }
 

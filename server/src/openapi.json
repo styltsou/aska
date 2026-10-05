@@ -358,6 +358,71 @@
         }
       }
     },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}": {
+      "patch": {
+        "operationId": "renameCollection",
+        "tags": ["Collections"],
+        "summary": "Rename a collection",
+        "description": "Changes the display name while keeping the collection slug and URL stable.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameCollectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The renamed collection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateCollectionResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/properties": {
+      "get": {
+        "operationId": "getCollectionProperties",
+        "tags": ["Collections"],
+        "summary": "Get collection properties",
+        "description": "Counts assets and folders in the collection and totals known original image and video file sizes.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          { "$ref": "#/components/parameters/CollectionSlug" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Collection properties.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionPropertiesResponse"
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}/collections/{collectionSlug}/folders": {
       "post": {
         "operationId": "createFolder",
@@ -2414,6 +2479,18 @@
           }
         }
       },
+      "RenameCollectionRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "New display name. Leading and trailing whitespace is removed."
+          }
+        }
+      },
       "CreatedCollection": {
         "type": "object",
         "required": [
@@ -2497,6 +2574,41 @@
             "properties": {
               "collection": {
                 "$ref": "#/components/schemas/CreatedCollection"
+              }
+            }
+          }
+        }
+      },
+      "CollectionPropertiesResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["properties"],
+            "properties": {
+              "properties": {
+                "type": "object",
+                "required": [
+                  "assetCount",
+                  "folderCount",
+                  "imageCount",
+                  "videoCount",
+                  "noteCount",
+                  "linkCount",
+                  "colorCount",
+                  "originalMediaSizeBytes"
+                ],
+                "properties": {
+                  "assetCount": { "type": "integer", "minimum": 0 },
+                  "folderCount": { "type": "integer", "minimum": 0 },
+                  "imageCount": { "type": "integer", "minimum": 0 },
+                  "videoCount": { "type": "integer", "minimum": 0 },
+                  "noteCount": { "type": "integer", "minimum": 0 },
+                  "linkCount": { "type": "integer", "minimum": 0 },
+                  "colorCount": { "type": "integer", "minimum": 0 },
+                  "originalMediaSizeBytes": { "type": "integer", "minimum": 0 }
+                }
               }
             }
           }

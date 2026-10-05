@@ -27,6 +27,17 @@ export type DetailedCollectionRow = {
   previews: FolderChildPreview[];
 };
 
+export type CollectionProperties = {
+  assetCount: number;
+  folderCount: number;
+  imageCount: number;
+  videoCount: number;
+  noteCount: number;
+  linkCount: number;
+  colorCount: number;
+  originalMediaSizeBytes: number;
+};
+
 export type DeleteCollectionNodeResult = {
   deletedNodeId: string;
   deletedAssetCount: number;

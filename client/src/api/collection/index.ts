@@ -1,7 +1,9 @@
 export {
   useBulkDelete,
   useCollections,
+  useCollectionProperties,
   useCreateCollection,
+  useRenameCollection,
   useCreateFolder,
   useCreateInboxNote,
   useCreateInboxRemoteImage,

@@ -5,6 +5,7 @@ import {
   BoardPositionSchema,
   CollectionNodePathParamSchema,
   CreateFolderSchema,
+  RenameCollectionSchema,
   CreateNoteSchema,
   AssetPathParamSchema,
   CollectionAssetNodePathParamSchema,
@@ -23,6 +24,15 @@ import {
 } from "./collection.dto";
 
 describe("collection board position DTOs", () => {
+  it("trims collection rename input and rejects blank names", () => {
+    expect(RenameCollectionSchema.parse({ name: "  Research  " })).toEqual({
+      name: "Research",
+    });
+    expect(RenameCollectionSchema.safeParse({ name: "   " }).success).toBe(
+      false,
+    );
+  });
+
   it("accepts signed integer canvas coordinates", () => {
     expect(BoardPositionSchema.parse({ x: -48, y: 96 })).toEqual({
       x: -48,

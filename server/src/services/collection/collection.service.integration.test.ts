@@ -89,6 +89,52 @@ afterEach(async () => {
 });
 
 describe("CollectionService integration", () => {
+  it("renames a collection without changing its URL or its nested asset counts", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Project References" },
+    );
+    await collectionService.createFolder(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Archive" },
+    );
+    await collectionService.createNote(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { content: "A saved thought", parentFolderPath: "archive" },
+    );
+
+    const renamed = await collectionService.renameCollection(
+      fixture.organizationId,
+      fixture.userId,
+      collection.slug,
+      { name: "Research Library" },
+    );
+    const properties = await collectionService.getCollectionProperties(
+      fixture.organizationId,
+      collection.slug,
+    );
+
+    expect(renamed).toMatchObject({
+      name: "Research Library",
+      slug: collection.slug,
+    });
+    expect(properties).toEqual({
+      assetCount: 1,
+      folderCount: 1,
+      imageCount: 0,
+      videoCount: 0,
+      noteCount: 1,
+      linkCount: 0,
+      colorCount: 0,
+      originalMediaSizeBytes: 0,
+    });
+  });
+
   it("updates a note and recalculates its metrics", async () => {
     const note = await assetService.createInboxNote(
       fixture.organizationId,
@@ -1943,6 +1989,13 @@ describe("ImageUploadService integration", () => {
     });
 
     expect(result).toEqual({ ignored: false });
+
+    expect(
+      await collectionService.getCollectionProperties(
+        fixture.organizationId,
+        collection.slug,
+      ),
+    ).toMatchObject({ imageCount: 1, originalMediaSizeBytes: 2_000 });
 
     const [finalizedUpload] = await db
       .select({ status: uploads.status, assetId: uploads.assetId })

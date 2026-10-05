@@ -12,7 +12,9 @@ import {
   flattenFolder,
   getCollectionContents,
   getCollections,
+  getCollectionProperties,
   getWorkspaceWithCollections,
+  renameCollection,
   moveCollectionNodesToFolder,
   updateCollectionNodePosition,
   updateCollectionNodePositions,
@@ -28,6 +30,14 @@ const collectionRoutes = factory
   .get("/workspace/:workspaceSlug", ...getWorkspaceWithCollections)
   .get("/workspace/:workspaceSlug/collections", ...getCollections)
   .post("/workspace/:workspaceSlug/collections", ...createCollection)
+  .get(
+    "/workspace/:workspaceSlug/collections/:collectionSlug/properties",
+    ...getCollectionProperties,
+  )
+  .patch(
+    "/workspace/:workspaceSlug/collections/:collectionSlug",
+    ...renameCollection,
+  )
   .post(
     "/workspace/:workspaceSlug/collections/:collectionSlug/folders",
     ...createFolder,

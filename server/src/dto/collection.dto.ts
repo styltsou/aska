@@ -240,6 +240,12 @@ export const CreateCollectionSchema = z.object({
 
 export type CreateCollectionInput = z.infer<typeof CreateCollectionSchema>;
 
+export const RenameCollectionSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+});
+
+export type RenameCollectionInput = z.infer<typeof RenameCollectionSchema>;
+
 export const CreateFolderSchema = z.object({
   name: z.string().min(1).max(255),
   parentFolderPath: z.string().optional(),

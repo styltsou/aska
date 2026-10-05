@@ -1,6 +1,8 @@
 export const collectionQueryKeys = {
   collections: (workspaceSlug: string) =>
     ["collections", workspaceSlug] as const,
+  properties: (workspaceSlug: string, collectionSlug: string) =>
+    ["collectionProperties", workspaceSlug, collectionSlug] as const,
   contentScope: (workspaceSlug: string, collectionSlug: string) =>
     ["collectionContents", workspaceSlug, collectionSlug] as const,
   contents: (

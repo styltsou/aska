@@ -6,7 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Link } from "@tanstack/react-router";
-import { FolderOpenIcon } from "lucide-react";
+import { FolderOpenIcon, MoreHorizontalIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
 import { LinkCardPreview } from "./board/cards/link-asset-card";
@@ -17,12 +17,15 @@ import {
 import { NoteMiniature } from "./board/cards/note-miniature";
 import { useDeleteCollection } from "@/api/collection";
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { CollectionPropertiesDialog } from "./collection-properties-dialog";
+import { RenameCollectionDialog } from "./rename-collection-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,11 +63,14 @@ export function CollectionCard({
 }: CollectionCardProps) {
   const [pointerOver, setPointerOver] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [propertiesDialogOpen, setPropertiesDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const pointerExitTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deleteCollection = useDeleteCollection(workspaceSlug);
   const previews = collection.previews.slice(0, MAX_VISIBLE_PREVIEWS);
-  const active = pointerOver || focused;
+  const active = pointerOver || focused || actionsOpen;
   const stackDirection = (hashString(collection.slug) & 1) === 0 ? 1 : -1;
 
   useEffect(
@@ -98,89 +104,125 @@ export function CollectionCard({
 
   return (
     <>
-      <ContextMenu>
-        <ContextMenuTrigger
-          render={(triggerProps) => (
-            <div className="relative">
-              <Link
-                {...triggerProps}
-                to="/$workspaceSlug/collections/$"
-                search={search}
-                params={{ workspaceSlug, _splat: collection.slug }}
-                className="group/card relative flex w-full min-w-0 cursor-pointer flex-col items-center gap-2.5 rounded-xl p-1.5 text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none"
-                onFocus={(event) =>
-                  setFocused(event.currentTarget.matches(":focus-visible"))
-                }
-                onBlur={() => setFocused(false)}
-              >
-                <div className="pointer-events-none relative z-10 aspect-[3/2] w-full @min-[64rem]:max-h-[calc((100svh-13.75rem)/2)]">
-                  <div
-                    className="absolute inset-0 flex items-center justify-center"
-                    style={{ containerType: "size" }}
-                  >
-                    {previews.length === 0 ? (
-                      <EmptyCollectionPreview
-                        active={active}
-                        onPointerEnter={handleHoverTargetEnter}
-                        onPointerLeave={handleHoverTargetLeave}
-                      />
-                    ) : (
-                      previews.map((preview, index) => (
-                        <CollectionPreviewCard
-                          key={preview.assetId}
-                          preview={preview}
-                          index={index}
-                          count={previews.length}
-                          stackDirection={stackDirection}
-                          active={active}
-                          onPointerEnter={handleHoverTargetEnter}
-                          onPointerLeave={handleHoverTargetLeave}
-                        />
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div
-                  aria-hidden="true"
-                  data-collection-hover-target
-                  onPointerEnter={handleHoverTargetEnter}
-                  onPointerLeave={handleHoverTargetLeave}
-                  className="absolute top-[64%] bottom-0 left-1/2 z-0 w-[68%] -translate-x-1/2"
-                />
-
-                <div
-                  data-collection-hover-target
-                  data-active={active}
-                  onPointerEnter={handleHoverTargetEnter}
-                  onPointerLeave={handleHoverTargetLeave}
-                  className="relative z-10 flex max-w-full min-w-0 items-center gap-5 rounded-md bg-sidebar px-3 py-1.5 transition-colors duration-150 ease-out group-focus-visible/card:bg-sidebar-active data-[active=true]:bg-sidebar-active motion-reduce:transition-none"
-                >
-                  <span className="min-w-0 truncate text-sm font-medium">
-                    {collection.name}
-                  </span>
-                  <span
-                    aria-label={`${collection.assetCount} items`}
-                    className="ml-auto shrink-0 text-xs text-sidebar-foreground/55 tabular-nums"
-                  >
-                    {collection.assetCount}
-                  </span>
-                </div>
-              </Link>
-            </div>
-          )}
-        />
-        <ContextMenuContent>
-          <ContextMenuItem>Rename</ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            className="text-red-600! hover:bg-red-500/20! focus:bg-red-500/20! data-highlighted:bg-red-500/20! dark:text-red-400! dark:hover:bg-red-500/30! dark:focus:bg-red-500/30! dark:data-highlighted:bg-red-500/30!"
-            onClick={() => setDeleteDialogOpen(true)}
+      <div className="relative flex w-full min-w-0 flex-col items-center gap-2.5 rounded-xl p-1.5 text-sidebar-foreground">
+        <Link
+          to="/$workspaceSlug/collections/$"
+          search={search}
+          params={{ workspaceSlug, _splat: collection.slug }}
+          tabIndex={-1}
+          aria-hidden="true"
+          className="relative z-10 aspect-[3/2] w-full cursor-pointer @min-[64rem]:max-h-[calc((100svh-13.75rem)/2)]"
+        >
+          <div
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            style={{ containerType: "size" }}
           >
-            Delete
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+            {previews.length === 0 ? (
+              <EmptyCollectionPreview
+                active={active}
+                onPointerEnter={handleHoverTargetEnter}
+                onPointerLeave={handleHoverTargetLeave}
+              />
+            ) : (
+              previews.map((preview, index) => (
+                <CollectionPreviewCard
+                  key={preview.assetId}
+                  preview={preview}
+                  index={index}
+                  count={previews.length}
+                  stackDirection={stackDirection}
+                  active={active}
+                  onPointerEnter={handleHoverTargetEnter}
+                  onPointerLeave={handleHoverTargetLeave}
+                />
+              ))
+            )}
+          </div>
+
+          <div
+            aria-hidden="true"
+            data-collection-hover-target
+            onPointerEnter={handleHoverTargetEnter}
+            onPointerLeave={handleHoverTargetLeave}
+            className="absolute top-[64%] -bottom-2.5 left-1/2 w-[68%] -translate-x-1/2"
+          />
+        </Link>
+        <div className="relative z-10 flex max-w-full min-w-0 items-center justify-center gap-1.5">
+          <Link
+            to="/$workspaceSlug/collections/$"
+            search={search}
+            params={{ workspaceSlug, _splat: collection.slug }}
+            data-collection-hover-target
+            data-active={active}
+            onPointerEnter={handleHoverTargetEnter}
+            onPointerLeave={handleHoverTargetLeave}
+            onFocus={(event) =>
+              setFocused(event.currentTarget.matches(":focus-visible"))
+            }
+            onBlur={() => setFocused(false)}
+            className="flex h-8 max-w-full min-w-0 items-center gap-5 rounded-md bg-sidebar px-3 text-sidebar-foreground transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none data-[active=true]:bg-sidebar-active motion-reduce:transition-none"
+          >
+            <span className="min-w-0 truncate text-sm font-medium">
+              {collection.name}
+            </span>
+            <span
+              aria-label={`${collection.assetCount} items`}
+              className="ml-auto shrink-0 text-xs text-sidebar-foreground/55 tabular-nums"
+            >
+              {collection.assetCount}
+            </span>
+          </Link>
+          <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`More actions for ${collection.name}`}
+                  data-collection-hover-target
+                  onPointerEnter={handleHoverTargetEnter}
+                  onPointerLeave={handleHoverTargetLeave}
+                  className="rounded-md bg-sidebar text-sidebar-foreground/70 hover:bg-sidebar-active hover:text-sidebar-foreground data-popup-open:bg-sidebar-active"
+                />
+              }
+            >
+              <MoreHorizontalIcon aria-hidden="true" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              side="bottom"
+              className="w-40 duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-ending-style:scale-[0.99] data-ending-style:duration-150 data-starting-style:scale-[0.97] motion-reduce:transition-none"
+            >
+              <DropdownMenuItem onClick={() => setRenameDialogOpen(true)}>
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPropertiesDialogOpen(true)}>
+                Properties
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-red-600! hover:bg-red-500/20! focus:bg-red-500/20! data-highlighted:bg-red-500/20! dark:text-red-400! dark:hover:bg-red-500/30! dark:focus:bg-red-500/30! dark:data-highlighted:bg-red-500/30!"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      <RenameCollectionDialog
+        open={renameDialogOpen}
+        onOpenChange={setRenameDialogOpen}
+        collection={collection}
+        workspaceSlug={workspaceSlug}
+      />
+      <CollectionPropertiesDialog
+        open={propertiesDialogOpen}
+        onOpenChange={setPropertiesDialogOpen}
+        collection={collection}
+        workspaceSlug={workspaceSlug}
+      />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent size="sm">
           <AlertDialogBody>
@@ -307,9 +349,9 @@ function CollectionPreviewCard({
     ? { duration: 0 }
     : {
         type: "spring" as const,
-        duration: 0.26,
-        bounce: 0.5,
-        delay: active ? index * 0.004 : 0,
+        duration: active ? 0.36 : 0.42,
+        bounce: active ? 0.18 : 0.25,
+        delay: active ? index * 0.04 : 0,
       };
 
   if (preview.type === "image") {

@@ -14,6 +14,7 @@ import type {
   CreatedFolder,
   MoveCollectionNodesParentInput,
   LightCollection,
+  RenameCollectionInput,
   UpdateNodePositionInput,
   UpdateNodePositionsInput,
   UpdateCanvasArrowInput,
@@ -34,6 +35,7 @@ import { CanvasObjectService } from "@/services/collection/canvas-object.service
 import { CanvasStackingService } from "@/services/collection/canvas-stacking.service";
 import type {
   CreatedCollectionRow,
+  CollectionProperties,
   DeleteCollectionNodeResult,
   DeleteCollectionResult,
   DetailedCollectionRow,
@@ -54,6 +56,16 @@ export interface ICollectionService {
   getWorkspaceBySlug(slug: string, userId: string): Promise<WorkspaceInfo>;
   getLightCollections(orgId: string): Promise<LightCollection[]>;
   getDetailedCollections(orgId: string): Promise<DetailedCollectionRow[]>;
+  getCollectionProperties(
+    orgId: string,
+    collectionSlug: string,
+  ): Promise<CollectionProperties>;
+  renameCollection(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: RenameCollectionInput,
+  ): Promise<CreatedCollectionRow>;
   createCollection(
     orgId: string,
     userId: string,
@@ -217,6 +229,22 @@ export class CollectionService implements ICollectionService {
 
   getDetailedCollections(orgId: string): Promise<DetailedCollectionRow[]> {
     return this.queries.getDetailedCollections(orgId);
+  }
+
+  getCollectionProperties(
+    orgId: string,
+    collectionSlug: string,
+  ): Promise<CollectionProperties> {
+    return this.queries.getCollectionProperties(orgId, collectionSlug);
+  }
+
+  renameCollection(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: RenameCollectionInput,
+  ): Promise<CreatedCollectionRow> {
+    return this.mutations.renameCollection(orgId, userId, collectionSlug, data);
   }
 
   createCollection(

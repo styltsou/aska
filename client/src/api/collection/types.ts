@@ -180,6 +180,23 @@ export type CreateCollectionResponse = {
   collection: CreatedCollection;
 };
 
+export type RenameCollectionResponse = CreateCollectionResponse;
+
+export type CollectionProperties = {
+  assetCount: number;
+  folderCount: number;
+  imageCount: number;
+  videoCount: number;
+  noteCount: number;
+  linkCount: number;
+  colorCount: number;
+  originalMediaSizeBytes: number;
+};
+
+export type CollectionPropertiesResponse = {
+  properties: CollectionProperties;
+};
+
 export type CreateFolderInput = {
   name: string;
   parentFolderPath?: string;

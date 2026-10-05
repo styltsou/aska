@@ -9,7 +9,9 @@ import {
 import {
   bulkDeleteNodes,
   fetchCollections,
+  fetchCollectionProperties,
   createCollection,
+  renameCollection,
   createInboxImageUpload,
   createInboxNote,
   createInboxRemoteImage,
@@ -44,6 +46,7 @@ import type {
   CollectionNode,
   ContentTypeFilter,
   CollectionsData,
+  CollectionPropertiesResponse,
   CreateCollectionInput,
   CreateImageUploadResponse,
   CreateFolderInput,
@@ -616,6 +619,64 @@ export function useCollections(workspaceSlug: string) {
   return useQuery<CollectionsData>({
     ...collectionsQueryOptions(workspaceSlug),
     enabled: !!workspaceSlug,
+  });
+}
+
+export function useCollectionProperties(
+  workspaceSlug: string,
+  collectionSlug: string,
+  enabled: boolean,
+) {
+  return useQuery<CollectionPropertiesResponse>({
+    queryKey: collectionQueryKeys.properties(workspaceSlug, collectionSlug),
+    queryFn: () => fetchCollectionProperties(workspaceSlug, collectionSlug),
+    enabled,
+  });
+}
+
+export function useRenameCollection(workspaceSlug: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ slug, name }: { slug: string; name: string }) =>
+      renameCollection(workspaceSlug, slug, name),
+    onSuccess: ({ collection }, { slug }) => {
+      queryClient.setQueryData<CollectionsData>(
+        collectionQueryKeys.collections(workspaceSlug),
+        (current) =>
+          current
+            ? {
+                ...current,
+                collections: current.collections.map((item) =>
+                  item.slug === slug
+                    ? {
+                        ...item,
+                        name: collection.name,
+                        updatedAt: collection.updatedAt,
+                      }
+                    : item,
+                ),
+              }
+            : current,
+      );
+      queryClient.setQueryData<WorkspaceData>(
+        ["workspace", workspaceSlug],
+        (current) =>
+          current
+            ? {
+                ...current,
+                collections: current.collections.map((item) =>
+                  item.slug === slug
+                    ? { ...item, name: collection.name }
+                    : item,
+                ),
+              }
+            : current,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: collectionQueryKeys.contentScope(workspaceSlug, slug),
+      });
+    },
   });
 }
 

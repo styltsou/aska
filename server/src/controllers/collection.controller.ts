@@ -7,6 +7,7 @@ import {
   FolderNodePathParamSchema,
   CollectionPathParamSchema,
   CreateCollectionSchema,
+  RenameCollectionSchema,
   CreateCanvasArrowSchema,
   CreateCanvasTextSchema,
   CreateColorSchema,
@@ -77,6 +78,57 @@ export const getCollections = factory.createHandlers(
     );
 
     return c.json(success({ collections }));
+  },
+);
+
+export const getCollectionProperties = factory.createHandlers(
+  authMiddleware,
+  validate.param(CollectionPathParamSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug } = c.req.valid("param");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      c.get("userId"),
+    );
+    const properties = await collectionService.getCollectionProperties(
+      workspace.id,
+      collectionSlug,
+    );
+
+    return c.json(success({ properties }));
+  },
+);
+
+export const renameCollection = factory.createHandlers(
+  authMiddleware,
+  validate.param(CollectionPathParamSchema),
+  validate.body(RenameCollectionSchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug } = c.req.valid("param");
+    const userId = c.get("userId");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    const collection = await collectionService.renameCollection(
+      workspace.id,
+      userId,
+      collectionSlug,
+      c.req.valid("json"),
+    );
+
+    return c.json(
+      success({
+        collection: {
+          id: collection.id,
+          name: collection.name,
+          slug: collection.slug,
+          description: collection.description,
+          createdAt: collection.createdAt.toISOString(),
+          updatedAt: collection.updatedAt.toISOString(),
+        },
+      }),
+    );
   },
 );
 

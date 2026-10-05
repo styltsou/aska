@@ -48,7 +48,11 @@ import {
   getCollectionBySlug,
   resolveTargetInCollection,
 } from "./collection-target-resolver";
-import type { DetailedCollectionRow, WorkspaceInfo } from "./collection.types";
+import type {
+  CollectionProperties,
+  DetailedCollectionRow,
+  WorkspaceInfo,
+} from "./collection.types";
 import {
   getResourceMediaLookup,
   projectLinkNode,
@@ -116,6 +120,45 @@ export class CollectionQueryService {
       ...r,
       assetCount: Number(r.assetCount),
     }));
+  }
+
+  async getCollectionProperties(
+    orgId: string,
+    collectionSlug: string,
+  ): Promise<CollectionProperties> {
+    const collection = await getCollectionBySlug(orgId, collectionSlug);
+    const [stats] = await db
+      .select({
+        assetCount: sql<number>`COUNT(*) FILTER (WHERE ${collectionNodes.nodeType} = 'asset')`,
+        folderCount: sql<number>`COUNT(*) FILTER (WHERE ${collectionNodes.nodeType} = 'folder')`,
+        imageCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'image')`,
+        videoCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'video')`,
+        noteCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'note')`,
+        linkCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'link')`,
+        colorCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'color')`,
+        originalMediaSizeBytes: sql<number>`
+          COALESCE(SUM(
+            COALESCE((${imageAssets.variants} -> 'original' ->> 'sizeBytes')::bigint, 0)
+            + COALESCE((${videoAssets.original} ->> 'sizeBytes')::bigint, 0)
+          ), 0)
+        `,
+      })
+      .from(collectionNodes)
+      .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
+      .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+      .leftJoin(videoAssets, eq(videoAssets.assetId, assets.id))
+      .where(eq(collectionNodes.collectionId, collection.id));
+
+    return {
+      assetCount: Number(stats?.assetCount ?? 0),
+      folderCount: Number(stats?.folderCount ?? 0),
+      imageCount: Number(stats?.imageCount ?? 0),
+      videoCount: Number(stats?.videoCount ?? 0),
+      noteCount: Number(stats?.noteCount ?? 0),
+      linkCount: Number(stats?.linkCount ?? 0),
+      colorCount: Number(stats?.colorCount ?? 0),
+      originalMediaSizeBytes: Number(stats?.originalMediaSizeBytes ?? 0),
+    };
   }
 
   async getDetailedCollections(

@@ -18,6 +18,7 @@ import type {
   CreateFolderInput,
   CreateNoteInput,
   CreatedFolder,
+  RenameCollectionInput,
   UpdateNodePositionInput,
   UpdateNodePositionsInput,
 } from "@/dto/collection.dto";
@@ -35,6 +36,30 @@ import {
 import type { CreatedCollectionRow } from "./collection.types";
 
 export class CollectionMutationService {
+  async renameCollection(
+    orgId: string,
+    userId: string,
+    collectionSlug: string,
+    data: RenameCollectionInput,
+  ): Promise<CreatedCollectionRow> {
+    const [updated] = await db
+      .update(collectionsTable)
+      .set({ name: data.name, updatedByUserId: userId })
+      .where(
+        and(
+          eq(collectionsTable.organizationId, orgId),
+          eq(collectionsTable.slug, collectionSlug),
+        ),
+      )
+      .returning();
+
+    if (!updated) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Collection not found");
+    }
+
+    return updated;
+  }
+
   async createCollection(
     orgId: string,
     userId: string,
