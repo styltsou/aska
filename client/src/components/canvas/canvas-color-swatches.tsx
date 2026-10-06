@@ -38,6 +38,18 @@ export function CanvasColorSwatches({
     setMoreOpen(false);
   }, [dismissKey]);
 
+  useEffect(() => {
+    if (!moreOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.repeat) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setMoreOpen(false);
+    };
+    window.addEventListener("keydown", handleEscape, true);
+    return () => window.removeEventListener("keydown", handleEscape, true);
+  }, [moreOpen]);
+
   return (
     <div
       className="flex items-center gap-1.5"
@@ -53,38 +65,34 @@ export function CanvasColorSwatches({
         />
       ))}
 
-      <Popover open={moreOpen} onOpenChange={setMoreOpen}>
+      <Popover modal open={moreOpen} onOpenChange={setMoreOpen}>
         <PopoverTrigger
           render={
             <button
               type="button"
               className={cn(
-                "relative flex size-[18px] items-center justify-center rounded-[5px] transition-[background,transform,box-shadow] duration-100 hover:scale-105 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                "relative flex size-[18px] items-center justify-center rounded-[5px] transition-transform duration-75 hover:scale-105 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
                 overflowColor
-                  ? "ring-1 ring-black/15 ring-inset dark:ring-white/20"
+                  ? "ring-1 ring-black/15 ring-inset dark:ring-white/20 transition-[background-color,transform,box-shadow] duration-75"
                   : "bg-foreground/5 ring-1 ring-foreground/10 ring-inset hover:bg-foreground/10",
               )}
+              style={{
+                backgroundColor: overflowColor
+                  ? canvasObjectColor(overflowColor)
+                  : undefined,
+              }}
             />
           }
+          aria-pressed={Boolean(overflowColor)}
           aria-label={
             overflowColor
               ? `More colors, ${colorLabel(overflowColor)} selected`
               : "More colors"
           }
         >
-          {overflowColor ? (
-            <>
-              <span
-                className="absolute inset-0 rounded-[inherit]"
-                style={{ backgroundColor: canvasObjectColor(overflowColor) }}
-              />
-              <span className="absolute right-0.5 bottom-0.5 flex size-2.5 items-center justify-center rounded-[2px] bg-popover/90 text-foreground shadow-sm ring-1 ring-foreground/15">
-                <PlusIcon className="size-2" strokeWidth={2.5} />
-              </span>
-            </>
-          ) : (
+          {!overflowColor ? (
             <PlusIcon className="size-3 text-foreground" strokeWidth={2} />
-          )}
+          ) : null}
           <SwatchSelectionMark
             color={overflowColor ?? "ink"}
             selected={Boolean(overflowColor)}
@@ -94,7 +102,7 @@ export function CanvasColorSwatches({
           side="bottom"
           align="end"
           sideOffset={8}
-          className="w-auto min-w-0 gap-0 p-2"
+          className="w-auto min-w-0 gap-0 p-2 duration-75"
         >
           <div
             className="grid grid-cols-4 gap-1.5"
@@ -106,10 +114,7 @@ export function CanvasColorSwatches({
                 key={color}
                 color={color}
                 selected={value === color}
-                onClick={() => {
-                  onChange(color);
-                  setMoreOpen(false);
-                }}
+                onClick={() => onChange(color)}
               />
             ))}
           </div>
@@ -152,7 +157,7 @@ function SwatchSelectionMark({
   return (
     <span
       className={cn(
-        "pointer-events-none absolute inset-0 m-auto size-2.5 rounded-[3px] transition-opacity duration-150 ease-out motion-reduce:transition-none",
+        "pointer-events-none absolute inset-0 m-auto size-2.5 rounded-[3px] transition-opacity duration-75 ease-out motion-reduce:transition-none",
         selected ? "opacity-100" : "opacity-0",
       )}
       style={{ backgroundColor: canvasObjectColorMarker(color) }}

@@ -59,11 +59,13 @@ export function CanvasObjectInspector({
   target,
   modifierLabel,
   onMove,
+  moveDisabled = false,
 }: {
   boardKey: string;
   target?: CanvasInspectorTarget;
   modifierLabel: string;
   onMove?: () => void;
+  moveDisabled?: boolean;
 }) {
   const viewportActivity = useTransientStore(
     (state) => state.canvasViewportActivity[boardKey] ?? 0,
@@ -114,8 +116,9 @@ export function CanvasObjectInspector({
               {onMove ? (
                 <button
                   type="button"
-                  className="flex size-7 cursor-pointer items-center justify-center rounded-md text-foreground transition-colors hover:bg-foreground/5"
+                  className="flex size-7 cursor-pointer items-center justify-center rounded-md text-foreground transition-colors hover:bg-foreground/5 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label={`Move ${target.type}`}
+                  disabled={moveDisabled}
                   onClick={onMove}
                 >
                   <FolderInputIcon className="size-3.5" />

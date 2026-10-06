@@ -60,6 +60,7 @@ type SelectionActionBarProps = {
   surface: "inbox" | "canvas" | "grid";
   onClear: () => void;
   onMove?: () => void;
+  moveDisabled?: boolean;
   onDelete?: () => void;
   onArrange?: () => void;
   onCompact?: () => void;
@@ -79,6 +80,7 @@ export function SelectionActionBar({
   surface,
   onClear,
   onMove,
+  moveDisabled = false,
   onDelete,
   onArrange,
   onCompact,
@@ -132,6 +134,7 @@ export function SelectionActionBar({
                                     ? "Move to collection"
                                     : "Move selected"
                                 }
+                                disabled={moveDisabled}
                                 onClick={onMove}
                               />
                             }
@@ -149,6 +152,7 @@ export function SelectionActionBar({
                           label={
                             surface === "inbox" ? "Move to collection" : "Move"
                           }
+                          disabled
                         >
                           <FolderInputIcon />
                         </PlaceholderAction>
@@ -378,14 +382,23 @@ function LayoutActionsMenu({
 function PlaceholderAction({
   label,
   children,
+  disabled = false,
 }: {
   label: string;
   children: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger
-        render={<Button type="button" variant="ghost" aria-label={label} />}
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={label}
+            disabled={disabled}
+          />
+        }
       >
         {children}
       </TooltipTrigger>

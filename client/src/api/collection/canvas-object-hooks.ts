@@ -395,7 +395,7 @@ export function useCreateCanvasArrow(
       ...data
     }: CreateCanvasArrowVariables) =>
       createCanvasArrow(workspaceSlug, collectionSlug, data),
-    onMutate: (variables) => {
+    onMutate: async (variables) => {
       const optimistic = optimisticArrowFromVariables(variables);
       if (!optimistic) return;
       const filter = contentsFilter(
@@ -403,7 +403,7 @@ export function useCreateCanvasArrow(
         collectionSlug,
         variables.parentFolderPath,
       );
-      void queryClient.cancelQueries(filter);
+      await queryClient.cancelQueries(filter);
       queryClient.setQueriesData<CollectionContentsResponse>(
         filter,
         (current) =>

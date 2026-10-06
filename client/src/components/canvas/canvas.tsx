@@ -128,6 +128,10 @@ import {
 import { CanvasArrowLayer, type DraftCanvasArrow } from "./canvas-arrow-layer";
 import { arrowHasIdentity } from "./canvas-arrow-identity";
 import {
+  visibleCanvasObjects,
+  type PendingCanvasArrow,
+} from "./canvas-pending-arrows";
+import {
   getArrowSnapshots,
   getInternalArrowIds,
   getLayoutArrowUpdates,
@@ -349,6 +353,13 @@ function CanvasSurface({
   const draftTextRef = useRef<CanvasTextObject | undefined>(undefined);
   draftTextRef.current = draftText;
   const [draftArrow, setDraftArrow] = useState<DraftCanvasArrow>();
+  const [pendingArrows, setPendingArrows] = useState<
+    Record<string, PendingCanvasArrow>
+  >({});
+  const displayCanvasObjects = useMemo(
+    () => visibleCanvasObjects(canvasObjects, pendingArrows),
+    [canvasObjects, pendingArrows],
+  );
   const pendingArrowCreatesRef = useRef(new Map<string, Promise<string>>());
   const prevEligibleNodeIdsRef = useRef<ReadonlySet<string>>(new Set());
   const resolveArrowObjectId = useCallback(async (objectId: string) => {
@@ -408,12 +419,16 @@ function CanvasSurface({
     () => selectionIdsForScope(selection, boardKey),
     [boardKey, selection],
   );
-  const focusedCanvasObjectId = activeCanvasObjectFocus(
-    canvasObjectFocus?.boardKey === boardKey
-      ? canvasObjectFocus.objectId
-      : undefined,
-    selectedIds,
-  );
+  const focusedCanvasObjectId =
+    activeCanvasObjectFocus(
+      canvasObjectFocus?.boardKey === boardKey
+        ? canvasObjectFocus.objectId
+        : undefined,
+      selectedIds,
+    ) ??
+    (selectedIds.length === 1 && pendingArrows[selectedIds[0]!]
+      ? selectedIds[0]
+      : undefined);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const canMoveSelection = selectedIds.every((id) =>
     PERSISTED_CANVAS_ITEM_ID.test(id),
@@ -481,10 +496,20 @@ function CanvasSurface({
           ),
       )
       .map((node) => node.id);
-    ids.push(...canvasObjects.map((object) => object.id));
+    ids.push(
+      ...displayCanvasObjects.flatMap((object) =>
+        object.clientId ? [object.id, object.clientId] : [object.id],
+      ),
+    );
     if (draftText) ids.push(draftText.id);
     return ids.join("\u001f");
-  }, [canvasObjects, colorMatchNodeIds, draftText, isColorFilterActive, nodes]);
+  }, [
+    colorMatchNodeIds,
+    displayCanvasObjects,
+    draftText,
+    isColorFilterActive,
+    nodes,
+  ]);
   const eligibleNodeIds = useMemo(
     () => new Set(eligibleNodeIdsKey ? eligibleNodeIdsKey.split("\u001f") : []),
     [eligibleNodeIdsKey],
@@ -1196,31 +1221,42 @@ function CanvasSurface({
         if (object.type !== "arrow") {
           throw new Error("Expected the created canvas object to be an arrow");
         }
-        setCanvasObjectFocus((current) =>
-          current?.boardKey === boardKey && current.objectId === clientId
-            ? { boardKey, objectId: object.id }
+        setPendingArrows((current) =>
+          current[clientId]
+            ? {
+                ...current,
+                [clientId]: { ...current[clientId], persistedId: object.id },
+              }
             : current,
         );
-        setEditingArrowId((current) =>
-          current === clientId ? object.id : current,
-        );
-        if (selectionRef.current.selectedIds.has(clientId)) {
-          replaceSelection(
-            boardKey,
-            [...selectionRef.current.selectedIds].map((id) =>
-              id === clientId ? object.id : id,
-            ),
-          );
-        }
         return object.id;
       });
       pendingArrowCreatesRef.current.set(clientId, creation);
+      const timestamp = new Date().toISOString();
+      setPendingArrows((current) => ({
+        ...current,
+        [clientId]: {
+          object: {
+            ...arrow,
+            id: clientId,
+            clientId,
+            type: "arrow",
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          },
+        },
+      }));
       setDraftArrow(undefined);
       setEditingArrowId(undefined);
       setCanvasObjectFocus({ boardKey, objectId: clientId });
       replaceSelection(boardKey, [clientId]);
       void creation.catch(() => {
         pendingArrowCreatesRef.current.delete(clientId);
+        setPendingArrows((current) => {
+          const next = { ...current };
+          delete next[clientId];
+          return next;
+        });
         setCanvasObjectFocus((current) =>
           current?.boardKey === boardKey && current.objectId === clientId
             ? undefined
@@ -1249,6 +1285,45 @@ function CanvasSurface({
       setCanvasTool,
     ],
   );
+  useLayoutEffect(() => {
+    const settled = Object.entries(pendingArrows).flatMap(
+      ([clientId, pending]) => {
+        const persisted = canvasObjects.find(
+          (object) =>
+            object.type === "arrow" &&
+            object.id !== clientId &&
+            (arrowHasIdentity(object, clientId) ||
+              object.id === pending.persistedId),
+        );
+        return persisted ? [[clientId, persisted.id] as const] : [];
+      },
+    );
+    if (settled.length === 0) return;
+    const persistedIds = new Map(settled);
+    setCanvasObjectFocus((current) => {
+      if (current?.boardKey !== boardKey) return current;
+      const objectId = persistedIds.get(current.objectId);
+      return objectId ? { boardKey, objectId } : current;
+    });
+    setEditingArrowId((current) =>
+      current ? (persistedIds.get(current) ?? current) : current,
+    );
+    if (
+      [...selectionRef.current.selectedIds].some((id) => persistedIds.has(id))
+    ) {
+      replaceSelection(
+        boardKey,
+        [...selectionRef.current.selectedIds].map(
+          (id) => persistedIds.get(id) ?? id,
+        ),
+      );
+    }
+    setPendingArrows((current) => {
+      const next = { ...current };
+      for (const [clientId] of settled) delete next[clientId];
+      return next;
+    });
+  }, [boardKey, canvasObjects, pendingArrows, replaceSelection]);
   const handleArrowSelect = useCallback(
     (objectId: string, event: ReactMouseEvent) => {
       setEditingArrowId((current) =>
@@ -1440,7 +1515,7 @@ function CanvasSurface({
     CanvasInspectorTarget | undefined
   >(() => {
     if (!focusedCanvasObjectId) return undefined;
-    const object = canvasObjects.find(
+    const object = displayCanvasObjects.find(
       (candidate) =>
         candidate.id === focusedCanvasObjectId ||
         (candidate.type === "arrow" &&
@@ -1466,7 +1541,7 @@ function CanvasSurface({
     }
     return undefined;
   }, [
-    canvasObjects,
+    displayCanvasObjects,
     deleteCanvasObject,
     editingArrowId,
     focusedCanvasObjectId,
@@ -1622,6 +1697,7 @@ function CanvasSurface({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if (isSelectionShortcutBlocked(event.target)) return;
       const canvasAction = getCanvasViewShortcutAction(event);
       if (canvasAction) {
@@ -2703,7 +2779,7 @@ function CanvasSurface({
           </ViewportPortal>
         ) : null}
         <CanvasArrowLayer
-          arrows={canvasObjects.filter(
+          arrows={displayCanvasObjects.filter(
             (object): object is CanvasArrowObject => object.type === "arrow",
           )}
           draft={draftArrow}
@@ -2733,10 +2809,9 @@ function CanvasSurface({
               boardKey={boardKey}
               target={focusedInspectorTarget}
               modifierLabel={getPlatformModifier()}
-              onMove={
-                /^(text|arrow)-\d+$/.test(focusedInspectorTarget.object.id)
-                  ? () => setMoveDialogOpen(true)
-                  : undefined
+              onMove={() => setMoveDialogOpen(true)}
+              moveDisabled={
+                !PERSISTED_CANVAS_ITEM_ID.test(focusedInspectorTarget.object.id)
               }
             />
           ) : (
@@ -2747,9 +2822,8 @@ function CanvasSurface({
                 setCanvasObjectFocus(undefined);
                 clearSelection(boardKey);
               }}
-              onMove={
-                canMoveSelection ? () => setMoveDialogOpen(true) : undefined
-              }
+              onMove={() => setMoveDialogOpen(true)}
+              moveDisabled={!canMoveSelection}
               onDelete={handleBulkDelete}
               onArrange={
                 layoutableSelectionCount >= 2 ? handleArrange : undefined
@@ -2771,7 +2845,9 @@ function CanvasSurface({
 
       {loadError ? (
         <div className="absolute inset-0 z-10">{loadError}</div>
-      ) : nodes.length === 0 && canvasObjects.length === 0 && !draftText ? (
+      ) : nodes.length === 0 &&
+        displayCanvasObjects.length === 0 &&
+        !draftText ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center">
           <div className="max-w-sm space-y-1.5">
             <h2 className="text-sm font-medium">{emptyTitle}</h2>
