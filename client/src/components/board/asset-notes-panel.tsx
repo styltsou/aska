@@ -86,10 +86,10 @@ export function AssetNotesPanel({
                   opacity: 0,
                   x: isMobile ? 0 : 10,
                   y: isMobile ? 10 : 0,
-                  transition: { duration: 0.35, ease },
+                  transition: { duration: 0.15, ease },
                 }
           }
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.4, ease }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease }}
           className={cn(
             "z-40 flex min-h-0 flex-col overflow-hidden",
             expanded
@@ -101,23 +101,20 @@ export function AssetNotesPanel({
             "max-md:absolute max-md:inset-x-0 max-md:top-auto max-md:right-0 max-md:bottom-0 max-md:h-[min(65%,28rem)] max-md:w-full max-md:rounded-t-xl max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:border-t",
           )}
         >
-          <header className="flex h-12 shrink-0 items-center justify-between px-4">
+          <header className="flex shrink-0 items-center justify-between pt-2 pr-2 pb-1 pl-4">
             <h2 className="text-sm font-medium">Notes</h2>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className={cn(
-                "size-8 rounded-lg",
-                ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
-              )}
+              className="size-8 rounded-lg text-foreground/70 transition-colors hover:!bg-transparent hover:text-foreground focus-visible:!bg-transparent focus-visible:text-foreground active:!bg-transparent"
               aria-label="Close notes"
               onClick={onClose}
             >
               <XIcon className="size-4" />
             </Button>
           </header>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
             {children}
           </div>
         </motion.aside>

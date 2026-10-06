@@ -7,6 +7,16 @@
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource-variable/inter";
 
+@keyframes preview-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 [data-asset-morphing] {
   animation: none !important;
   transition: none !important;

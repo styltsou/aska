@@ -1,13 +1,12 @@
 import {
   LoaderCircleIcon,
-  Maximize2Icon,
-  Minimize2Icon,
-  PlayIcon,
-  RotateCcwIcon,
+  MaximizeIcon,
+  MinimizeIcon,
   SkipBackIcon,
   SkipForwardIcon,
 } from "lucide-react";
 import { Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   type ChangeEvent,
   type KeyboardEvent,
@@ -25,13 +24,20 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { FLOATING_MENU_SURFACE_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import type { VideoAsset } from "@/types/asset";
 
 const CONTROL_HIDE_DELAY_MS = 1_800;
 const BUFFERING_SPINNER_DELAY_MS = 180;
 const SEEK_STEP_SECONDS = 10;
+const CENTER_PLAY_BUTTON_TRANSITION = {
+  duration: 0.15,
+  ease: [0.22, 1, 0.36, 1] as const,
+};
+const CENTER_PLAY_BUTTON_EXIT_TRANSITION = {
+  duration: 0.22,
+  ease: [0.22, 1, 0.36, 1] as const,
+};
 const VIDEO_PLAYER_RAIL_CLASS = "bg-white/20";
 const VIDEO_PLAYER_PREFERENCES_KEY = "aska.video-player-preferences:v2";
 const LEGACY_VIDEO_PLAYER_PREFERENCES_KEY = "aska.video-player-preferences:v1";
@@ -128,6 +134,7 @@ export function NativeVideoPlayer({
   fit?: "contain" | "cover";
 }) {
   const [initialPlayerPreferences] = useState(readVideoPlayerPreferences);
+  const reduceMotion = useReducedMotion();
   const playerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
@@ -415,7 +422,7 @@ export function NativeVideoPlayer({
         className={cn(
           "absolute inset-0 size-full",
           fit === "cover" && !playerFullscreen
-            ? "object-cover"
+            ? "scale-[1.005] object-cover"
             : "object-contain",
         )}
         onLoadedMetadata={handleLoadedMetadata}
@@ -476,20 +483,43 @@ export function NativeVideoPlayer({
           }
           onClick={togglePlayback}
         >
-          {!playing ? (
-            <span
-              className={cn(
-                "flex size-11 items-center justify-center rounded-full bg-black/45 text-white shadow-lg ring-1 ring-white/10 backdrop-blur-md transition-[background-color,transform,ring-color] duration-150 ease-out hover:scale-[1.04] hover:bg-black/60 hover:ring-white/25 motion-reduce:transition-none",
-                "absolute top-1/2 left-1/2 size-14 -translate-x-1/2 -translate-y-1/2",
-              )}
-            >
-              {ended ? (
-                <RotateCcwIcon className="size-5" />
-              ) : (
-                <PlayIcon className="ml-0.5 size-5 fill-current" />
-              )}
-            </span>
-          ) : null}
+          <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <AnimatePresence initial={false}>
+              {!playing ? (
+                <motion.span
+                  key="idle"
+                  initial={reduceMotion ? false : { opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={
+                    reduceMotion
+                      ? undefined
+                      : {
+                          opacity: 0,
+                          scale: 0.9,
+                          transition: CENTER_PLAY_BUTTON_EXIT_TRANSITION,
+                        }
+                  }
+                  transition={
+                    reduceMotion
+                      ? { duration: 0 }
+                      : CENTER_PLAY_BUTTON_TRANSITION
+                  }
+                  whileHover={reduceMotion ? undefined : { scale: 1.04 }}
+                  className="flex size-16 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur-md transition-colors duration-150 ease-out hover:bg-black/60 motion-reduce:transition-none"
+                >
+                  <MorphStateIcon
+                    icon={ended ? RotateCcw : playing ? Pause : Play}
+                    className={cn(
+                      "size-7",
+                      !ended && "fill-current",
+                      !playing && !ended && "ml-1",
+                    )}
+                    strokeWidth={ended ? 2.25 : 0}
+                  />
+                </motion.span>
+              ) : null}
+            </AnimatePresence>
+          </span>
         </button>
       ) : null}
 
@@ -519,14 +549,14 @@ export function NativeVideoPlayer({
           }
           onPointerLeave={() => setVolumeSliderExpanded(false)}
         >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 [mask-image:linear-gradient(to_top,black_calc(100%_-_2rem),transparent)] backdrop-blur-md [-webkit-mask-image:linear-gradient(to_top,black_calc(100%_-_2rem),transparent)]"
+          />
           <div className="group/progress relative flex h-4 min-w-0 items-center">
             {hover ? (
               <div
-                className={cn(
-                  "pointer-events-none absolute bottom-full z-40 mb-2 -translate-x-1/2 rounded-lg p-1 text-center",
-                  FLOATING_MENU_SURFACE_CLASS,
-                  "bg-popover/50",
-                )}
+                className="pointer-events-none absolute bottom-full z-40 mb-2 -translate-x-1/2 rounded-lg bg-black/45 p-1 text-center text-white shadow-lg backdrop-blur-md"
                 style={{ left: `${clamp(hover.percent, 0, 100)}%` }}
                 aria-hidden="true"
               >
@@ -680,7 +710,7 @@ export function NativeVideoPlayer({
                     <MorphStateIcon
                       icon={muted || volume === 0 ? VolumeX : Volume2}
                       className="size-4"
-                      strokeWidth={2.25}
+                      strokeWidth={2.5}
                     />
                   </TooltipTrigger>
                   <TooltipContent side="top">
@@ -696,7 +726,7 @@ export function NativeVideoPlayer({
                   <div className="relative flex size-full items-center px-1">
                     <div
                       className={cn(
-                        "pointer-events-none absolute right-1 left-1 h-1.5 overflow-hidden rounded-full transition-[height] duration-150 group-focus-within/volume:h-2 group-hover/volume:h-2 motion-reduce:transition-none",
+                        "pointer-events-none absolute right-2 left-1 h-1.5 overflow-hidden rounded-full transition-[height] duration-150 group-focus-within/volume:h-2 group-hover/volume:h-2 motion-reduce:transition-none",
                         VIDEO_PLAYER_RAIL_CLASS,
                       )}
                     >
@@ -721,7 +751,7 @@ export function NativeVideoPlayer({
                         event.currentTarget.blur();
                         scheduleControlsHide();
                       }}
-                      className="absolute inset-0 m-0 size-full cursor-pointer opacity-0"
+                      className="absolute top-0 left-1 m-0 h-full w-[calc(100%_-_0.75rem)] cursor-pointer opacity-0"
                       aria-label="Video volume"
                       aria-valuetext={`${Math.round(volumePercent)}%`}
                     />
@@ -731,7 +761,7 @@ export function NativeVideoPlayer({
 
               <button
                 type="button"
-                className="relative top-px inline-flex h-8 shrink-0 cursor-pointer items-center rounded-md px-1 text-xs font-medium text-white/80 tabular-nums transition-colors duration-150 hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none active:bg-white/15 disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-white/80"
+                className="relative top-px inline-flex h-8 shrink-0 cursor-pointer items-center rounded-md px-2 text-xs font-medium text-white/80 tabular-nums transition-colors duration-150 hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none active:bg-white/15 disabled:cursor-default disabled:hover:bg-transparent disabled:hover:text-white/80"
                 aria-label="Toggle between elapsed and remaining video time"
                 title="Toggle elapsed/remaining time"
                 disabled={duration <= 0}
@@ -763,9 +793,9 @@ export function NativeVideoPlayer({
                 className={controlButtonClass}
               >
                 {playerFullscreen ? (
-                  <Minimize2Icon className="size-4" />
+                  <MinimizeIcon className="size-4" strokeWidth={2.5} />
                 ) : (
-                  <Maximize2Icon className="size-4" />
+                  <MaximizeIcon className="size-4" strokeWidth={2.5} />
                 )}
               </PlayerControlButton>
             </div>

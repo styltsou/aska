@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 
+import { restoreStyleWithoutTransition } from "@/lib/restore-style-without-transition";
+
 const FULLSCREEN_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 function panelSnapshot(panel: HTMLElement) {
@@ -44,7 +46,7 @@ export function useAssetFullscreenMorph(enabled: boolean, expanded: boolean) {
       animationRef.current?.cancel();
       animationRef.current = null;
       if (baseStyleRef.current !== null) {
-        panel.style.cssText = baseStyleRef.current;
+        restoreStyleWithoutTransition(panel, baseStyleRef.current);
         baseStyleRef.current = null;
       }
     };
@@ -83,7 +85,7 @@ export function useAssetFullscreenMorph(enabled: boolean, expanded: boolean) {
         Math.abs(from.width - to.width) < 1 &&
         Math.abs(from.height - to.height) < 1)
     ) {
-      panel.style.cssText = baseStyle;
+      restoreStyleWithoutTransition(panel, baseStyle);
       return;
     }
 
@@ -135,7 +137,7 @@ export function useAssetFullscreenMorph(enabled: boolean, expanded: boolean) {
         },
       );
     } catch {
-      panel.style.cssText = baseStyle;
+      restoreStyleWithoutTransition(panel, baseStyle);
       baseStyleRef.current = null;
       previousSnapshotRef.current = panelSnapshot(panel);
       return;
@@ -146,7 +148,7 @@ export function useAssetFullscreenMorph(enabled: boolean, expanded: boolean) {
       if (animationRef.current !== animation) return;
       animation.cancel();
       animationRef.current = null;
-      panel.style.cssText = baseStyle;
+      restoreStyleWithoutTransition(panel, baseStyle);
       baseStyleRef.current = null;
     };
     void animation.finished.then(finish, finish);
@@ -156,7 +158,7 @@ export function useAssetFullscreenMorph(enabled: boolean, expanded: boolean) {
     () => () => {
       animationRef.current?.cancel();
       if (panelRef.current && baseStyleRef.current !== null)
-        panelRef.current.style.cssText = baseStyleRef.current;
+        restoreStyleWithoutTransition(panelRef.current, baseStyleRef.current);
     },
     [],
   );

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -162,6 +163,7 @@ export function VideoAssetViewer({
         fast
       >
         <DrawerContent
+          initialFocus={false}
           className="gap-0 overflow-hidden border-border/70 bg-background p-0 text-foreground shadow-2xl"
           style={
             {
@@ -220,6 +222,7 @@ export function VideoAssetViewer({
     >
       <DialogContent
         ref={fullscreenPanelRef}
+        initialFocus={false}
         data-workspace-asset-modal={assetModalId}
         data-canvas-shared-entry={sharedEntry || undefined}
         showCloseButton={false}
@@ -549,7 +552,17 @@ function NativeVideoContent({
   const reduceMotion = useReducedMotion();
   const queryClient = useQueryClient();
   const [note, setNote] = useState(asset.note ?? "");
-  const [saving, setSaving] = useState(false);
+  const assetIdRef = useRef(asset.id);
+  const draftRef = useRef(asset.note ?? "");
+  const savedNotesRef = useRef(new Map([[asset.id, asset.note ?? ""]]));
+  const autosaveTimerRef = useRef<number | undefined>(undefined);
+  const requestRef = useRef<Promise<void> | null>(null);
+  const queuedDraftRef = useRef<{ assetId: string; draft: string } | undefined>(
+    undefined,
+  );
+  const persistNoteRef = useRef<(assetId: string, draft: string) => void>(
+    () => undefined,
+  );
   const ready = asset.processingStatus === "completed" && Boolean(asset.url);
   const ratio =
     asset.width && asset.height ? asset.width / asset.height : 16 / 9;
@@ -557,33 +570,94 @@ function NativeVideoContent({
     ? { duration: 0 }
     : VIDEO_VIEWER_LAYOUT_TRANSITION;
 
-  useEffect(() => setNote(asset.note ?? ""), [asset.id, asset.note]);
+  const persistNote = useCallback(
+    (assetId: string, draft: string) => {
+      const nextNote = draft.trim() ? draft : "";
+      if (nextNote === (savedNotesRef.current.get(assetId) ?? "")) return;
 
-  const save = async () => {
-    setSaving(true);
-    try {
-      await apiPatch(
-        `/api/v1/workspace/${encodeURIComponent(workspaceSlug)}/assets/${encodeURIComponent(asset.id)}/video`,
-        { note: note.trim() || null },
-      );
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["workspace-asset", workspaceSlug, asset.id],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["collectionContents", workspaceSlug],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["inboxContents", workspaceSlug],
-        }),
-      ]);
-      toast.success("Video note saved");
-    } catch {
-      toast.error("Could not save video note");
-    } finally {
-      setSaving(false);
+      if (requestRef.current) {
+        queuedDraftRef.current = { assetId, draft };
+        return;
+      }
+
+      const request = apiPatch(
+        `/api/v1/workspace/${encodeURIComponent(workspaceSlug)}/assets/${encodeURIComponent(assetId)}/video`,
+        { note: nextNote || null },
+      )
+        .then(async () => {
+          savedNotesRef.current.set(assetId, nextNote);
+          await Promise.all([
+            queryClient.invalidateQueries({
+              queryKey: ["workspace-asset", workspaceSlug, assetId],
+            }),
+            queryClient.invalidateQueries({
+              queryKey: ["collectionContents", workspaceSlug],
+            }),
+            queryClient.invalidateQueries({
+              queryKey: ["inboxContents", workspaceSlug],
+            }),
+          ]);
+        })
+        .catch(() => {
+          toast.error("Could not save video note");
+        })
+        .finally(() => {
+          requestRef.current = null;
+          const queued = queuedDraftRef.current;
+          queuedDraftRef.current = undefined;
+          if (queued) persistNoteRef.current(queued.assetId, queued.draft);
+        });
+
+      requestRef.current = request;
+    },
+    [queryClient, workspaceSlug],
+  );
+  persistNoteRef.current = persistNote;
+
+  const flushNote = useCallback(() => {
+    if (autosaveTimerRef.current !== undefined) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = undefined;
     }
-  };
+    persistNote(assetIdRef.current, draftRef.current);
+  }, [persistNote]);
+
+  useEffect(() => {
+    const serverNote = asset.note ?? "";
+    if (assetIdRef.current !== asset.id) {
+      assetIdRef.current = asset.id;
+      draftRef.current = serverNote;
+      savedNotesRef.current.set(asset.id, serverNote);
+      setNote(serverNote);
+    } else if (
+      draftRef.current === (savedNotesRef.current.get(asset.id) ?? "")
+    ) {
+      draftRef.current = serverNote;
+      savedNotesRef.current.set(asset.id, serverNote);
+      setNote(serverNote);
+    }
+  }, [asset.id, asset.note]);
+
+  useEffect(() => {
+    if (!notesOpen) flushNote();
+  }, [flushNote, notesOpen]);
+
+  useEffect(() => () => flushNote(), [flushNote]);
+
+  const handleNoteChange = useCallback(
+    (value: string) => {
+      draftRef.current = value;
+      setNote(value);
+      if (autosaveTimerRef.current !== undefined) {
+        window.clearTimeout(autosaveTimerRef.current);
+      }
+      autosaveTimerRef.current = window.setTimeout(() => {
+        autosaveTimerRef.current = undefined;
+        persistNote(assetIdRef.current, draftRef.current);
+      }, 350);
+    },
+    [persistNote],
+  );
 
   const media = (
     <motion.div
@@ -646,23 +720,11 @@ function NativeVideoContent({
         spellCheck={false}
         value={note}
         maxLength={10_000}
-        onChange={(event) => setNote(event.target.value)}
+        onChange={(event) => handleNoteChange(event.target.value)}
         placeholder="Add a note about this video"
-        rows={5}
-        className="block min-h-28 w-full resize-y border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
+        rows={1}
+        className="block min-h-6 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
       />
-      {note.trim() !== (asset.note ?? "").trim() ? (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className="mt-3"
-          disabled={saving}
-          onClick={() => void save()}
-        >
-          {saving ? "Saving…" : "Save note"}
-        </Button>
-      ) : null}
     </>
   );
 
@@ -737,6 +799,22 @@ function NativeVideoLoading({
   workspace?: boolean;
   viewer?: boolean;
 }) {
+  if (viewer && !workspace) {
+    return (
+      <div
+        className="relative size-full min-h-0 overflow-hidden bg-black"
+        role="status"
+        aria-label="Loading video details"
+      >
+        <Skeleton
+          data-asset-modal-hero
+          className="size-full animate-[preview-shimmer_1.6s_linear_infinite] rounded-none bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+      </div>
+    );
+  }
+
   const content = (
     <div className="mx-auto w-full max-w-[76rem] px-5" aria-hidden="true">
       <div className="flex justify-center pt-4 pb-8">

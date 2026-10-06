@@ -1657,6 +1657,7 @@ export function NoteDetailDrawer({
       {children ? <NoteWorkspaceTrigger render={children} /> : null}
       <NoteWorkspaceContent
         ref={fullscreenPanelRef}
+        initialFocus={false}
         data-workspace-asset-modal={assetModalId}
         data-canvas-shared-entry={sharedEntry || undefined}
         backdropClassName={
@@ -1671,8 +1672,11 @@ export function NoteDetailDrawer({
               : undefined
         }
         className={cn(
-          "transition-[transform,opacity,top,left,right,width,height,max-width,max-height,border-radius,background-color,box-shadow] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "transition-[transform,translate,top,left,right,width,height,max-width,max-height,border-radius,background-color,box-shadow] duration-[200ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none data-starting-style:duration-[200ms] data-ending-style:duration-[200ms]",
           GLASS_FRAME_CLASS,
+          split
+            ? "data-starting-style:translate-x-full data-ending-style:translate-x-full"
+            : "data-starting-style:translate-x-[50vw] data-ending-style:translate-x-[50vw]",
           expanded
             ? split
               ? "inset-0 h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
@@ -1694,7 +1698,7 @@ export function NoteDetailDrawer({
                 : "duration-[350ms]"
               : "duration-[180ms]",
             expanded
-              ? "mt-[var(--app-shell-inset)] mb-[var(--app-shell-inset)] bg-background pl-[calc(var(--app-shell-inset)+0.5rem)]"
+              ? "mt-[var(--app-shell-inset)] mb-[var(--app-shell-inset)] bg-background"
               : "bg-transparent",
           )}
         >

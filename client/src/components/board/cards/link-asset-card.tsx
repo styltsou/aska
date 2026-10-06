@@ -1,5 +1,3 @@
-import "./link-asset-card.css";
-
 import { Globe2Icon, UserRoundIcon } from "lucide-react";
 import { useState, type MouseEvent } from "react";
 
@@ -131,7 +129,7 @@ export function LinkAssetCard({
           asset.resolutionStatus === "resolving") ? (
           <div
             data-slot="optimistic-link-preview"
-            className="pointer-events-none absolute inset-0 z-10 animate-[link-preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
+            className="pointer-events-none absolute inset-0 z-10 animate-[preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
           />
         ) : null}
         {onOpen && isYoutube ? (

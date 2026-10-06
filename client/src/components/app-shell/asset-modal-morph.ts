@@ -1,3 +1,5 @@
+import { restoreStyleWithoutTransition } from "@/lib/restore-style-without-transition";
+
 const OPEN_DURATION = 400;
 const CLOSE_DURATION = 350;
 const MORPH_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
@@ -433,7 +435,7 @@ export function startAssetModalMorph(
     cardRevealAnimation?.cancel();
     preview.remove();
     heroPreview?.remove();
-    modal.style.cssText = previousModalStyle;
+    restoreStyleWithoutTransition(modal, previousModalStyle);
     modal.style.pointerEvents = previousPointerEvents;
     card.style.visibility = previousCardVisibility;
     card.style.opacity = previousCardOpacity;
@@ -462,7 +464,7 @@ export function startAssetModalMorph(
     card.style.pointerEvents = previousCardPointerEvents;
     preview.remove();
     heroPreview?.remove();
-    modal.style.cssText = previousModalStyle;
+    restoreStyleWithoutTransition(modal, previousModalStyle);
     modal.style.pointerEvents = previousPointerEvents;
     if (previousMorphing === undefined) delete modal.dataset.assetMorphing;
     else modal.dataset.assetMorphing = previousMorphing;

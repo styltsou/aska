@@ -2053,6 +2053,7 @@ export function ImageAssetViewer({
     >
       <DialogContent
         ref={fullscreenPanelRef}
+        initialFocus={false}
         data-workspace-asset-modal={assetModalId}
         data-canvas-shared-entry={sharedEntry || undefined}
         showCloseButton={false}

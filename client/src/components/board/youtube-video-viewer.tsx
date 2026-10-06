@@ -301,6 +301,7 @@ export function YouTubeVideoViewer({
         fast
       >
         <DrawerContent
+          initialFocus={false}
           className="gap-0 overflow-hidden border-border/70 bg-background p-0 text-foreground shadow-2xl"
           style={
             {
@@ -357,6 +358,7 @@ export function YouTubeVideoViewer({
     >
       <DialogContent
         ref={fullscreenPanelRef}
+        initialFocus={false}
         data-workspace-asset-modal={assetModalId}
         data-canvas-shared-entry={sharedEntry || undefined}
         showCloseButton={false}

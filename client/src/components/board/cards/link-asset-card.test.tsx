@@ -171,9 +171,7 @@ describe("LinkAssetCard", () => {
 
     expect(html).toContain("aspect-video w-full");
     expect(html).toContain('data-slot="optimistic-link-preview"');
-    expect(html).toContain(
-      "animate-[link-preview-shimmer_1.6s_linear_infinite]",
-    );
+    expect(html).toContain("animate-[preview-shimmer_1.6s_linear_infinite]");
     expect(html).not.toContain("Resolving");
   });
 

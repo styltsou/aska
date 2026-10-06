@@ -232,7 +232,11 @@ export function ColorDetailDrawer({
       fast
     >
       {displayedColor ? (
-        <DrawerContent className={drawerClassName} style={drawerStyle}>
+        <DrawerContent
+          initialFocus={false}
+          className={drawerClassName}
+          style={drawerStyle}
+        >
           <DrawerHeader className="flex-row! items-start justify-between gap-4 border-b px-4 py-4 text-left!">
             <div className="flex min-w-0 items-center gap-3.5">
               <button
@@ -424,7 +428,11 @@ export function ColorDetailDrawer({
           </div>
         </DrawerContent>
       ) : loading ? (
-        <DrawerContent className={drawerClassName} style={drawerStyle}>
+        <DrawerContent
+          initialFocus={false}
+          className={drawerClassName}
+          style={drawerStyle}
+        >
           <DrawerTitle className="sr-only">Loading color</DrawerTitle>
           <DrawerDescription className="sr-only">
             Loading color details.
@@ -543,6 +551,7 @@ function ColorDetailModal({
     >
       <DialogContent
         ref={fullscreenPanelRef}
+        initialFocus={false}
         data-workspace-asset-modal={assetModalId}
         data-canvas-shared-entry={sharedEntry || undefined}
         showCloseButton={false}

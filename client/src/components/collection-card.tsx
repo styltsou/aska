@@ -178,9 +178,10 @@ export function CollectionCard({
                   size="icon"
                   aria-label={`More actions for ${collection.name}`}
                   data-collection-hover-target
+                  data-active={active}
                   onPointerEnter={handleHoverTargetEnter}
                   onPointerLeave={handleHoverTargetLeave}
-                  className="rounded-md bg-sidebar text-sidebar-foreground/70 hover:bg-sidebar-active hover:text-sidebar-foreground data-popup-open:bg-sidebar-active"
+                  className="rounded-md bg-sidebar text-sidebar-foreground/70 hover:bg-sidebar-active hover:text-sidebar-foreground data-popup-open:bg-sidebar-active data-[active=true]:bg-sidebar-active data-[active=true]:text-sidebar-foreground"
                 />
               }
             >
