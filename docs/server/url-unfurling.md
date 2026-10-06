@@ -117,11 +117,13 @@ generation path. Broad scheduled refresh is deliberately excluded.
 ## Resolution and provenance
 
 `services/url-resolution/src/types.ts` defines an ordered resolver registry.
-Specialized resolvers are registered before the generic resolver. The current
-The YouTube resolver uses the private YouTube Data API key to retrieve the
-video snippet (title, description, channel, and provider thumbnail) without
-fetching a watch page. A recognized YouTube video never falls into generic
-HTML parsing: if the provider response is unavailable, its specialized fallback
+Specialized resolvers are registered before the generic resolver. The YouTube
+resolver uses the private YouTube Data API key to retrieve the video snippet
+(title, description, channel, and provider thumbnail) without
+fetching a watch page. When a channel ID is available, it also requests the
+channel thumbnail; failure of that optional request does not discard the video
+metadata. A recognized YouTube video never falls into generic HTML parsing: if
+the provider response is unavailable, its specialized fallback
 keeps the canonical video identity and derived `hqdefault` thumbnail while
 leaving unavailable text blank. This prevents site-wide YouTube descriptions
 from becoming video-card descriptions. Other specialized resolvers can return

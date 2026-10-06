@@ -38,27 +38,46 @@ describe("YouTube Data API resolver", () => {
   });
 
   it("persists video-specific metadata and the best available thumbnail", async () => {
-    safeFetchMock.mockResolvedValue({
-      body: new TextEncoder().encode(
-        JSON.stringify({
-          items: [
-            {
-              id: videoId,
-              snippet: {
-                title: "  A video\n title ",
-                description: " First paragraph.\n\nSecond\t paragraph. ",
-                channelId: "UC123",
-                channelTitle: "A channel",
-                thumbnails: {
-                  high: { url: "https://i.ytimg.com/vi/high.jpg" },
-                  maxres: { url: "https://i.ytimg.com/vi/maxres.jpg" },
+    safeFetchMock
+      .mockResolvedValueOnce({
+        body: new TextEncoder().encode(
+          JSON.stringify({
+            items: [
+              {
+                id: videoId,
+                snippet: {
+                  title: "  A video\n title ",
+                  description: " First paragraph.\n\nSecond\t paragraph. ",
+                  channelId: "UC123",
+                  channelTitle: "A channel",
+                  thumbnails: {
+                    high: { url: "https://i.ytimg.com/vi/high.jpg" },
+                    maxres: { url: "https://i.ytimg.com/vi/maxres.jpg" },
+                  },
                 },
               },
-            },
-          ],
-        }),
-      ),
-    });
+            ],
+          }),
+        ),
+      })
+      .mockResolvedValueOnce({
+        body: new TextEncoder().encode(
+          JSON.stringify({
+            items: [
+              {
+                id: "UC123",
+                snippet: {
+                  thumbnails: {
+                    default: {
+                      url: "https://yt3.ggpht.com/channel-avatar=s88",
+                    },
+                  },
+                },
+              },
+            ],
+          }),
+        ),
+      });
 
     const result = await new YouTubeDataApiResolver("test-key").resolve(
       new URL(`https://youtu.be/${videoId}`),
@@ -78,7 +97,7 @@ describe("YouTube Data API resolver", () => {
     });
     expect(result).toMatchObject({
       resolverKey: "youtube-data-api",
-      resolverVersion: "3",
+      resolverVersion: "4",
       finalUrl: `https://www.youtube.com/watch?v=${videoId}`,
       canonicalUrl: `https://www.youtube.com/watch?v=${videoId}`,
       title: "A video title",
@@ -90,9 +109,14 @@ describe("YouTube Data API resolver", () => {
           videoId,
           channelName: "A channel",
           channelUrl: "https://www.youtube.com/channel/UC123",
+          channelAvatarUrl: "https://yt3.ggpht.com/channel-avatar=s88",
         },
       },
     });
+    const [channelEndpoint] = safeFetchMock.mock.calls[1] as [URL];
+    expect(channelEndpoint.pathname).toBe("/youtube/v3/channels");
+    expect(channelEndpoint.searchParams.get("id")).toBe("UC123");
+    expect(channelEndpoint.searchParams.get("part")).toBe("snippet");
     expect(result.media).toEqual([
       {
         role: "preview",
@@ -102,6 +126,39 @@ describe("YouTube Data API resolver", () => {
         alt: "A video title",
       },
     ]);
+  });
+
+  it("keeps video metadata when the channel image lookup fails", async () => {
+    safeFetchMock
+      .mockResolvedValueOnce({
+        body: new TextEncoder().encode(
+          JSON.stringify({
+            items: [
+              {
+                id: videoId,
+                snippet: {
+                  title: "A video",
+                  channelId: "UC123",
+                  channelTitle: "A channel",
+                },
+              },
+            ],
+          }),
+        ),
+      })
+      .mockRejectedValueOnce(new Error("Channel lookup unavailable"));
+
+    const result = await new YouTubeDataApiResolver("test-key").resolve(
+      new URL(`https://youtu.be/${videoId}`),
+    );
+
+    expect(result.title).toBe("A video");
+    expect(result.providerExtensions.youtube).toMatchObject({
+      channelName: "A channel",
+    });
+    expect(result.providerExtensions.youtube).not.toHaveProperty(
+      "channelAvatarUrl",
+    );
   });
 
   it("uses the YouTube page payload when the Data API is unavailable", async () => {

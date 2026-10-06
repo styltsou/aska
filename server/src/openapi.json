@@ -3107,7 +3107,8 @@
             "pattern": "^[A-Za-z0-9_-]{11}$"
           },
           "channelName": { "type": ["string", "null"] },
-          "channelUrl": { "type": ["string", "null"], "format": "uri" }
+          "channelUrl": { "type": ["string", "null"], "format": "uri" },
+          "channelAvatarUrl": { "type": "string", "format": "uri" }
         }
       },
       "LinkMediaVariant": {

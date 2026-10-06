@@ -7,7 +7,7 @@ const YOUTUBE_HOSTS = new Set([
 ]);
 
 export const YOUTUBE_RESOLVER_KEY = "youtube-data-api";
-export const YOUTUBE_RESOLVER_VERSION = "3";
+export const YOUTUBE_RESOLVER_VERSION = "4";
 
 export function getYouTubeVideoId(value: string | URL): string | null {
   let url: URL;

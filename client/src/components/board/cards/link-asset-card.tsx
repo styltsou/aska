@@ -1,7 +1,7 @@
 import "./link-asset-card.css";
 
-import { Globe2Icon } from "lucide-react";
-import type { MouseEvent } from "react";
+import { Globe2Icon, UserRoundIcon } from "lucide-react";
+import { useState, type MouseEvent } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { YouTubeDescription } from "@/components/board/youtube-description";
@@ -13,6 +13,8 @@ import type { LinkAsset } from "@/types/asset";
 
 const YOUTUBE_THUMBNAIL_URL = (videoId: string) =>
   `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+const LINK_CARD_META_CLASS =
+  "flex min-w-0 items-center gap-1.5 text-[13px] leading-5 text-sidebar-foreground/65";
 
 function YouTubePlayMark({ compact = false }: { compact?: boolean }) {
   return (
@@ -30,6 +32,30 @@ function YouTubePlayMark({ compact = false }: { compact?: boolean }) {
         fill="white"
       />
     </svg>
+  );
+}
+
+function ChannelAvatar({ src }: { src?: string }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  return (
+    <span
+      data-slot="channel-avatar"
+      aria-hidden="true"
+      className="flex size-4.5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-foreground/8 text-sidebar-foreground/55 ring-1 ring-sidebar-foreground/10"
+    >
+      {src && failedSrc !== src ? (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          className="size-full object-cover"
+          onError={() => setFailedSrc(src)}
+        />
+      ) : (
+        <UserRoundIcon className="size-3" />
+      )}
+    </span>
   );
 }
 
@@ -116,34 +142,42 @@ export function LinkAssetCard({
       </div>
       <div className="relative z-0 space-y-1 bg-sidebar px-3 pt-3 pb-3">
         {!isYoutube ? (
-          <div className="flex items-center gap-2 text-[11px] text-sidebar-foreground/60">
-            {asset.favicon ? (
-              <img
-                src={asset.favicon.url}
-                alt=""
-                className="size-3.5 rounded-sm object-contain"
-              />
-            ) : (
-              <Globe2Icon className="size-3.5" />
-            )}
-            <span className="truncate">{asset.siteName || asset.hostname}</span>
+          <div className={LINK_CARD_META_CLASS}>
+            <span className="flex size-4.5 shrink-0 items-center justify-center">
+              {asset.favicon ? (
+                <img
+                  src={asset.favicon.url}
+                  alt=""
+                  className="size-4 rounded-sm object-contain"
+                />
+              ) : (
+                <Globe2Icon className="size-4" />
+              )}
+            </span>
+            <span className="min-w-0 truncate">
+              {asset.siteName || asset.hostname}
+            </span>
           </div>
         ) : null}
         {isYoutubeMetadataLoading ? (
           <div className="space-y-1.5 py-0.5">
-            <div className="h-3.5 w-full animate-pulse rounded bg-sidebar-foreground/10" />
-            <div className="h-3.5 w-3/5 animate-pulse rounded bg-sidebar-foreground/10" />
+            <div className="h-4 w-full animate-pulse rounded bg-sidebar-foreground/10" />
+            <div className="h-4 w-3/5 animate-pulse rounded bg-sidebar-foreground/10" />
           </div>
         ) : (
-          <div className="line-clamp-2 text-sm leading-snug font-medium">
+          <div className="line-clamp-2 text-base leading-snug font-medium">
             {asset.title}
           </div>
         )}
         {isYoutubeMetadataLoading ? (
-          <span className="block h-3 w-28 animate-pulse rounded bg-sidebar-foreground/10" />
+          <div className="flex items-center gap-1.5">
+            <span className="size-4.5 shrink-0 animate-pulse rounded-full bg-sidebar-foreground/10" />
+            <span className="h-3.5 w-28 animate-pulse rounded bg-sidebar-foreground/10" />
+          </div>
         ) : isYoutube && channelName ? (
-          <div className="truncate text-[11px] text-sidebar-foreground/60">
-            {channelName}
+          <div className={LINK_CARD_META_CLASS}>
+            <ChannelAvatar src={asset.video?.channelAvatarUrl} />
+            <span className="min-w-0 truncate">{channelName}</span>
           </div>
         ) : null}
         {asset.description ? (

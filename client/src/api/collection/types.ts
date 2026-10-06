@@ -361,6 +361,7 @@ export type LinkVideo = {
   videoId: string;
   channelName: string | null;
   channelUrl: string | null;
+  channelAvatarUrl?: string;
 };
 
 /** Browser-only state used while a just-pasted YouTube link is unresolved. */

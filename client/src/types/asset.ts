@@ -103,6 +103,7 @@ export interface LinkAsset {
     videoId: string;
     channelName: string | null;
     channelUrl: string | null;
+    channelAvatarUrl?: string;
   };
   /** Browser-only metadata for a YouTube card before server resolution wins. */
   optimisticYouTube?: {

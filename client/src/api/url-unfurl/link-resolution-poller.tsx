@@ -225,6 +225,7 @@ function linkSignature(link: CollectionLinkNode) {
     link.video?.videoId,
     link.video?.channelName,
     link.video?.channelUrl,
+    link.video?.channelAvatarUrl,
   ]);
 }
 

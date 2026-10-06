@@ -75,6 +75,7 @@ export class YouTubeDataApiResolver implements UrlResolver {
     });
     const snippet = parseSnippet(response.body, videoId);
     const thumbnailUrl = selectThumbnailUrl(snippet.thumbnails);
+    const channelAvatarUrl = await this.resolveChannelAvatar(snippet.channelId);
     return youtubeResult({
       resolverKey: this.key,
       resolverVersion: this.version,
@@ -83,6 +84,7 @@ export class YouTubeDataApiResolver implements UrlResolver {
       description: formatDescription(snippet.description, 2_000),
       channelName: boundedText(snippet.channelTitle, 255),
       channelUrl: channelUrlFor(snippet.channelId),
+      channelAvatarUrl,
       thumbnailUrl,
       thumbnailSource: thumbnailUrl
         ? "youtube:data-api:thumbnail"
@@ -90,6 +92,31 @@ export class YouTubeDataApiResolver implements UrlResolver {
       titleSource: "youtube:data-api:title",
       descriptionSource: "youtube:data-api:description",
     });
+  }
+
+  private async resolveChannelAvatar(
+    channelId: unknown,
+  ): Promise<string | null> {
+    if (typeof channelId !== "string" || !CHANNEL_ID.test(channelId))
+      return null;
+
+    const endpoint = new URL("/youtube/v3/channels", DATA_API_ORIGIN);
+    endpoint.searchParams.set("part", "snippet");
+    endpoint.searchParams.set("id", channelId);
+    endpoint.searchParams.set("fields", "items(id,snippet(thumbnails))");
+    endpoint.searchParams.set("key", this.apiKey!.trim());
+
+    try {
+      const response = await safeFetch(endpoint, {
+        accept: "application/json",
+        allowedContentTypes: ["application/json"],
+        maxBytes: MAX_RESPONSE_BYTES,
+        totalTimeoutMs: 2_000,
+      });
+      return parseChannelAvatar(response.body, channelId);
+    } catch {
+      return null;
+    }
   }
 
   private async resolveWithYouTubePage(
@@ -149,6 +176,7 @@ function youtubeResult(input: {
   description: string | null;
   channelName: string | null;
   channelUrl: string | null;
+  channelAvatarUrl?: string | null;
   thumbnailUrl: string | null;
   thumbnailSource: string;
   titleSource?: string;
@@ -195,6 +223,9 @@ function youtubeResult(input: {
         videoId: input.videoId,
         channelName: input.channelName,
         channelUrl: input.channelUrl,
+        ...(input.channelAvatarUrl
+          ? { channelAvatarUrl: input.channelAvatarUrl }
+          : {}),
       },
     },
     media,
@@ -232,6 +263,36 @@ function parseSnippet(body: Uint8Array, videoId: string): YouTubeSnippet {
   } catch {
     throw new Error("Invalid YouTube Data API response");
   }
+}
+
+function parseChannelAvatar(
+  body: Uint8Array,
+  channelId: string,
+): string | null {
+  const parsed: unknown = JSON.parse(new TextDecoder().decode(body));
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    return null;
+  const items = (parsed as YouTubeDataApiResponse).items;
+  if (!Array.isArray(items) || items.length !== 1) return null;
+  const channel = items[0];
+  if (!channel || typeof channel !== "object" || Array.isArray(channel))
+    return null;
+  const { id, snippet } = channel as { id?: unknown; snippet?: unknown };
+  if (id !== channelId || !snippet || typeof snippet !== "object") return null;
+  const thumbnails = (snippet as { thumbnails?: unknown }).thumbnails;
+  if (
+    !thumbnails ||
+    typeof thumbnails !== "object" ||
+    Array.isArray(thumbnails)
+  )
+    return null;
+  for (const size of ["default", "medium", "high"]) {
+    const entry = (thumbnails as Record<string, unknown>)[size];
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const url = safeHttpUrl((entry as { url?: unknown }).url);
+    if (url?.startsWith("https://")) return url;
+  }
+  return null;
 }
 
 function parseYouTubePage(

@@ -66,13 +66,39 @@ describe("link projection", () => {
               videoId: "dQw4w9WgXcQ",
               channelName: "A channel",
               channelUrl: "https://www.youtube.com/channel/UC123",
+              channelAvatarUrl: "https://yt3.ggpht.com/channel-avatar=s88",
             },
           },
         },
         undefined,
         null,
       ).video,
-    ).toMatchObject({ provider: "youtube", channelName: "A channel" });
+    ).toMatchObject({
+      provider: "youtube",
+      channelName: "A channel",
+      channelAvatarUrl: "https://yt3.ggpht.com/channel-avatar=s88",
+    });
+  });
+
+  it("ignores an invalid channel image without losing the video", () => {
+    const projected = projectLinkNode(
+      {
+        ...baseRow,
+        providerExtensions: {
+          youtube: {
+            videoId: "dQw4w9WgXcQ",
+            channelName: "A channel",
+            channelUrl: "https://www.youtube.com/@channel",
+            channelAvatarUrl: "javascript:alert(1)",
+          },
+        },
+      },
+      undefined,
+      null,
+    );
+
+    expect(projected.video).toMatchObject({ channelName: "A channel" });
+    expect(projected.video?.channelAvatarUrl).toBeUndefined();
   });
 
   it.each(["youtube-oembed", "generic-html"])(

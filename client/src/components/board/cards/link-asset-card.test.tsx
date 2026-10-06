@@ -76,7 +76,9 @@ describe("LinkAssetCard", () => {
     expect(html).toContain('viewBox="0 0 68 48"');
     expect(html).not.toContain("text-popover-foreground");
     expect(html).toContain("A channel");
-    expect(html.indexOf(">A channel</div>")).toBeGreaterThan(
+    expect(html).toContain('data-slot="channel-avatar"');
+    expect(html).toContain("lucide-user-round");
+    expect(html.indexOf(">A channel</span>")).toBeGreaterThan(
       html.indexOf(">A video</div>"),
     );
     expect(html).not.toContain("YouTube ·");
@@ -84,6 +86,25 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("border-b border-border bg-muted/40");
     expect(html).not.toContain("shadow-sm");
     expect(html).not.toContain(`href="${asset.originalUrl}"`);
+  });
+
+  it("shows the channel profile image when one was resolved", () => {
+    const html = renderToStaticMarkup(
+      <LinkAssetCard
+        asset={{
+          ...asset,
+          video: {
+            ...asset.video!,
+            channelAvatarUrl: "https://yt3.ggpht.com/channel-avatar=s88",
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain("https://yt3.ggpht.com/channel-avatar=s88");
+    expect(html).toContain('data-slot="channel-avatar"');
+    expect(html).not.toContain("lucide-user-round");
+    expect(html).toContain("A channel");
   });
 
   it("keeps links and timestamps in a YouTube card preview non-interactive", () => {

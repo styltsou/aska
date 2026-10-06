@@ -508,6 +508,15 @@ export const LinkVideoSchema = z.object({
   videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
   channelName: z.string().max(255).nullable(),
   channelUrl: YouTubeChannelUrlSchema.nullable(),
+  channelAvatarUrl: z
+    .url()
+    .max(4096)
+    .refine((value) => {
+      const url = new URL(value);
+      return url.protocol === "https:" && !url.username && !url.password;
+    })
+    .optional()
+    .catch(undefined),
 });
 
 export type LinkVideo = z.infer<typeof LinkVideoSchema>;
