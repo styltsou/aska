@@ -10,6 +10,7 @@ import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
+import { AssetViewerModeIcon } from "@/components/board/asset-viewer-mode-icon";
 import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
 import {
   Tooltip,
@@ -24,8 +25,6 @@ import {
   DownloadIcon,
   ExternalLinkIcon,
   LocateFixedIcon,
-  Maximize2Icon,
-  Minimize2Icon,
   PanelRightIcon,
   PencilIcon,
   PipetteIcon,
@@ -1011,7 +1010,7 @@ function ImageViewerModeButton({
           />
         }
       >
-        {expanded ? <Minimize2Icon /> : <Maximize2Icon />}
+        <AssetViewerModeIcon expanded={expanded} />
         <span className="sr-only">{label}</span>
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>

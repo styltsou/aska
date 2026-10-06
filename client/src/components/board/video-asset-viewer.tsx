@@ -7,19 +7,18 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import {
   DownloadIcon,
   ExternalLinkIcon,
   LocateFixedIcon,
-  Maximize2Icon,
-  Minimize2Icon,
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import type { VideoAsset } from "@/types/asset";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
+import { AssetViewerModeIcon } from "@/components/board/asset-viewer-mode-icon";
 import {
   AssetNotesButton,
   AssetNotesPanel,
@@ -56,10 +55,6 @@ import { consumeVideoPlaybackPosition } from "@/lib/video-playback-position";
 
 const VIDEO_VIEWER_LAYOUT_TRANSITION = {
   duration: 0.18,
-  ease: [0.22, 1, 0.36, 1] as const,
-};
-const VIDEO_VIEWER_ICON_TRANSITION = {
-  duration: 0.08,
   ease: [0.22, 1, 0.36, 1] as const,
 };
 
@@ -416,26 +411,7 @@ function NativeVideoToolbar({
           onClick={onToggleExpanded}
           className={iconButtonClass}
         >
-          <span className="relative size-4">
-            <AnimatePresence initial={false}>
-              <motion.span
-                key={expanded ? "collapse" : "expand"}
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.96 }}
-                transition={
-                  reduceMotion ? { duration: 0 } : VIDEO_VIEWER_ICON_TRANSITION
-                }
-                className="absolute inset-0"
-              >
-                {expanded ? (
-                  <Minimize2Icon className="size-4" />
-                ) : (
-                  <Maximize2Icon className="size-4" />
-                )}
-              </motion.span>
-            </AnimatePresence>
-          </span>
+          <AssetViewerModeIcon expanded={expanded} />
         </ToolbarButton>
       ) : null}
       <span className="max-w-[min(32rem,calc(100vw-12rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground">

@@ -13,8 +13,6 @@ import {
   CheckIcon,
   LocateFixedIcon,
   LoaderCircleIcon,
-  Maximize2Icon,
-  Minimize2Icon,
   PanelRightIcon,
   XIcon,
 } from "lucide-react";
@@ -58,6 +56,7 @@ import { useBoardInsertionPlacement } from "@/components/canvas";
 import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 import { Button } from "@/components/ui/button";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
+import { AssetViewerModeIcon } from "@/components/board/asset-viewer-mode-icon";
 import {
   ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
   ASSET_VIEWER_HEADER_ICON_TOGGLE_BUTTON_CLASS,
@@ -1816,11 +1815,7 @@ export function NoteDetailDrawer({
                     />
                   }
                 >
-                  {expanded ? (
-                    <Minimize2Icon className="size-4" />
-                  ) : (
-                    <Maximize2Icon className="size-4" />
-                  )}
+                  <AssetViewerModeIcon expanded={expanded} />
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   {expanded ? "Exit full screen" : "Full screen"}

@@ -10,8 +10,6 @@ import {
   ImageIcon,
   LocateFixedIcon,
   LoaderCircleIcon,
-  Maximize2Icon,
-  Minimize2Icon,
   PanelRightIcon,
   PencilIcon,
   XIcon,
@@ -27,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
+import { AssetViewerModeIcon } from "@/components/board/asset-viewer-mode-icon";
 import {
   AssetNotesButton,
   AssetNotesPanel,
@@ -657,28 +656,7 @@ function ColorDetailModal({
               onExpandedChange(!expanded);
             }}
           >
-            <span className="relative size-4">
-              <AnimatePresence initial={false}>
-                <motion.span
-                  key={expanded ? "collapse" : "expand"}
-                  initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={reduceMotion ? undefined : { opacity: 0, scale: 0.96 }}
-                  transition={
-                    reduceMotion
-                      ? { duration: 0 }
-                      : { duration: 0.08, ease: [0.22, 1, 0.36, 1] }
-                  }
-                  className="absolute inset-0"
-                >
-                  {expanded ? (
-                    <Minimize2Icon className="size-4" />
-                  ) : (
-                    <Maximize2Icon className="size-4" />
-                  )}
-                </motion.span>
-              </AnimatePresence>
-            </span>
+            <AssetViewerModeIcon expanded={expanded} />
           </Button>
           <span className="max-w-[min(32rem,calc(100vw-14rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground">
             {title}

@@ -9,12 +9,10 @@ import {
 import {
   ExternalLinkIcon,
   LocateFixedIcon,
-  Maximize2Icon,
-  Minimize2Icon,
   PanelRightIcon,
   XIcon,
 } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 
 import { useUpdateLink } from "@/api/collection";
@@ -23,6 +21,7 @@ import {
   AssetTimestampCard,
   hasAssetBeenEdited,
 } from "@/components/board/asset-timestamp-card";
+import { AssetViewerModeIcon } from "@/components/board/asset-viewer-mode-icon";
 import {
   AssetNotesButton,
   AssetNotesPanel,
@@ -135,10 +134,6 @@ const LINK_NOTE_AUTOSAVE_DELAY_MS = 350;
 const LINK_NOTE_STORAGE_KEY = "aska:link-note:v1:";
 const VIDEO_VIEWER_LAYOUT_TRANSITION = {
   duration: 0.18,
-  ease: [0.22, 1, 0.36, 1] as const,
-};
-const VIDEO_VIEWER_ICON_TRANSITION = {
-  duration: 0.08,
   ease: [0.22, 1, 0.36, 1] as const,
 };
 const VIDEO_VIEWER_DESCRIPTION_TRANSITION = {
@@ -622,28 +617,7 @@ function VideoViewerToolbar({
               />
             }
           >
-            <span className="relative size-4">
-              <AnimatePresence initial={false}>
-                <motion.span
-                  key={expanded ? "collapse" : "expand"}
-                  initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={reduceMotion ? undefined : { opacity: 0, scale: 0.96 }}
-                  transition={
-                    reduceMotion
-                      ? { duration: 0 }
-                      : VIDEO_VIEWER_ICON_TRANSITION
-                  }
-                  className="absolute inset-0"
-                >
-                  {expanded ? (
-                    <Minimize2Icon className="size-4" />
-                  ) : (
-                    <Maximize2Icon className="size-4" />
-                  )}
-                </motion.span>
-              </AnimatePresence>
-            </span>
+            <AssetViewerModeIcon expanded={expanded} />
             <span className="sr-only">
               {expanded ? "Return to modal" : "Expand video"}
             </span>
