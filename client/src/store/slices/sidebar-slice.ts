@@ -6,6 +6,8 @@ export const DEFAULT_SIDEBAR_OPEN = true;
 export interface SidebarSlice {
   open: boolean;
   setOpen: (open: boolean | ((open: boolean) => boolean)) => void;
+  canvasFloatingSidebar: boolean;
+  setCanvasFloatingSidebar: (floating: boolean) => void;
 }
 
 export interface TransientSidebarSlice {
@@ -19,6 +21,9 @@ export const createSidebarSlice: StateCreator<SidebarSlice> = (set) => ({
     set((state) => ({
       open: typeof value === "function" ? value(state.open) : value,
     })),
+  canvasFloatingSidebar: readStoredFloatingSidebar(),
+  setCanvasFloatingSidebar: (floating) =>
+    set({ canvasFloatingSidebar: floating }),
 });
 
 export const createTransientSidebarSlice: StateCreator<
@@ -42,5 +47,19 @@ function readStoredOpen(): boolean {
       : DEFAULT_SIDEBAR_OPEN;
   } catch {
     return DEFAULT_SIDEBAR_OPEN;
+  }
+}
+
+function readStoredFloatingSidebar(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const raw = window.localStorage.getItem(APP_STORE_STORAGE_KEY);
+    if (!raw) return false;
+    const stored = JSON.parse(raw) as {
+      state?: { canvasFloatingSidebar?: unknown };
+    };
+    return stored.state?.canvasFloatingSidebar === true;
+  } catch {
+    return false;
   }
 }

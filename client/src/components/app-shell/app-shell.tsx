@@ -13,7 +13,12 @@ import { PexelsBrowserPanel } from "@/components/board/pexels-browser-panel";
 import { pruneExpiredUploadImagesDrafts } from "@/lib/upload-images-draft";
 import { cn } from "@/lib/utils";
 import { getSidebarCollectionLocation } from "./sidebar-collection-navigation";
-import { getPexelsBrowserScope, useSessionStore } from "@/store";
+import {
+  getCollectionViewScope,
+  getPexelsBrowserScope,
+  usePersistedStore,
+  useSessionStore,
+} from "@/store";
 import { WorkspacePeekProvider } from "./workspace-peek";
 import { WorkspaceAssetViewProvider } from "./workspace-asset-view";
 import { workspaceSearchQueryOptions } from "@/api/workspace-search";
@@ -29,6 +34,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isWorkspaceOverview = pathnameSegments.length === 1;
   const { workspaceSlug, collectionSlug, folderPath } =
     getSidebarCollectionLocation(pathname);
+  const collectionViewScope = getCollectionViewScope(
+    workspaceSlug,
+    collectionSlug ?? "",
+  );
+  const boardView = useSessionStore(
+    (state) => state.collectionViews[collectionViewScope] ?? "canvas",
+  );
+  const floatingSidebarEnabled = usePersistedStore(
+    (state) => state.canvasFloatingSidebar,
+  );
+
+  const floatingCanvasSidebar =
+    isBoardView && boardView === "canvas" && floatingSidebarEnabled;
   const pexelsBrowserOpen = useSessionStore((state) =>
     collectionSlug
       ? (state.pexelsBrowserByScope[
@@ -57,11 +75,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <WorkspaceAssetViewProvider workspaceSlug={workspaceSlug}>
         <DragDropProvider>
           <SidebarProvider
+            data-canvas-sidebar={floatingCanvasSidebar ? "floating" : undefined}
             className={
               isWorkspaceOverview ? "h-svh overflow-hidden" : undefined
             }
           >
-            <AppSidebar />
+            <AppSidebar compact={floatingCanvasSidebar} />
             <GlobalScratchpad />
             <SettingsDialog />
             <CommandPalette />

@@ -10,8 +10,10 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   FolderOpenIcon,
   InboxIcon,
@@ -28,9 +30,13 @@ import { openSettings } from "@/lib/settings-dialog";
 import { parseWorkspaceAssetPath } from "@/lib/workspace-asset-url";
 import { mergeWorkspaceOverlaySearch } from "@/lib/workspace-overlay-search";
 import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 
-export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  compact = false,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { compact?: boolean }) {
+  const { isMobile } = useSidebar();
   const authState = useRouterState({
     select: (state) =>
       state.matches.find((match) => match.routeId === "/$workspaceSlug")
@@ -133,27 +139,124 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   }));
 
   return (
-    <Sidebar variant="inset" className="pt-0 pb-0" {...props}>
-      <SidebarHeader>
-        <WorkspaceSwitcher />
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarSearchTrigger />
-        <NavMain items={navMain} />
-        <NavProjects
-          collections={navCollections}
-          isLoading={isWorkspaceLoading}
-        />
-        <NavSecondary items={navSecondary} className="mt-auto" />
-      </SidebarContent>
-      <SidebarFooter>
-        {authState?.session?.user ? (
-          <NavUser user={authState.session.user} />
-        ) : (
-          <SidebarUserSkeleton />
-        )}
-      </SidebarFooter>
-    </Sidebar>
+    <>
+      <Sidebar
+        variant={compact ? "canvas" : "inset"}
+        className="pt-0 pb-0"
+        {...props}
+      >
+        <SidebarHeader>
+          <WorkspaceSwitcher />
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarSearchTrigger />
+          <NavMain items={navMain} />
+          <NavProjects
+            collections={navCollections}
+            isLoading={isWorkspaceLoading}
+          />
+          <NavSecondary items={navSecondary} className="mt-auto" />
+        </SidebarContent>
+        <SidebarFooter>
+          {authState?.session?.user ? (
+            <NavUser user={authState.session.user} />
+          ) : (
+            <SidebarUserSkeleton />
+          )}
+        </SidebarFooter>
+      </Sidebar>
+      <AnimatePresence initial={false}>
+        {compact && !isMobile ? (
+          <CanvasFloatingSidebar
+            workspace={<WorkspaceSwitcher />}
+            library={
+              <div className="flex flex-col gap-1 p-2">
+                <SidebarSearchTrigger />
+                <NavMain items={navMain} />
+              </div>
+            }
+            collections={
+              <div className="max-h-[42svh] overflow-y-auto p-2">
+                <NavProjects
+                  collections={navCollections}
+                  isLoading={isWorkspaceLoading}
+                />
+              </div>
+            }
+          />
+        ) : null}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function CanvasFloatingSidebar({
+  workspace,
+  library,
+  collections,
+}: {
+  workspace: ReactNode;
+  library: ReactNode;
+  collections: ReactNode;
+}) {
+  const { open } = useSidebar();
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <motion.aside
+      aria-label="Workspace navigation"
+      aria-hidden={!open}
+      inert={!open}
+      className="fixed top-14 left-3 z-30 hidden w-56 max-w-[calc(100vw-1.5rem)] flex-col gap-2 text-sidebar-foreground md:flex"
+      initial={reduceMotion ? false : { opacity: 0, x: -8, y: -4, scale: 0.98 }}
+      animate={
+        open
+          ? { opacity: 1, x: 0, y: 0, scale: 1 }
+          : { opacity: 0, x: -5, y: -2, scale: 0.99 }
+      }
+      exit={
+        reduceMotion ? undefined : { opacity: 0, x: -5, y: -2, scale: 0.99 }
+      }
+      transition={{
+        duration: reduceMotion ? 0 : open ? 0.25 : 0.15,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+    >
+      <FloatingSidebarIsland index={0} reduceMotion={reduceMotion}>
+        {workspace}
+      </FloatingSidebarIsland>
+      <FloatingSidebarIsland index={1} reduceMotion={reduceMotion}>
+        {library}
+      </FloatingSidebarIsland>
+      <FloatingSidebarIsland index={2} reduceMotion={reduceMotion}>
+        {collections}
+      </FloatingSidebarIsland>
+    </motion.aside>
+  );
+}
+
+function FloatingSidebarIsland({
+  children,
+  index,
+  reduceMotion,
+}: {
+  children: ReactNode;
+  index: number;
+  reduceMotion: boolean | null;
+}) {
+  return (
+    <motion.section
+      className="overflow-hidden rounded-lg bg-sidebar shadow-sm ring-1 shadow-foreground/5 ring-sidebar-border [&_[data-sidebar=group]]:p-0"
+      initial={reduceMotion ? false : { opacity: 0, y: -6, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{
+        duration: reduceMotion ? 0 : 0.25,
+        delay: reduceMotion ? 0 : index * 0.04,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+    >
+      {children}
+    </motion.section>
   );
 }
 

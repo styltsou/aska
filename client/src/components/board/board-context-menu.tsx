@@ -87,6 +87,13 @@ export function BoardContextMenu({
   const isBoardActionRailVisible = usePersistedStore(
     (state) => state.workspaceBoardActionRails?.[workspaceSlug] ?? false,
   );
+  const isFloatingSidebar = usePersistedStore(
+    (state) => state.canvasFloatingSidebar,
+  );
+  const setFloatingSidebar = usePersistedStore(
+    (state) => state.setCanvasFloatingSidebar,
+  );
+  const setSidebarOpen = usePersistedStore((state) => state.setOpen);
   const setWorkspaceBoardActionRail = usePersistedStore(
     (state) => state.setWorkspaceBoardActionRail,
   );
@@ -171,6 +178,17 @@ export function BoardContextMenu({
                 }
               >
                 Actions dock
+              </ContextMenuCheckboxItem>
+              <ContextMenuCheckboxItem
+                closeOnClick
+                className="max-md:hidden"
+                checked={isFloatingSidebar}
+                onCheckedChange={(floating) => {
+                  setFloatingSidebar(floating === true);
+                  setSidebarOpen(true);
+                }}
+              >
+                Floating sidebar
               </ContextMenuCheckboxItem>
               <ContextMenuCheckboxItem
                 closeOnClick
