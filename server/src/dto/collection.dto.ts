@@ -208,9 +208,19 @@ export const FolderChildPreviewSchema = z.object({
   gradient: ColorGradientSchema.nullable().optional(),
   snippet: z.string().optional(),
   hostname: z.string().optional(),
+  siteName: z.string().nullable().optional(),
   title: z.string().nullable().optional(),
   favicon: z.string().optional(),
   videoId: z.string().optional(),
+  channelName: z.string().nullable().optional(),
+  channelAvatarUrl: z
+    .url()
+    .max(4096)
+    .refine((value) => {
+      const url = new URL(value);
+      return url.protocol === "https:" && !url.username && !url.password;
+    })
+    .optional(),
   description: z.string().nullable().optional(),
   mentionColors: MentionColorsSchema.optional(),
 });

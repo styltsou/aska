@@ -182,11 +182,14 @@ function patchLinkPreviews(
     return {
       ...preview,
       hostname: link.hostname,
+      siteName: link.siteName,
       title: link.title,
       url: link.previewImage?.url,
       blurDataURL: link.previewImage?.blurDataURL,
       favicon: link.favicon?.url,
       videoId: link.video?.videoId,
+      channelName: link.video?.channelName,
+      channelAvatarUrl: link.video?.channelAvatarUrl,
       description: link.description,
     };
   });

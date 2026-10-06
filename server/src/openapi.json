@@ -2414,9 +2414,34 @@
             "type": "string",
             "description": "Hostname for link previews."
           },
+          "siteName": {
+            "type": ["string", "null"],
+            "description": "Resolved site name for link previews."
+          },
           "title": {
             "type": ["string", "null"],
             "description": "Resolved or fallback title for link previews."
+          },
+          "favicon": {
+            "type": "string",
+            "description": "Favicon URL for link previews."
+          },
+          "videoId": {
+            "type": "string",
+            "description": "YouTube video ID for YouTube link previews."
+          },
+          "channelName": {
+            "type": ["string", "null"],
+            "description": "YouTube channel name for video previews."
+          },
+          "channelAvatarUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "HTTPS YouTube channel avatar URL for video previews."
+          },
+          "description": {
+            "type": ["string", "null"],
+            "description": "Resolved description for link previews."
           }
         },
         "description": "Preview thumbnail for a folder child."

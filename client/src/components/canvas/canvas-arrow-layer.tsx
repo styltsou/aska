@@ -876,7 +876,6 @@ export function CanvasArrowLayer({
             const showTransformFrame =
               focused &&
               editable &&
-              hasBends &&
               mode === "transform" &&
               (!activeDrag || keepsFullTransformUi);
             const showFrameControls = showTransformFrame;
@@ -887,7 +886,6 @@ export function CanvasArrowLayer({
             const showFrameMoveSurface =
               focused &&
               editable &&
-              hasBends &&
               mode === "transform" &&
               (!activeDrag || activeDrag.kind === "body");
             const showSelectionRing = selected && (!focused || !editable);

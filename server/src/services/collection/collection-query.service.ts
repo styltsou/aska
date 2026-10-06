@@ -41,6 +41,7 @@ import {
   toBoardPosition,
   toFolderPreview,
   toPreviewVideoId,
+  toPreviewYouTubeMetadata,
   type FolderPreviewRow,
   type ImageVariantLookup,
 } from "./collection-node-mappers";
@@ -200,6 +201,7 @@ export class CollectionQueryService {
         noteContent: noteAssets.markdown,
         linkResourceId: externalResources.id,
         linkHostname: externalResources.hostname,
+        linkSiteName: externalResources.siteName,
         linkTitle: externalResources.title,
         linkDescription: externalResources.description,
         linkProviderExtensions: externalResources.providerExtensions,
@@ -295,11 +297,13 @@ export class CollectionQueryService {
           assetId: `link-${row.assetId}`,
           type: "link",
           hostname: row.linkHostname,
+          siteName: row.linkSiteName,
           title: row.linkTitle,
           url: media?.previewImage?.url,
           blurDataURL: media?.previewImage?.blurDataURL,
           favicon: media?.favicon?.url,
           videoId: toPreviewVideoId(row.linkProviderExtensions),
+          ...toPreviewYouTubeMetadata(row.linkProviderExtensions),
           description: row.linkDescription,
         };
       } else if (row.assetType === "color" && row.colorHex) {
@@ -500,6 +504,7 @@ export class CollectionQueryService {
           content: noteAssets.markdown,
           resourceId: externalResources.id,
           hostname: externalResources.hostname,
+          siteName: externalResources.siteName,
           title: externalResources.title,
           description: externalResources.description,
           providerExtensions: externalResources.providerExtensions,

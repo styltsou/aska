@@ -33,14 +33,23 @@ function YouTubePlayMark({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function ChannelAvatar({ src }: { src?: string }) {
+function ChannelAvatar({
+  src,
+  compact = false,
+}: {
+  src?: string;
+  compact?: boolean;
+}) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   return (
     <span
       data-slot="channel-avatar"
       aria-hidden="true"
-      className="flex size-4.5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-foreground/8 text-sidebar-foreground/55 ring-1 ring-sidebar-foreground/10"
+      className={cn(
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-foreground/8 text-sidebar-foreground/55 ring-1 ring-sidebar-foreground/10",
+        compact ? "size-3.5" : "size-4.5",
+      )}
     >
       {src && failedSrc !== src ? (
         <img
@@ -51,7 +60,7 @@ function ChannelAvatar({ src }: { src?: string }) {
           onError={() => setFailedSrc(src)}
         />
       ) : (
-        <UserRoundIcon className="size-3" />
+        <UserRoundIcon className={compact ? "size-2.5" : "size-3"} />
       )}
     </span>
   );
@@ -255,9 +264,12 @@ type LinkCardPreviewData = Pick<
   | "url"
   | "blurDataURL"
   | "hostname"
+  | "siteName"
   | "title"
   | "favicon"
   | "videoId"
+  | "channelName"
+  | "channelAvatarUrl"
   | "description"
 > &
   Partial<Pick<FolderAssetPreview, "assetId" | "type">>;
@@ -280,7 +292,8 @@ export function LinkCardPreview({
       ? YOUTUBE_THUMBNAIL_URL(preview.videoId)
       : undefined);
   const displayTitle = preview.title?.trim() || "Untitled link";
-  const hostname = preview.hostname ?? (isYoutube ? "YouTube" : "Link");
+  const hostname =
+    preview.siteName || preview.hostname || (isYoutube ? "YouTube" : "Link");
 
   return (
     <div
@@ -340,6 +353,12 @@ export function LinkCardPreview({
         >
           {displayTitle}
         </div>
+        {isYoutube && preview.channelName?.trim() ? (
+          <div className="flex min-w-0 shrink-0 items-center gap-1.5 text-[11px] leading-4 text-sidebar-foreground/65">
+            <ChannelAvatar src={preview.channelAvatarUrl} compact={compact} />
+            <span className="min-w-0 truncate">{preview.channelName}</span>
+          </div>
+        ) : null}
         {preview.description?.trim() ? (
           preview.videoId ? (
             <YouTubeDescription

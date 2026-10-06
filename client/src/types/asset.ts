@@ -143,11 +143,14 @@ export interface FolderAssetPreview {
   blurDataURL?: string | null;
   snippet?: string;
   hostname?: string;
+  siteName?: string | null;
   title?: string | null;
   hex?: string;
   gradient?: ColorGradient | null;
   favicon?: string;
   videoId?: string;
+  channelName?: string | null;
+  channelAvatarUrl?: string;
   description?: string | null;
   mentionColors?: MentionColors;
 }

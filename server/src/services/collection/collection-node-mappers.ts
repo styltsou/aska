@@ -4,6 +4,7 @@ import type {
   FolderChildPreview,
   MentionColors,
 } from "@/dto/collection.dto";
+import { LinkVideoSchema } from "@/dto/collection.dto";
 import type { StoredColorGradient } from "@/lib/color-gradient";
 import type { ProjectedMedia } from "@/services/url-unfurl/projection";
 
@@ -28,6 +29,7 @@ export type FolderPreviewRow = {
   content: string | null;
   resourceId?: number | null;
   hostname?: string | null;
+  siteName?: string | null;
   title?: string | null;
   assetTitle?: string | null;
   providerExtensions?: Record<string, unknown> | null;
@@ -74,11 +76,13 @@ export function toFolderPreview(
       assetId: `link-${row.assetId}`,
       type: "link",
       hostname: row.hostname,
+      siteName: row.siteName ?? null,
       title: row.assetTitle ?? row.title ?? null,
       url: media?.previewImage?.url,
       blurDataURL: media?.previewImage?.blurDataURL,
       favicon: media?.favicon?.url,
       videoId: toPreviewVideoId(row.providerExtensions),
+      ...toPreviewYouTubeMetadata(row.providerExtensions),
       description: row.description ?? row.title ?? null,
     };
   }
@@ -172,4 +176,25 @@ export function toPreviewVideoId(
   return typeof videoId === "string" && /^[A-Za-z0-9_-]{11}$/.test(videoId)
     ? videoId
     : undefined;
+}
+
+export function toPreviewYouTubeMetadata(
+  providerExtensions?: Record<string, unknown> | null,
+): Pick<FolderChildPreview, "channelName" | "channelAvatarUrl"> {
+  const extension = providerExtensions?.youtube;
+  if (!extension || typeof extension !== "object" || Array.isArray(extension))
+    return {};
+
+  const parsed = LinkVideoSchema.safeParse({
+    provider: "youtube",
+    ...extension,
+  });
+  if (!parsed.success) return {};
+
+  return {
+    channelName: parsed.data.channelName,
+    ...(parsed.data.channelAvatarUrl
+      ? { channelAvatarUrl: parsed.data.channelAvatarUrl }
+      : {}),
+  };
 }

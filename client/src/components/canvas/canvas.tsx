@@ -134,6 +134,7 @@ import {
   getTranslatedArrowUpdates,
   type ArrowSnapshot,
 } from "./canvas-selection-geometry";
+import { retainSelectableIds } from "./canvas-selection-retain";
 import {
   CanvasObjectInspector,
   type CanvasInspectorTarget,
@@ -349,10 +350,12 @@ function CanvasSurface({
   draftTextRef.current = draftText;
   const [draftArrow, setDraftArrow] = useState<DraftCanvasArrow>();
   const pendingArrowCreatesRef = useRef(new Map<string, Promise<string>>());
+  const prevEligibleNodeIdsRef = useRef<ReadonlySet<string>>(new Set());
   const resolveArrowObjectId = useCallback(async (objectId: string) => {
     return (await pendingArrowCreatesRef.current.get(objectId)) ?? objectId;
   }, []);
   const arrowPointerStartRef = useRef<XYPosition | undefined>(undefined);
+  const suppressDrawClickRef = useRef(false);
   const handledCreationRequestRef = useRef<number | undefined>(undefined);
   const activeTool = useTransientStore(
     (state) => state.canvasTools[boardKey] ?? "select",
@@ -521,23 +524,12 @@ function CanvasSurface({
     const persistedIds = selectedIds.filter(
       (id) => !id.startsWith("text-draft-") && !id.startsWith("arrow-draft-"),
     );
-    if (persistedIds.length === 0) {
-      setDraftText(undefined);
-      setEditingTextId(undefined);
-      clearSelection(boardKey);
-      return;
-    }
+    setDraftText(undefined);
+    setEditingTextId(undefined);
+    clearSelection(boardKey);
+    if (persistedIds.length === 0) return;
     persistedIds.forEach((id) => exitStartRef.current?.(id));
-    bulkDelete.mutate(
-      { nodeIds: persistedIds, collectionSlug },
-      {
-        onSuccess: () => {
-          setDraftText(undefined);
-          setEditingTextId(undefined);
-          clearSelection(boardKey);
-        },
-      },
-    );
+    bulkDelete.mutate({ nodeIds: persistedIds, collectionSlug });
   }, [
     boardKey,
     bulkDelete,
@@ -550,15 +542,14 @@ function CanvasSurface({
   const deleteCanvasObject = useCallback(
     (objectId: string) => {
       setCanvasObjectFocus(undefined);
+      clearSelection(boardKey);
       if (objectId.startsWith("text-draft-")) {
         setDraftText(undefined);
         setEditingTextId(undefined);
-        clearSelection(boardKey);
         return;
       }
       if (objectId.startsWith("arrow-draft-")) {
         setEditingArrowId(undefined);
-        clearSelection(boardKey);
         const creation = pendingArrowCreatesRef.current.get(objectId);
         if (creation) {
           void creation
@@ -573,7 +564,6 @@ function CanvasSurface({
         return;
       }
       deleteCanvasObjectMutation(objectId, {
-        onSuccess: () => clearSelection(boardKey),
         onError: () => toast.error("Unable to delete the canvas object."),
       });
     },
@@ -1599,9 +1589,13 @@ function CanvasSurface({
 
   useEffect(() => {
     if (selection.scopeKey !== boardKey) return;
-    const retainedIds = selectedIds.filter((nodeId) =>
-      eligibleNodeIds.has(nodeId),
+    const retainedIds = retainSelectableIds(
+      selectedIds,
+      eligibleNodeIds,
+      prevEligibleNodeIdsRef.current,
+      new Set(pendingArrowCreatesRef.current.keys()),
     );
+    prevEligibleNodeIdsRef.current = eligibleNodeIds;
     if (retainedIds.length === selectedIds.length) return;
     replaceSelection(boardKey, retainedIds);
   }, [
@@ -2218,6 +2212,7 @@ function CanvasSurface({
         activeTool === "arrow" && "cursor-crosshair",
       )}
       onPointerDownCapture={(event) => {
+        suppressDrawClickRef.current = false;
         if (focusRequestId !== undefined) onDismissFocusedNode?.();
         if (
           activeTool === "arrow" &&
@@ -2277,6 +2272,7 @@ function CanvasSurface({
             screenToFlowPosition({ x: event.clientX, y: event.clientY }),
           );
           if (Math.hypot(end.x - start.x, end.y - start.y) >= 8) {
+            suppressDrawClickRef.current = true;
             createArrowBetween(start, end);
           } else {
             setDraftArrow(undefined);
@@ -2296,6 +2292,10 @@ function CanvasSurface({
       }}
       onClickCapture={(event) => {
         marquee.consumeClick(event);
+        if (!suppressDrawClickRef.current) return;
+        suppressDrawClickRef.current = false;
+        event.preventDefault();
+        event.stopPropagation();
       }}
       onDoubleClickCapture={(event) => {
         // Only bare canvas counts as empty space: cards, canvas objects and
@@ -2708,7 +2708,7 @@ function CanvasSurface({
           )}
           draft={draftArrow}
           selectedIds={selectedIdSet}
-          focusedId={focusedCanvasObjectId}
+          focusedId={selectedIds.length === 1 ? selectedIds[0] : undefined}
           pointEditId={editingArrowId}
           enabled={activeTool === "select"}
           editable={!isCanvasLocked && activeTool === "select"}

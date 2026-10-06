@@ -46,11 +46,14 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
       assetId: node.id,
       type: "link",
       hostname: node.hostname,
+      siteName: node.siteName,
       title: node.title,
       url: node.previewImage?.url,
       blurDataURL: node.previewImage?.blurDataURL,
       favicon: node.favicon?.url,
       videoId: node.video?.videoId,
+      channelName: node.video?.channelName,
+      channelAvatarUrl: node.video?.channelAvatarUrl,
       description: node.description ?? null,
     };
   }
