@@ -3,12 +3,12 @@ import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
 import { motion, useReducedMotion } from "motion/react";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 type NoteSection = {
   id: string;
   label: string;
-  description?: string;
   level: number;
   position: number;
 };
@@ -47,33 +47,12 @@ function getLayoutRight(element: HTMLElement) {
 
 function readSections(editor: Editor): NoteSection[] {
   const sections: NoteSection[] = [];
-  const document = editor.state.doc;
-  const blocks: Array<{ node: typeof document; position: number }> = [];
-
-  document.forEach((node, position) => {
-    blocks.push({ node, position });
-  });
-
-  blocks.forEach(({ node, position }, index) => {
+  editor.state.doc.forEach((node, position) => {
     if (node.type.name !== "heading") return;
-
-    let description = "";
-    for (let nextIndex = index + 1; nextIndex < blocks.length; nextIndex += 1) {
-      const nextNode = blocks[nextIndex]?.node;
-      if (!nextNode || nextNode.type.name === "heading") break;
-      if (!description && nextNode.isTextblock) {
-        description = nextNode.textContent.trim();
-      }
-      if (description) break;
-    }
 
     sections.push({
       id: `section-${position}`,
       label: node.textContent.trim() || "Untitled section",
-      description:
-        description.length > 120
-          ? `${description.slice(0, 117).trimEnd()}...`
-          : description || undefined,
       level: Number(node.attrs.level) || 1,
       position,
     });
@@ -90,7 +69,6 @@ function sectionsAreEqual(previous: NoteSection[], next: NoteSection[] | null) {
       (section, index) =>
         section.id === next[index]?.id &&
         section.label === next[index]?.label &&
-        section.description === next[index]?.description &&
         section.level === next[index]?.level,
     )
   );
@@ -108,6 +86,10 @@ export function NotePreviewRail({
   const [isRailVisible, setIsRailVisible] = useState(false);
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [isOutlineOpen, setIsOutlineOpen] = useState(false);
+  const [workspaceContent, setWorkspaceContent] = useState<HTMLElement | null>(
+    null,
+  );
   const [rightOffset, setRightOffset] = useState(
     MIN_SCROLLBAR_WIDTH + PREVIEW_RAIL_GAP,
   );
@@ -134,6 +116,17 @@ export function NotePreviewRail({
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    setWorkspaceContent(
+      container.closest<HTMLElement>("[data-slot='note-workspace-content']"),
+    );
+
+    return () => setWorkspaceContent(null);
+  }, [scrollContainerRef]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
     let frame = 0;
     const updateVisibility = () => {
       frame = 0;
@@ -149,6 +142,8 @@ export function NotePreviewRail({
         container.setAttribute(PREVIEW_RAIL_VISIBLE_ATTRIBUTE, "true");
       } else {
         container.removeAttribute(PREVIEW_RAIL_VISIBLE_ATTRIBUTE);
+        setIsOutlineOpen(false);
+        setHoveredIndex(null);
       }
     };
     const scheduleUpdate = () => {
@@ -179,13 +174,19 @@ export function NotePreviewRail({
         MIN_SCROLLBAR_WIDTH,
         container.offsetWidth - container.clientWidth,
       );
+      const containerRight = container.getBoundingClientRect().right;
       const nextOffset = Math.max(
         scrollbarWidth + PREVIEW_RAIL_GAP,
         Math.round(
-          window.innerWidth -
-            getLayoutRight(container) +
-            scrollbarWidth +
-            PREVIEW_RAIL_GAP,
+          workspaceContent
+            ? workspaceContent.getBoundingClientRect().right -
+                containerRight +
+                scrollbarWidth +
+                PREVIEW_RAIL_GAP
+            : window.innerWidth -
+                getLayoutRight(container) +
+                scrollbarWidth +
+                PREVIEW_RAIL_GAP,
         ),
       );
       setRightOffset((current) =>
@@ -234,12 +235,9 @@ export function NotePreviewRail({
       resizeObserver.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [editor, isRailVisible, scrollContainerRef, sections]);
+  }, [editor, isRailVisible, scrollContainerRef, sections, workspaceContent]);
 
   if (!isRailVisible) return null;
-
-  const previewSection =
-    hoveredIndex === null ? undefined : sections[hoveredIndex];
 
   function goToSection(section: NoteSection) {
     const container = scrollContainerRef.current;
@@ -262,30 +260,27 @@ export function NotePreviewRail({
   // Interaction adapted to Aska's note outline from beUI Preview Rail (MIT).
   const rail = (
     <div
-      className="fixed top-1/2 z-[60] hidden -translate-y-1/2 items-center lg:flex"
+      className={cn(
+        "top-1/2 z-[60] hidden -translate-y-1/2 items-center lg:flex",
+        workspaceContent ? "absolute" : "fixed",
+      )}
       style={{ right: rightOffset }}
+      onPointerEnter={() => setIsOutlineOpen(true)}
+      onPointerLeave={() => {
+        setIsOutlineOpen(false);
+        setHoveredIndex(null);
+      }}
+      onFocusCapture={() => setIsOutlineOpen(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsOutlineOpen(false);
+          setHoveredIndex(null);
+        }
+      }}
     >
-      {previewSection ? (
-        <motion.div
-          key={previewSection.id}
-          aria-hidden="true"
-          initial={shouldReduceMotion ? false : { opacity: 0, x: 4 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="pointer-events-none absolute right-12 w-64 rounded-lg border border-border bg-popover/95 px-3.5 py-3 text-popover-foreground shadow-lg backdrop-blur-xl"
-        >
-          <p className="truncate text-sm font-medium">{previewSection.label}</p>
-          {previewSection.description ? (
-            <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
-              {previewSection.description}
-            </p>
-          ) : null}
-        </motion.div>
-      ) : null}
-
       <nav
         aria-label="Note sections"
         className="flex max-h-[72dvh] w-9 [scrollbar-width:none] flex-col items-end overflow-y-auto py-1 [&::-webkit-scrollbar]:hidden"
-        onPointerLeave={() => setHoveredIndex(null)}
       >
         {sections.map((section, index) => {
           const distance =
@@ -343,10 +338,49 @@ export function NotePreviewRail({
           );
         })}
       </nav>
+      {isOutlineOpen ? (
+        <motion.div
+          initial={shouldReduceMotion ? false : { opacity: 0, x: 4 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="absolute top-1/2 right-9 max-h-[40dvh] w-72 -translate-y-1/2 rounded-lg border border-border bg-popover/95 p-1.5 text-popover-foreground shadow-lg backdrop-blur-xl"
+        >
+          <ScrollArea
+            viewportClassName="h-auto max-h-[calc(40dvh-0.75rem)]"
+            contentClassName="w-full"
+            className="min-h-0 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:right-[-0.25rem] [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-0.5 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35"
+          >
+            <nav aria-label="Note outline" className="py-0.5">
+              {sections.map((section, index) => {
+                const isActive = section.id === activeId;
+
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    aria-current={isActive ? "location" : undefined}
+                    className={cn(
+                      "flex w-full rounded-md py-2 pr-2 text-left text-sm leading-5 outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                      section.level === 1 && "pl-2",
+                      section.level === 2 && "pl-5",
+                      section.level >= 3 && "pl-8",
+                      isActive ? "text-foreground" : "text-muted-foreground",
+                    )}
+                    onPointerEnter={() => setHoveredIndex(index)}
+                    onFocus={() => setHoveredIndex(index)}
+                    onClick={() => goToSection(section)}
+                  >
+                    <span className="min-w-0 break-words">{section.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </ScrollArea>
+        </motion.div>
+      ) : null}
     </div>
   );
 
-  return typeof document === "undefined"
-    ? rail
-    : createPortal(rail, document.body);
+  if (typeof document === "undefined") return rail;
+
+  return createPortal(rail, workspaceContent ?? document.body);
 }
