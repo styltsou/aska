@@ -599,8 +599,7 @@ function ColorDetailModal({
           className={cn(
             "flex shrink-0 items-center gap-0.5 p-2 transition-[background-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
             fullscreenTransitionDuration,
-            expanded &&
-              "mt-[var(--app-shell-inset)] bg-background pl-[calc(var(--app-shell-inset)+0.5rem)]",
+            expanded && "bg-background",
           )}
         >
           <Button

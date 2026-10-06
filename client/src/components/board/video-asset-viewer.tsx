@@ -384,8 +384,7 @@ function NativeVideoToolbar({
             : "duration-[180ms]",
         presentation === "modal" &&
           "rounded-t-xl rounded-b-none bg-transparent",
-        presentation === "workspace" &&
-          "mt-[var(--app-shell-inset)] mb-[var(--app-shell-inset)] rounded-none bg-background pl-[calc(var(--app-shell-inset)+0.5rem)]",
+        presentation === "workspace" && "rounded-none bg-background",
         presentation === "drawer" && "border-b bg-background",
       )}
     >

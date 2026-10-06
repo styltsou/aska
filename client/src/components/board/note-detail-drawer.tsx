@@ -1696,9 +1696,7 @@ export function NoteDetailDrawer({
                 ? "duration-[400ms]"
                 : "duration-[350ms]"
               : "duration-[180ms]",
-            expanded
-              ? "mt-[var(--app-shell-inset)] mb-[var(--app-shell-inset)] bg-background"
-              : "bg-transparent",
+            expanded ? "bg-background" : "bg-transparent",
           )}
         >
           <div className="flex items-center gap-0.5">
