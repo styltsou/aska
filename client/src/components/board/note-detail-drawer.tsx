@@ -1671,11 +1671,12 @@ export function NoteDetailDrawer({
               : undefined
         }
         className={cn(
-          "transition-[transform,translate,top,left,right,width,height,max-width,max-height,border-radius,background-color,box-shadow] duration-[200ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none data-starting-style:duration-[200ms] data-ending-style:duration-[200ms]",
+          "transition-[transform,translate,opacity,top,left,right,width,height,max-width,max-height,border-radius,background-color,box-shadow] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none data-ending-style:duration-150",
           GLASS_FRAME_CLASS,
           split
             ? "data-starting-style:translate-x-full data-ending-style:translate-x-full"
-            : "data-starting-style:translate-x-[50vw] data-ending-style:translate-x-[50vw]",
+            : !sharedEntry &&
+                "data-starting-style:scale-[0.96] data-starting-style:opacity-0 data-ending-style:scale-[0.96] data-ending-style:opacity-0",
           expanded
             ? split
               ? "inset-0 h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
