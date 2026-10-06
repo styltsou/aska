@@ -225,6 +225,15 @@ export const DetailedCollectionSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   assetCount: z.number(),
+  properties: z.object({
+    folderCount: z.number(),
+    imageCount: z.number(),
+    videoCount: z.number(),
+    noteCount: z.number(),
+    linkCount: z.number(),
+    colorCount: z.number(),
+    originalMediaSizeBytes: z.number(),
+  }),
   previews: z.array(FolderChildPreviewSchema),
 });
 

@@ -156,6 +156,7 @@ export type DetailedCollection = {
   createdAt: string;
   updatedAt: string;
   assetCount: number;
+  properties: Omit<CollectionProperties, "assetCount">;
   previews: FolderChildPreview[];
 };
 
@@ -191,10 +192,6 @@ export type CollectionProperties = {
   linkCount: number;
   colorCount: number;
   originalMediaSizeBytes: number;
-};
-
-export type CollectionPropertiesResponse = {
-  properties: CollectionProperties;
 };
 
 export type CreateFolderInput = {

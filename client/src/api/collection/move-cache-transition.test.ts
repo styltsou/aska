@@ -296,6 +296,15 @@ describe("move cache transition", () => {
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
           assetCount: 2,
+          properties: {
+            folderCount: 0,
+            imageCount: 0,
+            videoCount: 0,
+            noteCount: 2,
+            linkCount: 0,
+            colorCount: 0,
+            originalMediaSizeBytes: 0,
+          },
           previews: [
             getAssetPreview(remainingNote),
             getAssetPreview(movedNote),

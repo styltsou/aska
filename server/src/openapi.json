@@ -2431,6 +2431,7 @@
           "createdAt",
           "updatedAt",
           "assetCount",
+          "properties",
           "previews"
         ],
         "properties": {
@@ -2457,6 +2458,27 @@
           },
           "assetCount": {
             "type": "integer"
+          },
+          "properties": {
+            "type": "object",
+            "required": [
+              "folderCount",
+              "imageCount",
+              "videoCount",
+              "noteCount",
+              "linkCount",
+              "colorCount",
+              "originalMediaSizeBytes"
+            ],
+            "properties": {
+              "folderCount": { "type": "integer", "minimum": 0 },
+              "imageCount": { "type": "integer", "minimum": 0 },
+              "videoCount": { "type": "integer", "minimum": 0 },
+              "noteCount": { "type": "integer", "minimum": 0 },
+              "linkCount": { "type": "integer", "minimum": 0 },
+              "colorCount": { "type": "integer", "minimum": 0 },
+              "originalMediaSizeBytes": { "type": "integer", "minimum": 0 }
+            }
           },
           "previews": {
             "type": "array",

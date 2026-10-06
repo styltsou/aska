@@ -64,6 +64,22 @@ type Deps = {
   objectStorageService: IObjectStorageService;
 };
 
+const collectionPropertyAggregates = {
+  assetCount: sql<number>`COUNT(*) FILTER (WHERE ${collectionNodes.nodeType} = 'asset')`,
+  folderCount: sql<number>`COUNT(*) FILTER (WHERE ${collectionNodes.nodeType} = 'folder')`,
+  imageCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'image')`,
+  videoCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'video')`,
+  noteCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'note')`,
+  linkCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'link')`,
+  colorCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'color')`,
+  originalMediaSizeBytes: sql<number>`
+    COALESCE(SUM(
+      COALESCE((${imageAssets.variants} -> 'original' ->> 'sizeBytes')::bigint, 0)
+      + COALESCE((${videoAssets.original} ->> 'sizeBytes')::bigint, 0)
+    ), 0)
+  `,
+};
+
 export class CollectionQueryService {
   private readonly objectStorageService: IObjectStorageService;
   private readonly canvasObjects = new CanvasObjectService();
@@ -102,10 +118,7 @@ export class CollectionQueryService {
         id: collectionsTable.id,
         name: collectionsTable.name,
         slug: collectionsTable.slug,
-        assetCount: sql<number>`
-          COUNT(${collectionNodes.id})
-          FILTER (WHERE ${collectionNodes.nodeType} = 'asset')
-        `,
+        assetCount: collectionPropertyAggregates.assetCount,
       })
       .from(collectionsTable)
       .leftJoin(
@@ -128,21 +141,7 @@ export class CollectionQueryService {
   ): Promise<CollectionProperties> {
     const collection = await getCollectionBySlug(orgId, collectionSlug);
     const [stats] = await db
-      .select({
-        assetCount: sql<number>`COUNT(*) FILTER (WHERE ${collectionNodes.nodeType} = 'asset')`,
-        folderCount: sql<number>`COUNT(*) FILTER (WHERE ${collectionNodes.nodeType} = 'folder')`,
-        imageCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'image')`,
-        videoCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'video')`,
-        noteCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'note')`,
-        linkCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'link')`,
-        colorCount: sql<number>`COUNT(*) FILTER (WHERE ${assets.type} = 'color')`,
-        originalMediaSizeBytes: sql<number>`
-          COALESCE(SUM(
-            COALESCE((${imageAssets.variants} -> 'original' ->> 'sizeBytes')::bigint, 0)
-            + COALESCE((${videoAssets.original} ->> 'sizeBytes')::bigint, 0)
-          ), 0)
-        `,
-      })
+      .select(collectionPropertyAggregates)
       .from(collectionNodes)
       .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
       .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
@@ -172,16 +171,16 @@ export class CollectionQueryService {
         description: collectionsTable.description,
         createdAt: collectionsTable.createdAt,
         updatedAt: collectionsTable.updatedAt,
-        assetCount: sql<number>`
-          COUNT(${collectionNodes.id})
-          FILTER (WHERE ${collectionNodes.nodeType} = 'asset')
-        `,
+        ...collectionPropertyAggregates,
       })
       .from(collectionsTable)
       .leftJoin(
         collectionNodes,
         eq(collectionNodes.collectionId, collectionsTable.id),
       )
+      .leftJoin(assets, eq(assets.id, collectionNodes.assetId))
+      .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+      .leftJoin(videoAssets, eq(videoAssets.assetId, assets.id))
       .where(eq(collectionsTable.organizationId, orgId))
       .groupBy(collectionsTable.id)
       .orderBy(desc(collectionsTable.createdAt));
@@ -331,6 +330,15 @@ export class CollectionQueryService {
       createdAt: r.createdAt.toISOString(),
       updatedAt: r.updatedAt.toISOString(),
       assetCount: Number(r.assetCount),
+      properties: {
+        folderCount: Number(r.folderCount),
+        imageCount: Number(r.imageCount),
+        videoCount: Number(r.videoCount),
+        noteCount: Number(r.noteCount),
+        linkCount: Number(r.linkCount),
+        colorCount: Number(r.colorCount),
+        originalMediaSizeBytes: Number(r.originalMediaSizeBytes),
+      },
       previews: previewMap.get(r.id) ?? [],
     }));
   }

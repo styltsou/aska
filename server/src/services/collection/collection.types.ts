@@ -24,6 +24,7 @@ export type DetailedCollectionRow = {
   createdAt: string;
   updatedAt: string;
   assetCount: number;
+  properties: Omit<CollectionProperties, "assetCount">;
   previews: FolderChildPreview[];
 };
 

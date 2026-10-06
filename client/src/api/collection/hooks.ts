@@ -9,7 +9,6 @@ import {
 import {
   bulkDeleteNodes,
   fetchCollections,
-  fetchCollectionProperties,
   createCollection,
   renameCollection,
   createInboxImageUpload,
@@ -46,7 +45,6 @@ import type {
   CollectionNode,
   ContentTypeFilter,
   CollectionsData,
-  CollectionPropertiesResponse,
   CreateCollectionInput,
   CreateImageUploadResponse,
   CreateFolderInput,
@@ -622,18 +620,6 @@ export function useCollections(workspaceSlug: string) {
   });
 }
 
-export function useCollectionProperties(
-  workspaceSlug: string,
-  collectionSlug: string,
-  enabled: boolean,
-) {
-  return useQuery<CollectionPropertiesResponse>({
-    queryKey: collectionQueryKeys.properties(workspaceSlug, collectionSlug),
-    queryFn: () => fetchCollectionProperties(workspaceSlug, collectionSlug),
-    enabled,
-  });
-}
-
 export function useRenameCollection(workspaceSlug: string) {
   const queryClient = useQueryClient();
 
@@ -702,6 +688,15 @@ export function useCreateCollection(workspaceSlug: string) {
               {
                 ...data.collection,
                 assetCount: 0,
+                properties: {
+                  folderCount: 0,
+                  imageCount: 0,
+                  videoCount: 0,
+                  noteCount: 0,
+                  linkCount: 0,
+                  colorCount: 0,
+                  originalMediaSizeBytes: 0,
+                },
                 previews: [],
               },
               ...current.collections,
@@ -817,6 +812,7 @@ export function useCreateFolder(workspaceSlug: string, collectionSlug: string) {
           };
         },
       );
+      reconcileCollectionMetadata(queryClient, workspaceSlug);
     },
   });
 }

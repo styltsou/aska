@@ -37,18 +37,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { FolderChildPreview } from "@/api/collection/types";
+import type {
+  DetailedCollection,
+  FolderChildPreview,
+} from "@/api/collection/types";
 import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";
 
 const MAX_VISIBLE_PREVIEWS = 4;
 
-interface CollectionCardItem {
-  id: number;
-  slug: string;
-  name: string;
-  assetCount: number;
-  previews: FolderChildPreview[];
-}
+type CollectionCardItem = DetailedCollection;
 
 interface CollectionCardProps {
   collection: CollectionCardItem;
@@ -221,7 +218,6 @@ export function CollectionCard({
         open={propertiesDialogOpen}
         onOpenChange={setPropertiesDialogOpen}
         collection={collection}
-        workspaceSlug={workspaceSlug}
       />
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent size="sm">

@@ -6,7 +6,6 @@ import type {
   CollectionLinkNode,
   ContentTypeFilter,
   CollectionsData,
-  CollectionPropertiesResponse,
   CreateCollectionInput,
   CreateCanvasArrowInput,
   CreateCanvasTextInput,
@@ -153,15 +152,6 @@ export async function renameCollection(
   return apiPatch<RenameCollectionResponse>(
     `/api/v1/workspace/${workspaceSlug}/collections/${encodeURIComponent(collectionSlug)}`,
     { name },
-  );
-}
-
-export async function fetchCollectionProperties(
-  workspaceSlug: string,
-  collectionSlug: string,
-): Promise<CollectionPropertiesResponse> {
-  return apiGet<CollectionPropertiesResponse>(
-    `/api/v1/workspace/${workspaceSlug}/collections/${encodeURIComponent(collectionSlug)}/properties`,
   );
 }
 
