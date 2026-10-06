@@ -9,6 +9,10 @@ import { authMiddleware } from "@/middleware";
 import { validate } from "@/middleware/validate";
 import { classifyMediaContentType } from "@/services/media-content-type";
 import {
+  isUnsplashPhotoUrl,
+  resolveUnsplashPhoto,
+} from "@/services/unsplash-photo";
+import {
   SafeFetchError,
   safeInspectContentType,
 } from "../../../services/url-unfurl-shared/src/safe-fetch";
@@ -29,9 +33,25 @@ export default factory
         c.get("userId"),
       );
       try {
-        const { contentType } = await safeInspectContentType(
-          c.req.valid("json").url,
-        );
+        const url = c.req.valid("json").url;
+        if (isUnsplashPhotoUrl(url)) {
+          const photo = await resolveUnsplashPhoto(url);
+          if (!photo)
+            throw new AppError(
+              ErrorCode.VALIDATION_ERROR,
+              "Unsplash photo could not be identified",
+            );
+          const { contentType } = await safeInspectContentType(photo.url);
+          if (classifyMediaContentType(contentType) !== "image")
+            throw new AppError(
+              ErrorCode.VALIDATION_ERROR,
+              "Unsplash photo did not return a supported image",
+            );
+          return c.json(
+            success({ kind: "image" as const, contentType, ...photo }),
+          );
+        }
+        const { contentType } = await safeInspectContentType(url);
         const kind = classifyMediaContentType(contentType);
         if (!kind)
           throw new AppError(

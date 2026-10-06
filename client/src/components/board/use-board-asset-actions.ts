@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useVideoAssets } from "@/api/video";
+import { resolveMediaUrl } from "@/api/media";
 
 import {
   useCreateInboxNote,
@@ -19,7 +20,6 @@ import type { CollectionContentsResponse } from "@/api/collection";
 import { collectionQueryKeys } from "@/api/collection/query-keys";
 import type { PexelsPhoto } from "@/api/pexels";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
-import { isDirectVideoUrl } from "@/lib/video-url";
 import {
   isUploadableMediaFile,
   localMediaKind,
@@ -27,6 +27,10 @@ import {
 } from "@/lib/media-upload";
 import type { ClipboardAssetPayload } from "@/lib/clipboard";
 import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
+import {
+  resolveUrlAsset,
+  toResolvedRemoteImageInput,
+} from "@/lib/url-asset-kind";
 import { parseHttpUrl } from "@/lib/utils";
 import {
   isNoteContentTooLong,
@@ -209,13 +213,16 @@ export function useBoardAssetActions({
     async (value: string, actionPlacement?: BoardInsertionPlacement) => {
       const url = parseHttpUrl(value);
       if (!url) return;
+      const insertionPlacement =
+        actionPlacement ?? getPlacement?.() ?? placement;
+      const resolved = await resolveUrlAsset(url, (candidate) =>
+        resolveMediaUrl(workspaceSlug, candidate),
+      );
 
-      if (isDirectVideoUrl(url)) {
+      if (resolved.kind === "video") {
         try {
-          const insertionPlacement =
-            actionPlacement ?? getPlacement?.() ?? placement;
           await videos.importUrl.mutateAsync({
-            url,
+            url: resolved.url,
             position: insertionPlacement?.position,
           });
         } catch (err) {
@@ -226,9 +233,28 @@ export function useBoardAssetActions({
         return;
       }
 
+      if (resolved.kind === "image") {
+        try {
+          const image = toResolvedRemoteImageInput(url, resolved);
+          if (target === "inbox") {
+            await createInboxRemoteImage.mutateAsync(image);
+          } else {
+            await createRemoteImage.mutateAsync({
+              ...image,
+              parentFolderPath,
+              placement: insertionPlacement,
+            });
+          }
+          toast.success("Image imported");
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Unable to import image.",
+          );
+        }
+        return;
+      }
+
       try {
-        const insertionPlacement =
-          actionPlacement ?? getPlacement?.() ?? placement;
         if (target === "inbox") {
           await createInboxLink.mutateAsync({
             url,
@@ -247,12 +273,15 @@ export function useBoardAssetActions({
     },
     [
       createInboxLink,
+      createInboxRemoteImage,
       createLink,
+      createRemoteImage,
       getPlacement,
       parentFolderPath,
       placement,
       target,
       videos.importUrl,
+      workspaceSlug,
     ],
   );
 

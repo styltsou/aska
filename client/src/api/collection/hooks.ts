@@ -2497,7 +2497,7 @@ export function useCreateRemoteImage(
         alt: data.alt ?? null,
         note: null,
         sourceLabel: null,
-        sourceUrl: data.url,
+        sourceUrl: data.provenance?.url ?? data.url,
         isFavorite: false,
         uploadStatus: "processing",
         uploadProgress: 100,

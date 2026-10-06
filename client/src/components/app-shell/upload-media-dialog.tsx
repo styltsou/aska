@@ -31,6 +31,7 @@ import type {
   CollectionNode,
 } from "@/api/collection";
 import { resolveMediaUrl, type ResolvedMediaUrl } from "@/api/media";
+import { toResolvedRemoteImageInput } from "@/lib/url-asset-kind";
 import { useVideoAssets } from "@/api/video";
 import { Button } from "@/components/ui/button";
 import { SUPPORTED_MEDIA_ACCEPT } from "@/constants";
@@ -540,7 +541,7 @@ export function UploadMediaDialog({
       const resolution = remoteResolutions[url];
       if (resolution?.status !== "ready")
         throw new Error("A media URL has not been identified");
-      return { url, kind: resolution.media.kind };
+      return { url, media: resolution.media };
     });
     const existing =
       target === "collection"
@@ -552,28 +553,29 @@ export function UploadMediaDialog({
             ),
           )
         : undefined;
-    const nodes = entries.map(({ kind }, index) => ({
+    const nodes = entries.map(({ media }, index) => ({
       id: `pending-media-url-${index}`,
-      type: kind,
-      width: kind === "video" ? 16 : 1,
-      height: kind === "video" ? 9 : 1,
+      type: media.kind,
+      width: media.kind === "video" ? 16 : 1,
+      height: media.kind === "video" ? 9 : 1,
     })) as CollectionNode[];
     const positions =
       target === "collection"
         ? reserveNodePositions(existing?.nodes ?? [], nodes, placement)
         : [];
     const results = await Promise.allSettled(
-      entries.map(({ url, kind }, index) => {
-        if (kind === "video") {
+      entries.map(({ url, media }, index) => {
+        if (media.kind === "video") {
           return videos.importUrl.mutateAsync({
-            url,
+            url: media.url ?? url,
             position: positions[index],
           });
         }
+        const image = toResolvedRemoteImageInput(url, media);
         if (target === "inbox")
-          return createInboxRemoteImage.mutateAsync({ url });
+          return createInboxRemoteImage.mutateAsync(image);
         return createRemoteImage.mutateAsync({
-          url,
+          ...image,
           parentFolderPath,
           placement: positions[index]
             ? { position: positions[index] }
