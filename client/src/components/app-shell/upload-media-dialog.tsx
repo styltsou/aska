@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import {
   CloudIcon,
-  ClapperboardIcon,
+  UploadIcon,
   ImagePlusIcon,
   LinkIcon,
   MonitorUpIcon,
@@ -681,9 +681,6 @@ export function UploadMediaDialog({
               <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/15 text-white">
                 <PlayIcon className="size-7 fill-current" />
               </span>
-              <span className="pointer-events-none absolute right-1.5 bottom-1.5 left-1.5 truncate rounded bg-black/70 px-1.5 py-0.5 text-xs text-white">
-                {file.name}
-              </span>
             </>
           ) : (
             <img
@@ -692,6 +689,9 @@ export function UploadMediaDialog({
               src={previewUrls[index]}
             />
           )}
+          <span className="pointer-events-none absolute right-1.5 bottom-1.5 left-1.5 truncate rounded-md bg-popover/85 px-1.5 py-0.5 text-xs text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
+            {file.name}
+          </span>
           <Button
             aria-label={`Remove ${file.name}`}
             className="absolute top-1.5 right-1.5 bg-background/70 text-foreground shadow-sm ring-1 ring-foreground/10 backdrop-blur-md transition-colors duration-[50ms] hover:bg-background"
@@ -780,8 +780,9 @@ export function UploadMediaDialog({
                     </p>
                   ) : null}
                   <div
-                    className="rounded-lg border border-dashed border-border/80 bg-background/35 p-3 transition-colors data-[dragging=true]:border-primary/60 data-[dragging=true]:bg-primary/5"
+                    className="rounded-lg border border-dashed border-border/80 transition-colors data-[dragging=true]:border-primary/60 data-[dragging=true]:bg-primary/5 data-[empty=true]:hover:bg-muted/45"
                     data-dragging={isDraggingFiles || undefined}
+                    data-empty={selectedFiles.length === 0 || undefined}
                     onDragLeave={handleDragLeave}
                     onDragOver={handleDragOver}
                     onDrop={handleDrop}
@@ -797,17 +798,15 @@ export function UploadMediaDialog({
                     />
                     {selectedFiles.length === 0 ? (
                       <button
-                        className="flex min-h-56 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-md px-4 text-center transition-colors outline-none hover:bg-muted/45 focus-visible:bg-muted/45 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
+                        className="flex min-h-56 w-full cursor-pointer flex-col items-center justify-center gap-3 px-4 text-center outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
                         disabled={isInteractionDisabled}
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                       >
-                        <span className="flex size-10 items-center justify-center rounded-lg border border-border/70 bg-background/65 text-muted-foreground shadow-sm backdrop-blur-sm">
-                          <ClapperboardIcon className="size-4" />
-                        </span>
+                        <UploadIcon className="size-4 text-foreground" />
                         <span className="space-y-1">
                           <span className="block text-sm font-medium text-foreground">
-                            Drop images or videos here, or browse
+                            Drop images and videos here, or browse
                           </span>
                           <span className="block text-xs text-muted-foreground">
                             Select JPEG, PNG, WebP, or GIF images and MP4 or
