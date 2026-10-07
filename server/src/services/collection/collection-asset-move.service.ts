@@ -1,4 +1,4 @@
-import { and, arrayContains, eq, isNull, ne } from "drizzle-orm";
+import { and, arrayContains, desc, eq, isNull, ne } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -335,6 +335,37 @@ export class CollectionAssetMoveService {
         }
         sourceRows.set(nodeId, row);
       }
+      // A placement's creation time is the preview order. Give every asset
+      // in this move a distinct time in request order, regardless of the
+      // source row order used above for locking.
+      const assetNodeIds = sources
+        .filter(({ source }) => source.nodeType === "asset")
+        .map(({ nodeId }) => nodeId);
+      const latestPlacement = assetNodeIds.length
+        ? first(
+            await tx
+              .select({ createdAt: collectionNodes.createdAt })
+              .from(collectionNodes)
+              .where(
+                and(
+                  eq(collectionNodes.collectionId, collection.id),
+                  eq(collectionNodes.nodeType, "asset"),
+                ),
+              )
+              .orderBy(desc(collectionNodes.createdAt))
+              .limit(1),
+          )
+        : undefined;
+      const lastMoveTime = Math.max(
+        Date.now(),
+        (latestPlacement?.createdAt.getTime() ?? 0) + assetNodeIds.length,
+      );
+      const placementTimes = new Map(
+        assetNodeIds.map((nodeId, index) => [
+          nodeId,
+          new Date(lastMoveTime - assetNodeIds.length + 1 + index),
+        ]),
+      );
       const sourceObjects = sourceTarget
         ? await tx
             .select({
@@ -765,6 +796,7 @@ export class CollectionAssetMoveService {
               .update(collectionNodes)
               .set({
                 parentFolderId: targetFolder.folderId,
+                createdAt: placementTimes.get(nodeId),
                 positionX: position.x,
                 positionY: position.y,
                 frontIndex: null,
@@ -790,6 +822,7 @@ export class CollectionAssetMoveService {
                 parentFolderId: targetFolder.folderId,
                 nodeType: "asset",
                 assetId: source.entityId,
+                createdAt: placementTimes.get(nodeId),
                 positionX: position.x,
                 positionY: position.y,
                 depth: targetFolder.pathFolderSlugs.length,

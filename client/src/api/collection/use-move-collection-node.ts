@@ -64,8 +64,50 @@ export function useMoveCollectionNodesToFolder(
           .getQueriesData<CollectionContentsResponse>({ queryKey: sourceScope })
           .filter(
             (entry): entry is CollectionContentsCacheEntry =>
-              entry[1] !== undefined && entry[0][3] === sourceFolderPath,
+              entry[1] !== undefined,
           );
+        const movedNodes = variables.nodeIds.flatMap((nodeId) => {
+          const node = previousContents
+            .flatMap(([, contents]) => contents.nodes)
+            .find((candidate) => candidate.id === nodeId);
+          return node ? [node] : [];
+        });
+        const sourceEntry = variables.targetFolderNodeId
+          ? findSourceEntry(
+              previousContents,
+              sourceFolderPath,
+              movedNodes.map((node) => node.id),
+              variables.targetFolderNodeId,
+            )
+          : undefined;
+        const targetFolder = sourceEntry?.[1].nodes.find(
+          (node) => node.id === variables.targetFolderNodeId,
+        );
+        const movedNodeIds = new Set(movedNodes.map((node) => node.id));
+        const unfilteredSource = previousContents.find(
+          ([key]) =>
+            isUnfilteredContentsKey(key) &&
+            getFolderPathFromKey(key) === sourceFolderPath,
+        );
+        const contentUpdates =
+          targetFolder?.type === "folder" && variables.targetFolderNodeId
+            ? transitionCachedContentsForMoves(previousContents, {
+                sourceFolderPath,
+                targetFolderPath: joinFolderPath(
+                  sourceFolderPath,
+                  targetFolder.slug,
+                ),
+                sourceParentFolderPath: getParentFolderPath(sourceFolderPath),
+                sourceFolderSlug: getCurrentFolderSlug(sourceFolderPath),
+                targetFolderNodeId: variables.targetFolderNodeId,
+                movedNodes,
+                remainingUnfilteredSourceNodes:
+                  unfilteredSource?.[1].nodes.filter(
+                    (node) => !movedNodeIds.has(node.id),
+                  ),
+              })
+            : [];
+        const updatedByKey = new Map(contentUpdates);
         const moving = new Set(variables.nodeIds);
         for (const [, contents] of previousContents) {
           for (const object of contents.canvasObjects) {
@@ -84,10 +126,16 @@ export function useMoveCollectionNodesToFolder(
           variables.arrowSnapshots.map((snapshot) => [snapshot.id, snapshot]),
         );
         for (const [key, contents] of previousContents) {
+          const nextContents = updatedByKey.get(key) ?? contents;
+          if (getFolderPathFromKey(key) !== sourceFolderPath) {
+            if (nextContents !== contents)
+              queryClient.setQueryData(key, nextContents);
+            continue;
+          }
           queryClient.setQueryData<CollectionContentsResponse>(key, {
-            ...contents,
-            nodes: contents.nodes.filter((node) => !moving.has(node.id)),
-            canvasObjects: contents.canvasObjects.flatMap<CanvasObject>(
+            ...nextContents,
+            nodes: nextContents.nodes.filter((node) => !moving.has(node.id)),
+            canvasObjects: nextContents.canvasObjects.flatMap<CanvasObject>(
               (object) => {
                 if (moving.has(object.id)) return [];
                 if (object.type !== "arrow") return [object];
@@ -219,7 +267,6 @@ export function useMoveCollectionNodesToFolder(
               sourceFolderSlug,
               targetFolderNodeId: variables.targetFolderNodeId,
               movedNodes,
-              updateTargetFolderPreview: false,
               remainingUnfilteredSourceNodes,
             },
           );

@@ -23,7 +23,6 @@ type CachedMoveInput = {
   targetFolderNodeId: string;
   movedNode: CollectionNode;
   preview?: FolderChildPreview;
-  updateTargetFolderPreview?: boolean;
   remainingUnfilteredSourceNodes?: CollectionNode[];
 };
 
@@ -37,6 +36,8 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
       assetId: node.id,
       type: "image",
       url: node.url,
+      width: node.width,
+      height: node.height,
       blurDataURL: node.blurDataURL,
     };
   }
@@ -63,6 +64,7 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
       assetId: node.id,
       type: "color",
       hex: node.hex ?? undefined,
+      gradient: node.gradient,
       title: node.title,
     };
   }
@@ -83,6 +85,7 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
     type: "note",
     title: node.title ?? null,
     snippet: makeMarkdownPreview(node.content),
+    mentionColors: node.mentionColors,
   };
 }
 
@@ -193,7 +196,7 @@ export function transitionCachedContentsForMove(
         updateTargetFolderForMove(
           removal.contents,
           input.targetFolderNodeId,
-          input.updateTargetFolderPreview === false ? undefined : input.preview,
+          input.preview,
           movedAssetCount,
           movedFolderDelta,
         ),

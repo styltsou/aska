@@ -1,8 +1,28 @@
 import { describe, expect, it } from "vitest";
 
-import { makeCanvasDropStackStyles } from "./canvas-drop-stack";
+import {
+  getCanvasDropStackPlacementOrder,
+  makeCanvasDropStackStyles,
+} from "./canvas-drop-stack";
 
 describe("canvas drop stack", () => {
+  it("places the grabbed card on top of the same trailing order shown in flight", () => {
+    const origins = new Map([
+      ["image-1", { x: 400, y: 40 }],
+      ["note-2", { x: 100, y: 100 }],
+      ["color-3", { x: -80, y: 250 }],
+    ]);
+    const styles = makeCanvasDropStackStyles("note-2", origins);
+    const placementOrder = getCanvasDropStackPlacementOrder("note-2", origins);
+
+    expect(placementOrder).toEqual(["color-3", "image-1", "note-2"]);
+    expect([...placementOrder].reverse()).toEqual(
+      [...styles.entries()]
+        .sort((left, right) => right[1].stackOrder - left[1].stackOrder)
+        .map(([id]) => id),
+    );
+  });
+
   it("keeps the grabbed card fixed and stacks the other cards around it", () => {
     const styles = makeCanvasDropStackStyles(
       "note-2",

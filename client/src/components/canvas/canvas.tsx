@@ -103,6 +103,7 @@ import {
 } from "./canvas-alignment-guides";
 import { CanvasAlignmentGuideLines } from "./canvas-alignment-guide-lines";
 import {
+  getCanvasDropStackPlacementOrder,
   makeCanvasDropStackStyles,
   type CanvasDropStackStyle,
 } from "./canvas-drop-stack";
@@ -2568,7 +2569,15 @@ function CanvasSurface({
             targetFolderNodeId &&
             [...session.movingIds].every((id) => isPersistedCanvasItemId(id))
           ) {
-            const nodeIds = [...session.movingIds];
+            const nodeIds = [
+              ...getCanvasDropStackPlacementOrder(
+                session.primaryNodeId,
+                session.origins,
+              ),
+              ...[...session.movingIds].filter(
+                (id) => !session.origins.has(id),
+              ),
+            ];
             const nodeIdsKey = nodeIds.join(",");
             suppressClicks(...nodeIds, targetFolderNodeId);
             setPendingFolderDrop({

@@ -217,8 +217,8 @@ describe("move cache transition", () => {
     ]);
   });
 
-  it("keeps target-folder previews unchanged for an internal move until refetch", () => {
-    const root = makeContents([movedNote, targetFolder]);
+  it("puts a moved batch on top of the target preview in placement order", () => {
+    const root = makeContents([movedNote, remainingNote, targetFolder]);
     const targetKey = [
       "collectionContents",
       "personal",
@@ -235,21 +235,31 @@ describe("move cache transition", () => {
         sourceFolderPath: undefined,
         targetFolderPath: "archive",
         targetFolderNodeId: targetFolder.id,
-        movedNodes: [movedNote],
-        updateTargetFolderPreview: false,
+        movedNodes: [remainingNote, movedNote],
       },
     );
     const updateMap = new Map(updates);
 
     expect(updateMap.get(updates[0]![0])?.nodes).toContainEqual({
       ...targetFolder,
-      count: targetFolder.count + 1,
+      count: targetFolder.count + 2,
+      previews: [
+        getAssetPreview(movedNote),
+        getAssetPreview(remainingNote),
+        ...targetFolder.previews,
+      ],
     });
     expect(
       updateMap
         .get(updates[0]![0])
         ?.nodes.find((node) => node.id === targetFolder.id),
-    ).toMatchObject({ previews: targetFolder.previews });
+    ).toMatchObject({
+      previews: [
+        getAssetPreview(movedNote),
+        getAssetPreview(remainingNote),
+        ...targetFolder.previews,
+      ],
+    });
   });
 
   it("rebuilds source-folder previews from remaining children and rolls back by asset ID", () => {

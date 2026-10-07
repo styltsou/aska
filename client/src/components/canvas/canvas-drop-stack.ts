@@ -16,6 +16,18 @@ export type CanvasDropStackStyle = {
 
 const DROP_STACK_SCALE = 0.72;
 
+/** The grabbed card is the front of the drag fan and lands last in the folder. */
+export function getCanvasDropStackPlacementOrder(
+  primaryNodeId: string,
+  origins: ReadonlyMap<string, CanvasDropStackPoint>,
+): string[] {
+  if (!origins.has(primaryNodeId)) return [];
+  return [
+    ...[...origins.keys()].filter((id) => id !== primaryNodeId).reverse(),
+    primaryNodeId,
+  ];
+}
+
 /** The fan shared by cards in flight and previews resting inside a folder. */
 export function getCanvasDropFanOffset(depth: number, trailingCount: number) {
   const depthProgress = depth / trailingCount;

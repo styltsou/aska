@@ -497,7 +497,7 @@ describe("CollectionService integration", () => {
     ).resolves.toMatchObject({ moved: false });
   });
 
-  it("preserves preview recency when assets move within a collection", async () => {
+  it("puts a moved batch on top of folder and collection previews in request order", async () => {
     const collection = await collectionService.createCollection(
       fixture.organizationId,
       fixture.userId,
@@ -600,21 +600,23 @@ describe("CollectionService integration", () => {
       ),
     ]);
 
-    expect(afterPlacements).toEqual(
-      beforePlacements.map((placement) =>
-        expect.objectContaining({
-          id: placement.id,
-          assetId: placement.assetId,
-          createdAt: placement.createdAt,
-          parentFolderId: targetFolder.id,
-        }),
-      ),
+    expect(afterPlacements.map((placement) => placement.id)).toEqual(
+      beforePlacements.map((placement) => placement.id),
+    );
+    expect(
+      afterPlacements.map((placement) => placement.parentFolderId),
+    ).toEqual([targetFolder.id, targetFolder.id]);
+    expect(afterPlacements[0]!.createdAt.getTime()).toBeGreaterThan(
+      beforePlacements[0]!.createdAt.getTime(),
+    );
+    expect(afterPlacements[1]!.createdAt.getTime()).toBeGreaterThan(
+      afterPlacements[0]!.createdAt.getTime(),
     );
     expect(collections[0]!.previews.map((preview) => preview.assetId)).toEqual([
-      newestColor.id,
-      newerNote.id,
       oldColor.id,
       oldNote.id,
+      newestColor.id,
+      newerNote.id,
     ]);
     expect(
       rootContents.nodes.find(
