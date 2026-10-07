@@ -185,13 +185,14 @@ const ColorGradientSchema = z.object({
 const MentionColorSchema = z.object({
   hex: z.string().nullable(),
   gradient: ColorGradientSchema.nullable(),
+  previewUrl: z.string().nullable().optional(),
+  faviconUrl: z.string().nullable().optional(),
+  isVideo: z.boolean().optional(),
 });
 
 /**
- * Color values of the assets a note references, keyed by the markdown
- * destination (`"color:7"`), so read-only renderers can draw mention swatches
- * without a resolve request. Only colors are included: note pills need no
- * extra data to render.
+ * Visual data for assets referenced by a note, keyed by markdown destination.
+ * Color values render swatches; link media renders compact thumbnails.
  */
 export const MentionColorsSchema = z.record(z.string(), MentionColorSchema);
 

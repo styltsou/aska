@@ -324,6 +324,7 @@ async function searchAssets(
               url: row.linkOriginalUrl ?? "",
             } as const)
           : ({ type: "open-asset" as const } as const),
+      ...(isVideo ? { isVideo: true } : {}),
       preview:
         type === "color" && row.colorHex
           ? {

@@ -1286,6 +1286,7 @@ export class AssetService implements IAssetService {
     const mentionColors = await fetchMentionColorsBySource(
       orgId,
       rows.filter((row) => row.assetType === "note").map((row) => row.assetId),
+      this.objectStorageService,
     );
 
     for (const row of rows) {

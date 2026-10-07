@@ -528,13 +528,19 @@ export type ColorGradient = {
 };
 
 /**
- * Color values of the assets a note references, keyed by markdown destination
- * (`"color:7"`). Ships with the card payload so read-only mention pills can
- * draw swatches without a resolve request.
+ * Visual values of assets a note references, keyed by markdown destination.
+ * Ships with the card payload so read-only mention pills can draw without a
+ * follow-up resolve request.
  */
 export type MentionColors = Record<
   string,
-  { hex: string | null; gradient: ColorGradient | null }
+  {
+    hex: string | null;
+    gradient: ColorGradient | null;
+    previewUrl?: string | null;
+    faviconUrl?: string | null;
+    isVideo?: boolean;
+  }
 >;
 
 export type CreateImageUploadInput = {

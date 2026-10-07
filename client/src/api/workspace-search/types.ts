@@ -20,6 +20,7 @@ export type WorkspaceSearchResult = {
     | { type: "open-asset" }
     | { type: "navigate" }
     | { type: "external"; url: string };
+  isVideo?: boolean;
   preview: {
     url?: string;
     faviconUrl?: string;

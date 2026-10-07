@@ -320,10 +320,13 @@ function createMDComponents(
       const mention = /^(note|color|link):(\d+)$/.exec(href ?? "");
       if (mention) {
         const assetType = mention[1] as NoteMentionType;
-        const color = mentionColors?.[href!];
-        const tint = color?.gradient
-          ? gradientRepresentativeColor(color.gradient)
-          : (color?.hex ?? undefined);
+        const visual = mentionColors?.[href!];
+        const tint =
+          assetType === "color"
+            ? visual?.gradient
+              ? gradientRepresentativeColor(visual.gradient)
+              : (visual?.hex ?? undefined)
+            : undefined;
         return (
           <span
             className={cn(NOTE_MENTION_CHIP_CLASS, "cursor-inherit", className)}
@@ -336,10 +339,15 @@ function createMDComponents(
               assetType={assetType}
               label={children}
               swatchBackground={
-                color?.gradient
-                  ? resolveGradientCss(color.gradient)
-                  : (color?.hex ?? undefined)
+                assetType === "color"
+                  ? visual?.gradient
+                    ? resolveGradientCss(visual.gradient)
+                    : (visual?.hex ?? undefined)
+                  : undefined
               }
+              previewUrl={visual?.previewUrl}
+              faviconUrl={visual?.faviconUrl}
+              isVideo={visual?.isVideo}
             />
           </span>
         );

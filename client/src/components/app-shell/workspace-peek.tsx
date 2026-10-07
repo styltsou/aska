@@ -1426,8 +1426,13 @@ function PeekNote({
   readOnly: boolean;
 }) {
   useEffect(() => pruneRedundantEditDrafts(), []);
-  const { peekNote, peekColor, setPeekNoteFlushHandler, syncPeekNote } =
-    useWorkspacePeek();
+  const {
+    peekNote,
+    peekColor,
+    peekVideo,
+    setPeekNoteFlushHandler,
+    syncPeekNote,
+  } = useWorkspacePeek();
   const { mutateAsync: updateNoteAsync } = useUpdateNote(workspaceSlug);
   const { mutateAsync: deleteAssetAsync } = useDeleteAsset(workspaceSlug);
   const [recoveredDraft] = useState(() =>
@@ -1666,6 +1671,22 @@ function PeekNote({
   const saveTitle = useCallback(() => {
     if (!readOnly) void flush(note.id);
   }, [flush, note.id, readOnly]);
+  const openReferencedVideo = useCallback(
+    async (assetId: string) => {
+      const { asset, location } = await fetchPeekableAsset(
+        workspaceSlug,
+        assetId,
+      );
+      if (asset.type === "link" && asset.video) {
+        await peekVideo(asset, location);
+        return;
+      }
+      if (asset.type === "link") {
+        window.open(asset.originalUrl, "_blank", "noopener,noreferrer");
+      }
+    },
+    [peekVideo, workspaceSlug],
+  );
   const openMentionTarget = useCallback(
     async (
       identity: { assetId: number; assetType: "note" | "color" | "link" },
@@ -1673,15 +1694,21 @@ function PeekNote({
     ) => {
       try {
         if (identity.assetType === "link") {
-          if (resolved?.url)
-            window.open(resolved.url, "_blank", "noopener,noreferrer");
-          return;
+          if (!resolved?.isVideo) {
+            if (resolved?.url)
+              window.open(resolved.url, "_blank", "noopener,noreferrer");
+            return;
+          }
         }
         if (!readOnly) {
           const content = richTextRef.current?.getMarkdown() ?? latest.current;
           latest.current = content;
           savePeekDraft(content, latestTitle.current);
           if (!(await flush(note.id))) return;
+        }
+        if (identity.assetType === "link") {
+          await openReferencedVideo(`link-${identity.assetId}`);
+          return;
         }
         const { asset, location } = await fetchPeekableAsset(
           workspaceSlug,
@@ -1713,6 +1740,7 @@ function PeekNote({
     [
       note.id,
       flush,
+      openReferencedVideo,
       peekColor,
       peekNote,
       readOnly,
@@ -1855,6 +1883,7 @@ function PeekNote({
             onOpenMention={(identity, resolved) =>
               void openMentionTarget(identity, resolved)
             }
+            onOpenReferencedVideo={openReferencedVideo}
             editable={!readOnly && saveState !== "deleting"}
             autoFocus={focusRequest > 0}
             scrollContainerRef={contentRef}

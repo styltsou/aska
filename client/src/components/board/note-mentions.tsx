@@ -18,6 +18,8 @@ import {
   CornerDownLeftIcon,
   FileTextIcon,
   LinkIcon,
+  PlayIcon,
+  VideoIcon,
 } from "lucide-react";
 import { Extension, Node, type Editor, type Range } from "@tiptap/core";
 import { PluginKey } from "@tiptap/pm/state";
@@ -124,9 +126,15 @@ const noteMentionPreviewCard = createHoverCardHandle<ReactNode>();
 export function MentionGlyph({
   assetType,
   swatchBackground,
+  previewUrl,
+  faviconUrl,
+  isVideo,
 }: {
   assetType: NoteMentionType;
   swatchBackground?: string;
+  previewUrl?: string | null;
+  faviconUrl?: string | null;
+  isVideo?: boolean;
 }) {
   if (assetType === "note") {
     return (
@@ -138,7 +146,15 @@ export function MentionGlyph({
     );
   }
   if (assetType === "link") {
-    return <LinkIcon aria-hidden="true" className={NOTE_MENTION_GLYPH_CLASS} />;
+    return (
+      <LinkMentionThumbnail
+        previewUrl={previewUrl ?? undefined}
+        faviconUrl={faviconUrl ?? undefined}
+        isVideo={isVideo}
+        className={NOTE_MENTION_GLYPH_CLASS}
+        iconClassName="size-2.5 text-foreground/75"
+      />
+    );
   }
   if (!swatchBackground) return null;
   return (
@@ -154,16 +170,84 @@ export function MentionPillBody({
   assetType,
   label,
   swatchBackground,
+  previewUrl,
+  faviconUrl,
+  isVideo,
 }: {
   assetType: NoteMentionType;
   label: ReactNode;
   swatchBackground?: string;
+  previewUrl?: string | null;
+  faviconUrl?: string | null;
+  isVideo?: boolean;
 }) {
   return (
     <>
-      <MentionGlyph assetType={assetType} swatchBackground={swatchBackground} />
+      <MentionGlyph
+        assetType={assetType}
+        swatchBackground={swatchBackground}
+        previewUrl={previewUrl}
+        faviconUrl={faviconUrl}
+        isVideo={isVideo}
+      />
       <span className="max-w-64 truncate leading-[1.2]">{label}</span>
     </>
+  );
+}
+
+function LinkMentionThumbnail({
+  previewUrl,
+  faviconUrl,
+  isVideo,
+  showVideoBadge = false,
+  className,
+  iconClassName,
+}: {
+  previewUrl?: string;
+  faviconUrl?: string;
+  isVideo?: boolean;
+  showVideoBadge?: boolean;
+  className: string;
+  iconClassName: string;
+}) {
+  const [failedPreview, setFailedPreview] = useState(false);
+  const [failedFavicon, setFailedFavicon] = useState(false);
+  const Icon = isVideo ? VideoIcon : LinkIcon;
+  const imageUrl =
+    previewUrl && !failedPreview
+      ? previewUrl
+      : faviconUrl && !failedFavicon
+        ? faviconUrl
+        : undefined;
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[0.2rem] bg-muted",
+        className,
+      )}
+    >
+      <Icon className={cn("absolute", iconClassName)} />
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt=""
+          className={cn(
+            "absolute inset-0 size-full",
+            imageUrl === faviconUrl ? "object-contain p-px" : "object-cover",
+          )}
+          onError={() => {
+            if (imageUrl === previewUrl) setFailedPreview(true);
+            else setFailedFavicon(true);
+          }}
+        />
+      ) : null}
+      {imageUrl && isVideo && showVideoBadge ? (
+        <span className="absolute right-0 bottom-0 flex size-3 items-center justify-center rounded-tl-sm bg-black/75 text-white">
+          <PlayIcon className="size-2 fill-current" />
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -380,6 +464,9 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
         assetType={assetType}
         label={label}
         swatchBackground={mentionSwatchBackground(resolved)}
+        previewUrl={resolved?.previewUrl}
+        faviconUrl={resolved?.faviconUrl}
+        isVideo={resolved?.isVideo}
       />
     </button>
   );
@@ -501,34 +588,44 @@ function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
 
 function LinkMentionHoverCard({ target }: { target: NoteMentionTarget }) {
   return (
-    <div className="p-3.5">
-      <p
-        className={cn(
-          MENTION_HOVER_CARD_REVEAL[0],
-          "truncate text-sm font-semibold text-foreground",
-        )}
-      >
-        {target.label}
-      </p>
-      <p
-        className={cn(
-          MENTION_HOVER_CARD_REVEAL[1],
-          "mt-0.5 truncate text-[11px] text-muted-foreground",
-        )}
-      >
-        {target.hostname ?? "Saved link"}
-      </p>
-      <p
-        className={cn(
-          MENTION_HOVER_CARD_REVEAL[2],
-          "mt-2 line-clamp-2 break-all text-xs text-muted-foreground",
-        )}
-      >
-        {target.url}
-      </p>
-      <p className="mt-2 truncate text-[11px] text-muted-foreground/75">
-        {target.locationLabel}
-      </p>
+    <div className="flex items-center gap-3 p-3.5">
+      <LinkMentionThumbnail
+        previewUrl={target.previewUrl ?? undefined}
+        faviconUrl={target.faviconUrl ?? undefined}
+        isVideo={target.isVideo}
+        className="size-14 rounded-md border border-foreground/10"
+        iconClassName="size-5 text-foreground/75"
+        showVideoBadge
+      />
+      <div className="min-w-0">
+        <p
+          className={cn(
+            MENTION_HOVER_CARD_REVEAL[0],
+            "truncate text-sm font-semibold text-foreground",
+          )}
+        >
+          {target.label}
+        </p>
+        <p
+          className={cn(
+            MENTION_HOVER_CARD_REVEAL[1],
+            "mt-0.5 truncate text-[11px] text-muted-foreground",
+          )}
+        >
+          {target.isVideo ? "Video" : (target.hostname ?? "Saved link")}
+        </p>
+        <p
+          className={cn(
+            MENTION_HOVER_CARD_REVEAL[2],
+            "mt-1.5 line-clamp-2 break-all text-[11px] text-muted-foreground",
+          )}
+        >
+          {target.url}
+        </p>
+        <p className="mt-1.5 truncate text-[11px] text-muted-foreground/75">
+          {target.locationLabel}
+        </p>
+      </div>
     </div>
   );
 }
@@ -609,25 +706,30 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
       lastResolvedItems,
       loading,
     });
-    const { notes, colors, links, flatItems } = useMemo(() => {
+    const { notes, colors, videos, links, flatItems } = useMemo(() => {
       const nextNotes = displayItems.filter(
         (item) => item.assetType === "note",
       );
       const nextColors = displayItems.filter(
         (item) => item.assetType === "color",
       );
+      const nextVideos = displayItems.filter(
+        (item) => item.assetType === "link" && item.isVideo,
+      );
       const nextLinks = displayItems.filter(
-        (item) => item.assetType === "link",
+        (item) => item.assetType === "link" && !item.isVideo,
       );
       return {
         notes: nextNotes,
         colors: nextColors,
+        videos: nextVideos,
         links: nextLinks,
-        flatItems: [...nextNotes, ...nextColors, ...nextLinks],
+        flatItems: [...nextNotes, ...nextColors, ...nextVideos, ...nextLinks],
       };
     }, [displayItems]);
     const showScopeControls =
-      [notes, colors, links].filter((group) => group.length > 0).length > 1;
+      [notes, colors, videos, links].filter((group) => group.length > 0)
+        .length > 1;
     const showGroupLabels = showScopeControls;
     const showInitialLoading = loading && flatItems.length === 0;
     const showSearching = Boolean(isSearchPending);
@@ -637,7 +739,7 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
         : parsed.scope === "color"
           ? "No colors match"
           : "No mentions match"
-      : "No notes, colors, or links to mention yet";
+      : "No notes, colors, videos, or links to mention yet";
 
     useEffect(() => setSelectedIndex(0), [flatItems]);
     useEffect(() => {
@@ -764,6 +866,20 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   onHover={setSelectedIndex}
                 />
               ) : null}
+              {videos.length > 0 &&
+              parsed.scope !== "note" &&
+              parsed.scope !== "color" ? (
+                <MentionGroup
+                  label="Videos"
+                  showLabel={showGroupLabels}
+                  items={videos}
+                  startIndex={notes.length + colors.length}
+                  selectedIndex={selectedIndex}
+                  itemRefs={itemRefs}
+                  onSelect={select}
+                  onHover={setSelectedIndex}
+                />
+              ) : null}
               {links.length > 0 &&
               parsed.scope !== "note" &&
               parsed.scope !== "color" ? (
@@ -771,9 +887,7 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   label="Links"
                   showLabel={showGroupLabels}
                   items={links}
-                  startIndex={
-                    parsed.scope === "link" ? 0 : notes.length + colors.length
-                  }
+                  startIndex={notes.length + colors.length + videos.length}
                   selectedIndex={selectedIndex}
                   itemRefs={itemRefs}
                   onSelect={select}
@@ -907,9 +1021,14 @@ function MentionGroup({
                 }}
               />
             ) : item.assetType === "link" ? (
-              <span className="flex size-7 items-center justify-center rounded-md bg-muted">
-                <LinkIcon className="size-4 text-foreground/80" />
-              </span>
+              <LinkMentionThumbnail
+                previewUrl={item.previewUrl ?? undefined}
+                faviconUrl={item.faviconUrl ?? undefined}
+                isVideo={item.isVideo}
+                className="size-7 rounded-md"
+                iconClassName="size-4 text-foreground/80"
+                showVideoBadge
+              />
             ) : (
               <span className="flex size-7 items-center justify-center rounded-md bg-muted">
                 <FileTextIcon className="size-5 text-foreground/80" />
@@ -925,7 +1044,7 @@ function MentionGroup({
                 </span>
               ) : item.assetType === "link" && item.hostname ? (
                 <span className="block truncate text-xs text-muted-foreground">
-                  {item.hostname}
+                  {item.isVideo ? `Video · ${item.hostname}` : item.hostname}
                 </span>
               ) : null}
             </span>

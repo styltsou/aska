@@ -18,6 +18,7 @@ import {
   collectionsTable,
   colorAssets,
   collectionNodes,
+  externalResourceMedia,
   externalResources,
   linkAssets,
   noteAssets,
@@ -34,6 +35,7 @@ import type {
   MentionType,
 } from "@/dto/note-mention.dto";
 import { parseAssetNodeId } from "@/lib/collection-node-id";
+import type { IObjectStorageService } from "@/services/object-storage.service";
 import {
   escapeMentionLabel,
   extractNoteMentions,
@@ -43,6 +45,7 @@ import {
 
 type DatabaseTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Executor = typeof db | DatabaseTransaction;
+type Deps = { objectStorageService: IObjectStorageService };
 
 type MentionRow = {
   assetId: number;
@@ -58,6 +61,9 @@ type MentionRow = {
   pathFolderSlugs: string[] | null;
   hostname: string | null;
   url: string | null;
+  resourceId: number | null;
+  resourceKind: string | null;
+  resolverKey: string | null;
 };
 
 export interface INoteMentionService {
@@ -80,6 +86,12 @@ export interface INoteMentionService {
 }
 
 export class NoteMentionService implements INoteMentionService {
+  private readonly objectStorageService: IObjectStorageService;
+
+  constructor({ objectStorageService }: Deps) {
+    this.objectStorageService = objectStorageService;
+  }
+
   async search(
     orgId: string,
     query: MentionSearchQuery,
@@ -96,8 +108,10 @@ export class NoteMentionService implements INoteMentionService {
         findMentionRows(orgId, ["link"], "", query.limit, query.sourceAssetId),
       ]);
       return {
-        targets: balanceRecentTargets([notes, colors, links], query.limit).map(
-          toTarget,
+        targets: await toTargets(
+          orgId,
+          balanceRecentTargets([notes, colors, links], query.limit),
+          this.objectStorageService,
         ),
       };
     }
@@ -109,7 +123,9 @@ export class NoteMentionService implements INoteMentionService {
       query.limit,
       query.sourceAssetId,
     );
-    return { targets: rows.map(toTarget) };
+    return {
+      targets: await toTargets(orgId, rows, this.objectStorageService),
+    };
   }
 
   async resolve(
@@ -136,18 +152,17 @@ export class NoteMentionService implements INoteMentionService {
       )
       .orderBy(asc(assets.id));
 
+    const validTargets = rows.filter(
+      (row) =>
+        (row.assetType === "note" ||
+          row.assetType === "color" ||
+          row.assetType === "link") &&
+        requestedKeys.has(
+          mentionKey(row.assetType as MentionType, row.assetId),
+        ),
+    );
     return {
-      targets: rows
-        .filter(
-          (row) =>
-            (row.assetType === "note" ||
-              row.assetType === "color" ||
-              row.assetType === "link") &&
-            requestedKeys.has(
-              mentionKey(row.assetType as MentionType, row.assetId),
-            ),
-        )
-        .map(toTarget),
+      targets: await toTargets(orgId, validTargets, this.objectStorageService),
     };
   }
 
@@ -403,6 +418,9 @@ function selectMentionRows(executor: Executor) {
       pathFolderSlugs: collectionNodes.pathFolderSlugs,
       hostname: externalResources.hostname,
       url: linkAssets.originalUrl,
+      resourceId: linkAssets.resourceId,
+      resourceKind: externalResources.resourceKind,
+      resolverKey: externalResources.resolverKey,
     })
     .from(assets)
     .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
@@ -492,7 +510,78 @@ function balanceRecentTargets(
   return [...selected, ...remaining].slice(0, limit);
 }
 
-function toTarget(row: MentionRow): MentionTarget {
+async function toTargets(
+  orgId: string,
+  rows: MentionRow[],
+  objectStorageService: IObjectStorageService,
+): Promise<MentionTarget[]> {
+  const resourceIds = [
+    ...new Set(
+      rows.flatMap((row) =>
+        row.assetType === "link" && row.resourceId ? [row.resourceId] : [],
+      ),
+    ),
+  ];
+  const mediaByResource = new Map<
+    number,
+    { preview?: string; icon?: string }
+  >();
+  if (resourceIds.length > 0) {
+    const mediaRows = await db
+      .select({
+        resourceId: externalResourceMedia.resourceId,
+        role: externalResourceMedia.role,
+        variants: externalResourceMedia.variants,
+      })
+      .from(externalResourceMedia)
+      .where(
+        and(
+          inArray(externalResourceMedia.resourceId, resourceIds),
+          eq(externalResourceMedia.organizationId, orgId),
+          inArray(externalResourceMedia.role, ["preview", "icon"]),
+          eq(externalResourceMedia.status, "ready"),
+        ),
+      );
+    const keysByResource = new Map<
+      number,
+      { preview?: string; icon?: string }
+    >();
+    for (const row of mediaRows) {
+      const variant =
+        row.variants.preview ?? row.variants.master ?? row.variants.display;
+      if (!variant?.objectKey) continue;
+      const keys = keysByResource.get(row.resourceId) ?? {};
+      if (row.role === "preview") keys.preview = variant.objectKey;
+      if (row.role === "icon") keys.icon = variant.objectKey;
+      keysByResource.set(row.resourceId, keys);
+    }
+    const mediaKeys = [...keysByResource.values()].flatMap((keys) =>
+      [keys.preview, keys.icon].filter((key): key is string => Boolean(key)),
+    );
+    const signed =
+      mediaKeys.length > 0
+        ? await objectStorageService.createPresignedGetUrls(mediaKeys)
+        : new Map();
+    for (const [resourceId, keys] of keysByResource) {
+      const current: { preview?: string; icon?: string } = {};
+      if (keys.preview) current.preview = signed.get(keys.preview)?.url;
+      if (keys.icon) current.icon = signed.get(keys.icon)?.url;
+      mediaByResource.set(resourceId, current);
+    }
+  }
+
+  return rows.map((row) => {
+    const media = row.resourceId
+      ? mediaByResource.get(row.resourceId)
+      : undefined;
+    return toTarget(row, media);
+  });
+}
+
+function toTarget(
+  row: MentionRow,
+  media?: { preview?: string; icon?: string },
+): MentionTarget {
   const folderName = row.pathFolderNames?.at(-1);
   return {
     assetId: row.assetId,
@@ -503,6 +592,12 @@ function toTarget(row: MentionRow): MentionTarget {
     gradient: row.gradient,
     hostname: row.hostname,
     url: row.url,
+    previewUrl: media?.preview ?? null,
+    faviconUrl: media?.icon ?? null,
+    isVideo:
+      row.assetType === "link" &&
+      ["youtube-oembed", "youtube-data-api"].includes(row.resolverKey ?? "") &&
+      row.resourceKind === "video",
     snippet: row.assetType === "note" ? noteSnippet(row.markdown ?? "") : null,
     locationLabel: folderName ?? row.collectionName ?? "Inbox",
     collectionSlug: row.collectionSlug,

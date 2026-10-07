@@ -15,6 +15,7 @@ import {
   NotebookPenIcon,
   PanelLeftIcon,
   PanelsTopLeftIcon,
+  PlayIcon,
   PaletteIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
@@ -977,10 +978,18 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
     );
   }
 
+  if (result.type === "link") {
+    return (
+      <LinkSearchResultPreview
+        previewUrl={result.preview?.url}
+        faviconUrl={result.preview?.faviconUrl}
+        isVideo={result.isVideo}
+      />
+    );
+  }
+
   if (
-    (result.type === "image" ||
-      result.type === "video" ||
-      result.type === "link") &&
+    (result.type === "image" || result.type === "video") &&
     result.preview?.url
   ) {
     return (
@@ -1012,15 +1021,6 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
     );
   }
 
-  if (result.type === "link" && result.preview?.faviconUrl) {
-    return (
-      <LinkSearchResultPreview
-        src={result.preview.faviconUrl}
-        bare={/youtube/i.test(result.preview.hostname ?? "")}
-      />
-    );
-  }
-
   const Icon =
     result.type === "note"
       ? FileTextIcon
@@ -1028,13 +1028,11 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
         ? ImageIcon
         : result.type === "video"
           ? VideoIcon
-          : result.type === "link"
-            ? ExternalLinkIcon
-            : result.type === "color"
-              ? PipetteIcon
-              : result.type === "collection"
-                ? PanelsTopLeftIcon
-                : FolderOpenIcon;
+          : result.type === "color"
+            ? PipetteIcon
+            : result.type === "collection"
+              ? PanelsTopLeftIcon
+              : FolderOpenIcon;
 
   return (
     <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
@@ -1044,36 +1042,56 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
 }
 
 function LinkSearchResultPreview({
-  src,
-  bare = false,
+  previewUrl,
+  faviconUrl,
+  isVideo = false,
 }: {
-  src: string;
-  bare?: boolean;
+  previewUrl?: string;
+  faviconUrl?: string;
+  isVideo?: boolean;
 }) {
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
-        <ExternalLinkIcon className="size-4" />
-      </span>
-    );
-  }
+  const [failedPreview, setFailedPreview] = useState(false);
+  const [failedFavicon, setFailedFavicon] = useState(false);
+  const imageUrl =
+    previewUrl && !failedPreview
+      ? previewUrl
+      : faviconUrl && !failedFavicon
+        ? faviconUrl
+        : undefined;
+  const Icon = isVideo ? VideoIcon : ExternalLinkIcon;
 
   return (
     <span
-      className={
-        bare
-          ? "flex size-8 shrink-0 items-center justify-center"
-          : "flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/60 bg-background shadow-sm"
-      }
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-background",
+        !(isVideo && imageUrl === faviconUrl) &&
+          "border border-border/60 shadow-sm",
+      )}
     >
-      <img
-        src={src}
-        alt=""
-        className={bare ? "size-8 object-contain" : "size-full object-contain"}
-        onError={() => setFailed(true)}
-      />
+      {imageUrl ? (
+        <>
+          <img
+            src={imageUrl}
+            alt=""
+            className={
+              imageUrl === faviconUrl
+                ? "size-full object-contain p-1"
+                : "size-full object-cover"
+            }
+            onError={() => {
+              if (imageUrl === previewUrl) setFailedPreview(true);
+              else setFailedFavicon(true);
+            }}
+          />
+          {isVideo ? (
+            <span className="absolute right-0.5 bottom-0.5 flex size-3.5 items-center justify-center rounded bg-black/75 text-white">
+              <PlayIcon className="size-2 fill-current" />
+            </span>
+          ) : null}
+        </>
+      ) : (
+        <Icon className="size-4 text-foreground" />
+      )}
     </span>
   );
 }

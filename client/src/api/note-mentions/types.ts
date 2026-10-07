@@ -15,6 +15,9 @@ export type NoteMentionTarget = {
   } | null;
   hostname?: string | null;
   url?: string | null;
+  previewUrl?: string | null;
+  faviconUrl?: string | null;
+  isVideo?: boolean;
   snippet: string | null;
   locationLabel: string;
   collectionSlug: string | null;

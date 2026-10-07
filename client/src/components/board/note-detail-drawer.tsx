@@ -137,6 +137,7 @@ export function NoteDetailDrawer({
   noteExtractionTarget,
   onNoteChange,
   onOpenReferencedColor,
+  onOpenReferencedVideo,
   onPromote,
   onSwap,
   onBack,
@@ -171,6 +172,7 @@ export function NoteDetailDrawer({
   };
   onNoteChange?: (note: NoteAsset) => void;
   onOpenReferencedColor?: (color: ColorAsset) => void;
+  onOpenReferencedVideo?: (assetId: string) => void | Promise<void>;
   onPromote?: (
     note: NoteAsset,
     previousNote?: NoteAsset,
@@ -1193,6 +1195,10 @@ export function NoteDetailDrawer({
     ) => {
       try {
         if (identity.assetType === "link") {
+          if (resolved?.isVideo && onOpenReferencedVideo) {
+            await onOpenReferencedVideo(`link-${identity.assetId}`);
+            return;
+          }
           if (resolved?.url)
             window.open(resolved.url, "_blank", "noopener,noreferrer");
           return;
@@ -1229,6 +1235,7 @@ export function NoteDetailDrawer({
     [
       isMobile,
       onOpenReferencedColor,
+      onOpenReferencedVideo,
       peekColor,
       peekNote,
       promotePeekedNote,

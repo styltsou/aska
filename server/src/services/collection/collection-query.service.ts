@@ -252,6 +252,7 @@ export class CollectionQueryService {
       selectedPreviewRows
         .filter((row) => row.assetType === "note")
         .map((row) => row.assetId),
+      this.objectStorageService,
     );
 
     const previewMap = new Map<number, FolderChildPreview[]>();
@@ -570,14 +571,18 @@ export class CollectionQueryService {
       linkResourceIds,
       this.objectStorageService,
     );
-    const mentionColors = await fetchMentionColorsBySource(orgId, [
-      ...children
-        .filter((child) => child.assetType === "note")
-        .map((child) => child.assetId),
-      ...selectedFolderPreviewRows
-        .filter((row) => row.assetType === "note" && row.assetId !== null)
-        .map((row) => row.assetId),
-    ]);
+    const mentionColors = await fetchMentionColorsBySource(
+      orgId,
+      [
+        ...children
+          .filter((child) => child.assetType === "note")
+          .map((child) => child.assetId),
+        ...selectedFolderPreviewRows
+          .filter((row) => row.assetType === "note" && row.assetId !== null)
+          .map((row) => row.assetId),
+      ],
+      this.objectStorageService,
+    );
 
     for (const row of selectedFolderPreviewRows) {
       if (!row.folderId) continue;

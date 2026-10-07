@@ -50,7 +50,7 @@ export const container = {
     objectStorageService,
     loggerService,
   }),
-  noteMentionService: new NoteMentionService(),
+  noteMentionService: new NoteMentionService({ objectStorageService }),
   workspaceSearchService: new WorkspaceSearchService({
     objectStorageService,
   }),
