@@ -1,8 +1,8 @@
-/* The mention preview card enters as a small, empty shell pinned to the pill
-   corner and inflates to its real size, with its contents popping in behind it.
-   Leaving is the quiet counterpart: quicker, no overshoot, barely any shrink.
-   Handing the card from one mention to the next morphs the height, so it takes
-   the incoming content's shape instead of jumping to it.
+/* The mention preview card enters as a small shell pinned to the pill corner
+   and inflates to its real size. Leaving is the quiet counterpart: quicker, no
+   overshoot, barely any shrink. Handing the card from one mention to the next
+   morphs the height, so it takes the incoming content's shape instead of
+   jumping to it.
 
    This lives unlayered on purpose: it outranks Tailwind's utility layer, which
    is how the card keeps the shared hover card's `animate-in` keyframes out of
@@ -42,9 +42,6 @@
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Straight cross-fade for the handover — the incoming card fades up under the
-   height morph while the outgoing one fades out inside it, with no directional
-   movement to imply a direction the pointer did not actually travel. */
 .note-mention-preview-card-content {
   position: relative;
   width: 100%;
@@ -52,32 +49,9 @@
   overflow: clip;
 }
 
-.note-mention-preview-card-content [data-previous],
-.note-mention-preview-card-content [data-current] {
-  opacity: 1;
-  animation: none;
-  transition-property: opacity;
-  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.note-mention-preview-card-content [data-previous] {
-  transition-duration: 100ms;
-}
-
-.note-mention-preview-card-content [data-current] {
-  transition-duration: 200ms;
-}
-
-.note-mention-preview-card-content [data-previous][data-ending-style],
-.note-mention-preview-card-content [data-current][data-starting-style] {
-  opacity: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .note-mention-preview-card,
-  .note-mention-preview-card-positioner,
-  .note-mention-preview-card-content [data-previous],
-  .note-mention-preview-card-content [data-current] {
+  .note-mention-preview-card-positioner {
     transition: none;
   }
 }

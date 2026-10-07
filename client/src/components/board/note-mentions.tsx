@@ -110,17 +110,6 @@ const MENTION_HOVER_CARD_POSITIONER_CLASS =
 
 const MENTION_HOVER_CARD_VIEWPORT_CLASS = "note-mention-preview-card-content";
 
-// The contents wait out the first half of the inflation before popping in, so the
-// card reads as an empty shell filling up rather than text appearing in a box.
-// Each row scales up in place — no slide, so nothing implies a direction.
-const MENTION_HOVER_CARD_REVEAL_BASE =
-  "motion-reduce:animate-none [--tw-ease:cubic-bezier(0.22,1,0.36,1)] group-data-open:animate-in group-data-open:fill-mode-both group-data-open:fade-in-0 group-data-open:zoom-in-92 group-data-open:duration-150";
-const MENTION_HOVER_CARD_REVEAL = [
-  `${MENTION_HOVER_CARD_REVEAL_BASE} group-data-open:delay-[60ms]`,
-  `${MENTION_HOVER_CARD_REVEAL_BASE} group-data-open:delay-[100ms]`,
-  `${MENTION_HOVER_CARD_REVEAL_BASE} group-data-open:delay-[140ms]`,
-] as const;
-
 const noteMentionPreviewCard = createHoverCardHandle<ReactNode>();
 
 export function MentionGlyph({
@@ -503,28 +492,13 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
 function NoteMentionHoverCard({ target }: { target: NoteMentionTarget }) {
   return (
     <div className="p-3.5">
-      <p
-        className={cn(
-          MENTION_HOVER_CARD_REVEAL[0],
-          "truncate text-sm font-semibold text-foreground",
-        )}
-      >
+      <p className="truncate text-sm font-semibold text-foreground">
         {target.label}
       </p>
-      <p
-        className={cn(
-          MENTION_HOVER_CARD_REVEAL[1],
-          "mt-0.5 truncate text-[11px] text-muted-foreground",
-        )}
-      >
+      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
         {target.locationLabel}
       </p>
-      <div
-        className={cn(
-          MENTION_HOVER_CARD_REVEAL[2],
-          "relative mt-3 h-10 overflow-hidden",
-        )}
-      >
+      <div className="relative mt-3 h-10 overflow-hidden">
         <p className="text-xs leading-5 text-muted-foreground">
           {target.snippet || "No note preview yet."}
         </p>
@@ -547,36 +521,18 @@ function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
     <div className="flex items-center gap-3 p-3.5">
       <div
         aria-hidden="true"
-        className={cn(
-          MENTION_HOVER_CARD_REVEAL[0],
-          "relative size-14 shrink-0 overflow-hidden rounded-md border border-foreground/10 bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)] bg-size-[16px_16px]",
-        )}
+        className="relative size-14 shrink-0 overflow-hidden rounded-md border border-foreground/10 bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)] bg-size-[16px_16px]"
       >
         <div className="absolute inset-0" style={{ background }} />
       </div>
       <div className="min-w-0">
-        <p
-          className={cn(
-            MENTION_HOVER_CARD_REVEAL[0],
-            "truncate text-sm font-semibold text-foreground",
-          )}
-        >
+        <p className="truncate text-sm font-semibold text-foreground">
           {target.label}
         </p>
-        <p
-          className={cn(
-            MENTION_HOVER_CARD_REVEAL[1],
-            "mt-0.5 truncate font-mono text-[11px] text-muted-foreground",
-          )}
-        >
+        <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
           {colorLabel}
         </p>
-        <p
-          className={cn(
-            MENTION_HOVER_CARD_REVEAL[2],
-            "mt-1.5 truncate text-[11px] text-muted-foreground/75",
-          )}
-        >
+        <p className="mt-1.5 truncate text-[11px] text-muted-foreground/75">
           {target.locationLabel}
         </p>
       </div>
@@ -595,32 +551,19 @@ function LinkMentionHoverCard({ target }: { target: NoteMentionTarget }) {
         iconClassName="size-5 text-foreground/75"
         showVideoBadge
       />
-      <div className="min-w-0">
-        <p
-          className={cn(
-            MENTION_HOVER_CARD_REVEAL[0],
-            "truncate text-sm font-semibold text-foreground",
-          )}
-        >
+      <div className="flex h-14 min-w-0 flex-col justify-between">
+        <p className="truncate text-xs leading-4 font-semibold text-foreground">
           {target.label}
         </p>
-        <p
-          className={cn(
-            MENTION_HOVER_CARD_REVEAL[1],
-            "mt-0.5 truncate text-[11px] text-muted-foreground",
-          )}
-        >
-          {target.isVideo ? "Video" : (target.hostname ?? "Saved link")}
-        </p>
-        <p
-          className={cn(
-            MENTION_HOVER_CARD_REVEAL[2],
-            "mt-1.5 line-clamp-2 break-all text-[11px] text-muted-foreground",
-          )}
-        >
-          {target.url}
-        </p>
-        <p className="mt-1.5 truncate text-[11px] text-muted-foreground/75">
+        {target.url ? (
+          <p
+            title={target.url}
+            className="line-clamp-2 text-[10px] leading-3 break-all text-muted-foreground"
+          >
+            {target.url}
+          </p>
+        ) : null}
+        <p className="truncate text-[10px] leading-3 text-muted-foreground/75">
           {target.locationLabel}
         </p>
       </div>

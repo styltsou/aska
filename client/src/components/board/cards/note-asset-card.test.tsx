@@ -174,6 +174,24 @@ describe("NoteMarkdown", () => {
     expect(html).toContain("background:#0a5");
   });
 
+  it("uses the current link title in static mention pills", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown
+        content="Read [Old link label](link:7)."
+        mentionColors={{
+          "link:7": {
+            hex: null,
+            gradient: null,
+            label: "Current page title",
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain("Current page title");
+    expect(html).not.toContain("Old link label");
+  });
+
   it("exposes the payload color as a tint variable", () => {
     const html = renderToStaticMarkup(
       <NoteMarkdown

@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
+  assets,
   colorAssets,
   externalResourceMedia,
   externalResources,
@@ -13,9 +14,9 @@ import { mentionKey } from "@/lib/note-mentions";
 import type { IObjectStorageService } from "@/services/object-storage.service";
 
 /**
- * Visual values for referenced colors and links, keyed by source note ID. This
- * lets read-only mention pills render swatches and link thumbnails without a
- * follow-up resolve request per card.
+ * Presentation values for referenced colors and links, keyed by source note
+ * ID. Read-only mention pills can render current labels, swatches, and link
+ * thumbnails without a follow-up resolve request per card.
  */
 export async function fetchMentionColorsBySource(
   orgId: string,
@@ -33,13 +34,22 @@ export async function fetchMentionColorsBySource(
       sourceAssetId: noteReferences.sourceAssetId,
       targetAssetId: noteReferences.targetAssetId,
       targetType: noteReferences.targetType,
+      assetTitle: assets.title,
       hex: colorAssets.hex,
       gradient: colorAssets.gradient,
       resourceId: linkAssets.resourceId,
+      hostname: externalResources.hostname,
       resourceKind: externalResources.resourceKind,
       resolverKey: externalResources.resolverKey,
     })
     .from(noteReferences)
+    .leftJoin(
+      assets,
+      and(
+        eq(assets.id, noteReferences.targetAssetId),
+        eq(assets.organizationId, noteReferences.organizationId),
+      ),
+    )
     .leftJoin(
       colorAssets,
       eq(colorAssets.assetId, noteReferences.targetAssetId),
@@ -129,6 +139,7 @@ export async function fetchMentionColorsBySource(
           ["youtube-oembed", "youtube-data-api"].includes(
             row.resolverKey ?? "",
           ) && row.resourceKind === "video",
+        label: row.assetTitle?.trim() || row.hostname || "Untitled",
       };
     }
     result.set(row.sourceAssetId, existing);

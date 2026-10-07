@@ -185,6 +185,7 @@ const ColorGradientSchema = z.object({
 const MentionColorSchema = z.object({
   hex: z.string().nullable(),
   gradient: ColorGradientSchema.nullable(),
+  label: z.string().nullable().optional(),
   previewUrl: z.string().nullable().optional(),
   faviconUrl: z.string().nullable().optional(),
   isVideo: z.boolean().optional(),
