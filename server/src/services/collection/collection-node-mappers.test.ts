@@ -114,10 +114,12 @@ describe("collection node mappers", () => {
       assetId: "link-9",
       type: "link",
       hostname: "example.com",
+      siteName: null,
       title: "Example link",
       url: "https://example.test/preview.webp",
       blurDataURL: "data:image/webp;base64,BB==",
       favicon: "https://example.test/favicon.ico",
+      videoId: undefined,
       description: "A fully resolved example page.",
     });
     expect(
@@ -140,6 +142,7 @@ describe("collection node mappers", () => {
       assetId: "link-10",
       type: "link",
       hostname: "www.youtube.com",
+      siteName: null,
       title: "Some video title",
       url: undefined,
       blurDataURL: undefined,
