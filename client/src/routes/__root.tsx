@@ -101,7 +101,13 @@ function RootError({ error, reset }: ErrorComponentProps) {
             {content.description}
           </p>
           <div className="mt-7 flex flex-wrap gap-2">
-            <Button type="button" onClick={reset}>
+            <Button
+              type="button"
+              onClick={() => {
+                reset();
+                window.location.reload();
+              }}
+            >
               <RotateCwIcon />
               Try again
             </Button>
