@@ -35,6 +35,7 @@ import {
   makeArrowTransformFrame,
   normalizeArrowRotation,
   paddedArrowFrameBounds,
+  roundedPolygonPath,
   resizeArrowPoints,
   rotateArrowPoints,
   snapArrowRotation,
@@ -217,7 +218,7 @@ export function CanvasArrowLayer({
       event.preventDefault();
       event.stopPropagation();
       if (
-        event.detail === 1 &&
+        event.detail <= 1 &&
         !(arrowHasIdentity(arrow, focusedId) && selectedIds.size === 1)
       ) {
         onSelect(arrow.id, event);
@@ -903,6 +904,7 @@ export function CanvasArrowLayer({
               11 / zoom,
             );
             const frameCorners = arrowFrameCorners(frame, frameBounds);
+            const framePath = roundedPolygonPath(frameCorners, 5 / zoom);
             const frameHandles = arrowFrameResizeHandlePositions(
               frame,
               frameBounds,
@@ -927,10 +929,9 @@ export function CanvasArrowLayer({
                 ) : null}
                 {arrow.id !== "arrow-draft" &&
                 (showTransformFrame || showSelectionRing) ? (
-                  <polygon
-                    points={frameCorners
-                      .map((point) => `${point.x},${point.y}`)
-                      .join(" ")}
+                  <path
+                    d={framePath}
+                    strokeLinejoin="round"
                     fill="none"
                     stroke="var(--primary)"
                     strokeWidth={showSelectionRing ? "2" : "1.5"}

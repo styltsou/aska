@@ -2784,7 +2784,7 @@ function CanvasSurface({
           )}
           draft={draftArrow}
           selectedIds={selectedIdSet}
-          focusedId={selectedIds.length === 1 ? selectedIds[0] : undefined}
+          focusedId={focusedCanvasObjectId}
           pointEditId={editingArrowId}
           enabled={activeTool === "select"}
           editable={!isCanvasLocked && activeTool === "select"}

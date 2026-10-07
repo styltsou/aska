@@ -142,6 +142,49 @@ export function arrowFrameCorners(
   ];
 }
 
+export function roundedPolygonPath(
+  points: readonly BoardPosition[],
+  radius: number,
+): string {
+  if (points.length < 3) return "";
+
+  const corners = points.map((point, index) => {
+    const previous = points[(index - 1 + points.length) % points.length]!;
+    const next = points[(index + 1) % points.length]!;
+    const toPrevious = { x: previous.x - point.x, y: previous.y - point.y };
+    const toNext = { x: next.x - point.x, y: next.y - point.y };
+    const previousLength = Math.hypot(toPrevious.x, toPrevious.y);
+    const nextLength = Math.hypot(toNext.x, toNext.y);
+    if (previousLength === 0 || nextLength === 0) {
+      return { previousPoint: point, nextPoint: point, point };
+    }
+    const cut = Math.min(radius, previousLength / 2, nextLength / 2);
+    const previousPoint = {
+      x: point.x + (toPrevious.x / previousLength) * cut,
+      y: point.y + (toPrevious.y / previousLength) * cut,
+    };
+    const nextPoint = {
+      x: point.x + (toNext.x / nextLength) * cut,
+      y: point.y + (toNext.y / nextLength) * cut,
+    };
+    return { previousPoint, nextPoint, point };
+  });
+
+  const first = corners[0]!;
+  const start = first.previousPoint;
+  const commands = [`M ${start.x} ${start.y}`];
+  for (let index = 0; index < corners.length; index += 1) {
+    const corner = corners[index]!;
+    const following = corners[(index + 1) % corners.length]!;
+    commands.push(
+      `Q ${corner.point.x} ${corner.point.y} ${corner.nextPoint.x} ${corner.nextPoint.y}`,
+      `L ${following.previousPoint.x} ${following.previousPoint.y}`,
+    );
+  }
+  commands.push("Z");
+  return commands.join(" ");
+}
+
 export function arrowFrameHandlePositions(
   frame: ArrowTransformFrame,
   bounds: FrameBounds,
