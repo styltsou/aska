@@ -266,6 +266,7 @@ function createMDComponents(
     li: ({ className, children, node, ...props }) => {
       const isTaskItem = className?.includes("task-list-item");
       const isChecked = taskItemIsChecked(node);
+      const taskChildren = isTaskItem ? Children.toArray(children) : [];
 
       return (
         <li
@@ -282,7 +283,14 @@ function createMDComponents(
           )}
           {...props}
         >
-          {children}
+          {isTaskItem ? (
+            <>
+              {taskChildren[0]}
+              <div className="min-w-0 flex-1">{taskChildren.slice(1)}</div>
+            </>
+          ) : (
+            children
+          )}
         </li>
       );
     },

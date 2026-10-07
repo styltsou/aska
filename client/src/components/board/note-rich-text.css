@@ -249,27 +249,37 @@
 
   .note-rich-text-content .note-highlight {
     @apply rounded-[0.18em] box-decoration-clone px-[0.08em] text-inherit;
+    /* Clear the browser's yellow mark fill beneath the inset color band. */
+    -webkit-box-decoration-break: clone;
+    background-color: transparent;
+    background-image: linear-gradient(
+      var(--note-highlight-background),
+      var(--note-highlight-background)
+    );
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 100% calc(100% - 0.28em);
   }
 
   .note-rich-text-content .note-highlight:not([data-highlight-color]),
   .note-rich-text-content .note-highlight[data-highlight-color="amber"] {
-    background: var(--note-highlight-amber);
+    --note-highlight-background: var(--note-highlight-amber);
   }
 
   .note-rich-text-content .note-highlight[data-highlight-color="mint"] {
-    background: var(--note-highlight-mint);
+    --note-highlight-background: var(--note-highlight-mint);
   }
 
   .note-rich-text-content .note-highlight[data-highlight-color="sky"] {
-    background: var(--note-highlight-sky);
+    --note-highlight-background: var(--note-highlight-sky);
   }
 
   .note-rich-text-content .note-highlight[data-highlight-color="rose"] {
-    background: var(--note-highlight-rose);
+    --note-highlight-background: var(--note-highlight-rose);
   }
 
   .note-rich-text-content .note-highlight[data-highlight-color="lavender"] {
-    background: var(--note-highlight-lavender);
+    --note-highlight-background: var(--note-highlight-lavender);
   }
 
   .note-rich-text-content[data-highlight-preview="amber"]::selection,

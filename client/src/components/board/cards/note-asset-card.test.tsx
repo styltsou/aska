@@ -80,6 +80,24 @@ describe("NoteMarkdown", () => {
     expect(html).toContain('data-slot="checkbox"');
   });
 
+  it("keeps task text and inline highlights in one wrapping flex child", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown
+        content={
+          '- [x] first words [highlight color="rose"]highlighted words across lines[/highlight]\n- [ ] [highlight color="rose"]all highlighted[/highlight]'
+        }
+        compact
+      />,
+    );
+
+    expect(html).toMatch(
+      /<div class="min-w-0 flex-1">\s*first words <mark[^>]*>highlighted words across lines<\/mark><\/div>/,
+    );
+    expect(html).toMatch(
+      /<div class="min-w-0 flex-1">\s*<mark[^>]*>all highlighted<\/mark><\/div>/,
+    );
+  });
+
   it("uses the editor's lowlight classes for code blocks", () => {
     const html = renderToStaticMarkup(
       <NoteMarkdown content={"```typescript\nconst note = true;\n```"} />,
