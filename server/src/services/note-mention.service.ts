@@ -18,6 +18,8 @@ import {
   collectionsTable,
   colorAssets,
   collectionNodes,
+  externalResources,
+  linkAssets,
   noteAssets,
   noteReferences,
 } from "@/db/schema";
@@ -54,6 +56,8 @@ type MentionRow = {
   collectionSlug: string | null;
   pathFolderNames: string[] | null;
   pathFolderSlugs: string[] | null;
+  hostname: string | null;
+  url: string | null;
 };
 
 export interface INoteMentionService {
@@ -80,16 +84,21 @@ export class NoteMentionService implements INoteMentionService {
     orgId: string,
     query: MentionSearchQuery,
   ): Promise<MentionTargetsResponse> {
-    const types = [...new Set(query.types ?? (["note", "color"] as const))];
+    const types = [
+      ...new Set(query.types ?? (["note", "color", "link"] as const)),
+    ];
     const normalizedQuery = query.q.trim();
 
-    if (!normalizedQuery && types.length === 2) {
-      const [notes, colors] = await Promise.all([
+    if (!normalizedQuery && types.length === 3) {
+      const [notes, colors, links] = await Promise.all([
         findMentionRows(orgId, ["note"], "", query.limit, query.sourceAssetId),
         findMentionRows(orgId, ["color"], "", query.limit, query.sourceAssetId),
+        findMentionRows(orgId, ["link"], "", query.limit, query.sourceAssetId),
       ]);
       return {
-        targets: balanceRecentTargets(notes, colors, query.limit).map(toTarget),
+        targets: balanceRecentTargets([notes, colors, links], query.limit).map(
+          toTarget,
+        ),
       };
     }
 
@@ -131,7 +140,9 @@ export class NoteMentionService implements INoteMentionService {
       targets: rows
         .filter(
           (row) =>
-            (row.assetType === "note" || row.assetType === "color") &&
+            (row.assetType === "note" ||
+              row.assetType === "color" ||
+              row.assetType === "link") &&
             requestedKeys.has(
               mentionKey(row.assetType as MentionType, row.assetId),
             ),
@@ -241,7 +252,9 @@ export async function reconcileNoteReferences(
     : [];
   const validTargets = rows.filter(
     (row) =>
-      (row.assetType === "note" || row.assetType === "color") &&
+      (row.assetType === "note" ||
+        row.assetType === "color" ||
+        row.assetType === "link") &&
       requestedKeys.has(mentionKey(row.assetType as MentionType, row.assetId)),
   );
   const replacements = new Map(
@@ -388,10 +401,20 @@ function selectMentionRows(executor: Executor) {
       collectionSlug: collectionsTable.slug,
       pathFolderNames: collectionNodes.pathFolderNames,
       pathFolderSlugs: collectionNodes.pathFolderSlugs,
+      hostname: externalResources.hostname,
+      url: linkAssets.originalUrl,
     })
     .from(assets)
     .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
     .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
+    .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
+    .leftJoin(
+      externalResources,
+      and(
+        eq(externalResources.id, linkAssets.resourceId),
+        eq(externalResources.organizationId, assets.organizationId),
+      ),
+    )
     .leftJoin(collectionNodes, eq(collectionNodes.assetId, assets.id))
     .leftJoin(
       collectionsTable,
@@ -418,10 +441,21 @@ async function findMentionRows(
         eq(assets.organizationId, orgId),
         inArray(assets.type, types),
         sourceAssetId ? ne(assets.id, sourceAssetId) : undefined,
-        or(eq(assets.type, "color"), isNotNull(assets.title)),
+        or(
+          eq(assets.type, "color"),
+          eq(assets.type, "link"),
+          isNotNull(assets.title),
+        ),
         query
           ? or(
               ilike(assets.title, match),
+              and(
+                eq(assets.type, "link"),
+                or(
+                  ilike(externalResources.hostname, match),
+                  ilike(linkAssets.originalUrl, match),
+                ),
+              ),
               and(
                 eq(assets.type, "color"),
                 or(
@@ -442,13 +476,13 @@ async function findMentionRows(
 }
 
 function balanceRecentTargets(
-  notes: MentionRow[],
-  colors: MentionRow[],
+  groups: MentionRow[][],
   limit: number,
 ): MentionRow[] {
-  const selected = [...notes.slice(0, 2), ...colors.slice(0, 2)];
+  const selected = groups.flatMap((group) => group.slice(0, 2));
   const selectedIds = new Set(selected.map((row) => row.assetId));
-  const remaining = [...notes, ...colors]
+  const remaining = groups
+    .flat()
     .filter((row) => !selectedIds.has(row.assetId))
     .sort(
       (left, right) =>
@@ -467,6 +501,8 @@ function toTarget(row: MentionRow): MentionTarget {
     title: row.title,
     hex: row.hex,
     gradient: row.gradient,
+    hostname: row.hostname,
+    url: row.url,
     snippet: row.assetType === "note" ? noteSnippet(row.markdown ?? "") : null,
     locationLabel: folderName ?? row.collectionName ?? "Inbox",
     collectionSlug: row.collectionSlug,
@@ -481,6 +517,7 @@ function mentionLabel(row: MentionRow): string {
     return `${type} Gradient`;
   }
   if (row.hex) return row.hex;
+  if (row.hostname) return row.hostname;
   return "Untitled";
 }
 

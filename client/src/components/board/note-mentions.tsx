@@ -17,6 +17,7 @@ import {
   ArrowUpIcon,
   CornerDownLeftIcon,
   FileTextIcon,
+  LinkIcon,
 } from "lucide-react";
 import { Extension, Node, type Editor, type Range } from "@tiptap/core";
 import { PluginKey } from "@tiptap/pm/state";
@@ -136,6 +137,9 @@ export function MentionGlyph({
       />
     );
   }
+  if (assetType === "link") {
+    return <LinkIcon aria-hidden="true" className={NOTE_MENTION_GLYPH_CLASS} />;
+  }
   if (!swatchBackground) return null;
   return (
     <span
@@ -210,7 +214,7 @@ export const AssetMention = Node.create({
     ];
   },
   parseMarkdown(token, helpers) {
-    const match = /^(note|color):(\d+)$/.exec(token.href ?? "");
+    const match = /^(note|color|link):(\d+)$/.exec(token.href ?? "");
     if (!match) {
       return helpers.applyMark(
         "link",
@@ -266,7 +270,9 @@ export function NoteMentionProvider({
           const assetType = node.attrs.assetType as NoteMentionType;
           if (
             Number.isSafeInteger(assetId) &&
-            (assetType === "note" || assetType === "color")
+            (assetType === "note" ||
+              assetType === "color" ||
+              assetType === "link")
           )
             targets.set(`${assetType}:${assetId}`, { assetId, assetType });
         });
@@ -392,8 +398,10 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
           payload={
             assetType === "note" ? (
               <NoteMentionHoverCard target={resolved} />
-            ) : (
+            ) : assetType === "color" ? (
               <ColorMentionHoverCard target={resolved} />
+            ) : (
+              <LinkMentionHoverCard target={resolved} />
             )
           }
           render={chip}
@@ -491,6 +499,40 @@ function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
   );
 }
 
+function LinkMentionHoverCard({ target }: { target: NoteMentionTarget }) {
+  return (
+    <div className="p-3.5">
+      <p
+        className={cn(
+          MENTION_HOVER_CARD_REVEAL[0],
+          "truncate text-sm font-semibold text-foreground",
+        )}
+      >
+        {target.label}
+      </p>
+      <p
+        className={cn(
+          MENTION_HOVER_CARD_REVEAL[1],
+          "mt-0.5 truncate text-[11px] text-muted-foreground",
+        )}
+      >
+        {target.hostname ?? "Saved link"}
+      </p>
+      <p
+        className={cn(
+          MENTION_HOVER_CARD_REVEAL[2],
+          "mt-2 line-clamp-2 break-all text-xs text-muted-foreground",
+        )}
+      >
+        {target.url}
+      </p>
+      <p className="mt-2 truncate text-[11px] text-muted-foreground/75">
+        {target.locationLabel}
+      </p>
+    </div>
+  );
+}
+
 type MentionMenuHandle = {
   onKeyDown: (props: SuggestionKeyDownProps) => boolean;
 };
@@ -529,9 +571,13 @@ export function filterRecentMentionTargets(
     const gradientLabel = target.gradient
       ? `${target.gradient.type === "radial" ? "radial" : "linear"} gradient`
       : "";
-    return [target.title, target.hex, gradientLabel].some((value) =>
-      value?.toLowerCase().includes(search),
-    );
+    return [
+      target.title,
+      target.hex,
+      target.hostname,
+      target.url,
+      gradientLabel,
+    ].some((value) => value?.toLowerCase().includes(search));
   });
 }
 
@@ -563,21 +609,26 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
       lastResolvedItems,
       loading,
     });
-    const { notes, colors, flatItems } = useMemo(() => {
+    const { notes, colors, links, flatItems } = useMemo(() => {
       const nextNotes = displayItems.filter(
         (item) => item.assetType === "note",
       );
       const nextColors = displayItems.filter(
         (item) => item.assetType === "color",
       );
+      const nextLinks = displayItems.filter(
+        (item) => item.assetType === "link",
+      );
       return {
         notes: nextNotes,
         colors: nextColors,
-        flatItems: [...nextNotes, ...nextColors],
+        links: nextLinks,
+        flatItems: [...nextNotes, ...nextColors, ...nextLinks],
       };
     }, [displayItems]);
-    const showScopeControls = notes.length > 0 && colors.length > 0;
-    const showGroupLabels = notes.length > 0 && colors.length > 0;
+    const showScopeControls =
+      [notes, colors, links].filter((group) => group.length > 0).length > 1;
+    const showGroupLabels = showScopeControls;
     const showInitialLoading = loading && flatItems.length === 0;
     const showSearching = Boolean(isSearchPending);
     const emptyLabel = query
@@ -586,7 +637,7 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
         : parsed.scope === "color"
           ? "No colors match"
           : "No mentions match"
-      : "No notes or colors to mention yet";
+      : "No notes, colors, or links to mention yet";
 
     useEffect(() => setSelectedIndex(0), [flatItems]);
     useEffect(() => {
@@ -648,24 +699,29 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
             {showScopeControls || showSearching ? (
               <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
                 {showScopeControls
-                  ? ([undefined, "note", "color"] as const).map((scope) => (
-                      <button
-                        key={scope ?? "all"}
-                        type="button"
-                        className={cn(
-                          "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                          parsed.scope === scope && "bg-accent text-foreground",
-                        )}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => setScope(scope)}
-                      >
-                        {scope === "note"
-                          ? "Notes"
-                          : scope === "color"
-                            ? "Colors"
-                            : "All"}
-                      </button>
-                    ))
+                  ? ([undefined, "note", "color", "link"] as const).map(
+                      (scope) => (
+                        <button
+                          key={scope ?? "all"}
+                          type="button"
+                          className={cn(
+                            "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                            parsed.scope === scope &&
+                              "bg-accent text-foreground",
+                          )}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => setScope(scope)}
+                        >
+                          {scope === "note"
+                            ? "Notes"
+                            : scope === "color"
+                              ? "Colors"
+                              : scope === "link"
+                                ? "Links"
+                                : "All"}
+                        </button>
+                      ),
+                    )
                   : null}
                 {showSearching ? (
                   <span
@@ -708,6 +764,22 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   onHover={setSelectedIndex}
                 />
               ) : null}
+              {links.length > 0 &&
+              parsed.scope !== "note" &&
+              parsed.scope !== "color" ? (
+                <MentionGroup
+                  label="Links"
+                  showLabel={showGroupLabels}
+                  items={links}
+                  startIndex={
+                    parsed.scope === "link" ? 0 : notes.length + colors.length
+                  }
+                  selectedIndex={selectedIndex}
+                  itemRefs={itemRefs}
+                  onSelect={select}
+                  onHover={setSelectedIndex}
+                />
+              ) : null}
               {flatItems.length === 0 && !showInitialLoading ? (
                 <p className="px-2 py-4 text-center text-xs text-muted-foreground/75">
                   {emptyLabel}
@@ -720,9 +792,13 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
               <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
                 @note
               </Kbd>
-              <span>or</span>
+              <span>,</span>
               <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
                 @color
+              </Kbd>
+              <span>or</span>
+              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                @link
               </Kbd>
               <span>to filter</span>
             </span>
@@ -830,6 +906,10 @@ function MentionGroup({
                     : (item.hex ?? "var(--muted)"),
                 }}
               />
+            ) : item.assetType === "link" ? (
+              <span className="flex size-7 items-center justify-center rounded-md bg-muted">
+                <LinkIcon className="size-4 text-foreground/80" />
+              </span>
             ) : (
               <span className="flex size-7 items-center justify-center rounded-md bg-muted">
                 <FileTextIcon className="size-5 text-foreground/80" />
@@ -842,6 +922,10 @@ function MentionGroup({
               {item.snippet ? (
                 <span className="block truncate text-xs text-muted-foreground">
                   {item.snippet}
+                </span>
+              ) : item.assetType === "link" && item.hostname ? (
+                <span className="block truncate text-xs text-muted-foreground">
+                  {item.hostname}
                 </span>
               ) : null}
             </span>
@@ -1022,7 +1106,7 @@ export function parseMentionQuery(query: string): {
   scope?: NoteMentionType;
   search: string;
 } {
-  const match = /^(note|color)(?:\s+(.*))?$/i.exec(query);
+  const match = /^(note|color|link)(?:\s+(.*))?$/i.exec(query);
   if (!match) return { search: query.trim() };
   return {
     scope: match[1]!.toLowerCase() as NoteMentionType,
@@ -1040,7 +1124,7 @@ export function createMentionScopeQuery(
 
 export function parseNumericAssetId(assetId?: string): number | undefined {
   if (!assetId) return undefined;
-  const match = /^(?:note|color)-(\d+)$/.exec(assetId);
+  const match = /^(?:note|color|link)-(\d+)$/.exec(assetId);
   return match ? Number(match[1]) : undefined;
 }
 

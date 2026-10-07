@@ -784,7 +784,7 @@ export const noteReferences = pgTable(
     ),
     check(
       "note_references_target_type_chk",
-      sql`${table.targetType} in ('note', 'color')`,
+      sql`${table.targetType} in ('note', 'color', 'link')`,
     ),
     check(
       "note_references_no_self_reference_chk",

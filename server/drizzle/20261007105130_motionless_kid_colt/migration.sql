@@ -1,0 +1,1 @@
+ALTER TABLE "note_references" DROP CONSTRAINT "note_references_target_type_chk", ADD CONSTRAINT "note_references_target_type_chk" CHECK ("target_type" in ('note', 'color', 'link'));

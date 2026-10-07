@@ -1,4 +1,4 @@
-export type NoteMentionType = "note" | "color";
+export type NoteMentionType = "note" | "color" | "link";
 
 export type NoteMentionTarget = {
   assetId: number;
@@ -13,6 +13,8 @@ export type NoteMentionTarget = {
     type?: "linear" | "radial";
     stops?: Array<{ color: string; position: number }>;
   } | null;
+  hostname?: string | null;
+  url?: string | null;
   snippet: string | null;
   locationLabel: string;
   collectionSlug: string | null;

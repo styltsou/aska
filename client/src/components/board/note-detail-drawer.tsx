@@ -1188,10 +1188,15 @@ export function NoteDetailDrawer({
 
   const openMentionTarget = useCallback(
     async (
-      identity: { assetId: number; assetType: "note" | "color" },
+      identity: { assetId: number; assetType: "note" | "color" | "link" },
       resolved?: NoteMentionTarget,
     ) => {
       try {
+        if (identity.assetType === "link") {
+          if (resolved?.url)
+            window.open(resolved.url, "_blank", "noopener,noreferrer");
+          return;
+        }
         const { asset, location: assetLocation } = await fetchPeekableAsset(
           workspaceSlug,
           `${identity.assetType}-${identity.assetId}`,

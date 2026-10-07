@@ -1,4 +1,4 @@
-export type NoteMentionType = "note" | "color";
+export type NoteMentionType = "note" | "color" | "link";
 
 export type ParsedNoteMention = {
   targetAssetId: number;
@@ -8,7 +8,7 @@ export type ParsedNoteMention = {
   end: number;
 };
 
-const MENTION_DESTINATION = /^(note|color):(\d+)$/;
+const MENTION_DESTINATION = /^(note|color|link):(\d+)$/;
 const FENCE_START = /^ {0,3}(`{3,}|~{3,})/;
 
 export function escapeMentionLabel(label: string): string {

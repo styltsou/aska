@@ -317,7 +317,7 @@ function createMDComponents(
       );
     },
     a: ({ className, href, children, ...props }) => {
-      const mention = /^(note|color):(\d+)$/.exec(href ?? "");
+      const mention = /^(note|color|link):(\d+)$/.exec(href ?? "");
       if (mention) {
         const assetType = mention[1] as NoteMentionType;
         const color = mentionColors?.[href!];
@@ -491,7 +491,9 @@ export function NoteMarkdown({
           components={components}
           remarkPlugins={[remarkGfm, remarkHighlight]}
           urlTransform={(url) =>
-            /^(?:note|color):\d+$/.test(url) ? url : defaultUrlTransform(url)
+            /^(?:note|color|link):\d+$/.test(url)
+              ? url
+              : defaultUrlTransform(url)
           }
         >
           {linkifyBareUrls(body)}

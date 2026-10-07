@@ -1668,10 +1668,15 @@ function PeekNote({
   }, [flush, note.id, readOnly]);
   const openMentionTarget = useCallback(
     async (
-      identity: { assetId: number; assetType: "note" | "color" },
+      identity: { assetId: number; assetType: "note" | "color" | "link" },
       resolved?: NoteMentionTarget,
     ) => {
       try {
+        if (identity.assetType === "link") {
+          if (resolved?.url)
+            window.open(resolved.url, "_blank", "noopener,noreferrer");
+          return;
+        }
         if (!readOnly) {
           const content = richTextRef.current?.getMarkdown() ?? latest.current;
           latest.current = content;
