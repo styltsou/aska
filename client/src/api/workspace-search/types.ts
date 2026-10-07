@@ -24,6 +24,13 @@ export type WorkspaceSearchResult = {
     url?: string;
     faviconUrl?: string;
     hex?: string;
+    gradient?: {
+      from: string;
+      to: string;
+      angle: number;
+      type?: "linear" | "radial";
+      stops?: Array<{ color: string; position: number }>;
+    };
     blurDataURL?: string;
     hostname?: string;
   } | null;

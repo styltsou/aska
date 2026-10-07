@@ -52,6 +52,7 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { useTheme } from "@/components/theme-provider";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useActiveModalLayer } from "@/hooks/use-active-modal-layer";
+import { resolveGradientCss } from "@/lib/color-gradient";
 import { useEventListener } from "@/hooks/use-event-listener";
 import {
   KEYBINDINGS,
@@ -967,7 +968,11 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
       <span
         aria-hidden="true"
         className="size-8 shrink-0 rounded-md ring-1 ring-foreground/10"
-        style={{ background: result.preview.hex }}
+        style={{
+          background: result.preview.gradient
+            ? resolveGradientCss(result.preview.gradient)
+            : result.preview.hex,
+        }}
       />
     );
   }

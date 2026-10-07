@@ -476,11 +476,11 @@ function toTarget(row: MentionRow): MentionTarget {
 
 function mentionLabel(row: MentionRow): string {
   if (row.title?.trim()) return row.title.trim();
-  if (row.hex) return row.hex;
   if (row.gradient) {
     const type = row.gradient.type === "radial" ? "Radial" : "Linear";
     return `${type} Gradient`;
   }
+  if (row.hex) return row.hex;
   return "Untitled";
 }
 

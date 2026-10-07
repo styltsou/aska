@@ -113,6 +113,9 @@ async function searchAssets(
     nullif(trim(${assets.title}), ''),
     nullif(trim(${externalResources.title}), ''),
     nullif(trim(${externalResources.hostname}), ''),
+    case when ${colorAssets.gradient} is not null then
+      case when ${colorAssets.gradient}->>'type' = 'radial' then 'Radial Gradient' else 'Linear Gradient' end
+    end,
     nullif(trim(${colorAssets.hex}), ''),
     case
       when ${assets.type} = 'image' then 'Untitled image'
@@ -140,6 +143,7 @@ async function searchAssets(
       imageVariants: imageAssets.variants,
       videoPoster: videoAssets.poster,
       colorHex: colorAssets.hex,
+      colorGradient: colorAssets.gradient,
       linkOriginalUrl: linkAssets.originalUrl,
       linkResourceId: linkAssets.resourceId,
       linkNote: linkAssets.note,
@@ -258,6 +262,11 @@ async function searchAssets(
       row.title?.trim() ||
       row.linkTitle?.trim() ||
       row.linkHostname?.trim() ||
+      (row.colorGradient
+        ? row.colorGradient.type === "radial"
+          ? "Radial Gradient"
+          : "Linear Gradient"
+        : null) ||
       row.colorHex ||
       (type === "image"
         ? "Untitled image"
@@ -317,7 +326,10 @@ async function searchAssets(
           : ({ type: "open-asset" as const } as const),
       preview:
         type === "color" && row.colorHex
-          ? { hex: row.colorHex }
+          ? {
+              hex: row.colorHex,
+              ...(row.colorGradient ? { gradient: row.colorGradient } : {}),
+            }
           : type === "image" && (imageUrl || row.imageBlurDataURL)
             ? {
                 ...(imageUrl ? { url: imageUrl } : {}),
