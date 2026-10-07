@@ -146,6 +146,7 @@ describe("color edits repainting mention swatches", () => {
     expect(node.mentionColors!["color:7"]).toEqual({
       hex: "#00f",
       gradient: null,
+      label: "Ink",
     });
   });
 
@@ -233,6 +234,7 @@ describe("color edits repainting mention swatches", () => {
     expect(folder.previews[0]!.mentionColors!["color:7"]).toEqual({
       hex: "#00f",
       gradient: null,
+      label: "Ink",
     });
   });
 

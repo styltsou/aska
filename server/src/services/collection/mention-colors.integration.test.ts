@@ -80,7 +80,7 @@ async function noteIdOf(assetNodeId: string) {
 }
 
 describe("fetchMentionColorsBySource", () => {
-  it("resolves a referenced color to its hex", async () => {
+  it("resolves a referenced color to its title and hex", async () => {
     const color = await assetService.createInboxColor(
       fixture.organizationId,
       fixture.userId,
@@ -99,7 +99,7 @@ describe("fetchMentionColorsBySource", () => {
 
     expect(map.get(await noteIdOf(note.id))?.[`color:${colorId}`]).toEqual({
       hex: "#0a5",
-      gradient: null,
+      label: color.title,
     });
   });
 
@@ -143,6 +143,8 @@ describe("fetchMentionColorsBySource", () => {
     ]);
     const entry = map.get(await noteIdOf(note.id))?.[`color:${colorId}`];
 
+    expect(entry?.label).toBe(color.title);
+    expect(entry?.hex).toBeUndefined();
     expect(entry?.gradient).toMatchObject({
       from: "#ff0000",
       to: "#0000ff",

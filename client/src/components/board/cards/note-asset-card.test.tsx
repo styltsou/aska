@@ -192,6 +192,28 @@ describe("NoteMarkdown", () => {
     expect(html).not.toContain("Old link label");
   });
 
+  it("uses the saved gradient title in static color mention pills", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown
+        content="Use [First stop](color:7)."
+        mentionColors={{
+          "color:7": {
+            gradient: {
+              from: "#f43f5e",
+              to: "#7c3aed",
+              angle: 90,
+              type: "linear",
+            },
+            label: "Linear Gradient",
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain(">Linear Gradient</span>");
+    expect(html).not.toContain(">First stop</span>");
+  });
+
   it("exposes the payload color as a tint variable", () => {
     const html = renderToStaticMarkup(
       <NoteMarkdown

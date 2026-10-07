@@ -1496,7 +1496,11 @@ function applySavedColorToPreview(
     ...preview,
     mentionColors: {
       ...preview.mentionColors,
-      [key]: { hex: color.hex, gradient: color.gradient ?? null },
+      [key]: {
+        hex: color.hex,
+        gradient: color.gradient ?? null,
+        label: color.title,
+      },
     },
   };
 }
@@ -1530,6 +1534,8 @@ function applyColorDraftToPreview(
   const key = mentionColorKey(draft.assetId);
   const entry = preview.mentionColors[key];
   if (!entry) return preview;
+  const effectiveGradient =
+    draft.gradient === undefined ? entry.gradient : draft.gradient;
 
   return {
     ...preview,
@@ -1537,8 +1543,13 @@ function applyColorDraftToPreview(
       ...preview.mentionColors,
       [key]: {
         hex: draft.hex ?? entry.hex,
-        gradient:
-          draft.gradient === undefined ? entry.gradient : draft.gradient,
+        gradient: effectiveGradient,
+        label:
+          draft.hex === undefined && draft.gradient === undefined
+            ? entry.label
+            : effectiveGradient
+              ? colorGradientTitle(effectiveGradient)
+              : null,
       },
     },
   };
@@ -1564,7 +1575,11 @@ export function applyUpdatedColorToContents(
           ...node,
           mentionColors: {
             ...node.mentionColors,
-            [key]: { hex: color.hex, gradient: color.gradient ?? null },
+            [key]: {
+              hex: color.hex,
+              gradient: color.gradient ?? null,
+              label: color.title,
+            },
           },
         };
       }
@@ -1612,14 +1627,21 @@ export function applyColorDraftToContents(
         const key = mentionColorKey(draft.assetId);
         const entry = node.mentionColors[key];
         if (!entry) return node;
+        const effectiveGradient =
+          draft.gradient === undefined ? entry.gradient : draft.gradient;
         return {
           ...node,
           mentionColors: {
             ...node.mentionColors,
             [key]: {
               hex: draft.hex ?? entry.hex,
-              gradient:
-                draft.gradient === undefined ? entry.gradient : draft.gradient,
+              gradient: effectiveGradient,
+              label:
+                draft.hex === undefined && draft.gradient === undefined
+                  ? entry.label
+                  : effectiveGradient
+                    ? colorGradientTitle(effectiveGradient)
+                    : null,
             },
           },
         };

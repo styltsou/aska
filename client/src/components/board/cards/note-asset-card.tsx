@@ -321,8 +321,7 @@ function createMDComponents(
       if (mention) {
         const assetType = mention[1] as NoteMentionType;
         const visual = mentionColors?.[href!];
-        const label =
-          assetType === "link" ? (visual?.label ?? children) : children;
+        const label = visual?.label ?? children;
         const tint =
           assetType === "color"
             ? visual?.gradient

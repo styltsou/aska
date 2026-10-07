@@ -535,8 +535,8 @@ export type ColorGradient = {
 export type MentionColors = Record<
   string,
   {
-    hex: string | null;
-    gradient: ColorGradient | null;
+    hex?: string | null;
+    gradient?: ColorGradient | null;
     label?: string | null;
     previewUrl?: string | null;
     faviconUrl?: string | null;

@@ -183,8 +183,8 @@ const ColorGradientSchema = z.object({
 });
 
 const MentionColorSchema = z.object({
-  hex: z.string().nullable(),
-  gradient: ColorGradientSchema.nullable(),
+  hex: z.string().nullable().optional(),
+  gradient: ColorGradientSchema.nullable().optional(),
   label: z.string().nullable().optional(),
   previewUrl: z.string().nullable().optional(),
   faviconUrl: z.string().nullable().optional(),
@@ -193,7 +193,8 @@ const MentionColorSchema = z.object({
 
 /**
  * Visual data for assets referenced by a note, keyed by markdown destination.
- * Color values render swatches; link media renders compact thumbnails.
+ * Labels keep static pills in sync with the editor; color values render
+ * swatches and link media renders compact thumbnails.
  */
 export const MentionColorsSchema = z.record(z.string(), MentionColorSchema);
 

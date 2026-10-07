@@ -11,6 +11,8 @@ import {
 } from "@/db/schema";
 import type { MentionColors } from "@/dto/collection.dto";
 import { mentionKey } from "@/lib/note-mentions";
+import { getColorGradientTitle } from "@/lib/color-gradient";
+import type { StoredColorGradient } from "@/lib/color-gradient";
 import type { IObjectStorageService } from "@/services/object-storage.service";
 
 /**
@@ -119,31 +121,51 @@ export async function fetchMentionColorsBySource(
     const existing = result.get(row.sourceAssetId) ?? {};
     if (row.targetType === "color") {
       existing[mentionKey("color", row.targetAssetId)] = {
-        hex: row.hex,
-        gradient: row.gradient ?? null,
+        label: mentionLabel(row),
+        ...(row.gradient
+          ? { gradient: row.gradient }
+          : row.hex
+            ? { hex: row.hex }
+            : {}),
       };
     } else if (row.targetType === "link") {
       const keys = row.resourceId
         ? keysByResource.get(row.resourceId)
         : undefined;
+      const previewUrl = keys?.preview
+        ? signedMedia.get(keys.preview)?.url
+        : undefined;
+      const faviconUrl = keys?.icon
+        ? signedMedia.get(keys.icon)?.url
+        : undefined;
+      const isVideo =
+        ["youtube-oembed", "youtube-data-api"].includes(
+          row.resolverKey ?? "",
+        ) && row.resourceKind === "video";
       existing[mentionKey("link", row.targetAssetId)] = {
-        hex: null,
-        gradient: null,
-        previewUrl: keys?.preview
-          ? (signedMedia.get(keys.preview)?.url ?? null)
-          : null,
-        faviconUrl: keys?.icon
-          ? (signedMedia.get(keys.icon)?.url ?? null)
-          : null,
-        isVideo:
-          ["youtube-oembed", "youtube-data-api"].includes(
-            row.resolverKey ?? "",
-          ) && row.resourceKind === "video",
-        label: row.assetTitle?.trim() || row.hostname || "Untitled",
+        label: mentionLabel(row),
+        ...(previewUrl ? { previewUrl } : {}),
+        ...(faviconUrl ? { faviconUrl } : {}),
+        ...(isVideo ? { isVideo } : {}),
       };
     }
     result.set(row.sourceAssetId, existing);
   }
 
   return result;
+}
+
+function mentionLabel(row: {
+  assetTitle: string | null;
+  targetType: string;
+  gradient: StoredColorGradient | null;
+  hex: string | null;
+  hostname: string | null;
+}) {
+  if (row.assetTitle?.trim()) return row.assetTitle.trim();
+  if (row.targetType === "color") {
+    if (row.gradient) return getColorGradientTitle(row.gradient);
+    if (row.hex) return row.hex;
+  }
+  return row.hostname || "Untitled";
 }
