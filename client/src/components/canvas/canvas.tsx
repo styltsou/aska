@@ -138,6 +138,10 @@ import {
   getTranslatedArrowUpdates,
   type ArrowSnapshot,
 } from "./canvas-selection-geometry";
+import {
+  isPersistedCanvasItemId,
+  isPersistedCollectionNodeId,
+} from "./canvas-item-id";
 import { retainSelectableIds } from "./canvas-selection-retain";
 import {
   CanvasObjectInspector,
@@ -146,8 +150,6 @@ import {
 
 const DEFAULT_VIEWPORT = { x: 40, y: 40, zoom: 1.1 };
 const VIEWPORT_ANIMATION_DURATION = 150;
-const PERSISTED_CANVAS_ITEM_ID =
-  /^(folder|image|note|link|color|text|arrow)-\d+$/;
 type CanvasFlowNode = CanvasNode | CanvasTextFlowNode;
 const nodeTypes: NodeTypes = { asset: CanvasCard, text: CanvasTextNode };
 
@@ -431,7 +433,7 @@ function CanvasSurface({
       : undefined);
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const canMoveSelection = selectedIds.every((id) =>
-    PERSISTED_CANVAS_ITEM_ID.test(id),
+    isPersistedCanvasItemId(id),
   );
   const layoutableIds = useMemo(
     () =>
@@ -1926,7 +1928,7 @@ function CanvasSurface({
             x: origin.x + delta.x,
             y: origin.y + delta.y,
           });
-          if (/^(folder|image|note|link|color)-\d+$/.test(id)) {
+          if (isPersistedCollectionNodeId(id)) {
             return [{ type: "node" as const, id, position }];
           }
           if (/^text-\d+$/.test(id)) {
@@ -2090,8 +2092,7 @@ function CanvasSurface({
       if (
         (node?.type === "asset" && !isDraggableNode(node)) ||
         (node?.type === "text" && node.id.startsWith("text-draft-")) ||
-        (movingIds &&
-          [...movingIds].some((id) => !PERSISTED_CANVAS_ITEM_ID.test(id)))
+        (movingIds && [...movingIds].some((id) => !isPersistedCanvasItemId(id)))
       ) {
         clearDropTarget();
         return;
@@ -2219,7 +2220,7 @@ function CanvasSurface({
       clearDropTarget();
       if (
         targetFolderNodeId &&
-        [...session.movingIds].every((id) => PERSISTED_CANVAS_ITEM_ID.test(id))
+        [...session.movingIds].every(isPersistedCanvasItemId)
       ) {
         const nodeIds = [...session.movingIds];
         const currentNodes = getNodes();
@@ -2565,9 +2566,7 @@ function CanvasSurface({
 
           if (
             targetFolderNodeId &&
-            [...session.movingIds].every((id) =>
-              PERSISTED_CANVAS_ITEM_ID.test(id),
-            )
+            [...session.movingIds].every((id) => isPersistedCanvasItemId(id))
           ) {
             const nodeIds = [...session.movingIds];
             const nodeIdsKey = nodeIds.join(",");
@@ -2811,7 +2810,7 @@ function CanvasSurface({
               modifierLabel={getPlatformModifier()}
               onMove={() => setMoveDialogOpen(true)}
               moveDisabled={
-                !PERSISTED_CANVAS_ITEM_ID.test(focusedInspectorTarget.object.id)
+                !isPersistedCanvasItemId(focusedInspectorTarget.object.id)
               }
             />
           ) : (
