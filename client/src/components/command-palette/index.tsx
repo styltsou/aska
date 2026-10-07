@@ -15,7 +15,6 @@ import {
   NotebookPenIcon,
   PanelLeftIcon,
   PanelsTopLeftIcon,
-  PlayIcon,
   PaletteIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
@@ -943,8 +942,9 @@ function WorkspaceSearchResults({
         >
           <SearchResultPreview result={result} />
           <span className="mr-1.5 min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium">
-              {result.label}
+            <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+              {result.isVideo ? <YouTubeSearchResultIcon /> : null}
+              <span className="truncate">{result.label}</span>
             </span>
             {result.snippet ? (
               <span className="block truncate text-xs text-muted-foreground">
@@ -961,6 +961,22 @@ function WorkspaceSearchResults({
         </CommandItem>
       ))}
     </CommandGroup>
+  );
+}
+
+function YouTubeSearchResultIcon() {
+  return (
+    <svg
+      viewBox="0 0 68 48"
+      aria-hidden="true"
+      className="h-[1em] w-[1.42em] shrink-0 fill-[#f00]"
+    >
+      <path d="M66.52 7.74c-.78-2.93-3.09-5.24-6.02-6.02C55.04.25 33 .25 33 .25S10.96.25 5.5 1.72A8.01 8.01 0 0 0-.52 7.74C-2 13.2-2 24-2 24s0 10.8 1.48 16.26c.78 2.93 3.09 5.24 6.02 6.02C10.96 47.75 33 47.75 33 47.75s22.04 0 27.5-1.47c2.93-.78 5.24-3.09 6.02-6.02C68 34.8 68 24 68 24s0-10.8-1.48-16.26Z" />
+      <path
+        d="M27.95 14.61c-.99-.61-2.2.1-2.2 1.27v16.24c0 1.17 1.21 1.88 2.2 1.27l13.26-8.12a1.5 1.5 0 0 0 0-2.55l-13.26-8.11Z"
+        fill="white"
+      />
+    </svg>
   );
 }
 
@@ -1087,11 +1103,6 @@ function LinkSearchResultPreview({
               else setFailedFavicon(true);
             }}
           />
-          {isVideo ? (
-            <span className="absolute right-0.5 bottom-0.5 flex size-3.5 items-center justify-center rounded bg-black/75 text-white">
-              <PlayIcon className="size-2 fill-current" />
-            </span>
-          ) : null}
         </>
       ) : (
         <Icon className="size-4 text-foreground" />
