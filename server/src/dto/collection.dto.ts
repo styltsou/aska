@@ -288,12 +288,16 @@ export const CreateNoteSchema = z
 
 export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
 
-export const CreateColorSchema = z.object({
-  hex: HexColorSchema,
-  gradient: ColorGradientSchema.optional(),
-  parentFolderPath: z.string().optional(),
-  position: BoardPositionSchema.optional(),
-});
+export const CreateColorSchema = z
+  .object({
+    hex: HexColorSchema.optional(),
+    gradient: ColorGradientSchema.optional(),
+    parentFolderPath: z.string().optional(),
+    position: BoardPositionSchema.optional(),
+  })
+  .refine((value) => value.gradient !== undefined || value.hex !== undefined, {
+    message: "Provide a hex value for solid colors or a gradient",
+  });
 
 export type CreateColorInput = z.infer<typeof CreateColorSchema>;
 
@@ -303,22 +307,32 @@ export const UpdateColorSchema = z
     gradient: ColorGradientSchema.nullable().optional(),
     note: z.string().max(10_000).nullable().optional(),
   })
-  .refine(
-    (value) =>
-      value.hex !== undefined ||
-      value.gradient !== undefined ||
-      value.note !== undefined,
-    {
-      message: "Provide at least one color field to update",
-    },
-  );
+  .superRefine((value, context) => {
+    if (
+      value.hex === undefined &&
+      value.gradient === undefined &&
+      value.note === undefined
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Provide at least one color field to update",
+      });
+    }
+    if (value.gradient === null && value.hex === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "A solid color needs a hex value",
+        path: ["hex"],
+      });
+    }
+  });
 
 export type UpdateColorInput = z.infer<typeof UpdateColorSchema>;
 
 export type UpdatedColor = {
   id: string;
   type: "color";
-  hex: string;
+  hex: string | null;
   note: string | null;
   updatedAt: string;
   title: string | null;
@@ -582,7 +596,7 @@ export const CollectionLinkNodeSchema = z.object({
 export const CollectionColorNodeSchema = z.object({
   id: z.string(),
   type: z.literal("color"),
-  hex: z.string(),
+  hex: z.string().nullable(),
   note: z.string().nullable(),
   gradient: ColorGradientSchema.nullable().optional(),
   title: z.string().nullable(),

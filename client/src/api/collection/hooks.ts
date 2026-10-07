@@ -78,6 +78,7 @@ import { collectionQueryKeys } from "./query-keys";
 import { applySavedNoteToWorkspaceAsset } from "./note-asset-cache";
 import type { PeekableAssetResponse } from "./types";
 import { colorSearchQueryKeys } from "@/api/color-search/hooks";
+import { colorGradientTitle } from "@/lib/color-gradient";
 import {
   invalidateMentionSuggestionQueries,
   noteMentionQueryKeys,
@@ -1010,10 +1011,10 @@ export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
       const placeholder: CollectionNode = {
         id: "color-pending",
         type: "color",
-        hex: data.hex,
+        hex: data.gradient ? null : (data.hex ?? null),
         note: null,
         gradient: data.gradient ?? null,
-        title: null,
+        title: data.gradient ? colorGradientTitle(data.gradient) : null,
         isFavorite: false,
         createdAt: new Date().toISOString(),
         position: null,
@@ -1052,10 +1053,12 @@ export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
       const optimisticColor: CollectionNode = {
         id: optimisticId,
         type: "color",
-        hex: variables.hex,
+        hex: variables.gradient ? null : (variables.hex ?? null),
         note: null,
         gradient: variables.gradient ?? null,
-        title: null,
+        title: variables.gradient
+          ? colorGradientTitle(variables.gradient)
+          : null,
         isFavorite: false,
         createdAt: new Date().toISOString(),
         clientId: optimisticId,
@@ -1149,7 +1152,7 @@ export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
       const preview: FolderChildPreview = {
         assetId: data.color.id,
         type: "color",
-        hex: data.color.hex,
+        hex: data.color.hex ?? undefined,
         title: data.color.title,
       };
       addPreviewToCollection(
@@ -1311,10 +1314,12 @@ export function useCreateInboxColor(workspaceSlug: string) {
       const optimisticColor: CollectionNode = {
         id: optimisticId,
         type: "color",
-        hex: variables.hex,
+        hex: variables.gradient ? null : (variables.hex ?? null),
         note: null,
         gradient: variables.gradient ?? null,
-        title: null,
+        title: variables.gradient
+          ? colorGradientTitle(variables.gradient)
+          : null,
         isFavorite: false,
         createdAt: new Date().toISOString(),
         clientId: optimisticId,
@@ -1475,7 +1480,7 @@ function applySavedColorToPreview(
   if (preview.type === "color" && preview.assetId === color.id) {
     return {
       ...preview,
-      hex: color.hex,
+      hex: color.hex ?? undefined,
       title: color.title,
       gradient: color.gradient ?? null,
     };
@@ -1502,10 +1507,21 @@ function applyColorDraftToPreview(
   draft: UpdateColorInput & { assetId: string },
 ): FolderChildPreview {
   if (preview.type === "color" && preview.assetId === draft.assetId) {
+    const nextGradient =
+      draft.gradient === undefined ? preview.gradient : draft.gradient;
+    const isGradient = nextGradient !== undefined && nextGradient !== null;
     return {
       ...preview,
-      ...(draft.hex === undefined ? {} : { hex: draft.hex, title: null }),
+      ...(draft.hex === undefined || isGradient
+        ? {}
+        : { hex: draft.hex, title: null }),
       ...(draft.gradient === undefined ? {} : { gradient: draft.gradient }),
+      ...(draft.gradient && isGradient
+        ? {
+            hex: undefined,
+            title: colorGradientTitle(draft.gradient),
+          }
+        : {}),
     };
   }
 
@@ -1574,11 +1590,22 @@ export function applyColorDraftToContents(
     ...current,
     nodes: current.nodes.map((node) => {
       if (node.type === "color" && node.id === draft.assetId) {
+        const nextGradient =
+          draft.gradient === undefined ? node.gradient : draft.gradient;
+        const isGradient = nextGradient !== undefined && nextGradient !== null;
         return {
           ...node,
-          ...(draft.hex === undefined ? {} : { hex: draft.hex, title: null }),
+          ...(draft.hex === undefined || isGradient
+            ? {}
+            : { hex: draft.hex, title: null }),
           ...(draft.note === undefined ? {} : { note: draft.note }),
           ...(draft.gradient === undefined ? {} : { gradient: draft.gradient }),
+          ...(draft.gradient && isGradient
+            ? {
+                hex: undefined,
+                title: colorGradientTitle(draft.gradient),
+              }
+            : {}),
         };
       }
       if (node.type === "note" && node.mentionColors) {

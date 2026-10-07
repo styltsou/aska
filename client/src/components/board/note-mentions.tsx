@@ -538,9 +538,7 @@ function NoteMentionHoverCard({ target }: { target: NoteMentionTarget }) {
 }
 
 function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
-  const colorLabel = target.gradient
-    ? `${target.gradient.type === "radial" ? "Radial" : "Linear"} gradient`
-    : (target.hex?.toUpperCase() ?? "Color");
+  const colorLabel = target.label;
   const background = target.gradient
     ? resolveGradientCss(target.gradient)
     : (target.hex ?? "currentColor");
@@ -665,16 +663,9 @@ export function filterRecentMentionTargets(
     if (parsed.scope && target.assetType !== parsed.scope) return false;
     if (!search) return true;
 
-    const gradientLabel = target.gradient
-      ? `${target.gradient.type === "radial" ? "radial" : "linear"} gradient`
-      : "";
-    return [
-      target.title,
-      target.hex,
-      target.hostname,
-      target.url,
-      gradientLabel,
-    ].some((value) => value?.toLowerCase().includes(search));
+    return [target.title, target.hex, target.hostname, target.url].some(
+      (value) => value?.toLowerCase().includes(search),
+    );
   });
 }
 

@@ -62,7 +62,7 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
     return {
       assetId: node.id,
       type: "color",
-      hex: node.hex,
+      hex: node.hex ?? undefined,
       title: node.title,
     };
   }

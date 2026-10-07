@@ -10,15 +10,13 @@ export function ColorCardPreview({
   gradient,
   title,
 }: {
-  hex?: string;
+  hex?: string | null;
   gradient?: ColorGradient | null;
   title?: string | null;
 }) {
   const name = title?.trim();
-  const displayHex = hex?.toUpperCase() ?? "Color";
-  const gradientLabel = gradient
-    ? `${gradient.type === "radial" ? "Radial" : "Linear"} gradient`
-    : null;
+  const displayHex = hex?.toUpperCase();
+  const label = name ?? (gradient ? "Color" : (displayHex ?? "Color"));
   const hasAlpha = Boolean(hex && hex.length === 9 && !hex.endsWith("ff"));
 
   return (
@@ -36,19 +34,19 @@ export function ColorCardPreview({
         style={
           gradient
             ? { background: resolveGradientCss(gradient) }
-            : { backgroundColor: hex }
+            : { backgroundColor: hex ?? "transparent" }
         }
       />
       <div className="relative z-0 flex min-w-0 items-center gap-[4.3%] bg-sidebar px-[4.3%] py-[4.3%] text-[clamp(0.625rem,4.6cqw,1rem)] leading-tight">
         <span
           className={cn(
             "min-w-0 truncate font-medium",
-            !name && !gradientLabel && "font-mono font-semibold tracking-tight",
+            !name && displayHex && "font-mono font-semibold tracking-tight",
           )}
         >
-          {name ?? gradientLabel ?? displayHex}
+          {label}
         </span>
-        {name && !gradientLabel ? (
+        {name && !gradient ? (
           <span className="ml-auto shrink-0 font-mono text-[0.875em] font-semibold tracking-tight text-sidebar-foreground/70">
             {displayHex}
           </span>

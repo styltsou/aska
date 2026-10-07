@@ -125,7 +125,7 @@ function colorActions(
 ) {
   const copiedValue = asset.gradient
     ? resolveGradientCss(asset.gradient)
-    : asset.hex;
+    : (asset.hex ?? "");
   const copyLabel = asset.gradient ? "Copy CSS" : "Copy hex";
 
   return (

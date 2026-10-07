@@ -8,6 +8,12 @@ export type StoredColorGradient = {
   stops?: Array<{ color: string; position: number }>;
 };
 
+export function getColorGradientTitle(
+  gradient: Pick<StoredColorGradient, "type">,
+) {
+  return `${gradient.type === "radial" ? "Radial" : "Linear"} Gradient`;
+}
+
 type ColorGradientInput = Omit<StoredColorGradient, "type" | "stops"> & {
   type?: "linear" | "radial" | undefined;
   stops?: Array<{ color: string; position: number }> | undefined;

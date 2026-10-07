@@ -18,18 +18,18 @@ export function ColorAssetCard({
   selected?: boolean;
 }) {
   const [surfaceHovered, setSurfaceHovered] = useState(false);
-  const hasAlpha = asset.hex.length === 9 && !asset.hex.endsWith("ff");
+  const hasAlpha = Boolean(
+    asset.hex?.length === 9 && !asset.hex.endsWith("ff"),
+  );
   const name = asset.title?.trim();
-  const hex = asset.hex.toUpperCase();
-  const gradientLabel = asset.gradient
-    ? `${asset.gradient.type === "radial" ? "Radial" : "Linear"} gradient`
-    : null;
+  const hex = asset.hex?.toUpperCase();
+  const label = name ?? hex ?? "Color";
   const surfaceStyle = asset.gradient
     ? { background: resolveGradientCss(asset.gradient) }
-    : { backgroundColor: asset.hex };
+    : { backgroundColor: asset.hex ?? "transparent" };
   const copiedValue = asset.gradient
     ? resolveGradientCss(asset.gradient)
-    : asset.hex;
+    : (asset.hex ?? "");
   const copyLabel = asset.gradient ? "Copy CSS gradient" : "Copy hex color";
 
   async function copyColorValue() {
@@ -60,7 +60,7 @@ export function ColorAssetCard({
         <button
           type="button"
           className="absolute inset-0 z-0 rounded-[inherit] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          aria-label={`Open ${name ?? gradientLabel ?? hex}`}
+          aria-label={`Open ${label}`}
           onClick={(event) => {
             if (hasSelectionModifier(event)) {
               event.preventDefault();
@@ -110,14 +110,16 @@ export function ColorAssetCard({
         <span
           className={cn(
             "truncate font-medium",
-            name || gradientLabel
+            name
               ? "text-base"
-              : "font-mono text-lg font-semibold tracking-tight",
+              : hex
+                ? "font-mono text-lg font-semibold tracking-tight"
+                : "text-base",
           )}
         >
-          {name ?? gradientLabel ?? hex}
+          {label}
         </span>
-        {name && !gradientLabel ? (
+        {name && !asset.gradient && hex ? (
           <span className="ml-auto shrink-0 font-mono text-sm font-semibold tracking-tight text-sidebar-foreground/70">
             {hex}
           </span>

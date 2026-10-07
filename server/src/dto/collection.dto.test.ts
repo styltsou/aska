@@ -21,7 +21,30 @@ import {
   UpdateCanvasTextSchema,
   UpdateCanvasArrowSchema,
   UpdateCanvasItemFrontIndexesSchema,
+  CreateColorSchema,
+  UpdateColorSchema,
 } from "./collection.dto";
+
+describe("color DTOs", () => {
+  const gradient = {
+    from: "#112233",
+    to: "#445566",
+    angle: 90,
+    type: "radial" as const,
+  };
+
+  it("allows gradient colors without a hex value", () => {
+    expect(CreateColorSchema.parse({ gradient })).toEqual({ gradient });
+    expect(CreateColorSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("requires a hex when changing a gradient back to a solid color", () => {
+    expect(UpdateColorSchema.safeParse({ gradient: null }).success).toBe(false);
+    expect(
+      UpdateColorSchema.safeParse({ gradient: null, hex: "#112233" }).success,
+    ).toBe(true);
+  });
+});
 
 describe("collection board position DTOs", () => {
   it("trims collection rename input and rejects blank names", () => {

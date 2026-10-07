@@ -434,7 +434,7 @@ export type AssetLocation =
   | { type: "collection"; collectionSlug: string; folderPath?: string };
 
 export type CreateColorInput = {
-  hex: string;
+  hex?: string;
   gradient?: ColorGradient;
   parentFolderPath?: string;
   position?: BoardPosition;
@@ -443,7 +443,7 @@ export type CreateColorInput = {
 export type CollectionColorNode = {
   id: string;
   type: "color";
-  hex: string;
+  hex: string | null;
   note: string | null;
   gradient?: ColorGradient | null;
   title: string | null;

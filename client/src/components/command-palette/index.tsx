@@ -965,7 +965,10 @@ function WorkspaceSearchResults({
 }
 
 function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
-  if (result.type === "color" && result.preview?.hex) {
+  if (
+    result.type === "color" &&
+    (result.preview?.hex || result.preview?.gradient)
+  ) {
     return (
       <span
         aria-hidden="true"
@@ -973,7 +976,7 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
         style={{
           background: result.preview.gradient
             ? resolveGradientCss(result.preview.gradient)
-            : result.preview.hex,
+            : (result.preview.hex ?? "transparent"),
         }}
       />
     );

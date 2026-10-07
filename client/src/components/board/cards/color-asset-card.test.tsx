@@ -48,14 +48,14 @@ describe("ColorAssetCard", () => {
     expect(html).toContain("font-mono text-lg font-semibold");
   });
 
-  it("uses a gradient label instead of its first stop", () => {
+  it("uses the saved gradient title instead of its first stop", () => {
     const html = renderToStaticMarkup(
       <ColorAssetCard
         asset={{
           id: "color-1",
           type: "color",
-          hex: "#f43f5e",
-          title: null,
+          hex: null,
+          title: "Radial Gradient",
           isFavorite: false,
           gradient: {
             from: "#f43f5e",
@@ -67,7 +67,7 @@ describe("ColorAssetCard", () => {
       />,
     );
 
-    expect(html).toContain("Radial gradient");
+    expect(html).toContain("Radial Gradient");
     expect(html).not.toContain("#F43F5E");
   });
 });

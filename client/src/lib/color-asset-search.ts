@@ -9,6 +9,7 @@ export function colorAssetToSearchColors(
   asset: ColorAsset,
 ): WeightedSearchColor[] {
   if (!asset.gradient) {
+    if (!asset.hex) return [];
     return [{ ...hexToOklab(normalizeHex(asset.hex)), weight: 1 }];
   }
 

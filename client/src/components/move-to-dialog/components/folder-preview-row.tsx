@@ -50,9 +50,9 @@ export function FolderPreviewRow({
             style={{
               background: preview.gradient
                 ? resolveGradientCss(preview.gradient)
-                : preview.hex,
+                : (preview.hex ?? "transparent"),
             }}
-            title={preview.title ?? preview.hex}
+            title={preview.title ?? preview.hex ?? undefined}
           />
         ) : (
           <div

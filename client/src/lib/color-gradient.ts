@@ -6,6 +6,10 @@ export type GradientStop = {
 
 export type GradientType = "linear" | "radial";
 
+export function colorGradientTitle(gradient: Pick<GradientSpec, "type">) {
+  return `${gradient.type === "radial" ? "Radial" : "Linear"} Gradient`;
+}
+
 export function sortGradientStops(stops: GradientStop[]) {
   return [...stops].sort((a, b) => a.position - b.position);
 }

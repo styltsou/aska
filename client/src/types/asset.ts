@@ -118,7 +118,7 @@ export interface LinkAsset {
 export interface ColorAsset {
   id: string;
   type: "color";
-  hex: string;
+  hex: string | null;
   note?: string | null;
   gradient?: {
     from: string;

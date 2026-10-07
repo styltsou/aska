@@ -86,7 +86,7 @@ describe("collection node mappers", () => {
           assetId: 9,
           content: null,
           hostname: "example.com",
-          title: "Example link",
+          assetTitle: "Example link",
           description: "A fully resolved example page.",
           resourceId: 4,
         },
@@ -130,7 +130,7 @@ describe("collection node mappers", () => {
           assetId: 10,
           content: null,
           hostname: "www.youtube.com",
-          title: "Some video title",
+          assetTitle: "Some video title",
           resourceId: 5,
           providerExtensions: {
             youtube: { videoId: "dQw4w9WgXcQ" },
@@ -148,7 +148,40 @@ describe("collection node mappers", () => {
       blurDataURL: undefined,
       favicon: undefined,
       videoId: "dQw4w9WgXcQ",
-      description: "Some video title",
+      description: null,
+    });
+  });
+
+  it("keeps gradient previews title-based when they have no hex", () => {
+    expect(
+      toFolderPreview(
+        {
+          folderId: 1,
+          assetType: "color",
+          assetId: 12,
+          content: null,
+          hex: null,
+          gradient: {
+            from: "#112233",
+            to: "#445566",
+            angle: 90,
+            type: "radial",
+          },
+          assetTitle: "Radial Gradient",
+        },
+        new Map(),
+      ),
+    ).toEqual({
+      assetId: "color-12",
+      type: "color",
+      hex: undefined,
+      gradient: {
+        from: "#112233",
+        to: "#445566",
+        angle: 90,
+        type: "radial",
+      },
+      title: "Radial Gradient",
     });
   });
 

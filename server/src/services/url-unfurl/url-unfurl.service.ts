@@ -203,6 +203,7 @@ export class UrlUnfurlService {
         .values({
           organizationId: orgId,
           type: "link",
+          title: resource.title,
           createdByUserId: userId,
           updatedByUserId: userId,
           ...(target ? {} : { lastAddedToInboxAt: new Date() }),
@@ -558,6 +559,16 @@ export class UrlUnfurlService {
 
     const mediaToQueue: Array<{ id: number; generation: number }> = [];
     await db.transaction(async (tx) => {
+      const currentResource = first(
+        await tx
+          .select({
+            resolutionGeneration: externalResources.resolutionGeneration,
+          })
+          .from(externalResources)
+          .where(eq(externalResources.id, attempt.resourceId))
+          .for("update")
+          .limit(1),
+      );
       const oldMedia = await tx
         .select({
           id: externalResourceMedia.id,
@@ -678,6 +689,23 @@ export class UrlUnfurlService {
             eq(externalResources.resolutionGeneration, input.generation),
           ),
         );
+      if (currentResource?.resolutionGeneration === input.generation) {
+        await tx
+          .update(assets)
+          .set({ title: input.title })
+          .where(
+            and(
+              eq(assets.type, "link"),
+              inArray(
+                assets.id,
+                tx
+                  .select({ assetId: linkAssets.assetId })
+                  .from(linkAssets)
+                  .where(eq(linkAssets.resourceId, attempt.resourceId)),
+              ),
+            ),
+          );
+      }
     });
 
     for (const media of mediaToQueue)
@@ -1004,11 +1032,11 @@ export class UrlUnfurlService {
       await db
         .select({
           assetId: assets.id,
+          assetTitle: assets.title,
           originalUrl: linkAssets.originalUrl,
           resourceId: externalResources.id,
           hostname: externalResources.hostname,
           canonicalUrl: externalResources.canonicalUrl,
-          resourceTitle: externalResources.title,
           description: externalResources.description,
           note: linkAssets.note,
           siteName: externalResources.siteName,

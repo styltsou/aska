@@ -794,9 +794,8 @@ export const noteReferences = pgTable(
 );
 
 /**
- * A color swatch asset. `hex` is a normalized lowercase hex value: always
- * #rrggbb when opaque, #rrggbbaa only when transparency is present, so the
- * RGB identity is stable for future search/palette features.
+ * A solid color stores its normalized hex value. A gradient stores its stops
+ * and leaves hex null so the first stop is not mistaken for the color asset.
  */
 export const colorAssets = pgTable(
   "color_assets",
@@ -804,7 +803,7 @@ export const colorAssets = pgTable(
     assetId: integer("asset_id")
       .primaryKey()
       .references(() => assets.id, { onDelete: "cascade" }),
-    hex: varchar({ length: 9 }).notNull(),
+    hex: varchar({ length: 9 }),
     note: text(),
     gradient: jsonb("gradient").$type<{
       from: string;
@@ -818,6 +817,10 @@ export const colorAssets = pgTable(
     check(
       "color_assets_hex_format_chk",
       sql`${table.hex} ~ '^#[0-9a-f]{6}([0-9a-f]{2})?$'`,
+    ),
+    check(
+      "color_assets_hex_gradient_consistency_chk",
+      sql`(${table.gradient} IS NULL AND ${table.hex} IS NOT NULL) OR (${table.gradient} IS NOT NULL AND ${table.hex} IS NULL)`,
     ),
   ],
 );

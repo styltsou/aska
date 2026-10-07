@@ -21,7 +21,8 @@ describe("ColorCardPreview", () => {
   it("keeps the complete gradient on the card surface", () => {
     const html = renderToStaticMarkup(
       <ColorCardPreview
-        hex="#f43f5e"
+        hex={null}
+        title="Radial Gradient"
         gradient={{
           from: "#f43f5e",
           to: "#7c3aed",
@@ -32,6 +33,6 @@ describe("ColorCardPreview", () => {
     );
 
     expect(html).toContain("radial-gradient(circle, #f43f5e 0%, #7c3aed 100%)");
-    expect(html).toContain("Radial gradient");
+    expect(html).toContain("Radial Gradient");
   });
 });

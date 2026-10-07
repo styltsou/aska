@@ -229,7 +229,7 @@ export function ColorEditorDialog({
   const isSavedDraft =
     isEditing &&
     mode === (savedGradient ? "gradient" : "solid") &&
-    draftColorHex === color.hex &&
+    draftColorHex === (color.gradient?.from ?? color.hex) &&
     (!isGradient ||
       (gradientType === (savedGradient?.type ?? "linear") &&
         gradientAngle === savedGradient?.angle &&
@@ -282,7 +282,7 @@ export function ColorEditorDialog({
     if (!color) return;
 
     const stops = initialStops(color);
-    setDraftHex(color.hex);
+    setDraftHex(color.hex ?? DEFAULT_HEX);
     setMode(color.gradient ? "gradient" : "solid");
     setGradientStops(stops);
     setGradientType(color.gradient?.type ?? "linear");
@@ -351,12 +351,12 @@ export function ColorEditorDialog({
 
   function handleSave() {
     const gradient = draftGradient;
-    const hex = draftColorHex;
+    const hex = gradient ? undefined : draftColorHex;
 
     try {
       if (color) {
         updateColor.mutate(
-          { assetId: color.id, hex, gradient },
+          { assetId: color.id, ...(hex ? { hex } : {}), gradient },
           {
             onSuccess: () => toast.success("Color updated."),
             onError: (error) =>
@@ -376,7 +376,7 @@ export function ColorEditorDialog({
       if (target === "inbox") {
         createInboxColor.mutate(
           {
-            hex,
+            ...(hex ? { hex } : {}),
             ...(gradient ? { gradient } : {}),
           },
           {
@@ -392,7 +392,7 @@ export function ColorEditorDialog({
       } else {
         createColor.mutate(
           {
-            hex,
+            ...(hex ? { hex } : {}),
             ...(gradient ? { gradient } : {}),
             parentFolderPath,
             placement,

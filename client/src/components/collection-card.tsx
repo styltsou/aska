@@ -402,7 +402,7 @@ function CollectionPreviewCard({
         <LinkCardPreview preview={preview} variant="collection" />
       ) : preview.type === "color" ? (
         <ColorCardPreview
-          hex={preview.hex}
+          hex={preview.hex ?? undefined}
           gradient={preview.gradient}
           title={preview.title}
         />

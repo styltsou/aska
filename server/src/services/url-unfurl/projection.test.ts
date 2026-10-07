@@ -8,7 +8,7 @@ const baseRow: LinkProjectionRow = {
   resourceId: 11,
   hostname: "youtu.be",
   canonicalUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  resourceTitle: "A video",
+  assetTitle: "A video",
   description: null,
   note: "Watch with the design team",
   siteName: "YouTube",
@@ -135,7 +135,7 @@ describe("link projection", () => {
   it("uses a friendly title when YouTube has no title metadata", () => {
     expect(
       projectLinkNode(
-        { ...baseRow, resourceTitle: null, resolverKey: "youtube-data-api" },
+        { ...baseRow, assetTitle: null, resolverKey: "youtube-data-api" },
         undefined,
         null,
       ).title,

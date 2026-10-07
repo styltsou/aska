@@ -16,7 +16,7 @@ export type LinkProjectionRow = {
   resourceId: number;
   hostname: string;
   canonicalUrl: string | null;
-  resourceTitle: string | null;
+  assetTitle: string | null;
   description: string | null;
   note: string | null;
   siteName: string | null;
@@ -114,7 +114,7 @@ export function projectLinkNode(
     canonicalUrl: row.canonicalUrl,
     hostname: row.hostname,
     title:
-      row.resourceTitle?.trim() ||
+      row.assetTitle?.trim() ||
       (isYouTubeVideo ? "Title unavailable" : row.hostname),
     description: hasAuthoritativeYouTubeDescription ? row.description : null,
     note: row.note,

@@ -97,7 +97,8 @@ describe("mention query parsing", () => {
       ...target,
       assetId: 2,
       assetType: "color" as const,
-      title: null,
+      title: "Radial Gradient",
+      label: "Radial Gradient",
       hex: null,
       gradient: {
         from: "#000",
@@ -109,6 +110,8 @@ describe("mention query parsing", () => {
     const color = {
       ...gradient,
       assetId: 3,
+      title: "Spring Green",
+      label: "Spring Green",
       hex: "#BADA55",
       gradient: null,
     };

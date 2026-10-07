@@ -25,7 +25,10 @@ import type {
 import { AppError, ErrorCode } from "@/lib/errors";
 import { parseCollectionNodeId } from "@/lib/collection-node-id";
 import { getColorName, normalizeHexColor } from "@/lib/color-names";
-import { normalizeColorGradient } from "@/lib/color-gradient";
+import {
+  getColorGradientTitle,
+  normalizeColorGradient,
+} from "@/lib/color-gradient";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import { normalizeNoteTitle } from "@/lib/note-title";
 import { reconcileNoteReferences } from "@/services/note-mention.service";
@@ -270,11 +273,13 @@ export class CollectionMutationService {
       collection,
       data.parentFolderPath,
     );
-    const hex = normalizeHexColor(data.hex);
     const gradient = data.gradient
       ? normalizeColorGradient(data.gradient)
       : null;
-    const name = gradient ? null : getColorName(hex);
+    const hex = gradient ? null : normalizeHexColor(data.hex!);
+    const name = gradient
+      ? getColorGradientTitle(gradient)
+      : getColorName(hex!);
 
     const color = await db.transaction(async (tx) => {
       const [insertedAsset] = await tx

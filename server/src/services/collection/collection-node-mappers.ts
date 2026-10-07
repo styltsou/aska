@@ -30,7 +30,6 @@ export type FolderPreviewRow = {
   resourceId?: number | null;
   hostname?: string | null;
   siteName?: string | null;
-  title?: string | null;
   assetTitle?: string | null;
   providerExtensions?: Record<string, unknown> | null;
   description?: string | null;
@@ -77,30 +76,30 @@ export function toFolderPreview(
       type: "link",
       hostname: row.hostname,
       siteName: row.siteName ?? null,
-      title: row.assetTitle ?? row.title ?? null,
+      title: row.assetTitle ?? null,
       url: media?.previewImage?.url,
       blurDataURL: media?.previewImage?.blurDataURL,
       favicon: media?.favicon?.url,
       videoId: toPreviewVideoId(row.providerExtensions),
       ...toPreviewYouTubeMetadata(row.providerExtensions),
-      description: row.description ?? row.title ?? null,
+      description: row.description ?? null,
     };
   }
 
-  if (row.assetType === "color" && row.hex) {
+  if (row.assetType === "color" && (row.hex || row.gradient)) {
     return {
       assetId: `color-${row.assetId}`,
       type: "color",
-      hex: row.hex,
+      hex: row.hex ?? undefined,
       gradient: row.gradient ?? null,
-      title: row.title ?? null,
+      title: row.assetTitle ?? null,
     };
   }
 
   return {
     assetId: `note-${row.assetId}`,
     type: "note",
-    title: row.assetTitle ?? row.title ?? null,
+    title: row.assetTitle ?? null,
     snippet: row.content ? makeSnippet(row.content) : undefined,
     mentionColors: row.assetId ? mentionColors?.get(row.assetId) : undefined,
   };

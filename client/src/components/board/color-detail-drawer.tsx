@@ -248,7 +248,7 @@ export function ColorDetailDrawer({
                 style={
                   gradientCss
                     ? { background: gradientCss }
-                    : { backgroundColor: displayedColor.hex }
+                    : { backgroundColor: displayedColor.hex ?? "transparent" }
                 }
               >
                 <span
@@ -261,12 +261,13 @@ export function ColorDetailDrawer({
               <div className="min-w-0">
                 <DrawerTitle className="truncate text-base leading-tight font-medium">
                   {displayedColor.title?.trim() ||
-                    displayedColor.hex.toUpperCase()}
+                    displayedColor.hex?.toUpperCase() ||
+                    "Color"}
                 </DrawerTitle>
                 <DrawerDescription className="font-mono text-xs">
                   {hasGradient
-                    ? `${displayedColor.gradient?.type === "radial" ? "Radial" : "Linear"} gradient`
-                    : displayedColor.hex.toUpperCase()}
+                    ? "CSS gradient"
+                    : (displayedColor.hex?.toUpperCase() ?? "")}
                 </DrawerDescription>
               </div>
             </div>
@@ -517,8 +518,10 @@ function ColorDetailModal({
   workspaceSlug: string;
 }) {
   const title =
-    color?.title?.trim() || color?.hex.toUpperCase() || "Loading color";
-  const hasAlpha = color?.hex.length === 9 && !color.hex.endsWith("ff");
+    color?.title?.trim() || color?.hex?.toUpperCase() || "Loading color";
+  const hasAlpha = Boolean(
+    color?.hex?.length === 9 && !color.hex.endsWith("ff"),
+  );
   const reduceMotion = useReducedMotion();
   const presentation = expanded ? "fullscreen" : "modal";
   const layoutTransition = reduceMotion
@@ -717,7 +720,7 @@ function ColorDetailModal({
                     style={
                       gradientCss
                         ? { background: gradientCss }
-                        : { backgroundColor: color.hex }
+                        : { backgroundColor: color.hex ?? "transparent" }
                     }
                   >
                     <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-sm font-medium text-white opacity-0 transition group-hover:bg-black/25 group-hover:opacity-100">
@@ -729,9 +732,7 @@ function ColorDetailModal({
                     </span>
                   </button>
                   <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    {hasGradient
-                      ? `${color.gradient?.type === "radial" ? "Radial" : "Linear"} gradient`
-                      : color.hex.toUpperCase()}
+                    {hasGradient ? "CSS gradient" : color.hex?.toUpperCase()}
                   </p>
                   <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
                     <span className="text-sm font-medium">Relevant images</span>

@@ -1927,7 +1927,7 @@ function PeekColor({
   );
   const copy = () =>
     void navigator.clipboard
-      .writeText(gradient ?? color.hex)
+      .writeText(gradient ?? color.hex ?? "")
       .then(() =>
         toast.success(gradient ? "Copied CSS gradient." : "Copied color."),
       )
@@ -1939,16 +1939,18 @@ function PeekColor({
         <div
           className="h-52 rounded-xl ring-1 ring-black/8"
           style={
-            gradient ? { background: gradient } : { backgroundColor: color.hex }
+            gradient
+              ? { background: gradient }
+              : { backgroundColor: color.hex ?? "transparent" }
           }
         />
         <div className="mt-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-lg font-medium">
-              {color.title?.trim() || color.hex.toUpperCase()}
+              {color.title?.trim() || color.hex?.toUpperCase() || "Color"}
             </p>
             <p className="mt-1 font-mono text-xs text-muted-foreground">
-              {gradient ? "CSS gradient" : color.hex.toUpperCase()}
+              {gradient ? "CSS gradient" : color.hex?.toUpperCase()}
             </p>
           </div>
           <Button size="sm" variant="outline" onClick={copy}>

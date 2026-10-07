@@ -202,7 +202,6 @@ export class CollectionQueryService {
         linkResourceId: externalResources.id,
         linkHostname: externalResources.hostname,
         linkSiteName: externalResources.siteName,
-        linkTitle: externalResources.title,
         linkDescription: externalResources.description,
         linkProviderExtensions: externalResources.providerExtensions,
       })
@@ -299,7 +298,7 @@ export class CollectionQueryService {
           type: "link",
           hostname: row.linkHostname,
           siteName: row.linkSiteName,
-          title: row.linkTitle,
+          title: row.assetTitle,
           url: media?.previewImage?.url,
           blurDataURL: media?.previewImage?.blurDataURL,
           favicon: media?.favicon?.url,
@@ -307,11 +306,14 @@ export class CollectionQueryService {
           ...toPreviewYouTubeMetadata(row.linkProviderExtensions),
           description: row.linkDescription,
         };
-      } else if (row.assetType === "color" && row.colorHex) {
+      } else if (
+        row.assetType === "color" &&
+        (row.colorHex || row.colorGradient)
+      ) {
         preview = {
           assetId: `color-${row.assetId}`,
           type: "color",
-          hex: row.colorHex,
+          hex: row.colorHex ?? undefined,
           gradient: row.colorGradient ?? null,
           title: row.assetTitle,
         };
@@ -410,7 +412,6 @@ export class CollectionQueryService {
         linkResourceId: externalResources.id,
         linkHostname: externalResources.hostname,
         linkCanonicalUrl: externalResources.canonicalUrl,
-        linkTitle: externalResources.title,
         linkDescription: externalResources.description,
         linkSiteName: externalResources.siteName,
         linkResourceKind: externalResources.resourceKind,
@@ -506,7 +507,6 @@ export class CollectionQueryService {
           resourceId: externalResources.id,
           hostname: externalResources.hostname,
           siteName: externalResources.siteName,
-          title: externalResources.title,
           description: externalResources.description,
           providerExtensions: externalResources.providerExtensions,
         })
@@ -707,7 +707,11 @@ export class CollectionQueryService {
         };
       }
 
-      if (child.assetType === "color" && child.assetId && child.colorHex) {
+      if (
+        child.assetType === "color" &&
+        child.assetId &&
+        (child.colorHex || child.colorGradient)
+      ) {
         return {
           id: `color-${child.assetId}`,
           type: "color" as const,
@@ -738,7 +742,7 @@ export class CollectionQueryService {
             resourceId: child.linkResourceId,
             hostname: child.linkHostname,
             canonicalUrl: child.linkCanonicalUrl,
-            resourceTitle: child.linkTitle,
+            assetTitle: child.title,
             description: child.linkDescription,
             note: child.linkNote,
             siteName: child.linkSiteName,
