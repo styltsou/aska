@@ -44,6 +44,7 @@ export function CanvasTextNode({
       )}
       style={{ color: canvasObjectColor(data.object.color) }}
       data-selection-node-id={data.object.id}
+      data-editing={data.editing || undefined}
       onPointerDown={(event) => data.onPointerDown(data.object.id, event)}
       onClick={(event) => data.onSelect(data.object.id, event)}
       onDoubleClick={(event) => {

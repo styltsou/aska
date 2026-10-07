@@ -300,7 +300,7 @@ function TextControls({
           render={
             <button
               type="button"
-              className="flex h-7 items-center gap-1 rounded-md px-1.5 text-xs transition-colors hover:bg-foreground/5 aria-expanded:bg-foreground/10"
+              className="flex h-7 cursor-pointer items-center gap-1 rounded-md px-1.5 text-xs transition-colors hover:bg-foreground/5 aria-expanded:bg-foreground/10"
             />
           }
           aria-label="Text font"
@@ -351,7 +351,7 @@ function TextControls({
           key={option.value}
           type="button"
           className={cn(
-            "size-7 rounded-md text-[11px] font-medium transition-colors hover:bg-foreground/5",
+            "size-7 cursor-pointer rounded-md text-[11px] font-medium transition-colors hover:bg-foreground/5",
             text.size === option.value && "bg-foreground/10",
           )}
           aria-label={`${option.label} text size`}

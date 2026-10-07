@@ -63,3 +63,13 @@
 .aska-flow[data-canvas-tool] .react-flow__node-asset.dragging {
   cursor: var(--canvas-tool-cursor);
 }
+
+.aska-flow[data-canvas-tool="select"]
+  .react-flow__node-text:not([data-editing]) {
+  cursor: pointer;
+}
+
+.aska-flow[data-canvas-tool="select"] .react-flow__node-text.dragging,
+.aska-flow[data-canvas-tool="select"] .react-flow__node-text.dragging * {
+  cursor: grabbing;
+}

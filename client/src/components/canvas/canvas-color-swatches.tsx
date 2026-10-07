@@ -71,7 +71,7 @@ export function CanvasColorSwatches({
             <button
               type="button"
               className={cn(
-                "relative flex size-[18px] items-center justify-center rounded-[5px] transition-transform duration-75 hover:scale-105 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                "relative flex size-[18px] cursor-pointer items-center justify-center rounded-[5px] transition-transform duration-75 hover:scale-105 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
                 overflowColor
                   ? "ring-1 ring-black/15 ring-inset dark:ring-white/20 transition-[background-color,transform,box-shadow] duration-75"
                   : "bg-foreground/5 ring-1 ring-foreground/10 ring-inset hover:bg-foreground/10",
@@ -136,7 +136,7 @@ function CanvasColorSwatch({
   return (
     <button
       type="button"
-      className="relative size-[18px] rounded-[5px] ring-1 ring-black/15 transition-transform duration-100 ring-inset hover:scale-105 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none dark:ring-white/20"
+      className="relative size-[18px] cursor-pointer rounded-[5px] ring-1 ring-black/15 transition-transform duration-100 ring-inset hover:scale-105 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none dark:ring-white/20"
       style={{ backgroundColor: canvasObjectColor(color) }}
       aria-label={`${colorLabel(color)}${selected ? ", selected" : ""}`}
       aria-pressed={selected}
