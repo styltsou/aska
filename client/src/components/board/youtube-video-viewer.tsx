@@ -443,7 +443,7 @@ export function YouTubeVideoViewer({
               : "duration-[180ms]",
             workspace
               ? "rounded-none border-transparent"
-              : "rounded-t-xl rounded-b-none border-border",
+              : "rounded-t-xl rounded-b-none border-foreground/10",
           )}
         >
           {displayedAsset ? (
@@ -516,7 +516,8 @@ function VideoViewerToolbar({
         presentation === "modal" &&
           "rounded-t-xl rounded-b-none bg-transparent",
         presentation === "workspace" && "rounded-none bg-background",
-        presentation === "drawer" && "border-b bg-background",
+        presentation === "drawer" &&
+          "border-b border-foreground/10 bg-background",
       )}
     >
       <Tooltip>

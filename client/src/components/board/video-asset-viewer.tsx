@@ -298,7 +298,7 @@ export function VideoAssetViewer({
         />
         <DialogBody
           className={cn(
-            "relative flex min-h-0 overflow-hidden border-t-0 border-b-0 bg-background p-0 transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            "relative flex min-h-0 overflow-hidden border-t border-b-0 bg-background p-0 transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
             expanded ? "flex-1" : "w-full flex-none",
             assetModalId
               ? expanded
@@ -307,7 +307,7 @@ export function VideoAssetViewer({
               : "duration-[180ms]",
             expanded
               ? "rounded-none border-transparent"
-              : "rounded-t-xl rounded-b-none border-border",
+              : "rounded-t-xl rounded-b-none border-foreground/10",
           )}
           style={expanded ? undefined : { aspectRatio: `${videoRatio}` }}
         >
@@ -385,7 +385,8 @@ function NativeVideoToolbar({
         presentation === "modal" &&
           "rounded-t-xl rounded-b-none bg-transparent",
         presentation === "workspace" && "rounded-none bg-background",
-        presentation === "drawer" && "border-b bg-background",
+        presentation === "drawer" &&
+          "border-b border-foreground/10 bg-background",
       )}
     >
       <ToolbarButton

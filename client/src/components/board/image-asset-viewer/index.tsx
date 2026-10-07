@@ -2213,7 +2213,7 @@ export function ImageAssetViewer({
               "relative z-10 flex min-h-0 flex-1",
               expanded && "h-full",
               !expanded &&
-                "overflow-hidden rounded-t-xl border-t border-border",
+                "overflow-hidden rounded-t-xl border-t border-foreground/10",
             )}
           >
             <div className="relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

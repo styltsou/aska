@@ -236,7 +236,7 @@ export function ColorDetailDrawer({
           className={drawerClassName}
           style={drawerStyle}
         >
-          <DrawerHeader className="flex-row! items-start justify-between gap-4 border-b px-4 py-4 text-left!">
+          <DrawerHeader className="flex-row! items-start justify-between gap-4 border-b border-foreground/10 px-4 py-4 text-left!">
             <div className="flex min-w-0 items-center gap-3.5">
               <button
                 type="button"
@@ -696,7 +696,7 @@ function ColorDetailModal({
               fullscreenTransitionDuration,
               expanded
                 ? "rounded-none border-transparent"
-                : "rounded-t-xl border-border",
+                : "rounded-t-xl border-foreground/10",
             )}
           >
             {color ? (

@@ -1911,7 +1911,9 @@ export function NoteDetailDrawer({
                   ? "duration-[400ms]"
                   : "duration-[350ms]"
                 : "duration-[180ms]",
-              expanded ? "border-transparent" : "rounded-t-xl border-border",
+              expanded
+                ? "border-transparent"
+                : "rounded-t-xl border-foreground/10",
             )}
           >
             <div className="mx-auto min-h-full w-full max-w-5xl px-5 sm:px-10 lg:px-16 [&_.ProseMirror]:!pt-2">

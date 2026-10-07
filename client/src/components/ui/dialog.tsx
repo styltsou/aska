@@ -105,7 +105,7 @@ function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="dialog-body"
       className={cn(
-        "relative z-10 rounded-b-lg border-b border-border bg-background p-4 text-foreground",
+        "relative z-10 rounded-b-lg border-b border-foreground/10 bg-background p-4 text-foreground",
         className,
       )}
       {...props}
