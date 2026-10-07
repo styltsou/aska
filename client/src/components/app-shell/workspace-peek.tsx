@@ -1677,12 +1677,13 @@ function PeekNote({
         workspaceSlug,
         assetId,
       );
-      if (asset.type === "link" && asset.video) {
-        await peekVideo(asset, location);
+      const peekAsset = collectionNodeToAsset(asset);
+      if (peekAsset.type === "link" && peekAsset.video) {
+        await peekVideo(peekAsset, location);
         return;
       }
-      if (asset.type === "link") {
-        window.open(asset.originalUrl, "_blank", "noopener,noreferrer");
+      if (peekAsset.type === "link") {
+        window.open(peekAsset.originalUrl, "_blank", "noopener,noreferrer");
       }
     },
     [peekVideo, workspaceSlug],
@@ -1883,7 +1884,6 @@ function PeekNote({
             onOpenMention={(identity, resolved) =>
               void openMentionTarget(identity, resolved)
             }
-            onOpenReferencedVideo={openReferencedVideo}
             editable={!readOnly && saveState !== "deleting"}
             autoFocus={focusRequest > 0}
             scrollContainerRef={contentRef}

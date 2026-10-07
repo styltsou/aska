@@ -770,7 +770,9 @@ function WorkspaceAssetViewController({
             });
           }}
           onOpenReferencedColor={(color) => openAsset(color.id)}
-          onOpenReferencedVideo={(assetId) => openAsset(assetId)}
+          onOpenReferencedVideo={async (assetId) => {
+            await openAsset(assetId);
+          }}
           onPromote={(note) => openAsset(note.id)}
           onSwap={(note, previousNote) =>
             openAsset(note.id, { replace: true, peekAfter: previousNote.id })

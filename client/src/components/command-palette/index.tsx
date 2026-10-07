@@ -82,6 +82,7 @@ import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { getRecentWorkspaceAssetIds } from "@/lib/workspace-recent-assets";
+import { cn } from "@/lib/utils";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { toast } from "sonner";
 
