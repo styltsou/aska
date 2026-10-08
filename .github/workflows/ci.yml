@@ -145,7 +145,7 @@ jobs:
       - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run lambda:typecheck
       - if: fromJSON(matrix.changed) && matrix.name == 'Server'
-        run: bun run format:fix && git diff -- src/services/note-mention.service.ts
+        run: bun run format
       - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run test
       - if: fromJSON(matrix.changed) && matrix.name != 'Server'

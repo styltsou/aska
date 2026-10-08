@@ -286,7 +286,8 @@ export async function reconcileNoteReferences(
       (row.assetType === "note" ||
         row.assetType === "color" ||
         row.assetType === "link" ||
-        row.assetType === "image" || row.assetType === "video") &&
+        row.assetType === "image" ||
+        row.assetType === "video") &&
       requestedKeys.has(mentionKey(row.assetType as MentionType, row.assetId)),
   );
   const replacements = new Map(
@@ -681,9 +682,7 @@ function mentionLabel(row: MentionRow): string {
   if (row.title?.trim()) return row.title.trim();
   if (row.assetType === "image") {
     return (
-      row.imageAlt?.trim() ||
-      row.imageSourceLabel?.trim() ||
-      "Untitled image"
+      row.imageAlt?.trim() || row.imageSourceLabel?.trim() || "Untitled image"
     );
   }
   if (row.assetType === "video") {
