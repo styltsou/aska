@@ -654,19 +654,21 @@ function VideoViewerLoading({
   viewer?: boolean;
 }) {
   const metadata = (
-    <div className="space-y-3" aria-hidden="true">
-      <Skeleton className={cn("h-6 w-2/3", workspace && "h-8 w-3/4")} />
-      <Skeleton className={cn("h-4 w-36", workspace && "h-5 w-44")} />
+    <div className="space-y-1" aria-hidden="true">
+      <Skeleton className={cn("h-6 w-2/3", workspace && "h-7 w-3/4")} />
+      <div className="pt-0.5">
+        <Skeleton className={cn("h-4 w-36", workspace && "h-5 w-44")} />
+      </div>
       <div className="space-y-2 pt-2">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-[88%]" />
         <Skeleton className="h-4 w-[62%]" />
       </div>
-      <div className="space-y-2 pt-3">
-        <Skeleton className="h-3 w-12" />
-        <Skeleton className="h-4 w-40" />
-      </div>
     </div>
+  );
+
+  const note = viewer ? null : (
+    <Skeleton className="h-6 w-40" aria-hidden="true" />
   );
 
   if (viewer) {
@@ -713,6 +715,7 @@ function VideoViewerLoading({
     >
       <Skeleton className="aspect-video w-full rounded-md" />
       {metadata}
+      {note}
     </div>
   );
 }
