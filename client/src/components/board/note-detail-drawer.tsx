@@ -1152,19 +1152,29 @@ export function NoteDetailDrawer({
   const promotePeekedNote = useCallback(
     async (nextMainNote: NoteAsset) => {
       if (!onPromote || isCreateMode || isPending) return false;
-      if (!activeNote) {
-        return (await onPromote(nextMainNote)) !== false;
-      }
+
+      const promoteInFullscreen = async (previousNote?: NoteAsset) => {
+        const promoted =
+          (await onPromote(nextMainNote, previousNote)) !== false;
+        if (promoted) {
+          if (onViewChange) onViewChange("full");
+          else setLocalView("full");
+        }
+        return promoted;
+      };
+
+      if (!activeNote) return promoteInFullscreen();
       if (nextMainNote.id === activeNote.id) return false;
       const currentMainNote = await prepareCurrentNoteForSwitch();
       if (!currentMainNote) return false;
-      return (await onPromote(nextMainNote, currentMainNote)) !== false;
+      return promoteInFullscreen(currentMainNote);
     },
     [
       activeNote,
       isCreateMode,
       isPending,
       onPromote,
+      onViewChange,
       prepareCurrentNoteForSwitch,
     ],
   );
