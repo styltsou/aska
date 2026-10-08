@@ -157,6 +157,24 @@ describe("LinkAssetCard", () => {
     expect(html).not.toContain("lucide-external-link");
   });
 
+  it("shows a muted unavailable state when a generic preview has no image", () => {
+    const html = renderToStaticMarkup(
+      <LinkAssetCard
+        asset={{
+          ...asset,
+          originalUrl: "https://example.com/article",
+          video: undefined,
+          hostname: "example.com",
+          title: "An article",
+        }}
+      />,
+    );
+
+    expect(html).toContain("lucide-image-off");
+    expect(html).toContain("text-muted-foreground");
+    expect(html).toContain("Preview unavailable");
+  });
+
   it("uses a 16:9 shimmer placeholder while a generic preview resolves", () => {
     const html = renderToStaticMarkup(
       <LinkAssetCard
@@ -324,7 +342,7 @@ describe("LinkCardPreview", () => {
     expect(html).not.toContain("i.ytimg.com");
   });
 
-  it("falls back to a globe tile when no thumbnail is resolved", () => {
+  it("shows an unavailable preview state when no thumbnail is resolved", () => {
     const html = renderToStaticMarkup(
       <LinkCardPreview
         preview={{
@@ -335,7 +353,8 @@ describe("LinkCardPreview", () => {
       />,
     );
 
-    expect(html).toContain("size-8 text-muted-foreground/40");
+    expect(html).toContain("lucide-image-off");
+    expect(html).toContain("Preview unavailable");
     expect(html).not.toContain("i.ytimg.com");
     expect(html).toContain("Untitled link");
   });
