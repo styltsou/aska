@@ -21,6 +21,7 @@ import {
   externalResourceMedia,
   externalResources,
   imageAssets,
+  videoAssets,
   linkAssets,
   noteAssets,
   noteReferences,
@@ -68,6 +69,8 @@ type MentionRow = {
   imageVariants: typeof imageAssets.$inferSelect.variants | null;
   imageAlt: string | null;
   imageSourceLabel: string | null;
+  videoPoster: typeof videoAssets.$inferSelect.poster | null;
+  videoSourceLabel: string | null;
 };
 
 export interface INoteMentionService {
@@ -101,21 +104,22 @@ export class NoteMentionService implements INoteMentionService {
     query: MentionSearchQuery,
   ): Promise<MentionTargetsResponse> {
     const types = [
-      ...new Set(query.types ?? (["note", "color", "link", "image"] as const)),
+      ...new Set(query.types ?? (["note", "color", "link", "image", "video"] as const)),
     ];
     const normalizedQuery = query.q.trim();
 
-    if (!normalizedQuery && types.length === 4) {
-      const [notes, colors, links, images] = await Promise.all([
+    if (!normalizedQuery && types.length === 5) {
+      const [notes, colors, links, images, videos] = await Promise.all([
         findMentionRows(orgId, ["note"], "", query.limit, query.sourceAssetId),
         findMentionRows(orgId, ["color"], "", query.limit, query.sourceAssetId),
         findMentionRows(orgId, ["link"], "", query.limit, query.sourceAssetId),
         findMentionRows(orgId, ["image"], "", query.limit, query.sourceAssetId),
+        findMentionRows(orgId, ["video"], "", query.limit, query.sourceAssetId),
       ]);
       return {
         targets: await toTargets(
           orgId,
-          balanceRecentTargets([notes, colors, links, images], query.limit),
+          balanceRecentTargets([notes, colors, links, images, videos], query.limit),
           this.objectStorageService,
         ),
       };
@@ -162,7 +166,8 @@ export class NoteMentionService implements INoteMentionService {
         (row.assetType === "note" ||
           row.assetType === "color" ||
           row.assetType === "link" ||
-          row.assetType === "image") &&
+          row.assetType === "image" ||
+          row.assetType === "video") &&
         requestedKeys.has(
           mentionKey(row.assetType as MentionType, row.assetId),
         ),
@@ -276,7 +281,7 @@ export async function reconcileNoteReferences(
       (row.assetType === "note" ||
         row.assetType === "color" ||
         row.assetType === "link" ||
-        row.assetType === "image") &&
+        row.assetType === "image" || row.assetType === "video") &&
       requestedKeys.has(mentionKey(row.assetType as MentionType, row.assetId)),
   );
   const replacements = new Map(
@@ -431,11 +436,14 @@ function selectMentionRows(executor: Executor) {
       imageVariants: imageAssets.variants,
       imageAlt: imageAssets.alt,
       imageSourceLabel: imageAssets.sourceLabel,
+      videoPoster: videoAssets.poster,
+      videoSourceLabel: videoAssets.sourceLabel,
     })
     .from(assets)
     .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
     .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
     .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
+    .leftJoin(videoAssets, eq(videoAssets.assetId, assets.id))
     .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
     .leftJoin(
       externalResources,
@@ -474,6 +482,7 @@ async function findMentionRows(
           eq(assets.type, "color"),
           eq(assets.type, "link"),
           eq(assets.type, "image"),
+          eq(assets.type, "video"),
           isNotNull(assets.title),
         ),
         query
@@ -498,6 +507,13 @@ async function findMentionRows(
                 or(
                   ilike(imageAssets.alt, match),
                   ilike(imageAssets.sourceLabel, match),
+                ),
+              ),
+              and(
+                eq(assets.type, "video"),
+                or(
+                  ilike(videoAssets.sourceLabel, match),
+                  ilike(videoAssets.note, match),
                 ),
               ),
             )
@@ -546,14 +562,18 @@ async function toTargets(
     { preview?: string; icon?: string }
   >();
   const imageKeysByAsset = new Map<number, string>();
+  const videoKeysByAsset = new Map<number, string>();
   for (const row of rows) {
-    if (row.assetType !== "image") continue;
-    const key =
-      row.imageVariants?.preview?.objectKey ??
-      row.imageVariants?.display?.objectKey;
-    if (key) imageKeysByAsset.set(row.assetId, key);
+    if (row.assetType === "image") {
+      const key = row.imageVariants?.preview?.objectKey ?? row.imageVariants?.display?.objectKey;
+      if (key) imageKeysByAsset.set(row.assetId, key);
+    } else if (row.assetType === "video") {
+      const key = row.videoPoster?.preview?.objectKey ?? row.videoPoster?.display?.objectKey;
+      if (key) videoKeysByAsset.set(row.assetId, key);
+    }
   }
-  const imageKeys = [...new Set(imageKeysByAsset.values())];
+  const previewKeysByAsset = new Map([...imageKeysByAsset, ...videoKeysByAsset]);
+  const imageKeys = [...new Set(previewKeysByAsset.values())];
   const signedImages =
     imageKeys.length > 0
       ? await objectStorageService.createPresignedGetUrls(imageKeys)
@@ -606,11 +626,9 @@ async function toTargets(
     const media = row.resourceId
       ? mediaByResource.get(row.resourceId)
       : undefined;
-    const imageKey = imageKeysByAsset.get(row.assetId);
-    const imagePreviewUrl = imageKey
-      ? signedImages.get(imageKey)?.url
-      : undefined;
-    return toTarget(row, media, imagePreviewUrl);
+    const previewKey = previewKeysByAsset.get(row.assetId);
+    const previewUrl = previewKey ? signedImages.get(previewKey)?.url : undefined;
+    return toTarget(row, media, previewUrl);
   });
 }
 
@@ -632,9 +650,10 @@ function toTarget(
     previewUrl: imagePreviewUrl ?? media?.preview ?? null,
     faviconUrl: media?.icon ?? null,
     isVideo:
-      row.assetType === "link" &&
-      ["youtube-oembed", "youtube-data-api"].includes(row.resolverKey ?? "") &&
-      row.resourceKind === "video",
+      row.assetType === "video" ||
+      (row.assetType === "link" &&
+        ["youtube-oembed", "youtube-data-api"].includes(row.resolverKey ?? "") &&
+        row.resourceKind === "video"),
     snippet: row.assetType === "note" ? noteSnippet(row.markdown ?? "") : null,
     locationLabel: folderName ?? row.collectionName ?? "Inbox",
     collectionSlug: row.collectionSlug,
@@ -651,6 +670,7 @@ function mentionLabel(row: MentionRow): string {
       "Untitled image"
     );
   }
+  if (row.assetType === "video") return row.videoSourceLabel?.trim() || "Untitled video";
   if (row.gradient) {
     const type = row.gradient.type === "radial" ? "Radial" : "Linear";
     return `${type} Gradient`;

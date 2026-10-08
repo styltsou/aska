@@ -135,12 +135,13 @@ export function MentionGlyph({
       />
     );
   }
-  if (assetType === "link") {
+  if (assetType === "link" || assetType === "video") {
     return (
       <LinkMentionThumbnail
         previewUrl={previewUrl ?? undefined}
         faviconUrl={faviconUrl ?? undefined}
-        isVideo={isVideo}
+        isVideo={isVideo || assetType === "video"}
+        showVideoBadge={assetType === "video"}
         className={NOTE_MENTION_GLYPH_CLASS}
         iconClassName="size-2.5 text-foreground/75"
       />
@@ -329,7 +330,7 @@ export const AssetMention = Node.create({
     ];
   },
   parseMarkdown(token, helpers) {
-    const match = /^(note|color|link|image):(\d+)$/.exec(token.href ?? "");
+    const match = /^(note|color|link|image|video):(\d+)$/.exec(token.href ?? "");
     if (!match) {
       return helpers.applyMark(
         "link",
@@ -735,7 +736,7 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
           : displayItems,
       [displayItems, parsed.scope],
     );
-    const { notes, colors, images, videos, links, flatItems } = useMemo(() => {
+    const { notes, colors, images, videos, youtube, links, flatItems } = useMemo(() => {
       const nextNotes = scopedDisplayItems.filter(
         (item) => item.assetType === "note",
       );
@@ -746,6 +747,9 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
         (item) => item.assetType === "image",
       );
       const nextVideos = scopedDisplayItems.filter(
+        (item) => item.assetType === "video",
+      );
+      const nextYoutube = scopedDisplayItems.filter(
         (item) => item.assetType === "link" && item.isVideo,
       );
       const nextLinks = scopedDisplayItems.filter(
@@ -756,18 +760,20 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
         colors: nextColors,
         images: nextImages,
         videos: nextVideos,
+        youtube: nextYoutube,
         links: nextLinks,
         flatItems: [
           ...nextNotes,
           ...nextColors,
           ...nextImages,
           ...nextVideos,
+          ...nextYoutube,
           ...nextLinks,
         ],
       };
     }, [scopedDisplayItems]);
     const showScopeControls =
-      [notes, colors, images, videos, links].filter((group) => group.length > 0)
+      [notes, colors, images, videos, youtube, links].filter((group) => group.length > 0)
         .length > 1;
     const showGroupLabels = showScopeControls;
     const showInitialLoading = loading && flatItems.length === 0;
@@ -779,7 +785,9 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
           ? "No colors match"
           : parsed.scope === "image"
             ? "No images match"
-            : "No mentions match"
+            : parsed.scope === "video"
+              ? "No videos match"
+              : "No mentions match"
       : "No notes, colors, images, videos, or links to mention yet";
 
     useEffect(() => setSelectedIndex(0), [flatItems]);
@@ -842,7 +850,7 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
             {showScopeControls || showSearching ? (
               <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
                 {showScopeControls
-                  ? ([undefined, "note", "color", "image", "link"] as const).map(
+                  ? ([undefined, "note", "color", "image", "video", "link"] as const).map(
                       (scope) => (
                         <button
                           key={scope ?? "all"}
@@ -861,6 +869,8 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                               ? "Colors"
                               : scope === "image"
                                 ? "Images"
+                                : scope === "video"
+                                ? "Videos"
                                 : scope === "link"
                                   ? "Links"
                                   : "All"}
@@ -925,12 +935,25 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                 />
               ) : null}
               {videos.length > 0 &&
-              (!parsed.scope || parsed.scope === "link") ? (
+              (!parsed.scope || parsed.scope === "video") ? (
                 <MentionGroup
                   label="Videos"
                   showLabel={showGroupLabels}
                   items={videos}
                   startIndex={notes.length + colors.length + images.length}
+                  selectedIndex={selectedIndex}
+                  itemRefs={itemRefs}
+                  onSelect={select}
+                  onHover={setSelectedIndex}
+                />
+              ) : null}
+              {youtube.length > 0 &&
+              (!parsed.scope || parsed.scope === "link") ? (
+                <MentionGroup
+                  label="YouTube"
+                  showLabel={showGroupLabels}
+                  items={youtube}
+                  startIndex={notes.length + colors.length + images.length + videos.length}
                   selectedIndex={selectedIndex}
                   itemRefs={itemRefs}
                   onSelect={select}
@@ -944,7 +967,7 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   showLabel={showGroupLabels}
                   items={links}
                   startIndex={
-                    notes.length + colors.length + images.length + videos.length
+                    notes.length + colors.length + images.length + videos.length + youtube.length
                   }
                   selectedIndex={selectedIndex}
                   itemRefs={itemRefs}
@@ -971,6 +994,10 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
               <span>,</span>
               <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
                 @image
+              </Kbd>
+              <span>,</span>
+              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                @video
               </Kbd>
               <span>or</span>
               <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
@@ -1293,7 +1320,7 @@ export function parseMentionQuery(query: string): {
   scope?: NoteMentionType;
   search: string;
 } {
-  const match = /^(note|color|link|image)(?:\s+(.*))?$/i.exec(query);
+  const match = /^(note|color|link|image|video)(?:\s+(.*))?$/i.exec(query);
   if (!match) return { search: query.trim() };
   return {
     scope: match[1]!.toLowerCase() as NoteMentionType,
@@ -1311,7 +1338,7 @@ export function createMentionScopeQuery(
 
 export function parseNumericAssetId(assetId?: string): number | undefined {
   if (!assetId) return undefined;
-  const match = /^(?:note|color|link|image)-(\d+)$/.exec(assetId);
+  const match = /^(?:note|color|link|image|video)-(\d+)$/.exec(assetId);
   return match ? Number(match[1]) : undefined;
 }
 

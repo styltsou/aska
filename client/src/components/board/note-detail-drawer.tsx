@@ -1210,6 +1210,12 @@ export function NoteDetailDrawer({
       resolved?: NoteMentionTarget,
     ) => {
       try {
+        if (identity.assetType === "video") {
+          if (onOpenReferencedVideo) {
+            await onOpenReferencedVideo(`video-${identity.assetId}`);
+          }
+          return;
+        }
         if (identity.assetType === "link") {
           if (resolved?.isVideo && onOpenReferencedVideo) {
             await onOpenReferencedVideo(`link-${identity.assetId}`);

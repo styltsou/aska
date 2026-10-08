@@ -217,6 +217,7 @@ type WorkspacePeekContextValue = {
     scope: PeekColorScope,
     options?: PeekOpenOptions,
   ) => Promise<boolean>;
+  openAssetInViewer: (assetId: string) => Promise<boolean>;
   peekVideo: (
     video: LinkAsset,
     location?: AssetLocation,
@@ -910,6 +911,8 @@ export function WorkspacePeekProvider({
       setAssetPromotionHandler: (handler) => {
         assetPromotionHandlerRef.current = handler;
       },
+      openAssetInViewer: (assetId) =>
+        assetPromotionHandlerRef.current?.(assetId) ?? Promise.resolve(false),
       showPeekedAsset,
       showAssetInBoard,
       consumeShowRequest,
@@ -1429,6 +1432,7 @@ function PeekNote({
     peekImage,
     peekColor,
     peekVideo,
+    openAssetInViewer,
     setPeekNoteFlushHandler,
     syncPeekNote,
   } = useWorkspacePeek();
@@ -1689,7 +1693,7 @@ function PeekNote({
   );
   const openMentionTarget = useCallback(
     async (
-      identity: { assetId: number; assetType: "note" | "color" | "link" | "image" },
+      identity: { assetId: number; assetType: "note" | "color" | "link" | "image" | "video" },
       resolved?: NoteMentionTarget,
     ) => {
       try {
@@ -1722,6 +1726,10 @@ function PeekNote({
           peekImage(asset, location);
           return;
         }
+        if (asset.type === "video") {
+          await openAssetInViewer(asset.id);
+          return;
+        }
         if (asset.type !== "color") return;
         peekColor(
           asset,
@@ -1745,6 +1753,7 @@ function PeekNote({
       note.id,
       flush,
       openReferencedVideo,
+      openAssetInViewer,
       peekColor,
       peekImage,
       peekNote,

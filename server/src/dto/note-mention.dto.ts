@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const MentionTypeSchema = z.enum(["note", "color", "link", "image"]);
+const MentionTypeSchema = z.enum(["note", "color", "link", "image", "video"]);
 const NoteAssetIdSchema = z.string().regex(/^note-\d+$/);
 const MentionTargetSchema = z.object({
   assetId: z.number().int().positive(),
@@ -12,7 +12,7 @@ export const MentionSearchQuerySchema = z.object({
   types: z.preprocess(
     (value) =>
       value === undefined ? undefined : Array.isArray(value) ? value : [value],
-    z.array(MentionTypeSchema).min(1).max(4).optional(),
+    z.array(MentionTypeSchema).min(1).max(5).optional(),
   ),
   limit: z.coerce.number().int().min(1).max(20).optional().default(10),
   sourceAssetId: z.coerce.number().int().positive().optional(),

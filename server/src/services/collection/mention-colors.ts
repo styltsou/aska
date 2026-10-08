@@ -7,6 +7,7 @@ import {
   externalResourceMedia,
   externalResources,
   imageAssets,
+  videoAssets,
   linkAssets,
   noteReferences,
 } from "@/db/schema";
@@ -40,6 +41,8 @@ export async function fetchMentionColorsBySource(
       assetTitle: assets.title,
       imageVariants: imageAssets.variants,
       imageAlt: imageAssets.alt,
+      videoPoster: videoAssets.poster,
+      videoSourceLabel: videoAssets.sourceLabel,
       hex: colorAssets.hex,
       gradient: colorAssets.gradient,
       resourceId: linkAssets.resourceId,
@@ -64,6 +67,10 @@ export async function fetchMentionColorsBySource(
       eq(imageAssets.assetId, noteReferences.targetAssetId),
     )
     .leftJoin(
+      videoAssets,
+      eq(videoAssets.assetId, noteReferences.targetAssetId),
+    )
+    .leftJoin(
       linkAssets,
       and(
         eq(linkAssets.assetId, noteReferences.targetAssetId),
@@ -81,17 +88,20 @@ export async function fetchMentionColorsBySource(
       and(
         eq(noteReferences.organizationId, orgId),
         inArray(noteReferences.sourceAssetId, ids),
-        inArray(noteReferences.targetType, ["color", "link", "image"]),
+        inArray(noteReferences.targetType, ["color", "link", "image", "video"]),
       ),
     );
 
   const imageKeysByAsset = new Map<number, string>();
+  const videoKeysByAsset = new Map<number, string>();
   for (const row of rows) {
-    if (row.targetType !== "image") continue;
-    const key =
-      row.imageVariants?.preview?.objectKey ??
-      row.imageVariants?.display?.objectKey;
-    if (key) imageKeysByAsset.set(row.targetAssetId, key);
+    if (row.targetType === "image") {
+      const key = row.imageVariants?.preview?.objectKey ?? row.imageVariants?.display?.objectKey;
+      if (key) imageKeysByAsset.set(row.targetAssetId, key);
+    } else if (row.targetType === "video") {
+      const key = row.videoPoster?.preview?.objectKey ?? row.videoPoster?.display?.objectKey;
+      if (key) videoKeysByAsset.set(row.targetAssetId, key);
+    }
   }
   const resourceIds = [
     ...new Set(rows.flatMap((row) => (row.resourceId ? [row.resourceId] : []))),
@@ -130,6 +140,7 @@ export async function fetchMentionColorsBySource(
         [keys.preview, keys.icon].filter((key): key is string => Boolean(key)),
       ),
       ...imageKeysByAsset.values(),
+      ...videoKeysByAsset.values(),
     ]),
   ];
   const signedMedia =
@@ -139,7 +150,8 @@ export async function fetchMentionColorsBySource(
 
   for (const row of rows) {
     const existing = result.get(row.sourceAssetId) ?? {};
-    if (row.targetType === "color") {
+    if (row.targetType === "video") return row.videoSourceLabel?.trim() || "Untitled video";
+  if (row.targetType === "color") {
       existing[mentionKey("color", row.targetAssetId)] = {
         label: mentionLabel(row),
         ...(row.gradient
@@ -175,6 +187,13 @@ export async function fetchMentionColorsBySource(
         label: mentionLabel(row),
         ...(previewUrl ? { previewUrl } : {}),
       };
+    } else if (row.targetType === "video") {
+      const videoKey = videoKeysByAsset.get(row.targetAssetId);
+      const previewUrl = videoKey ? signedMedia.get(videoKey)?.url : undefined;
+      existing[mentionKey("video", row.targetAssetId)] = {
+        label: mentionLabel(row),
+        ...(previewUrl ? { previewUrl } : {}),
+      };
     }
     result.set(row.sourceAssetId, existing);
   }
@@ -186,6 +205,7 @@ function mentionLabel(row: {
   assetTitle: string | null;
   targetType: string;
   imageAlt: string | null;
+  videoSourceLabel: string | null;
   gradient: StoredColorGradient | null;
   hex: string | null;
   hostname: string | null;
