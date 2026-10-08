@@ -901,9 +901,7 @@ export function WorkspacePeekProvider({
               )
             : await assetPromotionHandlerRef.current?.(
                 target.asset.id,
-                target.type === "link" || target.type === "image"
-                  ? { presentation: "fullscreen" }
-                  : undefined,
+                { presentation: "fullscreen" },
               );
         if (promoted) {
           setIsRailReserved(false);
