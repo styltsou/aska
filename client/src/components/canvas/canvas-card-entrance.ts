@@ -18,3 +18,29 @@ export function consumeCanvasCardEntranceSuppression(
   suppressedEntrances.delete(identity);
   return expiresAt !== undefined && expiresAt > Date.now();
 }
+export function resolveCanvasCardPresence({
+  currentNodeId,
+  nextNodeId,
+  currentPresence,
+  isNew,
+  entranceSuppressed,
+}: {
+  currentNodeId?: string;
+  nextNodeId: string;
+  currentPresence?: "entering" | "exiting";
+  isNew: boolean;
+  entranceSuppressed: boolean;
+}): "entering" | "exiting" | undefined {
+  if (
+    currentNodeId !== undefined &&
+    currentNodeId !== nextNodeId &&
+    currentPresence === "entering"
+  ) {
+    return undefined;
+  }
+
+  return (
+    currentPresence ??
+    (isNew && !entranceSuppressed ? "entering" : undefined)
+  );
+}
