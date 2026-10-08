@@ -52,14 +52,17 @@ export function CanvasTextNode({
         data.onBeginEdit(data.object.id);
       }}
     >
-      {!data.editing ? (
-        <p
-          className={cn("whitespace-pre", typography.className)}
-          style={typography.style}
-        >
-          {data.object.content}
-        </p>
-      ) : null}
+      <p
+        className={cn(
+          "whitespace-pre",
+          typography.className,
+          data.editing && "invisible",
+        )}
+        style={typography.style}
+        aria-hidden={data.editing || undefined}
+      >
+        {data.object.content}
+      </p>
     </div>
   );
 }
@@ -109,8 +112,8 @@ export function CanvasTextEditor({
         typography.className,
       )}
       style={{
-        left: position.x + 4,
-        top: position.y + 2,
+        left: position.x + 8,
+        top: position.y + 6,
         color: canvasObjectColor(object.color),
         pointerEvents: "all",
         zIndex: OVERLAY_Z_INDEX,
@@ -147,8 +150,12 @@ export function CanvasTextEditor({
       }}
       onBlur={commit}
       onKeyDown={(event) => {
-        if (event.key === "Escape") {
+        if (
+          event.key === "Escape" ||
+          (event.key === "Enter" && !event.shiftKey)
+        ) {
           event.preventDefault();
+          event.stopPropagation();
           commit();
         }
       }}
