@@ -511,19 +511,39 @@ function NoteMentionHoverCard({ target }: { target: NoteMentionTarget }) {
   );
 }
 
+function colorHasAlphaChannel(value?: string | null) {
+  const hex = value?.trim().replace(/^#/, "");
+  if (hex?.length === 4) return hex[3]?.toLowerCase() !== "f";
+  if (hex?.length === 8) return hex.slice(6).toLowerCase() !== "ff";
+  return false;
+}
+
 function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
   const colorLabel = target.label;
   const background = target.gradient
     ? resolveGradientCss(target.gradient)
     : (target.hex ?? "currentColor");
+  const gradientColors = target.gradient
+    ? (target.gradient.stops?.map((stop) => stop.color) ?? [
+        target.gradient.from,
+        target.gradient.to,
+      ])
+    : [];
+  const hasAlpha = target.gradient
+    ? gradientColors.some(colorHasAlphaChannel)
+    : colorHasAlphaChannel(target.hex);
 
   return (
     <div className="flex items-center gap-3 p-3.5">
       <div
         aria-hidden="true"
-        className="relative size-14 shrink-0 overflow-hidden rounded-md border border-foreground/10 bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)] bg-size-[16px_16px]"
+        className={cn(
+          "relative size-14 shrink-0 overflow-hidden rounded-md",
+          hasAlpha &&
+            "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
+        )}
       >
-        <div className="absolute inset-0" style={{ background }} />
+        <div className="absolute inset-0 rounded-md" style={{ background }} />
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-foreground">
