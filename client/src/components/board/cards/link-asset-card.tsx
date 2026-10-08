@@ -1,4 +1,8 @@
-import { Globe2Icon, UserRoundIcon } from "lucide-react";
+import {
+  Globe2Icon,
+  ImageOffIcon,
+  UserRoundIcon,
+} from "lucide-react";
 import { useState, type MouseEvent } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
@@ -13,6 +17,21 @@ const YOUTUBE_THUMBNAIL_URL = (videoId: string) =>
   `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 const LINK_CARD_META_CLASS =
   "flex min-w-0 items-center gap-1.5 text-[13px] leading-5 text-sidebar-foreground/65";
+
+function LinkPreviewUnavailable({ compact = false }: { compact?: boolean }) {
+  return (
+    <div
+      role="img"
+      aria-label="Preview unavailable"
+      className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-muted-foreground"
+    >
+      <ImageOffIcon className={compact ? "size-5" : "size-6"} />
+      <span className={compact ? "text-[10px]" : "text-xs"}>
+        Preview unavailable
+      </span>
+    </div>
+  );
+}
 
 function YouTubePlayMark({ compact = false }: { compact?: boolean }) {
   return (
@@ -102,6 +121,13 @@ export function LinkAssetCard({
     directYoutubeThumbnail && previewUrl !== directYoutubeThumbnail
       ? directYoutubeThumbnail
       : undefined;
+  const [failedPreviewUrl, setFailedPreviewUrl] = useState<string>();
+  const isPreviewResolving =
+    asset.resolutionStatus === "queued" ||
+    asset.resolutionStatus === "resolving";
+  const isPreviewUnavailable =
+    (!previewUrl && !isPreviewResolving) ||
+    Boolean(previewUrl && failedPreviewUrl === previewUrl && !previewFallback);
   const isOptimisticYoutube =
     Boolean(optimisticYoutube) &&
     (asset.resolutionStatus === "queued" ||
@@ -124,24 +150,30 @@ export function LinkAssetCard({
         data-asset-card-hero={onOpen ? "" : undefined}
         className="relative z-10 aspect-video w-full overflow-hidden rounded-b-lg border-b border-border bg-muted/40"
       >
-        {previewUrl ? (
+        {previewUrl && failedPreviewUrl !== previewUrl ? (
           <ProgressiveImage
             src={previewUrl}
             fallbackSrc={previewFallback}
             blurDataURL={asset.previewImage?.blurDataURL}
             alt={asset.previewImage?.alt ?? ""}
             className="absolute inset-0 size-full object-cover !transition-all duration-150 ease-out group-hover:scale-[1.05] motion-reduce:transition-none"
+            onError={
+              previewFallback
+                ? undefined
+                : () => setFailedPreviewUrl(previewUrl)
+            }
           />
         ) : null}
-        {!previewUrl &&
-        (asset.resolutionStatus === "queued" ||
-          asset.resolutionStatus === "resolving") ? (
+        {!previewUrl && isPreviewResolving ? (
           <div
             data-slot="optimistic-link-preview"
             className="pointer-events-none absolute inset-0 z-10 animate-[preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
           />
         ) : null}
-        {onOpen && isYoutube ? (
+        {isPreviewUnavailable ? <LinkPreviewUnavailable /> : null}
+        {onOpen &&
+        isYoutube &&
+        (!previewUrl || failedPreviewUrl !== previewUrl) ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <YouTubePlayMark />
           </div>
@@ -210,7 +242,7 @@ export function LinkAssetCard({
           </div>
         ) : asset.resolutionStatus === "failed" ? (
           <p className="text-xs text-sidebar-foreground/60">
-            Preview unavailable · link still works
+            The link still works
           </p>
         ) : null}
       </div>
@@ -291,6 +323,9 @@ export function LinkCardPreview({
     (isYoutube && preview.videoId
       ? YOUTUBE_THUMBNAIL_URL(preview.videoId)
       : undefined);
+  const [failedThumbnailUrl, setFailedThumbnailUrl] = useState<string>();
+  const thumbnailAvailable =
+    Boolean(thumbnailUrl) && failedThumbnailUrl !== thumbnailUrl;
   const displayTitle = preview.title?.trim() || "Untitled link";
   const hostname =
     preview.siteName || preview.hostname || (isYoutube ? "YouTube" : "Link");
@@ -304,20 +339,19 @@ export function LinkCardPreview({
       )}
     >
       <div className="relative z-10 aspect-video w-full shrink-0 overflow-hidden rounded-b-lg border-b border-border bg-muted/40">
-        {thumbnailUrl ? (
+        {thumbnailAvailable ? (
           <ProgressiveImage
-            src={thumbnailUrl}
+            src={thumbnailUrl!}
             blurDataURL={preview.blurDataURL}
             alt=""
             loading="lazy"
             className="absolute inset-0 size-full object-cover"
+            onError={() => setFailedThumbnailUrl(thumbnailUrl)}
           />
         ) : (
-          <div className="flex size-full items-center justify-center">
-            <Globe2Icon className="size-8 text-muted-foreground/40" />
-          </div>
+          <LinkPreviewUnavailable compact={compact} />
         )}
-        {isYoutube ? (
+        {isYoutube && thumbnailAvailable ? (
           <span className="absolute inset-0 flex items-center justify-center">
             <YouTubePlayMark compact={compact} />
           </span>
