@@ -96,10 +96,14 @@ export async function fetchMentionColorsBySource(
   const videoKeysByAsset = new Map<number, string>();
   for (const row of rows) {
     if (row.targetType === "image") {
-      const key = row.imageVariants?.preview?.objectKey ?? row.imageVariants?.display?.objectKey;
+      const key =
+        row.imageVariants?.preview?.objectKey ??
+        row.imageVariants?.display?.objectKey;
       if (key) imageKeysByAsset.set(row.targetAssetId, key);
     } else if (row.targetType === "video") {
-      const key = row.videoPoster?.preview?.objectKey ?? row.videoPoster?.display?.objectKey;
+      const key =
+        row.videoPoster?.preview?.objectKey ??
+        row.videoPoster?.display?.objectKey;
       if (key) videoKeysByAsset.set(row.targetAssetId, key);
     }
   }

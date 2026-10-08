@@ -104,7 +104,10 @@ export class NoteMentionService implements INoteMentionService {
     query: MentionSearchQuery,
   ): Promise<MentionTargetsResponse> {
     const types = [
-      ...new Set(query.types ?? (["note", "color", "link", "image", "video"] as const)),
+      ...new Set(
+        query.types ??
+          (["note", "color", "link", "image", "video"] as const),
+      ),
     ];
     const normalizedQuery = query.q.trim();
 
@@ -119,7 +122,10 @@ export class NoteMentionService implements INoteMentionService {
       return {
         targets: await toTargets(
           orgId,
-          balanceRecentTargets([notes, colors, links, images, videos], query.limit),
+          balanceRecentTargets(
+            [notes, colors, links, images, videos],
+            query.limit,
+          ),
           this.objectStorageService,
         ),
       };
@@ -565,14 +571,21 @@ async function toTargets(
   const videoKeysByAsset = new Map<number, string>();
   for (const row of rows) {
     if (row.assetType === "image") {
-      const key = row.imageVariants?.preview?.objectKey ?? row.imageVariants?.display?.objectKey;
+      const key =
+        row.imageVariants?.preview?.objectKey ??
+        row.imageVariants?.display?.objectKey;
       if (key) imageKeysByAsset.set(row.assetId, key);
     } else if (row.assetType === "video") {
-      const key = row.videoPoster?.preview?.objectKey ?? row.videoPoster?.display?.objectKey;
+      const key =
+        row.videoPoster?.preview?.objectKey ??
+        row.videoPoster?.display?.objectKey;
       if (key) videoKeysByAsset.set(row.assetId, key);
     }
   }
-  const previewKeysByAsset = new Map([...imageKeysByAsset, ...videoKeysByAsset]);
+  const previewKeysByAsset = new Map([
+    ...imageKeysByAsset,
+    ...videoKeysByAsset,
+  ]);
   const imageKeys = [...new Set(previewKeysByAsset.values())];
   const signedImages =
     imageKeys.length > 0
@@ -627,7 +640,9 @@ async function toTargets(
       ? mediaByResource.get(row.resourceId)
       : undefined;
     const previewKey = previewKeysByAsset.get(row.assetId);
-    const previewUrl = previewKey ? signedImages.get(previewKey)?.url : undefined;
+    const previewUrl = previewKey
+      ? signedImages.get(previewKey)?.url
+      : undefined;
     return toTarget(row, media, previewUrl);
   });
 }
@@ -652,7 +667,9 @@ function toTarget(
     isVideo:
       row.assetType === "video" ||
       (row.assetType === "link" &&
-        ["youtube-oembed", "youtube-data-api"].includes(row.resolverKey ?? "") &&
+        ["youtube-oembed", "youtube-data-api"].includes(
+          row.resolverKey ?? "",
+        ) &&
         row.resourceKind === "video"),
     snippet: row.assetType === "note" ? noteSnippet(row.markdown ?? "") : null,
     locationLabel: folderName ?? row.collectionName ?? "Inbox",
@@ -670,7 +687,9 @@ function mentionLabel(row: MentionRow): string {
       "Untitled image"
     );
   }
-  if (row.assetType === "video") return row.videoSourceLabel?.trim() || "Untitled video";
+  if (row.assetType === "video") {
+    return row.videoSourceLabel?.trim() || "Untitled video";
+  }
   if (row.gradient) {
     const type = row.gradient.type === "radial" ? "Radial" : "Linear";
     return `${type} Gradient`;
