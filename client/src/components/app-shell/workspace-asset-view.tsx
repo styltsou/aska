@@ -189,6 +189,46 @@ export function WorkspaceAssetViewProvider({
     }
   }, [presentation?.assetId, releaseHiddenSourceCard]);
 
+  useLayoutEffect(() => {
+    const current = presentation;
+    if (
+      !current?.open ||
+      current.urlStatus !== "committed" ||
+      current.presentation === "fullscreen" ||
+      search.view === "full" ||
+      sharedEntryAssetId === current.assetId
+    ) {
+      return;
+    }
+
+    const hideSourceCard = () => {
+      if (hiddenSourceCardRef.current?.assetId === current.assetId) return true;
+      const card = findVisibleAssetCard(current.assetId);
+      if (!card) return false;
+
+      const visibility = card.style.visibility;
+      card.style.visibility = "hidden";
+      hiddenSourceCardRef.current = {
+        assetId: current.assetId,
+        card,
+        visibility,
+      };
+      return true;
+    };
+
+    if (hideSourceCard()) return;
+
+    const observer = new MutationObserver(() => {
+      if (hideSourceCard()) observer.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [
+    presentation,
+    search.view,
+    sharedEntryAssetId,
+  ]);
+
   const openAssetImpl = useCallback(
     async (nextAssetId: string, options?: OpenAssetOptions) => {
       if (!parseWorkspaceAssetId(nextAssetId)) return Promise.resolve(false);
@@ -403,7 +443,6 @@ export function WorkspaceAssetViewProvider({
         run,
       };
       const sourceCard =
-        sharedEntryAssetId === current.assetId &&
         (current.assetId.startsWith("note-") ||
           current.assetId.startsWith("link-") ||
           current.assetId.startsWith("color-") ||
@@ -442,7 +481,7 @@ export function WorkspaceAssetViewProvider({
       }
       setPresentation({ ...current, open: false });
     },
-    [completeAssetClose, location.href, search.view, sharedEntryAssetId],
+    [completeAssetClose, location.href, search.view],
   );
 
   const closeAsset = useCallback(() => {
