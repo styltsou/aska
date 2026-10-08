@@ -773,6 +773,10 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
           ],
         };
       }, [scopedDisplayItems]);
+    const showScopeControls =
+      [notes, colors, images, videos, youtube, links].filter(
+        (group) => group.length > 0,
+      ).length > 1;
     const showGroupLabels = showScopeControls;
     const showInitialLoading = loading && flatItems.length === 0;
     const showSearching = Boolean(isSearchPending);
