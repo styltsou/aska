@@ -67,7 +67,10 @@ import { formatPlatformShortcut, getPlatformModifier } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import { makeBoardKey } from "./canvas-key";
 import { onBatchPlacementCompleted } from "./batch-placement-completed";
-import { consumeCanvasCardEntranceSuppression } from "./canvas-card-entrance";
+import {
+  consumeCanvasCardEntranceSuppression,
+  resolveCanvasCardPresence,
+} from "./canvas-card-entrance";
 import {
   setBoardFlowPositionConverter,
   setBoardPointerPosition,
@@ -1796,14 +1799,17 @@ function CanvasSurface({
         seenCanvasCardIdentitiesRef.current.add(identity);
         const entranceSuppressed =
           isNew && consumeCanvasCardEntranceSuppression(identity);
+        const presence = resolveCanvasCardPresence({
+          currentNodeId: currentNode?.id,
+          nextNodeId: node.id,
+          currentPresence: currentNode?.data.presence,
+          isNew,
+          entranceSuppressed,
+        });
         return makeFlowNode(
           node,
           index,
-          makeNodeData(
-            node,
-            currentNode?.data.presence ??
-              (isNew && !entranceSuppressed ? "entering" : undefined),
-          ),
+          makeNodeData(node, presence),
           expandedNoteOrder,
           currentNode,
         );
