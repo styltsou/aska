@@ -91,7 +91,7 @@ jobs:
         include:
           - name: Client
             directory: client
-            command: bun run lint && bun run typecheck && bun run format:fix && git diff -- src/components/app-shell/workspace-asset-view.tsx src/components/app-shell/workspace-peek.tsx src/components/board/cards/link-asset-card.tsx src/components/board/note-mentions.tsx src/components/canvas/canvas-card-entrance.test.ts src/components/canvas/canvas-card-entrance.ts && bun run test && bun run build
+            command: bun run lint && bun run typecheck && bun run format && bun run test && bun run build
             changed: ${{ needs.changes.outputs.client }}
           - name: Server
             directory: server

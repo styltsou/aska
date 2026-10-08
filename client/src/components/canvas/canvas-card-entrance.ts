@@ -41,7 +41,6 @@ export function resolveCanvasCardPresence({
   }
 
   return (
-    currentPresence ??
-    (isNew && !entranceSuppressed ? "entering" : undefined)
+    currentPresence ?? (isNew && !entranceSuppressed ? "entering" : undefined)
   );
 }

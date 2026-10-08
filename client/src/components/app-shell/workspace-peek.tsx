@@ -900,10 +900,9 @@ export function WorkspacePeekProvider({
             ? await notePromotionHandlerRef.current(
                 promotedNote || target.asset,
               )
-            : await assetPromotionHandlerRef.current?.(
-                target.asset.id,
-                { presentation: "fullscreen" },
-              );
+            : await assetPromotionHandlerRef.current?.(target.asset.id, {
+                presentation: "fullscreen",
+              });
         if (promoted) {
           setIsRailReserved(false);
         }
@@ -1693,7 +1692,10 @@ function PeekNote({
   );
   const openMentionTarget = useCallback(
     async (
-      identity: { assetId: number; assetType: "note" | "color" | "link" | "image" | "video" },
+      identity: {
+        assetId: number;
+        assetType: "note" | "color" | "link" | "image" | "video";
+      },
       resolved?: NoteMentionTarget,
     ) => {
       try {

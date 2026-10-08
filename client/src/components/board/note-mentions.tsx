@@ -330,7 +330,9 @@ export const AssetMention = Node.create({
     ];
   },
   parseMarkdown(token, helpers) {
-    const match = /^(note|color|link|image|video):(\d+)$/.exec(token.href ?? "");
+    const match = /^(note|color|link|image|video):(\d+)$/.exec(
+      token.href ?? "",
+    );
     if (!match) {
       return helpers.applyMark(
         "link",
@@ -586,9 +588,7 @@ function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
         className="relative size-14 shrink-0 overflow-hidden rounded-md"
       >
         {hasAlpha ? (
-          <div
-            className="absolute inset-px rounded-[calc(var(--radius-md)-1px)] bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]"
-          />
+          <div className="absolute inset-px rounded-[calc(var(--radius-md)-1px)] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)] bg-size-[16px_16px]" />
         ) : null}
         <div className="absolute inset-0 rounded-md" style={{ background }} />
       </div>
@@ -736,45 +736,43 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
           : displayItems,
       [displayItems, parsed.scope],
     );
-    const { notes, colors, images, videos, youtube, links, flatItems } = useMemo(() => {
-      const nextNotes = scopedDisplayItems.filter(
-        (item) => item.assetType === "note",
-      );
-      const nextColors = scopedDisplayItems.filter(
-        (item) => item.assetType === "color",
-      );
-      const nextImages = scopedDisplayItems.filter(
-        (item) => item.assetType === "image",
-      );
-      const nextVideos = scopedDisplayItems.filter(
-        (item) => item.assetType === "video",
-      );
-      const nextYoutube = scopedDisplayItems.filter(
-        (item) => item.assetType === "link" && item.isVideo,
-      );
-      const nextLinks = scopedDisplayItems.filter(
-        (item) => item.assetType === "link" && !item.isVideo,
-      );
-      return {
-        notes: nextNotes,
-        colors: nextColors,
-        images: nextImages,
-        videos: nextVideos,
-        youtube: nextYoutube,
-        links: nextLinks,
-        flatItems: [
-          ...nextNotes,
-          ...nextColors,
-          ...nextImages,
-          ...nextVideos,
-          ...nextYoutube,
-          ...nextLinks,
-        ],
-      };
-    }, [scopedDisplayItems]);
-    const showScopeControls =
-      [notes, colors, images, videos, youtube, links].filter((group) => group.length > 0)
-        .length > 1;
+    const { notes, colors, images, videos, youtube, links, flatItems } =
+      useMemo(() => {
+        const nextNotes = scopedDisplayItems.filter(
+          (item) => item.assetType === "note",
+        );
+        const nextColors = scopedDisplayItems.filter(
+          (item) => item.assetType === "color",
+        );
+        const nextImages = scopedDisplayItems.filter(
+          (item) => item.assetType === "image",
+        );
+        const nextVideos = scopedDisplayItems.filter(
+          (item) => item.assetType === "video",
+        );
+        const nextYoutube = scopedDisplayItems.filter(
+          (item) => item.assetType === "link" && item.isVideo,
+        );
+        const nextLinks = scopedDisplayItems.filter(
+          (item) => item.assetType === "link" && !item.isVideo,
+        );
+        return {
+          notes: nextNotes,
+          colors: nextColors,
+          images: nextImages,
+          videos: nextVideos,
+          youtube: nextYoutube,
+          links: nextLinks,
+          flatItems: [
+            ...nextNotes,
+            ...nextColors,
+            ...nextImages,
+            ...nextVideos,
+            ...nextYoutube,
+            ...nextLinks,
+          ],
+        };
+      }, [scopedDisplayItems]);
     const showGroupLabels = showScopeControls;
     const showInitialLoading = loading && flatItems.length === 0;
     const showSearching = Boolean(isSearchPending);
@@ -850,33 +848,39 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
             {showScopeControls || showSearching ? (
               <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
                 {showScopeControls
-                  ? ([undefined, "note", "color", "image", "video", "link"] as const).map(
-                      (scope) => (
-                        <button
-                          key={scope ?? "all"}
-                          type="button"
-                          className={cn(
-                            "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                            parsed.scope === scope &&
-                              "bg-accent text-foreground",
-                          )}
-                          onMouseDown={(event) => event.preventDefault()}
-                          onClick={() => setScope(scope)}
-                        >
-                          {scope === "note"
-                            ? "Notes"
-                            : scope === "color"
-                              ? "Colors"
-                              : scope === "image"
-                                ? "Images"
-                                : scope === "video"
+                  ? (
+                      [
+                        undefined,
+                        "note",
+                        "color",
+                        "image",
+                        "video",
+                        "link",
+                      ] as const
+                    ).map((scope) => (
+                      <button
+                        key={scope ?? "all"}
+                        type="button"
+                        className={cn(
+                          "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                          parsed.scope === scope && "bg-accent text-foreground",
+                        )}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => setScope(scope)}
+                      >
+                        {scope === "note"
+                          ? "Notes"
+                          : scope === "color"
+                            ? "Colors"
+                            : scope === "image"
+                              ? "Images"
+                              : scope === "video"
                                 ? "Videos"
                                 : scope === "link"
                                   ? "Links"
                                   : "All"}
-                        </button>
-                      ),
-                    )
+                      </button>
+                    ))
                   : null}
                 {showSearching ? (
                   <span
@@ -953,7 +957,9 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   label="YouTube"
                   showLabel={showGroupLabels}
                   items={youtube}
-                  startIndex={notes.length + colors.length + images.length + videos.length}
+                  startIndex={
+                    notes.length + colors.length + images.length + videos.length
+                  }
                   selectedIndex={selectedIndex}
                   itemRefs={itemRefs}
                   onSelect={select}
@@ -967,7 +973,11 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   showLabel={showGroupLabels}
                   items={links}
                   startIndex={
-                    notes.length + colors.length + images.length + videos.length + youtube.length
+                    notes.length +
+                    colors.length +
+                    images.length +
+                    videos.length +
+                    youtube.length
                   }
                   selectedIndex={selectedIndex}
                   itemRefs={itemRefs}

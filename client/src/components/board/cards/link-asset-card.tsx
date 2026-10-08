@@ -1,8 +1,4 @@
-import {
-  Globe2Icon,
-  ImageOffIcon,
-  UserRoundIcon,
-} from "lucide-react";
+import { Globe2Icon, ImageOffIcon, UserRoundIcon } from "lucide-react";
 import { useState, type MouseEvent } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";

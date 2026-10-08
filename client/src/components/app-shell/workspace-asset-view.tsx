@@ -223,11 +223,7 @@ export function WorkspaceAssetViewProvider({
     });
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [
-    presentation,
-    search.view,
-    sharedEntryAssetId,
-  ]);
+  }, [presentation, search.view, sharedEntryAssetId]);
 
   const openAssetImpl = useCallback(
     async (nextAssetId: string, options?: OpenAssetOptions) => {
