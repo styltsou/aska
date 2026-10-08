@@ -194,7 +194,7 @@ const MentionColorSchema = z.object({
 /**
  * Visual data for assets referenced by a note, keyed by markdown destination.
  * Labels keep static pills in sync with the editor; color values render
- * swatches and link media renders compact thumbnails.
+ * swatches and media thumbnails.
  */
 export const MentionColorsSchema = z.record(z.string(), MentionColorSchema);
 

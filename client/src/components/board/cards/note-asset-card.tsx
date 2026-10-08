@@ -317,7 +317,7 @@ function createMDComponents(
       );
     },
     a: ({ className, href, children, ...props }) => {
-      const mention = /^(note|color|link):(\d+)$/.exec(href ?? "");
+      const mention = /^(note|color|link|image):(\d+)$/.exec(href ?? "");
       if (mention) {
         const assetType = mention[1] as NoteMentionType;
         const visual = mentionColors?.[href!];

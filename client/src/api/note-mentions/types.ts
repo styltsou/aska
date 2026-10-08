@@ -1,4 +1,4 @@
-export type NoteMentionType = "note" | "color" | "link";
+export type NoteMentionType = "note" | "color" | "link" | "image";
 
 export type NoteMentionTarget = {
   assetId: number;

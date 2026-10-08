@@ -20,6 +20,7 @@ import {
   collectionNodes,
   externalResourceMedia,
   externalResources,
+  imageAssets,
   linkAssets,
   noteAssets,
   noteReferences,
@@ -64,6 +65,9 @@ type MentionRow = {
   resourceId: number | null;
   resourceKind: string | null;
   resolverKey: string | null;
+  imageVariants: typeof imageAssets.$inferSelect.variants | null;
+  imageAlt: string | null;
+  imageSourceLabel: string | null;
 };
 
 export interface INoteMentionService {
@@ -97,20 +101,21 @@ export class NoteMentionService implements INoteMentionService {
     query: MentionSearchQuery,
   ): Promise<MentionTargetsResponse> {
     const types = [
-      ...new Set(query.types ?? (["note", "color", "link"] as const)),
+      ...new Set(query.types ?? (["note", "color", "link", "image"] as const)),
     ];
     const normalizedQuery = query.q.trim();
 
-    if (!normalizedQuery && types.length === 3) {
-      const [notes, colors, links] = await Promise.all([
+    if (!normalizedQuery && types.length === 4) {
+      const [notes, colors, links, images] = await Promise.all([
         findMentionRows(orgId, ["note"], "", query.limit, query.sourceAssetId),
         findMentionRows(orgId, ["color"], "", query.limit, query.sourceAssetId),
         findMentionRows(orgId, ["link"], "", query.limit, query.sourceAssetId),
+        findMentionRows(orgId, ["image"], "", query.limit, query.sourceAssetId),
       ]);
       return {
         targets: await toTargets(
           orgId,
-          balanceRecentTargets([notes, colors, links], query.limit),
+          balanceRecentTargets([notes, colors, links, images], query.limit),
           this.objectStorageService,
         ),
       };
@@ -156,7 +161,8 @@ export class NoteMentionService implements INoteMentionService {
       (row) =>
         (row.assetType === "note" ||
           row.assetType === "color" ||
-          row.assetType === "link") &&
+          row.assetType === "link" ||
+          row.assetType === "image") &&
         requestedKeys.has(
           mentionKey(row.assetType as MentionType, row.assetId),
         ),
@@ -269,7 +275,8 @@ export async function reconcileNoteReferences(
     (row) =>
       (row.assetType === "note" ||
         row.assetType === "color" ||
-        row.assetType === "link") &&
+        row.assetType === "link" ||
+        row.assetType === "image") &&
       requestedKeys.has(mentionKey(row.assetType as MentionType, row.assetId)),
   );
   const replacements = new Map(
@@ -421,10 +428,14 @@ function selectMentionRows(executor: Executor) {
       resourceId: linkAssets.resourceId,
       resourceKind: externalResources.resourceKind,
       resolverKey: externalResources.resolverKey,
+      imageVariants: imageAssets.variants,
+      imageAlt: imageAssets.alt,
+      imageSourceLabel: imageAssets.sourceLabel,
     })
     .from(assets)
     .leftJoin(noteAssets, eq(noteAssets.assetId, assets.id))
     .leftJoin(colorAssets, eq(colorAssets.assetId, assets.id))
+    .leftJoin(imageAssets, eq(imageAssets.assetId, assets.id))
     .leftJoin(linkAssets, eq(linkAssets.assetId, assets.id))
     .leftJoin(
       externalResources,
@@ -462,6 +473,7 @@ async function findMentionRows(
         or(
           eq(assets.type, "color"),
           eq(assets.type, "link"),
+          eq(assets.type, "image"),
           isNotNull(assets.title),
         ),
         query
@@ -479,6 +491,13 @@ async function findMentionRows(
                 or(
                   ilike(colorAssets.hex, match),
                   sql`lower(coalesce(${colorAssets.gradient}->>'type', '') || ' gradient') like lower(${match})`,
+                ),
+              ),
+              and(
+                eq(assets.type, "image"),
+                or(
+                  ilike(imageAssets.alt, match),
+                  ilike(imageAssets.sourceLabel, match),
                 ),
               ),
             )
@@ -526,6 +545,19 @@ async function toTargets(
     number,
     { preview?: string; icon?: string }
   >();
+  const imageKeysByAsset = new Map<number, string>();
+  for (const row of rows) {
+    if (row.assetType !== "image") continue;
+    const key =
+      row.imageVariants?.preview?.objectKey ??
+      row.imageVariants?.display?.objectKey;
+    if (key) imageKeysByAsset.set(row.assetId, key);
+  }
+  const imageKeys = [...new Set(imageKeysByAsset.values())];
+  const signedImages =
+    imageKeys.length > 0
+      ? await objectStorageService.createPresignedGetUrls(imageKeys)
+      : new Map();
   if (resourceIds.length > 0) {
     const mediaRows = await db
       .select({
@@ -574,13 +606,18 @@ async function toTargets(
     const media = row.resourceId
       ? mediaByResource.get(row.resourceId)
       : undefined;
-    return toTarget(row, media);
+    const imageKey = imageKeysByAsset.get(row.assetId);
+    const imagePreviewUrl = imageKey
+      ? signedImages.get(imageKey)?.url
+      : undefined;
+    return toTarget(row, media, imagePreviewUrl);
   });
 }
 
 function toTarget(
   row: MentionRow,
   media?: { preview?: string; icon?: string },
+  imagePreviewUrl?: string,
 ): MentionTarget {
   const folderName = row.pathFolderNames?.at(-1);
   return {
@@ -592,7 +629,7 @@ function toTarget(
     gradient: row.gradient,
     hostname: row.hostname,
     url: row.url,
-    previewUrl: media?.preview ?? null,
+    previewUrl: imagePreviewUrl ?? media?.preview ?? null,
     faviconUrl: media?.icon ?? null,
     isVideo:
       row.assetType === "link" &&
@@ -607,6 +644,13 @@ function toTarget(
 
 function mentionLabel(row: MentionRow): string {
   if (row.title?.trim()) return row.title.trim();
+  if (row.assetType === "image") {
+    return (
+      row.imageAlt?.trim() ||
+      row.imageSourceLabel?.trim() ||
+      "Untitled image"
+    );
+  }
   if (row.gradient) {
     const type = row.gradient.type === "radial" ? "Radial" : "Linear";
     return `${type} Gradient`;

@@ -6,6 +6,7 @@ import {
   colorAssets,
   externalResourceMedia,
   externalResources,
+  imageAssets,
   linkAssets,
   noteReferences,
 } from "@/db/schema";
@@ -16,9 +17,9 @@ import type { StoredColorGradient } from "@/lib/color-gradient";
 import type { IObjectStorageService } from "@/services/object-storage.service";
 
 /**
- * Presentation values for referenced colors and links, keyed by source note
- * ID. Read-only mention pills can render current labels, swatches, and link
- * thumbnails without a follow-up resolve request per card.
+ * Presentation values for referenced colors, images, and links, keyed by
+ * source note ID. Read-only mention pills can render current labels, swatches,
+ * and media thumbnails without a follow-up resolve request per card.
  */
 export async function fetchMentionColorsBySource(
   orgId: string,
@@ -37,6 +38,8 @@ export async function fetchMentionColorsBySource(
       targetAssetId: noteReferences.targetAssetId,
       targetType: noteReferences.targetType,
       assetTitle: assets.title,
+      imageVariants: imageAssets.variants,
+      imageAlt: imageAssets.alt,
       hex: colorAssets.hex,
       gradient: colorAssets.gradient,
       resourceId: linkAssets.resourceId,
@@ -57,6 +60,10 @@ export async function fetchMentionColorsBySource(
       eq(colorAssets.assetId, noteReferences.targetAssetId),
     )
     .leftJoin(
+      imageAssets,
+      eq(imageAssets.assetId, noteReferences.targetAssetId),
+    )
+    .leftJoin(
       linkAssets,
       and(
         eq(linkAssets.assetId, noteReferences.targetAssetId),
@@ -74,10 +81,18 @@ export async function fetchMentionColorsBySource(
       and(
         eq(noteReferences.organizationId, orgId),
         inArray(noteReferences.sourceAssetId, ids),
-        inArray(noteReferences.targetType, ["color", "link"]),
+        inArray(noteReferences.targetType, ["color", "link", "image"]),
       ),
     );
 
+  const imageKeysByAsset = new Map<number, string>();
+  for (const row of rows) {
+    if (row.targetType !== "image") continue;
+    const key =
+      row.imageVariants?.preview?.objectKey ??
+      row.imageVariants?.display?.objectKey;
+    if (key) imageKeysByAsset.set(row.targetAssetId, key);
+  }
   const resourceIds = [
     ...new Set(rows.flatMap((row) => (row.resourceId ? [row.resourceId] : []))),
   ];
@@ -109,9 +124,14 @@ export async function fetchMentionColorsBySource(
     if (row.role === "icon") keys.icon = variant.objectKey;
     keysByResource.set(row.resourceId, keys);
   }
-  const mediaKeys = [...keysByResource.values()].flatMap((keys) =>
-    [keys.preview, keys.icon].filter((key): key is string => Boolean(key)),
-  );
+  const mediaKeys = [
+    ...new Set([
+      ...[...keysByResource.values()].flatMap((keys) =>
+        [keys.preview, keys.icon].filter((key): key is string => Boolean(key)),
+      ),
+      ...imageKeysByAsset.values(),
+    ]),
+  ];
   const signedMedia =
     objectStorageService && mediaKeys.length > 0
       ? await objectStorageService.createPresignedGetUrls(mediaKeys)
@@ -148,6 +168,13 @@ export async function fetchMentionColorsBySource(
         ...(faviconUrl ? { faviconUrl } : {}),
         ...(isVideo ? { isVideo } : {}),
       };
+    } else if (row.targetType === "image") {
+      const imageKey = imageKeysByAsset.get(row.targetAssetId);
+      const previewUrl = imageKey ? signedMedia.get(imageKey)?.url : undefined;
+      existing[mentionKey("image", row.targetAssetId)] = {
+        label: mentionLabel(row),
+        ...(previewUrl ? { previewUrl } : {}),
+      };
     }
     result.set(row.sourceAssetId, existing);
   }
@@ -158,11 +185,15 @@ export async function fetchMentionColorsBySource(
 function mentionLabel(row: {
   assetTitle: string | null;
   targetType: string;
+  imageAlt: string | null;
   gradient: StoredColorGradient | null;
   hex: string | null;
   hostname: string | null;
 }) {
   if (row.assetTitle?.trim()) return row.assetTitle.trim();
+  if (row.targetType === "image") {
+    return row.imageAlt?.trim() || "Untitled image";
+  }
   if (row.targetType === "color") {
     if (row.gradient) return getColorGradientTitle(row.gradient);
     if (row.hex) return row.hex;

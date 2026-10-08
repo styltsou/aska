@@ -17,6 +17,7 @@ import {
   ArrowUpIcon,
   CornerDownLeftIcon,
   FileTextIcon,
+  ImageIcon,
   LinkIcon,
   PlayIcon,
   VideoIcon,
@@ -145,6 +146,15 @@ export function MentionGlyph({
       />
     );
   }
+  if (assetType === "image") {
+    return (
+      <ImageMentionThumbnail
+        previewUrl={previewUrl ?? undefined}
+        className={NOTE_MENTION_GLYPH_CLASS}
+        iconClassName="size-2.5 text-foreground/75"
+      />
+    );
+  }
   if (!swatchBackground) return null;
   return (
     <span
@@ -240,6 +250,38 @@ function LinkMentionThumbnail({
   );
 }
 
+function ImageMentionThumbnail({
+  previewUrl,
+  className,
+  iconClassName,
+}: {
+  previewUrl?: string;
+  className: string;
+  iconClassName: string;
+}) {
+  const [failedPreview, setFailedPreview] = useState(false);
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-[0.2rem] bg-muted",
+        className,
+      )}
+    >
+      {!previewUrl || failedPreview ? (
+        <ImageIcon className={cn("absolute", iconClassName)} />
+      ) : (
+        <img
+          src={previewUrl}
+          alt=""
+          className="absolute inset-0 size-full object-cover"
+          onError={() => setFailedPreview(true)}
+        />
+      )}
+    </span>
+  );
+}
+
 export function mentionSwatchBackground(resolved?: NoteMentionTarget) {
   if (!resolved) return undefined;
   if (resolved.gradient) return resolveGradientCss(resolved.gradient);
@@ -287,7 +329,7 @@ export const AssetMention = Node.create({
     ];
   },
   parseMarkdown(token, helpers) {
-    const match = /^(note|color|link):(\d+)$/.exec(token.href ?? "");
+    const match = /^(note|color|link|image):(\d+)$/.exec(token.href ?? "");
     if (!match) {
       return helpers.applyMark(
         "link",
@@ -345,7 +387,8 @@ export function NoteMentionProvider({
             Number.isSafeInteger(assetId) &&
             (assetType === "note" ||
               assetType === "color" ||
-              assetType === "link")
+              assetType === "link" ||
+              assetType === "image")
           )
             targets.set(`${assetType}:${assetId}`, { assetId, assetType });
         });
@@ -476,6 +519,8 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
               <NoteMentionHoverCard target={resolved} />
             ) : assetType === "color" ? (
               <ColorMentionHoverCard target={resolved} />
+            ) : assetType === "image" ? (
+              <ImageMentionHoverCard target={resolved} />
             ) : (
               <LinkMentionHoverCard target={resolved} />
             )
@@ -557,6 +602,24 @@ function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
           {target.locationLabel}
         </p>
       </div>
+    </div>
+  );
+}
+
+function ImageMentionHoverCard({ target }: { target: NoteMentionTarget }) {
+  return (
+    <div className="p-3.5">
+      <ImageMentionThumbnail
+        previewUrl={target.previewUrl ?? undefined}
+        className="aspect-video w-full rounded-lg"
+        iconClassName="size-8 text-muted-foreground/55"
+      />
+      <p className="mt-2 truncate text-sm font-semibold text-foreground">
+        {target.label}
+      </p>
+      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+        {target.locationLabel}
+      </p>
     </div>
   );
 }
@@ -661,29 +724,50 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
       lastResolvedItems,
       loading,
     });
-    const { notes, colors, videos, links, flatItems } = useMemo(() => {
-      const nextNotes = displayItems.filter(
+    const scopedDisplayItems = useMemo(
+      () =>
+        parsed.scope
+          ? displayItems.filter((item) =>
+              parsed.scope === "link"
+                ? item.assetType === "link"
+                : item.assetType === parsed.scope,
+            )
+          : displayItems,
+      [displayItems, parsed.scope],
+    );
+    const { notes, colors, images, videos, links, flatItems } = useMemo(() => {
+      const nextNotes = scopedDisplayItems.filter(
         (item) => item.assetType === "note",
       );
-      const nextColors = displayItems.filter(
+      const nextColors = scopedDisplayItems.filter(
         (item) => item.assetType === "color",
       );
-      const nextVideos = displayItems.filter(
+      const nextImages = scopedDisplayItems.filter(
+        (item) => item.assetType === "image",
+      );
+      const nextVideos = scopedDisplayItems.filter(
         (item) => item.assetType === "link" && item.isVideo,
       );
-      const nextLinks = displayItems.filter(
+      const nextLinks = scopedDisplayItems.filter(
         (item) => item.assetType === "link" && !item.isVideo,
       );
       return {
         notes: nextNotes,
         colors: nextColors,
+        images: nextImages,
         videos: nextVideos,
         links: nextLinks,
-        flatItems: [...nextNotes, ...nextColors, ...nextVideos, ...nextLinks],
+        flatItems: [
+          ...nextNotes,
+          ...nextColors,
+          ...nextImages,
+          ...nextVideos,
+          ...nextLinks,
+        ],
       };
-    }, [displayItems]);
+    }, [scopedDisplayItems]);
     const showScopeControls =
-      [notes, colors, videos, links].filter((group) => group.length > 0)
+      [notes, colors, images, videos, links].filter((group) => group.length > 0)
         .length > 1;
     const showGroupLabels = showScopeControls;
     const showInitialLoading = loading && flatItems.length === 0;
@@ -693,8 +777,10 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
         ? "No notes match"
         : parsed.scope === "color"
           ? "No colors match"
-          : "No mentions match"
-      : "No notes, colors, videos, or links to mention yet";
+          : parsed.scope === "image"
+            ? "No images match"
+            : "No mentions match"
+      : "No notes, colors, images, videos, or links to mention yet";
 
     useEffect(() => setSelectedIndex(0), [flatItems]);
     useEffect(() => {
@@ -756,7 +842,7 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
             {showScopeControls || showSearching ? (
               <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
                 {showScopeControls
-                  ? ([undefined, "note", "color", "link"] as const).map(
+                  ? ([undefined, "note", "color", "image", "link"] as const).map(
                       (scope) => (
                         <button
                           key={scope ?? "all"}
@@ -773,9 +859,11 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                             ? "Notes"
                             : scope === "color"
                               ? "Colors"
-                              : scope === "link"
-                                ? "Links"
-                                : "All"}
+                              : scope === "image"
+                                ? "Images"
+                                : scope === "link"
+                                  ? "Links"
+                                  : "All"}
                         </button>
                       ),
                     )
@@ -797,7 +885,8 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
               aria-busy={loading}
             >
               {showInitialLoading ? <MentionMenuSkeleton /> : null}
-              {notes.length > 0 && parsed.scope !== "color" ? (
+              {notes.length > 0 &&
+              (!parsed.scope || parsed.scope === "note") ? (
                 <MentionGroup
                   label="Notes"
                   showLabel={showGroupLabels}
@@ -809,7 +898,8 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   onHover={setSelectedIndex}
                 />
               ) : null}
-              {colors.length > 0 && parsed.scope !== "note" ? (
+              {colors.length > 0 &&
+              (!parsed.scope || parsed.scope === "color") ? (
                 <MentionGroup
                   label="Colors"
                   showLabel={showGroupLabels}
@@ -821,13 +911,12 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   onHover={setSelectedIndex}
                 />
               ) : null}
-              {videos.length > 0 &&
-              parsed.scope !== "note" &&
-              parsed.scope !== "color" ? (
+              {images.length > 0 &&
+              (!parsed.scope || parsed.scope === "image") ? (
                 <MentionGroup
-                  label="Videos"
+                  label="Images"
                   showLabel={showGroupLabels}
-                  items={videos}
+                  items={images}
                   startIndex={notes.length + colors.length}
                   selectedIndex={selectedIndex}
                   itemRefs={itemRefs}
@@ -835,14 +924,28 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   onHover={setSelectedIndex}
                 />
               ) : null}
+              {videos.length > 0 &&
+              (!parsed.scope || parsed.scope === "link") ? (
+                <MentionGroup
+                  label="Videos"
+                  showLabel={showGroupLabels}
+                  items={videos}
+                  startIndex={notes.length + colors.length + images.length}
+                  selectedIndex={selectedIndex}
+                  itemRefs={itemRefs}
+                  onSelect={select}
+                  onHover={setSelectedIndex}
+                />
+              ) : null}
               {links.length > 0 &&
-              parsed.scope !== "note" &&
-              parsed.scope !== "color" ? (
+              (!parsed.scope || parsed.scope === "link") ? (
                 <MentionGroup
                   label="Links"
                   showLabel={showGroupLabels}
                   items={links}
-                  startIndex={notes.length + colors.length + videos.length}
+                  startIndex={
+                    notes.length + colors.length + images.length + videos.length
+                  }
                   selectedIndex={selectedIndex}
                   itemRefs={itemRefs}
                   onSelect={select}
@@ -864,6 +967,10 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
               <span>,</span>
               <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
                 @color
+              </Kbd>
+              <span>,</span>
+              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
+                @image
               </Kbd>
               <span>or</span>
               <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
@@ -974,6 +1081,12 @@ function MentionGroup({
                     ? resolveGradientCss(item.gradient)
                     : (item.hex ?? "var(--muted)"),
                 }}
+              />
+            ) : item.assetType === "image" ? (
+              <ImageMentionThumbnail
+                previewUrl={item.previewUrl ?? undefined}
+                className="size-7 rounded-md"
+                iconClassName="size-5 text-foreground/70"
               />
             ) : item.assetType === "link" ? (
               <LinkMentionThumbnail
@@ -1180,7 +1293,7 @@ export function parseMentionQuery(query: string): {
   scope?: NoteMentionType;
   search: string;
 } {
-  const match = /^(note|color|link)(?:\s+(.*))?$/i.exec(query);
+  const match = /^(note|color|link|image)(?:\s+(.*))?$/i.exec(query);
   if (!match) return { search: query.trim() };
   return {
     scope: match[1]!.toLowerCase() as NoteMentionType,
@@ -1198,7 +1311,7 @@ export function createMentionScopeQuery(
 
 export function parseNumericAssetId(assetId?: string): number | undefined {
   if (!assetId) return undefined;
-  const match = /^(?:note|color|link)-(\d+)$/.exec(assetId);
+  const match = /^(?:note|color|link|image)-(\d+)$/.exec(assetId);
   return match ? Number(match[1]) : undefined;
 }
 

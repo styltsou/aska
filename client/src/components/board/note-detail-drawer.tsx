@@ -31,7 +31,10 @@ import type {
   CollectionNoteNode,
 } from "@/api/collection";
 import { fetchPeekableAsset } from "@/api/collection/fetchers";
-import type { NoteMentionTarget } from "@/api/note-mentions/types";
+import type {
+  NoteMentionTarget,
+  NoteMentionType,
+} from "@/api/note-mentions/types";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-boundary";
@@ -88,7 +91,7 @@ import {
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import type { NoteHighlightColor } from "@/lib/note-highlights";
-import type { ColorAsset, NoteAsset } from "@/types/asset";
+import type { ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import {
   useWorkspacePeek,
   type PeekColorScope,
@@ -137,6 +140,7 @@ export function NoteDetailDrawer({
   noteExtractionTarget,
   onNoteChange,
   onOpenReferencedColor,
+  onOpenReferencedImage,
   onOpenReferencedVideo,
   onPromote,
   onSwap,
@@ -172,6 +176,7 @@ export function NoteDetailDrawer({
   };
   onNoteChange?: (note: NoteAsset) => void;
   onOpenReferencedColor?: (color: ColorAsset) => void;
+  onOpenReferencedImage?: (image: ImageAsset) => void;
   onOpenReferencedVideo?: (assetId: string) => void | Promise<void>;
   onPromote?: (
     note: NoteAsset,
@@ -201,6 +206,7 @@ export function NoteDetailDrawer({
   const {
     target: peekTarget,
     peekNote,
+    peekImage,
     peekColor,
     setActiveNoteId,
     setNotePromotionHandler,
@@ -1200,7 +1206,7 @@ export function NoteDetailDrawer({
 
   const openMentionTarget = useCallback(
     async (
-      identity: { assetId: number; assetType: "note" | "color" | "link" },
+      identity: { assetId: number; assetType: NoteMentionType },
       resolved?: NoteMentionTarget,
     ) => {
       try {
@@ -1220,6 +1226,11 @@ export function NoteDetailDrawer({
         if (asset.type === "note") {
           if (isMobile) await promotePeekedNote(asset);
           else peekNote(asset, assetLocation);
+          return;
+        }
+        if (asset.type === "image") {
+          if (isMobile && onOpenReferencedImage) onOpenReferencedImage(asset);
+          else peekImage(asset, assetLocation);
           return;
         }
         if (asset.type !== "color") return;
@@ -1245,8 +1256,10 @@ export function NoteDetailDrawer({
     [
       isMobile,
       onOpenReferencedColor,
+      onOpenReferencedImage,
       onOpenReferencedVideo,
       peekColor,
+      peekImage,
       peekNote,
       promotePeekedNote,
       workspaceSlug,

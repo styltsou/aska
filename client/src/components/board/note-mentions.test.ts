@@ -12,6 +12,7 @@ import {
   NOTE_MENTION_CHIP_CLASS,
   NOTE_MENTION_CHIP_HOVER_CLASS,
   NoteMentionProvider,
+  MentionPillBody,
   createMentionScopeQuery,
   createMentionsExtension,
   filterRecentMentionTargets,
@@ -159,7 +160,7 @@ describe("mention query parsing", () => {
     expect(isMentionSearchCacheFresh(queryClient, shared.queryKey)).toBe(true);
   });
 
-  it("recognizes explicit note and color scopes", () => {
+  it("recognizes explicit note, color, and image scopes", () => {
     expect(parseMentionQuery("note design system")).toEqual({
       scope: "note",
       search: "design system",
@@ -167,6 +168,10 @@ describe("mention query parsing", () => {
     expect(parseMentionQuery("color ")).toEqual({
       scope: "color",
       search: "",
+    });
+    expect(parseMentionQuery("image sunset")).toEqual({
+      scope: "image",
+      search: "sunset",
     });
   });
 
@@ -187,14 +192,36 @@ describe("mention query parsing", () => {
     expect(createMentionScopeQuery("color", "note design system")).toBe(
       "@color design system",
     );
+    expect(createMentionScopeQuery("image", "landscape")).toBe(
+      "@image landscape",
+    );
     expect(createMentionScopeQuery(undefined, "note design system")).toBe(
       "@design system",
     );
   });
 
+  it("renders an image mention with its preview or image fallback", () => {
+    const fallback = renderToStaticMarkup(
+      createElement(MentionPillBody, {
+        assetType: "image",
+        label: "A landscape",
+      }),
+    );
+    const preview = renderToStaticMarkup(
+      createElement(MentionPillBody, {
+        assetType: "image",
+        label: "A landscape",
+        previewUrl: "https://media.example/landscape.webp",
+      }),
+    );
+
+    expect(fallback).toContain("lucide-image");
+    expect(preview).toContain("https://media.example/landscape.webp");
+  });
+
   it("reads the numeric entity id from client note ids", () => {
     expect(parseNumericAssetId("note-42")).toBe(42);
-    expect(parseNumericAssetId("image-42")).toBeUndefined();
+    expect(parseNumericAssetId("image-42")).toBe(42);
   });
 
   it("tolerates unavailable Tiptap editor snapshots during initial render", () => {

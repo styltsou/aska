@@ -1426,6 +1426,7 @@ function PeekNote({
   useEffect(() => pruneRedundantEditDrafts(), []);
   const {
     peekNote,
+    peekImage,
     peekColor,
     peekVideo,
     setPeekNoteFlushHandler,
@@ -1688,7 +1689,7 @@ function PeekNote({
   );
   const openMentionTarget = useCallback(
     async (
-      identity: { assetId: number; assetType: "note" | "color" | "link" },
+      identity: { assetId: number; assetType: "note" | "color" | "link" | "image" },
       resolved?: NoteMentionTarget,
     ) => {
       try {
@@ -1717,6 +1718,10 @@ function PeekNote({
           peekNote(asset, location);
           return;
         }
+        if (asset.type === "image") {
+          peekImage(asset, location);
+          return;
+        }
         if (asset.type !== "color") return;
         peekColor(
           asset,
@@ -1741,6 +1746,7 @@ function PeekNote({
       flush,
       openReferencedVideo,
       peekColor,
+      peekImage,
       peekNote,
       readOnly,
       savePeekDraft,

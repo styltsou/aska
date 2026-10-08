@@ -809,6 +809,7 @@ function WorkspaceAssetViewController({
             });
           }}
           onOpenReferencedColor={(color) => openAsset(color.id)}
+          onOpenReferencedImage={(image) => openAsset(image.id)}
           onOpenReferencedVideo={async (assetId) => {
             await openAsset(assetId);
           }}

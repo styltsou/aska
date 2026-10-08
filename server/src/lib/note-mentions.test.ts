@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { extractNoteMentions, rewriteNoteMentionLabels } from "./note-mentions";
 
 describe("note mention markdown", () => {
-  it("extracts note and color links while ignoring ordinary links", () => {
+  it("extracts note, color, and image links while ignoring ordinary links", () => {
     expect(
       extractNoteMentions(
-        "See [Plan](note:12), [Blue](color:8), and [site](https://example.com).",
+        "See [Plan](note:12), [Blue](color:8), [Sunset](image:5), and [site](https://example.com).",
       ).map(({ targetAssetId, targetType, fallbackLabel }) => ({
         targetAssetId,
         targetType,
@@ -15,6 +15,7 @@ describe("note mention markdown", () => {
     ).toEqual([
       { targetAssetId: 12, targetType: "note", fallbackLabel: "Plan" },
       { targetAssetId: 8, targetType: "color", fallbackLabel: "Blue" },
+      { targetAssetId: 5, targetType: "image", fallbackLabel: "Sunset" },
     ]);
   });
 
@@ -32,6 +33,15 @@ describe("note mention markdown", () => {
     expect(extractNoteMentions(markdown)).toEqual([
       expect.objectContaining({ targetAssetId: 3, targetType: "note" }),
     ]);
+  });
+
+  it("rewrites image fallbacks when labels change", () => {
+    expect(
+      rewriteNoteMentionLabels(
+        "[Old image](image:7)",
+        new Map([["image:7", "New image"]]),
+      ),
+    ).toBe("[New image](image:7)");
   });
 
   it("rewrites every matching fallback without reformatting the note", () => {
