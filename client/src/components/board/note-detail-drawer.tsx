@@ -1229,19 +1229,27 @@ export function NoteDetailDrawer({
           workspaceSlug,
           `${identity.assetType}-${identity.assetId}`,
         );
-        if (asset.type === "note") {
-          if (isMobile) await promotePeekedNote(asset);
-          else peekNote(asset, assetLocation);
+        const referencedAsset = collectionNodeToAsset(asset);
+        if (referencedAsset.type === "note") {
+          if (isMobile) await promotePeekedNote(referencedAsset);
+          else peekNote(referencedAsset, assetLocation);
           return;
         }
-        if (asset.type === "image") {
-          if (isMobile && onOpenReferencedImage) onOpenReferencedImage(asset);
-          else peekImage(asset, assetLocation);
+        if (referencedAsset.type === "image") {
+          if (isMobile && onOpenReferencedImage)
+            onOpenReferencedImage(referencedAsset);
+          else peekImage(referencedAsset, assetLocation);
           return;
         }
-        if (asset.type !== "color") return;
+        if (referencedAsset.type === "video") {
+          if (onOpenReferencedVideo) {
+            await onOpenReferencedVideo(referencedAsset.id);
+          }
+          return;
+        }
+        if (referencedAsset.type !== "color") return;
         if (isMobile) {
-          onOpenReferencedColor?.(asset);
+          onOpenReferencedColor?.(referencedAsset);
           return;
         }
         const scope: PeekColorScope = resolved?.collectionSlug
@@ -1252,7 +1260,7 @@ export function NoteDetailDrawer({
               includeDescendants: true,
             }
           : { type: "inbox" };
-        peekColor(asset, scope);
+        peekColor(referencedAsset, scope);
       } catch (error) {
         toast.error(
           getUserFacingApiErrorMessage(error, "Could not open this reference."),

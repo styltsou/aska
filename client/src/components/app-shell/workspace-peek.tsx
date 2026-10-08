@@ -1718,21 +1718,22 @@ function PeekNote({
           workspaceSlug,
           `${identity.assetType}-${identity.assetId}`,
         );
-        if (asset.type === "note") {
-          peekNote(asset, location);
+        const peekAsset = collectionNodeToAsset(asset);
+        if (peekAsset.type === "note") {
+          peekNote(peekAsset, location);
           return;
         }
-        if (asset.type === "image") {
-          peekImage(asset, location);
+        if (peekAsset.type === "image") {
+          peekImage(peekAsset, location);
           return;
         }
-        if (asset.type === "video") {
-          await openAssetInViewer(asset.id);
+        if (peekAsset.type === "video") {
+          await openAssetInViewer(peekAsset.id);
           return;
         }
-        if (asset.type !== "color") return;
+        if (peekAsset.type !== "color") return;
         peekColor(
-          asset,
+          peekAsset,
           resolved?.collectionSlug
             ? {
                 type: "collection",
