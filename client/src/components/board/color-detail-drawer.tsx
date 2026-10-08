@@ -991,10 +991,6 @@ function ColorDetailLoading({
             <Skeleton className="size-8 rounded-lg" />
           </div>
         </div>
-        <div className="border-b px-4 py-4">
-          <Skeleton className="h-3 w-12" />
-          <Skeleton className="mt-2 h-4 w-40" />
-        </div>
         <div className="flex items-center justify-between gap-3 px-4 py-4">
           <Skeleton className="h-4 w-28" />
           {scope.type === "collection" ? (
@@ -1019,12 +1015,7 @@ function ColorDetailLoading({
           data-asset-modal-hero
           className="h-[clamp(5rem,20dvh,10rem)] w-full rounded-xl"
         />
-        <Skeleton className="mt-4 h-6 w-48" />
-        <Skeleton className="mt-2 h-3 w-24" />
-        <div className="mt-5">
-          <Skeleton className="h-3 w-12" />
-          <Skeleton className="mt-2 h-4 w-40" />
-        </div>
+        <Skeleton className="mt-1 h-3 w-24" />
         <div className="mt-8 flex items-center justify-between gap-3">
           <Skeleton className="h-4 w-28" />
           {scope.type === "collection" ? (
