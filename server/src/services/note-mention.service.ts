@@ -105,8 +105,7 @@ export class NoteMentionService implements INoteMentionService {
   ): Promise<MentionTargetsResponse> {
     const types = [
       ...new Set(
-        query.types ??
-          (["note", "color", "link", "image", "video"] as const),
+        query.types ?? (["note", "color", "link", "image", "video"] as const),
       ),
     ];
     const normalizedQuery = query.q.trim();
