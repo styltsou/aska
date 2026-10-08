@@ -537,12 +537,13 @@ function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
     <div className="flex items-center gap-3 p-3.5">
       <div
         aria-hidden="true"
-        className={cn(
-          "relative size-14 shrink-0 overflow-hidden rounded-md",
-          hasAlpha &&
-            "bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]",
-        )}
+        className="relative size-14 shrink-0 overflow-hidden rounded-md"
       >
+        {hasAlpha ? (
+          <div
+            className="absolute inset-px rounded-[calc(var(--radius-md)-1px)] bg-size-[16px_16px] bg-[repeating-conic-gradient(#e5e7eb_0_25%,#ffffff_0_50%)]"
+          />
+        ) : null}
         <div className="absolute inset-0 rounded-md" style={{ background }} />
       </div>
       <div className="min-w-0">
@@ -567,7 +568,7 @@ function LinkMentionHoverCard({ target }: { target: NoteMentionTarget }) {
         previewUrl={target.previewUrl ?? undefined}
         faviconUrl={target.faviconUrl ?? undefined}
         isVideo={target.isVideo}
-        className="size-14 rounded-md border border-foreground/10"
+        className="size-14 rounded-md"
         iconClassName="size-5 text-foreground/75"
         showVideoBadge
       />
