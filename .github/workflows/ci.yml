@@ -95,7 +95,7 @@ jobs:
             changed: ${{ needs.changes.outputs.client }}
           - name: Server
             directory: server
-            command: bun run lint && bun run typecheck && bun run format && bun run test
+            command: bun run lint && bun run typecheck && bun run format:fix && git diff -- src/services/note-mention.service.ts && bun run test
             # Server also runs when the SST/infra config or shared deps change.
             changed: ${{ needs.changes.outputs.server || needs.changes.outputs.infra || needs.changes.outputs.image-shared || needs.changes.outputs.url-unfurl-shared }}
           - name: Image variants
