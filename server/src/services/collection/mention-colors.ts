@@ -150,8 +150,7 @@ export async function fetchMentionColorsBySource(
 
   for (const row of rows) {
     const existing = result.get(row.sourceAssetId) ?? {};
-    if (row.targetType === "video") return row.videoSourceLabel?.trim() || "Untitled video";
-  if (row.targetType === "color") {
+    if (row.targetType === "color") {
       existing[mentionKey("color", row.targetAssetId)] = {
         label: mentionLabel(row),
         ...(row.gradient
@@ -213,6 +212,9 @@ function mentionLabel(row: {
   if (row.assetTitle?.trim()) return row.assetTitle.trim();
   if (row.targetType === "image") {
     return row.imageAlt?.trim() || "Untitled image";
+  }
+  if (row.targetType === "video") {
+    return row.videoSourceLabel?.trim() || "Untitled video";
   }
   if (row.targetType === "color") {
     if (row.gradient) return getColorGradientTitle(row.gradient);
