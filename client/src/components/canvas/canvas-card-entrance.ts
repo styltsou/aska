@@ -18,6 +18,7 @@ export function consumeCanvasCardEntranceSuppression(
   suppressedEntrances.delete(identity);
   return expiresAt !== undefined && expiresAt > Date.now();
 }
+
 export function resolveCanvasCardPresence({
   currentNodeId,
   nextNodeId,
