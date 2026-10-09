@@ -41,7 +41,7 @@ import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { UploadMediaDialog } from "@/components/app-shell/upload-media-dialog";
 
 const RAIL_BUTTON_CLASS =
-  "rounded-[calc(var(--radius-md)-1px)] text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80";
+  "rounded-[calc(var(--radius-md)-1px)] text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80 max-md:size-8";
 
 function RailShortcut({ keys }: { keys: string }) {
   return (
@@ -112,7 +112,7 @@ export function BoardActionRail({
             }
             transition={enterTransition}
             style={{ transformOrigin: "bottom center" }}
-            className="pointer-events-auto relative w-fit max-w-full overflow-x-auto overscroll-x-contain"
+            className="pointer-events-auto relative w-fit max-w-full"
           >
             <div
               className={cn("relative w-fit", FLOATING_GLASS_BACKDROP_CLASS)}
