@@ -26,7 +26,6 @@ export const apiRoutes = factory
   .route("/", imageUploadRoutes)
   .route("/", videoUploadRoutes)
   .route("/", mediaResolutionRoutes)
-  .route("/", extensionAuthRoutes)
   .route("/", videoPipelineRoutes)
   .route("/", pexelsRoutes)
   .route("/", imagePipelineRoutes)
