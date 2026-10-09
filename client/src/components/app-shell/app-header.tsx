@@ -140,7 +140,7 @@ export function AppHeader() {
   const setCollectionView = useSessionStore((state) => state.setCollectionView);
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 min-w-0 shrink-0 items-center gap-2 bg-sidebar px-2 transition-[height] duration-120 ease-linear group-has-[[data-slot=sidebar][data-state=collapsed]]/sidebar-wrapper:h-12 md:px-0 md:group-data-[canvas-sidebar=floating]/sidebar-wrapper:h-12">
+    <header className="sticky top-0 z-20 flex h-12 min-w-0 shrink-0 items-center gap-2 bg-sidebar px-2 transition-[height] duration-120 ease-linear group-has-[[data-slot=sidebar][data-state=collapsed]]/sidebar-wrapper:h-12 md:h-14 md:px-0 md:group-data-[canvas-sidebar=floating]/sidebar-wrapper:h-12">
       <SidebarTrigger />
       <AppBreadcrumbs />
       <div className="ml-auto flex items-center gap-2">
