@@ -1,11 +1,11 @@
 import { createAuthClient } from "better-auth/react";
-import { apiKeyClient, organizationClient } from "better-auth/client/plugins";
+import { organizationClient } from "better-auth/client/plugins";
 
 const DEFAULT_SERVER_URL = "http://localhost:3000";
 
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_SERVER_URL ?? DEFAULT_SERVER_URL,
-  plugins: [organizationClient(), apiKeyClient()],
+  plugins: [organizationClient()],
   sessionOptions: {
     // Route guards own session refreshes. Avoid network requests just because
     // a user switches back to this browser tab.
