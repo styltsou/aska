@@ -93,7 +93,7 @@ export function BoardActionRail({
     : FLOATING_TOOLBAR_EXIT_TRANSITION;
 
   return (
-    <div className="absolute inset-x-0 bottom-3 z-20 hidden items-end justify-center lg:flex">
+    <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-20 flex items-end justify-center px-2">
       <AnimatePresence initial={false}>
         {isRailVisible ? (
           <motion.div
@@ -112,7 +112,7 @@ export function BoardActionRail({
             }
             transition={enterTransition}
             style={{ transformOrigin: "bottom center" }}
-            className="pointer-events-auto relative w-fit"
+            className="pointer-events-auto relative w-fit max-w-full overflow-x-auto overscroll-x-contain"
           >
             <div
               className={cn("relative w-fit", FLOATING_GLASS_BACKDROP_CLASS)}
