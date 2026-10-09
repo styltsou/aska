@@ -4,7 +4,7 @@ import type { AuthSession } from "@/lib/auth";
 
 type ApiVariables = {
   requestId: string;
-  authSession: AuthSession["session"] | null;
+  authSession: AuthSession["session"];
   user: AuthSession["user"];
   userId: AuthSession["user"]["id"];
   activeOrganizationId: string | null;
