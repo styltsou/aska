@@ -13,6 +13,7 @@ import noteMentionRoutes from "./note-mention.routes";
 import workspaceSearchRoutes from "./workspace-search.routes";
 import videoUploadRoutes from "./video-upload.routes";
 import videoPipelineRoutes from "./video-pipeline.routes";
+import extensionAuthRoutes from "./extension-auth.routes";
 import mediaResolutionRoutes from "./media-resolution.routes";
 
 export const apiRoutes = factory
@@ -26,6 +27,7 @@ export const apiRoutes = factory
   .route("/", imageUploadRoutes)
   .route("/", videoUploadRoutes)
   .route("/", mediaResolutionRoutes)
+  .route("/", extensionAuthRoutes)
   .route("/", videoPipelineRoutes)
   .route("/", pexelsRoutes)
   .route("/", imagePipelineRoutes)
