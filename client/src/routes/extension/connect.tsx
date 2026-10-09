@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckIcon, LoaderCircleIcon } from "lucide-react";
 
@@ -140,7 +140,7 @@ function ConnectMessage({
 }: {
   title: string;
   description: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <section className="space-y-6" aria-labelledby="extension-connect-title">
