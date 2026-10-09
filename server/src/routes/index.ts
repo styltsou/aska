@@ -13,7 +13,6 @@ import noteMentionRoutes from "./note-mention.routes";
 import workspaceSearchRoutes from "./workspace-search.routes";
 import videoUploadRoutes from "./video-upload.routes";
 import videoPipelineRoutes from "./video-pipeline.routes";
-import extensionAuthRoutes from "./extension-auth.routes";
 import mediaResolutionRoutes from "./media-resolution.routes";
 
 export const apiRoutes = factory
