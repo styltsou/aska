@@ -3896,7 +3896,13 @@
             "properties": {
               "upload": {
                 "type": "object",
-                "required": ["id", "status", "errorMessage", "assetId", "ready"],
+                "required": [
+                  "id",
+                  "status",
+                  "errorMessage",
+                  "assetId",
+                  "ready"
+                ],
                 "properties": {
                   "id": { "type": "integer" },
                   "status": {

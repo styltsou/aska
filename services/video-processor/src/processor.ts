@@ -366,7 +366,8 @@ export async function processStoredVideo(input: {
       },
     );
     if (ready.ignored) {
-      if (ready.cleanup) await removeVideoObjects(input.bucket, input.objectKey);
+      if (ready.cleanup)
+        await removeVideoObjects(input.bucket, input.objectKey);
       return;
     }
     const prefix = input.objectKey.slice(0, input.objectKey.lastIndexOf("/"));
@@ -559,15 +560,12 @@ export async function reportStoredFailure(
     ignored: boolean;
     cleanup?: boolean;
     preserveOriginal?: boolean;
-  }>(
-    CALLBACK_PATH,
-    {
-      event: "video.processing.failed",
-      originalObjectKey: input.objectKey,
-      originalEtag: input.originalEtag,
-      error: message,
-    },
-  );
+  }>(CALLBACK_PATH, {
+    event: "video.processing.failed",
+    originalObjectKey: input.objectKey,
+    originalEtag: input.originalEtag,
+    error: message,
+  });
   if ((!result.ignored && !result.preserveOriginal) || result.cleanup)
     await removeVideoObjects(input.bucket, input.objectKey);
 }

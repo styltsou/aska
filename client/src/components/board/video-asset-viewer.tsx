@@ -179,11 +179,7 @@ export function VideoAssetViewer({
             onToggleNotes={() => setNotesOpen((current) => !current)}
             notesOpen={notesOpen}
             onShowInBoard={onShowInBoard}
-            onDownload={
-              displayedAsset?.url
-                ? handleDownload
-                : undefined
-            }
+            onDownload={displayedAsset?.url ? handleDownload : undefined}
             presentation="drawer"
           />
           {displayedAsset ? (
@@ -277,11 +273,7 @@ export function VideoAssetViewer({
           onToggleNotes={() => setNotesOpen((current) => !current)}
           notesOpen={notesOpen}
           onShowInBoard={onShowInBoard}
-          onDownload={
-            displayedAsset?.url
-              ? handleDownload
-              : undefined
-          }
+          onDownload={displayedAsset?.url ? handleDownload : undefined}
           expanded={expanded}
           presentation={expanded ? "workspace" : "modal"}
           layoutDependency={presentation}
