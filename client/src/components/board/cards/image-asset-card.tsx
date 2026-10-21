@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ExternalLink, LoaderCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
@@ -19,6 +19,7 @@ export function ImageAssetCard({
 }) {
   const hasBar = asset.sourceLabel;
   const [hovered, setHovered] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   return (
     <div
@@ -60,23 +61,30 @@ export function ImageAssetCard({
           loading="lazy"
         />
       </div>
-      {asset.uploadStatus ? (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5">
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
-            <LoaderCircleIcon className="size-3 animate-spin" />
-            {asset.uploadStatus === "processing" ? (
-              <span>Importing</span>
-            ) : (
-              <span>
-                Uploading{" "}
-                <span className="font-mono tabular-nums">
-                  {asset.uploadProgress ?? 0}%
+      <AnimatePresence initial={false}>
+        {asset.uploadStatus ? (
+          <motion.div
+            key="upload-status"
+            exit={reduceMotion ? undefined : { opacity: 0, y: 8 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18 }}
+            className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
+          >
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
+              <LoaderCircleIcon className="size-3 animate-spin" />
+              {asset.uploadStatus === "processing" ? (
+                <span>Importing</span>
+              ) : (
+                <span>
+                  Uploading{" "}
+                  <span className="font-mono tabular-nums">
+                    {asset.uploadProgress ?? 0}%
+                  </span>
                 </span>
-              </span>
-            )}
-          </div>
-        </div>
-      ) : null}
+              )}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       <AnimatePresence>
         {hovered && hasBar && !asset.uploadStatus ? (
           <motion.div

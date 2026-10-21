@@ -126,6 +126,7 @@ import {
 import {
   CanvasTextNode,
   CanvasTextEditor,
+  resolveCanvasTextHandoff,
   type CanvasTextFlowNode,
   type CanvasTextNodeData,
 } from "./canvas-text-node";
@@ -351,6 +352,9 @@ function CanvasSurface({
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [draftText, setDraftText] = useState<CanvasTextObject>();
   const [editingTextId, setEditingTextId] = useState<string>();
+  const [pendingTextContent, setPendingTextContent] = useState(
+    () => new Map<string, string>(),
+  );
   const [editingArrowId, setEditingArrowId] = useState<string>();
   const [canvasObjectFocus, setCanvasObjectFocus] = useState<{
     boardKey: string;
@@ -1050,6 +1054,9 @@ function CanvasSurface({
         setDraftText((current) =>
           current?.id === objectId ? { ...current, content } : current,
         );
+        setPendingTextContent((current) =>
+          new Map(current).set(objectId, content),
+        );
         setEditingTextId(undefined);
         createCanvasTextMutation(
           {
@@ -1077,6 +1084,9 @@ function CanvasSurface({
               }
             },
             onError: () => {
+              setPendingTextContent((current) =>
+                removePendingTextContent(current, objectId, content),
+              );
               setDraftText(undefined);
               setEditingTextId(undefined);
               toast.error("Unable to create canvas text.");
@@ -1087,9 +1097,19 @@ function CanvasSurface({
       }
       setEditingTextId(undefined);
       if (!trimmed) return;
+      setPendingTextContent((current) =>
+        new Map(current).set(objectId, content),
+      );
       updateCanvasTextMutation(
         { objectId, content },
-        { onError: () => toast.error("Unable to update canvas text.") },
+        {
+          onError: () => {
+            setPendingTextContent((current) =>
+              removePendingTextContent(current, objectId, content),
+            );
+            toast.error("Unable to update canvas text.");
+          },
+        },
       );
     },
     [
@@ -1425,6 +1445,7 @@ function CanvasSurface({
     (
       collectionNode: CollectionNode,
       presence?: CanvasNodeData["presence"],
+      handoffPillLabel?: string,
     ): CanvasNodeData => {
       const isHoveredDropTarget =
         collectionNode.type === "folder" &&
@@ -1467,6 +1488,7 @@ function CanvasSurface({
             ? dragSessionRef.current?.origins.size
             : undefined,
         dropStackStyle: dropStackStylesRef.current.get(collectionNode.id),
+        handoffPillLabel,
         presence,
         onPresenceComplete: (nodeId, completedPresence) =>
           presenceCompletionRef.current?.(nodeId, completedPresence),
@@ -1612,10 +1634,17 @@ function CanvasSurface({
     const exitingById = new Map(exitingNodes.map((node) => [node.id, node]));
     const liveIds = new Set(flowNodes.map((node) => node.id));
     return [
-      ...flowNodes.map((node) => exitingById.get(node.id) ?? node),
+      ...flowNodes.map((node) => {
+        if (node.type !== "text") return exitingById.get(node.id) ?? node;
+        return resolveCanvasTextHandoff(
+          node,
+          editingTextId,
+          pendingTextContent,
+        );
+      }),
       ...exitingNodes.filter((node) => !liveIds.has(node.id)),
     ];
-  }, [exitingNodes, flowNodes]);
+  }, [editingTextId, exitingNodes, flowNodes, pendingTextContent]);
   const editingTextNode = editingTextId
     ? flowNodes.find(
         (node): node is CanvasTextFlowNode =>
@@ -1769,7 +1798,7 @@ function CanvasSurface({
       )
       .then(() => undefined);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const expandedNoteOrder = updateExpandedNoteOrder(
       expandedNoteOrderRef.current,
       nodes,
@@ -1806,10 +1835,23 @@ function CanvasSurface({
           isNew,
           entranceSuppressed,
         });
+        const previousNode = currentNode?.data.collectionNode;
+        const handoffPillLabel =
+          previousNode &&
+          isPendingCollectionNode(previousNode) &&
+          !isPendingCollectionNode(node)
+            ? previousNode.type === "image" && previousNode.uploadStatus
+              ? previousNode.uploadStatus === "processing"
+                ? "Importing"
+                : `Uploading ${previousNode.uploadProgress ?? 0}%`
+              : previousNode.type === "note"
+                ? "Saving"
+                : undefined
+            : undefined;
         return makeFlowNode(
           node,
           index,
-          makeNodeData(node, presence),
+          makeNodeData(node, presence, handoffPillLabel),
           expandedNoteOrder,
           currentNode,
         );
@@ -1836,6 +1878,20 @@ function CanvasSurface({
       return [...assetNodes, ...textNodes];
     });
   }, [canvasObjects, draftText, makeNodeData, makeTextNodeData, nodes]);
+
+  useEffect(() => {
+    setPendingTextContent((current) => {
+      let next = current;
+      for (const object of canvasObjects) {
+        if (object.type !== "text") continue;
+        for (const id of [object.id, object.clientId]) {
+          if (!id || next.get(id) !== object.content) continue;
+          next = removePendingTextContent(next, id, object.content);
+        }
+      }
+      return next;
+    });
+  }, [canvasObjects]);
 
   useEffect(() => {
     if (
@@ -2965,6 +3021,17 @@ function makeTextFlowNode(
       : getCanvasTextRestingZIndex(object.frontIndex),
     style: undefined,
   };
+}
+
+function removePendingTextContent(
+  current: Map<string, string>,
+  id: string,
+  content: string,
+) {
+  if (current.get(id) !== content) return current;
+  const next = new Map(current);
+  next.delete(id);
+  return next;
 }
 
 function getCanvasCardHeight(node: CanvasFlowNode): number {

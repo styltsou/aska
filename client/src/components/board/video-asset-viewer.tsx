@@ -52,6 +52,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { apiPatch, apiUrl } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { consumeVideoPlaybackPosition } from "@/lib/video-playback-position";
+import { useVideoUploadPreview } from "@/lib/video-upload-preview";
 
 const VIDEO_VIEWER_LAYOUT_TRANSITION = {
   duration: 0.18,
@@ -179,8 +180,7 @@ export function VideoAssetViewer({
             notesOpen={notesOpen}
             onShowInBoard={onShowInBoard}
             onDownload={
-              displayedAsset?.processingStatus === "completed" &&
-              displayedAsset.url
+              displayedAsset?.url
                 ? handleDownload
                 : undefined
             }
@@ -278,8 +278,7 @@ export function VideoAssetViewer({
           notesOpen={notesOpen}
           onShowInBoard={onShowInBoard}
           onDownload={
-            displayedAsset?.processingStatus === "completed" &&
-            displayedAsset.url
+            displayedAsset?.url
               ? handleDownload
               : undefined
           }
@@ -539,7 +538,8 @@ function NativeVideoContent({
   const persistNoteRef = useRef<(assetId: string, draft: string) => void>(
     () => undefined,
   );
-  const ready = asset.processingStatus === "completed" && Boolean(asset.url);
+  const ready = Boolean(asset.url);
+  const localPosterUrl = useVideoUploadPreview(asset.id)?.posterUrl;
   const ratio =
     asset.width && asset.height ? asset.width / asset.height : 16 / 9;
   const layoutTransition = reduceMotion
@@ -662,7 +662,7 @@ function NativeVideoContent({
         <NativeVideoPlayer
           key={asset.id}
           src={asset.url!}
-          poster={asset.posterUrl ?? undefined}
+          poster={asset.posterUrl ?? localPosterUrl}
           storyboard={asset.storyboard}
           title={asset.title?.trim() || "Untitled video"}
           initialTime={initialPlaybackTime}

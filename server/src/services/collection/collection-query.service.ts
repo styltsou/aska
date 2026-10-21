@@ -670,16 +670,10 @@ export class CollectionQueryService {
         return {
           id: `video-${child.assetId}`,
           type: "video" as const,
-          url:
-            video?.status === "completed" ? (video.originalUrl ?? null) : null,
-          posterUrl:
-            video?.status === "completed"
-              ? (video.posterDisplayUrl ?? null)
-              : null,
+          url: video?.originalUrl ?? null,
+          posterUrl: video?.posterDisplayUrl ?? null,
           storyboard:
-            video?.status === "completed" &&
-            video.storyboard &&
-            video.storyboardUrl
+            video?.storyboard && video.storyboardUrl
               ? {
                   url: video.storyboardUrl,
                   frameCount: video.storyboard.frameCount,
@@ -844,14 +838,12 @@ export class CollectionQueryService {
       .where(inArray(videoAssets.assetId, ids));
     const urls = await this.objectStorageService.createPresignedGetUrls(
       rows.flatMap((row) =>
-        row.processingStatus === "completed"
-          ? [
-              row.original?.objectKey,
-              row.poster?.display.objectKey,
-              row.poster?.preview.objectKey,
-              row.storyboard?.objectKey,
-            ].filter((key): key is string => !!key)
-          : [],
+        [
+          row.original?.objectKey,
+          row.poster?.display.objectKey,
+          row.poster?.preview.objectKey,
+          row.storyboard?.objectKey,
+        ].filter((key): key is string => !!key),
       ),
     );
     return new Map(

@@ -303,7 +303,7 @@ export const imageAssets = pgTable(
   ],
 );
 
-/** A browser-playable source plus its generated still board preview. */
+/** A verified original video with optional poster and seek previews. */
 export const videoAssets = pgTable(
   "video_assets",
   {

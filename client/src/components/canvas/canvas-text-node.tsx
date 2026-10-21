@@ -17,6 +17,33 @@ export type CanvasTextNodeData = {
 
 export type CanvasTextFlowNode = Node<CanvasTextNodeData, "text">;
 
+export function resolveCanvasTextHandoff(
+  node: CanvasTextFlowNode,
+  editingTextId: string | undefined,
+  pendingContent: ReadonlyMap<string, string>,
+): CanvasTextFlowNode {
+  const committedContent =
+    pendingContent.get(node.id) ??
+    (node.data.object.clientId
+      ? pendingContent.get(node.data.object.clientId)
+      : undefined);
+  const editing = editingTextId === node.id;
+  if (committedContent === undefined && node.data.editing === editing) {
+    return node;
+  }
+  return {
+    ...node,
+    data: {
+      ...node.data,
+      editing,
+      object:
+        committedContent === undefined
+          ? node.data.object
+          : { ...node.data.object, content: committedContent },
+    },
+  };
+}
+
 export function insertCanvasPlainText(
   content: string,
   pastedText: string,

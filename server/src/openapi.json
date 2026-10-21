@@ -2986,7 +2986,7 @@
           "url": {
             "type": ["string", "null"],
             "format": "uri",
-            "description": "Playable original, or null until processing completes."
+            "description": "Playable original after validation, independent of poster and seek preview generation."
           },
           "posterUrl": { "type": ["string", "null"], "format": "uri" },
           "storyboard": {
@@ -3022,7 +3022,8 @@
           "sourceUrl": { "type": ["string", "null"], "format": "uri" },
           "processingStatus": {
             "type": "string",
-            "enum": ["processing", "completed", "failed"]
+            "enum": ["processing", "completed", "failed"],
+            "description": "Background preview generation state; a verified original may already be playable."
           },
           "processingError": { "type": ["string", "null"] },
           "isFavorite": { "type": "boolean" },
@@ -3895,7 +3896,7 @@
             "properties": {
               "upload": {
                 "type": "object",
-                "required": ["id", "status", "errorMessage", "assetId"],
+                "required": ["id", "status", "errorMessage", "assetId", "ready"],
                 "properties": {
                   "id": { "type": "integer" },
                   "status": {
@@ -3909,7 +3910,11 @@
                     ]
                   },
                   "errorMessage": { "type": ["string", "null"] },
-                  "assetId": { "type": "string", "pattern": "^video-\\d+$" }
+                  "assetId": { "type": "string", "pattern": "^video-\\d+$" },
+                  "ready": {
+                    "type": "boolean",
+                    "description": "Whether the verified original video is available for playback."
+                  }
                 }
               }
             }

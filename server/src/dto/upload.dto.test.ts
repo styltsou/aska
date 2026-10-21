@@ -4,6 +4,7 @@ import {
   CreateImageUploadSchema,
   CreateRemoteImageSchema,
   ImagePipelineCallbackSchema,
+  VideoPipelineCallbackSchema,
 } from "./upload.dto";
 
 const pipelineBase = {
@@ -110,6 +111,43 @@ describe("ImagePipelineCallbackSchema", () => {
           { ...completedCallback.variants[0], contentType: "image/png" },
           completedCallback.variants[1],
         ],
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("VideoPipelineCallbackSchema", () => {
+  const playableVideo = {
+    originalObjectKey: "workspace-1/video/upload-1/original.mp4",
+    originalEtag: "etag-1",
+    contentType: "video/mp4",
+    sizeBytes: 1024,
+    width: 640,
+    height: 360,
+    durationSeconds: 8,
+  };
+
+  it("accepts a verified original before previews exist", () => {
+    expect(
+      VideoPipelineCallbackSchema.safeParse({
+        ...playableVideo,
+        event: "video.processing.ready",
+      }).success,
+    ).toBe(true);
+    expect(
+      VideoPipelineCallbackSchema.safeParse({
+        ...playableVideo,
+        event: "video.processing.completed",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an unverified original", () => {
+    expect(
+      VideoPipelineCallbackSchema.safeParse({
+        ...playableVideo,
+        event: "video.processing.ready",
+        durationSeconds: 0,
       }).success,
     ).toBe(false);
   });

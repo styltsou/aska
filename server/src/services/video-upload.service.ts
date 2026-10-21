@@ -23,6 +23,7 @@ export type VideoUploadStatus = {
   status: "pending" | "uploaded" | "processing" | "completed" | "failed";
   errorMessage: string | null;
   assetId: string;
+  ready: boolean;
 };
 
 export class VideoUploadService {
@@ -221,8 +222,15 @@ export class VideoUploadService {
       ? await resolveCollectionTargetBySlug(orgId, collectionSlug)
       : null;
     const [row] = await db
-      .select()
+      .select({
+        id: videoUploads.id,
+        status: videoUploads.status,
+        errorMessage: videoUploads.errorMessage,
+        assetId: videoUploads.assetId,
+        original: videoAssets.original,
+      })
       .from(videoUploads)
+      .innerJoin(videoAssets, eq(videoAssets.assetId, videoUploads.assetId))
       .where(
         and(
           eq(videoUploads.id, id),
@@ -240,6 +248,7 @@ export class VideoUploadService {
       status: row.status,
       errorMessage: row.errorMessage,
       assetId: `video-${row.assetId}`,
+      ready: Boolean(row.original),
     };
   }
 
@@ -335,6 +344,7 @@ export class VideoUploadService {
   async handleCallback(input: VideoPipelineCallbackInput): Promise<{
     ignored: boolean;
     cleanup?: boolean;
+    preserveOriginal?: boolean;
     replacedStoryboardObjectKey?: string;
   }> {
     if (input.event === "video.import.failed") {
@@ -395,14 +405,7 @@ export class VideoUploadService {
         if (!claimed) return false;
         await tx
           .update(videoAssets)
-          .set({
-            original: {
-              objectKey: input.originalObjectKey,
-              contentType: input.contentType,
-              sizeBytes: input.sizeBytes,
-            },
-            sourceLabel: new URL(input.finalUrl).hostname.slice(0, 120),
-          })
+          .set({ sourceLabel: new URL(input.finalUrl).hostname.slice(0, 120) })
           .where(eq(videoAssets.assetId, row.assetId!));
         return true;
       });
@@ -413,27 +416,27 @@ export class VideoUploadService {
       .from(videoUploads)
       .where(eq(videoUploads.originalObjectKey, input.originalObjectKey))
       .limit(1);
+    if (row?.status === "failed") {
+      const [video] = await db
+        .select({ original: videoAssets.original })
+        .from(videoAssets)
+        .where(eq(videoAssets.assetId, row.assetId!))
+        .limit(1);
+      return { ignored: true, cleanup: !video?.original };
+    }
     if (
       !row ||
       !row.assetId ||
       (row.status === "completed" &&
-        input.event !== "video.storyboard.completed") ||
-      row.status === "failed"
+        input.event !== "video.storyboard.completed")
     )
       return {
         ignored: true,
         cleanup:
-          row?.status === "failed" ||
           (!!row && !row.assetId) ||
           (input.event === "video.storyboard.completed" && !row),
       };
     if (input.event === "video.processing.started") {
-      if (
-        row.status === "processing" &&
-        row.processingEtag === input.originalEtag &&
-        row.updatedAt.getTime() > Date.now() - 11 * 60_000
-      )
-        return { ignored: true };
       const [started] = await db
         .update(videoUploads)
         .set({ status: "processing", processingEtag: input.originalEtag })
@@ -452,6 +455,28 @@ export class VideoUploadService {
       row.processingEtag !== input.originalEtag
     )
       return { ignored: true };
+    if (input.event === "video.processing.ready") {
+      if (
+        row.status !== "processing" ||
+        row.processingEtag !== input.originalEtag
+      )
+        return { ignored: true };
+      const [updated] = await db
+        .update(videoAssets)
+        .set({
+          original: {
+            objectKey: input.originalObjectKey,
+            contentType: input.contentType,
+            sizeBytes: input.sizeBytes,
+          },
+          width: input.width,
+          height: input.height,
+          durationSeconds: input.durationSeconds,
+        })
+        .where(eq(videoAssets.assetId, row.assetId))
+        .returning({ assetId: videoAssets.assetId });
+      return { ignored: !updated };
+    }
     if (input.event === "video.storyboard.completed") {
       const expectedKey = `${input.originalObjectKey.slice(0, input.originalObjectKey.lastIndexOf("/"))}/storyboard-v2.webp`;
       if (input.storyboard.objectKey !== expectedKey)
@@ -489,8 +514,14 @@ export class VideoUploadService {
       };
     }
     if (input.event === "video.processing.failed") {
+      const [video] = await db
+        .select({ original: videoAssets.original })
+        .from(videoAssets)
+        .where(eq(videoAssets.assetId, row.assetId))
+        .limit(1);
       return {
         ignored: !(await this.failUpload(row.id, row.assetId, input.error)),
+        preserveOriginal: Boolean(video?.original),
       };
     }
     const completed = await db.transaction(async (tx) => {
@@ -522,7 +553,7 @@ export class VideoUploadService {
           width: input.width,
           height: input.height,
           durationSeconds: input.durationSeconds,
-          poster: input.poster,
+          poster: input.poster ?? null,
           storyboard: input.storyboard ?? null,
           processingStatus: "completed",
           processingError: null,

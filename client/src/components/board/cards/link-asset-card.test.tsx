@@ -73,7 +73,7 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("data-asset-card-outline");
     expect(html).toContain("hover:border-sidebar-foreground/20");
     expect(html).not.toContain('class="min-h-0 p-3"');
-    expect(html).toContain('viewBox="0 0 68 48"');
+    expect(html).not.toContain('viewBox="0 0 68 48"');
     expect(html).not.toContain("text-popover-foreground");
     expect(html).toContain("A channel");
     expect(html).toContain('data-slot="channel-avatar"');
@@ -222,7 +222,7 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("group-hover:scale-[1.05]");
   });
 
-  it("keeps the direct YouTube thumbnail under a stored rendition", () => {
+  it("shows a shimmer while the stored YouTube rendition loads", () => {
     const html = renderToStaticMarkup(
       <LinkAssetCard
         asset={{
@@ -237,7 +237,7 @@ describe("LinkAssetCard", () => {
     );
 
     expect(html).toContain("https://media.example/stored-thumbnail.webp");
-    expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
+    expect(html).toContain('data-slot="youtube-thumbnail-loading"');
     expect(html).not.toContain('data-slot="optimistic-link-preview"');
     expect(html).toContain("absolute inset-0 size-full object-cover");
     expect(html).toContain("transition-opacity duration-150 ease-out");
@@ -293,7 +293,22 @@ describe("LinkAssetCard", () => {
 });
 
 describe("LinkCardPreview", () => {
-  it("renders a YouTube thumbnail with a play badge from the video id", () => {
+  it("shows a shimmer and hides the thumbnail content in collection previews until loaded", () => {
+    const html = renderToStaticMarkup(
+      <LinkCardPreview
+        variant="collection"
+        preview={{ videoId: "dQw4w9WgXcQ", title: "A video" }}
+      />,
+    );
+
+    expect(html).toContain('data-slot="youtube-thumbnail-loading"');
+    expect(html).toContain("animate-[preview-shimmer_1.6s_linear_infinite]");
+    expect(html).toContain('data-slot="youtube-thumbnail-content"');
+    expect(html).toContain('style="opacity:0"');
+    expect(html).not.toContain('viewBox="0 0 68 48"');
+  });
+
+  it("keeps the YouTube play badge hidden while its thumbnail loads", () => {
     const html = renderToStaticMarkup(
       <LinkCardPreview
         preview={{
@@ -307,7 +322,7 @@ describe("LinkCardPreview", () => {
     );
 
     expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
-    expect(html).toContain('viewBox="0 0 68 48"');
+    expect(html).not.toContain('viewBox="0 0 68 48"');
     expect(html).toContain("A video");
     expect(html).not.toContain("www.youtube.com");
     expect(html).toContain(

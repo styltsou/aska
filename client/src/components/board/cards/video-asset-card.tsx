@@ -1,6 +1,6 @@
 import { AlertCircleIcon, LoaderCircleIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import type { VideoAsset } from "@/types/asset";
 import { VIDEO_CARD_TIME_BADGE_CLASS } from "@/components/board/video-card-control-styles";
@@ -31,7 +31,7 @@ export function VideoAssetCard({
   selected?: boolean;
   dragging?: boolean;
 }) {
-  const ready = asset.processingStatus === "completed" && !!asset.url;
+  const ready = Boolean(asset.url);
   const uploadPreview = useVideoUploadPreview(asset.id);
   const reduceMotion = useReducedMotion();
   const previewVideoRef = useRef<HTMLVideoElement>(null);
@@ -116,6 +116,15 @@ export function VideoAssetCard({
             aria-hidden="true"
             className="absolute inset-0 size-full object-cover"
           />
+        ) : asset.url ? (
+          <video
+            src={asset.url}
+            muted
+            playsInline
+            preload="metadata"
+            aria-hidden="true"
+            className="absolute inset-0 size-full object-cover"
+          />
         ) : null}
         {previewing && asset.url ? (
           <video
@@ -143,24 +152,21 @@ export function VideoAssetCard({
           />
         ) : null}
       </div>
-      {ready ? (
-        <>
-          {asset.durationSeconds ? (
-            <span
-              className={cn(
-                "absolute right-2 bottom-2",
-                VIDEO_CARD_TIME_BADGE_CLASS,
-              )}
-            >
-              {formatDuration(
-                previewing
-                  ? Math.max(0, asset.durationSeconds - previewTime)
-                  : asset.durationSeconds,
-              )}
-            </span>
-          ) : null}
-        </>
-      ) : asset.processingStatus === "failed" ? (
+      {ready && asset.durationSeconds ? (
+        <span
+          className={cn(
+            "absolute right-2 bottom-2",
+            VIDEO_CARD_TIME_BADGE_CLASS,
+          )}
+        >
+          {formatDuration(
+            previewing
+              ? Math.max(0, asset.durationSeconds - previewTime)
+              : asset.durationSeconds,
+          )}
+        </span>
+      ) : null}
+      {!ready && asset.processingStatus === "failed" ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
           <AlertCircleIcon className="size-5 text-destructive" />
           <span className="text-sm font-medium">Video could not be added</span>
@@ -168,23 +174,31 @@ export function VideoAssetCard({
             {asset.processingError ?? "Processing failed"}
           </span>
         </div>
-      ) : (
-        <div className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5">
-          <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
-            <LoaderCircleIcon className="size-3 animate-spin" />
-            {uploadPreview?.status === "uploading" ? (
-              <span>
-                Uploading{" "}
-                <span className="font-mono tabular-nums">
-                  {uploadPreview.progress}%
+      ) : null}
+      <AnimatePresence initial={false}>
+        {!ready && asset.processingStatus !== "failed" ? (
+          <motion.div
+            key="video-progress"
+            exit={reduceMotion ? undefined : { opacity: 0, y: 8 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18 }}
+            className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
+          >
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
+              <LoaderCircleIcon className="size-3 animate-spin" />
+              {uploadPreview?.status === "uploading" ? (
+                <span>
+                  Uploading{" "}
+                  <span className="font-mono tabular-nums">
+                    {uploadPreview.progress}%
+                  </span>
                 </span>
-              </span>
-            ) : (
-              <span>Importing</span>
-            )}
-          </div>
-        </div>
-      )}
+              ) : (
+                <span>{uploadPreview ? "Preparing video" : "Importing"}</span>
+              )}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

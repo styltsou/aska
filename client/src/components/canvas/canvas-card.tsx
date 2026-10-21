@@ -1,8 +1,15 @@
 import "./canvas-card.css";
 
 import { LoaderCircleIcon } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
-import { memo, useEffect, useMemo, useRef } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import {
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { type Node, type NodeProps } from "@xyflow/react";
 
 import type { CollectionNode } from "@/api/collection";
@@ -45,6 +52,7 @@ export type CanvasNodeData = {
   incomingDropAssetId?: string;
   incomingDropCount?: number;
   dropStackStyle?: CanvasDropStackStyle;
+  handoffPillLabel?: string;
   presence?: "entering" | "exiting";
   onPresenceComplete: (
     nodeId: string,
@@ -74,6 +82,7 @@ export const CanvasCard = memo(function CanvasCard({
 }: NodeProps<CanvasNode>) {
   const reduceMotion = useReducedMotion();
   const completedPresence = useRef<CanvasNodeData["presence"]>(undefined);
+  const [handoffPill, setHandoffPill] = useState(data.handoffPillLabel);
   const viewportActivity = useTransientStore(
     (state) => state.canvasViewportActivity[data.boardKey] ?? 0,
   );
@@ -158,6 +167,16 @@ export const CanvasCard = memo(function CanvasCard({
     if (data.presence) return;
     completedPresence.current = undefined;
   }, [data.presence]);
+
+  useLayoutEffect(() => {
+    if (data.handoffPillLabel) setHandoffPill(data.handoffPillLabel);
+  }, [data.handoffPillLabel]);
+
+  useEffect(() => {
+    if (!handoffPill) return;
+    const frame = requestAnimationFrame(() => setHandoffPill(undefined));
+    return () => cancelAnimationFrame(frame);
+  }, [handoffPill]);
 
   useEffect(() => {
     if (!reduceMotion || !isExiting || completedPresence.current === "exiting")
@@ -275,6 +294,22 @@ export const CanvasCard = memo(function CanvasCard({
             </div>
           </div>
         ) : null}
+        <AnimatePresence initial={false}>
+          {handoffPill ? (
+            <motion.div
+              key="handoff-pill"
+              initial={false}
+              exit={reduceMotion ? undefined : { opacity: 0, y: 8 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18 }}
+              className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
+            >
+              <div className="inline-flex items-center gap-1.5 rounded-lg bg-popover/85 px-2.5 py-1.5 text-xs font-medium text-popover-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
+                <LoaderCircleIcon className="size-3 animate-spin" />
+                <span>{handoffPill}</span>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
         {selected ? (
           <span
             aria-hidden

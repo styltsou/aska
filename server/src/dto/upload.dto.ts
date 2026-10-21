@@ -98,6 +98,16 @@ export const VideoPipelineCallbackSchema = z.discriminatedUnion("event", [
     originalEtag: z.string().min(1),
   }),
   z.object({
+    event: z.literal("video.processing.ready"),
+    originalObjectKey: z.string().min(1),
+    originalEtag: z.string().min(1),
+    contentType: z.enum(AllowedVideoContentTypes),
+    sizeBytes: z.number().int().positive().max(MAX_VIDEO_UPLOAD_BYTES),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    durationSeconds: z.number().positive(),
+  }),
+  z.object({
     event: z.literal("video.processing.completed"),
     originalObjectKey: z.string().min(1),
     originalEtag: z.string().min(1),
@@ -106,7 +116,7 @@ export const VideoPipelineCallbackSchema = z.discriminatedUnion("event", [
     width: z.number().int().positive(),
     height: z.number().int().positive(),
     durationSeconds: z.number().positive(),
-    poster: VideoPosterSchema,
+    poster: VideoPosterSchema.optional(),
     storyboard: VideoStoryboardSchema.optional(),
   }),
   z.object({

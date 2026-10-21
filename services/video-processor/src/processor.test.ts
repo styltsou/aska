@@ -5,12 +5,18 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
+import ffmpegPath from "ffmpeg-static";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { InvalidVideoError, probeVideo } from "./processor";
-
 const run = promisify(execFile);
-const canProbe = existsSync("/usr/bin/ffmpeg");
+const executable = existsSync("/usr/bin/ffmpeg")
+  ? "/usr/bin/ffmpeg"
+  : ffmpegPath && existsSync(ffmpegPath)
+    ? ffmpegPath
+    : undefined;
+if (executable) process.env.FFMPEG_PATH = executable;
+const { InvalidVideoError, probeVideo } = await import("./processor");
+const canProbe = Boolean(executable);
 let folder: string;
 
 describe.skipIf(!canProbe)("actual video stream validation", () => {
@@ -24,7 +30,7 @@ describe.skipIf(!canProbe)("actual video stream validation", () => {
   const make = async (fileName: string, codec: string) => {
     const output = path.join(folder, fileName);
     await run(
-      "/usr/bin/ffmpeg",
+      executable!,
       [
         "-hide_banner",
         "-loglevel",

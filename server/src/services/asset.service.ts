@@ -1138,7 +1138,6 @@ export class AssetService implements IAssetService {
       .select({
         title: assets.title,
         original: videoAssets.original,
-        status: videoAssets.processingStatus,
       })
       .from(assets)
       .innerJoin(videoAssets, eq(videoAssets.assetId, assets.id))
@@ -1150,7 +1149,7 @@ export class AssetService implements IAssetService {
         ),
       )
       .limit(1);
-    if (!row?.original || row.status !== "completed")
+    if (!row?.original)
       throw new AppError(
         ErrorCode.NOT_FOUND,
         "Video is not ready for download",
@@ -1359,18 +1358,16 @@ export class AssetService implements IAssetService {
 
       if (row.assetType === "video") {
         const [video, poster, storyboard] = await Promise.all([
-          row.videoProcessingStatus === "completed" && row.videoOriginal
+          row.videoOriginal
             ? this.objectStorageService.createPresignedGetUrl(
                 row.videoOriginal.objectKey,
               )
             : undefined,
-          row.videoProcessingStatus === "completed" &&
           row.videoPoster?.display.objectKey
             ? this.objectStorageService.createPresignedGetUrl(
                 row.videoPoster.display.objectKey,
               )
             : undefined,
-          row.videoProcessingStatus === "completed" &&
           row.videoStoryboard?.objectKey
             ? this.objectStorageService.createPresignedGetUrl(
                 row.videoStoryboard.objectKey,

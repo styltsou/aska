@@ -1,5 +1,5 @@
 import { Globe2Icon, ImageOffIcon, UserRoundIcon } from "lucide-react";
-import { useState, type MouseEvent } from "react";
+import { useState, type ComponentProps, type MouseEvent } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { YouTubeDescription } from "@/components/board/youtube-description";
@@ -13,6 +13,81 @@ const YOUTUBE_THUMBNAIL_URL = (videoId: string) =>
   `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 const LINK_CARD_META_CLASS =
   "flex min-w-0 items-center gap-1.5 text-[13px] leading-5 text-sidebar-foreground/65";
+
+async function waitForThumbnail(image: HTMLImageElement) {
+  // Match ProgressiveImage's reveal timing before showing the play mark.
+  try {
+    await image.decode?.();
+  } catch {
+    // A loaded image can still be displayed when explicit decoding fails.
+  }
+}
+
+function LinkThumbnail({
+  isYoutube,
+  compact = false,
+  showPlayMark = true,
+  className,
+  onError,
+  ...props
+}: ComponentProps<typeof ProgressiveImage> & {
+  isYoutube: boolean;
+  compact?: boolean;
+  showPlayMark?: boolean;
+}) {
+  const [loadedSrc, setLoadedSrc] = useState<string>();
+  const [failedSrc, setFailedSrc] = useState<string>();
+  const [useFallback, setUseFallback] = useState(false);
+  const source =
+    useFallback && props.fallbackSrc ? props.fallbackSrc : props.src;
+  const ready = loadedSrc === source;
+
+  if (!isYoutube)
+    return (
+      <ProgressiveImage {...props} className={className} onError={onError} />
+    );
+
+  if (failedSrc === source) return <LinkPreviewUnavailable compact={compact} />;
+
+  return (
+    <>
+      {!ready ? (
+        <div
+          data-slot="youtube-thumbnail-loading"
+          className="pointer-events-none absolute inset-0 animate-[preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
+        />
+      ) : null}
+      <div
+        data-slot="youtube-thumbnail-content"
+        className="absolute inset-0 transition-opacity duration-150 ease-out motion-reduce:transition-none"
+        style={{ opacity: ready ? 1 : 0 }}
+      >
+        <ProgressiveImage
+          {...props}
+          src={source}
+          fallbackSrc={undefined}
+          className={cn(className, "!transition-none")}
+          onLoad={async (event) => {
+            await waitForThumbnail(event.currentTarget);
+            setLoadedSrc(source);
+          }}
+          onError={(event) => {
+            setLoadedSrc(undefined);
+            setFailedSrc(source);
+            if (source === props.src && props.fallbackSrc) setUseFallback(true);
+            if (source === props.fallbackSrc || !props.fallbackSrc)
+              onError?.(event);
+          }}
+        />
+        {ready && showPlayMark ? (
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <YouTubePlayMark compact={compact} />
+          </span>
+        ) : null}
+      </div>
+    </>
+  );
+}
 
 function LinkPreviewUnavailable({ compact = false }: { compact?: boolean }) {
   return (
@@ -147,7 +222,10 @@ export function LinkAssetCard({
         className="relative z-10 aspect-video w-full overflow-hidden rounded-b-lg border-b border-border bg-muted/40"
       >
         {previewUrl && failedPreviewUrl !== previewUrl ? (
-          <ProgressiveImage
+          <LinkThumbnail
+            key={previewUrl}
+            isYoutube={isYoutube}
+            showPlayMark={Boolean(onOpen)}
             src={previewUrl}
             fallbackSrc={previewFallback}
             blurDataURL={asset.previewImage?.blurDataURL}
@@ -167,13 +245,6 @@ export function LinkAssetCard({
           />
         ) : null}
         {isPreviewUnavailable ? <LinkPreviewUnavailable /> : null}
-        {onOpen &&
-        isYoutube &&
-        (!previewUrl || failedPreviewUrl !== previewUrl) ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <YouTubePlayMark />
-          </div>
-        ) : null}
       </div>
       <div className="relative z-0 space-y-1 bg-sidebar px-3 pt-3 pb-3">
         {!isYoutube ? (
@@ -336,7 +407,10 @@ export function LinkCardPreview({
     >
       <div className="relative z-10 aspect-video w-full shrink-0 overflow-hidden rounded-b-lg border-b border-border bg-muted/40">
         {thumbnailAvailable ? (
-          <ProgressiveImage
+          <LinkThumbnail
+            key={thumbnailUrl}
+            isYoutube={isYoutube}
+            compact={compact}
             src={thumbnailUrl!}
             blurDataURL={preview.blurDataURL}
             alt=""
@@ -347,11 +421,6 @@ export function LinkCardPreview({
         ) : (
           <LinkPreviewUnavailable compact={compact} />
         )}
-        {isYoutube && thumbnailAvailable ? (
-          <span className="absolute inset-0 flex items-center justify-center">
-            <YouTubePlayMark compact={compact} />
-          </span>
-        ) : null}
       </div>
       <div
         className={cn(

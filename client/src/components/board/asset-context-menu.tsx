@@ -562,7 +562,7 @@ export function AssetContextMenu({
                   <ContextMenuItem onClick={() => onOpenVideo?.(asset)}>
                     Open video
                   </ContextMenuItem>
-                  {asset.processingStatus === "completed" && workspaceSlug ? (
+                  {asset.url && workspaceSlug ? (
                     <ContextMenuItem
                       onClick={() =>
                         window.open(

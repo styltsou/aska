@@ -1,0 +1,257 @@
+.is-hidden {
+  display: none !important;
+}
+
+.aska-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  overflow: hidden;
+  color: #f7f7f7;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.aska-picker,
+.aska-picker * {
+  box-sizing: border-box;
+}
+
+.aska-picker__snapshot,
+.aska-picker__surface {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.aska-picker__snapshot {
+  display: block;
+  pointer-events: none;
+}
+
+.aska-picker__surface {
+  cursor: crosshair;
+}
+
+.aska-picker__hint,
+.aska-picker__cancel,
+.aska-picker__preview,
+.aska-picker__result,
+.aska-picker__error {
+  border: 1px solid rgb(255 255 255 / 16%);
+  background: rgb(23 23 23 / 94%);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 25%), inset 0 1px 0 rgb(255 255 255 / 10%);
+  backdrop-filter: blur(12px);
+}
+
+.aska-picker__hint {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  padding: 9px 13px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.aska-picker__hint > span {
+  opacity: 0.5;
+}
+
+.aska-picker__hint kbd {
+  margin-left: 3px;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 4px;
+  padding: 2px 4px;
+  font: 10px/1 ui-monospace, SFMono-Regular, monospace;
+}
+
+.aska-picker__cancel {
+  position: fixed;
+  top: 17px;
+  right: 18px;
+  z-index: 3;
+  border-radius: 8px;
+  padding: 9px 11px;
+  color: #fff;
+  font: 550 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.aska-picker__cancel:hover {
+  background: #333;
+}
+
+.aska-picker__cancel:focus-visible,
+.aska-picker__result button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.aska-picker__preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  width: 228px;
+  min-height: 104px;
+  align-items: center;
+  gap: 11px;
+  border-radius: 12px;
+  padding: 11px;
+  pointer-events: none;
+  animation: aska-picker-in 120ms ease-out both;
+}
+
+.aska-picker__swatch {
+  display: block;
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border: 1px solid rgb(0 0 0 / 16%);
+  border-radius: 9px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 14%);
+}
+
+.aska-picker__values {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.aska-picker__values strong {
+  color: #fff;
+  font: 650 16px/1.15 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: -0.025em;
+}
+
+.aska-picker__values small {
+  color: rgb(255 255 255 / 64%);
+  font-size: 10px;
+}
+
+.aska-picker__result-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 28%);
+}
+
+.aska-picker__result {
+  display: flex;
+  width: min(310px, calc(100vw - 32px));
+  flex-direction: column;
+  align-items: center;
+  border-radius: 15px;
+  padding: 20px;
+  text-align: center;
+}
+
+.aska-picker__result-swatch {
+  display: block;
+  width: 60px;
+  height: 60px;
+  border: 1px solid rgb(0 0 0 / 14%);
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 14%);
+}
+
+.aska-picker__result-kicker {
+  margin-top: 15px;
+  color: rgb(255 255 255 / 55%);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+}
+
+.aska-picker__result-hex {
+  margin-top: 6px;
+  color: #fff;
+  font: 650 22px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.aska-picker__result-formats {
+  margin-top: 6px;
+  color: rgb(255 255 255 / 65%);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.aska-picker__result p {
+  max-width: 230px;
+  margin: 15px 0 0;
+  color: rgb(255 255 255 / 66%);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.aska-picker__result-actions {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  margin-top: 17px;
+}
+
+.aska-picker__result-actions button {
+  min-height: 35px;
+  flex: 1;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 9%);
+  color: #fff;
+  font: 600 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.aska-picker__result-actions button:last-child {
+  border-color: #e8e8e8;
+  background: #f4f4f4;
+  color: #191919;
+}
+
+.aska-picker__result-actions button:hover {
+  filter: brightness(1.12);
+}
+
+.aska-picker__error {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  z-index: 5;
+  max-width: min(320px, calc(100vw - 24px));
+  border-radius: 8px;
+  padding: 8px 11px;
+  color: #fff;
+  font-size: 11px;
+  transform: translateX(-50%);
+}
+
+@keyframes aska-picker-in {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aska-picker__preview {
+    animation: none;
+  }
+}

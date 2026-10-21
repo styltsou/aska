@@ -354,15 +354,32 @@ export async function processStoredVideo(input: {
       createWriteStream(inputPath),
     );
     const probe = await probeVideo(inputPath, contentType);
+    const ready = await callPipeline<{ ignored: boolean; cleanup?: boolean }>(
+      CALLBACK_PATH,
+      {
+        event: "video.processing.ready",
+        originalObjectKey: input.objectKey,
+        originalEtag: etag,
+        contentType,
+        sizeBytes: source.ContentLength,
+        ...probe,
+      },
+    );
+    if (ready.ignored) {
+      if (ready.cleanup) await removeVideoObjects(input.bucket, input.objectKey);
+      return;
+    }
     const prefix = input.objectKey.slice(0, input.objectKey.lastIndexOf("/"));
     const poster = await posterVariants(
       inputPath,
       probe.durationSeconds,
       input.bucket,
       prefix,
-    );
-    // Seek previews are optional: a slow or unusual file must still become a
-    // playable asset with its poster.
+    ).catch((error: unknown) => {
+      console.warn("Video poster generation skipped", error);
+      return undefined;
+    });
+    // Seek previews are optional: a slow or unusual file remains playable.
     const storyboard = await createStoryboard(
       inputPath,
       probe,
@@ -538,7 +555,11 @@ export async function reportStoredFailure(
   error: unknown,
 ) {
   const message = userFacingError(error);
-  const result = await callPipeline<{ ignored: boolean; cleanup?: boolean }>(
+  const result = await callPipeline<{
+    ignored: boolean;
+    cleanup?: boolean;
+    preserveOriginal?: boolean;
+  }>(
     CALLBACK_PATH,
     {
       event: "video.processing.failed",
@@ -547,7 +568,7 @@ export async function reportStoredFailure(
       error: message,
     },
   );
-  if (!result.ignored || result.cleanup)
+  if ((!result.ignored && !result.preserveOriginal) || result.cleanup)
     await removeVideoObjects(input.bucket, input.objectKey);
 }
 

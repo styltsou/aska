@@ -30,6 +30,7 @@ type Status = {
   status: "pending" | "uploaded" | "processing" | "completed" | "failed";
   errorMessage: string | null;
   assetId: string;
+  ready: boolean;
 };
 
 function basePath(scope: VideoScope) {
@@ -72,7 +73,7 @@ function putFile(
 export function useVideoAssets(scope: VideoScope) {
   const queryClient = useQueryClient();
   const path = basePath(scope);
-  const refresh = () =>
+  const refresh = (assetId?: string) =>
     Promise.all([
       queryClient.invalidateQueries({
         queryKey: scope.collectionSlug
@@ -85,10 +86,25 @@ export function useVideoAssets(scope: VideoScope) {
       queryClient.invalidateQueries({
         queryKey: collectionQueryKeys.collections(scope.workspaceSlug),
       }),
+      ...(assetId
+        ? [
+            queryClient.invalidateQueries({
+              queryKey: ["workspace-asset", scope.workspaceSlug, assetId],
+            }),
+          ]
+        : []),
     ]);
-  const watch = async (id: number, previewAssetId?: string) => {
-    for (let attempt = 0; attempt < 180; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 2_000));
+  const watch = async (
+    id: number,
+    previewAssetId?: string,
+    toastId?: string | number,
+  ) => {
+    let announcedReady = false;
+    const deadline = Date.now() + 20 * 60_000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, announcedReady ? 10_000 : 2_000),
+      );
       let upload: Status;
       try {
         ({ upload } = await apiGet<{ upload: Status }>(
@@ -101,26 +117,47 @@ export function useVideoAssets(scope: VideoScope) {
         ) {
           await refresh();
           if (previewAssetId) clearVideoUploadPreview(previewAssetId);
+          if (toastId !== undefined) toast.dismiss(toastId);
           return;
         }
         // A temporary network failure should not abandon a still-processing asset.
         continue;
       }
+      const becameReady = upload.ready && !announcedReady;
+      if (becameReady) {
+        announcedReady = true;
+        await refresh(upload.assetId);
+        toast.success(
+          "Video ready",
+          toastId === undefined ? undefined : { id: toastId },
+        );
+      }
       if (upload.status === "completed") {
-        await refresh();
+        if (!becameReady) await refresh(upload.assetId);
         if (previewAssetId) clearVideoUploadPreview(previewAssetId);
-        toast.success("Video ready");
+        if (!announcedReady)
+          toast.success(
+            "Video ready",
+            toastId === undefined ? undefined : { id: toastId },
+          );
         return;
       }
       if (upload.status === "failed") {
-        await refresh();
+        await refresh(upload.assetId);
         if (previewAssetId) clearVideoUploadPreview(previewAssetId);
-        toast.error(upload.errorMessage ?? "Video processing failed");
+        if (upload.ready)
+          toast.warning("Video previews could not be generated");
+        else
+          toast.error(
+            upload.errorMessage ?? "Video processing failed",
+            toastId === undefined ? undefined : { id: toastId },
+          );
         return;
       }
     }
     await refresh();
     if (previewAssetId) clearVideoUploadPreview(previewAssetId);
+    if (toastId !== undefined) toast.dismiss(toastId);
   };
 
   const upload = useMutation({
@@ -161,10 +198,8 @@ export function useVideoAssets(scope: VideoScope) {
           status: "processing",
           progress: 100,
         });
-        toast.loading("Processing video…", { id: toastId });
-        void watch(created.id, created.assetId).finally(() =>
-          toast.dismiss(toastId),
-        );
+        toast.loading("Preparing video…", { id: toastId });
+        void watch(created.id, created.assetId, toastId);
       } catch (error) {
         await apiPost(`${path}/uploads/${created.id}/fail`).catch(
           () => undefined,
