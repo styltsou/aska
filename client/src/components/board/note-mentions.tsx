@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { Extension, Node, type Editor, type Range } from "@tiptap/core";
 import { PluginKey } from "@tiptap/pm/state";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import {
   NodeViewWrapper,
   ReactNodeViewRenderer,
@@ -141,7 +142,6 @@ export function MentionGlyph({
         previewUrl={previewUrl ?? undefined}
         faviconUrl={faviconUrl ?? undefined}
         isVideo={isVideo || assetType === "video"}
-        showVideoBadge={assetType === "video"}
         className={NOTE_MENTION_GLYPH_CLASS}
         iconClassName="size-2.5 text-foreground/75"
       />
@@ -200,6 +200,7 @@ function LinkMentionThumbnail({
   faviconUrl,
   isVideo,
   showVideoBadge = false,
+  videoBadgeSize = "normal",
   className,
   iconClassName,
 }: {
@@ -207,6 +208,7 @@ function LinkMentionThumbnail({
   faviconUrl?: string;
   isVideo?: boolean;
   showVideoBadge?: boolean;
+  videoBadgeSize?: "small" | "normal";
   className: string;
   iconClassName: string;
 }) {
@@ -243,8 +245,20 @@ function LinkMentionThumbnail({
         />
       ) : null}
       {imageUrl && isVideo && showVideoBadge ? (
-        <span className="absolute right-0 bottom-0 flex size-3 items-center justify-center rounded-tl-sm bg-black/75 text-white">
-          <PlayIcon className="size-2 fill-current" />
+        <span className="absolute inset-0 flex items-center justify-center">
+          <span
+            className={cn(
+              "flex items-center justify-center rounded-full bg-black/65 text-white shadow-sm",
+              videoBadgeSize === "small" ? "size-4" : "size-5",
+            )}
+          >
+            <PlayIcon
+              className={cn(
+                "fill-current",
+                videoBadgeSize === "small" ? "size-2" : "size-2.5",
+              )}
+            />
+          </span>
         </span>
       ) : null}
     </span>
@@ -358,6 +372,36 @@ export const AssetMention = Node.create({
   },
 });
 
+export function getMentionTargetSignature(doc: ProseMirrorNode): string {
+  const targets = new Map<
+    string,
+    { assetId: number; assetType: NoteMentionType }
+  >();
+  doc.descendants((node) => {
+    if (node.type.name !== "assetMention") return;
+    const assetId = Number(node.attrs.targetAssetId);
+    const assetType = node.attrs.assetType as NoteMentionType;
+    if (
+      Number.isSafeInteger(assetId) &&
+      (assetType === "note" ||
+        assetType === "color" ||
+        assetType === "link" ||
+        assetType === "image" ||
+        assetType === "video")
+    ) {
+      targets.set(`${assetType}:${assetId}`, { assetId, assetType });
+    }
+  });
+  return [...targets.values()]
+    .sort(
+      (left, right) =>
+        left.assetId - right.assetId ||
+        left.assetType.localeCompare(right.assetType),
+    )
+    .map((target) => `${target.assetType}:${target.assetId}`)
+    .join(",");
+}
+
 export function NoteMentionProvider({
   editor,
   workspaceSlug,
@@ -378,31 +422,7 @@ export function NoteMentionProvider({
         if (!currentEditor || currentEditor.isDestroyed || !currentEditor.state)
           return "";
 
-        const targets = new Map<
-          string,
-          { assetId: number; assetType: NoteMentionType }
-        >();
-        currentEditor.state.doc.descendants((node) => {
-          if (node.type.name !== "assetMention") return;
-          const assetId = Number(node.attrs.targetAssetId);
-          const assetType = node.attrs.assetType as NoteMentionType;
-          if (
-            Number.isSafeInteger(assetId) &&
-            (assetType === "note" ||
-              assetType === "color" ||
-              assetType === "link" ||
-              assetType === "image")
-          )
-            targets.set(`${assetType}:${assetId}`, { assetId, assetType });
-        });
-        return [...targets.values()]
-          .sort(
-            (left, right) =>
-              left.assetId - right.assetId ||
-              left.assetType.localeCompare(right.assetType),
-          )
-          .map((target) => `${target.assetType}:${target.assetId}`)
-          .join(",");
+        return getMentionTargetSignature(currentEditor.state.doc);
       },
     }) ?? "";
   const targetIdentities = useMemo(
@@ -609,25 +629,27 @@ function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
 
 function ImageMentionHoverCard({ target }: { target: NoteMentionTarget }) {
   return (
-    <div className="p-3.5">
+    <div className="flex items-start gap-3 p-3.5">
       <ImageMentionThumbnail
         previewUrl={target.previewUrl ?? undefined}
-        className="aspect-video w-full rounded-lg"
-        iconClassName="size-8 text-muted-foreground/55"
+        className="aspect-video w-28 rounded-md"
+        iconClassName="size-6 text-muted-foreground/55"
       />
-      <p className="mt-2 truncate text-sm font-semibold text-foreground">
-        {target.label}
-      </p>
-      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-        {target.locationLabel}
-      </p>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-foreground">
+          {target.label}
+        </p>
+        <p className="mt-1 truncate text-[11px] text-muted-foreground">
+          {target.locationLabel}
+        </p>
+      </div>
     </div>
   );
 }
 
 function LinkMentionHoverCard({ target }: { target: NoteMentionTarget }) {
   return (
-    <div className="flex items-center gap-3 p-3.5">
+    <div className="flex items-start gap-3 p-3.5">
       <LinkMentionThumbnail
         previewUrl={target.previewUrl ?? undefined}
         faviconUrl={target.faviconUrl ?? undefined}
@@ -636,21 +658,21 @@ function LinkMentionHoverCard({ target }: { target: NoteMentionTarget }) {
         iconClassName="size-5 text-foreground/75"
         showVideoBadge
       />
-      <div className="flex h-14 min-w-0 flex-col justify-between">
-        <p className="truncate text-xs leading-4 font-semibold text-foreground">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-foreground">
           {target.label}
+        </p>
+        <p className="mt-1 truncate text-[11px] text-muted-foreground">
+          {target.locationLabel}
         </p>
         {target.url ? (
           <p
             title={target.url}
-            className="line-clamp-2 text-[10px] leading-3 break-all text-muted-foreground"
+            className="mt-1.5 line-clamp-2 text-[10px] leading-3 break-all text-muted-foreground/75"
           >
             {target.url}
           </p>
         ) : null}
-        <p className="truncate text-[10px] leading-3 text-muted-foreground/75">
-          {target.locationLabel}
-        </p>
       </div>
     </div>
   );
@@ -773,11 +795,10 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
           ],
         };
       }, [scopedDisplayItems]);
-    const showScopeControls =
+    const showGroupLabels =
       [notes, colors, images, videos, youtube, links].filter(
         (group) => group.length > 0,
       ).length > 1;
-    const showGroupLabels = showScopeControls;
     const showInitialLoading = loading && flatItems.length === 0;
     const showSearching = Boolean(isSearchPending);
     const emptyLabel = query
@@ -849,53 +870,42 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
           )}
         >
           <div className="relative z-10 overflow-hidden rounded-b-lg border-b border-border bg-background">
-            {showScopeControls || showSearching ? (
-              <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
-                {showScopeControls
-                  ? (
-                      [
-                        undefined,
-                        "note",
-                        "color",
-                        "image",
-                        "video",
-                        "link",
-                      ] as const
-                    ).map((scope) => (
-                      <button
-                        key={scope ?? "all"}
-                        type="button"
-                        className={cn(
-                          "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                          parsed.scope === scope && "bg-accent text-foreground",
-                        )}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => setScope(scope)}
-                      >
-                        {scope === "note"
-                          ? "Notes"
-                          : scope === "color"
-                            ? "Colors"
-                            : scope === "image"
-                              ? "Images"
-                              : scope === "video"
-                                ? "Videos"
-                                : scope === "link"
-                                  ? "Links"
-                                  : "All"}
-                      </button>
-                    ))
-                  : null}
-                {showSearching ? (
-                  <span
-                    className="ml-auto pr-1 text-[10px] text-muted-foreground/75"
-                    aria-live="polite"
-                  >
-                    Searching…
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
+            <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
+              {(
+                [undefined, "note", "color", "image", "video", "link"] as const
+              ).map((scope) => (
+                <button
+                  key={scope ?? "all"}
+                  type="button"
+                  className={cn(
+                    "rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
+                    parsed.scope === scope && "bg-accent text-foreground",
+                  )}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => setScope(scope)}
+                >
+                  {scope === "note"
+                    ? "Notes"
+                    : scope === "color"
+                      ? "Colors"
+                      : scope === "image"
+                        ? "Images"
+                        : scope === "video"
+                          ? "Videos"
+                          : scope === "link"
+                            ? "Links"
+                            : "All"}
+                </button>
+              ))}
+              {showSearching ? (
+                <span
+                  className="ml-auto pr-1 text-[10px] text-muted-foreground/75"
+                  aria-live="polite"
+                >
+                  Searching…
+                </span>
+              ) : null}
+            </div>
             <div
               className="max-h-80 [scrollbar-width:none] overflow-y-auto p-1.5 [&::-webkit-scrollbar]:hidden"
               role="listbox"
@@ -997,28 +1007,6 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
             </div>
           </div>
           <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-1.5 text-[10px] leading-4 text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-                @note
-              </Kbd>
-              <span>,</span>
-              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-                @color
-              </Kbd>
-              <span>,</span>
-              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-                @image
-              </Kbd>
-              <span>,</span>
-              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-                @video
-              </Kbd>
-              <span>or</span>
-              <Kbd variant="solid" className="h-4 min-w-fit px-1 text-[10px]">
-                @link
-              </Kbd>
-              <span>to filter</span>
-            </span>
             <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
               <span className="inline-flex items-center gap-1">
                 <KbdGroup className="gap-0.5">
@@ -1129,7 +1117,7 @@ function MentionGroup({
                 className="size-7 rounded-md"
                 iconClassName="size-5 text-foreground/70"
               />
-            ) : item.assetType === "link" ? (
+            ) : item.assetType === "link" || item.assetType === "video" ? (
               <LinkMentionThumbnail
                 previewUrl={item.previewUrl ?? undefined}
                 faviconUrl={item.faviconUrl ?? undefined}
@@ -1137,6 +1125,7 @@ function MentionGroup({
                 className="size-7 rounded-md"
                 iconClassName="size-4 text-foreground/80"
                 showVideoBadge
+                videoBadgeSize="small"
               />
             ) : (
               <span className="flex size-7 items-center justify-center rounded-md bg-muted">
@@ -1334,7 +1323,7 @@ export function parseMentionQuery(query: string): {
   scope?: NoteMentionType;
   search: string;
 } {
-  const match = /^(note|color|link|image|video)(?:\s+(.*))?$/i.exec(query);
+  const match = /^(note|color|link|image|video):(?:\s*(.*))?$/i.exec(query);
   if (!match) return { search: query.trim() };
   return {
     scope: match[1]!.toLowerCase() as NoteMentionType,
@@ -1347,7 +1336,7 @@ export function createMentionScopeQuery(
   query: string,
 ): string {
   const { search } = parseMentionQuery(query);
-  return `@${scope ? `${scope} ` : ""}${search}`;
+  return `@${scope ? `${scope}:` : ""}${search}`;
 }
 
 export function parseNumericAssetId(assetId?: string): number | undefined {

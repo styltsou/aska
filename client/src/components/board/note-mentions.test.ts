@@ -17,6 +17,7 @@ import {
   createMentionsExtension,
   filterRecentMentionTargets,
   getMentionMenuDisplayItems,
+  getMentionTargetSignature,
   parseMentionQuery,
   parseNumericAssetId,
   shouldShowMentionSuggestion,
@@ -161,15 +162,15 @@ describe("mention query parsing", () => {
   });
 
   it("recognizes explicit note, color, and image scopes", () => {
-    expect(parseMentionQuery("note design system")).toEqual({
+    expect(parseMentionQuery("note: design system")).toEqual({
       scope: "note",
       search: "design system",
     });
-    expect(parseMentionQuery("color ")).toEqual({
+    expect(parseMentionQuery("color:")).toEqual({
       scope: "color",
       search: "",
     });
-    expect(parseMentionQuery("image sunset")).toEqual({
+    expect(parseMentionQuery("image: sunset")).toEqual({
       scope: "image",
       search: "sunset",
     });
@@ -182,20 +183,20 @@ describe("mention query parsing", () => {
   it("dismisses a blank mention trigger but keeps multi-word searches open", () => {
     expect(shouldShowMentionSuggestion(" ")).toBe(false);
     expect(shouldShowMentionSuggestion("hello world")).toBe(true);
-    expect(shouldShowMentionSuggestion("note project plan")).toBe(true);
+    expect(shouldShowMentionSuggestion("note: project plan")).toBe(true);
   });
 
   it("builds the supported syntax when a scope chip is selected", () => {
     expect(createMentionScopeQuery("note", "design system")).toBe(
-      "@note design system",
+      "@note:design system",
     );
-    expect(createMentionScopeQuery("color", "note design system")).toBe(
-      "@color design system",
+    expect(createMentionScopeQuery("color", "note: design system")).toBe(
+      "@color:design system",
     );
     expect(createMentionScopeQuery("image", "landscape")).toBe(
-      "@image landscape",
+      "@image:landscape",
     );
-    expect(createMentionScopeQuery(undefined, "note design system")).toBe(
+    expect(createMentionScopeQuery(undefined, "note: design system")).toBe(
       "@design system",
     );
   });
@@ -217,6 +218,30 @@ describe("mention query parsing", () => {
 
     expect(fallback).toContain("lucide-image");
     expect(preview).toContain("https://media.example/landscape.webp");
+  });
+
+  it("renders a video poster without a play badge in the mention pill", () => {
+    const preview = renderToStaticMarkup(
+      createElement(MentionPillBody, {
+        assetType: "video",
+        label: "A clip",
+        previewUrl: "https://media.example/poster.webp",
+      }),
+    );
+
+    expect(preview).toContain("https://media.example/poster.webp");
+    expect(preview).not.toContain("lucide-play");
+  });
+
+  it("resolves video mentions alongside other mentions", () => {
+    const editor = new Editor({
+      extensions: [StarterKit, Markdown, AssetMention],
+      content: "[A note](note:4) and [A clip](video:9) and [The clip](video:9)",
+      contentType: "markdown",
+    });
+
+    expect(getMentionTargetSignature(editor.state.doc)).toBe("note:4,video:9");
+    editor.destroy();
   });
 
   it("reads the numeric entity id from client note ids", () => {

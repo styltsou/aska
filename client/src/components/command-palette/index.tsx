@@ -12,6 +12,7 @@ import {
   MoonIcon,
   CornerDownLeftIcon,
   ExternalLinkIcon,
+  PlayIcon,
   NotebookPenIcon,
   PanelLeftIcon,
   PanelsTopLeftIcon,
@@ -1022,6 +1023,7 @@ function SearchResultPreview({ result }: { result: WorkspaceSearchResult }) {
           blurDataURL={result.preview.blurDataURL}
           className="absolute inset-0 size-full rounded-[inherit] object-cover"
         />
+        {result.type === "video" ? <VideoThumbnailPlayOverlay /> : null}
       </span>
     );
   }
@@ -1083,7 +1085,7 @@ function LinkSearchResultPreview({
   return (
     <span
       className={cn(
-        "flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-background",
+        "relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-background",
         !(isVideo && imageUrl === faviconUrl) &&
           "border border-border/60 shadow-sm",
       )}
@@ -1103,10 +1105,21 @@ function LinkSearchResultPreview({
               else setFailedFavicon(true);
             }}
           />
+          {isVideo ? <VideoThumbnailPlayOverlay /> : null}
         </>
       ) : (
         <Icon className="size-4 text-foreground" />
       )}
+    </span>
+  );
+}
+
+function VideoThumbnailPlayOverlay() {
+  return (
+    <span className="absolute inset-0 flex items-center justify-center">
+      <span className="flex size-4 items-center justify-center rounded-full bg-black/65 text-white shadow-sm">
+        <PlayIcon className="size-2 fill-current" />
+      </span>
     </span>
   );
 }

@@ -500,7 +500,7 @@ export function NoteMarkdown({
           components={components}
           remarkPlugins={[remarkGfm, remarkHighlight]}
           urlTransform={(url) =>
-            /^(?:note|color|link):\d+$/.test(url)
+            /^(?:note|color|link|image|video):\d+$/.test(url)
               ? url
               : defaultUrlTransform(url)
           }
