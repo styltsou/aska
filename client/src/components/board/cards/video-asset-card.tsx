@@ -31,14 +31,19 @@ export function VideoAssetCard({
   selected?: boolean;
   dragging?: boolean;
 }) {
-  const ready = Boolean(asset.url);
   const uploadPreview = useVideoUploadPreview(asset.id);
+  const localSourceUrl =
+    uploadPreview?.status === "processing"
+      ? uploadPreview.sourceUrl
+      : undefined;
+  const playbackUrl = localSourceUrl ?? asset.url;
+  const ready = Boolean(playbackUrl);
   const reduceMotion = useReducedMotion();
   const previewVideoRef = useRef<HTMLVideoElement>(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTime, setPreviewTime] = useState(0);
-  const posterUrl = asset.posterUrl ?? uploadPreview?.posterUrl;
+  const posterUrl = uploadPreview?.posterUrl ?? asset.posterUrl;
   const width = asset.width ?? uploadPreview?.width;
   const height = asset.height ?? uploadPreview?.height;
 
@@ -116,9 +121,9 @@ export function VideoAssetCard({
             aria-hidden="true"
             className="absolute inset-0 size-full object-cover"
           />
-        ) : asset.url ? (
+        ) : playbackUrl ? (
           <video
-            src={asset.url}
+            src={playbackUrl}
             muted
             playsInline
             preload="metadata"
@@ -126,10 +131,10 @@ export function VideoAssetCard({
             className="absolute inset-0 size-full object-cover"
           />
         ) : null}
-        {previewing && asset.url ? (
+        {previewing && playbackUrl ? (
           <video
             ref={previewVideoRef}
-            src={asset.url}
+            src={playbackUrl}
             poster={posterUrl ?? undefined}
             muted
             loop

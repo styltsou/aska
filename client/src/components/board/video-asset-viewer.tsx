@@ -530,8 +530,14 @@ function NativeVideoContent({
   const persistNoteRef = useRef<(assetId: string, draft: string) => void>(
     () => undefined,
   );
-  const ready = Boolean(asset.url);
-  const localPosterUrl = useVideoUploadPreview(asset.id)?.posterUrl;
+  const uploadPreview = useVideoUploadPreview(asset.id);
+  const localSourceUrl =
+    uploadPreview?.status === "processing"
+      ? uploadPreview.sourceUrl
+      : undefined;
+  const playbackUrl = localSourceUrl ?? asset.url;
+  const ready = Boolean(playbackUrl);
+  const localPosterUrl = uploadPreview?.posterUrl;
   const ratio =
     asset.width && asset.height ? asset.width / asset.height : 16 / 9;
   const layoutTransition = reduceMotion
@@ -652,9 +658,9 @@ function NativeVideoContent({
     >
       {ready && open ? (
         <NativeVideoPlayer
-          key={asset.id}
-          src={asset.url!}
-          poster={asset.posterUrl ?? localPosterUrl}
+          key={`${asset.id}-${playbackUrl}`}
+          src={playbackUrl!}
+          poster={localPosterUrl ?? asset.posterUrl ?? undefined}
           storyboard={asset.storyboard}
           title={asset.title?.trim() || "Untitled video"}
           initialTime={initialPlaybackTime}

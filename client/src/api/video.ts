@@ -133,7 +133,7 @@ export function useVideoAssets(scope: VideoScope) {
         );
       }
       if (upload.status === "completed") {
-        if (!becameReady) await refresh(upload.assetId);
+        await refresh(upload.assetId);
         if (previewAssetId) clearVideoUploadPreview(previewAssetId);
         if (!announcedReady)
           toast.success(
