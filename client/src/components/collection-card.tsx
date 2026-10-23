@@ -9,12 +9,17 @@ import { Link } from "@tanstack/react-router";
 import { FolderOpenIcon, MoreHorizontalIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
+import { cn } from "@/lib/utils";
 import { LinkCardPreview } from "./board/cards/link-asset-card";
 import {
   COLOR_CARD_PREVIEW_ASPECT_RATIO,
   ColorCardPreview,
 } from "./board/cards/color-card-preview";
 import { NoteMiniature } from "./board/cards/note-miniature";
+import {
+  formatVideoDuration,
+  VIDEO_CARD_TIME_BADGE_CLASS,
+} from "./board/video-card-control-styles";
 import { useDeleteCollection } from "@/api/collection";
 import {
   DropdownMenu,
@@ -351,24 +356,43 @@ function CollectionPreviewCard({
         delay: active ? index * 0.04 : 0,
       };
 
-  if (preview.type === "image") {
-    return preview.url ? (
-      <motion.img
+  if ((preview.type === "image" || preview.type === "video") && preview.url) {
+    return (
+      <motion.div
         data-collection-hover-target
-        src={preview.url}
-        alt=""
-        loading="lazy"
-        decoding="async"
         aria-hidden="true"
         initial={false}
         animate={motionPosition}
         transition={motionTransition}
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
-        className="pointer-events-auto absolute block h-auto max-h-[75cqh] w-auto max-w-[62cqw] rounded-lg border border-transparent object-contain"
+        className={cn(
+          "pointer-events-auto absolute w-max max-w-[62cqw] overflow-hidden rounded-lg",
+          preview.type === "image" && "border border-transparent bg-card",
+        )}
         style={positionStyle}
-      />
-    ) : null;
+      >
+        <img
+          src={preview.url}
+          alt=""
+          width={preview.width}
+          height={preview.height}
+          loading="lazy"
+          decoding="async"
+          className="block h-auto max-h-[75cqh] w-auto max-w-[62cqw] object-contain"
+        />
+        {preview.type === "video" && preview.durationSeconds ? (
+          <span
+            className={cn(
+              "absolute right-2 bottom-2",
+              VIDEO_CARD_TIME_BADGE_CLASS,
+            )}
+          >
+            {formatVideoDuration(preview.durationSeconds)}
+          </span>
+        ) : null}
+      </motion.div>
+    );
   }
 
   const ratio =

@@ -277,6 +277,7 @@ export class CollectionQueryService {
             url: video.posterPreviewUrl,
             width: video.poster?.preview.width,
             height: video.poster?.preview.height,
+            durationSeconds: video.durationSeconds,
           };
       } else if (row.assetType === "note") {
         const snippet = row.noteContent
@@ -598,6 +599,7 @@ export class CollectionQueryService {
             url: video.posterPreviewUrl,
             width: video.poster?.preview.width,
             height: video.poster?.preview.height,
+            durationSeconds: video.durationSeconds,
           }
         : toFolderPreview(row, imageVariants, resourceMedia, mentionColors);
       if (!list) {

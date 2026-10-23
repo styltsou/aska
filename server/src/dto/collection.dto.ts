@@ -206,6 +206,7 @@ export const FolderChildPreviewSchema = z.object({
   url: z.string().optional(),
   width: z.number().optional(),
   height: z.number().optional(),
+  durationSeconds: z.number().nullable().optional(),
   blurDataURL: z.string().nullable().optional(),
   hex: z.string().optional(),
   gradient: ColorGradientSchema.nullable().optional(),

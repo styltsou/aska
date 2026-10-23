@@ -3,20 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import type { VideoAsset } from "@/types/asset";
-import { VIDEO_CARD_TIME_BADGE_CLASS } from "@/components/board/video-card-control-styles";
+import {
+  formatVideoDuration,
+  VIDEO_CARD_TIME_BADGE_CLASS,
+} from "@/components/board/video-card-control-styles";
 import { hasSelectionModifier } from "@/lib/selection";
 import { recordVideoPlaybackPosition } from "@/lib/video-playback-position";
 import { useVideoUploadPreview } from "@/lib/video-upload-preview";
 import { cn } from "@/lib/utils";
-
-function formatDuration(seconds: number) {
-  const whole = Math.floor(seconds);
-  const minutes = Math.floor(whole / 60);
-  const remainder = String(whole % 60).padStart(2, "0");
-  return whole >= 3600
-    ? `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}:${remainder}`
-    : `${minutes}:${remainder}`;
-}
 
 export function VideoAssetCard({
   asset,
@@ -164,7 +158,7 @@ export function VideoAssetCard({
             VIDEO_CARD_TIME_BADGE_CLASS,
           )}
         >
-          {formatDuration(
+          {formatVideoDuration(
             previewing
               ? Math.max(0, asset.durationSeconds - previewTime)
               : asset.durationSeconds,

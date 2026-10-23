@@ -4,6 +4,7 @@ export type FolderChildPreview = {
   url?: string;
   width?: number;
   height?: number;
+  durationSeconds?: number | null;
   blurDataURL?: string | null;
   snippet?: string;
   hostname?: string;
