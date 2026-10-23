@@ -243,9 +243,8 @@ export function CollectionCard({
               variant="destructive-primary"
               disabled={deleteCollection.isPending}
               onClick={() => {
-                deleteCollection.mutate(collection.slug, {
-                  onSettled: () => setDeleteDialogOpen(false),
-                });
+                setDeleteDialogOpen(false);
+                deleteCollection.mutate(collection.slug);
               }}
             >
               Delete
