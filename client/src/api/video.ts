@@ -186,10 +186,15 @@ export function useVideoAssets(scope: VideoScope) {
       const toastId = toast.loading(`Uploading ${file.name}…`);
       try {
         await putFile(file, created, (percent) => {
+          const sentAllBytes = percent === 100;
           updateVideoUploadPreview(created.assetId, {
-            status: "uploading",
+            status: sentAllBytes ? "processing" : "uploading",
             progress: percent,
           });
+          if (sentAllBytes) {
+            toast.dismiss(toastId);
+            return;
+          }
           toast.loading(`Uploading ${file.name} — ${percent}%`, {
             id: toastId,
           });
@@ -198,7 +203,6 @@ export function useVideoAssets(scope: VideoScope) {
           status: "processing",
           progress: 100,
         });
-        toast.loading("Preparing video…", { id: toastId });
         void watch(created.id, created.assetId, toastId);
       } catch (error) {
         await apiPost(`${path}/uploads/${created.id}/fail`).catch(
