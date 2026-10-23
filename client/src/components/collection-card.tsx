@@ -315,26 +315,32 @@ function CollectionPreviewCard({
   const restingY =
     (isSinglePreview || index === 0 ? 0 : 1 + index * 1.3) +
     (isSinglePreview ? 0 : verticalDrift);
-  const restingRotation =
+  const computedRestingRotation =
     (isSinglePreview ? 0 : side * (index === 0 ? 0.8 : 2 + index * 1.2)) +
     rotationDrift;
-  const hoverX = isSinglePreview
+  const computedHoverX = isSinglePreview
     ? restingX
     : side * (index === 0 ? 3 : 8 + index * 3) + horizontalDrift;
-  const hoverY = isSinglePreview
+  const computedHoverY = isSinglePreview
     ? restingY
     : restingY - (index === 0 ? 1.5 : 1);
-  const hoverRotation = isSinglePreview
-    ? restingRotation + side * 2
+  const computedHoverRotation = isSinglePreview
+    ? computedRestingRotation + side * 2
     : side * (index === 0 ? 3 : 5 + Math.min(index, 2) * 0.8) + rotationDrift;
-  const translateX = active ? hoverX : restingX;
-  const translateY = active ? hoverY : restingY;
-  const rotation = active ? hoverRotation : restingRotation;
-  const scale = active
+  const computedScale = active
     ? isSinglePreview
       ? 1.05
       : 1.015
     : 0.94 + ((seed >>> 21) & 7) / 100;
+  const isVideoPreview = preview.type === "video";
+  const translateX = active ? computedHoverX : restingX;
+  const translateY = active ? computedHoverY : restingY;
+  const rotation = isVideoPreview
+    ? 0
+    : active
+      ? computedHoverRotation
+      : computedRestingRotation;
+  const scale = isVideoPreview ? 1 : computedScale;
 
   const positionStyle: CSSProperties = {
     left: "50%",
