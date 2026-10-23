@@ -53,15 +53,15 @@
   }
 
   .note-rich-text-content ul:not([data-type="taskList"]) {
-    @apply my-3 ml-4 list-disc space-y-1.5 marker:text-sidebar-foreground/35;
+    @apply my-3 ml-4 list-disc space-y-1.5 marker:text-sidebar-foreground/80;
   }
 
   .note-rich-text-content ol {
-    @apply my-3 ml-4 list-decimal space-y-1.5 marker:text-sidebar-foreground/35;
+    @apply my-3 ml-4 list-decimal space-y-1.5 marker:text-sidebar-foreground/80;
   }
 
   .note-rich-text-content li {
-    @apply pl-1;
+    @apply pl-0;
   }
 
   .note-rich-text-content li > p {

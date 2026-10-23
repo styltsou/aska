@@ -12,6 +12,7 @@ import {
   useState,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -383,6 +384,114 @@ const SLASH_COMMAND_GROUPS: SlashCommandGroup[] = [
   },
 ];
 
+function SlashBlockPreview({ item }: { item: SlashCommandItem }) {
+  const headingLevel = item.title.startsWith("Heading ")
+    ? Number(item.title.slice(-1))
+    : null;
+
+  if (headingLevel) {
+    return (
+      <div
+        className={cn(
+          "whitespace-nowrap font-semibold tracking-tight text-foreground",
+          headingLevel === 1 && "text-2xl",
+          headingLevel === 2 && "text-xl",
+          headingLevel === 3 && "text-lg",
+          headingLevel === 4 && "text-base",
+        )}
+      >
+        {item.title}
+      </div>
+    );
+  }
+
+  switch (item.title) {
+    case "Text":
+      return <p className="text-sm leading-6 whitespace-nowrap">Text</p>;
+    case "Bullet list":
+      return (
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center gap-0">
+            <span
+              aria-hidden="true"
+              className="size-1.5 shrink-0 rounded-full bg-current"
+            />
+            <span>First idea</span>
+          </div>
+          <div className="flex items-center gap-0">
+            <span
+              aria-hidden="true"
+              className="size-1.5 shrink-0 rounded-full bg-current"
+            />
+            <span>Another idea</span>
+          </div>
+        </div>
+      );
+    case "Numbered list":
+      return (
+        <ol className="list-inside list-decimal space-y-1 text-sm">
+          <li>First step</li>
+          <li>Next step</li>
+        </ol>
+      );
+    case "To-do list":
+      return (
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="size-3.5 rounded border border-foreground/45" />
+            Plan the work
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="size-3.5 rounded border border-foreground/45" />
+            Get it done
+          </div>
+        </div>
+      );
+    case "Quote":
+      return (
+        <blockquote className="border-l-2 border-foreground/45 pl-3 text-sm italic">
+          A thought worth keeping.
+        </blockquote>
+      );
+    case "Code block":
+      return (
+        <pre className="overflow-hidden rounded-md bg-muted p-2.5 font-mono text-xs text-foreground">
+          <code>const idea = "hello";</code>
+        </pre>
+      );
+    case "Diagram":
+      return (
+        <div className="flex items-center justify-center gap-2 py-1 text-[10px] font-medium">
+          <span className="rounded border bg-background px-2 py-1">Idea</span>
+          <span className="text-muted-foreground">→</span>
+          <span className="rounded border bg-background px-2 py-1">Action</span>
+        </div>
+      );
+    case "Divider":
+      return <div className="my-2 border-t border-border" />;
+    case "Table":
+      return (
+        <div className="grid grid-cols-3 overflow-hidden rounded border border-border text-[10px]">
+          {Array.from({ length: 9 }, (_, index) => (
+            <div
+              key={index}
+              className={cn(
+                "min-h-6 border-r border-b border-border px-1 py-1",
+                index < 3 && "bg-muted font-semibold",
+                index % 3 === 2 && "border-r-0",
+                index >= 6 && "border-b-0",
+              )}
+            >
+              {index < 3 ? `Column ${index + 1}` : "Text"}
+            </div>
+          ))}
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
 function scoreSlashItem(item: SlashCommandItem, query: string): number {
   const title = item.title.toLowerCase();
   if (title.startsWith(query)) return 4;
@@ -432,6 +541,11 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
       return starts;
     }, [items]);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [previewPosition, setPreviewPosition] = useState<{
+      top: number;
+      left: number;
+      side: "left" | "right" | "stacked";
+    } | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const itemRefs = useRef(new Map<number, HTMLButtonElement>());
     const navigationDirectionRef = useRef<SlashMenuNavigationDirection | null>(
@@ -465,6 +579,62 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
       });
       list.scrollTop = nextScrollTop;
     }, [flatItems.length, selectedIndex]);
+
+    useLayoutEffect(() => {
+      const list = listRef.current;
+      const item = itemRefs.current.get(selectedIndex);
+      if (!list || !item) return;
+
+      const updatePosition = () => {
+        const itemRect = item.getBoundingClientRect();
+        const menuRect = list.getBoundingClientRect();
+        const cardWidth = 208;
+        const cardHeight = 170;
+        const gap = 8;
+        const margin = 8;
+        const right = menuRect.right + gap;
+        const left = menuRect.left - cardWidth - gap;
+        const hasRoomOnRight = right + cardWidth + margin <= window.innerWidth;
+        const hasRoomOnLeft = left >= margin;
+        const fitsBesideMenu = hasRoomOnRight || hasRoomOnLeft;
+        setPreviewPosition({
+          side: hasRoomOnRight ? "right" : hasRoomOnLeft ? "left" : "stacked",
+          left: fitsBesideMenu
+            ? hasRoomOnRight
+              ? right
+              : menuRect.left - gap
+            : Math.max(
+                margin,
+                Math.min(menuRect.left, window.innerWidth - cardWidth - margin),
+              ),
+          top: fitsBesideMenu
+            ? Math.max(
+                margin,
+                Math.min(
+                  itemRect.top - 12,
+                  window.innerHeight - cardHeight - margin,
+                ),
+              )
+            : menuRect.bottom + gap + cardHeight + margin <= window.innerHeight
+              ? menuRect.bottom + gap
+              : Math.max(margin, menuRect.top - cardHeight - gap),
+        });
+      };
+
+      updatePosition();
+      // The suggestion surface is mounted into its floating container after
+      // React renders; measure again once that container has been positioned.
+      const frame = window.requestAnimationFrame(updatePosition);
+      list.addEventListener("scroll", updatePosition, { passive: true });
+      window.addEventListener("resize", updatePosition);
+      window.addEventListener("scroll", updatePosition, true);
+      return () => {
+        window.cancelAnimationFrame(frame);
+        list.removeEventListener("scroll", updatePosition);
+        window.removeEventListener("resize", updatePosition);
+        window.removeEventListener("scroll", updatePosition, true);
+      };
+    }, [flatItems, selectedIndex]);
 
     function select(index: number) {
       const item = flatItems[index];
@@ -619,6 +789,36 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
             </span>
           </div>
         </div>
+        {!exiting && previewPosition && typeof document !== "undefined"
+          ? createPortal(
+              <div
+                className={cn(
+                  "pointer-events-none fixed w-max max-w-[min(13rem,calc(100vw-1rem))] rounded-lg border border-border bg-accent p-2 text-accent-foreground shadow-none",
+                  previewPosition.side === "left" && "-translate-x-full",
+                )}
+                style={{
+                  left: previewPosition.left,
+                  top: previewPosition.top,
+                  zIndex: 71,
+                }}
+                aria-hidden="true"
+              >
+                <div
+                  className={cn(
+                    "w-full rounded-md border border-border bg-background p-2 text-foreground",
+                  )}
+                >
+                  {flatItems[selectedIndex] ? (
+                    <SlashBlockPreview item={flatItems[selectedIndex]} />
+                  ) : null}
+                </div>
+                <p className="mt-1.5 max-w-40 text-xs leading-4 text-muted-foreground">
+                  {flatItems[selectedIndex]?.description}
+                </p>
+              </div>,
+              document.body,
+            )
+          : null}
       </SuggestionMenuTransition>
     );
   },

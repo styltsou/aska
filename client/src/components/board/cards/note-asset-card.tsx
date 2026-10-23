@@ -3,6 +3,7 @@ import "../note-rich-text.css";
 
 import {
   Children,
+  cloneElement,
   createElement,
   isValidElement,
   type CSSProperties,
@@ -146,6 +147,39 @@ function taskItemIsChecked(node: unknown): boolean {
   );
 }
 
+function renderBulletListItems(children: ReactNode, compact: boolean) {
+  return Children.map(children, (child) => {
+    if (
+      !isValidElement<{
+        className?: string;
+        children?: ReactNode;
+      }>(child)
+    ) {
+      return child;
+    }
+
+    return cloneElement(
+      child,
+      {
+        className: cn(
+          child.props.className,
+          "note-bullet-list-item flex items-start gap-0",
+        ),
+      },
+      <>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "mt-[0.55em] size-1.5 shrink-0 rounded-full bg-current",
+            compact && "mt-[0.45em]",
+          )}
+        />
+        <div className="min-w-0 flex-1 [&>p]:my-0">{child.props.children}</div>
+      </>,
+    );
+  });
+}
+
 function createMDComponents(
   compact: boolean,
   mentionColors: MentionColors | undefined,
@@ -231,7 +265,7 @@ function createMDComponents(
         {...props}
       />
     ),
-    ul: ({ className, node: _node, ...props }) => {
+    ul: ({ className, node: _node, children, ...props }) => {
       const isTaskList = className?.includes("contains-task-list");
 
       return (
@@ -239,7 +273,7 @@ function createMDComponents(
           className={cn(
             isTaskList
               ? "note-task-list ml-0 list-none pl-0 text-sidebar-foreground/80"
-              : "text-sidebar-foreground/80 marker:text-sidebar-foreground/35 list-disc",
+              : "list-none text-sidebar-foreground/80",
             isTaskList
               ? compact
                 ? "my-1 space-y-0.5"
@@ -250,13 +284,15 @@ function createMDComponents(
             className,
           )}
           {...props}
-        />
+        >
+          {isTaskList ? children : renderBulletListItems(children, compact)}
+        </ul>
       );
     },
     ol: ({ className, ...props }) => (
       <ol
         className={cn(
-          "text-sidebar-foreground/80 marker:text-sidebar-foreground/35 list-decimal",
+          "text-sidebar-foreground/80 marker:text-sidebar-foreground/80 list-decimal",
           compact ? "my-1 ml-3 space-y-0.5" : "my-3 ml-4 space-y-1.5",
           className,
         )}
@@ -273,7 +309,7 @@ function createMDComponents(
           className={cn(
             isTaskItem
               ? "note-task-item ml-0 flex items-start gap-2 pl-0"
-              : "pl-1",
+              : "pl-0",
             isTaskItem &&
               isChecked &&
               "text-sidebar-foreground/50 line-through",
