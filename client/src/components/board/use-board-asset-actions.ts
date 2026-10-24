@@ -16,15 +16,19 @@ import {
 } from "@/api/collection";
 import { useCreateInboxLink, useCreateLink } from "@/api/url-unfurl";
 import type { BoardInsertionPlacement } from "@/api/collection";
-import type { CollectionContentsResponse } from "@/api/collection";
+import type {
+  BoardPosition,
+  CollectionContentsResponse,
+  CollectionNode,
+  InboxContentsResponse,
+} from "@/api/collection";
 import { collectionQueryKeys } from "@/api/collection/query-keys";
 import type { PexelsPhoto } from "@/api/pexels";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
-import {
-  isUploadableMediaFile,
-  localMediaKind,
-  reserveLocalMediaPositions,
-} from "@/lib/media-upload";
+import { isUploadableMediaFile, localMediaKind } from "@/lib/media-upload";
+import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
+import { readUploadVideoDimensions } from "@/lib/upload-video-dimensions";
+import { reserveNodePositions } from "@/components/canvas/canvas-node-layout";
 import type { ClipboardAssetPayload } from "@/lib/clipboard";
 import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
 import {
@@ -126,6 +130,39 @@ export function useBoardAssetActions({
       }
       if (mediaFiles.length === 0) return;
 
+      const pendingIds = mediaFiles.map(
+        (_, index) =>
+          `file-drop-pending-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`,
+      );
+      const clearPendingCards = () => {
+        const ids = new Set(pendingIds);
+        if (target === "collection") {
+          const key = collectionQueryKeys.contents(
+            workspaceSlug,
+            collectionSlug,
+            parentFolderPath,
+          );
+          queryClient.setQueryData<CollectionContentsResponse>(key, (current) =>
+            current
+              ? {
+                  ...current,
+                  nodes: current.nodes.filter((node) => !ids.has(node.id)),
+                }
+              : current,
+          );
+        } else {
+          const key = collectionQueryKeys.inbox(workspaceSlug);
+          queryClient.setQueryData<InboxContentsResponse>(key, (current) =>
+            current
+              ? {
+                  ...current,
+                  nodes: current.nodes.filter((node) => !ids.has(node.id)),
+                }
+              : current,
+          );
+        }
+      };
+
       try {
         const insertionPlacement =
           actionPlacement ?? getPlacement?.() ?? placement;
@@ -139,32 +176,147 @@ export function useBoardAssetActions({
                 ),
               )
             : undefined;
+        const pendingCards = mediaFiles.map(
+          (file, index) =>
+            ({
+              id: pendingIds[index]!,
+              type: "image" as const,
+              url: "",
+              contentType: file.type,
+              width: 16,
+              height: 9,
+              title: file.name || null,
+              alt: null,
+              note: null,
+              sourceLabel: null,
+              sourceUrl: null,
+              isFavorite: false,
+              uploadStatus: "uploading" as const,
+              uploadProgress: 0,
+              pendingDropMediaKind: localMediaKind(file) ?? "image",
+              clientId: pendingIds[index]!,
+              createdAt: new Date().toISOString(),
+              position: null as BoardPosition | null,
+            }) satisfies Extract<CollectionNode, { type: "image" }>,
+        );
         const positions =
           target === "collection"
-            ? await reserveLocalMediaPositions(
-                mediaFiles,
+            ? reserveNodePositions(
                 existing?.nodes ?? [],
+                pendingCards,
                 insertionPlacement,
               )
             : [];
+        for (const [index, pending] of pendingCards.entries())
+          pending.position = positions[index] ?? null;
+
+        if (target === "collection") {
+          const key = collectionQueryKeys.contents(
+            workspaceSlug,
+            collectionSlug,
+            parentFolderPath,
+          );
+          queryClient.setQueryData<CollectionContentsResponse>(key, (current) =>
+            current
+              ? { ...current, nodes: [...current.nodes, ...pendingCards] }
+              : current,
+          );
+        } else {
+          const key = collectionQueryKeys.inbox(workspaceSlug);
+          queryClient.setQueryData<InboxContentsResponse>(key, (current) =>
+            current
+              ? { ...current, nodes: [...pendingCards, ...current.nodes] }
+              : current,
+          );
+        }
+
+        const dimensions = mediaFiles.map((file, index) => {
+          const read =
+            localMediaKind(file) === "video"
+              ? readUploadVideoDimensions(file)
+              : readUploadImageDimensions(file);
+          return read
+            .then((size) => {
+              const key =
+                target === "collection"
+                  ? collectionQueryKeys.contents(
+                      workspaceSlug,
+                      collectionSlug,
+                      parentFolderPath,
+                    )
+                  : collectionQueryKeys.inbox(workspaceSlug);
+              queryClient.setQueryData<
+                CollectionContentsResponse | InboxContentsResponse
+              >(key, (current) =>
+                current
+                  ? {
+                      ...current,
+                      nodes: current.nodes.map((node) =>
+                        node.id === pendingIds[index] &&
+                        node.type === "image" &&
+                        node.pendingDropMediaKind
+                          ? { ...node, ...size }
+                          : node,
+                      ),
+                    }
+                  : current,
+              );
+              return size;
+            })
+            .catch(() => undefined);
+        });
+
         const images = mediaFiles.flatMap((file, index) =>
           localMediaKind(file) === "image"
-            ? [{ file, position: positions[index] }]
+            ? [
+                {
+                  file,
+                  position: positions[index],
+                  placeholderId: pendingIds[index]!,
+                },
+              ]
             : [],
         );
         const videoFiles = mediaFiles.flatMap((file, index) =>
           localMediaKind(file) === "video"
-            ? [{ file, position: positions[index] }]
+            ? [
+                {
+                  file,
+                  position: positions[index],
+                  placeholderId: pendingIds[index]!,
+                  dimensions: dimensions[index]!,
+                },
+              ]
             : [],
         );
         const imageGroups =
           videoFiles.length > 0 ? images.map((image) => [image]) : [images];
+        const videoUploads = videoFiles.map(
+          ({ file, position, placeholderId, dimensions }) =>
+            dimensions
+              .then((size) =>
+                videos.upload.mutateAsync({
+                  file,
+                  position,
+                  placeholderId,
+                  dimensions: size,
+                }),
+              )
+              .catch((error) => {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Unable to upload video.",
+                );
+              }),
+        );
         for (const group of imageGroups) {
           if (group.length === 0) continue;
           try {
             if (target === "inbox") {
               await uploadInboxImages.mutateAsync({
                 files: group.map(({ file }) => file),
+                optimisticIds: group.map(({ placeholderId }) => placeholderId),
               });
             } else {
               await uploadLocalImages.mutateAsync({
@@ -172,24 +324,17 @@ export function useBoardAssetActions({
                 parentFolderPath,
                 placement: insertionPlacement,
                 positions: group.map(({ position }) => position!),
+                optimisticIds: group.map(({ placeholderId }) => placeholderId),
               });
             }
           } catch {
             // The image mutation reports its failure; later media still upload.
           }
         }
-        for (const { file, position } of videoFiles) {
-          try {
-            await videos.upload.mutateAsync({ file, position });
-          } catch (error) {
-            toast.error(
-              error instanceof Error
-                ? error.message
-                : "Unable to upload video.",
-            );
-          }
-        }
+        await Promise.all(videoUploads);
+        clearPendingCards();
       } catch (err) {
+        clearPendingCards();
         toast.error(
           err instanceof Error ? err.message : "Unable to upload media.",
         );

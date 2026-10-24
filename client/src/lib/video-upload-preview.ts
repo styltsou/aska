@@ -13,6 +13,10 @@ export type VideoUploadPreview = {
 const previews = new Map<string, VideoUploadPreview>();
 const listeners = new Map<string, Set<() => void>>();
 
+export function getVideoUploadPreview(assetId: string) {
+  return previews.get(assetId);
+}
+
 function emit(assetId: string) {
   for (const listener of listeners.get(assetId) ?? []) listener();
 }

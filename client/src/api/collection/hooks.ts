@@ -74,6 +74,7 @@ import { makeBoardKey } from "@/components/canvas/canvas-key";
 import { emitBatchPlacementCompleted } from "@/components/canvas/batch-placement-completed";
 import { suppressNextCanvasCardEntrance } from "@/components/canvas/canvas-card-entrance";
 import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
+import { getVideoUploadPreview } from "@/lib/video-upload-preview";
 import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
 import { applySavedNoteToWorkspaceAsset } from "./note-asset-cache";
@@ -98,6 +99,60 @@ const COLLECTION_CONTENTS_STALE_TIME = 30_000;
 const MAX_COLLECTION_PREVIEWS = 4;
 const UPLOAD_POLL_INTERVAL_MS = 1_000;
 const UPLOAD_POLL_TIMEOUT_MS = 2 * 60 * 1_000;
+
+export function keepLocalMediaDuringRefetch<
+  T extends CollectionContentsResponse | InboxContentsResponse,
+>(previous: T | undefined, fetched: T): T {
+  if (!previous) return fetched;
+  const previousById = new Map(previous.nodes.map((node) => [node.id, node]));
+  const uploadingImages = previous.nodes.filter(
+    (node) => node.type === "image" && node.uploadStatus === "uploading",
+  );
+  const serverIdsBeingUploaded = new Set(
+    uploadingImages.flatMap((node) =>
+      node.type === "image" && node.serverAssetId ? [node.serverAssetId] : [],
+    ),
+  );
+  const nodes = fetched.nodes
+    .filter((node) => !serverIdsBeingUploaded.has(node.id))
+    .map((node) => {
+      const local = previousById.get(node.id);
+      if (local?.type === "image" && local.uploadStatus === "uploading")
+        return local;
+      if (
+        local?.type === "image" &&
+        node.type === "image" &&
+        local.localPreviewUrl
+      )
+        return {
+          ...node,
+          localPreviewUrl: local.localPreviewUrl,
+          clientId: local.clientId,
+        };
+      if (
+        local?.type === "video" &&
+        node.type === "video" &&
+        getVideoUploadPreview(node.id)
+      )
+        return {
+          ...node,
+          width: node.width ?? local.width,
+          height: node.height ?? local.height,
+          position: node.position ?? local.position,
+        };
+      return node;
+    });
+  const fetchedIds = new Set(nodes.map((node) => node.id));
+  for (const node of previous.nodes) {
+    if (fetchedIds.has(node.id)) continue;
+    if (
+      (node.type === "image" && node.uploadStatus === "uploading") ||
+      (node.type === "video" && getVideoUploadPreview(node.id))
+    )
+      nodes.push(node);
+  }
+  return { ...fetched, nodes };
+}
 
 type CreateFolderMutationInput = CreateFolderInput & {
   placement?: BoardInsertionPlacement;
@@ -147,7 +202,19 @@ export function inboxContentsQueryOptions(
   const typeSignature = normalizedTypes?.join(",");
   return {
     queryKey: collectionQueryKeys.inbox(workspaceSlug, typeSignature),
-    queryFn: () => fetchInboxContents(workspaceSlug, normalizedTypes),
+    queryFn: async ({
+      client,
+    }: {
+      client: ReturnType<typeof useQueryClient>;
+    }) => {
+      const fetched = await fetchInboxContents(workspaceSlug, normalizedTypes);
+      return keepLocalMediaDuringRefetch(
+        client.getQueryData<InboxContentsResponse>(
+          collectionQueryKeys.inbox(workspaceSlug, typeSignature),
+        ),
+        fetched,
+      );
+    },
     staleTime: COLLECTION_CONTENTS_STALE_TIME,
   };
 }
@@ -167,13 +234,29 @@ export function collectionContentsQueryOptions(
       folderPath,
       typeSignature,
     ),
-    queryFn: () =>
-      fetchCollectionContents(
+    queryFn: async ({
+      client,
+    }: {
+      client: ReturnType<typeof useQueryClient>;
+    }) => {
+      const fetched = await fetchCollectionContents(
         workspaceSlug,
         collectionSlug,
         folderPath,
         normalizedTypes,
-      ),
+      );
+      return keepLocalMediaDuringRefetch(
+        client.getQueryData<CollectionContentsResponse>(
+          collectionQueryKeys.contents(
+            workspaceSlug,
+            collectionSlug,
+            folderPath,
+            typeSignature,
+          ),
+        ),
+        fetched,
+      );
+    },
     staleTime: COLLECTION_CONTENTS_STALE_TIME,
   };
 }
@@ -530,6 +613,22 @@ function makeOptimisticImageNode(
   };
 }
 
+function replaceCollectionNodes<T extends CollectionNode>(
+  nodes: CollectionNode[],
+  replacements: T[],
+) {
+  const pending = new Map(replacements.map((node) => [node.id, node]));
+  const next = nodes.map((node) => {
+    const replacement = pending.get(node.id);
+    if (replacement) {
+      pending.delete(node.id);
+      return replacement;
+    }
+    return node;
+  });
+  return [...next, ...pending.values()];
+}
+
 function revokeOptimisticImageUrls(
   images: Array<{ previewObjectUrl?: string }> | undefined,
 ) {
@@ -555,11 +654,13 @@ function updateOptimisticImage(
 
       return {
         ...current,
-        nodes: current.nodes.map((node) =>
-          node.id === imageId && node.type === "image"
-            ? { ...node, ...update }
-            : node,
-        ),
+        nodes: current.nodes
+          .filter((node) => node.id !== update.serverAssetId)
+          .map((node) =>
+            node.id === imageId && node.type === "image"
+              ? { ...node, ...update }
+              : node,
+          ),
       };
     },
   );
@@ -578,11 +679,13 @@ function updateOptimisticInboxImage(
 
       return {
         ...current,
-        nodes: current.nodes.map((node) =>
-          node.id === imageId && node.type === "image"
-            ? { ...node, ...update }
-            : node,
-        ),
+        nodes: current.nodes
+          .filter((node) => node.id !== update.serverAssetId)
+          .map((node) =>
+            node.id === imageId && node.type === "image"
+              ? { ...node, ...update }
+              : node,
+          ),
       };
     },
   );
@@ -2341,6 +2444,15 @@ export function useUploadLocalImages(
             },
           );
 
+          updateOptimisticImage(
+            queryClient,
+            workspaceSlug,
+            collectionSlug,
+            parentFolderPath,
+            optimisticImage.id,
+            { serverAssetId: uploadData.upload.image.id },
+          );
+
           await uploadFileToPresignedUrl(
             file,
             uploadData.upload,
@@ -2482,7 +2594,12 @@ export function useUploadInboxImages(workspaceSlug: string) {
       const previousWorkspace =
         queryClient.getQueryData<WorkspaceData>(workspaceKey);
       const optimisticImages = files.map((file, index) =>
-        makeOptimisticImageNode(file, index, UNKNOWN_IMAGE_DIMENSIONS, optimisticIds?.[index]),
+        makeOptimisticImageNode(
+          file,
+          index,
+          UNKNOWN_IMAGE_DIMENSIONS,
+          optimisticIds?.[index],
+        ),
       );
 
       queryClient.setQueryData<InboxContentsResponse>(inboxKey, (current) => {
@@ -2535,6 +2652,12 @@ export function useUploadInboxImages(workspaceSlug: string) {
             width: optimisticImage.width,
             height: optimisticImage.height,
           });
+          updateOptimisticInboxImage(
+            queryClient,
+            workspaceSlug,
+            optimisticImage.id,
+            { serverAssetId: uploadData.upload.image.id },
+          );
 
           await uploadFileToPresignedUrl(
             file,

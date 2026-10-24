@@ -1,10 +1,12 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ExternalLink, LoaderCircleIcon } from "lucide-react";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import type { ImageAsset } from "@/types/asset";
 import { hasSelectionModifier } from "@/lib/selection";
 import { cn } from "@/lib/utils";
+import { releaseLocalImagePreviewAfterRemoteLoad } from "@/lib/local-image-preview";
 
 export function ImageAssetCard({
   asset,
@@ -20,6 +22,7 @@ export function ImageAssetCard({
   const hasBar = asset.sourceLabel;
   const [hovered, setHovered] = useState(false);
   const reduceMotion = useReducedMotion();
+  const queryClient = useQueryClient();
 
   return (
     <div
@@ -55,6 +58,13 @@ export function ImageAssetCard({
         <ProgressiveImage
           src={asset.url}
           fallbackSrc={asset.localPreviewUrl}
+          revokeFallbackBlob={false}
+          onLoad={() =>
+            releaseLocalImagePreviewAfterRemoteLoad(
+              queryClient,
+              asset.localPreviewUrl,
+            )
+          }
           blurDataURL={asset.uploadStatus ? undefined : asset.blurDataURL}
           alt={asset.alt ?? ""}
           className="absolute inset-0 h-full w-full rounded-[inherit] object-cover"

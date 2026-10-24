@@ -295,6 +295,9 @@ export type CollectionImageNode = {
   paletteStatus?: "processing" | "completed" | "failed";
   uploadStatus?: "uploading" | "processing";
   uploadProgress?: number;
+  pendingDropMediaKind?: "image" | "video";
+  /** Server ID for an optimistic image whose upload is still in flight. */
+  serverAssetId?: string;
   clientId?: string;
   sizeBytes?: number;
   createdAt: string;
@@ -333,6 +336,8 @@ export type CollectionVideoNode = {
   updatedAt?: string;
   position: BoardPosition | null;
   frontIndex?: number | null;
+  /** Browser-only identity retained while replacing a dropped placeholder. */
+  clientId?: string;
 };
 
 export type CollectionNoteNode = {

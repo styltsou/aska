@@ -1,6 +1,6 @@
 import "./canvas-card.css";
 
-import { LoaderCircleIcon } from "lucide-react";
+import { ImageIcon, LoaderCircleIcon, VideoIcon } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   memo,
@@ -26,6 +26,10 @@ import { useTransientStore } from "@/store";
 import type { LinkAsset, VideoAsset } from "@/types/asset";
 
 import type { CanvasDropStackStyle } from "./canvas-drop-stack";
+import {
+  consumeCanvasDropPreview,
+  rememberCanvasDropPreview,
+} from "./canvas-drop-preview-handoff";
 
 export type CanvasNodeData = {
   collectionNode: CollectionNode;
@@ -64,6 +68,12 @@ export type CanvasNodeData = {
 
 export type CanvasNode = Node<CanvasNodeData, "asset">;
 
+type DropPreviewPlaceholder = {
+  kind: "image" | "video";
+  width: number;
+  height: number;
+};
+
 function canvasCardPropsEqual(
   prev: NodeProps<CanvasNode>,
   next: NodeProps<CanvasNode>,
@@ -83,10 +93,25 @@ export const CanvasCard = memo(function CanvasCard({
   const reduceMotion = useReducedMotion();
   const completedPresence = useRef<CanvasNodeData["presence"]>(undefined);
   const [handoffPill, setHandoffPill] = useState(data.handoffPillLabel);
+  const [dropPreviewHandoff, setDropPreviewHandoff] =
+    useState<DropPreviewPlaceholder>();
   const viewportActivity = useTransientStore(
     (state) => state.canvasViewportActivity[data.boardKey] ?? 0,
   );
   const node = data.collectionNode;
+  const pendingDropPreview = useMemo(
+    () =>
+      node.type === "image" && node.pendingDropMediaKind
+        ? {
+            kind: node.pendingDropMediaKind,
+            width: node.width,
+            height: node.height,
+          }
+        : undefined,
+    [node],
+  );
+  const dropPreviewClientId =
+    node.type === "image" || node.type === "video" ? node.clientId : undefined;
   const isEntering = data.presence === "entering";
   const isExiting = data.presence === "exiting";
   const asset = collectionNodeToAsset(node);
@@ -106,8 +131,17 @@ export const CanvasCard = memo(function CanvasCard({
   );
 
   const card = (isContextMenuOpen = false, displayAsset = asset) => (
-    <div className="h-full min-w-0">
-      {node.type === "image" && asset.type === "image" ? (
+    <div className="relative h-full min-w-0">
+      {pendingDropPreview ? (
+        <PendingDropMediaCard
+          kind={pendingDropPreview.kind}
+          width={pendingDropPreview.width}
+          height={pendingDropPreview.height}
+        />
+      ) : null}
+      {node.type === "image" &&
+      !pendingDropPreview &&
+      asset.type === "image" ? (
         <ImageAssetCard
           asset={asset}
           onOpen={isPending ? undefined : () => data.onOpenImage(node)}
@@ -160,6 +194,22 @@ export const CanvasCard = memo(function CanvasCard({
           selected={selected}
         />
       ) : null}
+      {dropPreviewHandoff ? (
+        <motion.div
+          className="pointer-events-none absolute inset-0 z-20"
+          initial={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+          animate={{ opacity: 0, scale: 1.006, filter: "blur(1px)" }}
+          transition={{ duration: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          style={{ transformOrigin: "center" }}
+          onAnimationComplete={() => setDropPreviewHandoff(undefined)}
+        >
+          <PendingDropMediaCard
+            kind={dropPreviewHandoff.kind}
+            width={dropPreviewHandoff.width}
+            height={dropPreviewHandoff.height}
+          />
+        </motion.div>
+      ) : null}
     </div>
   );
 
@@ -171,6 +221,17 @@ export const CanvasCard = memo(function CanvasCard({
   useLayoutEffect(() => {
     if (data.handoffPillLabel) setHandoffPill(data.handoffPillLabel);
   }, [data.handoffPillLabel]);
+
+  useLayoutEffect(() => {
+    if (pendingDropPreview) {
+      rememberCanvasDropPreview(node.id, pendingDropPreview);
+      setDropPreviewHandoff(undefined);
+      return;
+    }
+
+    const preview = consumeCanvasDropPreview(dropPreviewClientId);
+    if (preview && !reduceMotion) setDropPreviewHandoff(preview);
+  }, [dropPreviewClientId, node.id, pendingDropPreview, reduceMotion]);
 
   useEffect(() => {
     if (!handoffPill) return;
@@ -241,6 +302,7 @@ export const CanvasCard = memo(function CanvasCard({
       onContextMenuCapture={(event) => data.onContextMenu(node.id, event)}
     >
       <motion.div
+        layout={Boolean(pendingDropPreview || dropPreviewHandoff)}
         className={cn(isExiting && "pointer-events-none")}
         initial={
           reduceMotion || !isEntering ? false : { opacity: 0, scale: 0.98 }
@@ -253,6 +315,10 @@ export const CanvasCard = memo(function CanvasCard({
         transition={{
           duration: reduceMotion ? 0 : isExiting ? 0.15 : 0.25,
           ease: [0.22, 1, 0.36, 1],
+          layout: {
+            duration: reduceMotion ? 0 : 0.1,
+            ease: [0.22, 1, 0.36, 1],
+          },
         }}
         style={{ transformOrigin: "center" }}
         onAnimationComplete={() => {
@@ -320,6 +386,33 @@ export const CanvasCard = memo(function CanvasCard({
     </motion.div>
   );
 }, canvasCardPropsEqual);
+
+function PendingDropMediaCard({
+  kind,
+  width,
+  height,
+}: {
+  kind: "image" | "video";
+  width: number;
+  height: number;
+}) {
+  const Icon = kind === "video" ? VideoIcon : ImageIcon;
+  return (
+    <div
+      data-slot="pending-drop-media"
+      className="relative w-full overflow-hidden rounded-lg bg-muted"
+      style={{ aspectRatio: `${width} / ${height}` }}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 animate-[preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
+      />
+      <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+        <Icon className="size-7 text-muted-foreground" strokeWidth={1.7} />
+      </div>
+    </div>
+  );
+}
 
 function isPendingCollectionNode(node: CollectionNode): boolean {
   return (

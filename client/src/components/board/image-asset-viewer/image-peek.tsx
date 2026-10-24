@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DownloadIcon, ExternalLinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { copyImageToClipboard } from "@/lib/clipboard";
+import { releaseLocalImagePreviewAfterRemoteLoad } from "@/lib/local-image-preview";
 import type { ImageAsset } from "@/types/asset";
 
 import { ImageColorPalette, ImageMetadataDetails } from "./image-metadata";
@@ -56,6 +58,7 @@ export function ImagePeek({
   onAssetChange: (asset: ImageAsset) => void;
   setFlushHandler: (handler?: () => Promise<void>) => void;
 }) {
+  const queryClient = useQueryClient();
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
   const { note, onChange, flush } = useImageNoteEditor({
@@ -149,6 +152,13 @@ export function ImagePeek({
         >
           <ProgressiveImage
             src={imageUrl}
+            revokeFallbackBlob={false}
+            onLoad={() =>
+              releaseLocalImagePreviewAfterRemoteLoad(
+                queryClient,
+                asset.localPreviewUrl,
+              )
+            }
             fallbackSrc={
               asset.localPreviewUrl ??
               (asset.originalUrl && asset.originalUrl !== asset.url

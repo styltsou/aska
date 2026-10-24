@@ -7,10 +7,12 @@ import {
   applyColorDraftToContents,
   applyUpdatedColorToContents,
   collectionQueryKeys,
+  keepLocalMediaDuringRefetch,
 } from "./hooks";
 import type {
   CollectionContentsResponse,
   CollectionFolderNode,
+  CollectionImageNode,
   FolderChildPreview,
   CollectionNode,
   CollectionNoteNode,
@@ -106,6 +108,61 @@ function contentsWith(nodes: CollectionNode[]): CollectionContentsResponse {
     canvasObjects: [],
   };
 }
+
+function imageNode(
+  overrides: Partial<CollectionImageNode> = {},
+): CollectionImageNode {
+  return {
+    id: "image-1",
+    type: "image",
+    url: "/media/image-1",
+    width: 1200,
+    height: 800,
+    title: null,
+    alt: null,
+    note: null,
+    sourceLabel: null,
+    sourceUrl: null,
+    isFavorite: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    position: null,
+    ...overrides,
+  };
+}
+
+describe("local uploads during contents refetch", () => {
+  it("keeps the dropped preview and suppresses a duplicate server row until upload completes", () => {
+    const pending = imageNode({
+      id: "file-drop-pending-1",
+      url: "blob:preview",
+      uploadStatus: "uploading",
+      serverAssetId: "image-1",
+    });
+
+    expect(
+      keepLocalMediaDuringRefetch(contentsWith([pending]), contentsWith([]))
+        .nodes,
+    ).toEqual([pending]);
+    expect(
+      keepLocalMediaDuringRefetch(
+        contentsWith([pending]),
+        contentsWith([imageNode()]),
+      ).nodes,
+    ).toEqual([pending]);
+  });
+
+  it("keeps the local fallback after upload while the remote image loads", () => {
+    const local = imageNode({ localPreviewUrl: "blob:preview" });
+    const fetched = imageNode({ url: "/media/new-variant" });
+
+    expect(
+      keepLocalMediaDuringRefetch(
+        contentsWith([local]),
+        contentsWith([fetched]),
+      ).nodes,
+    ).toEqual([{ ...fetched, localPreviewUrl: "blob:preview" }]);
+  });
+});
 
 function contentsWithMention(): CollectionContentsResponse {
   return contentsWith([noteNode()]);

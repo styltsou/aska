@@ -1,7 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import type { BoardPosition } from "@/api/collection/types";
+import type {
+  BoardPosition,
+  CollectionContentsResponse,
+  CollectionVideoNode,
+  InboxContentsResponse,
+} from "@/api/collection/types";
 import { collectionQueryKeys } from "@/api/collection/query-keys";
 import { MAX_VIDEO_UPLOAD_BYTES } from "@/constants";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
@@ -81,16 +86,20 @@ function putFile(
 export function useVideoAssets(scope: VideoScope) {
   const queryClient = useQueryClient();
   const path = basePath(scope);
-  const refresh = (assetId?: string) =>
+  const refresh = (assetId?: string, refreshContents = true) =>
     Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: scope.collectionSlug
-          ? collectionQueryKeys.contentScope(
-              scope.workspaceSlug,
-              scope.collectionSlug,
-            )
-          : collectionQueryKeys.inbox(scope.workspaceSlug),
-      }),
+      ...(refreshContents
+        ? [
+            queryClient.invalidateQueries({
+              queryKey: scope.collectionSlug
+                ? collectionQueryKeys.contentScope(
+                    scope.workspaceSlug,
+                    scope.collectionSlug,
+                  )
+                : collectionQueryKeys.inbox(scope.workspaceSlug),
+            }),
+          ]
+        : []),
       queryClient.invalidateQueries({
         queryKey: collectionQueryKeys.collections(scope.workspaceSlug),
       }),
@@ -153,9 +162,13 @@ export function useVideoAssets(scope: VideoScope) {
     mutationFn: async ({
       file,
       position,
+      placeholderId,
+      dimensions,
     }: {
       file: File;
       position?: BoardPosition;
+      placeholderId?: string;
+      dimensions?: { width: number; height: number };
     }) => {
       const contentType = videoMime(file);
       if (file.size === 0 || file.size > MAX_VIDEO_UPLOAD_BYTES)
@@ -170,8 +183,64 @@ export function useVideoAssets(scope: VideoScope) {
           position,
         },
       );
+      const videoNode: CollectionVideoNode = {
+        id: created.assetId,
+        type: "video",
+        url: null,
+        posterUrl: null,
+        storyboard: null,
+        contentType,
+        width: dimensions?.width ?? null,
+        height: dimensions?.height ?? null,
+        durationSeconds: null,
+        title: file.name || null,
+        note: null,
+        sourceLabel: null,
+        sourceUrl: null,
+        processingStatus: "processing",
+        processingError: null,
+        isFavorite: false,
+        clientId: placeholderId,
+        createdAt: new Date().toISOString(),
+        position: position ?? null,
+      };
+      const cacheKey = scope.collectionSlug
+        ? collectionQueryKeys.contents(
+            scope.workspaceSlug,
+            scope.collectionSlug,
+            scope.parentFolderPath,
+          )
+        : collectionQueryKeys.inbox(scope.workspaceSlug);
       beginVideoUploadPreview(created.assetId, file);
-      void refresh();
+      const replacePlaceholder = <
+        T extends CollectionContentsResponse | InboxContentsResponse,
+      >(
+        current: T | undefined,
+      ) => {
+        if (!current) return current;
+        const placeholderIndex = placeholderId
+          ? current.nodes.findIndex((node) => node.id === placeholderId)
+          : -1;
+        if (placeholderIndex >= 0) {
+          const nodes = [...current.nodes];
+          nodes[placeholderIndex] = videoNode;
+          return { ...current, nodes };
+        }
+        return current.nodes.some((node) => node.id === videoNode.id)
+          ? current
+          : { ...current, nodes: [...current.nodes, videoNode] };
+      };
+      if (scope.collectionSlug)
+        queryClient.setQueryData<CollectionContentsResponse>(
+          cacheKey,
+          replacePlaceholder,
+        );
+      else
+        queryClient.setQueryData<InboxContentsResponse>(
+          cacheKey,
+          replacePlaceholder,
+        );
+      void refresh(undefined, false);
       const toastId = toast.loading(`Uploading ${file.name}…`);
       let uploadCompleteShownAt: number | undefined;
       try {
