@@ -81,7 +81,10 @@ import { applySavedNoteToWorkspaceAsset } from "./note-asset-cache";
 import type { PeekableAssetResponse } from "./types";
 import { colorSearchQueryKeys } from "@/api/color-search/hooks";
 import { colorGradientTitle } from "@/lib/color-gradient";
-import { watchGradientName } from "@/lib/gradient-naming";
+import {
+  showGradientNamingFailure,
+  watchGradientName,
+} from "@/lib/gradient-naming";
 import {
   invalidateMentionSuggestionQueries,
   noteMentionQueryKeys,
@@ -1285,7 +1288,10 @@ export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
           workspaceSlug,
           data.color.id,
           data.color.title,
+          data.color.naming.fingerprint,
         );
+      else if (data.color.naming?.state === "failed")
+        showGradientNamingFailure(data.color.naming.error);
     },
   });
 }
@@ -1499,7 +1505,10 @@ export function useCreateInboxColor(workspaceSlug: string) {
           workspaceSlug,
           data.color.id,
           data.color.title,
+          data.color.naming.fingerprint,
         );
+      else if (data.color.naming?.state === "failed")
+        showGradientNamingFailure(data.color.naming.error);
     },
   });
 }
@@ -2186,7 +2195,15 @@ export function useUpdateColor(workspaceSlug: string) {
       void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
       void queryClient.invalidateQueries(contentsFilter);
       if (color.naming?.state === "queued")
-        watchGradientName(queryClient, workspaceSlug, color.id, color.title);
+        watchGradientName(
+          queryClient,
+          workspaceSlug,
+          color.id,
+          color.title,
+          color.naming.fingerprint,
+        );
+      else if (color.naming?.state === "failed")
+        showGradientNamingFailure(color.naming.error);
       if (color.naming?.state === "prompt" && color.naming.fingerprint) {
         const fingerprint = color.naming.fingerprint;
         let handled = false;
@@ -2209,16 +2226,16 @@ export function useUpdateColor(workspaceSlug: string) {
                 action: "generate",
                 fingerprint,
               })
-                .then(({ queued }) => {
+                .then(({ queued, error }) => {
                   if (queued)
                     watchGradientName(
                       queryClient,
                       workspaceSlug,
                       color.id,
                       color.title,
+                      fingerprint,
                     );
-                  else
-                    toast.error("Automatic naming is unavailable right now.");
+                  else showGradientNamingFailure(error);
                 })
                 .catch(() =>
                   toast.error("Unable to generate a gradient title."),

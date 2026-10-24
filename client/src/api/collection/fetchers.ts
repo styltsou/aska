@@ -320,7 +320,15 @@ export async function actOnColorName(
   workspaceSlug: string,
   assetId: string,
   data: { action: "generate" | "keep"; fingerprint: string },
-): Promise<{ queued: boolean }> {
+): Promise<{
+  queued: boolean;
+  fingerprint?: string;
+  error?:
+    | "missing_api_key"
+    | "usage_limit"
+    | "provider_unavailable"
+    | "internal_error";
+}> {
   return apiPost(
     `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/color/name`,
     data,

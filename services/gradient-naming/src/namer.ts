@@ -1,6 +1,7 @@
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
+import type { GradientNamingFailure } from "./job";
 
 export type NameInput = {
   type: "linear" | "radial";
@@ -26,4 +27,25 @@ export async function generateGradientName(input: NameInput): Promise<string> {
     prompt: JSON.stringify(input),
   });
   return text;
+}
+
+export function classifyGradientNamingFailure(
+  error: unknown,
+): GradientNamingFailure {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  if (
+    /api[_ ]?key|credential|unauthenticated|unauthorized|authentication|invalid key|\b401\b/.test(
+      message,
+    )
+  )
+    return "missing_api_key";
+  if (/quota|rate limit|resource_exhausted|billing|\b429\b/.test(message))
+    return "usage_limit";
+  if (
+    /timed? ?out|timeout|network|fetch failed|connection|\b50[234]\b|unavailable|overloaded/.test(
+      message,
+    )
+  )
+    return "provider_unavailable";
+  return "internal_error";
 }

@@ -14,7 +14,10 @@ import { matchesGradientNamingJob } from "@/lib/color-naming";
 import { rewriteReferencedTargetLabel } from "@/services/note-mention.service";
 import { TaskQueueService } from "@/services/task-queue.service";
 import { env } from "@/config";
-import type { GradientNamingJob } from "../../../services/gradient-naming/src/job";
+import type {
+  GradientNamingFailure,
+  GradientNamingJob,
+} from "../../../services/gradient-naming/src/job";
 
 const queue = new TaskQueueService();
 
@@ -32,17 +35,52 @@ function describeStopColor(hex: string): string {
 }
 
 export type NamingState = {
-  state: "queued" | "prompt" | "none";
+  state: "queued" | "prompt" | "none" | "failed" | "succeeded";
   fingerprint?: string;
+  error?: GradientNamingFailure;
 };
+
+export type GradientNamingQueueResult = {
+  queued: boolean;
+  fingerprint?: string;
+  error?: GradientNamingFailure;
+};
+
+export function namingStateFromQueue(
+  result: GradientNamingQueueResult,
+): NamingState {
+  if (result.queued)
+    return { state: "queued", fingerprint: result.fingerprint };
+  if (result.error) return { state: "failed", error: result.error };
+  return { state: "none" };
+}
+
+export function namingStateFromStored(
+  status: string | null,
+  fingerprint: string | null,
+  error: string | null,
+): NamingState | undefined {
+  if (status === "queued" && fingerprint)
+    return { state: "queued", fingerprint };
+  if (
+    status === "failed" &&
+    (error === "missing_api_key" ||
+      error === "usage_limit" ||
+      error === "provider_unavailable" ||
+      error === "internal_error")
+  )
+    return { state: "failed", error };
+  if (status === "succeeded") return { state: "succeeded" };
+  return undefined;
+}
 
 export async function queueGradientName(
   assetId: number,
   gradient: StoredColorGradient,
   expectedTitle: string,
   expectedManual: boolean,
-): Promise<boolean> {
-  if (env.GRADIENT_NAMING_PROVIDER === "off") return false;
+): Promise<GradientNamingQueueResult> {
+  if (env.GRADIENT_NAMING_PROVIDER === "off") return { queued: false };
   const job: GradientNamingJob = {
     version: 1,
     kind: "gradient.name",
@@ -51,12 +89,61 @@ export async function queueGradientName(
     expectedTitle,
     expectedManual,
   };
+  await db
+    .update(colorAssets)
+    .set({
+      nameJobFingerprint: job.fingerprint,
+      nameJobStatus: "queued",
+      nameJobError: null,
+    })
+    .where(eq(colorAssets.assetId, assetId));
   try {
-    return await queue.enqueueGradientName(job);
+    const queued = await queue.enqueueGradientName(job);
+    if (queued) return { queued: true, fingerprint: job.fingerprint };
+    await recordGradientNameFailure(job, "internal_error");
+    return { queued: false, error: "internal_error" };
   } catch (error) {
     console.warn("Unable to queue gradient name", { assetId, error });
-    return false;
+    await recordGradientNameFailure(job, "internal_error");
+    return { queued: false, error: "internal_error" };
   }
+}
+
+export async function recordGradientNameFailure(
+  job: GradientNamingJob,
+  failure: GradientNamingFailure,
+) {
+  const [row] = await db
+    .select({
+      title: assets.title,
+      gradient: colorAssets.gradient,
+      nameEditedByUser: colorAssets.nameEditedByUser,
+      nameBasis: colorAssets.nameBasis,
+      nameJobStatus: colorAssets.nameJobStatus,
+      nameJobFingerprint: colorAssets.nameJobFingerprint,
+    })
+    .from(assets)
+    .innerJoin(colorAssets, eq(colorAssets.assetId, assets.id))
+    .where(and(eq(assets.id, job.assetId), eq(assets.type, "color")))
+    .limit(1);
+  if (
+    !row ||
+    row.nameJobStatus !== "queued" ||
+    row.nameJobFingerprint !== job.fingerprint ||
+    !matchesGradientNamingJob(row, job)
+  )
+    return { recorded: false };
+  await db
+    .update(colorAssets)
+    .set({ nameJobStatus: "failed", nameJobError: failure })
+    .where(
+      and(
+        eq(colorAssets.assetId, job.assetId),
+        eq(colorAssets.nameJobFingerprint, job.fingerprint),
+        eq(colorAssets.nameJobStatus, "queued"),
+      ),
+    );
+  return { recorded: true };
 }
 
 export function validateGeneratedTitle(value: string): string | null {
@@ -87,6 +174,8 @@ async function currentNamingTarget(assetId: number) {
       gradient: colorAssets.gradient,
       nameEditedByUser: colorAssets.nameEditedByUser,
       nameBasis: colorAssets.nameBasis,
+      nameJobStatus: colorAssets.nameJobStatus,
+      nameJobFingerprint: colorAssets.nameJobFingerprint,
     })
     .from(assets)
     .innerJoin(colorAssets, eq(colorAssets.assetId, assets.id))
@@ -97,7 +186,12 @@ async function currentNamingTarget(assetId: number) {
 
 export async function claimGradientName(job: GradientNamingJob) {
   const row = await currentNamingTarget(job.assetId);
-  if (!row || !matchesGradientNamingJob(row, job))
+  if (
+    !row ||
+    row.nameJobStatus !== "queued" ||
+    row.nameJobFingerprint !== job.fingerprint ||
+    !matchesGradientNamingJob(row, job)
+  )
     return { ignored: true as const };
   const gradient = row.gradient!;
   const stops = gradient.stops?.length
@@ -122,7 +216,10 @@ export async function completeGradientName(
   proposed: string,
 ) {
   const title = validateGeneratedTitle(proposed);
-  if (!title) return { applied: false };
+  if (!title) {
+    await recordGradientNameFailure(job, "internal_error");
+    return { applied: false };
+  }
   return db.transaction(async (tx) => {
     const [row] = await tx
       .select({
@@ -132,19 +229,29 @@ export async function completeGradientName(
         gradient: colorAssets.gradient,
         nameEditedByUser: colorAssets.nameEditedByUser,
         nameBasis: colorAssets.nameBasis,
+        nameJobStatus: colorAssets.nameJobStatus,
+        nameJobFingerprint: colorAssets.nameJobFingerprint,
       })
       .from(assets)
       .innerJoin(colorAssets, eq(colorAssets.assetId, assets.id))
       .where(and(eq(assets.id, job.assetId), eq(assets.type, "color")))
       .for("update")
       .limit(1);
-    if (!row || !matchesGradientNamingJob(row, job)) return { applied: false };
+    if (
+      !row ||
+      row.nameJobStatus !== "queued" ||
+      row.nameJobFingerprint !== job.fingerprint ||
+      !matchesGradientNamingJob(row, job)
+    )
+      return { applied: false };
     await tx.update(assets).set({ title }).where(eq(assets.id, row.id));
     await tx
       .update(colorAssets)
       .set({
         nameEditedByUser: false,
         nameBasis: row.gradient,
+        nameJobStatus: "succeeded",
+        nameJobError: null,
       })
       .where(eq(colorAssets.assetId, row.id));
     await rewriteReferencedTargetLabel(
@@ -211,12 +318,5 @@ export async function actOnGradientName(
     return current;
   });
   if (action === "keep") return { queued: false };
-  return {
-    queued: await queueGradientName(
-      row.id,
-      row.gradient!,
-      row.title ?? "",
-      true,
-    ),
-  };
+  return queueGradientName(row.id, row.gradient!, row.title ?? "", true);
 }

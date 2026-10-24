@@ -814,6 +814,9 @@ export const colorAssets = pgTable(
       type?: "linear" | "radial";
       stops?: Array<{ color: string; position: number }>;
     }>(),
+    nameJobFingerprint: varchar("name_job_fingerprint", { length: 64 }),
+    nameJobStatus: varchar("name_job_status", { length: 16 }),
+    nameJobError: varchar("name_job_error", { length: 32 }),
     gradient: jsonb("gradient").$type<{
       from: string;
       to: string;

@@ -1,7 +1,11 @@
 import type { SQSEvent, SQSBatchResponse } from "aws-lambda";
 import { callPipeline } from "../../image-shared/src/pipeline-client";
 import { parseGradientNamingJob } from "./job";
-import { generateGradientName, type NameInput } from "./namer";
+import {
+  classifyGradientNamingFailure,
+  generateGradientName,
+  type NameInput,
+} from "./namer";
 
 export async function handler(event: SQSEvent): Promise<SQSBatchResponse> {
   const batchItemFailures: SQSBatchResponse["batchItemFailures"] = [];
@@ -24,6 +28,10 @@ export async function handler(event: SQSEvent): Promise<SQSBatchResponse> {
       } catch (error) {
         // A free-tier limit or model failure must not turn a saved color into a retry loop.
         console.warn("Gradient naming failed", { assetId: job.assetId, error });
+        await callPipeline("/api/v1/internal/gradient-naming/failure", {
+          job,
+          error: classifyGradientNamingFailure(error),
+        });
         continue;
       }
       await callPipeline("/api/v1/internal/gradient-naming/result", {

@@ -1,6 +1,27 @@
 import { create } from "zustand";
 import type { QueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { fetchPeekableAsset } from "@/api/collection/fetchers";
+
+type NamingFailure =
+  | "missing_api_key"
+  | "usage_limit"
+  | "provider_unavailable"
+  | "internal_error";
+
+export function showGradientNamingFailure(error?: NamingFailure) {
+  const message =
+    error === "missing_api_key"
+      ? "Automatic naming needs a valid API key."
+      : error === "usage_limit"
+        ? "Automatic naming has reached its usage limit."
+        : error === "provider_unavailable"
+          ? "Automatic naming is unavailable right now."
+          : error === "internal_error"
+            ? "Unable to generate a gradient title."
+            : "Automatic naming is unavailable right now.";
+  toast.error(message);
+}
 
 type NamingState = {
   pending: Record<string, boolean>;
@@ -25,6 +46,7 @@ export function watchGradientName(
   workspaceSlug: string,
   assetId: string,
   previousTitle: string | null,
+  fingerprint?: string,
 ) {
   const generation = (activePolls.get(assetId) ?? 0) + 1;
   activePolls.set(assetId, generation);
@@ -56,6 +78,20 @@ export function watchGradientName(
             ]);
             return;
           }
+          if (
+            asset.type === "color" &&
+            asset.naming?.state === "failed" &&
+            (!fingerprint || asset.naming.fingerprint === fingerprint)
+          ) {
+            showGradientNamingFailure(asset.naming.error);
+            return;
+          }
+          if (
+            asset.type === "color" &&
+            asset.naming?.state === "succeeded" &&
+            (!fingerprint || asset.naming.fingerprint === fingerprint)
+          )
+            return;
         } catch {
           // A temporary fetch error is covered by the bounded wait.
         }

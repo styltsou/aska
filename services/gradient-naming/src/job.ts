@@ -7,6 +7,12 @@ export type GradientNamingJob = {
   expectedManual: boolean;
 };
 
+export type GradientNamingFailure =
+  | "missing_api_key"
+  | "usage_limit"
+  | "provider_unavailable"
+  | "internal_error";
+
 export function parseGradientNamingJob(value: unknown): GradientNamingJob {
   if (!value || typeof value !== "object")
     throw new Error("Invalid naming job");

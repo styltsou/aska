@@ -67,7 +67,11 @@ import {
   rewriteReferencedTargetLabel,
 } from "@/services/note-mention.service";
 import { first } from "@/lib/query";
-import { queueGradientName } from "@/services/gradient-naming.service";
+import {
+  namingStateFromQueue,
+  namingStateFromStored,
+  queueGradientName,
+} from "@/services/gradient-naming.service";
 import { env } from "@/config";
 import { deriveColorNaming } from "@/lib/color-naming";
 import type { IObjectStorageService } from "@/services/object-storage.service";
@@ -225,6 +229,9 @@ export class AssetService implements IAssetService {
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
         colorNote: colorAssets.note,
+        colorNameJobFingerprint: colorAssets.nameJobFingerprint,
+        colorNameJobStatus: colorAssets.nameJobStatus,
+        colorNameJobError: colorAssets.nameJobError,
         linkOriginalUrl: linkAssets.originalUrl,
         linkNote: linkAssets.note,
         linkResourceId: externalResources.id,
@@ -362,6 +369,9 @@ export class AssetService implements IAssetService {
         colorHex: colorAssets.hex,
         colorGradient: colorAssets.gradient,
         colorNote: colorAssets.note,
+        colorNameJobFingerprint: colorAssets.nameJobFingerprint,
+        colorNameJobStatus: colorAssets.nameJobStatus,
+        colorNameJobError: colorAssets.nameJobError,
         linkOriginalUrl: linkAssets.originalUrl,
         linkNote: linkAssets.note,
         linkResourceId: externalResources.id,
@@ -495,9 +505,9 @@ export class AssetService implements IAssetService {
       await tx.insert(colorAssets).values({ assetId: asset.id, hex, gradient });
       return asset;
     });
-    const namingQueued = gradient
+    const namingResult = gradient
       ? await queueGradientName(color.id, gradient, title ?? "", false)
-      : false;
+      : { queued: false };
     return {
       id: `color-${color.id}`,
       type: "color",
@@ -505,7 +515,7 @@ export class AssetService implements IAssetService {
       note: null,
       gradient,
       title,
-      naming: { state: namingQueued ? "queued" : "none" },
+      naming: namingStateFromQueue(namingResult),
       isFavorite: false,
       createdAt: color.createdAt.toISOString(),
       updatedAt: color.updatedAt.toISOString(),
@@ -788,6 +798,7 @@ export class AssetService implements IAssetService {
       const colorChanged =
         effectiveHex !== current.hex ||
         JSON.stringify(effectiveGradient) !== JSON.stringify(current.gradient);
+      const shouldClearNamingJob = colorChanged || data.title !== undefined;
       if (!effectiveGradient && !effectiveHex) {
         throw new AppError(
           ErrorCode.VALIDATION_ERROR,
@@ -827,6 +838,13 @@ export class AssetService implements IAssetService {
             ? { hex: effectiveHex, gradient: effectiveGradient }
             : {}),
           ...(data.note === undefined ? {} : { note: data.note }),
+          ...(shouldClearNamingJob
+            ? {
+                nameJobFingerprint: null,
+                nameJobStatus: null,
+                nameJobError: null,
+              }
+            : {}),
           nameEditedByUser: manualTitle,
           nameBasis,
         })
@@ -856,7 +874,7 @@ export class AssetService implements IAssetService {
       };
     });
 
-    const namingQueued =
+    const namingResult =
       updated.shouldQueue && updated.gradient
         ? await queueGradientName(
             updated.id,
@@ -864,14 +882,14 @@ export class AssetService implements IAssetService {
             updated.title ?? "",
             false,
           )
-        : false;
+        : { queued: false };
     const naming =
       updated.shouldPrompt && updated.gradient
         ? {
             state: "prompt" as const,
             fingerprint: gradientFingerprint(updated.gradient),
           }
-        : { state: namingQueued ? ("queued" as const) : ("none" as const) };
+        : namingStateFromQueue(namingResult);
 
     return {
       id: `color-${updated.id}`,
@@ -1300,6 +1318,9 @@ export class AssetService implements IAssetService {
       colorHex: string | null;
       colorGradient: StoredColorGradient | null;
       colorNote: string | null;
+      colorNameJobFingerprint: string | null;
+      colorNameJobStatus: string | null;
+      colorNameJobError: string | null;
       linkOriginalUrl: string | null;
       linkNote: string | null;
       linkResourceId: number | null;
@@ -1475,6 +1496,11 @@ export class AssetService implements IAssetService {
           hex: row.colorHex,
           gradient: row.colorGradient ?? null,
           note: row.colorNote,
+          naming: namingStateFromStored(
+            row.colorNameJobStatus,
+            row.colorNameJobFingerprint,
+            row.colorNameJobError,
+          ),
           title: row.title,
           isFavorite: row.isFavorite,
           createdAt: row.createdAt.toISOString(),

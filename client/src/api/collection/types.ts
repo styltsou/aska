@@ -455,7 +455,15 @@ export type CollectionColorNode = {
   note: string | null;
   gradient?: ColorGradient | null;
   title: string | null;
-  naming?: { state: "queued" | "prompt" | "none"; fingerprint?: string };
+  naming?: {
+    state: "queued" | "prompt" | "none" | "failed" | "succeeded";
+    fingerprint?: string;
+    error?:
+      | "missing_api_key"
+      | "usage_limit"
+      | "provider_unavailable"
+      | "internal_error";
+  };
   isFavorite: boolean;
   createdAt: string;
   updatedAt?: string;
