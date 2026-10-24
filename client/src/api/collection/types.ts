@@ -135,7 +135,7 @@ export type BoardInsertionPlacement = {
    * How the supplied position relates to the first inserted card. Positions
    * are still persisted as the card's top-left corner after client layout.
    */
-  anchor?: "center" | "top-left";
+  anchor?: "center" | "top-left" | "bottom-center";
   /** Skips the card entrance when another visual already represents it. */
   entranceAnimation?: "none";
   /**

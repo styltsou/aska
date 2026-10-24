@@ -260,7 +260,12 @@ function getInsertionGridPositions(
           x: anchor.x - getNodeWidth(firstNode) / 2,
           y: anchor.y - getNodeHeight(firstNode) / 2,
         }
-      : anchor;
+      : anchorKind === "bottom-center"
+        ? {
+            x: anchor.x - getNodeWidth(firstNode) / 2,
+            y: anchor.y - getNodeHeight(firstNode),
+          }
+        : anchor;
   let rowTop = Math.round(origin.y);
 
   for (let index = 0; index < nodes.length; index += 1) {
