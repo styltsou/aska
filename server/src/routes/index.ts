@@ -14,6 +14,7 @@ import workspaceSearchRoutes from "./workspace-search.routes";
 import videoUploadRoutes from "./video-upload.routes";
 import videoPipelineRoutes from "./video-pipeline.routes";
 import mediaResolutionRoutes from "./media-resolution.routes";
+import gradientNamingPipelineRoutes from "./gradient-naming-pipeline.routes";
 
 export const apiRoutes = factory
   .createApp()
@@ -30,4 +31,5 @@ export const apiRoutes = factory
   .route("/", pexelsRoutes)
   .route("/", imagePipelineRoutes)
   .route("/", urlUnfurlRoutes)
-  .route("/", resourcePipelineRoutes);
+  .route("/", resourcePipelineRoutes)
+  .route("/", gradientNamingPipelineRoutes);

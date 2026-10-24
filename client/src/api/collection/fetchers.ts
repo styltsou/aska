@@ -316,6 +316,17 @@ export async function updateColor(
   );
 }
 
+export async function actOnColorName(
+  workspaceSlug: string,
+  assetId: string,
+  data: { action: "generate" | "keep"; fingerprint: string },
+): Promise<{ queued: boolean }> {
+  return apiPost(
+    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/color/name`,
+    data,
+  );
+}
+
 export async function updateImage(
   workspaceSlug: string,
   assetId: string,

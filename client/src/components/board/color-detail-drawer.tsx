@@ -61,6 +61,7 @@ import type { ColorAsset, ImageAsset } from "@/types/asset";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 import { cn } from "@/lib/utils";
+import { useGradientNaming } from "@/lib/gradient-naming";
 
 const EMPTY_RESULTS: never[] = [];
 const COLOR_VIEWER_LAYOUT_TRANSITION = {
@@ -123,6 +124,9 @@ export function ColorDetailDrawer({
     if (color) setActiveColor(color);
   }, [color]);
   const displayedColor = color ?? (loading ? undefined : activeColor);
+  const naming = useGradientNaming((state) =>
+    Boolean(displayedColor && state.pending[displayedColor.id]),
+  );
   const [includeDescendants, setIncludeDescendants] = useState(false);
   const [copied, setCopied] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -259,7 +263,12 @@ export function ColorDetailDrawer({
                 </span>
               </button>
               <div className="min-w-0">
-                <DrawerTitle className="truncate text-base leading-tight font-medium">
+                <DrawerTitle
+                  className={cn(
+                    "truncate text-base leading-tight font-medium",
+                    naming && "gradient-name-shimmer",
+                  )}
+                >
                   {displayedColor.title?.trim() ||
                     displayedColor.hex?.toUpperCase() ||
                     "Color"}
@@ -519,6 +528,9 @@ function ColorDetailModal({
 }) {
   const title =
     color?.title?.trim() || color?.hex?.toUpperCase() || "Loading color";
+  const naming = useGradientNaming((state) =>
+    Boolean(color && state.pending[color.id]),
+  );
   const hasAlpha = Boolean(
     color?.hex?.length === 9 && !color.hex.endsWith("ff"),
   );
@@ -660,7 +672,12 @@ function ColorDetailModal({
           >
             <AssetViewerModeIcon expanded={expanded} />
           </Button>
-          <span className="max-w-[min(32rem,calc(100vw-14rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground">
+          <span
+            className={cn(
+              "max-w-[min(32rem,calc(100vw-14rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground",
+              naming && "gradient-name-shimmer",
+            )}
+          >
             {title}
           </span>
           <AssetNotesButton

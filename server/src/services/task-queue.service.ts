@@ -2,6 +2,7 @@ import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { Resource } from "sst";
 import { resourceMediaRenditionJob } from "../../../services/image-shared/src/variant-job";
 import { urlResolutionJob } from "../../../services/url-unfurl-shared/src/resolution-job";
+import type { GradientNamingJob } from "../../../services/gradient-naming/src/job";
 
 import { env } from "@/config";
 
@@ -41,6 +42,13 @@ export class TaskQueueService implements ITaskQueueService {
     });
   }
 
+  enqueueGradientName(job: GradientNamingJob): Promise<boolean> {
+    return this.send(
+      linkedQueueUrl("GradientNamingQueue", env.GRADIENT_NAMING_QUEUE_URL),
+      job,
+    );
+  }
+
   private async send(
     queueUrl: string | undefined,
     payload: Record<string, unknown>,
@@ -60,7 +68,8 @@ export class TaskQueueService implements ITaskQueueService {
 type LinkedQueueName =
   | "UrlResolutionQueue"
   | "ImageVariantsQueue"
-  | "VideoProcessingQueue";
+  | "VideoProcessingQueue"
+  | "GradientNamingQueue";
 
 function linkedQueueUrl(
   name: LinkedQueueName,

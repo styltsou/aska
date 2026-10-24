@@ -68,6 +68,10 @@ const envSchema = z
     S3_SECRET_ACCESS_KEY: z.string().optional(),
     PIPELINE_CALLBACK_SECRET: z.string().min(32).optional(),
     URL_RESOLUTION_QUEUE_URL: z.url().optional(),
+    GRADIENT_NAMING_QUEUE_URL: z.url().optional(),
+    GRADIENT_NAMING_PROVIDER: z
+      .enum(["off", "google", "openai"])
+      .default("off"),
     IMAGE_VARIANTS_QUEUE_URL: z.url().optional(),
     URL_UNFURL_SUCCESS_TTL_SECONDS: z.coerce
       .number()

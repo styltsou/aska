@@ -32,6 +32,7 @@ import {
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import { normalizeNoteTitle } from "@/lib/note-title";
 import { reconcileNoteReferences } from "@/services/note-mention.service";
+import { queueGradientName } from "@/services/gradient-naming.service";
 import {
   getCollectionBySlug,
   resolveTargetInCollection,
@@ -324,6 +325,10 @@ export class CollectionMutationService {
       throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create color");
     }
 
+    const namingQueued = gradient
+      ? await queueGradientName(color.id, gradient, name ?? "", false)
+      : false;
+
     return {
       id: `color-${color.id}`,
       type: "color",
@@ -331,6 +336,7 @@ export class CollectionMutationService {
       note: null,
       gradient,
       title: name,
+      naming: { state: namingQueued ? "queued" : "none" },
       isFavorite: false,
       createdAt: color.createdAt.toISOString(),
       updatedAt: color.updatedAt.toISOString(),

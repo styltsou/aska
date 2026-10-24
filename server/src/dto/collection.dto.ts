@@ -309,12 +309,14 @@ export const UpdateColorSchema = z
     hex: HexColorSchema.optional(),
     gradient: ColorGradientSchema.nullable().optional(),
     note: z.string().max(10_000).nullable().optional(),
+    title: z.string().trim().max(255).nullable().optional(),
   })
   .superRefine((value, context) => {
     if (
       value.hex === undefined &&
       value.gradient === undefined &&
-      value.note === undefined
+      value.note === undefined &&
+      value.title === undefined
     ) {
       context.addIssue({
         code: "custom",
@@ -341,7 +343,14 @@ export type UpdatedColor = {
   title: string | null;
   isFavorite: boolean;
   gradient?: z.infer<typeof ColorGradientSchema> | null;
+  naming?: { state: "queued" | "prompt" | "none"; fingerprint?: string };
 };
+
+export const ColorNamingActionSchema = z.object({
+  action: z.enum(["generate", "keep"]),
+  fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+});
+export type ColorNamingActionInput = z.infer<typeof ColorNamingActionSchema>;
 
 export const UpdateImageSchema = z.object({
   note: z.string().max(10_000).nullable(),
@@ -605,6 +614,12 @@ export const CollectionColorNodeSchema = z.object({
   note: z.string().nullable(),
   gradient: ColorGradientSchema.nullable().optional(),
   title: z.string().nullable(),
+  naming: z
+    .object({
+      state: z.enum(["queued", "prompt", "none"]),
+      fingerprint: z.string().optional(),
+    })
+    .optional(),
   isFavorite: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),

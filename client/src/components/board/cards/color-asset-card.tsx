@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { resolveGradientCss } from "@/lib/color-gradient";
 import { hasSelectionModifier } from "@/lib/selection";
 import type { ColorAsset } from "@/types/asset";
+import { useGradientNaming } from "@/lib/gradient-naming";
 
 export function ColorAssetCard({
   asset,
@@ -18,6 +19,7 @@ export function ColorAssetCard({
   selected?: boolean;
 }) {
   const [surfaceHovered, setSurfaceHovered] = useState(false);
+  const naming = useGradientNaming((state) => Boolean(state.pending[asset.id]));
   const hasAlpha = Boolean(
     asset.hex?.length === 9 && !asset.hex.endsWith("ff"),
   );
@@ -110,6 +112,7 @@ export function ColorAssetCard({
         <span
           className={cn(
             "truncate font-medium",
+            naming && "gradient-name-shimmer",
             name
               ? "text-base"
               : hex

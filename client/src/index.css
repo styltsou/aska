@@ -7,6 +7,37 @@
 @import "@fontsource/ibm-plex-mono/500.css";
 @import "@fontsource-variable/inter";
 
+@keyframes gradient-name-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+.gradient-name-shimmer {
+  background-image: linear-gradient(
+    105deg,
+    var(--foreground) 35%,
+    color-mix(in srgb, var(--foreground) 35%, transparent) 50%,
+    var(--foreground) 65%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: gradient-name-sweep 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-name-shimmer {
+    animation: none;
+    color: inherit;
+    background: none;
+  }
+}
+
 @keyframes preview-shimmer {
   0% {
     background-position: 200% 0;

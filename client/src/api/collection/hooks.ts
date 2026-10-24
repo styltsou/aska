@@ -35,6 +35,7 @@ import {
   updateImage,
   updateLink,
   updateColor,
+  actOnColorName,
 } from "./fetchers";
 import { makeMarkdownPreview } from "@/lib/markdown-preview";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
@@ -79,6 +80,7 @@ import { applySavedNoteToWorkspaceAsset } from "./note-asset-cache";
 import type { PeekableAssetResponse } from "./types";
 import { colorSearchQueryKeys } from "@/api/color-search/hooks";
 import { colorGradientTitle } from "@/lib/color-gradient";
+import { watchGradientName } from "@/lib/gradient-naming";
 import {
   invalidateMentionSuggestionQueries,
   noteMentionQueryKeys,
@@ -122,6 +124,7 @@ type CreateRemoteImageMutationInput = CreateRemoteImageInput & {
 
 type UploadLocalImagesMutationInput = {
   files: File[];
+  optimisticIds?: string[];
   parentFolderPath?: string;
   position?: { x: number; y: number };
   placement?: BoardInsertionPlacement;
@@ -497,11 +500,14 @@ function makeOptimisticImageNode(
   file: File,
   index: number,
   dimensions = UNKNOWN_IMAGE_DIMENSIONS,
+  optimisticId?: string,
 ): Extract<CollectionNode, { type: "image" }> & {
   previewObjectUrl: string;
 } {
   const previewObjectUrl = URL.createObjectURL(file);
-  const id = `image-uploading-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
+  const id =
+    optimisticId ??
+    `image-uploading-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
 
   return {
     id,
@@ -1170,6 +1176,13 @@ export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
         0,
       );
       reconcileCollectionCaches(queryClient, workspaceSlug, collectionSlug);
+      if (data.color.naming?.state === "queued")
+        watchGradientName(
+          queryClient,
+          workspaceSlug,
+          data.color.id,
+          data.color.title,
+        );
     },
   });
 }
@@ -1377,6 +1390,13 @@ export function useCreateInboxColor(workspaceSlug: string) {
         },
       );
       void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
+      if (data.color.naming?.state === "queued")
+        watchGradientName(
+          queryClient,
+          workspaceSlug,
+          data.color.id,
+          data.color.title,
+        );
     },
   });
 }
@@ -1516,16 +1536,20 @@ function applyColorDraftToPreview(
     const isGradient = nextGradient !== undefined && nextGradient !== null;
     return {
       ...preview,
-      ...(draft.hex === undefined || isGradient
-        ? {}
-        : { hex: draft.hex, title: null }),
+      ...(draft.hex === undefined || isGradient ? {} : { hex: draft.hex }),
       ...(draft.gradient === undefined ? {} : { gradient: draft.gradient }),
       ...(draft.gradient && isGradient
         ? {
             hex: undefined,
-            title: colorGradientTitle(draft.gradient),
           }
         : {}),
+      ...(draft.title === undefined
+        ? {}
+        : {
+            title:
+              draft.title?.trim() ||
+              (isGradient ? colorGradientTitle(nextGradient!) : null),
+          }),
     };
   }
 
@@ -1545,11 +1569,12 @@ function applyColorDraftToPreview(
         hex: draft.hex ?? entry.hex,
         gradient: effectiveGradient,
         label:
-          draft.hex === undefined && draft.gradient === undefined
+          draft.title === undefined
             ? entry.label
-            : effectiveGradient
-              ? colorGradientTitle(effectiveGradient)
-              : null,
+            : draft.title?.trim() ||
+              (effectiveGradient
+                ? colorGradientTitle(effectiveGradient)
+                : null),
       },
     },
   };
@@ -1610,17 +1635,21 @@ export function applyColorDraftToContents(
         const isGradient = nextGradient !== undefined && nextGradient !== null;
         return {
           ...node,
-          ...(draft.hex === undefined || isGradient
-            ? {}
-            : { hex: draft.hex, title: null }),
+          ...(draft.hex === undefined || isGradient ? {} : { hex: draft.hex }),
           ...(draft.note === undefined ? {} : { note: draft.note }),
           ...(draft.gradient === undefined ? {} : { gradient: draft.gradient }),
           ...(draft.gradient && isGradient
             ? {
                 hex: undefined,
-                title: colorGradientTitle(draft.gradient),
               }
             : {}),
+          ...(draft.title === undefined
+            ? {}
+            : {
+                title:
+                  draft.title?.trim() ||
+                  (isGradient ? colorGradientTitle(nextGradient!) : null),
+              }),
         };
       }
       if (node.type === "note" && node.mentionColors) {
@@ -1637,11 +1666,12 @@ export function applyColorDraftToContents(
               hex: draft.hex ?? entry.hex,
               gradient: effectiveGradient,
               label:
-                draft.hex === undefined && draft.gradient === undefined
+                draft.title === undefined
                   ? entry.label
-                  : effectiveGradient
-                    ? colorGradientTitle(effectiveGradient)
-                    : null,
+                  : draft.title?.trim() ||
+                    (effectiveGradient
+                      ? colorGradientTitle(effectiveGradient)
+                      : null),
             },
           },
         };
@@ -2052,6 +2082,51 @@ export function useUpdateColor(workspaceSlug: string) {
       });
       void invalidateMentionSuggestionQueries(queryClient, workspaceSlug);
       void queryClient.invalidateQueries(contentsFilter);
+      if (color.naming?.state === "queued")
+        watchGradientName(queryClient, workspaceSlug, color.id, color.title);
+      if (color.naming?.state === "prompt" && color.naming.fingerprint) {
+        const fingerprint = color.naming.fingerprint;
+        let handled = false;
+        const keep = () => {
+          if (handled) return;
+          handled = true;
+          void actOnColorName(workspaceSlug, color.id, {
+            action: "keep",
+            fingerprint,
+          }).catch(() => toast.error("Unable to keep the gradient title."));
+        };
+        toast("This gradient has changed a lot. Generate a new title?", {
+          duration: 12_000,
+          action: {
+            label: "Generate",
+            onClick: () => {
+              if (handled) return;
+              handled = true;
+              void actOnColorName(workspaceSlug, color.id, {
+                action: "generate",
+                fingerprint,
+              })
+                .then(({ queued }) => {
+                  if (queued)
+                    watchGradientName(
+                      queryClient,
+                      workspaceSlug,
+                      color.id,
+                      color.title,
+                    );
+                  else
+                    toast.error("Automatic naming is unavailable right now.");
+                })
+                .catch(() =>
+                  toast.error("Unable to generate a gradient title."),
+                );
+            },
+          },
+          cancel: { label: "Keep", onClick: keep },
+          onDismiss: keep,
+          onAutoClose: keep,
+        });
+      }
     },
   });
 }
@@ -2151,6 +2226,7 @@ export function useUploadLocalImages(
   return useMutation({
     mutationFn: async ({
       files,
+      optimisticIds,
       parentFolderPath,
       position,
       placement,
@@ -2184,7 +2260,12 @@ export function useUploadLocalImages(
         workspaceSlug,
       ]);
       const optimisticImages = files.map((file, index) =>
-        makeOptimisticImageNode(file, index, imageDimensions[index]),
+        makeOptimisticImageNode(
+          file,
+          index,
+          imageDimensions[index],
+          optimisticIds?.[index],
+        ),
       );
       const positions =
         requestedPositions ??
@@ -2204,7 +2285,7 @@ export function useUploadLocalImages(
 
           return {
             ...current,
-            nodes: [...current.nodes, ...optimisticImages],
+            nodes: replaceCollectionNodes(current.nodes, optimisticImages),
           };
         },
       );
@@ -2383,7 +2464,13 @@ export function useUploadInboxImages(workspaceSlug: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ files }: { files: File[] }) => {
+    mutationFn: async ({
+      files,
+      optimisticIds,
+    }: {
+      files: File[];
+      optimisticIds?: string[];
+    }) => {
       const inboxKey = collectionQueryKeys.inbox(workspaceSlug);
       const workspaceKey = ["workspace", workspaceSlug] as const;
       // Keep the modal-to-canvas handoff immediate; cancelling a refetch can
@@ -2395,7 +2482,7 @@ export function useUploadInboxImages(workspaceSlug: string) {
       const previousWorkspace =
         queryClient.getQueryData<WorkspaceData>(workspaceKey);
       const optimisticImages = files.map((file, index) =>
-        makeOptimisticImageNode(file, index),
+        makeOptimisticImageNode(file, index, UNKNOWN_IMAGE_DIMENSIONS, optimisticIds?.[index]),
       );
 
       queryClient.setQueryData<InboxContentsResponse>(inboxKey, (current) => {
@@ -2403,7 +2490,7 @@ export function useUploadInboxImages(workspaceSlug: string) {
 
         return {
           ...current,
-          nodes: [...optimisticImages, ...current.nodes],
+          nodes: replaceCollectionNodes(current.nodes, optimisticImages),
         };
       });
       updateInboxUnreadCount(

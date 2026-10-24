@@ -9,6 +9,7 @@ import {
   markInboxSeen,
   updateNote,
   updateColor,
+  actOnColorName,
   updateImage,
   updateVideo,
   updateLink,
@@ -24,6 +25,10 @@ const assetRoutes = factory
   .get("/workspace/:workspaceSlug/assets/:assetId", ...getPeekableAsset)
   .patch("/workspace/:workspaceSlug/assets/:assetId/note", ...updateNote)
   .patch("/workspace/:workspaceSlug/assets/:assetId/color", ...updateColor)
+  .post(
+    "/workspace/:workspaceSlug/assets/:assetId/color/name",
+    ...actOnColorName,
+  )
   .patch("/workspace/:workspaceSlug/assets/:assetId/image", ...updateImage)
   .patch("/workspace/:workspaceSlug/assets/:assetId/video", ...updateVideo)
   .patch("/workspace/:workspaceSlug/assets/:assetId/link", ...updateLink)

@@ -450,6 +450,7 @@ export type CollectionColorNode = {
   note: string | null;
   gradient?: ColorGradient | null;
   title: string | null;
+  naming?: { state: "queued" | "prompt" | "none"; fingerprint?: string };
   isFavorite: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -478,6 +479,7 @@ export type UpdateColorInput = {
   hex?: string;
   gradient?: ColorGradient | null;
   note?: string | null;
+  title?: string | null;
 };
 
 export type UpdatedColor = Pick<
@@ -490,7 +492,13 @@ export type UpdatedColor = Pick<
   | "isFavorite"
   | "gradient"
   | "updatedAt"
+  | "naming"
 >;
+
+export type ColorNamingActionInput = {
+  action: "generate" | "keep";
+  fingerprint: string;
+};
 
 export type UpdateColorResponse = { color: UpdatedColor };
 

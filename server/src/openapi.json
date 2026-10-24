@@ -1440,6 +1440,89 @@
         }
       }
     },
+    "/api/v1/workspace/{workspaceSlug}/assets/{assetId}/color": {
+      "patch": {
+        "operationId": "updateColor",
+        "tags": ["Assets"],
+        "summary": "Update a color asset",
+        "description": "Updates a solid color or gradient and its note or title. A typed title is preserved across later color changes. Clear title to restore dictionary naming for a solid or queue gradient naming. A major edit to a manually titled gradient can return a Generate/Keep prompt.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^color-\\d+$" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateColorRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The saved color and gradient naming state.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UpdateColorResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/workspace/{workspaceSlug}/assets/{assetId}/color/name": {
+      "post": {
+        "operationId": "actOnColorName",
+        "tags": ["Assets"],
+        "summary": "Generate or keep a manually edited gradient title",
+        "description": "Acts on a major-change prompt only when the gradient still matches its fingerprint. Generate queues automatic naming; Keep retains the title and stores the current gradient as the comparison baseline.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceSlug" },
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "pattern": "^color-\\d+$" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ColorNamingActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Whether automatic naming was queued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ColorNamingActionResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "description": "The gradient or naming prompt has changed." }
+        }
+      }
+    },
     "/api/v1/workspace/{workspaceSlug}/assets/{assetId}/note": {
       "patch": {
         "operationId": "updateNote",
@@ -2758,6 +2841,128 @@
           "position": {
             "$ref": "#/components/schemas/BoardPosition",
             "description": "Optional initial position in the target canvas."
+          }
+        }
+      },
+      "ColorGradient": {
+        "type": "object",
+        "required": ["from", "to", "angle"],
+        "properties": {
+          "from": {
+            "type": "string",
+            "pattern": "^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+          },
+          "to": {
+            "type": "string",
+            "pattern": "^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+          },
+          "angle": { "type": "integer", "minimum": 0, "maximum": 360 },
+          "type": { "type": "string", "enum": ["linear", "radial"] },
+          "stops": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 12,
+            "items": {
+              "type": "object",
+              "required": ["color", "position"],
+              "properties": {
+                "color": {
+                  "type": "string",
+                  "pattern": "^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+                },
+                "position": { "type": "number", "minimum": 0, "maximum": 100 }
+              }
+            }
+          }
+        }
+      },
+      "UpdateColorRequest": {
+        "type": "object",
+        "minProperties": 1,
+        "properties": {
+          "hex": {
+            "type": "string",
+            "pattern": "^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+          },
+          "gradient": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/ColorGradient" },
+              { "type": "null" }
+            ]
+          },
+          "note": { "type": ["string", "null"], "maxLength": 10000 },
+          "title": {
+            "type": ["string", "null"],
+            "maxLength": 255,
+            "description": "A typed title; null or an empty string clears it."
+          }
+        }
+      },
+      "ColorNamingState": {
+        "type": "object",
+        "required": ["state"],
+        "properties": {
+          "state": { "type": "string", "enum": ["queued", "prompt", "none"] },
+          "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      },
+      "UpdatedColor": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "hex",
+          "note",
+          "updatedAt",
+          "title",
+          "isFavorite"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^color-\\d+$" },
+          "type": { "type": "string", "enum": ["color"] },
+          "hex": { "type": ["string", "null"] },
+          "note": { "type": ["string", "null"] },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "title": { "type": ["string", "null"] },
+          "isFavorite": { "type": "boolean" },
+          "gradient": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/ColorGradient" },
+              { "type": "null" }
+            ]
+          },
+          "naming": { "$ref": "#/components/schemas/ColorNamingState" }
+        }
+      },
+      "UpdateColorResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["color"],
+            "properties": {
+              "color": { "$ref": "#/components/schemas/UpdatedColor" }
+            }
+          }
+        }
+      },
+      "ColorNamingActionRequest": {
+        "type": "object",
+        "required": ["action", "fingerprint"],
+        "properties": {
+          "action": { "type": "string", "enum": ["generate", "keep"] },
+          "fingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        }
+      },
+      "ColorNamingActionResponse": {
+        "type": "object",
+        "required": ["data"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["queued"],
+            "properties": { "queued": { "type": "boolean" } }
           }
         }
       },

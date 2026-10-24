@@ -68,6 +68,11 @@ export default $config({
     const resendApiKey = new sst.Secret("ResendApiKey");
     const pexelsApiKey = new sst.Secret("PexelsApiKey");
     const youtubeDataApiKey = new sst.Secret("YouTubeDataApiKey");
+    const googleAiApiKey = new sst.Secret("GoogleAiApiKey");
+    const openAiApiKey = new sst.Secret("OpenAiApiKey");
+    const gradientNamingProvider =
+      process.env.GRADIENT_NAMING_PROVIDER ??
+      ($app.stage === "hybrid" ? "google" : "off");
     const imagePipelineCallbackSecret = new sst.Secret(
       "ImagePipelineCallbackSecret",
     );
@@ -115,9 +120,16 @@ export default $config({
       queue: urlResolutionQueue,
       deadLetterQueue: urlResolutionDeadLetterQueue,
     } = createWorkerQueue("UrlResolutionQueue", "UrlResolutionDeadLetterQueue");
-    const videoDeadLetterQueue = new sst.aws.Queue("VideoProcessingDeadLetterQueue", {
-      transform: { queue: { messageRetentionSeconds: 1209600 } },
-    });
+    const { queue: gradientNamingQueue } = createWorkerQueue(
+      "GradientNamingQueue",
+      "GradientNamingDeadLetterQueue",
+    );
+    const videoDeadLetterQueue = new sst.aws.Queue(
+      "VideoProcessingDeadLetterQueue",
+      {
+        transform: { queue: { messageRetentionSeconds: 1209600 } },
+      },
+    );
     const videoProcessingQueue = new sst.aws.Queue("VideoProcessingQueue", {
       visibilityTimeout: "16 minutes",
       dlq: { queue: videoDeadLetterQueue.arn, retry: TASK_DLQ_RECEIVE_LIMIT },
@@ -208,7 +220,10 @@ export default $config({
       imageVariantsQueue,
     );
     imageUploadTopic.subscribeQueue("ExtractImagePalette", imagePaletteQueue);
-    imageUploadTopic.subscribeQueue("ProcessVideoUploads", videoProcessingQueue);
+    imageUploadTopic.subscribeQueue(
+      "ProcessVideoUploads",
+      videoProcessingQueue,
+    );
     const api = new sst.aws.ApiGatewayV2("Api", {
       ...(stableCloudDomains
         ? {
@@ -242,7 +257,13 @@ export default $config({
       runtime: "nodejs22.x",
       memory: "1024 MB",
       timeout: "29 seconds",
-      link: [assets, urlResolutionQueue, imageVariantsQueue, videoProcessingQueue],
+      link: [
+        assets,
+        urlResolutionQueue,
+        imageVariantsQueue,
+        videoProcessingQueue,
+        gradientNamingQueue,
+      ],
       nodejs: {
         sourcemap: true,
         // Crop rendering runs inline in the API and needs Sharp's native
@@ -284,6 +305,7 @@ export default $config({
         RESEND_API_KEY: resendApiKey.value,
         PEXELS_API_KEY: pexelsApiKey.value,
         PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+        GRADIENT_NAMING_PROVIDER: gradientNamingProvider,
         S3_BUCKET: assets.name,
         ...(media
           ? {
@@ -429,6 +451,24 @@ export default $config({
       },
       { batch: { size: 1, partialResponses: true } },
     );
+    gradientNamingQueue.subscribe(
+      {
+        handler: "services/gradient-naming/src/lambda.handler",
+        runtime: "nodejs22.x",
+        memory: "512 MB",
+        timeout: "30 seconds",
+        nodejs: { sourcemap: true },
+        environment: {
+          NODE_ENV: stableCloudDomains ? "production" : "development",
+          PIPELINE_API_BASE_URL: api.url,
+          PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
+          GRADIENT_NAMING_PROVIDER: gradientNamingProvider,
+          GOOGLE_GENERATIVE_AI_API_KEY: googleAiApiKey.value,
+          OPENAI_API_KEY: openAiApiKey.value,
+        },
+      },
+      { batch: { size: 1, partialResponses: true } },
+    );
     videoProcessingQueue.subscribe(
       {
         handler: "services/video-processor/src/lambda.handler",
@@ -441,9 +481,15 @@ export default $config({
         copyFiles: [
           ...imageWorkerFiles("image-variants").map((item) => ({
             ...item,
-            from: item.from.replace("services/image-variants", "services/video-processor"),
+            from: item.from.replace(
+              "services/image-variants",
+              "services/video-processor",
+            ),
           })),
-          { from: "services/video-processor/node_modules/ffmpeg-static/ffmpeg", to: "bin/ffmpeg" },
+          {
+            from: "services/video-processor/node_modules/ffmpeg-static/ffmpeg",
+            to: "bin/ffmpeg",
+          },
         ],
         environment: {
           NODE_OPTIONS: "--enable-source-maps",

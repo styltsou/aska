@@ -11,6 +11,7 @@ import {
   UpdateLinkSchema,
   UpdateNoteSchema,
   UpdateColorSchema,
+  ColorNamingActionSchema,
   WorkspaceParamSchema,
 } from "@/dto/collection.dto";
 import { factory } from "@/factory";
@@ -23,6 +24,7 @@ import { container } from "@/container";
 import type { IAssetService } from "@/services/asset.service";
 import type { IImageCropService } from "@/services/image-crop.service";
 import type { ICollectionService } from "@/services/collection.service";
+import { actOnGradientName } from "@/services/gradient-naming.service";
 
 const assetService: IAssetService = container.assetService;
 const collectionService: ICollectionService = container.collectionService;
@@ -152,6 +154,25 @@ export const updateColor = factory.createHandlers(
       data,
     );
     return c.json(success({ color }));
+  },
+);
+
+export const actOnColorName = factory.createHandlers(
+  authMiddleware,
+  validate.param(AssetPathParamSchema),
+  validate.body(ColorNamingActionSchema),
+  async (c) => {
+    const { workspaceSlug, assetId } = c.req.valid("param");
+    const { action, fingerprint } = c.req.valid("json");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      c.get("userId"),
+    );
+    return c.json(
+      success(
+        await actOnGradientName(workspace.id, assetId, action, fingerprint),
+      ),
+    );
   },
 );
 

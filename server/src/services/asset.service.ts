@@ -56,6 +56,7 @@ import { getColorName, normalizeHexColor } from "@/lib/color-names";
 import { assertNoteEditVersion } from "@/lib/note-edit-version";
 import {
   getColorGradientTitle,
+  gradientFingerprint,
   normalizeColorGradient,
   type StoredColorGradient,
 } from "@/lib/color-gradient";
@@ -66,6 +67,9 @@ import {
   rewriteReferencedTargetLabel,
 } from "@/services/note-mention.service";
 import { first } from "@/lib/query";
+import { queueGradientName } from "@/services/gradient-naming.service";
+import { env } from "@/config";
+import { deriveColorNaming } from "@/lib/color-naming";
 import type { IObjectStorageService } from "@/services/object-storage.service";
 import {
   getResourceMediaLookup,
@@ -491,6 +495,9 @@ export class AssetService implements IAssetService {
       await tx.insert(colorAssets).values({ assetId: asset.id, hex, gradient });
       return asset;
     });
+    const namingQueued = gradient
+      ? await queueGradientName(color.id, gradient, title ?? "", false)
+      : false;
     return {
       id: `color-${color.id}`,
       type: "color",
@@ -498,6 +505,7 @@ export class AssetService implements IAssetService {
       note: null,
       gradient,
       title,
+      naming: { state: namingQueued ? "queued" : "none" },
       isFavorite: false,
       createdAt: color.createdAt.toISOString(),
       updatedAt: color.updatedAt.toISOString(),
@@ -753,6 +761,8 @@ export class AssetService implements IAssetService {
             updatedAt: assets.updatedAt,
             hex: colorAssets.hex,
             gradient: colorAssets.gradient,
+            nameBasis: colorAssets.nameBasis,
+            nameEditedByUser: colorAssets.nameEditedByUser,
           })
           .from(assets)
           .innerJoin(colorAssets, eq(colorAssets.assetId, assets.id))
@@ -763,6 +773,7 @@ export class AssetService implements IAssetService {
               eq(assets.type, "color"),
             ),
           )
+          .for("update")
           .limit(1),
       );
       if (!current) {
@@ -771,26 +782,31 @@ export class AssetService implements IAssetService {
 
       const effectiveGradient =
         gradient === undefined ? current.gradient : gradient;
-      const colorChanged = requestedHex !== undefined || gradient !== undefined;
       const effectiveHex = effectiveGradient
         ? null
         : (requestedHex ?? current.hex);
+      const colorChanged =
+        effectiveHex !== current.hex ||
+        JSON.stringify(effectiveGradient) !== JSON.stringify(current.gradient);
       if (!effectiveGradient && !effectiveHex) {
         throw new AppError(
           ErrorCode.VALIDATION_ERROR,
           "A solid color needs a hex value",
         );
       }
-      const title = colorChanged
-        ? effectiveGradient
-          ? getColorGradientTitle(effectiveGradient)
-          : getColorName(effectiveHex!)
-        : current.title;
+      const { title, manualTitle, nameBasis, shouldQueue, shouldPrompt } =
+        deriveColorNaming(current, {
+          gradient: effectiveGradient,
+          hex: effectiveHex,
+          title: data.title,
+          colorChanged,
+          namingEnabled: env.GRADIENT_NAMING_PROVIDER !== "off",
+        });
 
       const [asset] = await tx
         .update(assets)
         .set({
-          ...(colorChanged ? { title } : {}),
+          ...(title !== current.title ? { title } : {}),
           updatedByUserId: userId,
         })
         .where(eq(assets.id, current.id))
@@ -811,6 +827,8 @@ export class AssetService implements IAssetService {
             ? { hex: effectiveHex, gradient: effectiveGradient }
             : {}),
           ...(data.note === undefined ? {} : { note: data.note }),
+          nameEditedByUser: manualTitle,
+          nameBasis,
         })
         .where(eq(colorAssets.assetId, asset.id))
         .returning({
@@ -819,7 +837,7 @@ export class AssetService implements IAssetService {
           note: colorAssets.note,
         });
 
-      if (colorChanged)
+      if (title !== current.title)
         await rewriteReferencedTargetLabel(
           tx,
           orgId,
@@ -833,8 +851,27 @@ export class AssetService implements IAssetService {
         hex: colorAsset?.hex ?? null,
         note: colorAsset?.note ?? null,
         gradient: colorAsset?.gradient ?? null,
+        shouldQueue,
+        shouldPrompt,
       };
     });
+
+    const namingQueued =
+      updated.shouldQueue && updated.gradient
+        ? await queueGradientName(
+            updated.id,
+            updated.gradient,
+            updated.title ?? "",
+            false,
+          )
+        : false;
+    const naming =
+      updated.shouldPrompt && updated.gradient
+        ? {
+            state: "prompt" as const,
+            fingerprint: gradientFingerprint(updated.gradient),
+          }
+        : { state: namingQueued ? ("queued" as const) : ("none" as const) };
 
     return {
       id: `color-${updated.id}`,
@@ -845,6 +882,7 @@ export class AssetService implements IAssetService {
       updatedAt: updated.updatedAt?.toISOString(),
       isFavorite: updated.isFavorite ?? false,
       gradient: updated.gradient ?? null,
+      naming,
     };
   }
 

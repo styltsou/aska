@@ -167,6 +167,7 @@ export function ColorEditorDialog({
   const updateColor = useUpdateColor(workspaceSlug);
   const [internalOpen, setInternalOpen] = useState(false);
   const [draftHex, setDraftHex] = useState(color?.hex ?? DEFAULT_HEX);
+  const [draftTitle, setDraftTitle] = useState(color?.title ?? "");
   const [mode, setMode] = useState<EditorMode>(
     color?.gradient ? "gradient" : "solid",
   );
@@ -228,6 +229,7 @@ export function ColorEditorDialog({
   );
   const isSavedDraft =
     isEditing &&
+    draftTitle === (color.title ?? "") &&
     mode === (savedGradient ? "gradient" : "solid") &&
     draftColorHex === (color.gradient?.from ?? color.hex) &&
     (!isGradient ||
@@ -283,6 +285,7 @@ export function ColorEditorDialog({
 
     const stops = initialStops(color);
     setDraftHex(color.hex ?? DEFAULT_HEX);
+    setDraftTitle(color.title ?? "");
     setMode(color.gradient ? "gradient" : "solid");
     setGradientStops(stops);
     setGradientType(color.gradient?.type ?? "linear");
@@ -356,7 +359,14 @@ export function ColorEditorDialog({
     try {
       if (color) {
         updateColor.mutate(
-          { assetId: color.id, ...(hex ? { hex } : {}), gradient },
+          {
+            assetId: color.id,
+            ...(hex ? { hex } : {}),
+            gradient,
+            ...(draftTitle === (color.title ?? "")
+              ? {}
+              : { title: draftTitle.trim() || null }),
+          },
           {
             onSuccess: () => toast.success("Color updated."),
             onError: (error) =>
@@ -463,6 +473,24 @@ export function ColorEditorDialog({
         </DrawerHeader>
 
         <div className="min-h-0 flex-1 overflow-x-clip overflow-y-auto rounded-xl border-y border-border bg-background pb-3">
+          {isEditing ? (
+            <div className="border-b border-border px-3 py-3">
+              <label
+                htmlFor="color-asset-title"
+                className="mb-1 block text-xs font-medium text-muted-foreground"
+              >
+                Title
+              </label>
+              <Input
+                id="color-asset-title"
+                value={draftTitle}
+                onChange={(event) => setDraftTitle(event.target.value)}
+                maxLength={255}
+                placeholder="Automatic color name"
+                aria-label="Color title"
+              />
+            </div>
+          ) : null}
           <div className="w-full">
             {isGradient ? (
               <div className="space-y-4 px-3 pt-3">
