@@ -177,6 +177,7 @@ export type VideoPosterVariants = {
   original: StoredImageObjectVariant;
   display: StoredImageObjectVariant;
   preview: StoredImageObjectVariant;
+  blurDataURL?: string | undefined;
 };
 
 export type VideoStoryboard = {

@@ -1247,29 +1247,7 @@ export class AssetService implements IAssetService {
         contentType: string;
         sizeBytes: number;
       } | null;
-      videoPoster: {
-        original: {
-          objectKey: string;
-          contentType: string;
-          width: number;
-          height: number;
-          sizeBytes: number;
-        };
-        display: {
-          objectKey: string;
-          contentType: string;
-          width: number;
-          height: number;
-          sizeBytes: number;
-        };
-        preview: {
-          objectKey: string;
-          contentType: string;
-          width: number;
-          height: number;
-          sizeBytes: number;
-        };
-      } | null;
+      videoPoster: typeof videoAssets.$inferSelect.poster;
       videoStoryboard: typeof videoAssets.$inferSelect.storyboard;
       videoWidth: number | null;
       videoHeight: number | null;
@@ -1357,7 +1335,7 @@ export class AssetService implements IAssetService {
       }
 
       if (row.assetType === "video") {
-        const [video, poster, storyboard] = await Promise.all([
+        const [video, poster, posterPreview, storyboard] = await Promise.all([
           row.videoOriginal
             ? this.objectStorageService.createPresignedGetUrl(
                 row.videoOriginal.objectKey,
@@ -1366,6 +1344,11 @@ export class AssetService implements IAssetService {
           row.videoPoster?.display.objectKey
             ? this.objectStorageService.createPresignedGetUrl(
                 row.videoPoster.display.objectKey,
+              )
+            : undefined,
+          row.videoPoster?.preview.objectKey
+            ? this.objectStorageService.createPresignedGetUrl(
+                row.videoPoster.preview.objectKey,
               )
             : undefined,
           row.videoStoryboard?.objectKey
@@ -1379,6 +1362,8 @@ export class AssetService implements IAssetService {
           type: "video",
           url: video?.url ?? null,
           posterUrl: poster?.url ?? null,
+          posterPreviewUrl: posterPreview?.url ?? null,
+          posterBlurDataURL: row.videoPoster?.blurDataURL ?? null,
           storyboard:
             storyboard && row.videoStoryboard
               ? {
@@ -1557,7 +1542,11 @@ export async function collectAssetObjectKeys(
   for (const row of videoRows) {
     if (row.original?.objectKey) keys.add(row.original.objectKey);
     if (row.poster)
-      for (const variant of Object.values(row.poster))
+      for (const variant of [
+        row.poster.original,
+        row.poster.display,
+        row.poster.preview,
+      ])
         keys.add(variant.objectKey);
     if (row.storyboard?.objectKey) keys.add(row.storyboard.objectKey);
   }

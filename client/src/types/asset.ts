@@ -34,6 +34,8 @@ export interface VideoAsset {
   type: "video";
   url: string | null;
   posterUrl?: string | null;
+  posterPreviewUrl?: string | null;
+  posterBlurDataURL?: string | null;
   storyboard?: {
     url: string;
     frameCount: number;

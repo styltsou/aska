@@ -33,6 +33,8 @@ type Status = {
   ready: boolean;
 };
 
+const MIN_UPLOAD_COMPLETE_DISPLAY_MS = 350;
+
 function basePath(scope: VideoScope) {
   const workspace = encodeURIComponent(scope.workspaceSlug);
   return scope.collectionSlug
@@ -58,12 +60,18 @@ function putFile(
       request.setRequestHeader(key, value);
     request.upload.onprogress = (event) => {
       if (event.lengthComputable)
-        onProgress?.(Math.round((event.loaded / event.total) * 100));
+        onProgress?.(
+          event.loaded >= event.total
+            ? 100
+            : Math.min(99, Math.floor((event.loaded / event.total) * 100)),
+        );
     };
-    request.onload = () =>
-      request.status >= 200 && request.status < 300
-        ? resolve()
-        : reject(new Error(`Upload failed: ${request.status}`));
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) {
+        onProgress?.(100);
+        resolve();
+      } else reject(new Error(`Upload failed: ${request.status}`));
+    };
     request.onerror = () => reject(new Error("Upload failed"));
     request.onabort = () => reject(new Error("Upload cancelled"));
     request.send(file);
@@ -94,11 +102,7 @@ export function useVideoAssets(scope: VideoScope) {
           ]
         : []),
     ]);
-  const watch = async (
-    id: number,
-    previewAssetId?: string,
-    toastId?: string | number,
-  ) => {
+  const watch = async (id: number, previewAssetId?: string) => {
     let announcedReady = false;
     const deadline = Date.now() + 20 * 60_000;
     while (Date.now() < deadline) {
@@ -117,7 +121,6 @@ export function useVideoAssets(scope: VideoScope) {
         ) {
           await refresh();
           if (previewAssetId) clearVideoUploadPreview(previewAssetId);
-          if (toastId !== undefined) toast.dismiss(toastId);
           return;
         }
         // A temporary network failure should not abandon a still-processing asset.
@@ -127,19 +130,10 @@ export function useVideoAssets(scope: VideoScope) {
       if (becameReady) {
         announcedReady = true;
         await refresh(upload.assetId);
-        toast.success(
-          "Video ready",
-          toastId === undefined ? undefined : { id: toastId },
-        );
       }
       if (upload.status === "completed") {
         await refresh(upload.assetId);
         if (previewAssetId) clearVideoUploadPreview(previewAssetId);
-        if (!announcedReady)
-          toast.success(
-            "Video ready",
-            toastId === undefined ? undefined : { id: toastId },
-          );
         return;
       }
       if (upload.status === "failed") {
@@ -147,17 +141,12 @@ export function useVideoAssets(scope: VideoScope) {
         if (previewAssetId) clearVideoUploadPreview(previewAssetId);
         if (upload.ready)
           toast.warning("Video previews could not be generated");
-        else
-          toast.error(
-            upload.errorMessage ?? "Video processing failed",
-            toastId === undefined ? undefined : { id: toastId },
-          );
+        else toast.error(upload.errorMessage ?? "Video processing failed");
         return;
       }
     }
     await refresh();
     if (previewAssetId) clearVideoUploadPreview(previewAssetId);
-    if (toastId !== undefined) toast.dismiss(toastId);
   };
 
   const upload = useMutation({
@@ -184,26 +173,33 @@ export function useVideoAssets(scope: VideoScope) {
       beginVideoUploadPreview(created.assetId, file);
       void refresh();
       const toastId = toast.loading(`Uploading ${file.name}…`);
+      let uploadCompleteShownAt: number | undefined;
       try {
         await putFile(file, created, (percent) => {
-          const sentAllBytes = percent === 100;
+          if (percent === 100) uploadCompleteShownAt ??= Date.now();
           updateVideoUploadPreview(created.assetId, {
-            status: sentAllBytes ? "processing" : "uploading",
+            status: "uploading",
             progress: percent,
           });
-          if (sentAllBytes) {
-            toast.dismiss(toastId);
-            return;
-          }
           toast.loading(`Uploading ${file.name} — ${percent}%`, {
             id: toastId,
           });
         });
+        const remainingDisplayMs = Math.max(
+          0,
+          MIN_UPLOAD_COMPLETE_DISPLAY_MS -
+            (Date.now() - (uploadCompleteShownAt ?? Date.now())),
+        );
+        if (remainingDisplayMs > 0)
+          await new Promise((resolve) =>
+            setTimeout(resolve, remainingDisplayMs),
+          );
+        toast.dismiss(toastId);
         updateVideoUploadPreview(created.assetId, {
           status: "processing",
           progress: 100,
         });
-        void watch(created.id, created.assetId, toastId);
+        void watch(created.id, created.assetId);
       } catch (error) {
         await apiPost(`${path}/uploads/${created.id}/fail`).catch(
           () => undefined,

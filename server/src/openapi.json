@@ -2989,6 +2989,8 @@
             "description": "Playable original after validation, independent of poster and seek preview generation."
           },
           "posterUrl": { "type": ["string", "null"], "format": "uri" },
+          "posterPreviewUrl": { "type": ["string", "null"], "format": "uri" },
+          "posterBlurDataURL": { "type": ["string", "null"] },
           "storyboard": {
             "type": ["object", "null"],
             "description": "Seek preview sheet and frame layout. Null when previews are unavailable.",

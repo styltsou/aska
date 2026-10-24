@@ -67,6 +67,7 @@ const VideoPosterSchema = z.object({
   original: VideoPosterVariantSchema.extend({ role: z.literal("original") }),
   display: VideoPosterVariantSchema.extend({ role: z.literal("display") }),
   preview: VideoPosterVariantSchema.extend({ role: z.literal("preview") }),
+  blurDataURL: z.string().startsWith("data:image/webp;base64,").optional(),
 });
 
 const VideoStoryboardSchema = z.object({

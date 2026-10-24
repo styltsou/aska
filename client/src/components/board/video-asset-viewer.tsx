@@ -532,12 +532,37 @@ function NativeVideoContent({
   );
   const uploadPreview = useVideoUploadPreview(asset.id);
   const localSourceUrl =
-    uploadPreview?.status === "processing"
+    uploadPreview &&
+    (uploadPreview.status === "processing" || uploadPreview.progress === 100)
       ? uploadPreview.sourceUrl
       : undefined;
   const playbackUrl = localSourceUrl ?? asset.url;
   const ready = Boolean(playbackUrl);
   const localPosterUrl = uploadPreview?.posterUrl;
+  const [decodedPosterUrl, setDecodedPosterUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const displayPosterUrl = asset.posterUrl;
+    if (!displayPosterUrl) return;
+    let active = true;
+    const image = new Image();
+    image.src = displayPosterUrl;
+    void image
+      .decode()
+      .then(() => {
+        if (active) setDecodedPosterUrl(displayPosterUrl);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [asset.posterUrl]);
+  const posterUrl =
+    decodedPosterUrl === asset.posterUrl
+      ? asset.posterUrl
+      : (localPosterUrl ??
+        asset.posterBlurDataURL ??
+        asset.posterPreviewUrl ??
+        asset.posterUrl);
   const ratio =
     asset.width && asset.height ? asset.width / asset.height : 16 / 9;
   const layoutTransition = reduceMotion
@@ -660,7 +685,7 @@ function NativeVideoContent({
         <NativeVideoPlayer
           key={`${asset.id}-${playbackUrl}`}
           src={playbackUrl!}
-          poster={localPosterUrl ?? asset.posterUrl ?? undefined}
+          poster={posterUrl ?? undefined}
           storyboard={asset.storyboard}
           title={asset.title?.trim() || "Untitled video"}
           initialTime={initialPlaybackTime}

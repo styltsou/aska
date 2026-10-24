@@ -215,12 +215,17 @@ async function posterVariants(
       sizeBytes: bytes.byteLength,
     };
   };
-  const [original, display, preview] = await Promise.all([
+  const [original, display, preview, blurDataURL] = await Promise.all([
     rendition("original"),
     rendition("display", 960),
     rendition("preview", 320),
+    sharp(frame.bytes, { limitInputPixels: 40_000_000 })
+      .resize(8, undefined, { withoutEnlargement: true })
+      .webp({ quality: 20 })
+      .toBuffer()
+      .then((tiny) => `data:image/webp;base64,${tiny.toString("base64")}`),
   ]);
-  return { original, display, preview };
+  return { original, display, preview, blurDataURL };
 }
 
 async function createStoryboard(

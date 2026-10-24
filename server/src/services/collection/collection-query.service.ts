@@ -674,6 +674,8 @@ export class CollectionQueryService {
           type: "video" as const,
           url: video?.originalUrl ?? null,
           posterUrl: video?.posterDisplayUrl ?? null,
+          posterPreviewUrl: video?.posterPreviewUrl ?? null,
+          posterBlurDataURL: video?.poster?.blurDataURL ?? null,
           storyboard:
             video?.storyboard && video.storyboardUrl
               ? {

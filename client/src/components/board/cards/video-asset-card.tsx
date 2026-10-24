@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import type { VideoAsset } from "@/types/asset";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
 import {
   formatVideoDuration,
   VIDEO_CARD_TIME_BADGE_CLASS,
@@ -27,7 +28,8 @@ export function VideoAssetCard({
 }) {
   const uploadPreview = useVideoUploadPreview(asset.id);
   const localSourceUrl =
-    uploadPreview?.status === "processing"
+    uploadPreview &&
+    (uploadPreview.status === "processing" || uploadPreview.progress === 100)
       ? uploadPreview.sourceUrl
       : undefined;
   const playbackUrl = localSourceUrl ?? asset.url;
@@ -37,7 +39,8 @@ export function VideoAssetCard({
   const [previewing, setPreviewing] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewTime, setPreviewTime] = useState(0);
-  const posterUrl = uploadPreview?.posterUrl ?? asset.posterUrl;
+  const localPosterUrl = uploadPreview?.posterUrl;
+  const posterUrl = localPosterUrl ?? asset.posterUrl;
   const width = asset.width ?? uploadPreview?.width;
   const height = asset.height ?? uploadPreview?.height;
 
@@ -99,11 +102,24 @@ export function VideoAssetCard({
         data-asset-card-hero="video"
         className="absolute inset-0 overflow-hidden rounded-[6px]"
       >
-        {posterUrl ? (
-          <img
-            src={posterUrl}
+        {asset.posterUrl ? (
+          <ProgressiveImage
+            src={asset.posterUrl}
+            fallbackSrc={
+              localPosterUrl ??
+              (asset.posterBlurDataURL ? undefined : asset.posterPreviewUrl) ??
+              undefined
+            }
+            blurDataURL={asset.posterBlurDataURL}
+            revokeFallbackBlob={false}
             alt=""
             loading="lazy"
+            className="absolute inset-0 size-full object-cover"
+          />
+        ) : localPosterUrl ? (
+          <img
+            src={localPosterUrl}
+            alt=""
             className="absolute inset-0 size-full object-cover"
           />
         ) : uploadPreview?.sourceUrl ? (
@@ -175,7 +191,8 @@ export function VideoAssetCard({
         </div>
       ) : null}
       <AnimatePresence initial={false}>
-        {!ready && asset.processingStatus !== "failed" ? (
+        {(!ready || uploadPreview?.status === "uploading") &&
+        asset.processingStatus !== "failed" ? (
           <motion.div
             key="video-progress"
             exit={reduceMotion ? undefined : { opacity: 0, y: 8 }}
@@ -192,7 +209,7 @@ export function VideoAssetCard({
                   </span>
                 </span>
               ) : (
-                <span>{uploadPreview ? "Preparing video" : "Importing"}</span>
+                <span>Importing</span>
               )}
             </div>
           </motion.div>

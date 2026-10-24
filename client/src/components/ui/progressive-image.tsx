@@ -26,6 +26,8 @@ type ProgressiveImageProps = Omit<
   src: string;
   /** A browser preview to keep visible while `src` finishes decoding. */
   fallbackSrc?: string;
+  /** Set false when another component owns the Blob URL lifecycle. */
+  revokeFallbackBlob?: boolean;
   blurDataURL?: string | null;
   placeholderClassName?: string;
   style?: MotionStyle;
@@ -34,6 +36,7 @@ type ProgressiveImageProps = Omit<
 export function ProgressiveImage({
   src,
   fallbackSrc,
+  revokeFallbackBlob = true,
   blurDataURL,
   alt = "",
   className,
@@ -54,12 +57,13 @@ export function ProgressiveImage({
     !fallbackSrc && !blurDataURL && !isDecoded && !previousDecodedSrc;
 
   useEffect(() => {
-    if (!isDecoded || !fallbackSrc?.startsWith("blob:")) return;
+    if (!revokeFallbackBlob || !isDecoded || !fallbackSrc?.startsWith("blob:"))
+      return;
 
     // Let the decoded remote image paint once before releasing the local Blob.
     const frame = requestAnimationFrame(() => URL.revokeObjectURL(fallbackSrc));
     return () => cancelAnimationFrame(frame);
-  }, [fallbackSrc, isDecoded]);
+  }, [fallbackSrc, isDecoded, revokeFallbackBlob]);
 
   const handleLoad = useCallback<NonNullable<ProgressiveImageProps["onLoad"]>>(
     (event) => {
@@ -149,6 +153,7 @@ export function ProgressiveImage({
           src={fallbackSrc}
           alt=""
           aria-hidden="true"
+          loading={loading}
           className={cn(
             className,
             "pointer-events-none transition-opacity duration-150 ease-out motion-reduce:transition-none",
