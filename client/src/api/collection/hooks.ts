@@ -2709,15 +2709,17 @@ export function useUploadInboxImages(workspaceSlug: string) {
             localPreviewUrl: optimisticImage.previewObjectUrl,
           };
           images.push(image);
-          queryClient.setQueryData<InboxContentsResponse>(inboxKey, (current) =>
-            !current
-              ? current
-              : {
-                  ...current,
-                  nodes: current.nodes.map((node) =>
-                    node.id === optimisticImage.id ? image : node,
-                  ),
-                },
+          queryClient.setQueryData<InboxContentsResponse>(
+            inboxKey,
+            (current) =>
+              !current
+                ? current
+                : {
+                    ...current,
+                    nodes: current.nodes.map((node) =>
+                      node.id === optimisticImage.id ? image : node,
+                    ),
+                  },
           );
         }
 
