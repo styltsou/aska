@@ -66,7 +66,7 @@ function LinkThumbnail({
           {...props}
           src={source}
           fallbackSrc={undefined}
-          className={cn(className, "!transition-none")}
+          className={cn(className, "!transition-transform")}
           onLoad={async (event) => {
             await waitForThumbnail(event.currentTarget);
             setLoadedSrc(source);

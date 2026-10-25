@@ -220,6 +220,8 @@ describe("LinkAssetCard", () => {
     expect(html).not.toContain('data-slot="optimistic-link-preview"');
     expect(html).toContain('aria-label="Loading video description"');
     expect(html).toContain("group-hover:scale-[1.05]");
+    expect(html).toContain("!transition-transform");
+    expect(html).not.toContain("!transition-none");
   });
 
   it("shows a shimmer while the stored YouTube rendition loads", () => {
