@@ -343,7 +343,15 @@ export type UpdatedColor = {
   title: string | null;
   isFavorite: boolean;
   gradient?: z.infer<typeof ColorGradientSchema> | null;
-  naming?: { state: "queued" | "prompt" | "none"; fingerprint?: string };
+  naming?: {
+    state: "queued" | "prompt" | "none" | "failed" | "succeeded";
+    fingerprint?: string;
+    error?:
+      | "missing_api_key"
+      | "usage_limit"
+      | "provider_unavailable"
+      | "internal_error";
+  };
 };
 
 export const ColorNamingActionSchema = z.object({
@@ -616,8 +624,16 @@ export const CollectionColorNodeSchema = z.object({
   title: z.string().nullable(),
   naming: z
     .object({
-      state: z.enum(["queued", "prompt", "none"]),
+      state: z.enum(["queued", "prompt", "none", "failed", "succeeded"]),
       fingerprint: z.string().optional(),
+      error: z
+        .enum([
+          "missing_api_key",
+          "usage_limit",
+          "provider_unavailable",
+          "internal_error",
+        ])
+        .optional(),
     })
     .optional(),
   isFavorite: z.boolean(),

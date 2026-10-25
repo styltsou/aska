@@ -50,7 +50,9 @@ export function namingStateFromQueue(
   result: GradientNamingQueueResult,
 ): NamingState {
   if (result.queued)
-    return { state: "queued", fingerprint: result.fingerprint };
+    return result.fingerprint
+      ? { state: "queued", fingerprint: result.fingerprint }
+      : { state: "queued" };
   if (result.error) return { state: "failed", error: result.error };
   return { state: "none" };
 }
