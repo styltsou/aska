@@ -89,6 +89,18 @@ For an arbitrary SST subcommand, use `bun run sst --`, for example:
 bun run sst -- diff --stage dev
 ```
 
+To update a stage secret from a PowerShell session without local Cloudflare
+credentials, enable the secret-only configuration path for that command:
+
+```powershell
+$env:SST_SECRET_UPDATE = "1"
+bunx sst secret set SecretName 'secret-value' --stage dev
+Remove-Item Env:SST_SECRET_UPDATE
+```
+
+This switch is only for `sst secret` commands. Normal `dev` deployments still
+load Cloudflare to manage the custom domains.
+
 ### 2. Cloudflare domain setup
 
 The stable `dev` deployment uses exactly these public hostnames:

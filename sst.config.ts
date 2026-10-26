@@ -1,7 +1,8 @@
 // oxlint-disable-next-line typescript/triple-slash-reference
 /// <reference path="./.sst/platform/config.d.ts" />
 
-const isSecretCommand = $cli.command.startsWith("secret");
+const isSecretCommand =
+  process.env.SST_SECRET_UPDATE === "1" || $cli.command.startsWith("secret");
 
 export default $config({
   app(input) {
