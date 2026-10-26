@@ -197,7 +197,7 @@ jobs:
       # unsafe because SST still evaluates all subscriptions, including new
       # queues that are not part of the DatabaseUrl target.
       - name: Apply database migrations
-        run: bunx sst shell --stage dev -- bun run scripts/migrate-stage.ts
+        run: bunx sst shell --print-logs --stage dev -- bun run scripts/migrate-stage.ts
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}
