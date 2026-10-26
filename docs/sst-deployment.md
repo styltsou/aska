@@ -162,17 +162,21 @@ uses the configured custom domain rather than a second, unmanaged API origin.
 ### 4. Stage secrets
 
 Set these once. SST encrypts and stores them in AWS for the `dev` stage; they
-are not local environment files and are never committed to Git.
+are not local environment files and are never committed to Git. Set
+`SST_SECRET_UPDATE=1` for each command so SST skips loading the Cloudflare
+provider when updating a secret. In PowerShell, set the variable as shown in
+the [secret update instructions above](#one-time-stable-dev-setup) and omit the
+`SST_SECRET_UPDATE=1` prefix shown below; in Bash, prefix each command with it.
 
 ```sh
-bun run sst -- secret set DatabaseUrl 'your Neon connection URL' --stage dev
-bun run sst -- secret set BetterAuthSecret 'your existing Better Auth secret' --stage dev
-bun run sst -- secret set ResendApiKey 'your Resend API key' --stage dev
-bun run sst -- secret set PexelsApiKey 'your Pexels API key' --stage dev
-bun run sst -- secret set ImagePipelineCallbackSecret 'a random 32+ character secret' --stage dev
-bun run sst -- secret set CloudFrontMediaPrivateKeyBase64 'base64-encoded RSA-2048 private key' --stage dev
-bun run sst -- secret set CloudFrontMediaPublicKey 'SPKI PEM public key matching the private key' --stage dev
-bun run sst -- secret set SentryDsn 'https://public-key@o0.ingest.sentry.io/project-id' --stage dev
+SST_SECRET_UPDATE=1 bun run sst -- secret set DatabaseUrl 'your Neon connection URL' --stage dev
+SST_SECRET_UPDATE=1 bun run sst -- secret set BetterAuthSecret 'your existing Better Auth secret' --stage dev
+SST_SECRET_UPDATE=1 bun run sst -- secret set ResendApiKey 'your Resend API key' --stage dev
+SST_SECRET_UPDATE=1 bun run sst -- secret set PexelsApiKey 'your Pexels API key' --stage dev
+SST_SECRET_UPDATE=1 bun run sst -- secret set ImagePipelineCallbackSecret 'a random 32+ character secret' --stage dev
+SST_SECRET_UPDATE=1 bun run sst -- secret set CloudFrontMediaPrivateKeyBase64 'base64-encoded RSA-2048 private key' --stage dev
+SST_SECRET_UPDATE=1 bun run sst -- secret set CloudFrontMediaPublicKey 'SPKI PEM public key matching the private key' --stage dev
+SST_SECRET_UPDATE=1 bun run sst -- secret set SentryDsn 'https://public-key@o0.ingest.sentry.io/project-id' --stage dev
 ```
 
 ### What each value configures
