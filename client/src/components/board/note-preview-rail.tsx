@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
 import { motion, useReducedMotion } from "motion/react";
@@ -11,6 +11,10 @@ type NoteSection = {
   label: string;
   level: number;
   position: number;
+};
+
+type NoteSectionBoundary = Pick<NoteSection, "id"> & {
+  top: number;
 };
 
 const SECTION_SCROLL_OFFSET = 72;
@@ -74,6 +78,27 @@ function sectionsAreEqual(previous: NoteSection[], next: NoteSection[] | null) {
   );
 }
 
+export function getVisibleNoteSectionIds(
+  sections: readonly NoteSectionBoundary[],
+  viewportTop: number,
+  viewportBottom: number,
+) {
+  return sections.flatMap((section, index) => {
+    const nextSectionTop = sections[index + 1]?.top ?? Number.POSITIVE_INFINITY;
+    return section.top < viewportBottom && nextSectionTop > viewportTop
+      ? [section.id]
+      : [];
+  });
+}
+
+export function isNotePreviewRailSectionHighlighted(
+  index: number,
+  hoveredIndex: number | null,
+  isVisible: boolean,
+) {
+  return hoveredIndex === null ? isVisible : index === hoveredIndex;
+}
+
 export function NotePreviewRail({
   editor,
   scrollContainerRef,
@@ -85,6 +110,7 @@ export function NotePreviewRail({
   const [sections, setSections] = useState(() => readSections(editor));
   const [isRailVisible, setIsRailVisible] = useState(false);
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
+  const [visibleSectionIds, setVisibleSectionIds] = useState<string[]>([]);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [workspaceContent, setWorkspaceContent] = useState<HTMLElement | null>(
@@ -94,8 +120,15 @@ export function NotePreviewRail({
     MIN_SCROLLBAR_WIDTH + PREVIEW_RAIL_GAP,
   );
   const activeIdRef = useRef(activeId);
+  const visibleSectionIdsRef = useRef(visibleSectionIds);
 
   activeIdRef.current = activeId;
+  visibleSectionIdsRef.current = visibleSectionIds;
+
+  const visibleSectionIdSet = useMemo(
+    () => new Set(visibleSectionIds),
+    [visibleSectionIds],
+  );
 
   useEffect(() => {
     const refreshSections = () => {
@@ -199,20 +232,35 @@ export function NotePreviewRail({
       const activeLine =
         containerRect.top + container.clientHeight * ACTIVE_SECTION_LINE;
       let nextActiveId = sections[0]?.id ?? "";
+      const sectionBoundaries: NoteSectionBoundary[] = [];
 
       for (const section of sections) {
         const node = editor.view.nodeDOM(section.position);
         if (!(node instanceof HTMLElement)) continue;
-        if (node.getBoundingClientRect().top <= activeLine) {
+        const top = node.getBoundingClientRect().top;
+        sectionBoundaries.push({ id: section.id, top });
+        if (top <= activeLine) {
           nextActiveId = section.id;
-        } else {
-          break;
         }
       }
+      const nextVisibleSectionIds = getVisibleNoteSectionIds(
+        sectionBoundaries,
+        containerRect.top,
+        containerRect.bottom,
+      );
 
       if (nextActiveId !== activeIdRef.current) {
         activeIdRef.current = nextActiveId;
         setActiveId(nextActiveId);
+      }
+      if (
+        nextVisibleSectionIds.length !== visibleSectionIdsRef.current.length ||
+        nextVisibleSectionIds.some(
+          (id, index) => id !== visibleSectionIdsRef.current[index],
+        )
+      ) {
+        visibleSectionIdsRef.current = nextVisibleSectionIds;
+        setVisibleSectionIds(nextVisibleSectionIds);
       }
     };
     const scheduleUpdate = () => {
@@ -296,6 +344,12 @@ export function NotePreviewRail({
                   ? 0.48
                   : 0.3;
           const isActive = section.id === activeId;
+          const isVisible = visibleSectionIdSet.has(section.id);
+          const isHighlighted = isNotePreviewRailSectionHighlighted(
+            index,
+            hoveredIndex,
+            isVisible,
+          );
 
           return (
             <button
@@ -303,7 +357,7 @@ export function NotePreviewRail({
               type="button"
               aria-label={`Go to ${section.label}`}
               aria-current={isActive ? "location" : undefined}
-              className="group flex h-5 w-9 shrink-0 items-center justify-end rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+              className="group flex h-3 w-7 shrink-0 items-center justify-end rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
               onPointerEnter={() => setHoveredIndex(index)}
               onFocus={() => setHoveredIndex(index)}
               onBlur={() => setHoveredIndex(null)}
@@ -319,19 +373,17 @@ export function NotePreviewRail({
                   shouldReduceMotion
                     ? { duration: 0 }
                     : {
-                        type: "spring",
-                        stiffness: 360,
-                        damping: 32,
-                        mass: 0.6,
+                        duration: 0.15,
+                        ease: "easeOut",
                       }
                 }
                 className={cn(
-                  "block h-px w-7 origin-right bg-current",
-                  isActive
+                  "block h-0.5 w-4.5 origin-right bg-current",
+                  isHighlighted
                     ? "text-sidebar-foreground"
-                    : "text-sidebar-foreground/35 group-hover:text-sidebar-foreground/65",
-                  section.level === 2 && "w-6",
-                  section.level === 3 && "w-5",
+                    : "text-sidebar-foreground/35",
+                  section.level === 2 && "w-3.5",
+                  section.level === 3 && "w-2.5",
                 )}
               />
             </button>
@@ -342,6 +394,11 @@ export function NotePreviewRail({
         <motion.div
           initial={shouldReduceMotion ? false : { opacity: 0, x: 4 }}
           animate={{ opacity: 1, x: 0 }}
+          transition={
+            shouldReduceMotion
+              ? { duration: 0 }
+              : { duration: 0.15, ease: "easeOut" }
+          }
           className="absolute top-1/2 right-9 max-h-[40dvh] w-72 -translate-y-1/2 rounded-lg border border-border bg-popover/95 p-1.5 text-popover-foreground shadow-lg backdrop-blur-xl"
         >
           <ScrollArea

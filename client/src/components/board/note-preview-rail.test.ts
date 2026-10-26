@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { shouldShowNotePreviewRail } from "./note-preview-rail";
+import {
+  getVisibleNoteSectionIds,
+  isNotePreviewRailSectionHighlighted,
+  shouldShowNotePreviewRail,
+} from "./note-preview-rail";
 
 describe("shouldShowNotePreviewRail", () => {
   it("requires at least 2 headings", () => {
@@ -21,5 +25,37 @@ describe("shouldShowNotePreviewRail", () => {
 
   it("waits for a measurable viewport", () => {
     expect(shouldShowNotePreviewRail(3, 4_000, 0)).toBe(false);
+  });
+});
+
+describe("getVisibleNoteSectionIds", () => {
+  const sections = [
+    { id: "introduction", top: 100 },
+    { id: "planning", top: 400 },
+    { id: "delivery", top: 800 },
+  ];
+
+  it("marks every section occupying the viewport as visible", () => {
+    expect(getVisibleNoteSectionIds(sections, 250, 900)).toEqual([
+      "introduction",
+      "planning",
+      "delivery",
+    ]);
+  });
+
+  it("excludes sections that end before the viewport", () => {
+    expect(getVisibleNoteSectionIds(sections, 450, 700)).toEqual(["planning"]);
+  });
+});
+
+describe("isNotePreviewRailSectionHighlighted", () => {
+  it("colors every visible section while the rail is idle", () => {
+    expect(isNotePreviewRailSectionHighlighted(0, null, true)).toBe(true);
+    expect(isNotePreviewRailSectionHighlighted(1, null, false)).toBe(false);
+  });
+
+  it("colors only the hovered section during hover", () => {
+    expect(isNotePreviewRailSectionHighlighted(0, 1, true)).toBe(false);
+    expect(isNotePreviewRailSectionHighlighted(1, 1, false)).toBe(true);
   });
 });
