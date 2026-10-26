@@ -1,6 +1,9 @@
 // oxlint-disable-next-line typescript/triple-slash-reference
 /// <reference path="./.sst/platform/config.d.ts" />
 
+const isSecretCommand =
+  $cli.command === "secret" || $cli.command.startsWith("secret.");
+
 export default $config({
   app(input) {
     return {
@@ -13,7 +16,7 @@ export default $config({
         // The personal Live stage has no custom domains or Cloudflare
         // resources. Do not initialise the provider there: it should require
         // only the short-lived AWS credentials obtained by `aws login`.
-        ...(input.stage === "dev"
+        ...(input.stage === "dev" && !isSecretCommand
           ? {
               cloudflare: {
                 package: "@pulumi/cloudflare",
@@ -25,6 +28,11 @@ export default $config({
     };
   },
   async run() {
+    // `sst secret set` stores an encrypted value in the stage state. It does
+    // not need the resource graph, and loading the dev graph would require
+    // Cloudflare credentials solely because that stage manages custom DNS.
+    if (isSecretCommand) return;
+
     const { TASK_DLQ_RECEIVE_LIMIT, TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS } =
       await import("./services/image-shared/src/task-timing");
     const clientOrigins = {
