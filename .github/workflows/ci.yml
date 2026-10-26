@@ -17,7 +17,6 @@ jobs:
       server: ${{ steps.filter.outputs.server }}
       image-variants: ${{ steps.filter.outputs.image-variants }}
       image-palette: ${{ steps.filter.outputs.image-palette }}
-      gradient-naming: ${{ steps.filter.outputs.gradient-naming }}
       image-shared: ${{ steps.filter.outputs.image-shared }}
       url-unfurl-shared: ${{ steps.filter.outputs.url-unfurl-shared }}
       url-resolution: ${{ steps.filter.outputs.url-resolution }}
@@ -44,9 +43,6 @@ jobs:
               - '.github/workflows/ci.yml'
             image-palette:
               - 'services/image-palette/**'
-              - '.github/workflows/ci.yml'
-            gradient-naming:
-              - 'services/gradient-naming/**'
               - '.github/workflows/ci.yml'
             image-shared:
               - 'services/image-shared/**'
@@ -110,10 +106,6 @@ jobs:
             directory: services/image-palette
             command: bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
             changed: ${{ needs.changes.outputs.image-palette || needs.changes.outputs.image-shared }}
-          - name: Gradient naming
-            directory: services/gradient-naming
-            command: bun run typecheck && bun run test
-            changed: ${{ needs.changes.outputs.gradient-naming }}
           - name: URL unfurl shared
             directory: services/url-unfurl-shared
             command: bun run lint && bun run typecheck && bun run format && bun run test
