@@ -1,8 +1,7 @@
 // oxlint-disable-next-line typescript/triple-slash-reference
 /// <reference path="./.sst/platform/config.d.ts" />
 
-const isSecretCommand =
-  $cli.command === "secret" || $cli.command.startsWith("secret.");
+const isSecretCommand = $cli.command.startsWith("secret");
 
 export default $config({
   app(input) {
