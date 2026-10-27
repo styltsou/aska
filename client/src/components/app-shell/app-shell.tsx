@@ -22,7 +22,7 @@ import {
 import { WorkspacePeekProvider } from "./workspace-peek";
 import { WorkspaceAssetViewProvider } from "./workspace-asset-view";
 import { workspaceSearchQueryOptions } from "@/api/workspace-search";
-import { getRecentWorkspaceAssetIds } from "@/lib/workspace-recent-assets";
+import { useRecentWorkspaceAssetIds } from "@/lib/workspace-recent-assets";
 import { useCommittedPathname } from "./use-committed-pathname";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -44,6 +44,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const floatingSidebarEnabled = usePersistedStore(
     (state) => state.canvasFloatingSidebar,
   );
+  const recentAssetIds = useRecentWorkspaceAssetIds(workspaceSlug);
 
   const floatingCanvasSidebar =
     isBoardView && boardView === "canvas" && floatingSidebarEnabled;
@@ -62,13 +63,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!workspaceSlug) return;
     void queryClient.prefetchQuery(
-      workspaceSearchQueryOptions(
-        workspaceSlug,
-        "",
-        getRecentWorkspaceAssetIds(workspaceSlug),
-      ),
+      workspaceSearchQueryOptions(workspaceSlug, "", recentAssetIds),
     );
-  }, [queryClient, workspaceSlug]);
+  }, [queryClient, recentAssetIds, workspaceSlug]);
 
   return (
     <WorkspacePeekProvider workspaceSlug={workspaceSlug}>

@@ -81,7 +81,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
-import { getRecentWorkspaceAssetIds } from "@/lib/workspace-recent-assets";
+import { useRecentWorkspaceAssetIds } from "@/lib/workspace-recent-assets";
 import { cn } from "@/lib/utils";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { toast } from "sonner";
@@ -233,7 +233,6 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PaletteMode>("search");
   const [query, setQuery] = useState("");
-  const [activeSearchResultId, setActiveSearchResultId] = useState<string>();
   const [activeCommandId, setActiveCommandId] = useState<CommandId>();
   const [createNoteOpen, setCreateNoteOpen] = useState(false);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
@@ -317,9 +316,7 @@ export function CommandPalette() {
   const canToggleBoardActionRail =
     collectionView === "canvas" && Boolean(boardKey);
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
-  const recentAssetIds = workspaceSlug
-    ? getRecentWorkspaceAssetIds(workspaceSlug)
-    : [];
+  const recentAssetIds = useRecentWorkspaceAssetIds(workspaceSlug);
   const workspaceSearch = useWorkspaceSearch(
     workspaceSlug,
     query,
@@ -334,7 +331,6 @@ export function CommandPalette() {
   function changeMode(nextMode: PaletteMode) {
     setMode(nextMode);
     setActiveCommandId(undefined);
-    setActiveSearchResultId(undefined);
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -342,7 +338,6 @@ export function CommandPalette() {
     if (!nextOpen) {
       setMode("search");
       setQuery("");
-      setActiveSearchResultId(undefined);
       setActiveCommandId(undefined);
     }
   }
@@ -603,35 +598,11 @@ export function CommandPalette() {
                   changeMode("search");
                   return;
                 }
-                if (
-                  event.key === "Enter" &&
-                  event.shiftKey &&
-                  mode === "search"
-                ) {
-                  const result = searchResults.find(
-                    (candidate) => candidate.id === activeSearchResultId,
-                  );
-                  if (
-                    result?.type === "image" ||
-                    result?.type === "note" ||
-                    result?.type === "color"
-                  ) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    void peekSearchResult(result);
-                  }
-                }
               }}
               onValueChange={(value) => {
                 if (mode === "commands") {
                   setActiveCommandId(COMMAND_ID_BY_LABEL.get(value));
-                  return;
                 }
-                setActiveSearchResultId(
-                  searchResults.find(
-                    (result) => searchResultValue(result) === value,
-                  )?.id,
-                );
               }}
             >
               <CommandInput
@@ -650,6 +621,37 @@ export function CommandPalette() {
                     ? "Search notes, images, links, colors…"
                     : "Search actions…"
                 }
+                onKeyDown={(event) => {
+                  if (
+                    event.key !== "Enter" ||
+                    !event.shiftKey ||
+                    mode !== "search"
+                  ) {
+                    return;
+                  }
+
+                  const selectedItemId = event.currentTarget.getAttribute(
+                    "aria-activedescendant",
+                  );
+                  const selectedItem = selectedItemId
+                    ? document.getElementById(selectedItemId)
+                    : null;
+                  const selectedResultId =
+                    selectedItem?.getAttribute("data-result-id");
+                  const result = searchResults.find(
+                    (candidate) => candidate.id === selectedResultId,
+                  );
+
+                  if (
+                    result?.type === "image" ||
+                    result?.type === "note" ||
+                    result?.type === "color"
+                  ) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void peekSearchResult(result);
+                  }
+                }}
               />
               <CommandList className="max-h-96">
                 {mode === "search" ? (
@@ -938,6 +940,7 @@ function WorkspaceSearchResults({
         <CommandItem
           key={`${result.type}:${result.id}`}
           value={searchResultValue(result)}
+          data-result-id={result.id}
           className="items-center gap-3 py-2"
           onSelect={() => onSelect(result)}
         >
