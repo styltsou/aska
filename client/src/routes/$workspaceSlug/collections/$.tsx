@@ -314,7 +314,11 @@ function CollectionPage() {
     );
   }
 
-  if (isLoading || (hasStaleRoutePlaceholder && !isError)) {
+  if (
+    isLoading ||
+    (hasStaleRoutePlaceholder && !isError) ||
+    (boardView === "grid" && isPlaceholderData && !isError)
+  ) {
     return boardView === "canvas" ? (
       <CanvasLoading
         workspaceSlug={workspaceSlug}

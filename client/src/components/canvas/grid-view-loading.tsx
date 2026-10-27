@@ -8,7 +8,10 @@ const ASSET_HEIGHTS = ["h-44", "h-56", "h-40", "h-64"] as const;
 
 export function GridViewLoading() {
   return (
-    <ScrollArea className="h-full min-h-0 w-full min-w-0 flex-1">
+    <ScrollArea
+      className="h-full min-h-0 w-full min-w-0 flex-1"
+      viewportClassName="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       <div
         className="p-5 pb-20"
         role="status"

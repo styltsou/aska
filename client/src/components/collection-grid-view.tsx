@@ -39,7 +39,8 @@ import { cn } from "@/lib/utils";
 import { useTransientStore } from "@/store";
 import type { LinkAsset, VideoAsset } from "@/types/asset";
 
-const INITIAL_ASSET_COUNT = 12;
+// Fill even a six-column viewport before the scroll observer starts paging.
+const INITIAL_ASSET_COUNT = 36;
 const ASSET_PAGE_SIZE = 24;
 const GRID_NODE_DRAG_TYPE = "grid-node";
 const GRID_FOLDER_DROP_PREFIX = "grid-folder:";
@@ -246,7 +247,7 @@ export function CollectionGridView({
 
   useEffect(() => {
     setVisibleAssetCount(INITIAL_ASSET_COUNT);
-  }, [assets, boardKey]);
+  }, [boardKey]);
 
   useEffect(() => {
     if (!focusedNodeId) return;
@@ -350,6 +351,7 @@ export function CollectionGridView({
     <>
       <ScrollArea
         viewportRef={scrollRef}
+        viewportClassName="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         className="h-full min-h-0 w-full min-w-0 flex-1 rounded-[inherit] [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:inset-y-2 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:right-1 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-0"
       >
         <div

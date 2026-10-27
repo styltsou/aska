@@ -1,6 +1,7 @@
 import {
   Children,
   isValidElement,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -90,68 +91,69 @@ export function Masonry({
       })),
     [children],
   );
-  const [positions, setPositions] = useState<MasonryPosition[]>([]);
-  const [height, setHeight] = useState(0);
-  const layoutRef = useRef({ positions, height });
-  layoutRef.current = { positions, height };
-
-  useIsomorphicLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const update = () => {
-      const nextWidth = el.clientWidth;
-      setWidth((current) => (current === nextWidth ? current : nextWidth));
-    };
-    update();
-    const observer =
-      typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
-    observer?.observe(el);
-    return () => observer?.disconnect();
-  }, []);
+  const [layout, setLayout] = useState<{
+    positions: MasonryPosition[];
+    height: number;
+    width: number;
+    keys: string[];
+  }>({ positions: [], height: 0, width: 0, keys: [] });
 
   const columns = width ? columnCountFor(width) : 0;
   const itemWidth = columns
     ? Math.max(0, (width - MASONRY_GAP * (columns - 1)) / columns)
     : 0;
 
+  const measure = useCallback(() => {
+    const nextWidth = containerRef.current?.clientWidth ?? 0;
+    if (nextWidth !== width) {
+      setWidth(nextWidth);
+      return;
+    }
+    if (!nextWidth || !items.length) return;
+
+    const heights = itemRefs.current
+      .slice(0, items.length)
+      .map((el) => el?.offsetHeight ?? 0);
+    const next = calculateMasonryLayout(heights, columns, itemWidth);
+    if (!next) return;
+
+    setLayout((current) =>
+      current.width === width &&
+      current.keys.length === items.length &&
+      current.keys.every((key, index) => key === items[index]?.key) &&
+      layoutsEqual(
+        current.positions,
+        next.positions,
+        current.height,
+        next.height,
+      )
+        ? current
+        : {
+            ...next,
+            width,
+            keys: items.map((item) => item.key),
+          },
+    );
+  }, [columns, itemWidth, items, width]);
+
+  // Measure a new set of cards before paint so they never appear stacked at (0, 0).
+  useIsomorphicLayoutEffect(measure);
+
   const frameRef = useRef<number | undefined>(undefined);
-  const scheduleRecompute = useRef<() => void>(() => {});
-  scheduleRecompute.current = () => {
-    if (frameRef.current !== undefined) return;
-
-    frameRef.current = requestAnimationFrame(() => {
-      frameRef.current = undefined;
-      const heights = itemRefs.current
-        .slice(0, items.length)
-        .map((el) => el?.offsetHeight ?? 0);
-      const layout = calculateMasonryLayout(heights, columns, itemWidth);
-      if (!layout) return;
-
-      const current = layoutRef.current;
-      if (
-        layoutsEqual(
-          current.positions,
-          layout.positions,
-          current.height,
-          layout.height,
-        )
-      ) {
-        return;
-      }
-
-      layoutRef.current = layout;
-      setPositions(layout.positions);
-      setHeight(layout.height);
-    });
-  };
 
   useEffect(() => {
-    scheduleRecompute.current();
     const nodes = itemRefs.current.filter(Boolean) as HTMLDivElement[];
     const observer =
       typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(() => scheduleRecompute.current())
+        ? new ResizeObserver(() => {
+            if (frameRef.current !== undefined) return;
+            frameRef.current = requestAnimationFrame(() => {
+              frameRef.current = undefined;
+              measure();
+            });
+          })
         : null;
+    if (containerRef.current) observer?.observe(containerRef.current);
     nodes.forEach((el) => observer?.observe(el));
     return () => {
       observer?.disconnect();
@@ -160,16 +162,22 @@ export function Masonry({
         frameRef.current = undefined;
       }
     };
-  }, [columns, items, itemWidth]);
+  }, [items, measure]);
+
+  const isReady =
+    width > 0 &&
+    layout.width === width &&
+    layout.keys.length === items.length &&
+    layout.keys.every((key, index) => key === items[index]?.key);
 
   return (
     <div
       ref={containerRef}
       className={`relative w-full ${className ?? ""}`}
-      style={height ? { height } : undefined}
+      style={isReady ? { height: layout.height } : { visibility: "hidden" }}
     >
       {items.map((item, index) => {
-        const pos = positions[index];
+        const pos = isReady ? layout.positions[index] : undefined;
         return (
           <div
             key={item.key}
@@ -183,7 +191,7 @@ export function Masonry({
                     width: pos.width,
                     transform: `translate(${pos.x}px, ${pos.y}px)`,
                   } satisfies CSSProperties)
-                : { width: itemWidth || undefined }
+                : { width: itemWidth || "100%" }
             }
           >
             {item.node}

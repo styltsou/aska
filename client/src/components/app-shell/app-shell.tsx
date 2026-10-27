@@ -72,6 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <WorkspaceAssetViewProvider workspaceSlug={workspaceSlug}>
         <DragDropProvider>
           <SidebarProvider
+            data-board-view={isBoardView ? "" : undefined}
             data-canvas-sidebar={floatingCanvasSidebar ? "floating" : undefined}
             className={
               isWorkspaceOverview ? "h-svh overflow-hidden" : undefined
