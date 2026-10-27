@@ -56,6 +56,14 @@
     @apply my-3 ml-4 list-disc space-y-1.5 marker:text-sidebar-foreground/80;
   }
 
+  .note-rich-text-content ul.note-preview-bullet-list {
+    @apply list-none;
+  }
+
+  .note-rich-text-content > div > ul.note-preview-bullet-list {
+    @apply ml-0;
+  }
+
   .note-rich-text-content ol {
     @apply my-3 ml-4 list-decimal space-y-1.5 marker:text-sidebar-foreground/80;
   }

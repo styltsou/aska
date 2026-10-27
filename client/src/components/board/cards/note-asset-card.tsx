@@ -147,7 +147,7 @@ function taskItemIsChecked(node: unknown): boolean {
   );
 }
 
-function renderBulletListItems(children: ReactNode, compact: boolean) {
+function renderBulletListItems(children: ReactNode) {
   return Children.map(children, (child) => {
     if (
       !isValidElement<{
@@ -163,17 +163,13 @@ function renderBulletListItems(children: ReactNode, compact: boolean) {
       {
         className: cn(
           child.props.className,
-          "note-bullet-list-item flex items-start gap-0",
+          "note-bullet-list-item flex items-start gap-2",
         ),
       },
       <>
-        <span
-          aria-hidden="true"
-          className={cn(
-            "mt-[0.55em] size-1.5 shrink-0 rounded-full bg-current",
-            compact && "mt-[0.45em]",
-          )}
-        />
+        <span aria-hidden="true" className="flex h-[1lh] shrink-0 items-center">
+          <span className="size-1.5 rounded-full bg-current" />
+        </span>
         <div className="min-w-0 flex-1 [&>p]:my-0">{child.props.children}</div>
       </>,
     );
@@ -273,19 +269,19 @@ function createMDComponents(
           className={cn(
             isTaskList
               ? "note-task-list ml-0 list-none pl-0 text-sidebar-foreground/80"
-              : "list-none text-sidebar-foreground/80",
+              : "note-preview-bullet-list list-none text-sidebar-foreground/80",
             isTaskList
               ? compact
                 ? "my-1 space-y-0.5"
                 : "my-3 space-y-1.5"
               : compact
-                ? "my-1 ml-3 space-y-0.5"
-                : "my-3 ml-4 space-y-1.5",
+                ? "my-1 space-y-0.5"
+                : "my-3 space-y-1.5",
             className,
           )}
           {...props}
         >
-          {isTaskList ? children : renderBulletListItems(children, compact)}
+          {isTaskList ? children : renderBulletListItems(children)}
         </ul>
       );
     },
