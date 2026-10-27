@@ -5,7 +5,10 @@ const MAX_RECENT_ASSETS = 12;
 const ASSET_ID = /^(?:image|video|note|link|color)-\d+$/;
 const RECENT_ASSETS_CHANGED_EVENT = "aska:workspace-recent-assets-changed";
 const EMPTY_RECENT_ASSET_IDS: readonly string[] = [];
-const cachedRecentAssetIds = new Map<string, readonly string[]>();
+const cachedRecentAssetIds = new Map<
+  string,
+  { raw: string | null; recentAssetIds: readonly string[] }
+>();
 
 export function getRecentWorkspaceAssetIds(workspaceSlug: string): string[] {
   return [...getRecentWorkspaceAssetIdsSnapshot(workspaceSlug)];
@@ -62,17 +65,25 @@ export function useRecentWorkspaceAssetIds(
 function getRecentWorkspaceAssetIdsSnapshot(
   workspaceSlug: string,
 ): readonly string[] {
+  const raw = readRecentWorkspaceAssetIdsRaw(workspaceSlug);
   const cached = cachedRecentAssetIds.get(workspaceSlug);
-  if (cached) return cached;
+  if (cached?.raw === raw) return cached.recentAssetIds;
 
-  const recentAssetIds = readRecentWorkspaceAssetIds(workspaceSlug);
-  cachedRecentAssetIds.set(workspaceSlug, recentAssetIds);
+  const recentAssetIds = parseRecentWorkspaceAssetIds(raw);
+  cachedRecentAssetIds.set(workspaceSlug, { raw, recentAssetIds });
   return recentAssetIds;
 }
 
-function readRecentWorkspaceAssetIds(workspaceSlug: string): string[] {
+function readRecentWorkspaceAssetIdsRaw(workspaceSlug: string): string | null {
   try {
-    const raw = localStorage.getItem(storageKey(workspaceSlug));
+    return localStorage.getItem(storageKey(workspaceSlug));
+  } catch {
+    return null;
+  }
+}
+
+function parseRecentWorkspaceAssetIds(raw: string | null): string[] {
+  try {
     if (!raw) return [];
     const stored: unknown = JSON.parse(raw);
     if (!Array.isArray(stored)) return [];
@@ -93,11 +104,12 @@ export function recordRecentWorkspaceAsset(
       assetId,
       ...recentAssetIds.filter((id) => id !== assetId),
     ].slice(0, MAX_RECENT_ASSETS);
-    localStorage.setItem(
-      storageKey(workspaceSlug),
-      JSON.stringify(nextRecentAssetIds),
-    );
-    cachedRecentAssetIds.set(workspaceSlug, nextRecentAssetIds);
+    const raw = JSON.stringify(nextRecentAssetIds);
+    localStorage.setItem(storageKey(workspaceSlug), raw);
+    cachedRecentAssetIds.set(workspaceSlug, {
+      raw,
+      recentAssetIds: nextRecentAssetIds,
+    });
     window.dispatchEvent(
       new CustomEvent(RECENT_ASSETS_CHANGED_EVENT, { detail: workspaceSlug }),
     );
