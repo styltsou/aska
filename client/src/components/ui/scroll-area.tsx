@@ -9,11 +9,21 @@ function ScrollArea({
   viewportClassName,
   viewportRef,
   contentClassName,
+  verticalScrollbarClassName,
+  verticalScrollbarStyle,
+  verticalThumbClassName,
+  horizontalScrollbarClassName,
+  horizontalThumbClassName,
   ...props
 }: ScrollAreaPrimitive.Root.Props & {
   viewportClassName?: string;
   viewportRef?: React.Ref<HTMLDivElement>;
   contentClassName?: string;
+  verticalScrollbarClassName?: string;
+  verticalScrollbarStyle?: React.CSSProperties;
+  verticalThumbClassName?: string;
+  horizontalScrollbarClassName?: string;
+  horizontalThumbClassName?: string;
 }) {
   return (
     <ScrollAreaPrimitive.Root
@@ -40,21 +50,34 @@ function ScrollArea({
       <ScrollAreaPrimitive.Scrollbar
         data-slot="scroll-area-scrollbar"
         orientation="vertical"
-        className="absolute inset-y-0 right-0 z-10 flex w-2.5 touch-none justify-center p-0.5 opacity-0 transition-opacity duration-150 select-none data-hovering:opacity-100 data-scrolling:opacity-100"
+        className={cn(
+          "absolute inset-y-0 right-0 z-10 flex w-2.5 touch-none justify-center p-0.5 opacity-0 transition-opacity duration-150 select-none data-hovering:opacity-100 data-scrolling:opacity-100",
+          verticalScrollbarClassName,
+        )}
+        style={verticalScrollbarStyle}
       >
         <ScrollAreaPrimitive.Thumb
           data-slot="scroll-area-thumb"
-          className="relative w-1 rounded-full bg-sidebar-foreground/20 before:absolute before:inset-0 before:-inset-x-0.5"
+          className={cn(
+            "relative w-1 rounded-full bg-sidebar-foreground/20 before:absolute before:inset-0 before:-inset-x-0.5",
+            verticalThumbClassName,
+          )}
         />
       </ScrollAreaPrimitive.Scrollbar>
       <ScrollAreaPrimitive.Scrollbar
         data-slot="scroll-area-scrollbar"
         orientation="horizontal"
-        className="flex touch-none p-0.5 opacity-0 transition-opacity duration-150 select-none data-hovering:opacity-100 data-scrolling:opacity-100"
+        className={cn(
+          "flex touch-none p-0.5 opacity-0 transition-opacity duration-150 select-none data-hovering:opacity-100 data-scrolling:opacity-100",
+          horizontalScrollbarClassName,
+        )}
       >
         <ScrollAreaPrimitive.Thumb
           data-slot="scroll-area-thumb"
-          className="relative h-1 rounded-full bg-sidebar-foreground/20 before:absolute before:inset-0 before:-inset-y-0.5"
+          className={cn(
+            "relative h-1 rounded-full bg-sidebar-foreground/20 before:absolute before:inset-0 before:-inset-y-0.5",
+            horizontalThumbClassName,
+          )}
         />
       </ScrollAreaPrimitive.Scrollbar>
     </ScrollAreaPrimitive.Root>

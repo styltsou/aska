@@ -1,5 +1,3 @@
-import "./note-workspace.css";
-
 import {
   lazy,
   Suspense,
@@ -43,6 +41,7 @@ import { NoteHighlightControl } from "@/components/board/note-highlight-control"
 import { NoteBacklinks } from "@/components/board/note-backlinks";
 import { NoteSaveStatus } from "@/components/board/note-save-status";
 import { NoteSaveFeedback } from "@/components/board/note-save-feedback";
+import { NoteScrollArea } from "@/components/board/note-scroll-area";
 import {
   isSameSaveSnapshot,
   resolveNoteSaveCompletion,
@@ -1951,10 +1950,10 @@ export function NoteDetailDrawer({
           data-slot="note-workspace-main-content"
           className="relative flex min-h-0 flex-1 flex-col"
         >
-          <div
-            ref={noteContentRef}
+          <NoteScrollArea
+            viewportRef={noteContentRef}
             className={cn(
-              "note-workspace-scroll-container min-h-0 flex-1 overflow-y-auto border-t bg-background transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+              "min-h-0 flex-1 border-t bg-background transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
               assetModalId
                 ? expanded
                   ? "duration-[400ms]"
@@ -2028,7 +2027,7 @@ export function NoteDetailDrawer({
                 </Suspense>
               ) : null}
             </div>
-          </div>
+          </NoteScrollArea>
         </div>
         {saveState === "conflict" || saveState === "error" ? (
           <NoteSaveFeedback

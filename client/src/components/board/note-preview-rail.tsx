@@ -19,11 +19,10 @@ type NoteSectionBoundary = Pick<NoteSection, "id"> & {
 
 const SECTION_SCROLL_OFFSET = 72;
 const ACTIVE_SECTION_LINE = 0.28;
-const MIN_SCROLLBAR_WIDTH = 4;
+const MIN_SCROLLBAR_WIDTH = 2;
 const PREVIEW_RAIL_GAP = 2;
-const MIN_PREVIEW_RAIL_SECTIONS = 2;
-const MIN_PREVIEW_RAIL_VIEWPORTS = 2;
-const PREVIEW_RAIL_VISIBLE_ATTRIBUTE = "data-note-preview-rail-visible";
+const MIN_PREVIEW_RAIL_SECTIONS = 1;
+const MIN_PREVIEW_RAIL_OVERFLOW_RATIO = 0.25;
 
 export function shouldShowNotePreviewRail(
   sectionCount: number,
@@ -33,20 +32,21 @@ export function shouldShowNotePreviewRail(
   return (
     sectionCount >= MIN_PREVIEW_RAIL_SECTIONS &&
     clientHeight > 0 &&
-    scrollHeight >= clientHeight * MIN_PREVIEW_RAIL_VIEWPORTS
+    scrollHeight - clientHeight >=
+      clientHeight * MIN_PREVIEW_RAIL_OVERFLOW_RATIO
   );
 }
 
-function getLayoutRight(element: HTMLElement) {
-  let right = element.offsetLeft + element.offsetWidth;
+function getLayoutLeft(element: HTMLElement) {
+  let left = element.offsetLeft;
   let parent = element.offsetParent;
 
   while (parent instanceof HTMLElement) {
-    right += parent.offsetLeft;
+    left += parent.offsetLeft;
     parent = parent.offsetParent;
   }
 
-  return right;
+  return left;
 }
 
 function readSections(editor: Editor): NoteSection[] {
@@ -116,7 +116,7 @@ export function NotePreviewRail({
   const [workspaceContent, setWorkspaceContent] = useState<HTMLElement | null>(
     null,
   );
-  const [rightOffset, setRightOffset] = useState(
+  const [leftOffset, setLeftOffset] = useState(
     MIN_SCROLLBAR_WIDTH + PREVIEW_RAIL_GAP,
   );
   const activeIdRef = useRef(activeId);
@@ -171,10 +171,7 @@ export function NotePreviewRail({
       setIsRailVisible((current) =>
         current === nextIsVisible ? current : nextIsVisible,
       );
-      if (nextIsVisible) {
-        container.setAttribute(PREVIEW_RAIL_VISIBLE_ATTRIBUTE, "true");
-      } else {
-        container.removeAttribute(PREVIEW_RAIL_VISIBLE_ATTRIBUTE);
+      if (!nextIsVisible) {
         setIsOutlineOpen(false);
         setHoveredIndex(null);
       }
@@ -192,7 +189,6 @@ export function NotePreviewRail({
     return () => {
       editor.off("update", scheduleUpdate);
       resizeObserver.disconnect();
-      container.removeAttribute(PREVIEW_RAIL_VISIBLE_ATTRIBUTE);
       if (frame) window.cancelAnimationFrame(frame);
     };
   }, [editor, scrollContainerRef, sections.length]);
@@ -207,22 +203,19 @@ export function NotePreviewRail({
         MIN_SCROLLBAR_WIDTH,
         container.offsetWidth - container.clientWidth,
       );
-      const containerRight = container.getBoundingClientRect().right;
+      const containerLeft = container.getBoundingClientRect().left;
       const nextOffset = Math.max(
         scrollbarWidth + PREVIEW_RAIL_GAP,
         Math.round(
           workspaceContent
-            ? workspaceContent.getBoundingClientRect().right -
-                containerRight +
+            ? containerLeft -
+                workspaceContent.getBoundingClientRect().left +
                 scrollbarWidth +
                 PREVIEW_RAIL_GAP
-            : window.innerWidth -
-                getLayoutRight(container) +
-                scrollbarWidth +
-                PREVIEW_RAIL_GAP,
+            : getLayoutLeft(container) + scrollbarWidth + PREVIEW_RAIL_GAP,
         ),
       );
-      setRightOffset((current) =>
+      setLeftOffset((current) =>
         current === nextOffset ? current : nextOffset,
       );
     };
@@ -312,7 +305,7 @@ export function NotePreviewRail({
         "top-1/2 z-[60] hidden -translate-y-1/2 items-center lg:flex",
         workspaceContent ? "absolute" : "fixed",
       )}
-      style={{ right: rightOffset }}
+      style={{ left: leftOffset }}
       onPointerEnter={() => setIsOutlineOpen(true)}
       onPointerLeave={() => {
         setIsOutlineOpen(false);
@@ -328,7 +321,7 @@ export function NotePreviewRail({
     >
       <nav
         aria-label="Note sections"
-        className="flex max-h-[72dvh] w-9 [scrollbar-width:none] flex-col items-end overflow-y-auto py-1 [&::-webkit-scrollbar]:hidden"
+        className="flex max-h-[72dvh] w-9 [scrollbar-width:none] flex-col items-start overflow-y-auto py-1 [&::-webkit-scrollbar]:hidden"
       >
         {sections.map((section, index) => {
           const distance =
@@ -357,7 +350,7 @@ export function NotePreviewRail({
               type="button"
               aria-label={`Go to ${section.label}`}
               aria-current={isActive ? "location" : undefined}
-              className="group flex h-3 w-7 shrink-0 items-center justify-end rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+              className="group flex h-3 w-7 shrink-0 items-center justify-start rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
               onPointerEnter={() => setHoveredIndex(index)}
               onFocus={() => setHoveredIndex(index)}
               onBlur={() => setHoveredIndex(null)}
@@ -378,7 +371,7 @@ export function NotePreviewRail({
                       }
                 }
                 className={cn(
-                  "block h-0.5 w-4.5 origin-right bg-current",
+                  "block h-0.5 w-4.5 origin-left bg-current",
                   isHighlighted
                     ? "text-sidebar-foreground"
                     : "text-sidebar-foreground/35",
@@ -392,14 +385,14 @@ export function NotePreviewRail({
       </nav>
       {isOutlineOpen ? (
         <motion.div
-          initial={shouldReduceMotion ? false : { opacity: 0, x: 4 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, x: -4 }}
           animate={{ opacity: 1, x: 0 }}
           transition={
             shouldReduceMotion
               ? { duration: 0 }
               : { duration: 0.15, ease: "easeOut" }
           }
-          className="absolute top-1/2 right-9 max-h-[40dvh] w-72 -translate-y-1/2 rounded-lg border border-border bg-popover/95 p-1.5 text-popover-foreground shadow-lg backdrop-blur-xl"
+          className="absolute top-1/2 left-9 max-h-[40dvh] w-72 -translate-y-1/2 rounded-lg border border-border bg-popover/95 p-1.5 text-popover-foreground shadow-lg backdrop-blur-xl"
         >
           <ScrollArea
             viewportClassName="h-auto max-h-[calc(40dvh-0.75rem)]"

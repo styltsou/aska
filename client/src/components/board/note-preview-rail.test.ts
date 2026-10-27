@@ -7,20 +7,20 @@ import {
 } from "./note-preview-rail";
 
 describe("shouldShowNotePreviewRail", () => {
-  it("requires at least 2 headings", () => {
-    expect(shouldShowNotePreviewRail(1, 3_000, 1_000)).toBe(false);
+  it("requires at least 1 heading", () => {
+    expect(shouldShowNotePreviewRail(0, 3_000, 1_000)).toBe(false);
   });
 
-  it("hides the rail when most content is already visible", () => {
-    expect(shouldShowNotePreviewRail(2, 1_999, 1_000)).toBe(false);
+  it("hides the rail when overflow is less than a quarter viewport", () => {
+    expect(shouldShowNotePreviewRail(2, 1_249, 1_000)).toBe(false);
   });
 
-  it("shows the rail at 2 viewport heights", () => {
-    expect(shouldShowNotePreviewRail(2, 2_000, 1_000)).toBe(true);
+  it("shows the rail at a quarter viewport of overflow", () => {
+    expect(shouldShowNotePreviewRail(2, 1_250, 1_000)).toBe(true);
   });
 
-  it("shows the rail for long notes with only a few headings", () => {
-    expect(shouldShowNotePreviewRail(3, 4_000, 1_000)).toBe(true);
+  it("shows the rail for a long note with a single section", () => {
+    expect(shouldShowNotePreviewRail(1, 1_500, 1_000)).toBe(true);
   });
 
   it("waits for a measurable viewport", () => {

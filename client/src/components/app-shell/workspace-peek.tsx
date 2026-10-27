@@ -1,5 +1,3 @@
-import "@/components/board/note-workspace.css";
-
 import {
   createContext,
   useCallback,
@@ -25,6 +23,7 @@ import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
 import { NoteSaveStatus } from "@/components/board/note-save-status";
+import { NoteScrollArea } from "@/components/board/note-scroll-area";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import { NoteTitleField } from "@/components/board/note-title-field";
 import { NoteRichText } from "@/components/board/note-rich-text";
@@ -1874,9 +1873,9 @@ function PeekNote({
           </TooltipContent>
         </Tooltip>
       </PeekHeader>
-      <div
-        ref={contentRef}
-        className="note-workspace-scroll-container relative z-10 min-h-0 flex-1 overflow-y-auto rounded-t-xl border-t border-foreground/10 bg-background"
+      <NoteScrollArea
+        viewportRef={contentRef}
+        className="relative z-10 min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background"
       >
         <div className="mx-auto w-full max-w-3xl px-10 pt-0 pb-10 [&_.ProseMirror]:!pt-8">
           <NoteTitleField
@@ -1919,7 +1918,7 @@ function PeekNote({
             }}
           />
         </div>
-      </div>
+      </NoteScrollArea>
     </>
   );
 }
@@ -1950,7 +1949,7 @@ function PeekColor({
       .catch(() => toast.error("Unable to copy color."));
   const results = search.data?.results ?? [];
   return (
-    <div className="note-workspace-scroll-container relative z-10 min-h-0 flex-1 overflow-y-auto rounded-t-xl border-t border-foreground/10 bg-background">
+    <NoteScrollArea className="relative z-10 min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background">
       <div className="mx-auto w-full max-w-4xl px-8 pt-16 pb-8">
         <div
           className="h-52 rounded-xl ring-1 ring-black/8"
@@ -2002,7 +2001,7 @@ function PeekColor({
           )}
         </section>
       </div>
-    </div>
+    </NoteScrollArea>
   );
 }
 
