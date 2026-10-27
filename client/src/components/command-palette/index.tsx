@@ -89,6 +89,13 @@ import { toast } from "sonner";
 
 type PaletteMode = "search" | "commands";
 
+const MODE_SWITCH_EASE = [0.22, 1, 0.36, 1] as const;
+const MODE_SWITCH_VARIANTS = {
+  initial: (direction: number) => ({ opacity: 0, x: direction * 4 }),
+  animate: { opacity: 1, x: 0 },
+  exit: (direction: number) => ({ opacity: 0, x: direction * -4 }),
+};
+
 type CommandId =
   | "new-note"
   | "new-color"
@@ -233,6 +240,8 @@ const COMMAND_ID_BY_LABEL: ReadonlyMap<string, CommandId> = new Map(
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<PaletteMode>("search");
+  const shouldReduceMotion = useReducedMotion();
+  const modeSwitchDirection = mode === "commands" ? 1 : -1;
   const [query, setQuery] = useState("");
   const [activeCommandId, setActiveCommandId] = useState<CommandId>();
   const [createNoteOpen, setCreateNoteOpen] = useState(false);
@@ -578,9 +587,9 @@ export function CommandPalette() {
             ? "Search assets, folders, and collections."
             : "Search app commands and destinations."
         }
-        className="top-[18vh] max-w-xl transition-[opacity,transform] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
+        className="top-[18vh] max-w-[44rem] transition-[opacity,transform] duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none"
       >
-        <DialogBody className="overflow-hidden p-0">
+        <DialogBody className="overflow-hidden bg-background/50 p-0">
           <div className="p-1.5">
             <Command
               shouldFilter={mode === "commands"}
@@ -616,7 +625,11 @@ export function CommandPalette() {
                     isSearching={workspaceSearch.isSearching}
                   />
                 }
-                startAddonClassName={mode === "commands" ? "w-[70px]" : "w-7"}
+                startAddonClassName={
+                  mode === "commands"
+                    ? "w-[70px] transition-none"
+                    : "w-7 transition-none"
+                }
                 placeholder={
                   mode === "search"
                     ? "Search notes, images, links, colors…"
@@ -654,110 +667,135 @@ export function CommandPalette() {
                   }
                 }}
               />
-              <CommandList className="max-h-96">
-                {mode === "search" ? (
-                  <WorkspaceSearchResults
-                    query={query}
-                    results={searchResults}
-                    isLoading={
-                      workspaceSearch.isLoading || workspaceSearch.isSearching
+              <CommandList className="relative max-h-[min(28rem,55vh)]">
+                <AnimatePresence
+                  initial={false}
+                  mode="popLayout"
+                  custom={modeSwitchDirection}
+                >
+                  <motion.div
+                    key={mode}
+                    className="w-full"
+                    custom={modeSwitchDirection}
+                    variants={MODE_SWITCH_VARIANTS}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={
+                      shouldReduceMotion
+                        ? { duration: 0 }
+                        : { duration: 0.1, ease: MODE_SWITCH_EASE }
                     }
-                    isError={workspaceSearch.isError}
-                    onSelect={runSearchResult}
-                  />
-                ) : (
-                  <>
-                    <CommandEmpty>No commands found.</CommandEmpty>
-                    {COMMAND_GROUPS.map((group) => ({
-                      heading: group.heading,
-                      items: group.items.filter(
-                        (item) =>
-                          (item.id !== "toggle-filter-bar" ||
-                            Boolean(filterScope)) &&
-                          (item.id !== "new-note" || canCreateNote) &&
-                          (item.id !== "new-color" || canCreateColor) &&
-                          (item.id !== "new-folder" || canCreateFolder) &&
-                          (item.id !== "upload-media" || canUploadMedia) &&
-                          (item.id !== "toggle-collection-view" ||
-                            canToggleCollectionView) &&
-                          (item.id !== "toggle-alignment-guides" ||
-                            canToggleAlignmentGuides) &&
-                          (item.id !== "toggle-board-action-rail" ||
-                            canToggleBoardActionRail) &&
-                          (item.id !== "open-pexels-browser" ||
-                            canCreateFolder),
-                      ),
-                    }))
-                      .filter((group) => group.items.length > 0)
-                      .map((group, index) => (
-                        <div key={group.heading}>
-                          {index > 0 ? <CommandSeparator /> : null}
-                          <CommandGroup heading={group.heading}>
-                            {group.items.map((item) => {
-                              const Icon =
-                                item.id === "toggle-collection-view"
-                                  ? collectionView === "canvas"
-                                    ? LayoutGridIcon
-                                    : PanelsTopLeftIcon
-                                  : item.icon;
-                              const label =
-                                item.id === "change-theme"
-                                  ? theme === "dark"
-                                    ? "Switch to light mode"
-                                    : "Switch to dark mode"
-                                  : item.id === "toggle-collection-view"
-                                    ? collectionView === "canvas"
-                                      ? "Switch to grid view"
-                                      : "Switch to canvas view"
-                                    : item.id === "toggle-board-action-rail"
-                                      ? isBoardActionRailVisible
-                                        ? "Hide actions dock"
-                                        : "Show actions dock"
-                                      : item.id === "toggle-alignment-guides"
-                                        ? areAlignmentGuidesEnabled
-                                          ? "Hide alignment guides"
-                                          : "Show alignment guides"
-                                        : item.id === "toggle-filter-bar"
-                                          ? isFilterBarOpen
-                                            ? "Hide filter bar"
-                                            : "Show filter bar"
-                                          : item.id === "toggle-sidebar"
-                                            ? isSidebarOpen
-                                              ? "Hide sidebar"
-                                              : "Show sidebar"
-                                            : item.label;
+                  >
+                    {mode === "search" ? (
+                      <WorkspaceSearchResults
+                        query={query}
+                        results={searchResults}
+                        isLoading={
+                          workspaceSearch.isLoading ||
+                          workspaceSearch.isSearching
+                        }
+                        isError={workspaceSearch.isError}
+                        onSelect={runSearchResult}
+                      />
+                    ) : (
+                      <>
+                        <CommandEmpty>No commands found.</CommandEmpty>
+                        {COMMAND_GROUPS.map((group) => ({
+                          heading: group.heading,
+                          items: group.items.filter(
+                            (item) =>
+                              (item.id !== "toggle-filter-bar" ||
+                                Boolean(filterScope)) &&
+                              (item.id !== "new-note" || canCreateNote) &&
+                              (item.id !== "new-color" || canCreateColor) &&
+                              (item.id !== "new-folder" || canCreateFolder) &&
+                              (item.id !== "upload-media" || canUploadMedia) &&
+                              (item.id !== "toggle-collection-view" ||
+                                canToggleCollectionView) &&
+                              (item.id !== "toggle-alignment-guides" ||
+                                canToggleAlignmentGuides) &&
+                              (item.id !== "toggle-board-action-rail" ||
+                                canToggleBoardActionRail) &&
+                              (item.id !== "open-pexels-browser" ||
+                                canCreateFolder),
+                          ),
+                        }))
+                          .filter((group) => group.items.length > 0)
+                          .map((group, index) => (
+                            <div key={group.heading}>
+                              {index > 0 ? <CommandSeparator /> : null}
+                              <CommandGroup heading={group.heading}>
+                                {group.items.map((item) => {
+                                  const Icon =
+                                    item.id === "toggle-collection-view"
+                                      ? collectionView === "canvas"
+                                        ? LayoutGridIcon
+                                        : PanelsTopLeftIcon
+                                      : item.icon;
+                                  const label =
+                                    item.id === "change-theme"
+                                      ? theme === "dark"
+                                        ? "Switch to light mode"
+                                        : "Switch to dark mode"
+                                      : item.id === "toggle-collection-view"
+                                        ? collectionView === "canvas"
+                                          ? "Switch to grid view"
+                                          : "Switch to canvas view"
+                                        : item.id === "toggle-board-action-rail"
+                                          ? isBoardActionRailVisible
+                                            ? "Hide actions dock"
+                                            : "Show actions dock"
+                                          : item.id ===
+                                              "toggle-alignment-guides"
+                                            ? areAlignmentGuidesEnabled
+                                              ? "Hide alignment guides"
+                                              : "Show alignment guides"
+                                            : item.id === "toggle-filter-bar"
+                                              ? isFilterBarOpen
+                                                ? "Hide filter bar"
+                                                : "Show filter bar"
+                                              : item.id === "toggle-sidebar"
+                                                ? isSidebarOpen
+                                                  ? "Hide sidebar"
+                                                  : "Show sidebar"
+                                                : item.label;
 
-                              return (
-                                <CommandItem
-                                  key={item.id}
-                                  value={item.label}
-                                  onSelect={() => runCommand(item.id)}
-                                >
-                                  <Icon className="size-4" />
-                                  <span>{label}</span>
-                                  {item.shortcut ? (
-                                    <CommandShortcut>
-                                      {formatPlatformShortcut(item.shortcut)}
-                                    </CommandShortcut>
-                                  ) : null}
-                                </CommandItem>
-                              );
-                            })}
-                          </CommandGroup>
-                        </div>
-                      ))}
-                  </>
-                )}
+                                  return (
+                                    <CommandItem
+                                      key={item.id}
+                                      value={item.label}
+                                      onSelect={() => runCommand(item.id)}
+                                    >
+                                      <Icon className="size-4" />
+                                      <span>{label}</span>
+                                      {item.shortcut ? (
+                                        <CommandShortcut>
+                                          {formatPlatformShortcut(
+                                            item.shortcut,
+                                          )}
+                                        </CommandShortcut>
+                                      ) : null}
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </div>
+                          ))}
+                      </>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
               </CommandList>
             </Command>
           </div>
         </DialogBody>
-        <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-[10px] leading-4 text-muted-foreground sm:pr-[18px] sm:pl-[10px]">
+        <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 p-1.5 text-xs leading-4 text-muted-foreground sm:pr-[18px] sm:pl-[10px]">
           {mode === "search" ? (
             <span className="inline-flex items-center gap-1">
               <Kbd
                 variant="solid"
-                className="h-4 min-w-fit px-1 text-[10px] text-muted-foreground"
+                className="h-4 min-w-fit px-1 text-muted-foreground"
               >
                 Tab
               </Kbd>
@@ -767,7 +805,7 @@ export function CommandPalette() {
             <span className="inline-flex items-center gap-1">
               <Kbd
                 variant="solid"
-                className="h-4 min-w-fit px-1 text-[10px] text-muted-foreground"
+                className="h-4 min-w-fit px-1 text-muted-foreground"
               >
                 Tab
               </Kbd>
@@ -775,7 +813,7 @@ export function CommandPalette() {
               <Kbd
                 variant="solid"
                 aria-label="Backspace"
-                className="h-4 min-w-fit px-1 text-[10px] text-muted-foreground"
+                className="h-4 min-w-fit px-1 text-muted-foreground"
               >
                 <DeleteIcon aria-hidden="true" />
               </Kbd>
@@ -787,7 +825,7 @@ export function CommandPalette() {
               <KbdGroup className="gap-0.5">
                 <Kbd
                   variant="solid"
-                  className="h-4 min-w-fit px-1 text-[10px] text-muted-foreground"
+                  className="h-4 min-w-fit px-1 text-muted-foreground"
                 >
                   Shift
                 </Kbd>
@@ -795,7 +833,7 @@ export function CommandPalette() {
                 <Kbd
                   variant="solid"
                   aria-label="Enter"
-                  className="h-4 min-w-4 px-0.5 text-[10px] text-muted-foreground"
+                  className="h-4 min-w-4 px-0.5 text-muted-foreground"
                 >
                   <CornerDownLeftIcon aria-hidden="true" />
                 </Kbd>
@@ -807,13 +845,13 @@ export function CommandPalette() {
             <KbdGroup className="gap-0.5">
               <Kbd
                 variant="solid"
-                className="h-4 w-4 min-w-4 p-0 text-[10px] text-muted-foreground"
+                className="h-4 w-4 min-w-4 p-0 text-muted-foreground"
               >
                 <ArrowUpIcon className="size-3 translate-x-px" />
               </Kbd>
               <Kbd
                 variant="solid"
-                className="h-4 w-4 min-w-4 p-0 text-[10px] text-muted-foreground"
+                className="h-4 w-4 min-w-4 p-0 text-muted-foreground"
               >
                 <ArrowDownIcon className="size-3 translate-x-px" />
               </Kbd>
@@ -823,7 +861,7 @@ export function CommandPalette() {
           <span className="inline-flex items-center gap-1">
             <Kbd
               variant="solid"
-              className="h-4 min-w-4 px-0.5 text-[10px] text-muted-foreground"
+              className="h-4 min-w-4 px-0.5 text-muted-foreground"
             >
               <CornerDownLeftIcon />
             </Kbd>
@@ -884,32 +922,12 @@ function CommandInputLeadingContent({
   mode: PaletteMode;
   isSearching: boolean;
 }) {
-  const shouldReduceMotion = useReducedMotion();
-  const transition = shouldReduceMotion
-    ? { duration: 0 }
-    : { duration: 0.06, ease: [0.16, 1, 0.3, 1] as const };
-
-  return (
-    <AnimatePresence initial={false} mode="wait">
-      {mode === "commands" ? (
-        <motion.span
-          key="actions"
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -2 }}
-          initial={{ opacity: 0, x: -2 }}
-          transition={transition}
-        >
-          <ActionsModePill />
-        </motion.span>
-      ) : (
-        <span
-          key="search"
-          className="flex size-3.5 items-center justify-center"
-        >
-          <WorkspaceSearchInputIndicator isSearching={isSearching} />
-        </span>
-      )}
-    </AnimatePresence>
+  return mode === "commands" ? (
+    <ActionsModePill />
+  ) : (
+    <span className="flex size-3.5 items-center justify-center">
+      <WorkspaceSearchInputIndicator isSearching={isSearching} />
+    </span>
   );
 }
 
