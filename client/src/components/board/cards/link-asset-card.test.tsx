@@ -107,7 +107,7 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("A channel");
   });
 
-  it("keeps links and timestamps in a YouTube card preview non-interactive", () => {
+  it("omits the description from YouTube cards", () => {
     const html = renderToStaticMarkup(
       <LinkAssetCard
         asset={{
@@ -119,14 +119,10 @@ describe("LinkAssetCard", () => {
       />,
     );
 
-    expect(html).toContain("Watch at ");
-    expect(html).toContain("1:23");
-    expect(html).toContain("1:02:03");
-    expect(html).toContain("https://example.com");
-    expect(html).toContain("#research");
-    expect(html).not.toContain('href="https://www.youtube.com/watch');
-    expect(html).not.toContain('href="https://example.com"');
-    expect(html).toContain("font-semibold text-primary/90");
+    expect(html).toContain("A video");
+    expect(html).toContain("A channel");
+    expect(html).not.toContain("Watch at ");
+    expect(html).not.toContain("https://example.com");
   });
 
   it("keeps an ordinary link card as an external anchor", () => {
@@ -218,7 +214,7 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("aspect-video w-full");
     expect(html).toContain("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
     expect(html).not.toContain('data-slot="optimistic-link-preview"');
-    expect(html).toContain('aria-label="Loading video description"');
+    expect(html).not.toContain('aria-label="Loading video description"');
     expect(html).toContain("group-hover:scale-[1.05]");
     expect(html).toContain("!transition-transform");
     expect(html).not.toContain("!transition-none");
@@ -331,6 +327,27 @@ describe("LinkCardPreview", () => {
       "aspect-video w-full shrink-0 overflow-hidden rounded-b-lg",
     );
     expect(html).not.toContain("scale(");
+  });
+
+  it("omits YouTube descriptions from folder and collection previews", () => {
+    for (const variant of ["default", "collection"] as const) {
+      const html = renderToStaticMarkup(
+        <LinkCardPreview
+          variant={variant}
+          preview={{
+            videoId: "dQw4w9WgXcQ",
+            title: "A video",
+            channelName: "A channel",
+            channelAvatarUrl: "https://example.com/avatar.jpg",
+            description: "A video description",
+          }}
+        />,
+      );
+      expect(html).toContain("A video");
+      expect(html).toContain("A channel");
+      expect(html).toContain("https://example.com/avatar.jpg");
+      expect(html).not.toContain("A video description");
+    }
   });
 
   it("renders the title, description, and site footer at natural card sizes", () => {

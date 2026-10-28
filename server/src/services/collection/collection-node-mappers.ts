@@ -71,6 +71,7 @@ export function toFolderPreview(
 
   if (row.assetType === "link" && row.hostname) {
     const media = row.resourceId ? linkMedia?.get(row.resourceId) : undefined;
+    const videoId = toPreviewVideoId(row.providerExtensions);
     return {
       assetId: `link-${row.assetId}`,
       type: "link",
@@ -80,9 +81,9 @@ export function toFolderPreview(
       url: media?.previewImage?.url,
       blurDataURL: media?.previewImage?.blurDataURL,
       favicon: media?.favicon?.url,
-      videoId: toPreviewVideoId(row.providerExtensions),
+      videoId,
       ...toPreviewYouTubeMetadata(row.providerExtensions),
-      description: row.description ?? null,
+      description: videoId ? null : (row.description ?? null),
     };
   }
 

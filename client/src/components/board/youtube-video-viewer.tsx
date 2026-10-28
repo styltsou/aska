@@ -6,12 +6,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import {
-  ExternalLinkIcon,
-  LocateFixedIcon,
-  PanelRightIcon,
-  XIcon,
-} from "lucide-react";
+import { LocateFixedIcon, PanelRightIcon, XIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 
@@ -56,6 +51,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 import type { AssetLocation } from "@/api/collection";
 import { YouTubeDescription } from "@/components/board/youtube-description";
+import { ChannelAvatar } from "@/components/board/cards/link-asset-card";
 import { createYouTubePlayerSeekController } from "@/components/board/youtube-player-seek";
 import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
 import { formatNoteHeaderEditTime } from "@/lib/note-date-format";
@@ -1043,17 +1039,20 @@ function VideoViewerMetadata({
               large && "text-base!",
             )}
           >
+            <ChannelAvatar src={asset.video.channelAvatarUrl} />
             {channelName}
-            <ExternalLinkIcon className={cn("size-3.5", large && "size-4!")} />
             <span className="sr-only">Opens channel in a new tab</span>
           </a>
         ) : (
           <p
             className={cn(
-              "text-sm font-medium text-muted-foreground",
+              "inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground",
               large && "text-base!",
             )}
           >
+            {asset.video.channelName ? (
+              <ChannelAvatar src={asset.video.channelAvatarUrl} />
+            ) : null}
             {channelName}
           </p>
         )}

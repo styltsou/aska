@@ -2,7 +2,6 @@ import { Globe2Icon, ImageOffIcon, UserRoundIcon } from "lucide-react";
 import { useState, type ComponentProps, type MouseEvent } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
-import { YouTubeDescription } from "@/components/board/youtube-description";
 import { hasSelectionModifier } from "@/lib/selection";
 import { isYouTubeVideoUrl } from "@/lib/youtube-url";
 import { cn } from "@/lib/utils";
@@ -123,7 +122,7 @@ function YouTubePlayMark({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function ChannelAvatar({
+export function ChannelAvatar({
   src,
   compact = false,
 }: {
@@ -205,7 +204,6 @@ export function LinkAssetCard({
       asset.resolutionStatus === "resolving");
   const isYoutubeMetadataLoading =
     isOptimisticYoutube && optimisticYoutube?.metadataStatus === "loading";
-  const isYoutubeDescriptionLoading = isOptimisticYoutube && !asset.description;
   const channelName =
     asset.video?.channelName ?? optimisticYoutube?.channelName;
 
@@ -281,33 +279,16 @@ export function LinkAssetCard({
             <span className="h-3.5 w-28 animate-pulse rounded bg-sidebar-foreground/10" />
           </div>
         ) : isYoutube && channelName ? (
-          <div className={LINK_CARD_META_CLASS}>
+          <div className={cn(LINK_CARD_META_CLASS, "pt-0.5")}>
             <ChannelAvatar src={asset.video?.channelAvatarUrl} />
             <span className="min-w-0 truncate">{channelName}</span>
           </div>
         ) : null}
-        {asset.description ? (
-          youtubeVideoId ? (
-            <YouTubeDescription
-              description={asset.description}
-              videoId={youtubeVideoId}
-              interactive={false}
-              className="line-clamp-2 text-xs leading-relaxed whitespace-pre-line text-sidebar-foreground/60"
-            />
-          ) : (
-            <p className="line-clamp-2 text-xs leading-relaxed whitespace-pre-line text-sidebar-foreground/60">
-              {asset.description}
-            </p>
-          )
-        ) : isYoutubeDescriptionLoading ? (
-          <div
-            className="space-y-1.5 pt-1"
-            aria-label="Loading video description"
-          >
-            <div className="h-2.5 w-full animate-pulse rounded bg-sidebar-foreground/10" />
-            <div className="h-2.5 w-4/5 animate-pulse rounded bg-sidebar-foreground/10" />
-          </div>
-        ) : asset.resolutionStatus === "failed" ? (
+        {!isYoutube && asset.description ? (
+          <p className="line-clamp-2 text-xs leading-relaxed whitespace-pre-line text-sidebar-foreground/60">
+            {asset.description}
+          </p>
+        ) : !isYoutube && asset.resolutionStatus === "failed" ? (
           <p className="text-xs text-sidebar-foreground/60">
             The link still works
           </p>
@@ -453,36 +434,22 @@ export function LinkCardPreview({
           {displayTitle}
         </div>
         {isYoutube && preview.channelName?.trim() ? (
-          <div className="flex min-w-0 shrink-0 items-center gap-1.5 text-[11px] leading-4 text-sidebar-foreground/65">
+          <div className="flex min-w-0 shrink-0 items-center gap-1.5 pt-0.5 text-[11px] leading-4 text-sidebar-foreground/65">
             <ChannelAvatar src={preview.channelAvatarUrl} compact={compact} />
             <span className="min-w-0 truncate">{preview.channelName}</span>
           </div>
         ) : null}
-        {preview.description?.trim() ? (
-          preview.videoId ? (
-            <YouTubeDescription
-              description={preview.description.trim()}
-              videoId={preview.videoId}
-              interactive={false}
-              className={cn(
-                "text-muted-foreground",
-                compact
-                  ? "line-clamp-3 text-[11px] leading-snug whitespace-pre-line"
-                  : "line-clamp-3 text-xs leading-snug whitespace-pre-line",
-              )}
-            />
-          ) : (
-            <div
-              className={cn(
-                "text-muted-foreground",
-                compact
-                  ? "line-clamp-3 text-[11px] leading-snug whitespace-pre-line"
-                  : "line-clamp-3 text-xs leading-snug whitespace-pre-line",
-              )}
-            >
-              {preview.description.trim()}
-            </div>
-          )
+        {!isYoutube && preview.description?.trim() ? (
+          <div
+            className={cn(
+              "text-muted-foreground",
+              compact
+                ? "line-clamp-3 text-[11px] leading-snug whitespace-pre-line"
+                : "line-clamp-3 text-xs leading-snug whitespace-pre-line",
+            )}
+          >
+            {preview.description.trim()}
+          </div>
         ) : null}
       </div>
     </div>

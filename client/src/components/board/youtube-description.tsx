@@ -119,14 +119,12 @@ export function YouTubeDescription({
   videoId,
   className,
   ref,
-  interactive = true,
   onTimestampSeek,
 }: {
   description: string;
   videoId: string;
   className?: string;
   ref?: Ref<HTMLParagraphElement>;
-  interactive?: boolean;
   onTimestampSeek?: (seconds: number) => boolean;
 }) {
   const segments = parseYouTubeDescription(description);
@@ -136,16 +134,8 @@ export function YouTubeDescription({
     }
 
     if (segment.type === "link") {
-      const linkClassName = interactive
-        ? "text-muted-foreground underline decoration-current/40 underline-offset-2 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:text-foreground hover:decoration-current motion-reduce:transition-none"
-        : "underline decoration-current/40 underline-offset-2";
-      if (!interactive) {
-        return (
-          <span key={`${index}-${segment.value}`} className={linkClassName}>
-            {segment.value}
-          </span>
-        );
-      }
+      const linkClassName =
+        "text-muted-foreground underline decoration-current/40 underline-offset-2 transition-colors duration-100 ease-[cubic-bezier(0.16,1,0.3,1)] hover:text-foreground hover:decoration-current motion-reduce:transition-none";
       return (
         <a
           key={`${index}-${segment.value}`}
@@ -173,14 +163,6 @@ export function YouTubeDescription({
 
     const timestampClassName =
       "font-medium text-foreground underline decoration-current/40 underline-offset-2 hover:decoration-current";
-    if (!interactive) {
-      return (
-        <span key={`${index}-${segment.value}`} className={timestampClassName}>
-          {segment.value}
-        </span>
-      );
-    }
-
     return (
       <a
         key={`${index}-${segment.value}`}

@@ -55,7 +55,7 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
       videoId: node.video?.videoId,
       channelName: node.video?.channelName,
       channelAvatarUrl: node.video?.channelAvatarUrl,
-      description: node.description ?? null,
+      description: node.video?.videoId ? null : (node.description ?? null),
     };
   }
 

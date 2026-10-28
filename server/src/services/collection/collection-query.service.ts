@@ -294,6 +294,7 @@ export class CollectionQueryService {
         const media = row.linkResourceId
           ? resourceMedia.get(row.linkResourceId)
           : undefined;
+        const videoId = toPreviewVideoId(row.linkProviderExtensions);
         preview = {
           assetId: `link-${row.assetId}`,
           type: "link",
@@ -303,9 +304,9 @@ export class CollectionQueryService {
           url: media?.previewImage?.url,
           blurDataURL: media?.previewImage?.blurDataURL,
           favicon: media?.favicon?.url,
-          videoId: toPreviewVideoId(row.linkProviderExtensions),
+          videoId,
           ...toPreviewYouTubeMetadata(row.linkProviderExtensions),
-          description: row.linkDescription,
+          description: videoId ? null : row.linkDescription,
         };
       } else if (
         row.assetType === "color" &&

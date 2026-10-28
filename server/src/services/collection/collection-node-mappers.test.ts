@@ -131,6 +131,7 @@ describe("collection node mappers", () => {
           content: null,
           hostname: "www.youtube.com",
           assetTitle: "Some video title",
+          description: "A video description",
           resourceId: 5,
           providerExtensions: {
             youtube: { videoId: "dQw4w9WgXcQ" },
