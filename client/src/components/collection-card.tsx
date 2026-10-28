@@ -455,7 +455,6 @@ function CollectionPreviewCard({
           <NoteMiniature
             content={preview.snippet ?? ""}
             title={preview.title}
-            size="collection"
             mentionColors={preview.mentionColors}
           />
         </div>

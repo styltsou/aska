@@ -771,7 +771,8 @@ export function NoteAssetCard({
             <NoteMarkdown
               content={asset.content}
               title={asset.title}
-              className="min-w-0"
+              compact
+              className="min-w-0 [&_.note-card-preview-title]:text-[1.1875rem]"
               mentionColors={asset.mentionColors}
             />
           </div>
