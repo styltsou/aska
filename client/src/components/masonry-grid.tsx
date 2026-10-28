@@ -9,18 +9,9 @@ import {
 } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
+import { columnsForGrid, GRID_GAP, type GridDensity } from "./grid-density";
 
-export const MASONRY_GAP = 10;
-
-/** Minimum comfortable width for a single card before dropping a column. */
-const MIN_COLUMN_WIDTH = 260;
-
-function columnCountFor(width: number): number {
-  const raw = Math.floor(
-    (width + MASONRY_GAP) / (MIN_COLUMN_WIDTH + MASONRY_GAP),
-  );
-  return Math.max(1, Math.min(6, raw));
-}
+export const MASONRY_GAP = GRID_GAP;
 
 type Item = { node: ReactNode; key: string };
 export type MasonryPosition = { x: number; y: number; width: number };
@@ -29,14 +20,19 @@ export function calculateMasonryLayout(
   heights: readonly number[],
   columns: number,
   itemWidth: number,
+  previousColumns?: readonly number[],
 ): { positions: MasonryPosition[]; height: number } | undefined {
   if (!columns || !heights.length || heights.some((height) => height <= 0)) {
     return undefined;
   }
 
   const columnHeights = Array<number>(columns).fill(0);
-  const positions = heights.map((height) => {
-    const column = columnHeights.indexOf(Math.min(...columnHeights));
+  const positions = heights.map((height, index) => {
+    const previous = previousColumns?.[index];
+    const column =
+      previous !== undefined && previous >= 0 && previous < columns
+        ? previous
+        : columnHeights.indexOf(Math.min(...columnHeights));
     const position = {
       x: column * (itemWidth + MASONRY_GAP),
       y: columnHeights[column]!,
@@ -73,13 +69,18 @@ function layoutsEqual(
 export function Masonry({
   children,
   className,
+  width,
+  density,
 }: {
   children: ReactNode;
   className?: string;
+  width?: number;
+  density?: GridDensity;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [measuredWidth, setMeasuredWidth] = useState(0);
+  const effectiveWidth = width ?? measuredWidth;
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [width, setWidth] = useState(0);
   const items = useMemo<Item[]>(
     () =>
       Children.toArray(children).map((node, index) => ({
@@ -95,49 +96,63 @@ export function Masonry({
     positions: MasonryPosition[];
     height: number;
     width: number;
+    columns: number;
     keys: string[];
-  }>({ positions: [], height: 0, width: 0, keys: [] });
+  }>({ positions: [], height: 0, width: 0, columns: 0, keys: [] });
 
-  const columns = width ? columnCountFor(width) : 0;
+  const columns = columnsForGrid(effectiveWidth, density ?? "balanced");
   const itemWidth = columns
-    ? Math.max(0, (width - MASONRY_GAP * (columns - 1)) / columns)
+    ? Math.max(0, (effectiveWidth - MASONRY_GAP * (columns - 1)) / columns)
     : 0;
 
   const measure = useCallback(() => {
-    const nextWidth = containerRef.current?.clientWidth ?? 0;
-    if (nextWidth !== width) {
-      setWidth(nextWidth);
-      return;
-    }
-    if (!nextWidth || !items.length) return;
+    if (!effectiveWidth || !items.length) return;
 
     const heights = itemRefs.current
       .slice(0, items.length)
       .map((el) => el?.offsetHeight ?? 0);
-    const next = calculateMasonryLayout(heights, columns, itemWidth);
-    if (!next) return;
-
-    setLayout((current) =>
-      current.width === width &&
-      current.keys.length === items.length &&
-      current.keys.every((key, index) => key === items[index]?.key) &&
-      layoutsEqual(
-        current.positions,
-        next.positions,
-        current.height,
-        next.height,
-      )
+    setLayout((current) => {
+      const previousColumns =
+        current.columns === columns &&
+        current.keys.every((key, index) => key === items[index]?.key)
+          ? current.positions.map((position) =>
+              Math.round(
+                position.x / (current.positions[0]!.width + MASONRY_GAP),
+              ),
+            )
+          : undefined;
+      const next = calculateMasonryLayout(
+        heights,
+        columns,
+        itemWidth,
+        previousColumns,
+      );
+      if (!next) return current;
+      return current.width === effectiveWidth &&
+        current.keys.length === items.length &&
+        current.keys.every((key, index) => key === items[index]?.key) &&
+        layoutsEqual(
+          current.positions,
+          next.positions,
+          current.height,
+          next.height,
+        )
         ? current
         : {
             ...next,
-            width,
+            width: effectiveWidth,
+            columns,
             keys: items.map((item) => item.key),
-          },
-    );
-  }, [columns, itemWidth, items, width]);
+          };
+    });
+  }, [columns, itemWidth, items, effectiveWidth]);
 
   // Measure a new set of cards before paint so they never appear stacked at (0, 0).
   useIsomorphicLayoutEffect(measure);
+  useIsomorphicLayoutEffect(() => {
+    if (width === undefined)
+      setMeasuredWidth(containerRef.current?.clientWidth ?? 0);
+  });
 
   const frameRef = useRef<number | undefined>(undefined);
 
@@ -146,6 +161,9 @@ export function Masonry({
     const observer =
       typeof ResizeObserver !== "undefined"
         ? new ResizeObserver(() => {
+            if (width === undefined) {
+              setMeasuredWidth(containerRef.current?.clientWidth ?? 0);
+            }
             if (frameRef.current !== undefined) return;
             frameRef.current = requestAnimationFrame(() => {
               frameRef.current = undefined;
@@ -153,7 +171,8 @@ export function Masonry({
             });
           })
         : null;
-    if (containerRef.current) observer?.observe(containerRef.current);
+    if (width === undefined && containerRef.current)
+      observer?.observe(containerRef.current);
     nodes.forEach((el) => observer?.observe(el));
     return () => {
       observer?.disconnect();
@@ -162,22 +181,20 @@ export function Masonry({
         frameRef.current = undefined;
       }
     };
-  }, [items, measure]);
+  }, [items, measure, width]);
 
-  const isReady =
-    width > 0 &&
-    layout.width === width &&
-    layout.keys.length === items.length &&
-    layout.keys.every((key, index) => key === items[index]?.key);
+  // Appending a page should not hide cards that already have valid positions.
+  const hasLayout = layout.positions.length > 0;
 
   return (
     <div
       ref={containerRef}
       className={`relative w-full ${className ?? ""}`}
-      style={isReady ? { height: layout.height } : { visibility: "hidden" }}
+      style={hasLayout ? { height: layout.height } : { visibility: "hidden" }}
     >
       {items.map((item, index) => {
-        const pos = isReady ? layout.positions[index] : undefined;
+        const pos =
+          layout.keys[index] === item.key ? layout.positions[index] : undefined;
         return (
           <div
             key={item.key}
@@ -191,7 +208,7 @@ export function Masonry({
                     width: pos.width,
                     transform: `translate(${pos.x}px, ${pos.y}px)`,
                   } satisfies CSSProperties)
-                : { width: itemWidth || "100%" }
+                : { width: itemWidth || "100%", visibility: "hidden" }
             }
           >
             {item.node}

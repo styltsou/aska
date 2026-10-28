@@ -26,7 +26,13 @@ import {
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
 import { MoveToDialog } from "@/components/move-to-dialog";
 import { Masonry } from "@/components/masonry-grid";
+import {
+  columnsForGrid,
+  GRID_DENSITIES,
+  type GridDensity,
+} from "@/components/grid-density";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { sortCollectionNodesByMostRecent } from "@/lib/collection-node-order";
 import {
@@ -102,7 +108,14 @@ export function CollectionGridView({
 }: CollectionGridViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [contentWidth, setContentWidth] = useState(0);
+  const [density, setDensity] = useState<GridDensity>(() => {
+    if (typeof window === "undefined") return "balanced";
+    const saved = window.localStorage.getItem("aska:grid-density");
+    return saved === "spacious" || saved === "compact" ? saved : "balanced";
+  });
   const [visibleAssetCount, setVisibleAssetCount] =
     useState(INITIAL_ASSET_COUNT);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
@@ -170,8 +183,23 @@ export function CollectionGridView({
     onReplace: (nodeIds) => replaceSelection(boardKey, nodeIds),
     shouldStart: (event) =>
       !(event.target instanceof Element) ||
-      !event.target.closest("[data-selection-node-id]"),
+      !event.target.closest("[data-selection-node-id], [data-grid-control]"),
   });
+
+  useIsomorphicLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+    const update = () => setContentWidth(content.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [folders.length, assets.length]);
+
+  const setGridDensity = (next: GridDensity) => {
+    setDensity(next);
+    window.localStorage.setItem("aska:grid-density", next);
+  };
 
   useDragDropMonitor({
     onDragStart(event) {
@@ -394,7 +422,7 @@ export function CollectionGridView({
               </div>
             </div>
           ) : (
-            <div className="w-full space-y-10">
+            <div ref={contentRef} className="w-full space-y-10">
               {folders.length > 0 ? (
                 <section aria-labelledby="grid-folders-title">
                   <div className="mb-3 flex items-baseline gap-2">
@@ -408,14 +436,19 @@ export function CollectionGridView({
                       {folders.length}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                  <div
+                    className="grid gap-[10px]"
+                    style={{
+                      gridTemplateColumns: `repeat(${columnsForGrid(contentWidth, density) || 1}, minmax(0, 1fr))`,
+                    }}
+                  >
                     {folders.map(renderCard)}
                   </div>
                 </section>
               ) : null}
 
               <section aria-labelledby="grid-assets-title">
-                <div className="mb-3 flex items-baseline gap-2">
+                <div className="mb-3 flex items-center gap-2">
                   <h2
                     id="grid-assets-title"
                     className="text-xs font-semibold tracking-wide text-foreground/80 uppercase"
@@ -425,10 +458,42 @@ export function CollectionGridView({
                   <span className="text-xs text-muted-foreground tabular-nums">
                     {assets.length}
                   </span>
+                  <div
+                    data-grid-control
+                    className="ml-auto flex items-center rounded-lg border border-border/70 bg-background/80 p-0.5"
+                    role="group"
+                    aria-label="Grid size"
+                  >
+                    {(
+                      Object.entries(GRID_DENSITIES) as [
+                        GridDensity,
+                        (typeof GRID_DENSITIES)[GridDensity],
+                      ][]
+                    ).map(([value, preset]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        aria-pressed={density === value}
+                        onClick={() => setGridDensity(value)}
+                        className={cn(
+                          "rounded-md px-2.5 py-1 text-xs transition-colors",
+                          density === value
+                            ? "bg-foreground text-background shadow-sm"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 {assets.length > 0 ? (
                   <>
-                    <Masonry className="min-w-0">
+                    <Masonry
+                      className="min-w-0"
+                      width={contentWidth}
+                      density={density}
+                    >
                       {visibleAssets.map(renderCard)}
                     </Masonry>
                     <div

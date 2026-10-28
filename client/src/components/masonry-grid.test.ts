@@ -19,4 +19,18 @@ describe("calculateMasonryLayout", () => {
     expect(calculateMasonryLayout([100, 0], 2, 300)).toBeUndefined();
     expect(calculateMasonryLayout([], 2, 300)).toBeUndefined();
   });
+
+  it("keeps existing cards in their columns after card heights change", () => {
+    const initial = calculateMasonryLayout([100, 200, 80, 120], 2, 300)!;
+    const columns = initial.positions.map((position) => position.x / 310);
+    const resized = calculateMasonryLayout(
+      [300, 200, 80, 120],
+      2,
+      280,
+      columns,
+    )!;
+    expect(resized.positions.map((position) => position.x / 290)).toEqual(
+      columns,
+    );
+  });
 });
