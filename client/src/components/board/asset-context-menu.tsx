@@ -50,7 +50,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { getPexelsBrowserScope, useSessionStore } from "@/store";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isYouTubeVideoUrl } from "@/lib/youtube-url";
-import { apiUrl } from "@/lib/api";
+import { downloadAssetOriginal } from "@/lib/asset-download";
 import { clearDeletedNoteDrafts } from "@/lib/note-edit-draft";
 
 type ImagePrefetch = {
@@ -564,15 +564,7 @@ export function AssetContextMenu({
                   </ContextMenuItem>
                   {asset.url && workspaceSlug ? (
                     <ContextMenuItem
-                      onClick={() =>
-                        window.open(
-                          apiUrl(
-                            `/api/v1/workspace/${encodeURIComponent(workspaceSlug)}/assets/${encodeURIComponent(asset.id)}/download`,
-                          ),
-                          "_blank",
-                          "noopener",
-                        )
-                      }
+                      onClick={() => void downloadAssetOriginal(workspaceSlug, asset)}
                     >
                       Download original
                     </ContextMenuItem>

@@ -50,7 +50,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { apiPatch, apiUrl } from "@/lib/api";
+import { apiPatch } from "@/lib/api";
+import { downloadAssetOriginal } from "@/lib/asset-download";
 import { cn } from "@/lib/utils";
 import { consumeVideoPlaybackPosition } from "@/lib/video-playback-position";
 import { useVideoUploadPreview } from "@/lib/video-upload-preview";
@@ -132,13 +133,7 @@ export function VideoAssetViewer({
     : "Loading video details.";
   const handleDownload = useCallback(() => {
     if (!displayedAsset) return;
-    const link = document.createElement("a");
-    link.href = apiUrl(
-      `/api/v1/workspace/${encodeURIComponent(workspaceSlug)}/assets/${encodeURIComponent(displayedAsset.id)}/download`,
-    );
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    void downloadAssetOriginal(workspaceSlug, displayedAsset);
   }, [displayedAsset, workspaceSlug]);
 
   if (!displayedAsset && !loading) return null;
@@ -176,11 +171,14 @@ export function VideoAssetViewer({
           </DrawerDescription>
           <NativeVideoToolbar
             asset={displayedAsset}
+            loading={loading}
             onClose={onDismissAll ?? onClose}
             onToggleNotes={() => setNotesOpen((current) => !current)}
             notesOpen={notesOpen}
             onShowInBoard={onShowInBoard}
-            onDownload={displayedAsset?.url ? handleDownload : undefined}
+            onDownload={
+              displayedAsset?.url || loading ? handleDownload : undefined
+            }
             presentation="drawer"
           />
           {displayedAsset ? (

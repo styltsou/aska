@@ -403,7 +403,7 @@ export async function fetchAssetImageBlob(
   signal?: AbortSignal,
 ): Promise<Blob> {
   return apiGetBlob(
-    `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(assetId)}/download`,
+    `/api/v1/workspace/${encodeURIComponent(workspaceSlug)}/assets/${encodeURIComponent(assetId)}/download`,
     signal,
   );
 }

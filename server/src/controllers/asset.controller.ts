@@ -340,6 +340,9 @@ export const downloadAsset = factory.createHandlers(
     if (assetId.startsWith("video-")) {
       const url = await assetService.downloadVideo(workspace.id, assetId);
       c.header("Cache-Control", "private, no-store");
+      if (c.req.query("format") === "json") {
+        return c.json(success({ url }));
+      }
       return c.redirect(url, 302);
     }
     const { bytes, contentType, filename } = await assetService.downloadAsset(

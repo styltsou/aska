@@ -1,3 +1,4 @@
+import { downloadAssetOriginal } from "@/lib/asset-download";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DownloadIcon, ExternalLinkIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -288,12 +289,8 @@ export function ImagePeekHeaderActions({
   }, [asset, workspaceSlug]);
 
   const handleDownload = useCallback(() => {
-    const link = document.createElement("a");
-    link.href = `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(asset.id)}/download`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  }, [asset.id, workspaceSlug]);
+    void downloadAssetOriginal(workspaceSlug, asset);
+  }, [asset, workspaceSlug]);
 
   return (
     <>
