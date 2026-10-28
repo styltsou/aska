@@ -73,6 +73,7 @@ import Suggestion, {
 import { toast } from "sonner";
 
 import { NotePreviewRail } from "@/components/board/note-preview-rail";
+import { NoteCodeBlockEditing } from "@/components/board/note-code-block-editing";
 import { NoteMermaidBlock } from "@/components/board/note-mermaid-block";
 import {
   AssetMention,
@@ -90,6 +91,10 @@ import {
 import { NoteCutListItemCleanup } from "@/components/board/note-cut-cleanup";
 import { AskaTaskItem } from "@/components/board/task-item";
 import { Button } from "@/components/ui/button";
+import {
+  CodeBlockDownloadButton,
+  CodeBlockWrapButton,
+} from "@/components/ui/code-block";
 import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import {
   DropdownMenu,
@@ -922,10 +927,25 @@ const CODE_BLOCK_LANGUAGES = [
   { value: "diff", label: "Diff" },
 ];
 
+const CODE_BLOCK_FILE_EXTENSIONS: Record<string, string> = {
+  bash: "sh",
+  csharp: "cs",
+  cpp: "cpp",
+  javascript: "js",
+  typescript: "ts",
+  yaml: "yml",
+};
+
+function codeBlockFileName(language: string) {
+  const extension = CODE_BLOCK_FILE_EXTENSIONS[language] ?? language;
+  return `code.${extension || "txt"}`;
+}
+
 function NoteCodeBlock({ editor, node, updateAttributes }: ReactNodeViewProps) {
   const [copied, setCopied] = useState(false);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [languageQuery, setLanguageQuery] = useState("");
+  const [wrap, setWrap] = useState(false);
   const language =
     typeof node.attrs.language === "string" ? node.attrs.language : "";
   const languageLabel =
@@ -969,7 +989,7 @@ function NoteCodeBlock({ editor, node, updateAttributes }: ReactNodeViewProps) {
   }, [copied]);
 
   return (
-    <NodeViewWrapper className="note-code-block">
+    <NodeViewWrapper className="note-code-block" data-wrap={wrap || undefined}>
       <div className="note-code-block-header" contentEditable={false}>
         <DropdownMenu
           open={languageMenuOpen}
@@ -1019,34 +1039,66 @@ function NoteCodeBlock({ editor, node, updateAttributes }: ReactNodeViewProps) {
             ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="note-code-block-copy"
-                aria-label="Copy code"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  if (typeof navigator.clipboard?.writeText !== "function") {
-                    return;
-                  }
-                  void navigator.clipboard
-                    .writeText(node.textContent)
-                    .then(() => setCopied(true));
-                }}
-              >
-                <CopyFeedbackIcon copied={copied} />
-                <span className="sr-only">
-                  {copied ? "Copied" : "Copy code"}
-                </span>
-              </Button>
-            }
-          />
-          <TooltipContent>{copied ? "Copied" : "Copy code"}</TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <CodeBlockWrapButton
+                  wrap={wrap}
+                  onWrapChange={setWrap}
+                  size="icon-sm"
+                  className="size-[1.625rem]"
+                  onMouseDown={(event) => event.preventDefault()}
+                />
+              }
+            />
+            <TooltipContent>
+              {wrap ? "Unwrap lines" : "Wrap lines"}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <CodeBlockDownloadButton
+                  value={node.textContent}
+                  fileName={codeBlockFileName(language)}
+                  size="icon-sm"
+                  className="size-[1.625rem]"
+                  onMouseDown={(event) => event.preventDefault()}
+                />
+              }
+            />
+            <TooltipContent>Download code</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="note-code-block-copy size-[1.625rem] !text-sidebar-foreground/60 hover:!bg-sidebar-foreground/8 hover:!text-sidebar-foreground"
+                  aria-label="Copy code"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    if (typeof navigator.clipboard?.writeText !== "function") {
+                      return;
+                    }
+                    void navigator.clipboard
+                      .writeText(node.textContent)
+                      .then(() => setCopied(true));
+                  }}
+                >
+                  <CopyFeedbackIcon copied={copied} size={16} />
+                  <span className="sr-only">
+                    {copied ? "Copied" : "Copy code"}
+                  </span>
+                </Button>
+              }
+            />
+            <TooltipContent>{copied ? "Copied" : "Copy code"}</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
       <pre>
         <NodeViewContent<"code"> as="code" />
@@ -1152,6 +1204,7 @@ const BASE_NOTE_EXTENSIONS = [
     lowlight: noteLowlight,
     defaultLanguage: null,
   }),
+  NoteCodeBlockEditing,
   NoteMermaidBlock,
   TableKit.configure({ table: { resizable: true } }),
   TaskList,

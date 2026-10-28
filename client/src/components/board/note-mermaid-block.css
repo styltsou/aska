@@ -27,6 +27,27 @@
   @apply ml-auto flex items-center gap-0.5;
 }
 
+.note-mermaid-actions [data-slot="button"],
+.note-mermaid-full-header [data-slot="button"] {
+  color: color-mix(in srgb, var(--sidebar-foreground) 60%, transparent);
+}
+
+.note-mermaid-actions [data-slot="button"]:is(:hover, :focus-visible),
+.note-mermaid-full-header [data-slot="button"]:is(:hover, :focus-visible) {
+  color: var(--sidebar-foreground);
+  background-color: color-mix(in srgb, var(--sidebar-foreground) 8%, transparent);
+}
+
+.note-mermaid-actions [data-slot="button"] svg,
+.note-mermaid-full-header [data-slot="button"] svg {
+  @apply size-4;
+}
+
+.note-mermaid-actions [data-action="expand"] svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
 .note-mermaid-view-toggle {
   @apply relative grid w-fit grid-cols-2 gap-0.5 rounded-md border border-border/60 bg-muted p-0.5;
 }

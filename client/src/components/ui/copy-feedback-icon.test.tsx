@@ -12,9 +12,11 @@ describe("CopyFeedbackIcon", () => {
       <CopyFeedbackIcon copied className="size-4" />,
     );
 
-    expect(copy).toContain('class="size-4"');
-    expect(copy).toContain("M10 8");
-    expect(copied).toContain('class="size-4"');
-    expect(copied).toContain("M20 6");
+    expect(copy).toContain("size-4");
+    expect(copy.indexOf("opacity-100")).toBeLessThan(copy.indexOf("opacity-0"));
+    expect(copied).toContain("size-4");
+    expect(copied.indexOf("opacity-0")).toBeLessThan(
+      copied.indexOf("opacity-100"),
+    );
   });
 });

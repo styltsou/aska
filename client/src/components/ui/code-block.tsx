@@ -1,212 +1,312 @@
-import {
-  type ComponentProps,
-  createContext,
-  type HTMLAttributes,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import { type BundledLanguage, codeToHtml, type ShikiTransformer } from "shiki";
-import { Button } from "./button";
-import { CopyFeedbackIcon } from "./copy-feedback-icon";
-import { ScrollArea } from "./scroll-area";
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+
+import { Button } from "@/components/ui/button";
+import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import { cn } from "@/lib/utils";
+import { DownloadIcon, WrapTextIcon } from "lucide-react";
 
-type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
-  code: string;
-  language: BundledLanguage;
-  showLineNumbers?: boolean;
-};
-
-interface CodeBlockContextType {
-  code: string;
-}
-
-const CodeBlockContext = createContext<CodeBlockContextType>({
-  code: "",
-});
-
-const lineNumberTransformer: ShikiTransformer = {
-  name: "line-numbers",
-  line(node, line) {
-    node.children.unshift({
-      type: "element",
-      tagName: "span",
-      properties: {
-        className: [
-          "inline-block",
-          "min-w-10",
-          "mr-4",
-          "text-right",
-          "select-none",
-          "text-muted-foreground",
-        ],
+const codeBlockVariants = cva(
+  "group/code-block relative flex w-full min-w-0 flex-col overflow-hidden rounded-lg border text-sm text-sidebar-foreground has-[>[data-slot=code-block-content]:focus-visible]:ring-3 has-[>[data-slot=code-block-content]:focus-visible]:ring-ring/50 data-[size=sm]:text-xs",
+  {
+    variants: {
+      variant: {
+        default: "border-sidebar-border bg-background",
+        destructive: "border-destructive/30 bg-destructive/5 text-destructive",
       },
-      children: [{ type: "text", value: String(line) }],
-    });
+    },
+    defaultVariants: { variant: "default" },
   },
-};
+);
 
-export async function highlightCode(
-  code: string,
-  language: BundledLanguage,
-  showLineNumbers = false,
-) {
-  const transformers: ShikiTransformer[] = showLineNumbers
-    ? [lineNumberTransformer]
-    : [];
-
-  return await Promise.all([
-    codeToHtml(code, {
-      lang: language,
-      theme: "github-light",
-      transformers,
-    }),
-    codeToHtml(code, {
-      lang: language,
-      theme: "github-dark",
-      transformers,
-    }),
-  ]);
+function CodeBlock({
+  className,
+  variant = "default",
+  size = "default",
+  ...props
+}: React.ComponentProps<"div"> &
+  VariantProps<typeof codeBlockVariants> & { size?: "default" | "sm" }) {
+  return (
+    <div
+      data-slot="code-block"
+      data-variant={variant}
+      data-size={size}
+      className={cn(codeBlockVariants({ variant }), className)}
+      {...props}
+    />
+  );
 }
 
-export const CodeBlock = ({
-  code,
-  language,
-  showLineNumbers = false,
+function CodeBlockHeader({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="code-block-header"
+      className={cn(
+        "flex min-w-0 shrink-0 items-center gap-2 bg-background p-2 text-sidebar-foreground/65 group-data-[size=sm]/code-block:px-2.5 group-data-[size=sm]/code-block:py-1.5",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function CodeBlockTitle({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="code-block-title"
+      className={cn(
+        "min-w-0 truncate font-sans text-xs font-medium text-sidebar-foreground/65 [&_svg]:pointer-events-none [&_svg]:inline-block [&_svg]:align-middle [&_svg:not([class*='size-'])]:size-3.5 *:[svg]:me-1.5",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function CodeBlockActions({
   className,
-  children,
   ...props
-}: CodeBlockProps) => {
-  const [html, setHtml] = useState<string>("");
-  const [darkHtml, setDarkHtml] = useState<string>("");
-  const mounted = useRef(false);
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="code-block-actions"
+      className={cn(
+        "-my-1 ms-auto -me-1.5 flex shrink-0 items-center gap-1 [[data-slot=code-block]>&]:absolute [[data-slot=code-block]>&]:end-2 [[data-slot=code-block]>&]:top-2 [[data-slot=code-block]>&]:z-10 [[data-slot=code-block]>&]:m-0 [[data-slot=code-block]>&]:opacity-0 [[data-slot=code-block]>&]:transition-opacity [[data-slot=code-block]>&]:group-focus-within/code-block:opacity-100 [[data-slot=code-block]>&]:group-hover/code-block:opacity-100 [[data-slot=code-block]>&]:pointer-coarse:opacity-100",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
-  useEffect(() => {
-    highlightCode(code, language, showLineNumbers).then(([light, dark]) => {
-      if (!mounted.current) {
-        setHtml(light);
-        setDarkHtml(dark);
-        mounted.current = true;
-      }
-    });
+function CodeBlockCopyButton({
+  value,
+  variant = "ghost",
+  size = "icon-sm",
+  className,
+  onClick,
+  ...props
+}: React.ComponentProps<typeof Button> & { value: string }) {
+  const [copied, setCopied] = React.useState(false);
 
-    return () => {
-      mounted.current = false;
-    };
-  }, [code, language, showLineNumbers]);
-
-  const hasHighlighted = html !== "";
+  React.useEffect(() => {
+    if (!copied) return;
+    const timeout = window.setTimeout(() => setCopied(false), 1_500);
+    return () => window.clearTimeout(timeout);
+  }, [copied]);
 
   return (
-    <CodeBlockContext.Provider value={{ code }}>
-      <div
+    <>
+      <Button
+        data-slot="code-block-copy-button"
+        data-copied={copied || undefined}
+        variant={variant}
+        size={size}
+        aria-label={copied ? "Copied" : "Copy code"}
         className={cn(
-          "group bg-background text-foreground relative w-full min-w-0 overflow-hidden rounded-md border",
+          "text-sidebar-foreground/60 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground",
           className,
         )}
+        onClick={(event) => {
+          onClick?.(event);
+          void navigator.clipboard
+            ?.writeText(value)
+            .then(() => setCopied(true))
+            .catch(() => {});
+        }}
         {...props}
       >
-        <div className="relative">
-          {hasHighlighted ? (
-            <>
-              <ScrollArea className="min-w-0 dark:hidden">
-                <div
-                  className="w-full min-w-0 [&_code]:font-mono [&_code]:text-sm [&_pre]:m-0 [&_pre]:overflow-visible! [&_pre]:bg-background! [&_pre]:p-4 [&_pre]:text-sm [&_pre]:text-foreground!"
-                  dangerouslySetInnerHTML={{ __html: html }}
-                />
-              </ScrollArea>
-              <ScrollArea className="hidden min-w-0 dark:block">
-                <div
-                  className="w-full min-w-0 [&_code]:font-mono [&_code]:text-sm [&_pre]:m-0 [&_pre]:overflow-visible! [&_pre]:bg-background! [&_pre]:p-4 [&_pre]:text-sm [&_pre]:text-foreground!"
-                  dangerouslySetInnerHTML={{ __html: darkHtml }}
-                />
-              </ScrollArea>
-            </>
-          ) : (
-            <ScrollArea className="min-w-0">
-              <pre className="p-4 text-sm leading-relaxed text-foreground">
-                <code className="font-mono text-sm">{code}</code>
-              </pre>
-            </ScrollArea>
-          )}
-          {children && (
-            <div className="absolute top-2 right-2 flex items-center gap-2">
-              {children}
-            </div>
-          )}
-        </div>
-      </div>
-    </CodeBlockContext.Provider>
-  );
-};
-
-export type CodeBlockCopyButtonProps = ComponentProps<typeof Button> & {
-  onCopy?: () => void;
-  onError?: (error: Error) => void;
-  timeout?: number;
-};
-
-export const CodeBlockCopyButton = ({
-  onCopy,
-  onError,
-  timeout = 2000,
-  children,
-  className,
-  ...props
-}: CodeBlockCopyButtonProps) => {
-  const [isCopied, setIsCopied] = useState(false);
-  const { code } = useContext(CodeBlockContext);
-
-  const copyToClipboard = async () => {
-    if (typeof window === "undefined" || !navigator?.clipboard?.writeText) {
-      onError?.(new Error("Clipboard API not available"));
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(code);
-      setIsCopied(true);
-      onCopy?.();
-      setTimeout(() => setIsCopied(false), timeout);
-    } catch (error) {
-      onError?.(error as Error);
-    }
-  };
-
-  return (
-    <Button
-      className={cn("shrink-0", className)}
-      onClick={copyToClipboard}
-      size="icon"
-      variant="ghost"
-      {...props}
-    >
-      {children ?? <CopyFeedbackIcon copied={isCopied} size={14} />}
-    </Button>
-  );
-};
-
-/** Demo component for preview */
-export default function CodeBlockDemo() {
-  const code = `function MyComponent(props) {
-  return (
-    <div>
-      <h1>Hello, {props.name}!</h1>
-      <p>This is an example React component.</p>
-    </div>
-  );
-}`;
-
-  return (
-    <div className="w-full max-w-2xl p-6">
-      <CodeBlock code={code} language="jsx">
-        <CodeBlockCopyButton
-          onCopy={() => console.log("Copied code to clipboard")}
-          onError={() => console.error("Failed to copy code to clipboard")}
-        />
-      </CodeBlock>
-    </div>
+        <CopyFeedbackIcon copied={copied} size={14} />
+      </Button>
+      <span aria-live="polite" className="sr-only">
+        {copied ? "Copied" : ""}
+      </span>
+    </>
   );
 }
+
+function CodeBlockWrapButton({
+  wrap,
+  onWrapChange,
+  variant = "ghost",
+  size = "icon-sm",
+  className,
+  onClick,
+  ...props
+}: React.ComponentProps<typeof Button> & {
+  wrap: boolean;
+  onWrapChange: (wrap: boolean) => void;
+}) {
+  return (
+    <Button
+      data-slot="code-block-wrap-button"
+      variant={variant}
+      size={size}
+      aria-label="Wrap lines"
+      aria-pressed={wrap}
+      className={cn(
+        "text-sidebar-foreground/60 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground",
+        className,
+      )}
+      onClick={(event) => {
+        onClick?.(event);
+        onWrapChange(!wrap);
+      }}
+      {...props}
+    >
+      <WrapTextIcon size={16} />
+    </Button>
+  );
+}
+
+function CodeBlockDownloadButton({
+  value,
+  fileName = "code.txt",
+  variant = "ghost",
+  size = "icon-sm",
+  className,
+  onClick,
+  ...props
+}: React.ComponentProps<typeof Button> & {
+  value: string;
+  fileName?: string;
+}) {
+  return (
+    <Button
+      data-slot="code-block-download-button"
+      variant={variant}
+      size={size}
+      aria-label="Download code"
+      className={cn(
+        "text-sidebar-foreground/60 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground",
+        className,
+      )}
+      onClick={(event) => {
+        onClick?.(event);
+        const url = URL.createObjectURL(
+          new Blob([value], { type: "text/plain;charset=utf-8" }),
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      }}
+      {...props}
+    >
+      <DownloadIcon size={16} />
+    </Button>
+  );
+}
+
+function CodeBlockContent({
+  className,
+  children,
+  style,
+  wrap = false,
+  lineNumbers = false,
+  startLine = 1,
+  tabIndex = -1,
+  ...props
+}: React.ComponentProps<"pre"> & {
+  wrap?: boolean;
+  lineNumbers?: boolean;
+  startLine?: number;
+}) {
+  return (
+    <pre
+      data-slot="code-block-content"
+      data-wrap={wrap || undefined}
+      data-numbered={lineNumbers || undefined}
+      dir="ltr"
+      tabIndex={tabIndex}
+      style={{ counterReset: `line ${startLine - 1}`, ...style }}
+      className={cn(
+        "m-0 min-h-0 min-w-0 overflow-auto border-x-0 border-b-0 border-sidebar-border bg-card p-3 text-start font-mono leading-5 outline-none data-wrap:wrap-break-word data-wrap:whitespace-pre-wrap",
+        className,
+      )}
+      {...props}
+    >
+      <code
+        data-slot="code-block-code"
+        className="block min-h-lh min-w-max in-data-numbered:grid in-data-numbered:content-start in-data-numbered:grid-cols-[auto_1fr] in-data-wrap:min-w-0"
+      >
+        {lineNumbers && typeof children === "string"
+          ? children
+              .replace(/\n$/, "")
+              .split("\n")
+              .map((line, index) => (
+                <CodeBlockLine key={index}>{line}</CodeBlockLine>
+              ))
+          : children}
+      </code>
+    </pre>
+  );
+}
+
+const codeBlockLineVariants = cva(
+  "relative -mx-3 block min-h-lh px-3 before:min-w-6 before:text-end before:text-sidebar-foreground/45 after:absolute after:start-1 after:top-0 after:text-sidebar-foreground/45 after:select-none in-data-numbered:col-span-2 in-data-numbered:grid in-data-numbered:grid-cols-subgrid in-data-numbered:gap-x-3 in-data-numbered:[counter-increment:line] in-data-numbered:before:content-[counter(line)] in-data-numbered:before:select-none",
+  {
+    variants: {
+      variant: {
+        default: "",
+        added: "bg-emerald-500/10 after:text-emerald-600 after:content-['+']",
+        removed: "bg-destructive/10 after:text-destructive after:content-['−']",
+        highlighted: "bg-sidebar-foreground/8",
+      },
+    },
+    defaultVariants: { variant: "default" },
+  },
+);
+
+function CodeBlockLine({
+  className,
+  variant = "default",
+  children,
+  ...props
+}: React.ComponentProps<"span"> & VariantProps<typeof codeBlockLineVariants>) {
+  const empty =
+    children === undefined ||
+    children === null ||
+    children === "" ||
+    (Array.isArray(children) && children.length === 0);
+
+  return (
+    <span
+      data-slot="code-block-line"
+      data-variant={variant}
+      className={cn(codeBlockLineVariants({ variant }), className)}
+      {...props}
+    >
+      <span data-slot="code-block-line-content" className="min-w-0">
+        {empty ? "\n" : children}
+      </span>
+    </span>
+  );
+}
+
+function CodeBlockFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="code-block-footer"
+      className={cn(
+        "flex min-w-0 shrink-0 items-center gap-2 bg-background px-3 pb-3 text-sidebar-foreground/65",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export {
+  CodeBlock,
+  CodeBlockHeader,
+  CodeBlockTitle,
+  CodeBlockActions,
+  CodeBlockCopyButton,
+  CodeBlockWrapButton,
+  CodeBlockDownloadButton,
+  CodeBlockContent,
+  CodeBlockLine,
+  CodeBlockFooter,
+};

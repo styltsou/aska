@@ -268,3 +268,12 @@
     @apply font-sans;
   }
 }
+
+@keyframes icon-swap-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

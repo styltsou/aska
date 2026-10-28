@@ -197,7 +197,7 @@ function MermaidBlockView({
                     "relative isolate z-10",
                     !showInlineCode
                       ? "text-foreground hover:!bg-transparent hover:!text-foreground active:!bg-transparent"
-                      : "text-muted-foreground transition-colors duration-[50ms] hover:!bg-transparent hover:text-foreground active:!bg-transparent active:text-foreground",
+                      : "text-sidebar-foreground/60 transition-colors duration-[50ms] hover:!bg-transparent hover:text-sidebar-foreground active:!bg-transparent active:text-sidebar-foreground",
                   )}
                   role="tab"
                   size="icon-xs"
@@ -221,7 +221,7 @@ function MermaidBlockView({
                     "relative isolate z-10",
                     showInlineCode
                       ? "text-foreground hover:!bg-transparent hover:!text-foreground active:!bg-transparent"
-                      : "text-muted-foreground transition-colors duration-[50ms] hover:!bg-transparent hover:text-foreground active:!bg-transparent active:text-foreground",
+                      : "text-sidebar-foreground/60 transition-colors duration-[50ms] hover:!bg-transparent hover:text-sidebar-foreground active:!bg-transparent active:text-sidebar-foreground",
                   )}
                   role="tab"
                   size="icon-xs"
@@ -246,6 +246,7 @@ function MermaidBlockView({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
+                  className="size-[1.625rem] !text-sidebar-foreground/60 hover:!bg-sidebar-foreground/8 hover:!text-sidebar-foreground"
                   aria-label={copied ? "Copied source" : "Copy Mermaid source"}
                   onClick={() => void copySource()}
                 >
@@ -264,6 +265,7 @@ function MermaidBlockView({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
+                  className="size-[1.625rem] !text-sidebar-foreground/60 hover:!bg-sidebar-foreground/8 hover:!text-sidebar-foreground"
                   aria-label="Download PNG"
                   disabled={!svg}
                   onClick={exportPng}
@@ -281,6 +283,8 @@ function MermaidBlockView({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
+                  className="size-[1.625rem] !text-sidebar-foreground/60 hover:!bg-sidebar-foreground/8 hover:!text-sidebar-foreground"
+                  data-action="expand"
                   aria-label="Expand diagram"
                   ref={openButtonRef}
                   onClick={() => {

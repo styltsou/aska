@@ -1,6 +1,6 @@
-import { Maximize2, Minimize2 } from "lucide";
+import { Maximize2, Minimize2 } from "lucide-react";
 
-import { MorphStateIcon } from "@/components/ui/morph-state-icon";
+import { StateIcon } from "@/components/ui/state-icon";
 
 export function AssetViewerModeIcon({
   expanded = false,
@@ -9,7 +9,7 @@ export function AssetViewerModeIcon({
 }) {
   return (
     <span className="relative inline-flex size-4 items-center justify-center">
-      <MorphStateIcon
+      <StateIcon
         icon={expanded ? Minimize2 : Maximize2}
         className="size-3.5"
       />

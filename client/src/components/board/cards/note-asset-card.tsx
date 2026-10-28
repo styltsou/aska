@@ -15,8 +15,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { CopyIcon } from "lucide-react";
 import { motion } from "motion/react";
+import { ChevronDownIcon, CopyIcon, DownloadIcon, WrapTextIcon } from "lucide-react";
 import ReactMarkdown, {
   defaultUrlTransform,
   type Components,
@@ -40,6 +40,13 @@ import {
 } from "@/components/board/note-mentions";
 import { NoteMermaidPreview } from "@/components/board/note-mermaid-preview";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  CodeBlock,
+  CodeBlockActions,
+  CodeBlockContent,
+  CodeBlockHeader,
+  CodeBlockTitle,
+} from "@/components/ui/code-block";
 import type { NoteAsset } from "@/types/asset";
 import type { NoteMentionType } from "@/api/note-mentions/types";
 import type { MentionColors } from "@/api/collection/types";
@@ -113,20 +120,54 @@ function renderHighlightedCode(
   });
 }
 
-function getCodeBlockLanguage(children: ReactNode): string {
+function renderPreviewCodeLines(nodes: RootContent[]) {
+  const lines: ReactNode[][] = [[]];
+  let key = 0;
+  const visit = (items: RootContent[], classes: string[]) => {
+    for (const node of items) {
+      if (node.type === "text") {
+        const parts = node.value.split("\n");
+        parts.forEach((part, index) => {
+          if (index) lines.push([]);
+          if (!part) return;
+          const pieceKey = key++;
+          const piece = classes.reduceRight<ReactNode>(
+            (child, className) => <span className={className}>{child}</span>,
+            part,
+          );
+          lines[lines.length - 1].push(<span key={pieceKey}>{piece}</span>);
+        });
+      } else if (node.type === "element") {
+        const className = Array.isArray(node.properties.className)
+          ? node.properties.className.join(" ")
+          : "";
+        visit(node.children, className ? [...classes, className] : classes);
+      }
+    }
+  };
+  visit(nodes, []);
+  return lines;
+}
+
+function getCodeBlockDetails(children: ReactNode) {
   const code = Children.toArray(children).find(
-    (child): child is ReactElement<{ className?: unknown }> =>
+    (
+      child,
+    ): child is ReactElement<{ className?: unknown; children?: ReactNode }> =>
       isValidElement(child),
   );
-  if (!code) return "Plain text";
 
-  const className = code.props.className;
+  const className = code?.props.className;
   const match =
     typeof className === "string" ? /language-(\w+)/.exec(className) : null;
 
-  return match?.[1]
-    ? match[1].replace(/\b\w/g, (letter) => letter.toUpperCase())
-    : "Plain text";
+  return {
+    language: match?.[1] ?? "",
+    label: match?.[1]
+      ? match[1].replace(/\b\w/g, (letter) => letter.toUpperCase())
+      : "Plain text",
+    source: String(code?.props.children ?? "").replace(/\n$/, ""),
+  };
 }
 
 function taskItemIsChecked(node: unknown): boolean {
@@ -420,35 +461,57 @@ function createMDComponents(
         {...props}
       />
     ),
-    pre: ({ children, ...props }) => {
-      const code = Children.toArray(children).find(
-        (
-          child,
-        ): child is ReactElement<{
-          className?: string;
-          children?: ReactNode;
-        }> => isValidElement(child),
-      );
-      if (code?.props.className?.includes("language-mermaid")) {
+    pre: ({ children }) => {
+      const { language, label, source } = getCodeBlockDetails(children);
+      if (language === "mermaid") {
         return (
           <NoteMermaidPreview
-            source={String(code.props.children ?? "").replace(/\n$/, "")}
+            source={source}
             compact={compact}
           />
         );
       }
+
+      const highlighted = lowlight.listLanguages().includes(language)
+        ? lowlight.highlight(language, source)
+        : undefined;
+
       return (
-        <div className="note-code-block note-code-block--preview">
-          <div className="note-code-block-header" aria-hidden="true">
-            <span className="note-code-block-language">
-              {getCodeBlockLanguage(children)}
-            </span>
-            <span className="note-code-block-copy flex size-7 items-center justify-center">
-              <CopyIcon className="size-3.5" />
-            </span>
-          </div>
-          <pre {...props}>{children}</pre>
-        </div>
+        <CodeBlock className="note-code-block note-code-block--preview pointer-events-none select-none">
+          <CodeBlockHeader className="note-code-block-header">
+            <CodeBlockTitle className="note-code-block-language pointer-events-none">
+              {label}
+              <ChevronDownIcon className="note-code-preview-chevron" />
+            </CodeBlockTitle>
+            <CodeBlockActions
+              className="note-code-preview-actions"
+              aria-hidden="true"
+            >
+              <span className="note-code-preview-action">
+                <WrapTextIcon />
+              </span>
+              <span className="note-code-preview-action">
+                <DownloadIcon />
+              </span>
+              <span className="note-code-preview-action">
+                <CopyIcon />
+              </span>
+            </CodeBlockActions>
+          </CodeBlockHeader>
+          <CodeBlockContent>
+            {(highlighted
+              ? renderPreviewCodeLines(highlighted.children)
+              : source.split("\n").map((line) => [line])
+            ).map((line, index) => (
+              <span className="note-code-preview-line" key={index}>
+                <span className="note-code-preview-number" aria-hidden="true">
+                  {index + 1}
+                </span>
+                <span>{line}</span>
+              </span>
+            ))}
+          </CodeBlockContent>
+        </CodeBlock>
       );
     },
     code: ({ className, children, ...props }) => {
@@ -509,8 +572,10 @@ export function NoteMarkdown({
   return (
     <div
       className={cn(
-        "note-rich-text-content",
-        compact ? "text-[0.6875rem] leading-4" : "text-[0.8125rem] leading-5",
+        "note-rich-text-content note-card-markdown",
+        compact
+          ? "note-card-markdown--compact text-[0.6875rem] leading-4"
+          : "text-[0.8125rem] leading-5",
         className,
       )}
     >

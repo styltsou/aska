@@ -2,10 +2,14 @@ import {
   LoaderCircleIcon,
   MaximizeIcon,
   MinimizeIcon,
+  Pause,
+  Play,
+  RotateCcw,
   SkipBackIcon,
   SkipForwardIcon,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
-import { Pause, Play, RotateCcw, Volume2, VolumeX } from "lucide";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   type ChangeEvent,
@@ -18,7 +22,7 @@ import {
   useState,
 } from "react";
 
-import { MorphStateIcon } from "@/components/ui/morph-state-icon";
+import { StateIcon } from "@/components/ui/state-icon";
 import {
   Tooltip,
   TooltipContent,
@@ -507,7 +511,7 @@ export function NativeVideoPlayer({
                   whileHover={reduceMotion ? undefined : { scale: 1.04 }}
                   className="flex size-16 items-center justify-center rounded-full bg-black/45 text-white shadow-lg backdrop-blur-md transition-colors duration-150 ease-out hover:bg-black/60 motion-reduce:transition-none"
                 >
-                  <MorphStateIcon
+                  <StateIcon
                     icon={ended ? RotateCcw : playing ? Pause : Play}
                     className={cn(
                       "size-7",
@@ -670,7 +674,7 @@ export function NativeVideoPlayer({
                   onClick={togglePlayback}
                   className={controlButtonClass}
                 >
-                  <MorphStateIcon
+                  <StateIcon
                     icon={ended ? RotateCcw : playing ? Pause : Play}
                     className={cn("size-4", !ended && "fill-current")}
                     strokeWidth={ended ? 2.25 : 0}
@@ -707,7 +711,7 @@ export function NativeVideoPlayer({
                       />
                     }
                   >
-                    <MorphStateIcon
+                    <StateIcon
                       icon={muted || volume === 0 ? VolumeX : Volume2}
                       className="size-4"
                       strokeWidth={2.5}

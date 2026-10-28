@@ -5,11 +5,10 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { LoaderCircleIcon, UserPlusIcon } from "lucide-react";
-import { Eye, EyeOff } from "lucide";
+import { Eye, EyeOff, LoaderCircleIcon, UserPlusIcon } from "lucide-react";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { Button } from "@/components/ui/button";
-import { MorphStateIcon } from "@/components/ui/morph-state-icon";
+import { StateIcon } from "@/components/ui/state-icon";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -121,7 +120,7 @@ function SignupPage() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  <MorphStateIcon
+                  <StateIcon
                     icon={showPassword ? EyeOff : Eye}
                     className="size-4"
                   />
@@ -154,7 +153,7 @@ function SignupPage() {
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  <MorphStateIcon
+                  <StateIcon
                     icon={showConfirmPassword ? EyeOff : Eye}
                     className="size-4"
                   />
