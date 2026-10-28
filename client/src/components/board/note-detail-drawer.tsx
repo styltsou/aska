@@ -3,6 +3,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -56,6 +57,11 @@ import {
 } from "@/components/board/note-workspace-dialog";
 import { useBoardInsertionPlacement } from "@/components/canvas";
 import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
+import {
+  canMorphAssetModal,
+  findVisibleAssetCard,
+  startAssetModalMorph,
+} from "@/components/app-shell/asset-modal-morph";
 import { Button } from "@/components/ui/button";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import { AssetViewerModeIcon } from "@/components/board/asset-viewer-mode-icon";
@@ -112,11 +118,15 @@ import {
 
 const AUTOSAVE_DELAY_MS = 700;
 const COPIED_RESET_MS = 1_500;
-const NoteRichText = lazy(() =>
+const loadNoteRichText = () =>
   import("@/components/board/note-rich-text").then((module) => ({
     default: module.NoteRichText,
-  })),
-);
+  }));
+const NoteRichText = lazy(loadNoteRichText);
+
+export function preloadNoteRichText() {
+  void loadNoteRichText();
+}
 
 type SaveState =
   | "saved"
@@ -239,6 +249,14 @@ export function NoteDetailDrawer({
     else setLocalView(nextView);
   };
   const noteContentRef = useRef<HTMLDivElement>(null);
+  const workspacePanelRef = useRef<HTMLDivElement | null>(null);
+  const setWorkspacePanel = useCallback(
+    (panel: HTMLDivElement | null) => {
+      workspacePanelRef.current = panel;
+      fullscreenPanelRef(panel);
+    },
+    [fullscreenPanelRef],
+  );
   const titleInputRef = useRef<HTMLTextAreaElement>(null);
   const richTextRef = useRef<NoteRichTextHandle>(null);
   const draftRef = useRef(note?.content ?? "");
@@ -252,6 +270,12 @@ export function NoteDetailDrawer({
   const syncedNoteIdRef = useRef<string | undefined>(undefined);
   const closeAfterSaveRef = useRef(false);
   const closeRequestedRef = useRef(false);
+  const createdCardRef = useRef<{
+    card: HTMLElement;
+    visibility: string;
+  } | null>(null);
+  const createCloseMorphRef =
+    useRef<ReturnType<typeof startAssetModalMorph>>(undefined);
   const dismissAllRef = useRef(false);
   const hasRestoredCreateOpenRef = useRef(false);
   const isInitialPageReloadRef = useRef(isPageReload());
@@ -286,6 +310,7 @@ export function NoteDetailDrawer({
   const [extractionFeedback, setExtractionFeedback] =
     useState<ExtractionFeedback>();
   const activeNote = createdNote ?? note;
+  const createdNoteId = createdNote?.id;
   const isPeekMirror =
     peekTarget?.type === "note" && peekTarget.asset.id === activeNote?.id;
   useEffect(() => {
@@ -313,14 +338,56 @@ export function NoteDetailDrawer({
     [createCollectionPath, createTarget, isCreateMode, workspaceSlug],
   );
   const closeWorkspace = useCallback(() => {
+    if (createCloseMorphRef.current) return;
     closeRequestedRef.current = true;
     setActiveNoteId(undefined);
-    if (controlledOpen === undefined) setWorkspaceOpen(false);
-    else if (dismissAllRef.current) {
+    if (controlledOpen === undefined) {
+      const hidden = createdCardRef.current;
+      const modal = workspacePanelRef.current;
+      const card = createdNote && findVisibleAssetCard(createdNote.id);
+      const morph =
+        isCreateMode &&
+        !expanded &&
+        !split &&
+        card &&
+        modal &&
+        canMorphAssetModal()
+          ? startAssetModalMorph(
+              "close",
+              card,
+              modal,
+              hidden?.card === card ? hidden.visibility : card.style.visibility,
+            )
+          : undefined;
+      if (morph) {
+        createCloseMorphRef.current = morph;
+        void morph.finished.then(() => {
+          if (createCloseMorphRef.current !== morph) return;
+          createCloseMorphRef.current = undefined;
+          const backdrop = modal!.parentElement?.querySelector<HTMLElement>(
+            ".workspace-asset-view-backdrop",
+          );
+          if (backdrop) backdrop.style.visibility = "hidden";
+          modal!.style.visibility = "hidden";
+          setWorkspaceOpen(false);
+        });
+      } else setWorkspaceOpen(false);
+    } else if (dismissAllRef.current) {
       dismissAllRef.current = false;
       onDismissAll?.();
     } else onRequestClose?.();
-  }, [controlledOpen, onDismissAll, onRequestClose, setActiveNoteId]);
+  }, [
+    controlledOpen,
+    createdNote,
+    expanded,
+    isCreateMode,
+    onDismissAll,
+    onRequestClose,
+    setActiveNoteId,
+    split,
+  ]);
+  const closeWorkspaceRef = useRef(closeWorkspace);
+  closeWorkspaceRef.current = closeWorkspace;
   const frontMatter = useMemo(() => parseFrontMatter(draft), [draft]);
   const updateNote = useUpdateNote(workspaceSlug);
   const { mutateAsync: deleteAssetAsync } = useDeleteAsset(workspaceSlug);
@@ -405,6 +472,41 @@ export function NoteDetailDrawer({
       setWorkspaceOpen(isCreateMode && Boolean(createOptions?.open));
     }
   }, [activeNote, createOptions?.open, isCreateMode]);
+
+  useLayoutEffect(() => {
+    if (!isCreateMode || !createdNoteId || !isWorkspaceOpen) return;
+    const observer = new MutationObserver(() => hideCard());
+    const hideCard = () => {
+      const card = findVisibleAssetCard(createdNoteId);
+      if (!card || createdCardRef.current?.card === card) return;
+      if (createdCardRef.current) {
+        createdCardRef.current.card.style.visibility =
+          createdCardRef.current.visibility;
+      }
+      createdCardRef.current = { card, visibility: card.style.visibility };
+      card.style.visibility = "hidden";
+      const board = card.closest<HTMLElement>(
+        '.aska-flow, [data-slot="scroll-area-viewport"]',
+      );
+      if (board) {
+        observer.disconnect();
+        observer.observe(board, { childList: true, subtree: true });
+      }
+    };
+    hideCard();
+    if (!createdCardRef.current)
+      observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      observer.disconnect();
+      createCloseMorphRef.current?.cancel();
+      createCloseMorphRef.current = undefined;
+      if (createdCardRef.current) {
+        createdCardRef.current.card.style.visibility =
+          createdCardRef.current.visibility;
+        createdCardRef.current = null;
+      }
+    };
+  }, [createdNoteId, isCreateMode, isWorkspaceOpen]);
 
   useEffect(() => {
     if (!isCreateMode || activeNote || !isWorkspaceOpen) return;
@@ -664,7 +766,8 @@ export function NoteDetailDrawer({
           setSaveState("saved");
           if (closeAfterSaveRef.current) {
             closeAfterSaveRef.current = false;
-            closeWorkspace();
+            // Let the new card mount before looking for the morph destination.
+            window.requestAnimationFrame(() => closeWorkspaceRef.current());
           }
           return;
         }
@@ -1685,6 +1788,13 @@ export function NoteDetailDrawer({
           return;
         closeRequestedRef.current = false;
         if (isCreateMode) {
+          const backdrop =
+            workspacePanelRef.current?.parentElement?.querySelector<HTMLElement>(
+              ".workspace-asset-view-backdrop",
+            );
+          if (backdrop) backdrop.style.visibility = "";
+          if (workspacePanelRef.current)
+            workspacePanelRef.current.style.visibility = "";
           setCreatedNote(undefined);
           setDraft("");
           setTitle("");
@@ -1703,12 +1813,12 @@ export function NoteDetailDrawer({
     >
       {children ? <NoteWorkspaceTrigger render={children} /> : null}
       <NoteWorkspaceContent
-        ref={fullscreenPanelRef}
+        ref={setWorkspacePanel}
         initialFocus={false}
         data-workspace-asset-modal={assetModalId}
         data-canvas-shared-entry={sharedEntry || undefined}
         backdropClassName={
-          assetModalId
+          assetModalId || (isCreateMode && createdNote)
             ? cn(
                 "workspace-asset-view-backdrop",
                 sharedEntry && "canvas-shared-entry",

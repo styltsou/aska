@@ -1,7 +1,11 @@
+import { useEffect } from "react";
 import type React from "react";
 
 import type { BoardInsertionPlacement } from "@/api/collection";
-import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
+import {
+  NoteDetailDrawer,
+  preloadNoteRichText,
+} from "@/components/board/note-detail-drawer";
 
 export function CreateNoteDialog({
   workspaceSlug,
@@ -24,6 +28,10 @@ export function CreateNoteDialog({
   target?: "collection" | "inbox";
   placement?: BoardInsertionPlacement;
 }) {
+  useEffect(() => {
+    preloadNoteRichText();
+  }, []);
+
   const [collectionSlug = "", ...folderSegments] = collectionPath
     .split("/")
     .filter(Boolean);
