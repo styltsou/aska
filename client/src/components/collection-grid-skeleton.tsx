@@ -22,9 +22,11 @@ export function CollectionGridSkeleton() {
                 maxHeightCqh={72}
               />
             </div>
-            <div className="flex max-w-full items-center gap-1.5">
-              <Skeleton className="h-8 w-32 rounded-md" />
-              <Skeleton className="size-8 rounded-md" />
+            <div className="flex h-8 max-w-full items-center justify-center">
+              <div className="flex h-full min-w-0 items-center gap-5 px-3">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-5" />
+              </div>
             </div>
           </div>
         ))}

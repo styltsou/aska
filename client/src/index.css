@@ -253,7 +253,8 @@
   * {
     @apply border-border outline-ring/50;
   }
-  html:has([data-board-view]) {
+  html:has([data-board-view]),
+  html:has([data-workspace-overview]) {
     overflow: hidden;
   }
   body {

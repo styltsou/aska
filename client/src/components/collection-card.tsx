@@ -73,7 +73,11 @@ export function CollectionCard({
   const deleteCollection = useDeleteCollection(workspaceSlug);
   const previews = collection.previews.slice(0, MAX_VISIBLE_PREVIEWS);
   const active = pointerOver || focused || actionsOpen;
+  const reduceMotion = useReducedMotion();
   const stackDirection = (hashString(collection.slug) & 1) === 0 ? 1 : -1;
+  const controlTransition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.3, ease: [0.34, 1.45, 0.64, 1] as const };
 
   useEffect(
     () => () => {
@@ -149,69 +153,88 @@ export function CollectionCard({
             className="absolute top-[64%] -bottom-2.5 left-1/2 w-[68%] -translate-x-1/2"
           />
         </Link>
-        <div className="relative z-10 flex max-w-full min-w-0 items-center justify-center gap-1.5">
-          <Link
-            to="/$workspaceSlug/collections/$"
-            search={search}
-            params={{ workspaceSlug, _splat: collection.slug }}
-            data-collection-hover-target
-            data-active={active}
-            onPointerEnter={handleHoverTargetEnter}
-            onPointerLeave={handleHoverTargetLeave}
-            onFocus={(event) =>
-              setFocused(event.currentTarget.matches(":focus-visible"))
-            }
-            onBlur={() => setFocused(false)}
-            className="flex h-8 max-w-full min-w-0 items-center gap-5 rounded-md bg-sidebar px-3 text-sidebar-foreground transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none data-[active=true]:bg-sidebar-active motion-reduce:transition-none"
+        <div className="relative z-10 flex h-8 max-w-full min-w-0 items-center justify-center">
+          <motion.div
+            initial={false}
+            animate={{ x: active ? -19 : 0 }}
+            transition={controlTransition}
+            className="max-w-full min-w-0"
           >
-            <span className="min-w-0 truncate text-sm font-medium">
-              {collection.name}
-            </span>
-            <span
-              aria-label={`${collection.assetCount} items`}
-              className="ml-auto shrink-0 text-xs text-sidebar-foreground/55 tabular-nums"
-            >
-              {collection.assetCount}
-            </span>
-          </Link>
-          <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`More actions for ${collection.name}`}
-                  data-collection-hover-target
-                  data-active={active}
-                  onPointerEnter={handleHoverTargetEnter}
-                  onPointerLeave={handleHoverTargetLeave}
-                  className="rounded-md bg-sidebar text-sidebar-foreground/70 hover:bg-sidebar-active hover:text-sidebar-foreground data-popup-open:bg-sidebar-active data-[active=true]:bg-sidebar-active data-[active=true]:text-sidebar-foreground"
-                />
+            <Link
+              to="/$workspaceSlug/collections/$"
+              search={search}
+              params={{ workspaceSlug, _splat: collection.slug }}
+              data-collection-hover-target
+              data-active={active}
+              onPointerEnter={handleHoverTargetEnter}
+              onPointerLeave={handleHoverTargetLeave}
+              onFocus={(event) =>
+                setFocused(event.currentTarget.matches(":focus-visible"))
               }
+              onBlur={() => setFocused(false)}
+              className="flex h-8 max-w-full min-w-0 items-center gap-5 rounded-md px-3 text-sidebar-foreground transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none data-[active=true]:bg-sidebar-active motion-reduce:transition-none"
             >
-              <MoreHorizontalIcon aria-hidden="true" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              side="bottom"
-              className="w-40 duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-ending-style:scale-[0.99] data-ending-style:duration-150 data-starting-style:scale-[0.97] motion-reduce:transition-none"
-            >
-              <DropdownMenuItem onClick={() => setRenameDialogOpen(true)}>
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setPropertiesDialogOpen(true)}>
-                Properties
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-red-600! hover:bg-red-500/20! focus:bg-red-500/20! data-highlighted:bg-red-500/20! dark:text-red-400! dark:hover:bg-red-500/30! dark:focus:bg-red-500/30! dark:data-highlighted:bg-red-500/30!"
-                onClick={() => setDeleteDialogOpen(true)}
+              <span className="min-w-0 truncate text-sm font-medium">
+                {collection.name}
+              </span>
+              <span
+                aria-label={`${collection.assetCount} items`}
+                className="ml-auto shrink-0 text-xs text-sidebar-foreground/55 tabular-nums"
               >
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {collection.assetCount}
+              </span>
+            </Link>
+          </motion.div>
+          <motion.div
+            initial={false}
+            animate={{
+              x: -19,
+              opacity: active ? 1 : 0,
+              scale: active ? 1 : 0.98,
+            }}
+            transition={controlTransition}
+            data-active={active}
+            className="pointer-events-none absolute left-full ml-1.5 origin-left data-[active=true]:pointer-events-auto"
+          >
+            <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`More actions for ${collection.name}`}
+                    data-collection-hover-target
+                    data-active={active}
+                    onPointerEnter={handleHoverTargetEnter}
+                    onPointerLeave={handleHoverTargetLeave}
+                    className="rounded-md text-sidebar-foreground/70 hover:bg-sidebar-active hover:text-sidebar-foreground data-popup-open:bg-sidebar-active data-[active=true]:bg-sidebar-active data-[active=true]:text-sidebar-foreground"
+                  />
+                }
+              >
+                <MoreHorizontalIcon aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                side="bottom"
+                className="w-40 duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-ending-style:scale-[0.99] data-ending-style:duration-150 data-starting-style:scale-[0.97] motion-reduce:transition-none"
+              >
+                <DropdownMenuItem onClick={() => setRenameDialogOpen(true)}>
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPropertiesDialogOpen(true)}>
+                  Properties
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-red-600! hover:bg-red-500/20! focus:bg-red-500/20! data-highlighted:bg-red-500/20! dark:text-red-400! dark:hover:bg-red-500/30! dark:focus:bg-red-500/30! dark:data-highlighted:bg-red-500/30!"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </motion.div>
         </div>
       </div>
       <RenameCollectionDialog
