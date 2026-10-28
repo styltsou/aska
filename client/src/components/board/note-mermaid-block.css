@@ -35,7 +35,11 @@
 .note-mermaid-actions [data-slot="button"]:is(:hover, :focus-visible),
 .note-mermaid-full-header [data-slot="button"]:is(:hover, :focus-visible) {
   color: var(--sidebar-foreground);
-  background-color: color-mix(in srgb, var(--sidebar-foreground) 8%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--sidebar-foreground) 8%,
+    transparent
+  );
 }
 
 .note-mermaid-actions [data-slot="button"] svg,

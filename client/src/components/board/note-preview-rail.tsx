@@ -359,8 +359,7 @@ export function NotePreviewRail({
               <motion.span
                 aria-hidden="true"
                 animate={{
-                  scaleX:
-                    hoveredIndex === null ? 0.5 : hoverScale,
+                  scaleX: hoveredIndex === null ? 0.5 : hoverScale,
                 }}
                 transition={
                   shouldReduceMotion

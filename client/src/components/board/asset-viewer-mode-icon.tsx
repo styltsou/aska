@@ -9,10 +9,7 @@ export function AssetViewerModeIcon({
 }) {
   return (
     <span className="relative inline-flex size-4 items-center justify-center">
-      <StateIcon
-        icon={expanded ? Minimize2 : Maximize2}
-        className="size-3.5"
-      />
+      <StateIcon icon={expanded ? Minimize2 : Maximize2} className="size-3.5" />
     </span>
   );
 }

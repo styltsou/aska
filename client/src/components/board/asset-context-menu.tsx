@@ -564,7 +564,9 @@ export function AssetContextMenu({
                   </ContextMenuItem>
                   {asset.url && workspaceSlug ? (
                     <ContextMenuItem
-                      onClick={() => void downloadAssetOriginal(workspaceSlug, asset)}
+                      onClick={() =>
+                        void downloadAssetOriginal(workspaceSlug, asset)
+                      }
                     >
                       Download original
                     </ContextMenuItem>

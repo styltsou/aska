@@ -229,7 +229,7 @@ function CodeBlockContent({
     >
       <code
         data-slot="code-block-code"
-        className="block min-h-lh min-w-max in-data-numbered:grid in-data-numbered:content-start in-data-numbered:grid-cols-[auto_1fr] in-data-wrap:min-w-0"
+        className="block min-h-lh min-w-max in-data-numbered:grid in-data-numbered:grid-cols-[auto_1fr] in-data-numbered:content-start in-data-wrap:min-w-0"
       >
         {lineNumbers && typeof children === "string"
           ? children

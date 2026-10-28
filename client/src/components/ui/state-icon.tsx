@@ -9,7 +9,10 @@ export function StateIcon({ icon: Icon, className, ...props }: StateIconProps) {
   return (
     <Icon
       key={Icon.displayName}
-      className={cn("motion-safe:animate-[icon-swap-in_150ms_ease-in-out]", className)}
+      className={cn(
+        "motion-safe:animate-[icon-swap-in_150ms_ease-in-out]",
+        className,
+      )}
       {...props}
     />
   );

@@ -452,9 +452,15 @@
   color: color-mix(in srgb, var(--sidebar-foreground) 60%, transparent);
 }
 
-.note-rich-text-content .note-code-block-header [data-slot="button"]:is(:hover, :focus-visible) {
+.note-rich-text-content
+  .note-code-block-header
+  [data-slot="button"]:is(:hover, :focus-visible) {
   color: var(--sidebar-foreground);
-  background-color: color-mix(in srgb, var(--sidebar-foreground) 8%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--sidebar-foreground) 8%,
+    transparent
+  );
 }
 
 /* Previews use the editor's proportions at their own text scale. Keep these
