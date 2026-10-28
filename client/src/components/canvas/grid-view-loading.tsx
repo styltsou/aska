@@ -1,3 +1,8 @@
+import {
+  ColorCardSkeleton,
+  LinkCardSkeleton,
+  NoteCardSkeleton,
+} from "@/components/asset-card-skeleton";
 import { Masonry } from "@/components/masonry-grid";
 import { FolderCardSkeleton } from "@/components/preview-stack-skeleton";
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
@@ -5,8 +10,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const FOLDER_SKELETONS = 3;
-const ASSET_SKELETONS = 12;
-const ASSET_HEIGHTS = ["h-44", "h-56", "h-40", "h-64"] as const;
+const ASSET_SKELETONS = [
+  { type: "image", aspectRatio: 4 / 3 },
+  { type: "note", variant: 0 },
+  { type: "image", aspectRatio: 4 / 5 },
+  { type: "link", variant: 0 },
+  { type: "image", aspectRatio: 16 / 9 },
+  { type: "color" },
+  { type: "note", variant: 1 },
+  { type: "image", aspectRatio: 3 / 4 },
+  { type: "link", variant: 1 },
+  { type: "image", aspectRatio: 3 / 2 },
+  { type: "image", aspectRatio: 4 / 5 },
+  { type: "note", variant: 0 },
+] as const;
 export function GridViewLoading() {
   return (
     <ScrollArea
@@ -39,12 +56,21 @@ export function GridViewLoading() {
               <Skeleton className="h-3 w-8" />
             </div>
             <Masonry className="min-w-0">
-              {Array.from({ length: ASSET_SKELETONS }).map((_, i) => (
-                <ImageSkeleton
-                  key={i}
-                  className={`w-full rounded-lg ${ASSET_HEIGHTS[i % ASSET_HEIGHTS.length]}`}
-                />
-              ))}
+              {ASSET_SKELETONS.map((asset, i) =>
+                asset.type === "note" ? (
+                  <NoteCardSkeleton key={i} variant={asset.variant} />
+                ) : asset.type === "link" ? (
+                  <LinkCardSkeleton key={i} variant={asset.variant} />
+                ) : asset.type === "color" ? (
+                  <ColorCardSkeleton key={i} />
+                ) : (
+                  <ImageSkeleton
+                    key={i}
+                    className="w-full rounded-lg"
+                    style={{ aspectRatio: asset.aspectRatio }}
+                  />
+                ),
+              )}
             </Masonry>
           </section>
         </div>

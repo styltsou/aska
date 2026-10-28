@@ -7,9 +7,9 @@ import {
 } from "@xyflow/react";
 import { useRef, useState } from "react";
 
+import { NoteCardSkeleton } from "@/components/asset-card-skeleton";
 import { FolderCardSkeleton } from "@/components/preview-stack-skeleton";
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
-import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistedStore } from "@/store";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { makeBoardKey } from "./canvas-key";
@@ -148,14 +148,7 @@ function LoadingCard({ id, type, height }: (typeof LOADING_CARDS)[number]) {
   const widthClass = "w-[280px] max-md:w-[200px]";
 
   if (type === "note") {
-    return (
-      <div className={`${widthClass} rounded-lg border bg-sidebar p-4`}>
-        <Skeleton className="h-3 w-5/6" />
-        <Skeleton className="mt-3 h-3 w-full" />
-        <Skeleton className="mt-3 h-3 w-4/5" />
-        <Skeleton className="mt-3 h-3 w-2/3" />
-      </div>
-    );
+    return <NoteCardSkeleton className={widthClass} />;
   }
 
   if (type === "folder") {
