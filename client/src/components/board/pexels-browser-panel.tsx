@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { usePexelsSearch, type PexelsPhoto } from "@/api/pexels";
 import { useCreateRemoteImage } from "@/api/collection";
 import { Button } from "@/components/ui/button";
+import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -132,7 +133,7 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none absolute inset-0 animate-pulse bg-muted transition-opacity duration-300",
+          "image-shimmer pointer-events-none absolute inset-0 transition-opacity duration-300",
           loaded ? "opacity-0" : "opacity-100",
         )}
       />
@@ -675,9 +676,9 @@ export function PexelsBrowserPanel({
                     ) : search.isLoading ? (
                       <div className="columns-2 gap-2 [@container(min-width:38rem)]:columns-3">
                         {Array.from({ length: 6 }, (_, index) => (
-                          <div
+                          <ImageSkeleton
                             key={index}
-                            className="mb-2 aspect-[4/5] animate-pulse rounded-lg bg-muted"
+                            className="mb-2 aspect-[4/5] rounded-lg"
                           />
                         ))}
                       </div>

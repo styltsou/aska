@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { resolveGradientCss } from "@/lib/color-gradient";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -971,10 +972,10 @@ function ColorResultsSkeleton() {
       aria-label="Searching for images"
     >
       {Array.from({ length: 6 }, (_, index) => (
-        <div
+        <ImageSkeleton
           key={index}
           className={cn(
-            "mb-3 animate-pulse break-inside-avoid rounded-lg bg-muted",
+            "mb-3 break-inside-avoid rounded-lg",
             index % 3 === 0 ? "h-28 sm:h-36" : "h-24 sm:h-32",
           )}
         />

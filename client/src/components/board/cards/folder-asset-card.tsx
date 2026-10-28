@@ -185,7 +185,7 @@ function FolderPreviewCard({
   if ((preview.type === "image" || preview.type === "video") && preview.url) {
     return (
       <div
-        className="absolute top-1/2 left-1/2 w-max max-w-[65cqw] overflow-hidden rounded-lg bg-card shadow-sm ring-1 ring-border/30 transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none"
+        className="absolute top-1/2 left-1/2 w-max max-w-[65cqw] overflow-hidden rounded-lg bg-card ring-1 ring-border/30 transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none"
         style={positionStyle}
       >
         <img
@@ -226,7 +226,7 @@ function FolderPreviewCard({
 
   return (
     <div
-      className="absolute top-1/2 left-1/2 overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none"
+      className="absolute top-1/2 left-1/2 overflow-hidden rounded-lg border border-border bg-card transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none"
       style={style}
     >
       {preview.type === "link" ? (

@@ -48,6 +48,23 @@
   }
 }
 
+.image-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    var(--muted) 18%,
+    color-mix(in oklch, var(--muted) 88%, var(--foreground)) 46%,
+    var(--muted) 74%
+  );
+  background-size: 220% 100%;
+  animation: preview-shimmer 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image-shimmer {
+    animation: none;
+  }
+}
+
 [data-asset-morphing] {
   animation: none !important;
   transition: none !important;

@@ -354,12 +354,7 @@ function CollectionPreviewCard({
   };
   const motionTransition = reduceMotion
     ? { duration: 0 }
-    : {
-        type: "spring" as const,
-        duration: active ? 0.36 : 0.42,
-        bounce: active ? 0.18 : 0.25,
-        delay: active ? index * 0.04 : 0,
-      };
+    : { duration: 0.3, ease: [0.34, 1.45, 0.64, 1] as const };
 
   if ((preview.type === "image" || preview.type === "video") && preview.url) {
     return (
@@ -371,10 +366,7 @@ function CollectionPreviewCard({
         transition={motionTransition}
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
-        className={cn(
-          "pointer-events-auto absolute w-max max-w-[62cqw] overflow-hidden rounded-lg",
-          preview.type === "image" && "border border-transparent bg-card",
-        )}
+        className="pointer-events-auto absolute w-max max-w-[62cqw] overflow-hidden rounded-lg"
         style={positionStyle}
       >
         <img

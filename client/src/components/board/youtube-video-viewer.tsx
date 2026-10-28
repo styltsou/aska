@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import {
   Tooltip,
   TooltipContent,
@@ -689,7 +690,7 @@ function VideoViewerLoading({
               }
             >
               <div className="flex items-center justify-start pt-4 pb-8">
-                <Skeleton
+                <ImageSkeleton
                   data-asset-modal-hero
                   className={cn(
                     "aspect-video w-full rounded-md",
@@ -713,7 +714,7 @@ function VideoViewerLoading({
       role="status"
       aria-label="Loading video details"
     >
-      <Skeleton className="aspect-video w-full rounded-md" />
+      <ImageSkeleton className="aspect-video w-full rounded-md" />
       {metadata}
       {note}
     </div>

@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import {
   Tooltip,
   TooltipContent,
@@ -805,9 +806,9 @@ function NativeVideoLoading({
         role="status"
         aria-label="Loading video details"
       >
-        <Skeleton
+        <ImageSkeleton
           data-asset-modal-hero
-          className="size-full animate-[preview-shimmer_1.6s_linear_infinite] rounded-none bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
+          className="size-full rounded-none"
           aria-hidden="true"
         />
       </div>
@@ -817,7 +818,7 @@ function NativeVideoLoading({
   const content = (
     <div className="mx-auto w-full max-w-[76rem] px-5" aria-hidden="true">
       <div className="flex justify-center pt-4 pb-8">
-        <Skeleton
+        <ImageSkeleton
           data-asset-modal-hero
           className={cn(
             "aspect-video w-full rounded-md",

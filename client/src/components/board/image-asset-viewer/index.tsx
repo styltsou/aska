@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import { AssetViewerModeIcon } from "@/components/board/asset-viewer-mode-icon";
 import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
@@ -2344,9 +2345,9 @@ export function ImageAssetViewer({
                       layoutTransition={fullscreenLayoutTransition}
                     />
                   ) : loading ? (
-                    <Skeleton
+                    <ImageSkeleton
                       data-asset-modal-hero
-                      className="rounded-lg bg-white/10"
+                      className="rounded-lg"
                       style={{
                         width: "min(100cqw, calc(100cqh * 1.333333), 64rem)",
                         height: "min(100cqh, calc(100cqw / 1.333333), 48rem)",

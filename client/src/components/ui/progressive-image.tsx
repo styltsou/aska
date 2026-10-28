@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ComponentProps } from "react";
 import { motion, type MotionStyle } from "motion/react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import {
   reportImageDecoded,
   reportImageFailed,
@@ -145,7 +145,7 @@ export function ProgressiveImage({
           className={cn(className, "pointer-events-none")}
           style={style}
         >
-          <Skeleton className={cn("size-full", placeholderClassName)} />
+          <ImageSkeleton className={cn("size-full", placeholderClassName)} />
         </motion.div>
       ) : null}
       {fallbackSrc ? (

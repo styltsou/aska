@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -314,9 +315,9 @@ export function DestinationDialog({
                       className="flex w-full items-center gap-3 rounded-md px-2.5 py-2"
                     >
                       <div className="flex shrink-0 gap-0.5">
-                        <Skeleton className="size-8 rounded-[3px]" />
-                        <Skeleton className="size-8 rounded-[3px]" />
-                        <Skeleton className="size-8 rounded-[3px]" />
+                        <ImageSkeleton className="size-8 rounded-[3px]" />
+                        <ImageSkeleton className="size-8 rounded-[3px]" />
+                        <ImageSkeleton className="size-8 rounded-[3px]" />
                       </div>
                       <div className="flex-1">
                         <Skeleton className="h-4 w-26" />

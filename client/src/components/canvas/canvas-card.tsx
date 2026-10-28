@@ -405,7 +405,7 @@ function PendingDropMediaCard({
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 animate-[preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
+        className="image-shimmer pointer-events-none absolute inset-0"
       />
       <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
         <Icon className="size-7 text-muted-foreground" strokeWidth={1.7} />

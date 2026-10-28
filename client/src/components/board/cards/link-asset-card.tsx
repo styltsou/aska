@@ -54,7 +54,7 @@ function LinkThumbnail({
       {!ready ? (
         <div
           data-slot="youtube-thumbnail-loading"
-          className="pointer-events-none absolute inset-0 animate-[preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
+          className="image-shimmer pointer-events-none absolute inset-0"
         />
       ) : null}
       <div
@@ -241,7 +241,7 @@ export function LinkAssetCard({
         {!previewUrl && isPreviewResolving ? (
           <div
             data-slot="optimistic-link-preview"
-            className="pointer-events-none absolute inset-0 z-10 animate-[preview-shimmer_1.6s_linear_infinite] bg-[linear-gradient(110deg,var(--muted)_18%,color-mix(in_oklch,var(--muted)_88%,var(--foreground))_46%,var(--muted)_74%)] [background-size:220%_100%] motion-reduce:animate-none"
+            className="image-shimmer pointer-events-none absolute inset-0 z-10"
           />
         ) : null}
         {isPreviewUnavailable ? <LinkPreviewUnavailable /> : null}
