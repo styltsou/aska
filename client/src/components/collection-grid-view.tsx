@@ -12,6 +12,7 @@ import {
   useDraggable,
   useDroppable,
 } from "@dnd-kit/react";
+import { toast } from "sonner";
 
 import {
   useBulkDelete,
@@ -67,6 +68,8 @@ type CollectionGridViewProps = {
   hasMoreAssets?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: (() => void) | undefined;
+  onSelectAll?: (() => Promise<CollectionNode[]>) | undefined;
+  selectionFilterKey?: string;
   isColorFilterActive?: boolean;
   colorMatchNodeIds?: ReadonlySet<string>;
   focusedNodeId?: string;
@@ -95,6 +98,8 @@ export function CollectionGridView({
   hasMoreAssets = false,
   isLoadingMore = false,
   onLoadMore,
+  onSelectAll,
+  selectionFilterKey,
   isColorFilterActive = false,
   colorMatchNodeIds,
   focusedNodeId,
@@ -170,6 +175,7 @@ export function CollectionGridView({
     [assets, folders],
   );
   const selectedIds = selectionIdsForScope(selection, boardKey);
+  const allEligibleRef = useRef(new Set<string>());
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const selectionRef = useRef({ selectedIds: selectedIdSet, count: 0 });
   selectionRef.current = {
@@ -259,10 +265,17 @@ export function CollectionGridView({
   }, [activateSelectionScope, boardKey]);
 
   useEffect(() => {
+    allEligibleRef.current = new Set();
+  }, [selectionFilterKey]);
+
+  useEffect(() => {
     if (selection.scopeKey !== boardKey) return;
     replaceSelection(
       boardKey,
-      selectedIds.filter((nodeId) => eligibleNodeIds.has(nodeId)),
+      selectedIds.filter(
+        (nodeId) =>
+          eligibleNodeIds.has(nodeId) || allEligibleRef.current.has(nodeId),
+      ),
     );
   }, [
     boardKey,
@@ -302,12 +315,32 @@ export function CollectionGridView({
       }
       if (isSelectionShortcut(event)) {
         event.preventDefault();
-        replaceSelection(boardKey, eligibleNodeIds);
+        if (onSelectAll) {
+          void onSelectAll()
+            .then((allNodes) => {
+              const ids = new Set(
+                allNodes
+                  .filter(isPersistedSelectableAsset)
+                  .map((node) => node.id),
+              );
+              allEligibleRef.current = ids;
+              replaceSelection(boardKey, ids);
+            })
+            .catch(() => toast.error("Could not select all assets"));
+        } else {
+          replaceSelection(boardKey, eligibleNodeIds);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [boardKey, clearSelection, eligibleNodeIds, replaceSelection]);
+  }, [
+    boardKey,
+    clearSelection,
+    eligibleNodeIds,
+    onSelectAll,
+    replaceSelection,
+  ]);
 
   const handleSelectionContextMenu = useCallback(
     (nodeId: string, event: MouseEvent<HTMLDivElement>) => {

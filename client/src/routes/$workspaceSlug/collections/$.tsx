@@ -11,7 +11,10 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { collectionQueryKeys } from "@/api/collection/query-keys";
-import { fetchCollectionGrid } from "@/api/collection/fetchers";
+import {
+  fetchCollectionContents,
+  fetchCollectionGrid,
+} from "@/api/collection/fetchers";
 import {
   useCollectionContents,
   type CanvasObject,
@@ -507,6 +510,20 @@ function CollectionPage() {
                       ? () => void gridQuery.fetchNextPage()
                       : undefined
                   }
+                  onSelectAll={
+                    useGridPages
+                      ? async () =>
+                          (
+                            await fetchCollectionContents(
+                              workspaceSlug,
+                              collectionSlug,
+                              parentFolderPath,
+                              requestedAssetTypes,
+                            )
+                          ).nodes
+                      : undefined
+                  }
+                  selectionFilterKey={requestedAssetTypes.join(",")}
                   isColorFilterActive={hasResolvedColorSearch}
                   colorMatchNodeIds={colorMatchNodeIds}
                   focusedNodeId={focusedNodeId}
