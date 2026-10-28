@@ -20,7 +20,7 @@ type NoteSectionBoundary = Pick<NoteSection, "id"> & {
 const SECTION_SCROLL_OFFSET = 72;
 const ACTIVE_SECTION_LINE = 0.28;
 const MIN_SCROLLBAR_WIDTH = 2;
-const PREVIEW_RAIL_GAP = 2;
+const PREVIEW_RAIL_GAP = 6;
 const MIN_PREVIEW_RAIL_SECTIONS = 1;
 const MIN_PREVIEW_RAIL_OVERFLOW_RATIO = 0.25;
 
@@ -360,7 +360,7 @@ export function NotePreviewRail({
                 aria-hidden="true"
                 animate={{
                   scaleX:
-                    hoveredIndex === null ? (isActive ? 1 : 0.42) : hoverScale,
+                    hoveredIndex === null ? 0.5 : hoverScale,
                 }}
                 transition={
                   shouldReduceMotion
@@ -375,8 +375,6 @@ export function NotePreviewRail({
                   isHighlighted
                     ? "text-sidebar-foreground"
                     : "text-sidebar-foreground/35",
-                  section.level === 2 && "w-3.5",
-                  section.level === 3 && "w-2.5",
                 )}
               />
             </button>
