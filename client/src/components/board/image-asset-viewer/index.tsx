@@ -1,3 +1,4 @@
+import { downloadAssetOriginal } from "@/lib/asset-download";
 import {
   Dialog,
   DialogBody,
@@ -880,7 +881,7 @@ function ImageViewerActions({
   onCopyImage,
   onDownload,
 }: {
-  asset: ImageAsset;
+  asset?: ImageAsset;
   cropMode: boolean;
   isSavingCrop: boolean;
   isEyeDropping: boolean;
@@ -900,7 +901,7 @@ function ImageViewerActions({
               variant="secondary"
               size="sm"
               onClick={onStartCrop}
-              disabled={cropMode || isSavingCrop}
+              disabled={!asset || cropMode || isSavingCrop}
             />
           }
         >
@@ -919,7 +920,7 @@ function ImageViewerActions({
                 onClick={onPickColor}
                 className={VIEWER_HEADER_ICON_BUTTON_CLASS}
                 aria-pressed={isEyeDropping}
-                disabled={cropMode}
+                disabled={!asset || cropMode}
               />
             }
           >
@@ -949,6 +950,7 @@ function ImageViewerActions({
                 variant="ghost"
                 size="icon-sm"
                 onClick={onCopyImage}
+                disabled={!asset}
                 className={VIEWER_HEADER_ICON_BUTTON_CLASS}
               />
             }
@@ -969,6 +971,7 @@ function ImageViewerActions({
                 variant="ghost"
                 size="icon-sm"
                 onClick={onDownload}
+                disabled={!asset}
                 className={VIEWER_HEADER_ICON_BUTTON_CLASS}
               />
             }
@@ -979,8 +982,9 @@ function ImageViewerActions({
           <TooltipContent>Download</TooltipContent>
         </Tooltip>
         <AssetTimestampCard
-          createdAt={asset.createdAt}
-          updatedAt={asset.updatedAt}
+          createdAt={asset?.createdAt}
+          updatedAt={asset?.updatedAt}
+          disabled={!asset}
           label="Image details"
           triggerClassName={VIEWER_HEADER_ICON_BUTTON_CLASS}
         />
@@ -1025,12 +1029,16 @@ function ImageViewerModalHeaderControls({
   onExpand,
   onPeek,
   onShowInBoard,
+  loading,
+  titleLoading,
 }: {
   title: string;
   onClose: () => void;
   onExpand: () => void;
   onPeek?: () => void;
   onShowInBoard?: () => void;
+  loading: boolean;
+  titleLoading: boolean;
 }) {
   return (
     <div className="pointer-events-auto flex items-center gap-1">
@@ -1082,6 +1090,7 @@ function ImageViewerModalHeaderControls({
                 size="icon-sm"
                 className={VIEWER_HEADER_ICON_BUTTON_CLASS}
                 aria-label="Show in board"
+                disabled={loading}
                 onClick={onShowInBoard}
               />
             }
@@ -1093,9 +1102,16 @@ function ImageViewerModalHeaderControls({
         </Tooltip>
       ) : null}
       <ImageViewerModeButton expanded={false} onToggleExpanded={onExpand} />
-      <span className="max-w-[min(32rem,calc(100vw-14rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground">
-        {title}
-      </span>
+      {titleLoading ? (
+        <Skeleton
+          className="mx-1 h-4 w-28 shrink-0 rounded-sm"
+          aria-hidden="true"
+        />
+      ) : (
+        <span className="max-w-[min(32rem,calc(100vw-14rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground">
+          {title}
+        </span>
+      )}
     </div>
   );
 }
@@ -1211,6 +1227,7 @@ export function ImageAssetViewer({
   location?: AssetLocation;
 }) {
   const retainedAssetRef = useRef(selectedAsset);
+  const pendingPeekAssetIdRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const { target: peekTarget, peekImage } = useWorkspacePeek();
@@ -1455,6 +1472,26 @@ export function ImageAssetViewer({
     location,
     peekImage,
   ]);
+
+  const requestPeek = useCallback(() => {
+    if (!asset || !location) {
+      pendingPeekAssetIdRef.current = assetModalId ?? asset?.id ?? null;
+      return;
+    }
+    handlePeek();
+  }, [asset, assetModalId, handlePeek, location]);
+
+  useEffect(() => {
+    const pendingId = pendingPeekAssetIdRef.current;
+    if (!pendingId) return;
+    if (!open || (assetModalId && pendingId !== assetModalId)) {
+      pendingPeekAssetIdRef.current = null;
+      return;
+    }
+    if (!asset || !location || asset.id !== pendingId) return;
+    pendingPeekAssetIdRef.current = null;
+    handlePeek();
+  }, [asset, assetModalId, handlePeek, location, open]);
 
   const handleDismissAll = useCallback(() => {
     if (!onDismissAll) return;
@@ -1896,13 +1933,7 @@ export function ImageAssetViewer({
 
   const handleDownload = useCallback(() => {
     if (!asset) return;
-    const link = document.createElement("a");
-    link.href = `/api/v1/workspace/${workspaceSlug}/assets/${encodeURIComponent(
-      asset.id,
-    )}/download`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    void downloadAssetOriginal(workspaceSlug, asset);
   }, [asset, workspaceSlug]);
 
   const handleCopyImage = useCallback(async () => {
@@ -2029,20 +2060,18 @@ export function ImageAssetViewer({
       ? `inset(${Math.max(0, (cropperContainerSize.height - activeCropSize.height) / 2)}px ${Math.max(0, (cropperContainerSize.width - activeCropSize.width) / 2)}px)`
       : undefined;
   const cropTransform = `translate(${crop.x}px, ${crop.y}px) scale(${zoom}) scaleX(${flipX ? -1 : 1}) scaleY(${flipY ? -1 : 1}) rotate(${rotation}deg)`;
-  const imageActionProps = asset
-    ? {
-        asset,
-        cropMode,
-        isSavingCrop,
-        isEyeDropping,
-        hasCopiedColor,
-        hasCopiedImage,
-        onStartCrop: handleStartCrop,
-        onPickColor: handlePickColor,
-        onCopyImage: handleCopyImage,
-        onDownload: handleDownload,
-      }
-    : undefined;
+  const imageActionProps = {
+    asset,
+    cropMode,
+    isSavingCrop,
+    isEyeDropping,
+    hasCopiedColor,
+    hasCopiedImage,
+    onStartCrop: handleStartCrop,
+    onPickColor: handlePickColor,
+    onCopyImage: handleCopyImage,
+    onDownload: handleDownload,
+  };
 
   return (
     <Dialog
@@ -2119,9 +2148,8 @@ export function ImageAssetViewer({
                       </TooltipTrigger>
                       <TooltipContent>Close image</TooltipContent>
                     </Tooltip>
-                    {asset &&
-                    location &&
-                    !asset.uploadStatus &&
+                    {(location || (loading && assetModalId)) &&
+                    (!asset || !asset.uploadStatus) &&
                     !isMobile &&
                     !cropMode &&
                     !isSavingCrop ? (
@@ -2134,7 +2162,7 @@ export function ImageAssetViewer({
                               size="icon-sm"
                               className={headerControlButtonClass}
                               aria-label="Peek image"
-                              onClick={handlePeek}
+                              onClick={requestPeek}
                             />
                           }
                         >
@@ -2154,6 +2182,7 @@ export function ImageAssetViewer({
                               size="icon-sm"
                               className={headerControlButtonClass}
                               aria-label="Show in board"
+                              disabled={loading || !asset}
                               onClick={handleShowInBoard}
                             />
                           }
@@ -2176,9 +2205,16 @@ export function ImageAssetViewer({
                     "flex h-9 min-w-0 items-center rounded-lg px-3",
                   )}
                 >
-                  <span className="min-w-0 truncate text-sm font-medium text-foreground">
-                    {title}
-                  </span>
+                  {!asset ? (
+                    <Skeleton
+                      className="h-4 w-28 rounded-sm"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                      {title}
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (
@@ -2186,14 +2222,15 @@ export function ImageAssetViewer({
                 title={title}
                 onClose={handleClose}
                 onExpand={toggleExpanded}
+                loading={loading || !asset}
+                titleLoading={!asset}
                 onPeek={
-                  asset &&
-                  location &&
-                  !asset.uploadStatus &&
+                  (location || (loading && assetModalId)) &&
+                  (!asset || !asset.uploadStatus) &&
                   !isMobile &&
                   !cropMode &&
                   !isSavingCrop
-                    ? handlePeek
+                    ? requestPeek
                     : undefined
                 }
                 onShowInBoard={onShowInBoard ? handleShowInBoard : undefined}

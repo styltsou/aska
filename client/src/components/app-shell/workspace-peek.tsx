@@ -1027,7 +1027,17 @@ export function WorkspacePeekProvider({
                 </div>
               </div>
             ) : (
-              <WorkspacePeekLoading assetId={peekId} />
+              <WorkspacePeekLoading
+                assetId={peekId}
+                readOnlyNote={activeNoteId === peekId}
+                onClose={() => {
+                  void navigateOverlay(routeLocation.pathname, {
+                    peek: undefined,
+                    peekScope: undefined,
+                    peekDescendants: undefined,
+                  });
+                }}
+              />
             )}
           </motion.aside>
         ) : null}
@@ -1036,7 +1046,15 @@ export function WorkspacePeekProvider({
   );
 }
 
-function WorkspacePeekLoading({ assetId }: { assetId: string }) {
+function WorkspacePeekLoading({
+  assetId,
+  onClose,
+  readOnlyNote,
+}: {
+  assetId: string;
+  onClose: () => void;
+  readOnlyNote: boolean;
+}) {
   const type = assetId.split("-", 1)[0];
   const isVideo = type === "link" || type === "video";
   const disabledAction = async () => {};
@@ -1060,9 +1078,13 @@ function WorkspacePeekLoading({ assetId }: { assetId: string }) {
       aria-label="Loading peeked reference"
     >
       <PeekHeader
-        onClose={() => {}}
+        onClose={onClose}
         onShow={disabledAction}
-        onPromote={type !== "color" ? disabledAction : undefined}
+        onPromote={
+          type !== "color" && !(type === "note" && readOnlyNote)
+            ? disabledAction
+            : undefined
+        }
         promoteLabel={
           isVideo || type === "image" ? "Open full screen" : "Open in main view"
         }
@@ -1082,10 +1104,18 @@ function WorkspacePeekLoading({ assetId }: { assetId: string }) {
           </>
         ) : type === "note" ? (
           <>
-            {disabledButton(
-              "Highlight text",
-              <HighlighterIcon className="size-4" />,
-            )}
+            {readOnlyNote
+              ? disabledButton(
+                  "Read-only Peek mirror",
+                  <TriangleAlertIcon className="size-4" />,
+                )
+              : null}
+            {!readOnlyNote
+              ? disabledButton(
+                  "Highlight text",
+                  <HighlighterIcon className="size-4" />,
+                )
+              : null}
             {disabledButton(
               "Copy markdown",
               <CopyFeedbackIcon copied={false} className="size-4" />,
@@ -1443,7 +1473,6 @@ function PeekHeader({
                 variant="ghost"
                 size="icon"
                 aria-label="Close Peek"
-                disabled={disabled}
                 className="size-8 rounded-lg"
                 onClick={onClose}
               >

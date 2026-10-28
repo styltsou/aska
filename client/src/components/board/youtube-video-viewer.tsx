@@ -226,6 +226,7 @@ export function YouTubeVideoViewer({
   );
   const expanded = view ? view === "full" : localExpanded;
   const [activeAsset, setActiveAsset] = useState<VideoLinkAsset>();
+  const pendingPeekAssetIdRef = useRef<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
 
   useEffect(() => {
@@ -237,6 +238,31 @@ export function YouTubeVideoViewer({
     : loading
       ? undefined
       : activeAsset;
+  useEffect(() => {
+    const pendingId = pendingPeekAssetIdRef.current;
+    if (!pendingId) return;
+    if (
+      controlledOpen === false ||
+      (assetModalId && pendingId !== assetModalId)
+    ) {
+      pendingPeekAssetIdRef.current = null;
+      return;
+    }
+    if (!displayedAsset || !location || displayedAsset.id !== pendingId) return;
+    pendingPeekAssetIdRef.current = null;
+    void peekVideo(displayedAsset, location, { demoteMain: true }).then(
+      (opened) => {
+        if (opened) onClose();
+      },
+    );
+  }, [
+    assetModalId,
+    controlledOpen,
+    displayedAsset,
+    location,
+    onClose,
+    peekVideo,
+  ]);
   if (!displayedAsset && !loading) return null;
   const open = controlledOpen ?? asset !== undefined;
   const split = Boolean(peekTarget) && !isMobile;
@@ -311,6 +337,7 @@ export function YouTubeVideoViewer({
           </DrawerDescription>
           <VideoViewerToolbar
             asset={displayedAsset}
+            loading={loading}
             onClose={onDismissAll ?? onClose}
             notesOpen={notesOpen}
             onToggleNotes={() => setNotesOpen((current) => !current)}
@@ -398,12 +425,18 @@ export function YouTubeVideoViewer({
         </DialogDescription>
         <VideoViewerToolbar
           asset={displayedAsset}
+          loading={loading}
           onClose={onDismissAll ?? onClose}
           notesOpen={notesOpen}
           onToggleNotes={() => setNotesOpen((current) => !current)}
           onPeek={
-            displayedAsset && location
+            location || (loading && assetModalId)
               ? () => {
+                  if (!displayedAsset || !location) {
+                    pendingPeekAssetIdRef.current =
+                      assetModalId ?? displayedAsset?.id ?? null;
+                    return;
+                  }
                   void peekVideo(displayedAsset, location, {
                     demoteMain: true,
                   }).then((opened) => {
@@ -468,6 +501,7 @@ export function YouTubeVideoViewer({
 
 function VideoViewerToolbar({
   asset,
+  loading,
   onClose,
   notesOpen,
   onToggleNotes,
@@ -481,6 +515,7 @@ function VideoViewerToolbar({
   onToggleExpanded,
 }: {
   asset?: VideoLinkAsset;
+  loading: boolean;
   onClose: () => void;
   notesOpen: boolean;
   onToggleNotes: () => void;
@@ -587,6 +622,7 @@ function VideoViewerToolbar({
                   ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
                 )}
                 aria-label="Show in board"
+                disabled={loading || !asset}
                 onClick={onShowInBoard}
               />
             }
@@ -627,17 +663,17 @@ function VideoViewerToolbar({
       <div className="ml-auto flex items-center gap-0.5">
         <AssetNotesButton
           hasNote={Boolean(asset?.note?.trim())}
+          disabled={!asset}
           open={notesOpen}
           onClick={onToggleNotes}
         />
-        {asset ? (
-          <AssetTimestampCard
-            createdAt={asset.createdAt}
-            updatedAt={asset.updatedAt}
-            label="Video details"
-            triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
-          />
-        ) : null}
+        <AssetTimestampCard
+          createdAt={asset?.createdAt}
+          updatedAt={asset?.updatedAt}
+          disabled={!asset}
+          label="Video details"
+          triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
+        />
       </div>
     </motion.div>
   );

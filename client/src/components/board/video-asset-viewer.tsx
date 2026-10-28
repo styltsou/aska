@@ -176,9 +176,7 @@ export function VideoAssetViewer({
             onToggleNotes={() => setNotesOpen((current) => !current)}
             notesOpen={notesOpen}
             onShowInBoard={onShowInBoard}
-            onDownload={
-              displayedAsset?.url || loading ? handleDownload : undefined
-            }
+            onDownload={displayedAsset?.url ? handleDownload : undefined}
             presentation="drawer"
           />
           {displayedAsset ? (
@@ -268,6 +266,7 @@ export function VideoAssetViewer({
         </DialogDescription>
         <NativeVideoToolbar
           asset={displayedAsset}
+          loading={loading}
           onClose={onDismissAll ?? onClose}
           onToggleNotes={() => setNotesOpen((current) => !current)}
           notesOpen={notesOpen}
@@ -326,6 +325,7 @@ export function VideoAssetViewer({
 
 function NativeVideoToolbar({
   asset,
+  loading,
   onClose,
   onToggleNotes,
   notesOpen,
@@ -339,6 +339,7 @@ function NativeVideoToolbar({
   onToggleExpanded,
 }: {
   asset?: VideoAsset;
+  loading: boolean;
   onClose: () => void;
   onToggleNotes: () => void;
   notesOpen: boolean;
@@ -389,6 +390,7 @@ function NativeVideoToolbar({
       {onShowInBoard ? (
         <ToolbarButton
           label="Show in board"
+          disabled={loading || !asset}
           onClick={onShowInBoard}
           className={iconButtonClass}
         >
@@ -404,12 +406,20 @@ function NativeVideoToolbar({
           <AssetViewerModeIcon expanded={expanded} />
         </ToolbarButton>
       ) : null}
-      <span className="max-w-[min(32rem,calc(100vw-12rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground">
-        {asset?.title?.trim() || "Untitled video"}
-      </span>
+      {asset ? (
+        <span className="max-w-[min(32rem,calc(100vw-12rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground">
+          {asset.title?.trim() || "Untitled video"}
+        </span>
+      ) : (
+        <Skeleton
+          className="mx-1 h-4 w-32 shrink-0 rounded-sm"
+          aria-hidden="true"
+        />
+      )}
       <div className="ml-auto flex items-center gap-0.5">
         <AssetNotesButton
           hasNote={Boolean(asset?.note?.trim())}
+          disabled={!asset}
           open={notesOpen}
           onClick={onToggleNotes}
         />
@@ -438,20 +448,20 @@ function NativeVideoToolbar({
         {onDownload ? (
           <ToolbarButton
             label="Download original"
+            disabled={!asset}
             onClick={onDownload}
             className={iconButtonClass}
           >
             <DownloadIcon className="size-4" />
           </ToolbarButton>
         ) : null}
-        {asset ? (
-          <AssetTimestampCard
-            createdAt={asset.createdAt}
-            updatedAt={asset.updatedAt}
-            label="Video details"
-            triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
-          />
-        ) : null}
+        <AssetTimestampCard
+          createdAt={asset?.createdAt}
+          updatedAt={asset?.updatedAt}
+          disabled={!asset}
+          label="Video details"
+          triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
+        />
       </div>
     </motion.div>
   );
@@ -462,8 +472,10 @@ function ToolbarButton({
   onClick,
   className,
   children,
+  disabled = false,
 }: {
   label: string;
+  disabled?: boolean;
   onClick: () => void;
   className: string;
   children: ReactNode;
@@ -478,6 +490,7 @@ function ToolbarButton({
             size="icon"
             className={className}
             aria-label={label}
+            disabled={disabled}
             onClick={onClick}
           />
         }

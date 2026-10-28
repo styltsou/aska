@@ -37,6 +37,7 @@ export function AssetTimestampCard({
   createdAt,
   updatedAt,
   label,
+  disabled = false,
   triggerClassName,
   side = "bottom",
   align = "end",
@@ -45,6 +46,7 @@ export function AssetTimestampCard({
   createdAt?: string;
   updatedAt?: string;
   label: string;
+  disabled?: boolean;
   triggerClassName?: string;
   side?: "top" | "right" | "bottom" | "left";
   align?: "start" | "center" | "end";
@@ -55,6 +57,20 @@ export function AssetTimestampCard({
     updatedAt && hasAssetBeenEdited(createdAt, updatedAt)
       ? formatNoteMetadataDateTime(updatedAt)
       : "";
+  if (disabled) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className={cn("size-8 shrink-0 rounded-lg", triggerClassName)}
+        aria-label={label}
+        disabled
+      >
+        <InfoIcon className="size-4" />
+      </Button>
+    );
+  }
   if (!createdLabel && !editedLabel) return null;
 
   return (

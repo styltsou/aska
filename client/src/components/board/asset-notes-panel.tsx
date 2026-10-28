@@ -13,11 +13,13 @@ export function AssetNotesButton({
   open,
   onClick,
   className,
+  disabled = false,
 }: {
   hasNote: boolean;
   open: boolean;
   onClick: () => void;
   className?: string;
+  disabled?: boolean;
 }) {
   return (
     <Button
@@ -33,6 +35,7 @@ export function AssetNotesButton({
       aria-haspopup="true"
       aria-expanded={open}
       onClick={onClick}
+      disabled={disabled}
     >
       <NotebookPenIcon className="size-4" />
       {hasNote ? (

@@ -1945,6 +1945,7 @@ export function NoteDetailDrawer({
                         ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
                       )}
                       aria-label="Show in board"
+                      disabled={loading}
                       onClick={onShowInBoard}
                     />
                   }
@@ -2034,6 +2035,7 @@ export function NoteDetailDrawer({
                       ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
                     )}
                     aria-label={copied ? "Note copied" : "Copy markdown"}
+                    disabled={loading && !activeNote}
                     onClick={copyNoteMarkdown}
                   >
                     <CopyFeedbackIcon copied={copied} className="size-4" />
@@ -2050,6 +2052,7 @@ export function NoteDetailDrawer({
             <AssetTimestampCard
               createdAt={activeNote?.createdAt}
               updatedAt={activeNote?.updatedAt}
+              disabled={loading && !activeNote}
               label="Note details"
               sideOffset={10}
               triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}

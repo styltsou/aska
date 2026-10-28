@@ -121,10 +121,26 @@ export function ColorDetailDrawer({
       "md:right-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--app-shell-inset))]",
   );
   const [activeColor, setActiveColor] = useState<ColorAsset | undefined>(color);
+  const pendingPeekAssetIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (color) setActiveColor(color);
   }, [color]);
   const displayedColor = color ?? (loading ? undefined : activeColor);
+  useEffect(() => {
+    const pendingId = pendingPeekAssetIdRef.current;
+    if (!pendingId) return;
+    if (!open || (assetModalId && pendingId !== assetModalId)) {
+      pendingPeekAssetIdRef.current = null;
+      return;
+    }
+    if (!displayedColor || displayedColor.id !== pendingId) return;
+    pendingPeekAssetIdRef.current = null;
+    void peekColor(displayedColor, scope, { demoteMain: true }).then(
+      (opened) => {
+        if (opened) onClose();
+      },
+    );
+  }, [assetModalId, displayedColor, onClose, open, peekColor, scope]);
   const naming = useGradientNaming((state) =>
     Boolean(displayedColor && state.pending[displayedColor.id]),
   );
@@ -193,8 +209,12 @@ export function ColorDetailDrawer({
         onEdit={onEdit}
         onShowInBoard={onShowInBoard}
         onPeek={
-          displayedColor
+          displayedColor || (loading && assetModalId)
             ? () => {
+                if (!displayedColor) {
+                  pendingPeekAssetIdRef.current = assetModalId ?? null;
+                  return;
+                }
                 void peekColor(displayedColor, effectiveScope, {
                   demoteMain: true,
                 }).then((opened) => {
@@ -447,7 +467,16 @@ export function ColorDetailDrawer({
           <DrawerDescription className="sr-only">
             Loading color details.
           </DrawerDescription>
-          <ColorDetailLoading mobile scope={scope} />
+          <ColorDetailLoading
+            mobile
+            scope={scope}
+            onClose={onDismissAll ?? onClose}
+            onPeek={() => {
+              pendingPeekAssetIdRef.current = assetModalId ?? null;
+            }}
+            showInBoard={Boolean(onShowInBoard)}
+            canEdit={Boolean(onEdit)}
+          />
         </DrawerContent>
       ) : null}
     </Drawer>
@@ -653,6 +682,7 @@ function ColorDetailModal({
                 ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
               )}
               aria-label="Show in board"
+              disabled={loading || !color}
               onClick={onShowInBoard}
             >
               <LocateFixedIcon className="size-4" />
@@ -673,16 +703,24 @@ function ColorDetailModal({
           >
             <AssetViewerModeIcon expanded={expanded} />
           </Button>
-          <span
-            className={cn(
-              "max-w-[min(32rem,calc(100vw-14rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground",
-              naming && "gradient-name-shimmer",
-            )}
-          >
-            {title}
-          </span>
+          {color ? (
+            <span
+              className={cn(
+                "max-w-[min(32rem,calc(100vw-14rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground",
+                naming && "gradient-name-shimmer",
+              )}
+            >
+              {title}
+            </span>
+          ) : (
+            <Skeleton
+              className="mx-1 h-4 w-28 shrink-0 rounded-sm"
+              aria-hidden="true"
+            />
+          )}
           <AssetNotesButton
             hasNote={Boolean(color?.note?.trim())}
+            disabled={!color}
             open={notesOpen}
             onClick={() => onNotesOpenChange(!notesOpen)}
             className="ml-auto"
@@ -696,19 +734,19 @@ function ColorDetailModal({
                 ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
               )}
               aria-label="Edit color"
+              disabled={!color}
               onClick={onEdit}
             >
               <PencilIcon className="size-4" />
             </Button>
           ) : null}
-          {color ? (
-            <AssetTimestampCard
-              createdAt={color.createdAt}
-              updatedAt={color.updatedAt}
-              label="Color details"
-              triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
-            />
-          ) : null}
+          <AssetTimestampCard
+            createdAt={color?.createdAt}
+            updatedAt={color?.updatedAt}
+            disabled={!color}
+            label="Color details"
+            triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
+          />
         </motion.div>
         <div className="relative flex min-h-0 flex-1 overflow-hidden">
           <DialogBody
@@ -987,9 +1025,17 @@ function ColorResultsSkeleton() {
 function ColorDetailLoading({
   scope,
   mobile = false,
+  onClose,
+  onPeek,
+  showInBoard = false,
+  canEdit = false,
 }: {
   scope: ColorSearchScope;
   mobile?: boolean;
+  onClose?: () => void;
+  onPeek?: () => void;
+  showInBoard?: boolean;
+  canEdit?: boolean;
 }) {
   if (mobile) {
     return (
@@ -1004,9 +1050,54 @@ function ColorDetailLoading({
             <Skeleton className="h-4 w-32" />
             <Skeleton className="h-3 w-20" />
           </div>
-          <div className="flex gap-1.5" aria-hidden="true">
-            <Skeleton className="size-8 rounded-lg" />
-            <Skeleton className="size-8 rounded-lg" />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <AssetNotesButton
+              hasNote={false}
+              open={false}
+              onClick={() => {}}
+              disabled
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Close color"
+              onClick={onClose}
+            >
+              <XIcon className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Peek"
+              onClick={onPeek}
+            >
+              <PanelRightIcon className="size-4" />
+            </Button>
+            {showInBoard ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Show in board"
+                disabled
+              >
+                <LocateFixedIcon className="size-4" />
+              </Button>
+            ) : null}
+            {canEdit ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Edit color"
+                disabled
+              >
+                <PencilIcon className="size-4" />
+              </Button>
+            ) : null}
+            <AssetTimestampCard label="Color details" disabled />
           </div>
         </div>
         <div className="flex items-center justify-between gap-3 px-4 py-4">
