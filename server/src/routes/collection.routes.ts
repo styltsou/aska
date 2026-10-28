@@ -11,6 +11,7 @@ import {
   deleteCanvasObject,
   flattenFolder,
   getCollectionContents,
+  getCollectionGrid,
   getCollections,
   getCollectionProperties,
   getWorkspaceWithCollections,
@@ -105,6 +106,10 @@ const collectionRoutes = factory
   .get(
     "/workspace/:workspaceSlug/collections/:collectionSlug/contents",
     ...getCollectionContents,
+  )
+  .get(
+    "/workspace/:workspaceSlug/collections/:collectionSlug/grid",
+    ...getCollectionGrid,
   )
   .post("/workspace/:workspaceSlug/bulk-delete", ...bulkDelete);
 

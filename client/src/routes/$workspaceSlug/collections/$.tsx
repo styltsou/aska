@@ -7,10 +7,11 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { collectionQueryKeys } from "@/api/collection/query-keys";
+import { fetchCollectionGrid } from "@/api/collection/fetchers";
 import {
   useCollectionContents,
   type CanvasObject,
@@ -70,6 +71,13 @@ function CollectionPage() {
     .split("/")
     .filter(Boolean);
   const folderPath = folderSegments.join("/");
+  const collectionViewScope = getCollectionViewScope(
+    workspaceSlug,
+    collectionSlug,
+  );
+  const boardView = useSessionStore(
+    (state) => state.collectionViews[collectionViewScope] ?? "canvas",
+  );
   const queryClient = useQueryClient();
   const [focusedShowRequest, setFocusedShowRequest] =
     useState<BoardShowRequest>();
@@ -84,20 +92,109 @@ function CollectionPage() {
       ? [...selectedAssetTypes, "folder" as const]
       : selectedAssetTypes;
   const {
-    data,
-    isLoading,
-    isFetching,
-    isError,
-    isPlaceholderData,
-    error,
-    refetch,
+    data: canvasData,
+    isLoading: isCanvasLoading,
+    isFetching: isCanvasFetching,
+    isError: isCanvasError,
+    isPlaceholderData: isCanvasPlaceholderData,
+    error: canvasError,
+    refetch: refetchCanvas,
   } = useCollectionContents(
     workspaceSlug,
     collectionSlug,
     folderPath || undefined,
     {
       types: requestedAssetTypes,
+      enabled:
+        boardView === "canvas" ||
+        (filterBar.filterType === "Color" &&
+          filterBar.selectedColors.length > 0),
     },
+  );
+  const gridQuery = useInfiniteQuery({
+    queryKey: [
+      "collectionGrid",
+      workspaceSlug,
+      collectionSlug,
+      folderPath,
+      ...requestedAssetTypes,
+    ],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      fetchCollectionGrid(
+        workspaceSlug,
+        collectionSlug,
+        folderPath || undefined,
+        requestedAssetTypes,
+        pageParam,
+      ),
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled:
+      boardView === "grid" &&
+      !(
+        filterBar.filterType === "Color" && filterBar.selectedColors.length > 0
+      ) &&
+      !!workspaceSlug &&
+      !!collectionSlug,
+  });
+  const gridPages = gridQuery.data?.pages;
+  const gridData = useMemo(
+    () =>
+      gridPages?.[0]
+        ? {
+            collection: gridPages[0].collection,
+            breadcrumbs: gridPages[0].breadcrumbs,
+            nodes: [
+              ...gridPages[0].folders,
+              ...gridPages.flatMap((page) => page.assets),
+            ],
+            canvasObjects: EMPTY_CANVAS_OBJECTS,
+          }
+        : undefined,
+    [gridPages],
+  );
+  const useGridPages =
+    boardView === "grid" &&
+    !(filterBar.filterType === "Color" && filterBar.selectedColors.length > 0);
+  const data = useGridPages ? gridData : canvasData;
+  const isLoading = useGridPages ? gridQuery.isLoading : isCanvasLoading;
+  const isFetching = useGridPages ? gridQuery.isFetching : isCanvasFetching;
+  const isError = useGridPages ? gridQuery.isError : isCanvasError;
+  const isPlaceholderData = useGridPages ? false : isCanvasPlaceholderData;
+  const error = useGridPages ? gridQuery.error : canvasError;
+  const refetch = useGridPages ? gridQuery.refetch : refetchCanvas;
+
+  useEffect(
+    () =>
+      queryClient.getQueryCache().subscribe((event) => {
+        if (event.type !== "updated") return;
+        const key = event.query.queryKey;
+        if (
+          key[0] === "collectionContents" &&
+          key[1] === workspaceSlug &&
+          key[2] === collectionSlug
+        ) {
+          void queryClient.invalidateQueries({
+            queryKey: ["collectionGrid", workspaceSlug, collectionSlug],
+          });
+        }
+      }),
+    [queryClient, workspaceSlug, collectionSlug],
+  );
+
+  useEffect(
+    () =>
+      queryClient.getMutationCache().subscribe((event) => {
+        if (
+          event.type === "updated" &&
+          event.mutation.state.status === "success"
+        ) {
+          void queryClient.invalidateQueries({
+            queryKey: ["collectionGrid", workspaceSlug, collectionSlug],
+          });
+        }
+      }),
+    [queryClient, workspaceSlug, collectionSlug],
   );
 
   const cachedCollectionName = queryClient
@@ -193,13 +290,6 @@ function CollectionPage() {
     workspaceSlug,
     collectionSlug,
     parentFolderPath,
-  );
-  const collectionViewScope = getCollectionViewScope(
-    workspaceSlug,
-    collectionSlug,
-  );
-  const boardView = useSessionStore(
-    (state) => state.collectionViews[collectionViewScope] ?? "canvas",
   );
   const [warmedBoardKey, setWarmedBoardKey] = useState<string>();
   const isInactiveViewWarmed = warmedBoardKey === boardKey;
@@ -410,6 +500,13 @@ function CollectionPage() {
                     activeFolder ? `folder-${activeFolder.id}` : null
                   }
                   nodes={nodes}
+                  hasMoreAssets={useGridPages && gridQuery.hasNextPage}
+                  isLoadingMore={gridQuery.isFetchingNextPage}
+                  onLoadMore={
+                    useGridPages
+                      ? () => void gridQuery.fetchNextPage()
+                      : undefined
+                  }
                   isColorFilterActive={hasResolvedColorSearch}
                   colorMatchNodeIds={colorMatchNodeIds}
                   focusedNodeId={focusedNodeId}

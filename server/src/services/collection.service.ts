@@ -156,7 +156,9 @@ export interface ICollectionService {
     collectionSlug: string,
     folderPath?: string,
     types?: ContentTypeFilter[],
-  ): Promise<CollectionContentsResponse>;
+    gridPage?: { cursor?: string | undefined; limit: number },
+    skipCanvas?: boolean,
+  ): Promise<CollectionContentsResponse & { nextCursor?: string | undefined }>;
   updateNodePosition(
     orgId: string,
     collectionSlug: string,
@@ -376,12 +378,16 @@ export class CollectionService implements ICollectionService {
     collectionSlug: string,
     folderPath?: string,
     types?: ContentTypeFilter[],
-  ): Promise<CollectionContentsResponse> {
+    gridPage?: { cursor?: string | undefined; limit: number },
+    skipCanvas?: boolean,
+  ): Promise<CollectionContentsResponse & { nextCursor?: string | undefined }> {
     return this.queries.getCollectionContents(
       orgId,
       collectionSlug,
       folderPath,
       types,
+      gridPage,
+      skipCanvas,
     );
   }
 

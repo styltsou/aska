@@ -933,6 +933,13 @@ export const collectionNodes = pgTable(
       table.collectionId,
       table.parentFolderId,
     ),
+    index("collection_nodes_grid_page_idx").on(
+      table.collectionId,
+      table.parentFolderId,
+      table.nodeType,
+      table.createdAt.desc(),
+      table.id.desc(),
+    ),
     index("collection_nodes_canvas_front_idx").on(
       table.organizationId,
       table.collectionId,

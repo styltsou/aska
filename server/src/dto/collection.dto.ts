@@ -920,6 +920,15 @@ export const CollectionContentsQuerySchema = ContentTypeQuerySchema.extend({
   folderPath: z.string().optional(),
 });
 
+export const CollectionGridQuerySchema = CollectionContentsQuerySchema.extend({
+  cursor: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+$/)
+    .max(128)
+    .optional(),
+  limit: z.coerce.number().int().min(12).max(100).default(48),
+});
+
 export const BulkDeleteBodySchema = z.object({
   nodeIds: z
     .array(CanvasItemIdSchema)

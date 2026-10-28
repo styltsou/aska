@@ -3,6 +3,7 @@ import {
   arrayOverlaps,
   desc,
   eq,
+  lt,
   inArray,
   isNull,
   or,
@@ -60,6 +61,7 @@ import {
 } from "@/services/url-unfurl/projection";
 import { CanvasObjectService } from "./canvas-object.service";
 import { fetchMentionColorsBySource } from "./mention-colors";
+import { decodeGridCursor, encodeGridCursor } from "./grid-cursor";
 
 type Deps = {
   objectStorageService: IObjectStorageService;
@@ -357,14 +359,23 @@ export class CollectionQueryService {
     collectionSlug: string,
     folderPath?: string,
     types?: ContentTypeFilter[],
-  ): Promise<CollectionContentsResponse> {
+    gridPage?: { cursor?: string | undefined; limit: number },
+    skipCanvas = false,
+  ): Promise<CollectionContentsResponse & { nextCursor?: string | undefined }> {
     const collection = await getCollectionBySlug(orgId, collectionSlug);
     const target = await resolveTargetInCollection(collection, folderPath);
-    const canvasObjectsPromise = this.canvasObjects.getObjects(
-      orgId,
-      collection.id,
-      target.parentFolderId,
-    );
+    const canvasObjectsPromise =
+      gridPage || skipCanvas
+        ? Promise.resolve([])
+        : this.canvasObjects.getObjects(
+            orgId,
+            collection.id,
+            target.parentFolderId,
+          );
+    const cursor = gridPage?.cursor ? decodeGridCursor(gridPage.cursor) : null;
+    if (gridPage?.cursor && !cursor) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid grid cursor");
+    }
     const assetTypes = types?.filter(
       (type): type is "image" | "note" | "link" | "color" => type !== "folder",
     );
@@ -383,7 +394,7 @@ export class CollectionQueryService {
               : undefined,
           );
 
-    const children = await db
+    const childQuery = db
       .select({
         nodeId: collectionNodes.id,
         nodeType: collectionNodes.nodeType,
@@ -404,6 +415,7 @@ export class CollectionQueryService {
         imageVariantStatus: imageAssets.variantStatus,
         imagePaletteStatus: imageAssets.paletteStatus,
         createdAt: collectionNodes.createdAt,
+        createdAtCursor: sql<string>`${collectionNodes.createdAt}::text`,
         noteContent: noteAssets.markdown,
         noteIsExpanded: noteAssets.isExpanded,
         colorHex: colorAssets.hex,
@@ -445,9 +457,35 @@ export class CollectionQueryService {
             ? eq(collectionNodes.parentFolderId, target.parentFolderId)
             : isNull(collectionNodes.parentFolderId),
           typeCondition,
+          gridPage ? eq(collectionNodes.nodeType, "asset") : undefined,
+          cursor
+            ? or(
+                sql`${collectionNodes.createdAt} < ${cursor.timestamp}::timestamp`,
+                and(
+                  sql`${collectionNodes.createdAt} = ${cursor.timestamp}::timestamp`,
+                  lt(collectionNodes.id, cursor.nodeId),
+                ),
+              )
+            : undefined,
         ),
       )
-      .orderBy(collectionNodes.createdAt, collectionNodes.id);
+      .orderBy(
+        gridPage ? desc(collectionNodes.createdAt) : collectionNodes.createdAt,
+        gridPage ? desc(collectionNodes.id) : collectionNodes.id,
+      )
+      .$dynamic();
+    const childRows = await (gridPage
+      ? childQuery.limit(gridPage.limit + 1)
+      : childQuery);
+    const hasNextPage = !!gridPage && childRows.length > gridPage.limit;
+    const children = hasNextPage
+      ? childRows.slice(0, gridPage!.limit)
+      : childRows;
+    const lastChild = children.at(-1);
+    const nextCursor =
+      hasNextPage && lastChild
+        ? encodeGridCursor(lastChild.createdAtCursor, lastChild.nodeId)
+        : undefined;
 
     const folderChildIds = children
       .filter((c) => c.nodeType === "folder" && c.folderId !== null)
@@ -811,6 +849,7 @@ export class CollectionQueryService {
       breadcrumbs,
       nodes,
       canvasObjects: await canvasObjectsPromise,
+      ...(gridPage ? { nextCursor } : {}),
     };
   }
 

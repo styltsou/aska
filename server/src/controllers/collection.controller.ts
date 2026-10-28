@@ -14,6 +14,7 @@ import {
   CreateFolderSchema,
   CreateNoteSchema,
   CollectionContentsQuerySchema,
+  CollectionGridQuerySchema,
   MoveCollectionNodesParentSchema,
   WorkspaceParamSchema,
   UpdateNodePositionSchema,
@@ -615,5 +616,70 @@ export const getCollectionContents = factory.createHandlers(
     );
 
     return c.json(success(contents));
+  },
+);
+
+export const getCollectionGrid = factory.createHandlers(
+  authMiddleware,
+  validate.param(CollectionPathParamSchema),
+  validate.query(CollectionGridQuerySchema),
+  async (c) => {
+    const { workspaceSlug, collectionSlug } = c.req.valid("param");
+    const { folderPath, types, cursor, limit } = c.req.valid("query");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      c.get("userId"),
+    );
+    const assetTypes = types?.filter((type) => type !== "folder");
+    const [folders, page] = await Promise.all([
+      !cursor && (!types || types.includes("folder"))
+        ? collectionService.getCollectionContents(
+            workspace.id,
+            collectionSlug,
+            folderPath,
+            ["folder"],
+            undefined,
+            true,
+          )
+        : Promise.resolve(undefined),
+      types && assetTypes?.length === 0
+        ? Promise.resolve(undefined)
+        : collectionService.getCollectionContents(
+            workspace.id,
+            collectionSlug,
+            folderPath,
+            assetTypes,
+            { cursor, limit },
+          ),
+    ]);
+    const contents = page ?? folders;
+    if (!contents) {
+      const empty = await collectionService.getCollectionContents(
+        workspace.id,
+        collectionSlug,
+        folderPath,
+        ["folder"],
+        undefined,
+        true,
+      );
+      return c.json(
+        success({
+          collection: empty.collection,
+          breadcrumbs: empty.breadcrumbs,
+          folders: [],
+          assets: [],
+          nextCursor: null,
+        }),
+      );
+    }
+    return c.json(
+      success({
+        collection: contents.collection,
+        breadcrumbs: contents.breadcrumbs,
+        folders: folders?.nodes ?? [],
+        assets: page?.nodes ?? [],
+        nextCursor: page?.nextCursor ?? null,
+      }),
+    );
   },
 );

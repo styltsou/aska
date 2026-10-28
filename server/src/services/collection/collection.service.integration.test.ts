@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { db } from "@/db";
@@ -89,6 +89,51 @@ afterEach(async () => {
 });
 
 describe("CollectionService integration", () => {
+  it("pages grid assets without skipping nodes that share a timestamp", async () => {
+    const collection = await collectionService.createCollection(
+      fixture.organizationId,
+      fixture.userId,
+      { name: "Paged Grid" },
+    );
+    const notes = [];
+    for (const content of ["First", "Second", "Third"]) {
+      notes.push(
+        await collectionService.createNote(
+          fixture.organizationId,
+          fixture.userId,
+          collection.slug,
+          { content },
+        ),
+      );
+    }
+    await db
+      .update(collectionNodes)
+      .set({ createdAt: sql`'2026-10-29 12:34:56.123456'::timestamp` })
+      .where(eq(collectionNodes.collectionId, collection.id));
+
+    const firstPage = await collectionService.getCollectionContents(
+      fixture.organizationId,
+      collection.slug,
+      undefined,
+      undefined,
+      { limit: 2 },
+    );
+    const secondPage = await collectionService.getCollectionContents(
+      fixture.organizationId,
+      collection.slug,
+      undefined,
+      undefined,
+      { limit: 2, cursor: firstPage.nextCursor },
+    );
+    expect(firstPage.canvasObjects).toEqual([]);
+    expect(firstPage.nodes.map((node) => node.id)).toHaveLength(2);
+    expect(secondPage.nodes).toHaveLength(1);
+    expect(
+      new Set([...firstPage.nodes, ...secondPage.nodes].map((node) => node.id)),
+    ).toEqual(new Set(notes.map((note) => note.id)));
+    expect(secondPage.nextCursor).toBeUndefined();
+  });
+
   it("renames a collection without changing its URL or its nested asset counts", async () => {
     const collection = await collectionService.createCollection(
       fixture.organizationId,

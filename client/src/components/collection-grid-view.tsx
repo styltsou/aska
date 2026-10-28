@@ -25,7 +25,7 @@ import {
 } from "@/components/board/use-marquee-selection";
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
 import { MoveToDialog } from "@/components/move-to-dialog";
-import { Masonry } from "@/components/masonry-grid";
+import { VirtualMasonry } from "@/components/virtual-masonry";
 import {
   columnsForGrid,
   GRID_DENSITIES,
@@ -45,9 +45,6 @@ import { cn } from "@/lib/utils";
 import { useTransientStore } from "@/store";
 import type { LinkAsset, VideoAsset } from "@/types/asset";
 
-// Fill even a six-column viewport before the scroll observer starts paging.
-const INITIAL_ASSET_COUNT = 36;
-const ASSET_PAGE_SIZE = 24;
 const GRID_NODE_DRAG_TYPE = "grid-node";
 const GRID_FOLDER_DROP_PREFIX = "grid-folder:";
 
@@ -67,6 +64,9 @@ type CollectionGridViewProps = {
   folderPath?: string;
   expectedParentFolderNodeId: string | null;
   nodes: CollectionNode[];
+  hasMoreAssets?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: (() => void) | undefined;
   isColorFilterActive?: boolean;
   colorMatchNodeIds?: ReadonlySet<string>;
   focusedNodeId?: string;
@@ -92,6 +92,9 @@ export function CollectionGridView({
   folderPath,
   expectedParentFolderNodeId,
   nodes,
+  hasMoreAssets = false,
+  isLoadingMore = false,
+  onLoadMore,
   isColorFilterActive = false,
   colorMatchNodeIds,
   focusedNodeId,
@@ -116,8 +119,6 @@ export function CollectionGridView({
     const saved = window.localStorage.getItem("aska:grid-density");
     return saved === "spacious" || saved === "compact" ? saved : "balanced";
   });
-  const [visibleAssetCount, setVisibleAssetCount] =
-    useState(INITIAL_ASSET_COUNT);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [activeDrag, setActiveDrag] = useState<GridNodeDragData>();
   const [pendingFolderDrop, setPendingFolderDrop] =
@@ -159,8 +160,6 @@ export function CollectionGridView({
       ),
     [colorMatchNodeIds, isColorFilterActive, orderedNodes],
   );
-  const visibleAssets = assets.slice(0, visibleAssetCount);
-  const hasMoreAssets = visibleAssetCount < assets.length;
   const eligibleNodeIds = useMemo(
     () =>
       new Set(
@@ -274,50 +273,25 @@ export function CollectionGridView({
   ]);
 
   useEffect(() => {
-    setVisibleAssetCount(INITIAL_ASSET_COUNT);
-  }, [boardKey]);
-
-  useEffect(() => {
     if (!focusedNodeId) return;
     const index = assets.findIndex((node) => node.id === focusedNodeId);
-    if (index < 0) return;
-
-    if (index >= visibleAssetCount) {
-      setVisibleAssetCount(
-        Math.min(
-          Math.ceil((index + 1) / ASSET_PAGE_SIZE) * ASSET_PAGE_SIZE,
-          assets.length,
-        ),
-      );
-      return;
-    }
-
-    const frame = requestAnimationFrame(() => {
-      surfaceRef.current
-        ?.querySelector(`[data-grid-node-id="${focusedNodeId}"]`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [assets, focusRequestId, focusedNodeId, visibleAssetCount]);
+    if (index < 0 && hasMoreAssets && !isLoadingMore) onLoadMore?.();
+  }, [assets, focusedNodeId, hasMoreAssets, isLoadingMore, onLoadMore]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
     const root = scrollRef.current;
-    if (!target || !root || !hasMoreAssets) return;
+    if (!target || !root || !hasMoreAssets || isLoadingMore) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setVisibleAssetCount((count) =>
-            Math.min(count + ASSET_PAGE_SIZE, assets.length),
-          );
-        }
+        if (entries[0]?.isIntersecting) onLoadMore?.();
       },
       { root, rootMargin: "600px 0px" },
     );
     observer.observe(target);
     return () => observer.disconnect();
-  }, [assets.length, hasMoreAssets, visibleAssetCount]);
+  }, [assets.length, hasMoreAssets, isLoadingMore, onLoadMore]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -457,6 +431,7 @@ export function CollectionGridView({
                   </h2>
                   <span className="text-xs text-muted-foreground tabular-nums">
                     {assets.length}
+                    {hasMoreAssets ? "+" : ""}
                   </span>
                   <div
                     data-grid-control
@@ -489,13 +464,21 @@ export function CollectionGridView({
                 </div>
                 {assets.length > 0 ? (
                   <>
-                    <Masonry
-                      className="min-w-0"
+                    <VirtualMasonry
                       width={contentWidth}
                       density={density}
+                      scrollElementRef={scrollRef}
+                      focusedIndex={
+                        focusedNodeId
+                          ? assets.findIndex(
+                              (node) => node.id === focusedNodeId,
+                            )
+                          : undefined
+                      }
+                      focusRequestId={focusRequestId}
                     >
-                      {visibleAssets.map(renderCard)}
-                    </Masonry>
+                      {assets.map(renderCard)}
+                    </VirtualMasonry>
                     <div
                       ref={loadMoreRef}
                       className="h-px"

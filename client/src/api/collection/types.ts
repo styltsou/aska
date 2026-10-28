@@ -755,6 +755,15 @@ export type CollectionContentsResponse = {
   canvasObjects: CanvasObject[];
 };
 
+export type CollectionGridResponse = Pick<
+  CollectionContentsResponse,
+  "collection" | "breadcrumbs"
+> & {
+  folders: CollectionNode[];
+  assets: CollectionNode[];
+  nextCursor: string | null;
+};
+
 export type InboxContentsResponse = Omit<
   CollectionContentsResponse,
   "canvasObjects"

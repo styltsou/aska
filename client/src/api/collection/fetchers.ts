@@ -3,6 +3,7 @@ import type {
   BulkDeleteResponse,
   CanvasObjectResponse,
   CollectionContentsResponse,
+  CollectionGridResponse,
   CollectionLinkNode,
   ContentTypeFilter,
   CollectionsData,
@@ -514,6 +515,23 @@ export async function fetchCollectionContents(
   const query = params.size > 0 ? `?${params.toString()}` : "";
   const path = `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/contents${query}`;
   return apiGet<CollectionContentsResponse>(path);
+}
+
+export async function fetchCollectionGrid(
+  workspaceSlug: string,
+  collectionSlug: string,
+  folderPath?: string,
+  types?: readonly ContentTypeFilter[],
+  cursor?: string,
+): Promise<CollectionGridResponse> {
+  const params = new URLSearchParams();
+  if (folderPath) params.set("folderPath", folderPath);
+  if (types?.length) params.set("types", types.join(","));
+  if (cursor) params.set("cursor", cursor);
+  params.set("limit", "48");
+  return apiGet<CollectionGridResponse>(
+    `/api/v1/workspace/${workspaceSlug}/collections/${collectionSlug}/grid?${params}`,
+  );
 }
 
 function buildTypesQuery(types?: readonly ContentTypeFilter[]) {
