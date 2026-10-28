@@ -78,8 +78,7 @@ export default $config({
     const googleAiApiKey = new sst.Secret("GoogleAiApiKey");
     const openAiApiKey = new sst.Secret("OpenAiApiKey");
     const gradientNamingProvider =
-      process.env.GRADIENT_NAMING_PROVIDER ??
-      ($app.stage === "hybrid" ? "google" : "off");
+      process.env.GRADIENT_NAMING_PROVIDER ?? "google";
     const imagePipelineCallbackSecret = new sst.Secret(
       "ImagePipelineCallbackSecret",
     );
