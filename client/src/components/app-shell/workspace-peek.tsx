@@ -12,6 +12,9 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   ArrowLeftRightIcon,
+  DownloadIcon,
+  HighlighterIcon,
+  InfoIcon,
   LocateFixedIcon,
   Maximize2Icon,
   TriangleAlertIcon,
@@ -65,6 +68,8 @@ import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
 import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
 import { useWeightedColorImageSearch } from "@/api/color-search";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
+import { ImageSkeleton } from "@/components/ui/image-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
@@ -982,7 +987,8 @@ export function WorkspacePeekProvider({
             aria-label="Loading peeked reference"
             className={cn(
               GLASS_FRAME_CLASS,
-              "fixed inset-y-[var(--app-shell-inset)] right-[var(--app-shell-inset)] z-50 hidden w-(--workspace-peek-panel-width) items-center justify-center rounded-xl bg-card md:flex",
+              "fixed inset-y-[var(--app-shell-inset)] right-[var(--app-shell-inset)] z-50 hidden w-(--workspace-peek-panel-width) overflow-hidden rounded-xl bg-card md:flex",
+              peekError && "items-center justify-center",
             )}
             initial={false}
             animate={SIDE_PANEL_ANIMATE}
@@ -1021,14 +1027,139 @@ export function WorkspacePeekProvider({
                 </div>
               </div>
             ) : (
-              <span className="text-sm text-muted-foreground">
-                Loading reference…
-              </span>
+              <WorkspacePeekLoading assetId={peekId} />
             )}
           </motion.aside>
         ) : null}
       </AnimatePresence>
     </WorkspacePeekContext.Provider>
+  );
+}
+
+function WorkspacePeekLoading({ assetId }: { assetId: string }) {
+  const type = assetId.split("-", 1)[0];
+  const isVideo = type === "link" || type === "video";
+  const disabledAction = async () => {};
+  const disabledButton = (label: string, icon: ReactNode) => (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-8 rounded-lg"
+      aria-label={label}
+      disabled
+    >
+      {icon}
+    </Button>
+  );
+
+  return (
+    <div
+      className="flex min-h-0 w-full flex-1 flex-col"
+      role="status"
+      aria-label="Loading peeked reference"
+    >
+      <PeekHeader
+        onClose={() => {}}
+        onShow={disabledAction}
+        onPromote={type !== "color" ? disabledAction : undefined}
+        promoteLabel={
+          isVideo || type === "image" ? "Open full screen" : "Open in main view"
+        }
+        disabled
+        info={disabledButton(
+          `${type === "link" || type === "video" ? "Video" : type[0].toUpperCase() + type.slice(1)} details`,
+          <InfoIcon className="size-4" />,
+        )}
+      >
+        {type === "image" ? (
+          <>
+            {disabledButton(
+              "Copy image",
+              <CopyFeedbackIcon copied={false} className="size-4" />,
+            )}
+            {disabledButton("Download", <DownloadIcon className="size-4" />)}
+          </>
+        ) : type === "note" ? (
+          <>
+            {disabledButton(
+              "Highlight text",
+              <HighlighterIcon className="size-4" />,
+            )}
+            {disabledButton(
+              "Copy markdown",
+              <CopyFeedbackIcon copied={false} className="size-4" />,
+            )}
+          </>
+        ) : null}
+      </PeekHeader>
+      {type === "note" ? (
+        <div
+          className="min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background px-10 py-8"
+          aria-hidden="true"
+        >
+          <Skeleton className="h-9 w-[min(32rem,78%)] rounded-lg sm:h-10" />
+          <div className="mt-8 space-y-3.5">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-[92%]" />
+            <Skeleton className="h-4 w-[68%]" />
+            <div className="h-4" />
+            <Skeleton className="h-4 w-[84%]" />
+          </div>
+        </div>
+      ) : type === "image" ? (
+        <div
+          className="min-h-0 flex-1 overflow-y-auto rounded-t-xl border-t border-foreground/10 bg-background"
+          aria-hidden="true"
+        >
+          <div className="flex h-[min(70dvh,40rem)] min-h-76 items-center justify-center bg-muted/50 p-5">
+            <ImageSkeleton className="aspect-[4/3] max-h-full w-full max-w-lg rounded-lg" />
+          </div>
+          <div className="relative -mt-4 space-y-5 rounded-t-xl border-t border-border bg-background px-5 py-5">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+        </div>
+      ) : type === "color" ? (
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-t-xl border-t border-foreground/10 bg-background">
+          <div className="mx-auto w-full max-w-4xl px-8 pt-16 pb-8">
+            <Skeleton className="h-52 w-full rounded-xl" />
+            <div className="mt-5 flex items-end justify-between gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+              <Button size="sm" variant="outline" disabled>
+                Copy value
+              </Button>
+            </div>
+            <div className="mt-10 border-t pt-5">
+              <Skeleton className="h-4 w-28" />
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <ImageSkeleton
+                    key={index}
+                    className="aspect-[4/3] rounded-lg"
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-background p-3"
+          aria-hidden="true"
+        >
+          <ImageSkeleton className="aspect-video w-full rounded-md" />
+          <Skeleton className="h-5 w-2/3" />
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1266,6 +1397,7 @@ function PeekHeader({
   showEnabled = true,
   children,
   info,
+  disabled = false,
 }: {
   onClose: () => void;
   onPromote?: () => Promise<void>;
@@ -1274,6 +1406,7 @@ function PeekHeader({
   showEnabled?: boolean;
   children?: ReactNode;
   info?: ReactNode;
+  disabled?: boolean;
 }) {
   const [isPromoting, setIsPromoting] = useState(false);
   const [isShowing, setIsShowing] = useState(false);
@@ -1310,6 +1443,7 @@ function PeekHeader({
                 variant="ghost"
                 size="icon"
                 aria-label="Close Peek"
+                disabled={disabled}
                 className="size-8 rounded-lg"
                 onClick={onClose}
               >
@@ -1335,7 +1469,7 @@ function PeekHeader({
                   size="icon"
                   className="size-8 rounded-lg"
                   aria-label="Show in board"
-                  disabled={!showEnabled || isShowing}
+                  disabled={disabled || !showEnabled || isShowing}
                   onClick={() => void handleShow()}
                 >
                   <LocateFixedIcon className="size-4" />
@@ -1349,7 +1483,7 @@ function PeekHeader({
         {onPromote ? (
           <PeekPromotionControl
             label={promoteLabel}
-            isPromoting={isPromoting}
+            isPromoting={disabled || isPromoting}
             onPromote={handlePromote}
           />
         ) : null}

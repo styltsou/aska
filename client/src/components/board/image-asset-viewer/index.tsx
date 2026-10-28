@@ -2080,7 +2080,6 @@ export function ImageAssetViewer({
           className={cn(
             "relative isolate flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden p-0 text-foreground transition-[border-color,border-radius,background-color] duration-[180ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
             "rounded-none border-0 bg-transparent",
-            loading && "bg-neutral-950",
           )}
         >
           <DialogTitle className="sr-only">{title}</DialogTitle>
@@ -2217,7 +2216,12 @@ export function ImageAssetViewer({
                 "overflow-hidden rounded-t-xl border-t border-foreground/10",
             )}
           >
-            <div className="relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div
+              className={cn(
+                "relative isolate flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
+                loading && !displayUrl && "bg-background",
+              )}
+            >
               {displayUrl ? (
                 <div
                   className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-neutral-950"
