@@ -1,5 +1,10 @@
 import { Globe2Icon, ImageOffIcon, UserRoundIcon } from "lucide-react";
-import { useState, type ComponentProps, type MouseEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type ComponentProps,
+  type MouseEvent,
+} from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { hasSelectionModifier } from "@/lib/selection";
@@ -12,6 +17,7 @@ const YOUTUBE_THUMBNAIL_URL = (videoId: string) =>
   `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 const LINK_CARD_META_CLASS =
   "flex min-w-0 items-center gap-1.5 text-[13px] leading-5 text-sidebar-foreground/65";
+const PREVIEW_SHIMMER_TIMEOUT_MS = 30_000;
 
 async function waitForThumbnail(image: HTMLImageElement) {
   // Match ProgressiveImage's reveal timing before showing the play mark.
@@ -100,6 +106,30 @@ function LinkPreviewUnavailable({ compact = false }: { compact?: boolean }) {
         Preview unavailable
       </span>
     </div>
+  );
+}
+
+function LinkFavicon({
+  src,
+  compact = false,
+}: {
+  src?: string;
+  compact?: boolean;
+}) {
+  const [failedSrc, setFailedSrc] = useState<string>();
+  if (!src || failedSrc === src)
+    return <Globe2Icon className={compact ? "size-3.5 shrink-0" : "size-4"} />;
+  return (
+    <img
+      src={src}
+      alt=""
+      className={
+        compact
+          ? "size-3.5 rounded-sm object-contain"
+          : "size-4 rounded-sm object-contain"
+      }
+      onError={() => setFailedSrc(src)}
+    />
   );
 }
 
@@ -195,8 +225,20 @@ export function LinkAssetCard({
   const isPreviewResolving =
     asset.resolutionStatus === "queued" ||
     asset.resolutionStatus === "resolving";
+  const [previewWaitExpired, setPreviewWaitExpired] = useState(false);
+  useEffect(() => {
+    if (!isPreviewResolving || previewUrl) {
+      setPreviewWaitExpired(false);
+      return;
+    }
+    const timeout = window.setTimeout(
+      () => setPreviewWaitExpired(true),
+      PREVIEW_SHIMMER_TIMEOUT_MS,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [isPreviewResolving, previewUrl]);
   const isPreviewUnavailable =
-    (!previewUrl && !isPreviewResolving) ||
+    (!previewUrl && (!isPreviewResolving || previewWaitExpired)) ||
     Boolean(previewUrl && failedPreviewUrl === previewUrl && !previewFallback);
   const isOptimisticYoutube =
     Boolean(optimisticYoutube) &&
@@ -236,7 +278,7 @@ export function LinkAssetCard({
             }
           />
         ) : null}
-        {!previewUrl && isPreviewResolving ? (
+        {!previewUrl && isPreviewResolving && !previewWaitExpired ? (
           <div
             data-slot="optimistic-link-preview"
             className="image-shimmer pointer-events-none absolute inset-0 z-10"
@@ -248,15 +290,7 @@ export function LinkAssetCard({
         {!isYoutube ? (
           <div className={LINK_CARD_META_CLASS}>
             <span className="flex size-4.5 shrink-0 items-center justify-center">
-              {asset.favicon ? (
-                <img
-                  src={asset.favicon.url}
-                  alt=""
-                  className="size-4 rounded-sm object-contain"
-                />
-              ) : (
-                <Globe2Icon className="size-4" />
-              )}
+              <LinkFavicon src={asset.favicon?.url} />
             </span>
             <span className="min-w-0 truncate">
               {asset.siteName || asset.hostname}
@@ -287,10 +321,6 @@ export function LinkAssetCard({
         {!isYoutube && asset.description ? (
           <p className="line-clamp-2 text-xs leading-relaxed whitespace-pre-line text-sidebar-foreground/60">
             {asset.description}
-          </p>
-        ) : !isYoutube && asset.resolutionStatus === "failed" ? (
-          <p className="text-xs text-sidebar-foreground/60">
-            The link still works
           </p>
         ) : null}
       </div>
@@ -411,15 +441,7 @@ export function LinkCardPreview({
       >
         {!isYoutube ? (
           <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-sidebar-foreground/60">
-            {preview.favicon ? (
-              <img
-                src={preview.favicon}
-                alt=""
-                className="size-3.5 rounded-sm object-contain"
-              />
-            ) : (
-              <Globe2Icon className="size-3.5 shrink-0" />
-            )}
+            <LinkFavicon src={preview.favicon} compact />
             <span className="truncate">{hostname}</span>
           </div>
         ) : null}

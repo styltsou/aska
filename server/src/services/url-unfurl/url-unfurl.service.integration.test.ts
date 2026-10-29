@@ -252,6 +252,12 @@ describe("UrlUnfurlService integration", () => {
       resolutionStatus: "resolving",
     });
     expect(mediaTasks).toHaveLength(1);
+    await expect(
+      service.claimResourceMedia(mediaTasks[0]!.id, mediaTasks[0]!.generation),
+    ).resolves.toMatchObject({
+      ignored: false,
+      referrerOrigin: "https://example.com/",
+    });
     await service.handleResourceMediaResult({
       event: "resource.media.failed",
       id: mediaTasks[0]!.id,
@@ -269,6 +275,41 @@ describe("UrlUnfurlService integration", () => {
       resolutionStatus: "partial",
       previewImage: null,
     });
+
+    await service.refreshLink(fixture.organizationId, link.id);
+    const retry = resolutionTasks.at(-1)!;
+    await service.handleResolutionResult({
+      event: "resource.metadata.completed",
+      id: retry.id,
+      generation: retry.generation,
+      resolverKey: "generic-html",
+      resolverVersion: "1",
+      finalUrl: "https://example.com/article",
+      canonicalUrl: null,
+      title: "Resolved article",
+      description: "Description",
+      siteName: "Example",
+      resourceKind: "article",
+      fieldProvenance: {},
+      providerExtensions: {},
+      media: [
+        {
+          role: "preview",
+          sourceUrl: "https://cdn.example.com/preview.jpg",
+          sourceMetadata: "og:image",
+          processingProfile: "link-preview-v1",
+        },
+      ],
+    });
+    expect(mediaTasks).toHaveLength(2);
+    expect(mediaTasks[1]?.generation).toBe(retry.generation);
+    await expect(
+      service.getLinkNode(
+        fixture.organizationId,
+        Number(link.id.slice("link-".length)),
+        null,
+      ),
+    ).resolves.toMatchObject({ resolutionStatus: "resolving" });
   });
 
   it("projects a completed Open Graph preview and reaches ready", async () => {

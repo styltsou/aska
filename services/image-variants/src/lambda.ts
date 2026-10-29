@@ -42,6 +42,7 @@ type ResourceMediaClaim =
       storageId: string;
       role: "preview" | "icon" | "primary" | "cover";
       processingProfile: "link-preview-v1" | "link-preview-v2" | "icon-v1";
+      referrerOrigin: string;
     };
 
 function parseJob(body: string): VariantsJob {
@@ -120,7 +121,7 @@ async function processResourceMedia(
   if (claim.ignored) return;
   const fetched = await safeFetch(claim.url, {
     accept:
-      "image/avif,image/webp,image/png,image/jpeg,image/gif,image/x-icon,image/vnd.microsoft.icon",
+      "image/avif,image/webp,image/png,image/jpeg,image/gif,image/x-icon,image/vnd.microsoft.icon,image/svg+xml",
     allowedContentTypes: [
       "image/avif",
       "image/webp",
@@ -129,9 +130,11 @@ async function processResourceMedia(
       "image/gif",
       "image/x-icon",
       "image/vnd.microsoft.icon",
+      ...(claim.role === "icon" ? ["image/svg+xml"] : []),
     ],
-    maxBytes: MAX_SOURCE_BYTES,
+    maxBytes: claim.role === "icon" ? 1024 * 1024 : MAX_SOURCE_BYTES,
     totalTimeoutMs: 15_000,
+    referrerOrigin: claim.referrerOrigin,
   });
   const result = await processImageVariants(
     fetched.body,

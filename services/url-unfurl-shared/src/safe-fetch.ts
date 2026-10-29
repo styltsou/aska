@@ -41,6 +41,8 @@ export type SafeFetchOptions = {
   totalTimeoutMs: number;
   requestTimeoutMs?: number;
   userAgent?: string;
+  /** Origin of the page that advertised a media URL; never include its query. */
+  referrerOrigin?: string;
   /**
    * `full` protects callers that need the complete resource. `html-head` is an
    * explicit metadata-only mode: it returns through `</head>` and leaves the
@@ -431,7 +433,7 @@ async function requestPinned(
           accept: options.accept,
           "accept-encoding": "identity",
           "user-agent": options.userAgent ?? "Aska-Link-Resolver/1.0",
-          referer: "",
+          referer: options.referrerOrigin ?? "",
         },
         servername: url.hostname,
         lookup: createPinnedLookup(addresses),

@@ -87,6 +87,7 @@ export type MediaClaim =
       storageId: string;
       role: "preview" | "icon" | "primary" | "cover";
       processingProfile: string;
+      referrerOrigin: string;
     };
 
 export class UrlUnfurlService {
@@ -575,6 +576,7 @@ export class UrlUnfurlService {
           role: externalResourceMedia.role,
           sourceUrlHash: externalResourceMedia.sourceUrlHash,
           processingProfile: externalResourceMedia.processingProfile,
+          status: externalResourceMedia.status,
           variants: externalResourceMedia.variants,
         })
         .from(externalResourceMedia)
@@ -591,6 +593,7 @@ export class UrlUnfurlService {
         const existing = oldByRole.get(discovery.role);
         if (
           existing &&
+          existing.status === "ready" &&
           existing.sourceUrlHash === sourceUrlHash &&
           existing.processingProfile === discovery.processingProfile
         )
@@ -738,6 +741,7 @@ export class UrlUnfurlService {
           resourceId: externalResourceMedia.resourceId,
           organizationId: externalResourceMedia.organizationId,
           currentGeneration: externalResources.resolutionGeneration,
+          resourceUrl: externalResources.normalizedUrl,
           sourceUrl: externalResourceMedia.sourceUrl,
           storageId: externalResourceMedia.storageId,
           role: externalResourceMedia.role,
@@ -783,6 +787,7 @@ export class UrlUnfurlService {
       storageId: row.storageId,
       role: row.role,
       processingProfile: row.processingProfile,
+      referrerOrigin: `${new URL(row.resourceUrl).origin}/`,
     };
   }
 

@@ -171,6 +171,22 @@ describe("LinkAssetCard", () => {
     expect(html).toContain("Preview unavailable");
   });
 
+  it("does not present a failed extraction as a working link message", () => {
+    const html = renderToStaticMarkup(
+      <LinkAssetCard
+        asset={{
+          ...asset,
+          originalUrl: "https://example.com/article",
+          video: undefined,
+          description: undefined,
+          resolutionStatus: "failed",
+        }}
+      />,
+    );
+    expect(html).toContain("Preview unavailable");
+    expect(html).not.toContain("The link still works");
+  });
+
   it("uses a 16:9 shimmer placeholder while a generic preview resolves", () => {
     const html = renderToStaticMarkup(
       <LinkAssetCard
@@ -256,7 +272,7 @@ describe("LinkAssetCard", () => {
     expect(html).not.toContain('data-slot="optimistic-link-preview"');
   });
 
-  it("offers refresh for completed YouTube cards and failed links", () => {
+  it("offers refresh for completed links, except blocked or active ones", () => {
     expect(shouldShowLinkPreviewRefresh(asset)).toBe(true);
     expect(
       shouldShowLinkPreviewRefresh({
@@ -264,7 +280,7 @@ describe("LinkAssetCard", () => {
         originalUrl: "https://example.com/article",
         video: undefined,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       shouldShowLinkPreviewRefresh({
         ...asset,

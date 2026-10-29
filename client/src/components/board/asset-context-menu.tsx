@@ -49,7 +49,6 @@ import {
 import { useRouterState } from "@tanstack/react-router";
 import { getPexelsBrowserScope, useSessionStore } from "@/store";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { isYouTubeVideoUrl } from "@/lib/youtube-url";
 import { downloadAssetOriginal } from "@/lib/asset-download";
 import { clearDeletedNoteDrafts } from "@/lib/note-edit-draft";
 
@@ -167,12 +166,7 @@ export function shouldShowLinkPreviewRefresh(asset: LinkAsset): boolean {
   const blocked =
     asset.failureCategory === "credentials" ||
     asset.failureCategory === "sensitive_query";
-  return (
-    !active &&
-    !blocked &&
-    (isYouTubeVideoUrl(asset.originalUrl) ||
-      asset.resolutionStatus === "failed")
-  );
+  return !active && !blocked;
 }
 
 function linkActions(

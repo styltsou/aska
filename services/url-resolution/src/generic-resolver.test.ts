@@ -38,6 +38,7 @@ describe("generic HTML resolver", () => {
       }),
     );
     expect(result.title).toBe("Resolved title");
+    expect(result.description).toBeNull();
     expect(result.media).toEqual([
       {
         role: "preview",

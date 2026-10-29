@@ -50,6 +50,20 @@ describe("image rendition profiles", () => {
     expect(result.blurDataURL).toBeNull();
   });
 
+  it("renders SVG favicons to a stored WebP icon", async () => {
+    const svg = new TextEncoder().encode(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" fill="#336699"/></svg>',
+    );
+    const result = await processImageVariants(svg, "icon-v1");
+    expect(result.format).toBe("svg");
+    expect(result.variants[0]).toMatchObject({
+      role: "master",
+      width: 64,
+      height: 64,
+      contentType: "image/webp",
+    });
+  });
+
   it("rejects unknown profiles instead of silently using upload defaults", async () => {
     await expect(
       processImageVariants(
