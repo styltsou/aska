@@ -4,9 +4,9 @@ export const GRID_DENSITIES: Record<
   GridDensity,
   { label: string; minWidth: number; maxWidth: number }
 > = {
-  spacious: { label: "Spacious", minWidth: 300, maxWidth: 420 },
-  balanced: { label: "Balanced", minWidth: 230, maxWidth: 320 },
-  compact: { label: "Compact", minWidth: 170, maxWidth: 230 },
+  spacious: { label: "Spacious", minWidth: 300, maxWidth: 600 },
+  balanced: { label: "Balanced", minWidth: 230, maxWidth: 330 },
+  compact: { label: "Compact", minWidth: 160, maxWidth: 210 },
 };
 
 export const GRID_GAP = 10;
