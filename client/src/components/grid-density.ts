@@ -11,6 +11,12 @@ export const GRID_DENSITIES: Record<
 
 export const GRID_GAP = 10;
 
+export function getSavedGridDensity(): GridDensity {
+  if (typeof window === "undefined") return "balanced";
+  const saved = window.localStorage.getItem("aska:grid-density");
+  return saved === "spacious" || saved === "compact" ? saved : "balanced";
+}
+
 export function columnsForGrid(width: number, density: GridDensity): number {
   if (width <= 0) return 0;
   const { minWidth, maxWidth } = GRID_DENSITIES[density];

@@ -1,13 +1,16 @@
+import { useRef, useState } from "react";
 import {
   ColorCardSkeleton,
   LinkCardSkeleton,
   NoteCardSkeleton,
 } from "@/components/asset-card-skeleton";
+import { columnsForGrid, getSavedGridDensity } from "@/components/grid-density";
 import { Masonry } from "@/components/masonry-grid";
 import { FolderCardSkeleton } from "@/components/preview-stack-skeleton";
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
 const FOLDER_SKELETONS = 3;
 const ASSET_SKELETONS = [
@@ -25,6 +28,20 @@ const ASSET_SKELETONS = [
   { type: "note", variant: 0 },
 ] as const;
 export function GridViewLoading() {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentWidth, setContentWidth] = useState(0);
+  const [density] = useState(getSavedGridDensity);
+
+  useIsomorphicLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!content) return;
+    const update = () => setContentWidth(content.clientWidth);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <ScrollArea
       className="h-full min-h-0 w-full min-w-0 flex-1"
@@ -39,13 +56,18 @@ export function GridViewLoading() {
       >
         <span className="sr-only">Loading collection grid view</span>
 
-        <div className="w-full space-y-10">
+        <div ref={contentRef} className="w-full space-y-10">
           <section aria-hidden="true">
             <div className="mb-3 flex items-baseline gap-2">
               <Skeleton className="h-3 w-16" />
               <Skeleton className="h-3 w-6" />
             </div>
-            <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div
+              className="grid gap-[10px]"
+              style={{
+                gridTemplateColumns: `repeat(${columnsForGrid(contentWidth, density) || 1}, minmax(0, 1fr))`,
+              }}
+            >
               {Array.from({ length: FOLDER_SKELETONS }).map((_, i) => (
                 <FolderCardSkeleton key={i} variant={i} />
               ))}
@@ -57,7 +79,7 @@ export function GridViewLoading() {
               <Skeleton className="h-3 w-14" />
               <Skeleton className="h-3 w-8" />
             </div>
-            <Masonry className="min-w-0">
+            <Masonry className="min-w-0" width={contentWidth} density={density}>
               {ASSET_SKELETONS.map((asset, i) =>
                 asset.type === "note" ? (
                   <NoteCardSkeleton key={i} variant={asset.variant} />

@@ -30,6 +30,7 @@ import { MoveToDialog } from "@/components/move-to-dialog";
 import { VirtualMasonry } from "@/components/virtual-masonry";
 import {
   columnsForGrid,
+  getSavedGridDensity,
   GRID_DENSITIES,
   type GridDensity,
 } from "@/components/grid-density";
@@ -121,11 +122,7 @@ export function CollectionGridView({
   const contentRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [contentWidth, setContentWidth] = useState(0);
-  const [density, setDensity] = useState<GridDensity>(() => {
-    if (typeof window === "undefined") return "balanced";
-    const saved = window.localStorage.getItem("aska:grid-density");
-    return saved === "spacious" || saved === "compact" ? saved : "balanced";
-  });
+  const [density, setDensity] = useState<GridDensity>(getSavedGridDensity);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [activeDrag, setActiveDrag] = useState<GridNodeDragData>();
   const [pendingFolderDrop, setPendingFolderDrop] =
