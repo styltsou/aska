@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useRef,
   useState,
@@ -29,6 +30,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { CollectionPropertiesDialog } from "./collection-properties-dialog";
 import { RenameCollectionDialog } from "./rename-collection-dialog";
 import {
@@ -67,18 +75,23 @@ export function CollectionCard({
   const [stackInteracted, setStackInteracted] = useState(false);
   const [focused, setFocused] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [contextMenuOpen, setContextMenuOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [propertiesDialogOpen, setPropertiesDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const pointerExitTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dismissingMenuWithCardPress = useRef(false);
   const deleteCollection = useDeleteCollection(workspaceSlug);
   const previews = collection.previews.slice(0, MAX_VISIBLE_PREVIEWS);
-  const active = pointerOver || focused || actionsOpen;
-  const reduceMotion = useReducedMotion();
+  const active = pointerOver || focused || actionsOpen || contextMenuOpen;
   const stackDirection = (hashString(collection.slug) & 1) === 0 ? 1 : -1;
-  const controlTransition = reduceMotion
-    ? { duration: 0 }
-    : { duration: 0.3, ease: [0.34, 1.45, 0.64, 1] as const };
+  const collectionActions = [
+    { label: "Rename", onClick: () => setRenameDialogOpen(true) },
+    { label: "Properties", onClick: () => setPropertiesDialogOpen(true) },
+    { label: "Delete", onClick: () => setDeleteDialogOpen(true) },
+  ];
+  const destructiveClass =
+    "text-red-600! hover:bg-red-500/20! focus:bg-red-500/20! data-highlighted:bg-red-500/20! dark:text-red-400! dark:hover:bg-red-500/30! dark:focus:bg-red-500/30! dark:data-highlighted:bg-red-500/30!";
 
   useEffect(
     () => () => {
@@ -112,95 +125,107 @@ export function CollectionCard({
 
   return (
     <>
-      <div className="relative flex w-full min-w-0 flex-col items-center gap-2.5 rounded-xl p-1.5 text-sidebar-foreground">
-        <Link
-          to="/$workspaceSlug/collections/$"
-          search={search}
-          params={{ workspaceSlug, _splat: collection.slug }}
-          tabIndex={-1}
-          aria-hidden="true"
-          className="relative z-10 aspect-[3/2] w-full cursor-pointer @min-[64rem]:max-h-[calc((100svh-13.75rem)/2)]"
+      <ContextMenu open={contextMenuOpen} onOpenChange={setContextMenuOpen}>
+        <ContextMenuTrigger
+          render={
+            <div className="relative flex w-full min-w-0 flex-col items-center gap-2.5 rounded-xl p-1.5 text-sidebar-foreground" />
+          }
+          onPointerDownCapture={(event) => {
+            dismissingMenuWithCardPress.current =
+              (actionsOpen || contextMenuOpen) &&
+              event.target instanceof Element &&
+              Boolean(event.target.closest("[data-collection-link]"));
+          }}
+          onClickCapture={(event) => {
+            if (
+              event.target instanceof Element &&
+              event.target.closest("[data-collection-link]") &&
+              (dismissingMenuWithCardPress.current ||
+                actionsOpen ||
+                contextMenuOpen)
+            ) {
+              event.preventDefault();
+              event.stopPropagation();
+              setActionsOpen(false);
+              setContextMenuOpen(false);
+            }
+            dismissingMenuWithCardPress.current = false;
+          }}
         >
-          <div
-            className="pointer-events-none absolute inset-0 flex items-center justify-center"
-            style={{ containerType: "size" }}
+          <Link
+            to="/$workspaceSlug/collections/$"
+            search={search}
+            params={{ workspaceSlug, _splat: collection.slug }}
+            data-collection-link
+            tabIndex={-1}
+            aria-hidden="true"
+            className="relative z-10 aspect-[3/2] w-full cursor-pointer @min-[64rem]:max-h-[calc((100svh-13.75rem)/2)]"
           >
-            {previews.length === 0 ? (
-              <EmptyCollectionPreview
-                active={active}
-                onPointerEnter={handleHoverTargetEnter}
-                onPointerLeave={handleHoverTargetLeave}
-              />
-            ) : (
-              previews.map((preview, index) => (
-                <CollectionPreviewCard
-                  key={preview.assetId}
-                  preview={preview}
-                  index={index}
-                  count={previews.length}
-                  stackDirection={stackDirection}
+            <div
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              style={{ containerType: "size" }}
+            >
+              {previews.length === 0 ? (
+                <EmptyCollectionPreview
                   active={active}
-                  motionEnabled={stackInteracted || active}
                   onPointerEnter={handleHoverTargetEnter}
                   onPointerLeave={handleHoverTargetLeave}
                 />
-              ))
-            )}
-          </div>
+              ) : (
+                previews.map((preview, index) => (
+                  <CollectionPreviewCard
+                    key={preview.assetId}
+                    preview={preview}
+                    index={index}
+                    count={previews.length}
+                    stackDirection={stackDirection}
+                    active={active}
+                    motionEnabled={stackInteracted || active}
+                    onPointerEnter={handleHoverTargetEnter}
+                    onPointerLeave={handleHoverTargetLeave}
+                  />
+                ))
+              )}
+            </div>
 
-          <div
-            aria-hidden="true"
-            data-collection-hover-target
-            onPointerEnter={handleHoverTargetEnter}
-            onPointerLeave={handleHoverTargetLeave}
-            className="absolute top-[64%] -bottom-2.5 left-1/2 w-[68%] -translate-x-1/2"
-          />
-        </Link>
-        <div className="relative z-10 flex h-8 max-w-full min-w-0 items-center justify-center">
-          <motion.div
-            initial={false}
-            animate={{ x: active ? -19 : 0 }}
-            transition={controlTransition}
-            className="max-w-full min-w-0"
-          >
-            <Link
-              to="/$workspaceSlug/collections/$"
-              search={search}
-              params={{ workspaceSlug, _splat: collection.slug }}
+            <div
+              aria-hidden="true"
               data-collection-hover-target
-              data-active={active}
               onPointerEnter={handleHoverTargetEnter}
               onPointerLeave={handleHoverTargetLeave}
-              onFocus={(event) => {
-                const visible = event.currentTarget.matches(":focus-visible");
-                if (visible) setStackInteracted(true);
-                setFocused(visible);
-              }}
-              onBlur={() => setFocused(false)}
-              className="flex h-8 max-w-full min-w-0 items-center gap-5 rounded-md px-3 text-sidebar-foreground transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none data-[active=true]:bg-sidebar-active motion-reduce:transition-none"
-            >
-              <span className="min-w-0 truncate text-sm font-medium">
-                {collection.name}
-              </span>
-              <span
-                aria-label={`${collection.assetCount} items`}
-                className="ml-auto shrink-0 text-xs text-sidebar-foreground/55 tabular-nums"
+              className="absolute top-[64%] -bottom-2.5 left-1/2 w-[68%] -translate-x-1/2"
+            />
+          </Link>
+          <div className="relative z-10 flex h-8 max-w-full min-w-0 items-center justify-center gap-1.5">
+            <div className="max-w-full min-w-0">
+              <Link
+                to="/$workspaceSlug/collections/$"
+                search={search}
+                params={{ workspaceSlug, _splat: collection.slug }}
+                data-collection-link
+                data-collection-hover-target
+                data-active={active}
+                onPointerEnter={handleHoverTargetEnter}
+                onPointerLeave={handleHoverTargetLeave}
+                onFocus={(event) => {
+                  const visible = event.currentTarget.matches(":focus-visible");
+                  if (visible) setStackInteracted(true);
+                  setFocused(visible);
+                }}
+                onBlur={() => setFocused(false)}
+                className="flex h-8 max-w-full min-w-0 items-center gap-5 rounded-md px-3 text-sidebar-foreground transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none data-[active=true]:bg-sidebar-active motion-reduce:transition-none"
               >
-                {collection.assetCount}
-              </span>
-            </Link>
-          </motion.div>
-          <motion.div
-            initial={false}
-            animate={{
-              x: -19,
-              opacity: active ? 1 : 0,
-              scale: active ? 1 : 0.98,
-            }}
-            transition={controlTransition}
-            data-active={active}
-            className="pointer-events-none absolute left-full ml-1.5 origin-left data-[active=true]:pointer-events-auto"
-          >
+                <span className="min-w-0 truncate text-sm font-medium">
+                  {collection.name}
+                </span>
+                <span
+                  aria-label={`${collection.assetCount} items`}
+                  className="ml-auto shrink-0 text-xs text-sidebar-foreground/55 tabular-nums"
+                >
+                  {collection.assetCount}
+                </span>
+              </Link>
+            </div>
             <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
               <DropdownMenuTrigger
                 render={
@@ -224,24 +249,35 @@ export function CollectionCard({
                 side="bottom"
                 className="w-40 duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-ending-style:scale-[0.99] data-ending-style:duration-150 data-starting-style:scale-[0.97] motion-reduce:transition-none"
               >
-                <DropdownMenuItem onClick={() => setRenameDialogOpen(true)}>
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPropertiesDialogOpen(true)}>
-                  Properties
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-red-600! hover:bg-red-500/20! focus:bg-red-500/20! data-highlighted:bg-red-500/20! dark:text-red-400! dark:hover:bg-red-500/30! dark:focus:bg-red-500/30! dark:data-highlighted:bg-red-500/30!"
-                  onClick={() => setDeleteDialogOpen(true)}
-                >
-                  Delete
-                </DropdownMenuItem>
+                {collectionActions.map((action, index) => (
+                  <Fragment key={action.label}>
+                    {index === 2 ? <DropdownMenuSeparator /> : null}
+                    <DropdownMenuItem
+                      className={index === 2 ? destructiveClass : undefined}
+                      onClick={action.onClick}
+                    >
+                      {action.label}
+                    </DropdownMenuItem>
+                  </Fragment>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          </motion.div>
-        </div>
-      </div>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="w-40">
+          {collectionActions.map((action, index) => (
+            <Fragment key={action.label}>
+              {index === 2 ? <ContextMenuSeparator /> : null}
+              <ContextMenuItem
+                className={index === 2 ? destructiveClass : undefined}
+                onClick={action.onClick}
+              >
+                {action.label}
+              </ContextMenuItem>
+            </Fragment>
+          ))}
+        </ContextMenuContent>
+      </ContextMenu>
       <RenameCollectionDialog
         open={renameDialogOpen}
         onOpenChange={setRenameDialogOpen}
