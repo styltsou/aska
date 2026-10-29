@@ -221,9 +221,10 @@ jobs:
           aws apigateway get-integration --rest-api-id 77do6h6v54 --resource-id "$resource_id" --http-method GET
           aws lambda get-policy --function-name "$function_name"
           aws lambda get-function-configuration --function-name "$function_name"
+          log_group="$(aws lambda get-function-configuration --function-name "$function_name" --query 'LoggingConfig.LogGroup' --output text)"
           aws apigateway test-invoke-method --rest-api-id 77do6h6v54 --resource-id "$resource_id" --http-method GET
           curl --silent --show-error --no-buffer "https://aska-api.styltsou.com/ai/health?ci-probe=${GITHUB_SHA}" || true
-          aws logs tail "/aws/lambda/${function_name}" --since 5m || true
+          aws logs tail "$log_group" --since 5m || true
       - name: Queue missing video storyboards
         run: bunx sst shell --stage dev -- bun run --cwd server backfill:video-storyboards --enqueue --wait
         env:
