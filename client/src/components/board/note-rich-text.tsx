@@ -3,6 +3,8 @@ import "./note-rich-text.css";
 
 import {
   forwardRef,
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -2094,6 +2096,12 @@ function LinkInteractionPopover({ editor }: { editor: Editor }) {
   );
 }
 
+const NoteAiPrompt = lazy(() =>
+  import("@/components/board/note-ai-prompt").then((module) => ({
+    default: module.NoteAiPrompt,
+  })),
+);
+
 export const NoteRichText = forwardRef<
   NoteRichTextHandle,
   {
@@ -2144,6 +2152,9 @@ export const NoteRichText = forwardRef<
   const onHighlightSelectionChangeRef = useRef(onHighlightSelectionChange);
   const highlightPointerDownRef = useRef(false);
   const editorInstanceRef = useRef<Editor | null>(null);
+  const [aiTarget, setAiTarget] = useState<{ from: number; to: number } | null>(
+    null,
+  );
   const initialMarkdownRef = useRef(markdown);
   onChangeRef.current = onChange;
   onSaveShortcutRef.current = onSaveShortcut;
@@ -2191,6 +2202,27 @@ export const NoteRichText = forwardRef<
         spellcheck: "false",
       },
       handleKeyDown: (_view: unknown, event: KeyboardEvent) => {
+        const currentEditor = editorInstanceRef.current;
+        if (
+          editableRef.current &&
+          !highlightModeRef.current &&
+          event.key === " " &&
+          !event.repeat &&
+          !event.isComposing &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.altKey &&
+          currentEditor?.state.selection.empty &&
+          currentEditor.state.selection.$from.depth === 1 &&
+          currentEditor.state.selection.$from.parent.type.name ===
+            "paragraph" &&
+          currentEditor.state.selection.$from.parent.content.size === 0
+        ) {
+          event.preventDefault();
+          const { from, to } = currentEditor.state.selection;
+          setAiTarget({ from, to });
+          return true;
+        }
         if (event.key === "Escape" && highlightModeRef.current) {
           event.preventDefault();
           highlightPointerDownRef.current = false;
@@ -2329,7 +2361,10 @@ export const NoteRichText = forwardRef<
   editorInstanceRef.current = editor;
 
   useEffect(() => {
-    editor?.setEditable(editable, false);
+    editor?.setEditable(editable && !aiTarget, false);
+  }, [aiTarget, editable, editor]);
+
+  useEffect(() => {
     if (!autoFocus) return;
 
     const focusFrame = window.requestAnimationFrame(() => {
@@ -2590,6 +2625,24 @@ export const NoteRichText = forwardRef<
           editor={editor}
           scrollContainerRef={scrollContainerRef}
         />
+      ) : null}
+      {aiTarget ? (
+        <Suspense fallback={null}>
+          <NoteAiPrompt
+            note={editor.getMarkdown()}
+            onClose={() => {
+              setAiTarget(null);
+              editor.commands.focus();
+            }}
+            onAccept={(content) => {
+              editor.commands.insertContentAt(aiTarget, content, {
+                contentType: "markdown",
+              });
+              setAiTarget(null);
+              editor.commands.focus();
+            }}
+          />
+        </Suspense>
       ) : null}
     </NoteMentionProvider>
   );
