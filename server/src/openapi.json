@@ -2187,7 +2187,12 @@
         "summary": "Download an image or video original",
         "parameters": [
           { "$ref": "#/components/parameters/WorkspaceSlug" },
-          { "name": "format", "in": "query", "schema": { "type": "string", "enum": ["json"] }, "description": "For videos, return the signed download URL as JSON." },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["json"] },
+            "description": "For videos, return the signed download URL as JSON."
+          },
           {
             "name": "assetId",
             "in": "path",
@@ -2196,7 +2201,9 @@
           }
         ],
         "responses": {
-          "200": { "description": "Original image bytes, or a signed video download URL when format=json." },
+          "200": {
+            "description": "Original image bytes, or a signed video download URL when format=json."
+          },
           "302": {
             "description": "Redirect to a short-lived S3 video attachment URL."
           }

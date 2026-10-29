@@ -2,56 +2,34 @@
   "version": "8",
   "dialect": "postgres",
   "id": "62ffad08-3a17-4489-9a1a-9360e06bad59",
-  "prevIds": [
-    "114cd37b-67eb-474c-9c54-20973aef3306"
-  ],
+  "prevIds": ["114cd37b-67eb-474c-9c54-20973aef3306"],
   "ddl": [
     {
-      "values": [
-        "image",
-        "video",
-        "note",
-        "link",
-        "color"
-      ],
+      "values": ["image", "video", "note", "link", "color"],
       "name": "asset_type",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "filled",
-        "hollow",
-        "chevron"
-      ],
+      "values": ["filled", "hollow", "chevron"],
       "name": "canvas_arrow_head",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "solid",
-        "dashed",
-        "dotted"
-      ],
+      "values": ["solid", "dashed", "dotted"],
       "name": "canvas_arrow_pattern",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "straight",
-        "smooth"
-      ],
+      "values": ["straight", "smooth"],
       "name": "canvas_arrow_routing",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "clean",
-        "sketch"
-      ],
+      "values": ["clean", "sketch"],
       "name": "canvas_arrow_style",
       "entityType": "enums",
       "schema": "public"
@@ -72,83 +50,49 @@
       "schema": "public"
     },
     {
-      "values": [
-        "text",
-        "arrow"
-      ],
+      "values": ["text", "arrow"],
       "name": "canvas_object_type",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "inter",
-        "fraunces",
-        "ibm_plex_mono",
-        "sue_ellen_francisco"
-      ],
+      "values": ["inter", "fraunces", "ibm_plex_mono", "sue_ellen_francisco"],
       "name": "canvas_text_font",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "sm",
-        "md",
-        "lg",
-        "xl"
-      ],
+      "values": ["sm", "md", "lg", "xl"],
       "name": "canvas_text_size",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "asset",
-        "folder"
-      ],
+      "values": ["asset", "folder"],
       "name": "collection_node_type",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "processing",
-        "completed",
-        "failed"
-      ],
+      "values": ["processing", "completed", "failed"],
       "name": "image_enrichment_status",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "pending",
-        "processing"
-      ],
+      "values": ["pending", "processing"],
       "name": "media_cleanup_job_status",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "preview",
-        "icon",
-        "primary",
-        "cover"
-      ],
+      "values": ["preview", "icon", "primary", "cover"],
       "name": "resource_media_role",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "discovered",
-        "queued",
-        "processing",
-        "ready",
-        "failed"
-      ],
+      "values": ["discovered", "queued", "processing", "ready", "failed"],
       "name": "resource_media_status",
       "entityType": "enums",
       "schema": "public"
@@ -167,13 +111,7 @@
       "schema": "public"
     },
     {
-      "values": [
-        "queued",
-        "resolving",
-        "partial",
-        "ready",
-        "failed"
-      ],
+      "values": ["queued", "resolving", "partial", "ready", "failed"],
       "name": "resource_resolution_status",
       "entityType": "enums",
       "schema": "public"
@@ -190,22 +128,13 @@
       "schema": "public"
     },
     {
-      "values": [
-        "direct",
-        "remote_url"
-      ],
+      "values": ["direct", "remote_url"],
       "name": "upload_source",
       "entityType": "enums",
       "schema": "public"
     },
     {
-      "values": [
-        "pending",
-        "uploaded",
-        "processing",
-        "completed",
-        "failed"
-      ],
+      "values": ["pending", "uploaded", "processing", "completed", "failed"],
       "name": "upload_status",
       "entityType": "enums",
       "schema": "public"
@@ -6579,14 +6508,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "assets_organization_id_organization_id_fkey",
@@ -6596,14 +6521,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "assets_created_by_user_id_user_id_fkey",
@@ -6613,14 +6534,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "updated_by_user_id"
-      ],
+      "columns": ["updated_by_user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "assets_updated_by_user_id_user_id_fkey",
@@ -6630,14 +6547,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "canvas_object_id"
-      ],
+      "columns": ["canvas_object_id"],
       "schemaTo": "public",
       "tableTo": "canvas_objects",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "canvas_arrow_objects_canvas_object_id_canvas_objects_id_fkey",
@@ -6647,14 +6560,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "start_collection_node_id"
-      ],
+      "columns": ["start_collection_node_id"],
       "schemaTo": "public",
       "tableTo": "collection_nodes",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "canvas_arrow_objects_C1T9I3Rr5TcZ_fkey",
@@ -6664,14 +6573,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "start_canvas_object_id"
-      ],
+      "columns": ["start_canvas_object_id"],
       "schemaTo": "public",
       "tableTo": "canvas_objects",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "canvas_arrow_objects_ZqGzRD235Caz_fkey",
@@ -6681,14 +6586,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "end_collection_node_id"
-      ],
+      "columns": ["end_collection_node_id"],
       "schemaTo": "public",
       "tableTo": "collection_nodes",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "canvas_arrow_objects_PZmJwQjghjFA_fkey",
@@ -6698,14 +6599,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "end_canvas_object_id"
-      ],
+      "columns": ["end_canvas_object_id"],
       "schemaTo": "public",
       "tableTo": "canvas_objects",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "canvas_arrow_objects_oafVLxUK9Gb2_fkey",
@@ -6715,14 +6612,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "canvas_objects_organization_id_organization_id_fkey",
@@ -6732,14 +6625,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "canvas_objects_created_by_user_id_user_id_fkey",
@@ -6749,14 +6638,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "updated_by_user_id"
-      ],
+      "columns": ["updated_by_user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "canvas_objects_updated_by_user_id_user_id_fkey",
@@ -6766,16 +6651,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "collection_id",
-        "organization_id"
-      ],
+      "columns": ["collection_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "collections",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "canvas_objects_collection_org_fkey",
@@ -6785,16 +6664,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "collection_id",
-        "parent_folder_id"
-      ],
+      "columns": ["collection_id", "parent_folder_id"],
       "schemaTo": "public",
       "tableTo": "collection_nodes",
-      "columnsTo": [
-        "collection_id",
-        "folder_id"
-      ],
+      "columnsTo": ["collection_id", "folder_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "canvas_objects_parent_folder_in_collection_fkey",
@@ -6804,14 +6677,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "canvas_object_id"
-      ],
+      "columns": ["canvas_object_id"],
       "schemaTo": "public",
       "tableTo": "canvas_objects",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "canvas_text_objects_canvas_object_id_canvas_objects_id_fkey",
@@ -6821,14 +6690,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "collection_nodes_organization_id_organization_id_fkey",
@@ -6838,16 +6703,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "collection_id",
-        "organization_id"
-      ],
+      "columns": ["collection_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "collections",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "collection_nodes_collection_org_fkey",
@@ -6857,16 +6716,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "asset_id",
-        "organization_id"
-      ],
+      "columns": ["asset_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "collection_nodes_asset_org_fkey",
@@ -6876,16 +6729,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "folder_id",
-        "organization_id"
-      ],
+      "columns": ["folder_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "folders",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "collection_nodes_folder_org_fkey",
@@ -6895,16 +6742,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "collection_id",
-        "parent_folder_id"
-      ],
+      "columns": ["collection_id", "parent_folder_id"],
       "schemaTo": "public",
       "tableTo": "collection_nodes",
-      "columnsTo": [
-        "collection_id",
-        "folder_id"
-      ],
+      "columnsTo": ["collection_id", "folder_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "collection_nodes_parent_folder_in_collection_fkey",
@@ -6914,14 +6755,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "collections_organization_id_organization_id_fkey",
@@ -6931,14 +6768,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "collections_created_by_user_id_user_id_fkey",
@@ -6948,14 +6781,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "updated_by_user_id"
-      ],
+      "columns": ["updated_by_user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "collections_updated_by_user_id_user_id_fkey",
@@ -6965,14 +6794,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "color_assets_asset_id_assets_id_fkey",
@@ -6982,16 +6807,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "resource_id",
-        "organization_id"
-      ],
+      "columns": ["resource_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "external_resources",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "external_resource_media_resource_org_fkey",
@@ -7001,14 +6820,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "external_resources_organization_id_organization_id_fkey",
@@ -7018,14 +6833,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "folders_organization_id_organization_id_fkey",
@@ -7035,14 +6846,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "folders_created_by_user_id_user_id_fkey",
@@ -7052,14 +6859,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "updated_by_user_id"
-      ],
+      "columns": ["updated_by_user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "folders_updated_by_user_id_user_id_fkey",
@@ -7069,14 +6872,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "image_assets_asset_id_assets_id_fkey",
@@ -7086,14 +6885,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "schemaTo": "public",
       "tableTo": "image_assets",
-      "columnsTo": [
-        "asset_id"
-      ],
+      "columnsTo": ["asset_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "image_colors_asset_id_image_assets_asset_id_fkey",
@@ -7103,16 +6898,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "asset_id",
-        "organization_id"
-      ],
+      "columns": ["asset_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "image_colors_asset_org_fkey",
@@ -7122,14 +6911,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "link_assets_asset_id_assets_id_fkey",
@@ -7139,16 +6924,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "asset_id",
-        "organization_id"
-      ],
+      "columns": ["asset_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "link_assets_asset_org_fkey",
@@ -7158,16 +6937,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "resource_id",
-        "organization_id"
-      ],
+      "columns": ["resource_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "external_resources",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "link_assets_resource_org_fkey",
@@ -7177,14 +6950,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "media_cleanup_jobs_organization_id_organization_id_fkey",
@@ -7194,14 +6963,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "media_cleanup_jobs_asset_id_assets_id_fkey",
@@ -7211,14 +6976,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "note_assets_asset_id_assets_id_fkey",
@@ -7228,16 +6989,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "source_asset_id",
-        "organization_id"
-      ],
+      "columns": ["source_asset_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "note_references_source_asset_org_fkey",
@@ -7247,16 +7002,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "target_asset_id",
-        "organization_id"
-      ],
+      "columns": ["target_asset_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "note_references_target_asset_org_fkey",
@@ -7266,16 +7015,10 @@
     },
     {
       "nameExplicit": true,
-      "columns": [
-        "resource_id",
-        "organization_id"
-      ],
+      "columns": ["resource_id", "organization_id"],
       "schemaTo": "public",
       "tableTo": "external_resources",
-      "columnsTo": [
-        "id",
-        "organization_id"
-      ],
+      "columnsTo": ["id", "organization_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "resource_resolution_attempts_resource_org_fkey",
@@ -7285,14 +7028,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "uploads_organization_id_organization_id_fkey",
@@ -7302,14 +7041,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "collection_id"
-      ],
+      "columns": ["collection_id"],
       "schemaTo": "public",
       "tableTo": "collections",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "uploads_collection_id_collections_id_fkey",
@@ -7319,14 +7054,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "uploads_asset_id_assets_id_fkey",
@@ -7336,14 +7067,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "uploads_created_by_user_id_user_id_fkey",
@@ -7353,14 +7080,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "video_assets_asset_id_assets_id_fkey",
@@ -7370,14 +7093,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "video_uploads_organization_id_organization_id_fkey",
@@ -7387,14 +7106,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "collection_id"
-      ],
+      "columns": ["collection_id"],
       "schemaTo": "public",
       "tableTo": "collections",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "video_uploads_collection_id_collections_id_fkey",
@@ -7404,14 +7119,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "schemaTo": "public",
       "tableTo": "assets",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "video_uploads_asset_id_assets_id_fkey",
@@ -7421,14 +7132,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "created_by_user_id"
-      ],
+      "columns": ["created_by_user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET NULL",
       "name": "video_uploads_created_by_user_id_user_id_fkey",
@@ -7438,14 +7145,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "account_user_id_user_id_fkey",
@@ -7455,14 +7158,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "invitation_organization_id_organization_id_fkey",
@@ -7472,14 +7171,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "inviter_id"
-      ],
+      "columns": ["inviter_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "invitation_inviter_id_user_id_fkey",
@@ -7489,14 +7184,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "organization_id"
-      ],
+      "columns": ["organization_id"],
       "schemaTo": "public",
       "tableTo": "organization",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "member_organization_id_organization_id_fkey",
@@ -7506,14 +7197,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "member_user_id_user_id_fkey",
@@ -7523,14 +7210,10 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "user_id"
-      ],
+      "columns": ["user_id"],
       "schemaTo": "public",
       "tableTo": "user",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "session_user_id_user_id_fkey",
@@ -7539,9 +7222,7 @@
       "table": "session"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "assets_pkey",
       "schema": "public",
@@ -7549,9 +7230,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "canvas_object_id"
-      ],
+      "columns": ["canvas_object_id"],
       "nameExplicit": false,
       "name": "canvas_arrow_objects_pkey",
       "schema": "public",
@@ -7559,9 +7238,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "canvas_objects_pkey",
       "schema": "public",
@@ -7569,9 +7246,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "canvas_object_id"
-      ],
+      "columns": ["canvas_object_id"],
       "nameExplicit": false,
       "name": "canvas_text_objects_pkey",
       "schema": "public",
@@ -7579,9 +7254,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "collection_nodes_pkey",
       "schema": "public",
@@ -7589,9 +7262,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "collections_pkey",
       "schema": "public",
@@ -7599,9 +7270,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "nameExplicit": false,
       "name": "color_assets_pkey",
       "schema": "public",
@@ -7609,9 +7278,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "external_resource_media_pkey",
       "schema": "public",
@@ -7619,9 +7286,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "external_resources_pkey",
       "schema": "public",
@@ -7629,9 +7294,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "folders_pkey",
       "schema": "public",
@@ -7639,9 +7302,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "nameExplicit": false,
       "name": "image_assets_pkey",
       "schema": "public",
@@ -7649,9 +7310,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "image_colors_pkey",
       "schema": "public",
@@ -7659,9 +7318,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "nameExplicit": false,
       "name": "link_assets_pkey",
       "schema": "public",
@@ -7669,9 +7326,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "media_cleanup_jobs_pkey",
       "schema": "public",
@@ -7679,9 +7334,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "nameExplicit": false,
       "name": "note_assets_pkey",
       "schema": "public",
@@ -7689,9 +7342,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "note_references_pkey",
       "schema": "public",
@@ -7699,9 +7350,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "resource_resolution_attempts_pkey",
       "schema": "public",
@@ -7709,9 +7358,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "uploads_pkey",
       "schema": "public",
@@ -7719,9 +7366,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "asset_id"
-      ],
+      "columns": ["asset_id"],
       "nameExplicit": false,
       "name": "video_assets_pkey",
       "schema": "public",
@@ -7729,9 +7374,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "video_uploads_pkey",
       "schema": "public",
@@ -7739,9 +7382,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "account_pkey",
       "schema": "public",
@@ -7749,9 +7390,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "invitation_pkey",
       "schema": "public",
@@ -7759,9 +7398,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "member_pkey",
       "schema": "public",
@@ -7769,9 +7406,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "organization_pkey",
       "schema": "public",
@@ -7779,9 +7414,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "session_pkey",
       "schema": "public",
@@ -7789,9 +7422,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "user_pkey",
       "schema": "public",
@@ -7799,9 +7430,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "verification_pkey",
       "schema": "public",
@@ -7809,9 +7438,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "apikey_pkey",
       "schema": "public",
@@ -7820,9 +7447,7 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "slug"
-      ],
+      "columns": ["slug"],
       "nullsNotDistinct": false,
       "name": "organization_slug_key",
       "schema": "public",
@@ -7831,9 +7456,7 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "token"
-      ],
+      "columns": ["token"],
       "nullsNotDistinct": false,
       "name": "session_token_key",
       "schema": "public",
@@ -7842,9 +7465,7 @@
     },
     {
       "nameExplicit": false,
-      "columns": [
-        "email"
-      ],
+      "columns": ["email"],
       "nullsNotDistinct": false,
       "name": "user_email_key",
       "schema": "public",
