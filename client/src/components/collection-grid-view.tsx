@@ -389,7 +389,9 @@ export function CollectionGridView({
       <ScrollArea
         viewportRef={scrollRef}
         viewportClassName="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        className="h-full min-h-0 w-full min-w-0 flex-1 rounded-[inherit] [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:inset-y-2 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:right-1 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-0"
+        className="h-full min-h-0 w-full min-w-0 flex-1 rounded-[inherit]"
+        verticalScrollbarClassName="w-[5px] p-0"
+        verticalScrollbarStyle={{ top: 5, bottom: 5, right: 3 }}
       >
         <div
           ref={surfaceRef}

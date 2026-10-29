@@ -29,6 +29,8 @@ export function GridViewLoading() {
     <ScrollArea
       className="h-full min-h-0 w-full min-w-0 flex-1"
       viewportClassName="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      verticalScrollbarClassName="w-[5px] p-0"
+      verticalScrollbarStyle={{ top: 5, bottom: 5, right: 3 }}
     >
       <div
         className="p-5 pb-20"

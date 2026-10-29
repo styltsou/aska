@@ -24,9 +24,9 @@ export function NoteScrollArea({
         verticalScrollbarClassName,
       )}
       verticalScrollbarStyle={{
-        top: "4px",
-        bottom: "4px",
-        insetInlineEnd: "2px",
+        top: "5px",
+        bottom: "5px",
+        insetInlineEnd: "3px",
       }}
       verticalThumbClassName={cn(
         "w-[5px] rounded-full bg-sidebar-foreground/16 transition-colors duration-150 group-hover/note-scroll-area:bg-sidebar-foreground/24",
