@@ -318,7 +318,9 @@ function TabsThumb() {
     }
 
     const isTabSwitch = Boolean(before);
-    const duration = isTabSwitch ? (transition ?? THUMB_TRANSITION) : { duration: 0 };
+    const duration = isTabSwitch
+      ? (transition ?? THUMB_TRANSITION)
+      : { duration: 0 };
 
     y.set(geometry.top);
     height.set(geometry.height);
