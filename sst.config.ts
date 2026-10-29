@@ -356,6 +356,11 @@ export default $config({
         ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".styltsou.com" } : {}),
       },
     });
+    aiApi.route("GET /health", {
+      handler: "server/src/ai-stream-health-lambda.handler",
+      runtime: "nodejs22.x",
+      streaming: true,
+    });
     // ApiGatewayV1 requires an explicit deployment after its routes are added;
     // this also creates the stage and custom-domain base-path mapping.
     aiApi.deploy();
