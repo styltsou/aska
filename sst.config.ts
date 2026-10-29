@@ -54,6 +54,7 @@ export default $config({
         ? {
             app: "aska-app.styltsou.com",
             api: "aska-api.styltsou.com",
+            ai: "aska-ai.styltsou.com",
             apiDns: sst.cloudflare.dns({
               // Supplying the zone explicitly keeps the DNS token narrowly
               // scoped to styltsou.com and avoids account-wide zone discovery.
@@ -323,6 +324,38 @@ export default $config({
         ...sentryEnvironment,
       },
     });
+    // REST API response streaming lets the local Vite client receive chunks
+    // while the existing HTTP API continues to serve ordinary requests.
+    const aiApi = new sst.aws.ApiGatewayV1("AiApi", {
+      endpoint: { type: "regional" },
+      cors: false,
+      ...(stableCloudDomains
+        ? {
+            domain: {
+              name: stableCloudDomains.ai,
+              dns: stableCloudDomains.apiDns,
+            },
+          }
+        : {}),
+    });
+    aiApi.route("ANY /api/ai/stream", {
+      handler: "server/src/ai-stream-lambda.handler",
+      runtime: "nodejs22.x",
+      streaming: true,
+      memory: "1024 MB",
+      timeout: "2 minutes",
+      link: [databaseUrl, betterAuthSecret, resendApiKey],
+      environment: {
+        NODE_ENV: stableCloudDomains ? "production" : "development",
+        DATABASE_URL: databaseUrl.value,
+        BETTER_AUTH_SECRET: betterAuthSecret.value,
+        BETTER_AUTH_URL: api.url,
+        RESEND_API_KEY: resendApiKey.value,
+        CORS_ORIGINS: allowedClientOrigins.join(","),
+        CROSS_SITE_AUTH_COOKIES: stableCloudDomains ? "true" : "false",
+        ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".styltsou.com" } : {}),
+      },
+    });
     new sst.aws.CronV2("MediaCleanup", {
       schedule: "rate(5 minutes)",
       function: {
@@ -534,6 +567,7 @@ export default $config({
         : {}),
       environment: {
         VITE_SERVER_URL: api.url,
+        VITE_AI_STREAM_URL: $interpolate`${aiApi.url}/api/ai/stream`,
         VITE_SENTRY_DSN: sentryDsn.value,
         VITE_SENTRY_ENVIRONMENT: $app.stage,
         VITE_SENTRY_TRACES_SAMPLE_RATE:
@@ -545,6 +579,7 @@ export default $config({
     });
     return {
       api: api.url,
+      aiApi: aiApi.url,
       client: client.url,
       assetsBucket: assets.name,
       media: media?.domainUrl,
