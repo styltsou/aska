@@ -85,7 +85,7 @@ export function BoardContextMenu({
     (state) => state.setWorkspaceAlignmentGuides,
   );
   const isBoardActionRailVisible = usePersistedStore(
-    (state) => state.workspaceBoardActionRails?.[workspaceSlug] ?? false,
+    (state) => state.boardActionRailVisible,
   );
   const isFloatingSidebar = usePersistedStore(
     (state) => state.canvasFloatingSidebar,
@@ -94,8 +94,8 @@ export function BoardContextMenu({
     (state) => state.setCanvasFloatingSidebar,
   );
   const setSidebarOpen = usePersistedStore((state) => state.setOpen);
-  const setWorkspaceBoardActionRail = usePersistedStore(
-    (state) => state.setWorkspaceBoardActionRail,
+  const setBoardActionRailVisible = usePersistedStore(
+    (state) => state.setBoardActionRailVisible,
   );
 
   useEffect(() => {
@@ -174,7 +174,7 @@ export function BoardContextMenu({
                 closeOnClick
                 checked={isBoardActionRailVisible}
                 onCheckedChange={(visible) =>
-                  setWorkspaceBoardActionRail(workspaceSlug, visible === true)
+                  setBoardActionRailVisible(visible === true)
                 }
               >
                 Actions dock

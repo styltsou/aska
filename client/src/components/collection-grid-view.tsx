@@ -13,6 +13,7 @@ import {
   useDroppable,
 } from "@dnd-kit/react";
 import { toast } from "sonner";
+import { motion, useReducedMotion } from "motion/react";
 
 import {
   useBulkDelete,
@@ -35,6 +36,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
+import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { sortCollectionNodesByMostRecent } from "@/lib/collection-node-order";
 import {
   isPersistedSelectableAsset,
@@ -429,20 +431,28 @@ export function CollectionGridView({
               </div>
             </div>
           ) : (
-            <div ref={contentRef} className="w-full space-y-10">
+            <div ref={contentRef} className="w-full">
+              <div className="pointer-events-none sticky top-5 z-10 flex h-0 justify-end">
+                <GridDensityControl value={density} onChange={setGridDensity} />
+              </div>
+              <div className="mb-3 flex min-h-[30px] items-center gap-2 pr-64">
+                <h2
+                  id={
+                    folders.length > 0
+                      ? "grid-folders-title"
+                      : "grid-assets-title"
+                  }
+                  className="text-xs font-semibold tracking-wide text-foreground/80 uppercase"
+                >
+                  {folders.length > 0 ? "Folders" : "Assets"}
+                </h2>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {folders.length > 0 ? folders.length : assets.length}
+                  {folders.length === 0 && hasMoreAssets ? "+" : ""}
+                </span>
+              </div>
               {folders.length > 0 ? (
                 <section aria-labelledby="grid-folders-title">
-                  <div className="mb-3 flex items-baseline gap-2">
-                    <h2
-                      id="grid-folders-title"
-                      className="text-xs font-semibold tracking-wide text-foreground/80 uppercase"
-                    >
-                      Folders
-                    </h2>
-                    <span className="text-xs text-muted-foreground tabular-nums">
-                      {folders.length}
-                    </span>
-                  </div>
                   <div
                     className="grid gap-[10px]"
                     style={{
@@ -454,47 +464,24 @@ export function CollectionGridView({
                 </section>
               ) : null}
 
-              <section aria-labelledby="grid-assets-title">
-                <div className="mb-3 flex items-center gap-2">
-                  <h2
-                    id="grid-assets-title"
-                    className="text-xs font-semibold tracking-wide text-foreground/80 uppercase"
-                  >
-                    Assets
-                  </h2>
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {assets.length}
-                    {hasMoreAssets ? "+" : ""}
-                  </span>
-                  <div
-                    data-grid-control
-                    className="ml-auto flex items-center rounded-lg border border-border/70 bg-background/80 p-0.5"
-                    role="group"
-                    aria-label="Grid size"
-                  >
-                    {(
-                      Object.entries(GRID_DENSITIES) as [
-                        GridDensity,
-                        (typeof GRID_DENSITIES)[GridDensity],
-                      ][]
-                    ).map(([value, preset]) => (
-                      <button
-                        key={value}
-                        type="button"
-                        aria-pressed={density === value}
-                        onClick={() => setGridDensity(value)}
-                        className={cn(
-                          "rounded-md px-2.5 py-1 text-xs transition-colors",
-                          density === value
-                            ? "bg-foreground text-background shadow-sm"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
+              <section
+                aria-labelledby="grid-assets-title"
+                className={folders.length > 0 ? "mt-10" : undefined}
+              >
+                {folders.length > 0 ? (
+                  <div className="mb-3 flex items-center gap-2">
+                    <h2
+                      id="grid-assets-title"
+                      className="text-xs font-semibold tracking-wide text-foreground/80 uppercase"
+                    >
+                      Assets
+                    </h2>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {assets.length}
+                      {hasMoreAssets ? "+" : ""}
+                    </span>
                   </div>
-                </div>
+                ) : null}
                 {assets.length > 0 ? (
                   <>
                     <VirtualMasonry
@@ -559,6 +546,86 @@ export function CollectionGridView({
         dropTargetRectRef={dropTargetRectRef}
       />
     </>
+  );
+}
+
+function GridDensityControl({
+  value,
+  onChange,
+}: {
+  value: GridDensity;
+  onChange: (value: GridDensity) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState<{ left: number; width: number }>();
+  const reduceMotion = useReducedMotion();
+
+  useIsomorphicLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const update = () => {
+      const active = container.querySelector<HTMLButtonElement>(
+        'button[aria-pressed="true"]',
+      );
+      if (active) {
+        setThumb({ left: active.offsetLeft, width: active.offsetWidth });
+      }
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    container
+      .querySelectorAll("button")
+      .forEach((button) => observer.observe(button));
+    return () => observer.disconnect();
+  }, [value]);
+
+  return (
+    <div
+      ref={containerRef}
+      data-grid-control
+      role="group"
+      aria-label="Grid size"
+      className={cn(
+        "pointer-events-auto relative ml-auto flex h-fit items-center rounded-lg border border-border/70 p-0.5 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-background/50",
+        GLASS_FRAME_CLASS,
+        "ring-0",
+      )}
+    >
+      {thumb ? (
+        <motion.span
+          aria-hidden="true"
+          initial={false}
+          animate={{ x: thumb.left, width: thumb.width }}
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : { type: "spring", stiffness: 500, damping: 35, mass: 0.9 }
+          }
+          className="pointer-events-none absolute inset-y-0.5 left-0 rounded-md bg-foreground shadow-sm"
+        />
+      ) : null}
+      {(
+        Object.entries(GRID_DENSITIES) as [
+          GridDensity,
+          (typeof GRID_DENSITIES)[GridDensity],
+        ][]
+      ).map(([option, preset]) => (
+        <button
+          key={option}
+          type="button"
+          aria-pressed={value === option}
+          onClick={() => onChange(option)}
+          className={cn(
+            "relative rounded-md px-2.5 py-1 text-xs transition-colors",
+            value === option
+              ? "text-background"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {preset.label}
+        </button>
+      ))}
+    </div>
   );
 }
 

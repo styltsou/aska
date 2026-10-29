@@ -21,6 +21,7 @@ export function calculateMasonryLayout(
   columns: number,
   itemWidth: number,
   previousColumns?: readonly number[],
+  gap = MASONRY_GAP,
 ): { positions: MasonryPosition[]; height: number } | undefined {
   if (!columns || !heights.length || heights.some((height) => height <= 0)) {
     return undefined;
@@ -34,17 +35,17 @@ export function calculateMasonryLayout(
         ? previous
         : columnHeights.indexOf(Math.min(...columnHeights));
     const position = {
-      x: column * (itemWidth + MASONRY_GAP),
+      x: column * (itemWidth + gap),
       y: columnHeights[column]!,
       width: itemWidth,
     };
-    columnHeights[column]! += height + MASONRY_GAP;
+    columnHeights[column]! += height + gap;
     return position;
   });
 
   return {
     positions,
-    height: Math.max(...columnHeights) - MASONRY_GAP,
+    height: Math.max(...columnHeights) - gap,
   };
 }
 
@@ -71,11 +72,15 @@ export function Masonry({
   className,
   width,
   density,
+  columnCount,
+  gap = MASONRY_GAP,
 }: {
   children: ReactNode;
   className?: string;
   width?: number;
   density?: GridDensity;
+  columnCount?: number;
+  gap?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [measuredWidth, setMeasuredWidth] = useState(0);
@@ -97,12 +102,22 @@ export function Masonry({
     height: number;
     width: number;
     columns: number;
+    gap: number;
     keys: string[];
-  }>({ positions: [], height: 0, width: 0, columns: 0, keys: [] });
+  }>({
+    positions: [],
+    height: 0,
+    width: 0,
+    columns: 0,
+    gap: MASONRY_GAP,
+    keys: [],
+  });
 
-  const columns = columnsForGrid(effectiveWidth, density ?? "balanced");
+  const columns = effectiveWidth
+    ? (columnCount ?? columnsForGrid(effectiveWidth, density ?? "balanced"))
+    : 0;
   const itemWidth = columns
-    ? Math.max(0, (effectiveWidth - MASONRY_GAP * (columns - 1)) / columns)
+    ? Math.max(0, (effectiveWidth - gap * (columns - 1)) / columns)
     : 0;
 
   const measure = useCallback(() => {
@@ -117,7 +132,7 @@ export function Masonry({
         current.keys.every((key, index) => key === items[index]?.key)
           ? current.positions.map((position) =>
               Math.round(
-                position.x / (current.positions[0]!.width + MASONRY_GAP),
+                position.x / (current.positions[0]!.width + current.gap),
               ),
             )
           : undefined;
@@ -126,9 +141,12 @@ export function Masonry({
         columns,
         itemWidth,
         previousColumns,
+        gap,
       );
       if (!next) return current;
       return current.width === effectiveWidth &&
+        current.columns === columns &&
+        current.gap === gap &&
         current.keys.length === items.length &&
         current.keys.every((key, index) => key === items[index]?.key) &&
         layoutsEqual(
@@ -142,10 +160,11 @@ export function Masonry({
             ...next,
             width: effectiveWidth,
             columns,
+            gap,
             keys: items.map((item) => item.key),
           };
     });
-  }, [columns, itemWidth, items, effectiveWidth]);
+  }, [columns, itemWidth, items, effectiveWidth, gap]);
 
   // Measure a new set of cards before paint so they never appear stacked at (0, 0).
   useIsomorphicLayoutEffect(measure);

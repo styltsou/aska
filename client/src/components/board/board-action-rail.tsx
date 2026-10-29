@@ -56,11 +56,17 @@ function RailShortcut({ keys }: { keys: string }) {
 export function BoardActionRail({
   workspaceSlug,
   collectionPath,
+  view,
 }: {
   workspaceSlug: string;
   collectionPath: string;
+  view: "canvas" | "grid";
 }) {
-  const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
+  const canvasPlacement = useBoardInsertionPlacement(
+    workspaceSlug,
+    collectionPath,
+  );
+  const placement = view === "canvas" ? canvasPlacement : undefined;
   const [collectionSlug = "", ...folderSegments] = collectionPath.split("/");
   const boardKey = makeBoardKey(
     workspaceSlug,
@@ -82,7 +88,7 @@ export function BoardActionRail({
     (state) => state.pexelsBrowserByScope[pexelsScope]?.open ?? false,
   );
   const isRailVisible = usePersistedStore(
-    (state) => state.workspaceBoardActionRails?.[workspaceSlug] ?? false,
+    (state) => state.boardActionRailVisible,
   );
   const reduceMotion = useReducedMotion();
   const enterTransition = reduceMotion
@@ -91,6 +97,9 @@ export function BoardActionRail({
   const exitTransition = reduceMotion
     ? { duration: 0 }
     : FLOATING_TOOLBAR_EXIT_TRANSITION;
+  const layoutTransition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
     <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-20 flex items-end justify-center px-2">
@@ -117,9 +126,7 @@ export function BoardActionRail({
             <div
               className={cn("relative w-fit", FLOATING_GLASS_BACKDROP_CLASS)}
             >
-              <motion.div
-                layout="size"
-                transition={enterTransition}
+              <div
                 className={cn(
                   "relative z-10 flex items-center rounded-lg p-1",
                   GLASS_FRAME_CLASS,
@@ -234,73 +241,92 @@ export function BoardActionRail({
                     </Tooltip>
                   </ButtonGroup>
                 </div>
-                <div className={cn(GLASS_ISLAND_CLASS, "ml-1")}>
-                  <ButtonGroup>
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            type="button"
-                            size="icon-lg"
-                            variant="ghost"
-                            aria-label="Text tool"
-                            aria-pressed={activeTool === "text"}
-                            data-active={activeTool === "text" || undefined}
-                            className={cn(
-                              RAIL_BUTTON_CLASS,
-                              activeTool === "text" &&
-                                "bg-sidebar-active text-sidebar-accent-foreground",
-                            )}
-                            onClick={() =>
-                              setCanvasTool(
-                                boardKey,
-                                activeTool === "text" ? "select" : "text",
-                              )
-                            }
-                          >
-                            <TypeIcon className="size-3.5" />
-                          </Button>
-                        }
-                      />
-                      <TooltipContent side="top">
-                        <span>Text tool</span>
-                        <RailShortcut keys="T" />
-                      </TooltipContent>
-                    </Tooltip>
-                    <ButtonGroupSeparator />
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            type="button"
-                            size="icon-lg"
-                            variant="ghost"
-                            aria-label="Arrow tool"
-                            aria-pressed={activeTool === "arrow"}
-                            data-active={activeTool === "arrow" || undefined}
-                            className={cn(
-                              RAIL_BUTTON_CLASS,
-                              activeTool === "arrow" &&
-                                "bg-sidebar-active text-sidebar-accent-foreground",
-                            )}
-                            onClick={() =>
-                              setCanvasTool(
-                                boardKey,
-                                activeTool === "arrow" ? "select" : "arrow",
-                              )
-                            }
-                          >
-                            <ArrowUpRightIcon className="size-4.5" />
-                          </Button>
-                        }
-                      />
-                      <TooltipContent side="top">
-                        <span>Arrow tool</span>
-                        <RailShortcut keys="A" />
-                      </TooltipContent>
-                    </Tooltip>
-                  </ButtonGroup>
-                </div>
+                <motion.div
+                  initial={false}
+                  animate={{
+                    width: view === "canvas" ? "auto" : 0,
+                    opacity: view === "canvas" ? 1 : 0,
+                  }}
+                  transition={{
+                    width: layoutTransition,
+                    opacity: reduceMotion
+                      ? { duration: 0 }
+                      : view === "canvas"
+                        ? { duration: 0.16, delay: 0.07, ease: "easeOut" }
+                        : { duration: 0.12, ease: "easeOut" },
+                  }}
+                  className="shrink-0 overflow-hidden"
+                  aria-hidden={view !== "canvas"}
+                  inert={view !== "canvas"}
+                >
+                  <div className={cn(GLASS_ISLAND_CLASS, "ml-1 w-max")}>
+                    <ButtonGroup>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              size="icon-lg"
+                              variant="ghost"
+                              aria-label="Text tool"
+                              aria-pressed={activeTool === "text"}
+                              data-active={activeTool === "text" || undefined}
+                              className={cn(
+                                RAIL_BUTTON_CLASS,
+                                activeTool === "text" &&
+                                  "bg-sidebar-active text-sidebar-accent-foreground",
+                              )}
+                              onClick={() =>
+                                setCanvasTool(
+                                  boardKey,
+                                  activeTool === "text" ? "select" : "text",
+                                )
+                              }
+                            >
+                              <TypeIcon className="size-3.5" />
+                            </Button>
+                          }
+                        />
+                        <TooltipContent side="top">
+                          <span>Text tool</span>
+                          <RailShortcut keys="T" />
+                        </TooltipContent>
+                      </Tooltip>
+                      <ButtonGroupSeparator />
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <Button
+                              type="button"
+                              size="icon-lg"
+                              variant="ghost"
+                              aria-label="Arrow tool"
+                              aria-pressed={activeTool === "arrow"}
+                              data-active={activeTool === "arrow" || undefined}
+                              className={cn(
+                                RAIL_BUTTON_CLASS,
+                                activeTool === "arrow" &&
+                                  "bg-sidebar-active text-sidebar-accent-foreground",
+                              )}
+                              onClick={() =>
+                                setCanvasTool(
+                                  boardKey,
+                                  activeTool === "arrow" ? "select" : "arrow",
+                                )
+                              }
+                            >
+                              <ArrowUpRightIcon className="size-4.5" />
+                            </Button>
+                          }
+                        />
+                        <TooltipContent side="top">
+                          <span>Arrow tool</span>
+                          <RailShortcut keys="A" />
+                        </TooltipContent>
+                      </Tooltip>
+                    </ButtonGroup>
+                  </div>
+                </motion.div>
                 <div className={cn(GLASS_ISLAND_CLASS, "ml-1")}>
                   <ButtonGroup>
                     <Tooltip>
@@ -339,7 +365,7 @@ export function BoardActionRail({
                     </Tooltip>
                   </ButtonGroup>
                 </div>
-              </motion.div>
+              </div>
             </div>
           </motion.div>
         ) : null}

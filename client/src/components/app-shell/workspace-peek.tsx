@@ -2127,9 +2127,11 @@ function PeekColor({
             <p className="text-lg font-medium">
               {color.title?.trim() || color.hex?.toUpperCase() || "Color"}
             </p>
-            <p className="mt-1 font-mono text-xs text-muted-foreground">
-              {gradient ? "CSS gradient" : color.hex?.toUpperCase()}
-            </p>
+            {!gradient && color.hex ? (
+              <p className="mt-1 font-mono text-xs text-muted-foreground">
+                {color.hex.toUpperCase()}
+              </p>
+            ) : null}
           </div>
           <Button size="sm" variant="outline" onClick={copy}>
             Copy value

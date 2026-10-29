@@ -16,7 +16,7 @@ import {
 
 import { cn } from "@/lib/utils";
 
-type TabsVariant = "segment" | "pill" | "underline";
+type TabsVariant = "segment" | "segment-contrast" | "pill" | "underline";
 type TabsSize = "sm" | "md";
 
 const SPRING_TRANSITION: Transition = {
@@ -99,6 +99,8 @@ export function Tabs({
 const listVariantClasses: Record<TabsVariant, string> = {
   segment:
     "gap-0.5 rounded-md border border-border/60 bg-muted p-0.5 shadow-[0_1px_1px_rgb(0_0_0_/_0.02)] ring-1 ring-foreground/[0.025] backdrop-blur-sm",
+  "segment-contrast":
+    "inline-flex items-center rounded-lg border border-border/70 bg-background/80 p-0.5",
   pill: "inline-flex items-center gap-1 rounded-full bg-card p-1",
   underline: "inline-flex items-center gap-1 border-b border-border",
 };
@@ -124,6 +126,7 @@ const triggerRadiusClasses: Record<
   string
 > = {
   segment: "rounded-[calc(var(--radius-md)-2px)]",
+  "segment-contrast": "rounded-md",
   pill: "rounded-full",
 };
 
@@ -196,7 +199,12 @@ export function TabsTrigger({
         triggerSizeClasses[size],
         triggerIconSizeClasses[size],
         triggerRadiusClasses[variant],
-        active ? "text-foreground" : triggerInactiveClasses,
+        active
+          ? variant === "segment-contrast"
+            ? "text-background"
+            : "text-foreground"
+          : triggerInactiveClasses,
+        variant === "segment-contrast" && "font-normal",
         className,
       )}
     >
@@ -204,9 +212,12 @@ export function TabsTrigger({
         <motion.span
           aria-hidden="true"
           layoutId={layoutId}
-          layout="position"
+          layout={variant === "segment-contrast" ? true : "position"}
           className={cn(
-            "absolute inset-0 z-0 bg-gradient-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]",
+            "absolute inset-0 z-0",
+            variant === "segment-contrast"
+              ? "bg-foreground shadow-sm"
+              : "bg-gradient-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]",
             triggerRadiusClasses[variant],
           )}
         />

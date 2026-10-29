@@ -1,15 +1,24 @@
 export function migratePersistedAppStore(
   state: unknown,
+  legacyViews?: unknown,
 ): Record<string, unknown> {
   const persistedState = isRecord(state) ? state : {};
+  const { workspaceBoardActionRails, ...remainingState } = persistedState;
 
   return {
-    ...persistedState,
-    workspaceBoardActionRails: isRecord(
-      persistedState.workspaceBoardActionRails,
-    )
-      ? persistedState.workspaceBoardActionRails
-      : {},
+    ...remainingState,
+    boardActionRailVisible:
+      typeof persistedState.boardActionRailVisible === "boolean"
+        ? persistedState.boardActionRailVisible
+        : isRecord(workspaceBoardActionRails) &&
+          Object.values(workspaceBoardActionRails).some(
+            (value) => value === true,
+          ),
+    collectionViews: isRecord(persistedState.collectionViews)
+      ? persistedState.collectionViews
+      : isRecord(legacyViews)
+        ? legacyViews
+        : {},
   };
 }
 

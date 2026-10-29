@@ -260,20 +260,20 @@ export function CommandPalette() {
   const { theme, setTheme } = useTheme();
   const { open: isSidebarOpen, toggleSidebar } = useSidebar();
   const toggleFilterBar = useSessionStore((state) => state.toggleFilterBar);
-  const setCollectionView = useSessionStore((state) => state.setCollectionView);
+  const setCollectionView = usePersistedStore(
+    (state) => state.setCollectionView,
+  );
   const setWorkspaceAlignmentGuides = usePersistedStore(
     (state) => state.setWorkspaceAlignmentGuides,
   );
   const [workspaceSlug, view, ...viewPath] = pathname
     .split("/")
     .filter(Boolean);
-  const isBoardActionRailVisible = usePersistedStore((state) =>
-    workspaceSlug
-      ? (state.workspaceBoardActionRails?.[workspaceSlug] ?? false)
-      : false,
+  const isBoardActionRailVisible = usePersistedStore(
+    (state) => state.boardActionRailVisible,
   );
-  const setWorkspaceBoardActionRail = usePersistedStore(
-    (state) => state.setWorkspaceBoardActionRail,
+  const setBoardActionRailVisible = usePersistedStore(
+    (state) => state.setBoardActionRailVisible,
   );
   const openScratchpad = useTransientStore((state) => state.openScratchpad);
   const setCanvasTool = useTransientStore((state) => state.setCanvasTool);
@@ -285,7 +285,7 @@ export function CommandPalette() {
     view === "collections" && workspaceSlug && viewPath[0]
       ? getCollectionViewScope(workspaceSlug, viewPath[0])
       : undefined;
-  const collectionView = useSessionStore((state) =>
+  const collectionView = usePersistedStore((state) =>
     collectionViewScope
       ? (state.collectionViews[collectionViewScope] ?? "canvas")
       : undefined,
@@ -323,8 +323,7 @@ export function CommandPalette() {
   );
   const canToggleAlignmentGuides =
     collectionView === "canvas" && Boolean(boardKey);
-  const canToggleBoardActionRail =
-    collectionView === "canvas" && Boolean(boardKey);
+  const canToggleBoardActionRail = Boolean(boardKey);
   const placement = useBoardInsertionPlacement(workspaceSlug, collectionPath);
   const recentAssetIds = useRecentWorkspaceAssetIds(workspaceSlug);
   const workspaceSearch = useWorkspaceSearch(
@@ -532,7 +531,7 @@ export function CommandPalette() {
       case "toggle-board-action-rail":
         if (!boardKey || !workspaceSlug) return;
         handleOpenChange(false);
-        setWorkspaceBoardActionRail(workspaceSlug, !isBoardActionRailVisible);
+        setBoardActionRailVisible(!isBoardActionRailVisible);
         return;
       case "change-theme":
         handleOpenChange(false);

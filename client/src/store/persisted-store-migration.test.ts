@@ -1,36 +1,39 @@
 import { describe, expect, it } from "vitest";
-
-import {
-  mergePersistedAppStore,
-  migratePersistedAppStore,
-} from "./persisted-store-migration";
+import { migratePersistedAppStore } from "./persisted-store-migration";
 
 describe("persisted app store migration", () => {
-  it("adds the creation-toolbar preference to existing stored state", () => {
+  it("preserves an enabled dock and migrates current tab view choices", () => {
     expect(
-      migratePersistedAppStore({
-        boardLocks: { "studio:ideas": true },
-        workspaceAlignmentGuides: { studio: false },
-      }),
-    ).toMatchObject({
-      boardLocks: { "studio:ideas": true },
-      workspaceAlignmentGuides: { studio: false },
-      workspaceBoardActionRails: {},
-    });
-  });
-
-  it("replaces malformed toolbar preferences without discarding valid state", () => {
-    expect(
-      mergePersistedAppStore(
-        { workspaceBoardActionRails: null, open: false },
+      migratePersistedAppStore(
         {
-          open: true,
-          workspaceBoardActionRails: { studio: true },
+          workspaceBoardActionRails: { studio: false, other: true },
+          open: false,
         },
+        { "studio:references": "grid" },
       ),
     ).toEqual({
       open: false,
-      workspaceBoardActionRails: {},
+      boardActionRailVisible: true,
+      collectionViews: { "studio:references": "grid" },
     });
+  });
+
+  it("keeps newer preferences and handles malformed legacy values", () => {
+    expect(
+      migratePersistedAppStore(
+        {
+          workspaceBoardActionRails: null,
+          boardActionRailVisible: false,
+          collectionViews: { "studio:ideas": "canvas" },
+        },
+        { "studio:ideas": "grid" },
+      ),
+    ).toEqual({
+      boardActionRailVisible: false,
+      collectionViews: { "studio:ideas": "canvas" },
+    });
+    expect(
+      migratePersistedAppStore({ workspaceBoardActionRails: null }),
+    ).toEqual({ boardActionRailVisible: false, collectionViews: {} });
   });
 });

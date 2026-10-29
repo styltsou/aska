@@ -9,17 +9,14 @@ export interface PersistedBoardSlice {
   boardViewports: Record<string, Viewport>;
   boardLocks: Record<string, boolean | undefined>;
   workspaceAlignmentGuides: Record<string, boolean | undefined>;
-  workspaceBoardActionRails: Record<string, boolean | undefined>;
+  boardActionRailVisible: boolean;
   setBoardViewport: (boardKey: string, viewport: Viewport) => void;
   setBoardLock: (boardKey: string, locked: boolean) => void;
   setWorkspaceAlignmentGuides: (
     workspaceSlug: string,
     enabled: boolean,
   ) => void;
-  setWorkspaceBoardActionRail: (
-    workspaceSlug: string,
-    visible: boolean,
-  ) => void;
+  setBoardActionRailVisible: (visible: boolean) => void;
 }
 
 export const createPersistedBoardSlice: StateCreator<PersistedBoardSlice> = (
@@ -28,7 +25,7 @@ export const createPersistedBoardSlice: StateCreator<PersistedBoardSlice> = (
   boardViewports: {},
   boardLocks: {},
   workspaceAlignmentGuides: {},
-  workspaceBoardActionRails: {},
+  boardActionRailVisible: false,
   setBoardViewport: (boardKey, viewport) =>
     set((state) => ({
       boardViewports: { ...state.boardViewports, [boardKey]: viewport },
@@ -44,13 +41,8 @@ export const createPersistedBoardSlice: StateCreator<PersistedBoardSlice> = (
         [workspaceSlug]: enabled,
       },
     })),
-  setWorkspaceBoardActionRail: (workspaceSlug, visible) =>
-    set((state) => ({
-      workspaceBoardActionRails: {
-        ...state.workspaceBoardActionRails,
-        [workspaceSlug]: visible,
-      },
-    })),
+  setBoardActionRailVisible: (visible) =>
+    set({ boardActionRailVisible: visible }),
 });
 
 export interface TransientBoardSlice {

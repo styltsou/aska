@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
@@ -55,6 +56,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
+import { Masonry } from "@/components/masonry-grid";
 import { colorAssetToSearchColors } from "@/lib/color-asset-search";
 import { resolveGradientCss } from "@/lib/color-gradient";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -294,11 +296,15 @@ export function ColorDetailDrawer({
                     displayedColor.hex?.toUpperCase() ||
                     "Color"}
                 </DrawerTitle>
-                <DrawerDescription className="font-mono text-xs">
-                  {hasGradient
-                    ? "CSS gradient"
-                    : (displayedColor.hex?.toUpperCase() ?? "")}
-                </DrawerDescription>
+                {hasGradient ? (
+                  <DrawerDescription className="sr-only">
+                    Color details and relevant images.
+                  </DrawerDescription>
+                ) : (
+                  <DrawerDescription className="font-mono text-xs">
+                    {displayedColor.hex?.toUpperCase() ?? ""}
+                  </DrawerDescription>
+                )}
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
@@ -383,7 +389,7 @@ export function ColorDetailDrawer({
                     onValueChange={(value) =>
                       setIncludeDescendants(value === "collection")
                     }
-                    variant="segment"
+                    variant="segment-contrast"
                     size="sm"
                   >
                     <TabsList aria-label="Search scope">
@@ -400,13 +406,13 @@ export function ColorDetailDrawer({
                 <ScrollArea className="size-full [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-4 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-2 [&_[data-slot=scroll-area-thumb]]:bg-sidebar-foreground/55 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm">
                   <div className="min-h-full px-4 pt-0 pb-4">
                     {search.isLoading || search.isSearching ? (
-                      <ColorResultsSkeleton />
+                      <ColorResultsSkeleton twoColumns />
                     ) : search.isError ? (
                       <ColorSearchError onRetry={() => void search.refetch()} />
                     ) : results.length === 0 ? (
                       <ColorSearchEmpty />
                     ) : (
-                      <div className="columns-2 gap-3">
+                      <ColorResultsMasonry twoColumns>
                         {results.map((result) => {
                           const location =
                             result.location.type === "collection" &&
@@ -437,7 +443,7 @@ export function ColorDetailDrawer({
                             />
                           );
                         })}
-                      </div>
+                      </ColorResultsMasonry>
                     )}
                   </div>
                 </ScrollArea>
@@ -630,7 +636,7 @@ function ColorDetailModal({
           fullscreenTransitionDuration,
           expanded
             ? "top-0 left-0 h-dvh max-h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
-            : "top-1/2 h-[min(48rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[76rem] -translate-y-1/2 rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10",
+            : "top-1/2 h-[min(60rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[76rem] -translate-y-1/2 rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10",
         )}
       >
         <DialogTitle className="sr-only">{title}</DialogTitle>
@@ -760,7 +766,7 @@ function ColorDetailModal({
           >
             {color ? (
               <div className="flex h-full min-h-0 min-w-0 flex-col">
-                <div className="shrink-0 px-4 pt-4 sm:px-5 sm:pt-5">
+                <div className="shrink-0 px-4 pt-4 pb-4 sm:px-5 sm:pt-5">
                   <button
                     data-asset-modal-hero
                     type="button"
@@ -787,9 +793,11 @@ function ColorDetailModal({
                       Copy
                     </span>
                   </button>
-                  <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    {hasGradient ? "CSS gradient" : color.hex?.toUpperCase()}
-                  </p>
+                  {!hasGradient && color.hex ? (
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">
+                      {color.hex.toUpperCase()}
+                    </p>
+                  ) : null}
                   <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
                     <span className="text-sm font-medium">Relevant images</span>
                     {scope.type === "collection" ? (
@@ -799,7 +807,7 @@ function ColorDetailModal({
                         onValueChange={(value) =>
                           onIncludeDescendantsChange(value === "collection")
                         }
-                        variant="segment"
+                        variant="segment-contrast"
                         size="sm"
                       >
                         <TabsList aria-label="Search scope">
@@ -812,8 +820,8 @@ function ColorDetailModal({
                     ) : null}
                   </div>
                 </div>
-                <ScrollArea className="min-h-0 min-w-0 flex-1">
-                  <div className="px-4 pt-4 pb-5 sm:px-5">
+                <ScrollArea className="mx-4 min-h-0 min-w-0 flex-1 rounded-t-lg sm:mx-5">
+                  <div className="pb-5">
                     {searching ? (
                       <ColorResultsSkeleton />
                     ) : error ? (
@@ -821,7 +829,7 @@ function ColorDetailModal({
                     ) : results.length === 0 ? (
                       <ColorSearchEmpty />
                     ) : (
-                      <div className="columns-2 gap-3 lg:columns-3">
+                      <ColorResultsMasonry>
                         {results.map((result) => (
                           <ImageResultTile
                             key={result.image.id}
@@ -846,7 +854,7 @@ function ColorDetailModal({
                             }
                           />
                         ))}
-                      </div>
+                      </ColorResultsMasonry>
                     )}
                   </div>
                 </ScrollArea>
@@ -969,7 +977,7 @@ function ImageResultTile({
   return (
     <button
       type="button"
-      className="group/tile relative mb-3 block w-full break-inside-avoid overflow-hidden rounded-lg border border-transparent text-left focus-visible:ring-2 focus-visible:ring-ring"
+      className="group/tile relative block w-full overflow-hidden rounded-lg border border-transparent text-left focus-visible:ring-2 focus-visible:ring-ring"
       style={{ aspectRatio: `${image.width} / ${image.height}` }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -1003,21 +1011,61 @@ function ImageResultTile({
   );
 }
 
-function ColorResultsSkeleton() {
+const COLOR_RESULT_SKELETON_RATIOS = [
+  "aspect-[4/3]",
+  "aspect-[3/4]",
+  "aspect-square",
+  "aspect-[5/4]",
+  "aspect-[4/5]",
+  "aspect-[3/2]",
+  "aspect-[2/3]",
+  "aspect-[7/5]",
+];
+
+function ColorResultsMasonry({
+  children,
+  twoColumns = false,
+}: {
+  children: ReactNode;
+  twoColumns?: boolean;
+}) {
+  const [wide, setWide] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 64rem)").matches,
+  );
+
+  useEffect(() => {
+    if (twoColumns) return;
+    const media = window.matchMedia("(min-width: 64rem)");
+    const update = () => setWide(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [twoColumns]);
+
   return (
-    <div
-      className="columns-2 gap-3 lg:columns-3"
-      aria-label="Searching for images"
-    >
-      {Array.from({ length: 6 }, (_, index) => (
-        <ImageSkeleton
-          key={index}
-          className={cn(
-            "mb-3 break-inside-avoid rounded-lg",
-            index % 3 === 0 ? "h-28 sm:h-36" : "h-24 sm:h-32",
-          )}
-        />
-      ))}
+    <Masonry columnCount={!twoColumns && wide ? 4 : 2} gap={12}>
+      {children}
+    </Masonry>
+  );
+}
+
+function ColorResultsSkeleton({
+  twoColumns = false,
+}: {
+  twoColumns?: boolean;
+}) {
+  return (
+    <div aria-label="Searching for images">
+      <ColorResultsMasonry twoColumns={twoColumns}>
+        {COLOR_RESULT_SKELETON_RATIOS.map((ratio) => (
+          <ImageSkeleton
+            key={ratio}
+            className={cn("w-full rounded-lg", ratio)}
+          />
+        ))}
+      </ColorResultsMasonry>
     </div>
   );
 }
@@ -1048,7 +1096,6 @@ function ColorDetailLoading({
           <Skeleton className="size-12 shrink-0 rounded-xl" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-20" />
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <AssetNotesButton
@@ -1107,7 +1154,7 @@ function ColorDetailLoading({
           ) : null}
         </div>
         <div className="min-h-0 flex-1 overflow-hidden px-4 pb-4">
-          <ColorResultsSkeleton />
+          <ColorResultsSkeleton twoColumns />
         </div>
       </div>
     );
@@ -1119,12 +1166,11 @@ function ColorDetailLoading({
       role="status"
       aria-label="Loading color details"
     >
-      <div className="shrink-0 px-4 pt-4 sm:px-5 sm:pt-5">
+      <div className="shrink-0 px-4 pt-4 pb-4 sm:px-5 sm:pt-5">
         <Skeleton
           data-asset-modal-hero
           className="h-[clamp(5rem,20dvh,10rem)] w-full rounded-xl"
         />
-        <Skeleton className="mt-1 h-3 w-24" />
         <div className="mt-8 flex items-center justify-between gap-3">
           <Skeleton className="h-4 w-28" />
           {scope.type === "collection" ? (
@@ -1132,7 +1178,7 @@ function ColorDetailLoading({
           ) : null}
         </div>
       </div>
-      <div className="min-h-0 min-w-0 flex-1 overflow-hidden px-4 pt-4 pb-5 sm:px-5">
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden px-4 pb-5 sm:px-5">
         <ColorResultsSkeleton />
       </div>
     </div>

@@ -1,6 +1,5 @@
 import type { StateCreator } from "zustand";
 
-import type { SessionStore } from "@/store";
 import type { BoardView } from "@/store/slices/board-slice";
 
 export interface CollectionViewSlice {
@@ -15,15 +14,12 @@ export function getCollectionViewScope(
   return `${workspaceSlug}:${collectionSlug}`;
 }
 
-export const createCollectionViewSlice: StateCreator<
-  SessionStore,
-  [["zustand/immer", never]],
-  [],
-  CollectionViewSlice
-> = (set) => ({
+export const createCollectionViewSlice: StateCreator<CollectionViewSlice> = (
+  set,
+) => ({
   collectionViews: {},
   setCollectionView: (scope, view) =>
-    set((state) => {
-      state.collectionViews[scope] = view;
-    }),
+    set((state) => ({
+      collectionViews: { ...state.collectionViews, [scope]: view },
+    })),
 });

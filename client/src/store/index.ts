@@ -48,31 +48,43 @@ import {
 export { getCollectionViewScope, getPexelsBrowserScope };
 
 // True cross-session state, persisted to localStorage.
-export type PersistedStore = PersistedBoardSlice & SidebarSlice;
+export type PersistedStore = PersistedBoardSlice &
+  SidebarSlice &
+  CollectionViewSlice;
 export const usePersistedStore = create<PersistedStore>()(
   persist<PersistedStore>(
     (...a) => ({
       ...createPersistedBoardSlice(...a),
       ...createSidebarSlice(...a),
+      ...createCollectionViewSlice(...a),
     }),
     {
       name: APP_STORE_STORAGE_KEY,
-      version: 1,
+      version: 2,
       migrate: (persistedState) =>
-        migratePersistedAppStore(persistedState) as unknown as PersistedStore,
+        migratePersistedAppStore(
+          persistedState,
+          readLegacyCollectionViews(),
+        ) as unknown as PersistedStore,
       merge: mergePersistedAppStore,
     },
   ),
 );
 
+function readLegacyCollectionViews(): unknown {
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORE_STORAGE_KEY);
+    return raw ? JSON.parse(raw)?.state?.collectionViews : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // Tab-scoped state, persisted to sessionStorage.
-export type SessionStore = CollectionViewSlice &
-  FilterBarSlice &
-  PexelsBrowserScopeSlice;
+export type SessionStore = FilterBarSlice & PexelsBrowserScopeSlice;
 export const useSessionStore = create<SessionStore>()(
   persist(
     immer((...a) => ({
-      ...createCollectionViewSlice(...a),
       ...createFilterBarSlice(...a),
       ...createPexelsBrowserScopeSlice(...a),
     })),

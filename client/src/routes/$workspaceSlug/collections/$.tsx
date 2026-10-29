@@ -36,7 +36,11 @@ import {
   FolderNotFound,
 } from "@/components/canvas";
 import { ApiError } from "@/lib/api";
-import { getCollectionViewScope, useSessionStore } from "@/store";
+import {
+  getCollectionViewScope,
+  usePersistedStore,
+  useSessionStore,
+} from "@/store";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { ResourceLoadError } from "@/components/resource-load-error";
 import { CollectionGridView } from "@/components/collection-grid-view";
@@ -78,7 +82,7 @@ function CollectionPage() {
     workspaceSlug,
     collectionSlug,
   );
-  const boardView = useSessionStore(
+  const boardView = usePersistedStore(
     (state) => state.collectionViews[collectionViewScope] ?? "canvas",
   );
   const queryClient = useQueryClient();
@@ -407,21 +411,10 @@ function CollectionPage() {
     );
   }
 
-  if (
+  const showLoading =
     isLoading ||
     (hasStaleRoutePlaceholder && !isError) ||
-    (boardView === "grid" && isPlaceholderData && !isError)
-  ) {
-    return boardView === "canvas" ? (
-      <CanvasLoading
-        workspaceSlug={workspaceSlug}
-        collectionSlug={collectionSlug}
-        folderPath={parentFolderPath}
-      />
-    ) : (
-      <GridViewLoading />
-    );
-  }
+    (boardView === "grid" && isPlaceholderData && !isError);
 
   const loadError =
     isError && (!data || hasStaleRoutePlaceholder) ? (
@@ -447,135 +440,156 @@ function CollectionPage() {
           boardKey={boardKey}
         >
           <div className="relative flex h-full min-w-0 flex-1">
-            {boardView === "canvas" || isInactiveViewWarmed ? (
-              <Activity mode={boardView === "canvas" ? "visible" : "hidden"}>
-                <BoardActionRail
-                  workspaceSlug={workspaceSlug}
-                  collectionPath={collectionPath}
-                />
-                <StableCanvas
-                  key={boardKey}
-                  workspaceSlug={workspaceSlug}
-                  collectionSlug={collectionSlug}
-                  folderPath={parentFolderPath}
-                  expectedParentFolderNodeId={
-                    activeFolder ? `folder-${activeFolder.id}` : null
-                  }
-                  nodes={nodes}
-                  canvasObjects={data?.canvasObjects ?? EMPTY_CANVAS_OBJECTS}
-                  isColorFilterActive={hasResolvedColorSearch}
-                  colorMatchNodeIds={colorMatchNodeIds}
-                  focusedNodeId={focusedNodeId}
-                  focusRequestId={focusedShowRequest?.id}
-                  onDismissFocusedNode={dismissFocusedNode}
-                  loadError={loadError}
-                  emptyTitle={
-                    isTypeFilterActive
-                      ? "No matching assets"
-                      : folderPath
-                        ? "Folder is empty"
-                        : "Collection is empty"
-                  }
-                  emptyDescription={
-                    isTypeFilterActive
-                      ? "Try a different asset type."
-                      : folderPath
-                        ? "Add images, notes, links, or folders to start arranging this board."
-                        : "Add images, notes, links, or folders to start arranging this collection."
-                  }
-                  onOpenNote={handleOpenCanvasNode}
-                  onOpenImage={handleOpenCanvasNode}
-                  onOpenColor={handleOpenCanvasNode}
-                  onOpenVideo={handleOpenCanvasNode}
-                  onOpenFolder={handleOpenFolder}
-                />
-              </Activity>
-            ) : null}
-            {boardView === "grid" || isInactiveViewWarmed ? (
-              <Activity mode={boardView === "grid" ? "visible" : "hidden"}>
-                <StableCollectionGridView
-                  key={boardKey}
-                  boardKey={boardKey}
-                  workspaceSlug={workspaceSlug}
-                  collectionSlug={collectionSlug}
-                  folderPath={parentFolderPath}
-                  expectedParentFolderNodeId={
-                    activeFolder ? `folder-${activeFolder.id}` : null
-                  }
-                  nodes={nodes}
-                  hasMoreAssets={useGridPages && gridQuery.hasNextPage}
-                  isLoadingMore={gridQuery.isFetchingNextPage}
-                  onLoadMore={
-                    useGridPages
-                      ? () => void gridQuery.fetchNextPage()
-                      : undefined
-                  }
-                  onSelectAll={
-                    useGridPages
-                      ? async () =>
-                          (
-                            await fetchCollectionContents(
-                              workspaceSlug,
-                              collectionSlug,
-                              parentFolderPath,
-                              requestedAssetTypes,
-                            )
-                          ).nodes
-                      : undefined
-                  }
-                  selectionFilterKey={requestedAssetTypes.join(",")}
-                  isColorFilterActive={hasResolvedColorSearch}
-                  colorMatchNodeIds={colorMatchNodeIds}
-                  focusedNodeId={focusedNodeId}
-                  focusRequestId={focusedShowRequest?.id}
-                  onDismissFocusedNode={dismissFocusedNode}
-                  loadError={loadError}
-                  emptyTitle={
-                    isTypeFilterActive
-                      ? "No matching assets"
-                      : folderPath
-                        ? "Folder is empty"
-                        : "Collection is empty"
-                  }
-                  emptyDescription={
-                    isTypeFilterActive
-                      ? "Try a different asset type."
-                      : folderPath
-                        ? "Add images, notes, links, or folders to this folder."
-                        : "Add images, notes, links, or folders to this collection."
-                  }
-                  onOpenNote={handleOpenNode}
-                  onOpenImage={handleOpenNode}
-                  onOpenColor={handleOpenNode}
-                  onOpenVideo={handleOpenNode}
-                  onOpenFolder={handleOpenFolder}
-                />
-              </Activity>
-            ) : null}
-          </div>
-          {(nodes.length > 0 || selectedAssetTypes.length > 0) && (
-            <FilterBar
-              scope={filterScope}
-              searchStatus={{
-                resultCount: hasResolvedColorSearch
-                  ? colorResults.length
-                  : isTypeFilterActive && !isFetching
-                    ? nodes.length
-                    : undefined,
-                isSearching:
-                  colorSearch.isSearching || (isTypeFilterActive && isFetching),
-                focusedResultIndex: hasResolvedColorSearch
-                  ? focusedColorResultIndex
-                  : undefined,
-                onPrevious: hasResolvedColorSearch
-                  ? () => focusRelativeColorResult(-1)
-                  : undefined,
-                onNext: hasResolvedColorSearch
-                  ? () => focusRelativeColorResult(1)
-                  : undefined,
-              }}
+            <BoardActionRail
+              workspaceSlug={workspaceSlug}
+              collectionPath={collectionPath}
+              view={boardView}
             />
-          )}
+            {showLoading ? (
+              boardView === "canvas" ? (
+                <CanvasLoading
+                  workspaceSlug={workspaceSlug}
+                  collectionSlug={collectionSlug}
+                  folderPath={parentFolderPath}
+                />
+              ) : (
+                <GridViewLoading />
+              )
+            ) : (
+              <>
+                {boardView === "canvas" || isInactiveViewWarmed ? (
+                  <Activity
+                    mode={boardView === "canvas" ? "visible" : "hidden"}
+                  >
+                    <StableCanvas
+                      key={boardKey}
+                      workspaceSlug={workspaceSlug}
+                      collectionSlug={collectionSlug}
+                      folderPath={parentFolderPath}
+                      expectedParentFolderNodeId={
+                        activeFolder ? `folder-${activeFolder.id}` : null
+                      }
+                      nodes={nodes}
+                      canvasObjects={
+                        data?.canvasObjects ?? EMPTY_CANVAS_OBJECTS
+                      }
+                      isColorFilterActive={hasResolvedColorSearch}
+                      colorMatchNodeIds={colorMatchNodeIds}
+                      focusedNodeId={focusedNodeId}
+                      focusRequestId={focusedShowRequest?.id}
+                      onDismissFocusedNode={dismissFocusedNode}
+                      loadError={loadError}
+                      emptyTitle={
+                        isTypeFilterActive
+                          ? "No matching assets"
+                          : folderPath
+                            ? "Folder is empty"
+                            : "Collection is empty"
+                      }
+                      emptyDescription={
+                        isTypeFilterActive
+                          ? "Try a different asset type."
+                          : folderPath
+                            ? "Add images, notes, links, or folders to start arranging this board."
+                            : "Add images, notes, links, or folders to start arranging this collection."
+                      }
+                      onOpenNote={handleOpenCanvasNode}
+                      onOpenImage={handleOpenCanvasNode}
+                      onOpenColor={handleOpenCanvasNode}
+                      onOpenVideo={handleOpenCanvasNode}
+                      onOpenFolder={handleOpenFolder}
+                    />
+                  </Activity>
+                ) : null}
+                {boardView === "grid" || isInactiveViewWarmed ? (
+                  <Activity mode={boardView === "grid" ? "visible" : "hidden"}>
+                    <StableCollectionGridView
+                      key={boardKey}
+                      boardKey={boardKey}
+                      workspaceSlug={workspaceSlug}
+                      collectionSlug={collectionSlug}
+                      folderPath={parentFolderPath}
+                      expectedParentFolderNodeId={
+                        activeFolder ? `folder-${activeFolder.id}` : null
+                      }
+                      nodes={nodes}
+                      hasMoreAssets={useGridPages && gridQuery.hasNextPage}
+                      isLoadingMore={gridQuery.isFetchingNextPage}
+                      onLoadMore={
+                        useGridPages
+                          ? () => void gridQuery.fetchNextPage()
+                          : undefined
+                      }
+                      onSelectAll={
+                        useGridPages
+                          ? async () =>
+                              (
+                                await fetchCollectionContents(
+                                  workspaceSlug,
+                                  collectionSlug,
+                                  parentFolderPath,
+                                  requestedAssetTypes,
+                                )
+                              ).nodes
+                          : undefined
+                      }
+                      selectionFilterKey={requestedAssetTypes.join(",")}
+                      isColorFilterActive={hasResolvedColorSearch}
+                      colorMatchNodeIds={colorMatchNodeIds}
+                      focusedNodeId={focusedNodeId}
+                      focusRequestId={focusedShowRequest?.id}
+                      onDismissFocusedNode={dismissFocusedNode}
+                      loadError={loadError}
+                      emptyTitle={
+                        isTypeFilterActive
+                          ? "No matching assets"
+                          : folderPath
+                            ? "Folder is empty"
+                            : "Collection is empty"
+                      }
+                      emptyDescription={
+                        isTypeFilterActive
+                          ? "Try a different asset type."
+                          : folderPath
+                            ? "Add images, notes, links, or folders to this folder."
+                            : "Add images, notes, links, or folders to this collection."
+                      }
+                      onOpenNote={handleOpenNode}
+                      onOpenImage={handleOpenNode}
+                      onOpenColor={handleOpenNode}
+                      onOpenVideo={handleOpenNode}
+                      onOpenFolder={handleOpenFolder}
+                    />
+                  </Activity>
+                ) : null}
+              </>
+            )}
+          </div>
+          {!showLoading &&
+            (nodes.length > 0 || selectedAssetTypes.length > 0) && (
+              <FilterBar
+                scope={filterScope}
+                searchStatus={{
+                  resultCount: hasResolvedColorSearch
+                    ? colorResults.length
+                    : isTypeFilterActive && !isFetching
+                      ? nodes.length
+                      : undefined,
+                  isSearching:
+                    colorSearch.isSearching ||
+                    (isTypeFilterActive && isFetching),
+                  focusedResultIndex: hasResolvedColorSearch
+                    ? focusedColorResultIndex
+                    : undefined,
+                  onPrevious: hasResolvedColorSearch
+                    ? () => focusRelativeColorResult(-1)
+                    : undefined,
+                  onNext: hasResolvedColorSearch
+                    ? () => focusRelativeColorResult(1)
+                    : undefined,
+                }}
+              />
+            )}
         </BoardUploadZone>
       </BoardContextMenu>
     </>

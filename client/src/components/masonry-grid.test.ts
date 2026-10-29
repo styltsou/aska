@@ -20,6 +20,22 @@ describe("calculateMasonryLayout", () => {
     expect(calculateMasonryLayout([], 2, 300)).toBeUndefined();
   });
 
+  it("fills all four columns before stacking images", () => {
+    const layout = calculateMasonryLayout(
+      [400, 300, 100, 200],
+      4,
+      200,
+      undefined,
+      12,
+    )!;
+    expect(layout.positions.map(({ x, y }) => [x, y])).toEqual([
+      [0, 0],
+      [212, 0],
+      [424, 0],
+      [636, 0],
+    ]);
+  });
+
   it("keeps existing cards in their columns after card heights change", () => {
     const initial = calculateMasonryLayout([100, 200, 80, 120], 2, 300)!;
     const columns = initial.positions.map((position) => position.x / 310);

@@ -61,7 +61,7 @@ export function CollectionViewMenu({
     (state) => state.setWorkspaceAlignmentGuides,
   );
   const isBoardActionRailVisible = usePersistedStore(
-    (state) => state.workspaceBoardActionRails?.[workspaceSlug] ?? false,
+    (state) => state.boardActionRailVisible,
   );
   const isFloatingSidebar = usePersistedStore(
     (state) => state.canvasFloatingSidebar,
@@ -70,8 +70,8 @@ export function CollectionViewMenu({
     (state) => state.setCanvasFloatingSidebar,
   );
   const setSidebarOpen = usePersistedStore((state) => state.setOpen);
-  const setWorkspaceBoardActionRail = usePersistedStore(
-    (state) => state.setWorkspaceBoardActionRail,
+  const setBoardActionRailVisible = usePersistedStore(
+    (state) => state.setBoardActionRailVisible,
   );
   const zoom = usePersistedStore(
     (state) => state.boardViewports[boardKey]?.zoom ?? 1.1,
@@ -152,6 +152,19 @@ export function CollectionViewMenu({
             </DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
         </DropdownMenuGroup>
+        {value === "grid" ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={isBoardActionRailVisible}
+              onCheckedChange={(visible) =>
+                setBoardActionRailVisible(visible === true)
+              }
+            >
+              Actions dock
+            </DropdownMenuCheckboxItem>
+          </>
+        ) : null}
         {value === "canvas" ? (
           <>
             <DropdownMenuSeparator />
@@ -235,7 +248,7 @@ export function CollectionViewMenu({
               <DropdownMenuCheckboxItem
                 checked={isBoardActionRailVisible}
                 onCheckedChange={(visible) =>
-                  setWorkspaceBoardActionRail(workspaceSlug, visible === true)
+                  setBoardActionRailVisible(visible === true)
                 }
               >
                 Actions dock

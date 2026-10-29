@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     workspaceSlug,
     collectionSlug ?? "",
   );
-  const boardView = useSessionStore(
+  const boardView = usePersistedStore(
     (state) => state.collectionViews[collectionViewScope] ?? "canvas",
   );
   const floatingSidebarEnabled = usePersistedStore(
