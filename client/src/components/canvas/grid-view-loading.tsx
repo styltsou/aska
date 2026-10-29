@@ -12,7 +12,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
-const FOLDER_SKELETONS = 3;
 const ASSET_SKELETONS = [
   { type: "image", aspectRatio: 4 / 3 },
   { type: "note", variant: 0 },
@@ -31,6 +30,7 @@ export function GridViewLoading() {
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentWidth, setContentWidth] = useState(0);
   const [density] = useState(getSavedGridDensity);
+  const columnCount = columnsForGrid(contentWidth, density) || 1;
 
   useIsomorphicLayoutEffect(() => {
     const content = contentRef.current;
@@ -65,11 +65,11 @@ export function GridViewLoading() {
             <div
               className="grid gap-[10px]"
               style={{
-                gridTemplateColumns: `repeat(${columnsForGrid(contentWidth, density) || 1}, minmax(0, 1fr))`,
+                gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
               }}
             >
-              {Array.from({ length: FOLDER_SKELETONS }).map((_, i) => (
-                <FolderCardSkeleton key={i} variant={i} />
+              {Array.from({ length: columnCount }).map((_, i) => (
+                <FolderCardSkeleton key={i} variant={i % 3} />
               ))}
             </div>
           </section>
