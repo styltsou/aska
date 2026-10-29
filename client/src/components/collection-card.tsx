@@ -84,6 +84,10 @@ export function CollectionCard({
   const deleteCollection = useDeleteCollection(workspaceSlug);
   const previews = collection.previews.slice(0, MAX_VISIBLE_PREVIEWS);
   const active = pointerOver || focused || actionsOpen || contextMenuOpen;
+  const reduceMotion = useReducedMotion();
+  const controlTransition = reduceMotion
+    ? { duration: 0 }
+    : { duration: 0.3, ease: [0.34, 1.45, 0.64, 1] as const };
   const stackDirection = (hashString(collection.slug) & 1) === 0 ? 1 : -1;
   const collectionActions = [
     { label: "Rename", onClick: () => setRenameDialogOpen(true) },
@@ -196,8 +200,13 @@ export function CollectionCard({
               className="absolute top-[64%] -bottom-2.5 left-1/2 w-[68%] -translate-x-1/2"
             />
           </Link>
-          <div className="relative z-10 flex h-8 max-w-full min-w-0 items-center justify-center gap-1.5">
-            <div className="max-w-full min-w-0">
+          <div className="relative z-10 flex h-8 max-w-full min-w-0 items-center justify-center">
+            <motion.div
+              initial={false}
+              animate={{ x: active ? -19 : 0 }}
+              transition={controlTransition}
+              className="max-w-full min-w-0"
+            >
               <Link
                 to="/$workspaceSlug/collections/$"
                 search={search}
@@ -225,43 +234,57 @@ export function CollectionCard({
                   {collection.assetCount}
                 </span>
               </Link>
-            </div>
-            <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={`More actions for ${collection.name}`}
-                    data-collection-hover-target
-                    data-active={active}
-                    onPointerEnter={handleHoverTargetEnter}
-                    onPointerLeave={handleHoverTargetLeave}
-                    className="rounded-md text-sidebar-foreground/70 hover:bg-sidebar-active hover:text-sidebar-foreground data-popup-open:bg-sidebar-active data-[active=true]:bg-sidebar-active data-[active=true]:text-sidebar-foreground"
-                  />
-                }
-              >
-                <MoreHorizontalIcon aria-hidden="true" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                side="bottom"
-                className="w-40 duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-ending-style:scale-[0.99] data-ending-style:duration-150 data-starting-style:scale-[0.97] motion-reduce:transition-none"
-              >
-                {collectionActions.map((action, index) => (
-                  <Fragment key={action.label}>
-                    {index === 2 ? <DropdownMenuSeparator /> : null}
-                    <DropdownMenuItem
-                      className={index === 2 ? destructiveClass : undefined}
-                      onClick={action.onClick}
-                    >
-                      {action.label}
-                    </DropdownMenuItem>
-                  </Fragment>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            </motion.div>
+            <motion.div
+              initial={false}
+              animate={{
+                x: -19,
+                opacity: active ? 1 : 0,
+                scale: active ? 1 : 0.98,
+              }}
+              transition={controlTransition}
+              data-active={active}
+              className="pointer-events-none absolute left-full ml-1.5 origin-left data-[active=true]:pointer-events-auto"
+            >
+              <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`More actions for ${collection.name}`}
+                      data-collection-hover-target
+                      data-active={active}
+                      onPointerEnter={handleHoverTargetEnter}
+                      onPointerLeave={handleHoverTargetLeave}
+                      onFocus={() => setFocused(true)}
+                      onBlur={() => setFocused(false)}
+                      className="rounded-md text-sidebar-foreground/70 hover:bg-sidebar-active hover:text-sidebar-foreground data-popup-open:bg-sidebar-active data-[active=true]:bg-sidebar-active data-[active=true]:text-sidebar-foreground"
+                    />
+                  }
+                >
+                  <MoreHorizontalIcon aria-hidden="true" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  side="bottom"
+                  className="w-40 duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-ending-style:scale-[0.99] data-ending-style:duration-150 data-starting-style:scale-[0.97] motion-reduce:transition-none"
+                >
+                  {collectionActions.map((action, index) => (
+                    <Fragment key={action.label}>
+                      {index === 2 ? <DropdownMenuSeparator /> : null}
+                      <DropdownMenuItem
+                        className={index === 2 ? destructiveClass : undefined}
+                        onClick={action.onClick}
+                      >
+                        {action.label}
+                      </DropdownMenuItem>
+                    </Fragment>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </motion.div>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="w-40">
