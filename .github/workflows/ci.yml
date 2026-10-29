@@ -217,6 +217,9 @@ jobs:
         run: |
           function_name="$(aws lambda list-functions --query 'Functions[?contains(FunctionName, `AiApiRoute`)].FunctionName | [0]' --output text)"
           test "$function_name" != "None"
+          resource_id="$(aws apigateway get-resources --rest-api-id 77do6h6v54 --query 'items[?path==`/health`].id | [0]' --output text)"
+          aws apigateway get-integration --rest-api-id 77do6h6v54 --resource-id "$resource_id" --http-method GET
+          aws lambda get-policy --function-name "$function_name"
           curl --silent --show-error --no-buffer "https://aska-api.styltsou.com/ai/health?ci-probe=${GITHUB_SHA}" || true
           aws logs tail "/aws/lambda/${function_name}" --since 5m || true
       - name: Queue missing video storyboards
