@@ -3,7 +3,7 @@ import {
   useParams,
   useRouterState,
 } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CollectionCard } from "@/components/collection-card";
 import { CollectionGridSkeleton } from "@/components/collection-grid-skeleton";
 import { CreateCollectionDialog } from "@/components/app-shell/create-collection-dialog";
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/$workspaceSlug/")({
 });
 
 export function WorkspacePage() {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { workspaceSlug } = useParams({ from: "/$workspaceSlug" });
   const workspaceSearch = useRouterState({
     select: (state) => state.location.search as WorkspaceRouteSearch,
@@ -54,13 +55,16 @@ export function WorkspacePage() {
 
   const collections = data.collections;
 
-  if (collections.length === 0) {
+  if (collections.length === 0 || createDialogOpen) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
         <p className="text-sm text-muted-foreground">
           This workspace doesn't have any collections yet
         </p>
-        <CreateCollectionDialog workspaceSlug={workspaceSlug}>
+        <CreateCollectionDialog
+          workspaceSlug={workspaceSlug}
+          onOpenChange={setCreateDialogOpen}
+        >
           <Button>
             <PlusIcon />
             <span>Create collection</span>

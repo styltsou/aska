@@ -20,9 +20,11 @@ import { useWorkspaceOverlayNavigation } from "./use-workspace-overlay-navigatio
 export function CreateCollectionDialog({
   workspaceSlug,
   children,
+  onOpenChange,
 }: {
   workspaceSlug: string;
   children: React.ReactElement;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const navigateOverlay = useWorkspaceOverlayNavigation();
   const [open, setOpen] = useState(false);
@@ -38,6 +40,7 @@ export function CreateCollectionDialog({
       setIsNavigating(false);
     }
     setOpen(nextOpen);
+    onOpenChange?.(nextOpen);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -52,7 +55,6 @@ export function CreateCollectionDialog({
         `/${workspaceSlug}/collections/${data.collection.slug}`,
         { asset: undefined, view: undefined },
       );
-      handleOpenChange(false);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to create collection.",
