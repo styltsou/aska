@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -459,8 +460,9 @@ function CollectionPreviewCard({
         className="pointer-events-auto absolute w-max max-w-[62cqw] overflow-hidden rounded-lg"
         style={positionStyle}
       >
-        <img
+        <ProgressiveImage
           src={preview.url}
+          blurDataURL={preview.blurDataURL}
           alt=""
           width={preview.width}
           height={preview.height}
