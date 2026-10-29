@@ -106,7 +106,7 @@ load Cloudflare to manage the custom domains.
 The stable `dev` deployment uses exactly these public hostnames:
 
 ```text
-aska-app.styltsou.com  -> Cloudflare (proxied) -> CloudFront client
+aska-app.styltsou.com  -> Cloudflare DNS-only -> CloudFront client
 aska-api.styltsou.com  -> Cloudflare (proxied) -> API Gateway HTTP API
 images.styltsou.com    -> Cloudflare DNS-only -> private CloudFront media
 ```
@@ -147,10 +147,11 @@ CLOUDFLARE_ZONE_ID
 
 SST uses that token to create the DNS records and validate the AWS-managed ACM
 certificates. Do not hand-create the application CNAME records: SST owns them.
-The app and API DNS records stay proxied through Cloudflare for TLS and edge
-network protection. `images` is deliberately DNS-only so CloudFront remains
-the sole media edge and validates its signed cookies. Set the Cloudflare zone
-SSL/TLS mode to **Full (strict)**.
+The app and `images` records are DNS-only because CloudFront provides their TLS
+and CDN edge. A Cloudflare proxy in front of CloudFront adds another CDN hop
+that can cause intermittent gateway errors. The API record stays proxied for
+Cloudflare edge protection. Set the Cloudflare zone SSL/TLS mode to **Full
+(strict)** for the proxied API.
 
 The app and API are public at the edge. Better Auth and the API authorization
 middleware protect user data, while image and URL pipeline callbacks continue
@@ -231,8 +232,13 @@ is no client production `.env` file to create or maintain.
 The GitHub Actions deployment deploys **both** the backend and this client.
 The client is served as `https://aska-app.styltsou.com` and is built with
 `https://aska-api.styltsou.com` as `VITE_SERVER_URL`. CloudFront remains the
-client's origin and its S3 bucket remains private; Cloudflare is the public
-edge.
+client's origin and its S3 bucket remains private. CloudFront is the client's
+public edge; Cloudflare manages its DNS record without proxying requests.
+
+Leave `StaticSite.errorPage` unset for this single-page client. SST then
+rewrites direct visits to client routes such as `/login` to `index.html` with
+HTTP 200. Setting `errorPage: "index.html"` instead makes those routes return
+HTTP 404 even though the response body contains the client app.
 
 The image Lambda packages the Linux `sharp` runtime from the pipeline's Bun
 installation. SST does not run npm to assemble that Lambda package.

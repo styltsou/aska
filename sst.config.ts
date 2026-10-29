@@ -54,17 +54,16 @@ export default $config({
         ? {
             app: "aska-app.styltsou.com",
             api: "aska-api.styltsou.com",
-            dns: sst.cloudflare.dns({
+            apiDns: sst.cloudflare.dns({
               // Supplying the zone explicitly keeps the DNS token narrowly
               // scoped to styltsou.com and avoids account-wide zone discovery.
               zone: requireEnvironment("CLOUDFLARE_ZONE_ID"),
-              // Keep public application and API traffic on Cloudflare's edge.
+              // Keep the API on Cloudflare's edge.
               proxy: true,
             }),
-            // CloudFront itself is the media edge and validates the signed
-            // cookies, so this record must not introduce another proxy/cache
-            // layer in front of the distribution.
-            mediaDns: sst.cloudflare.dns({
+            // CloudFront already handles TLS and caching for the client and
+            // private media. Avoid a second proxy in front of either CDN.
+            cdnDns: sst.cloudflare.dns({
               zone: requireEnvironment("CLOUDFLARE_ZONE_ID"),
               proxy: false,
             }),
@@ -182,7 +181,7 @@ export default $config({
       ? createMediaDistribution({
           assets,
           domain: "images.styltsou.com",
-          dns: stableCloudDomains.mediaDns,
+          dns: stableCloudDomains.cdnDns,
           publicKey: cloudFrontPublicKey!.value,
         })
       : undefined;
@@ -235,7 +234,7 @@ export default $config({
         ? {
             domain: {
               name: stableCloudDomains.api,
-              dns: stableCloudDomains.dns,
+              dns: stableCloudDomains.apiDns,
             },
             // Keep browser traffic on the configured custom hostname instead
             // of exposing a second, unmanaged API origin.
@@ -518,9 +517,8 @@ export default $config({
       // Local Vite is deliberately started in its own terminal. SST dev keeps
       // the backend handlers local while they use the real AWS dev resources.
       dev: false,
-      // React Router is a client-side router, so unknown application routes
-      // must serve the SPA entry point rather than CloudFront's 404 page.
-      errorPage: "index.html",
+      // Leave errorPage unset so SST rewrites client-side routes to index.html
+      // with a 200 response. Setting it to index.html returns a real 404.
       edge: {
         viewerResponse: {
           injection: `event.response.headers["content-security-policy"] = { value: "frame-src https://www.youtube-nocookie.com" };`,
@@ -530,7 +528,7 @@ export default $config({
         ? {
             domain: {
               name: stableCloudDomains.app,
-              dns: stableCloudDomains.dns,
+              dns: stableCloudDomains.cdnDns,
             },
           }
         : {}),
