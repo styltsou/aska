@@ -356,6 +356,9 @@ export default $config({
         ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".styltsou.com" } : {}),
       },
     });
+    // ApiGatewayV1 requires an explicit deployment after its routes are added;
+    // this also creates the stage and custom-domain base-path mapping.
+    aiApi.deploy();
     new sst.aws.CronV2("MediaCleanup", {
       schedule: "rate(5 minutes)",
       function: {
