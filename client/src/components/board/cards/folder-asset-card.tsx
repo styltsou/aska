@@ -40,6 +40,7 @@ export function FolderAssetCard({
 }) {
   const reduceMotion = useReducedMotion();
   const [pointerOver, setPointerOver] = useState(false);
+  const [stackInteracted, setStackInteracted] = useState(false);
   const [focused, setFocused] = useState(false);
   const active = pointerOver || focused;
   const previews = asset.previews?.slice(0, MAX_VISIBLE_PREVIEWS) ?? [];
@@ -63,11 +64,16 @@ export function FolderAssetCard({
       )}
       role={onOpen ? "link" : undefined}
       tabIndex={onOpen ? 0 : undefined}
-      onMouseEnter={() => setPointerOver(true)}
+      onMouseEnter={() => {
+        setStackInteracted(true);
+        setPointerOver(true);
+      }}
       onMouseLeave={() => setPointerOver(false)}
-      onFocus={(event) =>
-        setFocused(event.currentTarget.matches(":focus-visible"))
-      }
+      onFocus={(event) => {
+        const visible = event.currentTarget.matches(":focus-visible");
+        if (visible) setStackInteracted(true);
+        setFocused(visible);
+      }}
       onBlur={() => setFocused(false)}
       onClick={(event) => {
         if (!hasSelectionModifier(event)) onOpen?.();
@@ -87,7 +93,11 @@ export function FolderAssetCard({
         style={{ containerType: "size" }}
       >
         <div
-          className="absolute inset-0 transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none"
+          className={cn(
+            "absolute inset-0",
+            stackInteracted &&
+              "transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none",
+          )}
           style={{
             transform: `translateY(-${(stackLift / BOARD_CARD_WIDTH) * 100}cqw)`,
           }}
@@ -100,6 +110,7 @@ export function FolderAssetCard({
               index={index}
               count={previews.length}
               active={active}
+              motionEnabled={stackInteracted}
             />
           ))}
           <AnimatePresence initial={false}>
@@ -164,11 +175,13 @@ function FolderPreviewCard({
   index,
   count,
   active,
+  motionEnabled,
 }: {
   preview: FolderAssetPreview;
   index: number;
   count: number;
   active: boolean;
+  motionEnabled: boolean;
 }) {
   const fan = index === 0 ? null : getCanvasDropFanOffset(index, count - 1);
   const x =
@@ -185,7 +198,11 @@ function FolderPreviewCard({
   if ((preview.type === "image" || preview.type === "video") && preview.url) {
     return (
       <div
-        className="absolute top-1/2 left-1/2 w-max max-w-[65cqw] overflow-hidden rounded-lg bg-card ring-1 ring-border/30 transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none"
+        className={cn(
+          "absolute top-1/2 left-1/2 w-max max-w-[65cqw] overflow-hidden rounded-lg bg-card ring-1 ring-border/30",
+          motionEnabled &&
+            "transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none",
+        )}
         style={positionStyle}
       >
         <img
@@ -226,7 +243,11 @@ function FolderPreviewCard({
 
   return (
     <div
-      className="absolute top-1/2 left-1/2 overflow-hidden rounded-lg border border-border bg-card transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none"
+      className={cn(
+        "absolute top-1/2 left-1/2 overflow-hidden rounded-lg border border-border bg-card",
+        motionEnabled &&
+          "transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none",
+      )}
       style={style}
     >
       {preview.type === "link" ? (

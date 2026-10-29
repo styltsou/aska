@@ -64,6 +64,7 @@ export function CollectionCard({
   search,
 }: CollectionCardProps) {
   const [pointerOver, setPointerOver] = useState(false);
+  const [stackInteracted, setStackInteracted] = useState(false);
   const [focused, setFocused] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
@@ -87,6 +88,7 @@ export function CollectionCard({
   );
 
   const handleHoverTargetEnter = () => {
+    setStackInteracted(true);
     if (pointerExitTimeout.current) clearTimeout(pointerExitTimeout.current);
     pointerExitTimeout.current = null;
     setPointerOver(true);
@@ -138,6 +140,7 @@ export function CollectionCard({
                   count={previews.length}
                   stackDirection={stackDirection}
                   active={active}
+                  motionEnabled={stackInteracted || active}
                   onPointerEnter={handleHoverTargetEnter}
                   onPointerLeave={handleHoverTargetLeave}
                 />
@@ -168,9 +171,11 @@ export function CollectionCard({
               data-active={active}
               onPointerEnter={handleHoverTargetEnter}
               onPointerLeave={handleHoverTargetLeave}
-              onFocus={(event) =>
-                setFocused(event.currentTarget.matches(":focus-visible"))
-              }
+              onFocus={(event) => {
+                const visible = event.currentTarget.matches(":focus-visible");
+                if (visible) setStackInteracted(true);
+                setFocused(visible);
+              }}
               onBlur={() => setFocused(false)}
               className="flex h-8 max-w-full min-w-0 items-center gap-5 rounded-md px-3 text-sidebar-foreground transition-colors duration-150 ease-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none data-[active=true]:bg-sidebar-active motion-reduce:transition-none"
             >
@@ -313,6 +318,7 @@ function CollectionPreviewCard({
   count,
   stackDirection,
   active,
+  motionEnabled,
   onPointerEnter,
   onPointerLeave,
 }: {
@@ -321,6 +327,7 @@ function CollectionPreviewCard({
   count: number;
   stackDirection: number;
   active: boolean;
+  motionEnabled: boolean;
   onPointerEnter: () => void;
   onPointerLeave: (event: ReactPointerEvent<HTMLElement>) => void;
 }) {
@@ -375,9 +382,10 @@ function CollectionPreviewCard({
     rotate: rotation,
     scale,
   };
-  const motionTransition = reduceMotion
-    ? { duration: 0 }
-    : { duration: 0.3, ease: [0.34, 1.45, 0.64, 1] as const };
+  const motionTransition =
+    reduceMotion || !motionEnabled
+      ? { duration: 0 }
+      : { duration: 0.3, ease: [0.34, 1.45, 0.64, 1] as const };
 
   if ((preview.type === "image" || preview.type === "video") && preview.url) {
     return (
