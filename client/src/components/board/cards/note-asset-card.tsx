@@ -16,7 +16,12 @@ import {
   useState,
 } from "react";
 import { motion } from "motion/react";
-import { ChevronDownIcon, CopyIcon, DownloadIcon, WrapTextIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  CopyIcon,
+  DownloadIcon,
+  WrapTextIcon,
+} from "lucide-react";
 import ReactMarkdown, {
   defaultUrlTransform,
   type Components,
@@ -464,12 +469,7 @@ function createMDComponents(
     pre: ({ children }) => {
       const { language, label, source } = getCodeBlockDetails(children);
       if (language === "mermaid") {
-        return (
-          <NoteMermaidPreview
-            source={source}
-            compact={compact}
-          />
-        );
+        return <NoteMermaidPreview source={source} compact={compact} />;
       }
 
       const highlighted = lowlight.listLanguages().includes(language)

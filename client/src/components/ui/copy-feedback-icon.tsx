@@ -15,7 +15,10 @@ export function CopyFeedbackIcon({
   return (
     <span
       aria-hidden="true"
-      className={cn("relative inline-flex size-4 shrink-0 align-middle", className)}
+      className={cn(
+        "relative inline-flex size-4 shrink-0 align-middle",
+        className,
+      )}
       style={{ width: size, height: size, ...style }}
     >
       <CopyIcon
