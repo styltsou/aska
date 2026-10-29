@@ -1,10 +1,5 @@
 import { Globe2Icon, ImageOffIcon, UserRoundIcon } from "lucide-react";
-import {
-  useEffect,
-  useState,
-  type ComponentProps,
-  type MouseEvent,
-} from "react";
+import { useState, type ComponentProps, type MouseEvent } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { hasSelectionModifier } from "@/lib/selection";
@@ -17,7 +12,6 @@ const YOUTUBE_THUMBNAIL_URL = (videoId: string) =>
   `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 const LINK_CARD_META_CLASS =
   "flex min-w-0 items-center gap-1.5 text-[13px] leading-5 text-sidebar-foreground/65";
-const PREVIEW_SHIMMER_TIMEOUT_MS = 30_000;
 
 async function waitForThumbnail(image: HTMLImageElement) {
   // Match ProgressiveImage's reveal timing before showing the play mark.
@@ -225,20 +219,8 @@ export function LinkAssetCard({
   const isPreviewResolving =
     asset.resolutionStatus === "queued" ||
     asset.resolutionStatus === "resolving";
-  const [previewWaitExpired, setPreviewWaitExpired] = useState(false);
-  useEffect(() => {
-    if (!isPreviewResolving || previewUrl) {
-      setPreviewWaitExpired(false);
-      return;
-    }
-    const timeout = window.setTimeout(
-      () => setPreviewWaitExpired(true),
-      PREVIEW_SHIMMER_TIMEOUT_MS,
-    );
-    return () => window.clearTimeout(timeout);
-  }, [isPreviewResolving, previewUrl]);
   const isPreviewUnavailable =
-    (!previewUrl && (!isPreviewResolving || previewWaitExpired)) ||
+    (!previewUrl && !isPreviewResolving) ||
     Boolean(previewUrl && failedPreviewUrl === previewUrl && !previewFallback);
   const isOptimisticYoutube =
     Boolean(optimisticYoutube) &&
@@ -263,7 +245,7 @@ export function LinkAssetCard({
       >
         {previewUrl && failedPreviewUrl !== previewUrl ? (
           <LinkThumbnail
-            key={previewUrl}
+            key={isYoutube ? previewUrl : undefined}
             isYoutube={isYoutube}
             showPlayMark={Boolean(onOpen)}
             src={previewUrl}
@@ -278,7 +260,7 @@ export function LinkAssetCard({
             }
           />
         ) : null}
-        {!previewUrl && isPreviewResolving && !previewWaitExpired ? (
+        {!previewUrl && isPreviewResolving ? (
           <div
             data-slot="optimistic-link-preview"
             className="image-shimmer pointer-events-none absolute inset-0 z-10"
@@ -419,7 +401,7 @@ export function LinkCardPreview({
       <div className="relative z-10 aspect-video w-full shrink-0 overflow-hidden rounded-b-lg border-b border-border bg-muted/40">
         {thumbnailAvailable ? (
           <LinkThumbnail
-            key={thumbnailUrl}
+            key={isYoutube ? thumbnailUrl : undefined}
             isYoutube={isYoutube}
             compact={compact}
             src={thumbnailUrl!}

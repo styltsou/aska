@@ -20,7 +20,7 @@ function linkResolutionQueryKey(workspaceSlug: string, assetId: string) {
   return ["linkResolution", workspaceSlug, assetId] as const;
 }
 
-/** Polls only links created or manually refreshed in this browser tab. */
+/** Follows active links created, refreshed, or loaded in this browser tab. */
 export function LinkResolutionPoller({
   workspaceSlug,
 }: {
@@ -74,9 +74,18 @@ export function LinkResolutionPoller({
 export function trackLinkResolution(
   workspaceSlug: string,
   link: Pick<CollectionLinkNode, "id" | "resolutionStatus">,
+  queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  if (isActive(link))
-    useLinkResolutionTracker.getState().track(workspaceSlug, link.id);
+  if (!isActive(link)) return;
+  const tracker = useLinkResolutionTracker.getState();
+  if (tracker.pendingByWorkspace[workspaceSlug]?.includes(link.id)) return;
+  // A previous polling session may have cached a terminal result. Do not let
+  // that snapshot immediately stop a newly requested refresh.
+  queryClient.removeQueries({
+    queryKey: linkResolutionQueryKey(workspaceSlug, link.id),
+    exact: true,
+  });
+  tracker.track(workspaceSlug, link.id);
 }
 
 export function patchLinkInCaches(
@@ -118,8 +127,7 @@ function patchCollectionContents<
     if (node.type === "link" && node.id === link.id) {
       changed = true;
       const optimisticYouTube = node.optimisticYouTube;
-      const retainOptimisticPreview =
-        Boolean(optimisticYouTube) && isActive(link) && !link.previewImage;
+      const retainPreview = isActive(link) && !link.previewImage;
       const retainOptimisticMetadata =
         Boolean(optimisticYouTube) && isActive(link) && !link.resolvedAt;
       const { optimisticYouTube: _optimisticYouTube, ...nodeWithoutOptimism } =
@@ -137,11 +145,10 @@ function patchCollectionContents<
         resolvedAt: link.resolvedAt,
         staleAt: link.staleAt,
         previewImage:
-          link.previewImage ??
-          (retainOptimisticPreview ? node.previewImage : null),
-        favicon: link.favicon,
+          link.previewImage ?? (retainPreview ? node.previewImage : null),
+        favicon: link.favicon ?? (isActive(link) ? node.favicon : null),
         video: link.video,
-        ...(retainOptimisticPreview ? { optimisticYouTube } : {}),
+        ...(retainPreview && optimisticYouTube ? { optimisticYouTube } : {}),
       };
     }
 
@@ -184,9 +191,12 @@ function patchLinkPreviews(
       hostname: link.hostname,
       siteName: link.siteName,
       title: link.title,
-      url: link.previewImage?.url,
-      blurDataURL: link.previewImage?.blurDataURL,
-      favicon: link.favicon?.url,
+      url: link.previewImage?.url ?? (isActive(link) ? preview.url : undefined),
+      blurDataURL:
+        link.previewImage?.blurDataURL ??
+        (isActive(link) ? preview.blurDataURL : undefined),
+      favicon:
+        link.favicon?.url ?? (isActive(link) ? preview.favicon : undefined),
       videoId: link.video?.videoId,
       channelName: link.video?.channelName,
       channelAvatarUrl: link.video?.channelAvatarUrl,

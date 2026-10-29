@@ -78,12 +78,15 @@ image pipeline.
 
 `client/src/api/url-unfurl/hooks.ts` inserts a local `CollectionLinkNode` into
 the appropriate React Query cache, reserves its canvas position, and reconciles
-the temporary ID with the persisted node. Only links created or manually
-refreshed in the current tab poll their small status endpoint; each response
+the temporary ID with the persisted node. Active links created, refreshed, or
+loaded in the current tab poll their small status endpoint; each response
 patches matching full cards and compact collection/folder previews. A terminal
 `ready`, `partial`, or `failed` response also revalidates the affected
 collection metadata and contents so server-selected preview ordering remains
-authoritative. Polling then stops and does not resume after a page reload.
+authoritative. Polling then stops. Loading pending links after a page reload
+resumes polling. A new refresh discards the previous terminal status query.
+Existing preview images remain visible while a refresh is pending, and image
+components retain their decoded state when a refreshed signed URL arrives.
 
 `client/src/components/board/cards/link-asset-card.tsx` always renders a usable
 anchor from the user-supplied URL. It progressively adds text, favicon, and

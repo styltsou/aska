@@ -1,5 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import * as fetchers from "./fetchers";
+import { useLinkResolutionTracker } from "@/api/url-unfurl/link-resolution-tracker";
 
 import { colorSearchQueryKeys } from "@/api/color-search/hooks";
 
@@ -8,6 +10,8 @@ import {
   applyUpdatedColorToContents,
   collectionQueryKeys,
   keepLocalMediaDuringRefetch,
+  collectionContentsQueryOptions,
+  inboxContentsQueryOptions,
 } from "./hooks";
 import type {
   CollectionContentsResponse,
@@ -16,7 +20,78 @@ import type {
   FolderChildPreview,
   CollectionNode,
   CollectionNoteNode,
+  CollectionLinkNode,
 } from "./types";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  useLinkResolutionTracker.setState({ pendingByWorkspace: {} });
+});
+
+describe("pending link refetches", () => {
+  const pending: CollectionLinkNode = {
+    id: "link-9",
+    type: "link",
+    originalUrl: "https://github.com/styltsou/aska",
+    hostname: "github.com",
+    title: "aska",
+    canonicalUrl: null,
+    description: null,
+    note: null,
+    siteName: null,
+    resourceKind: "web_page",
+    resolutionStatus: "resolving",
+    failureCategory: null,
+    resolvedAt: null,
+    staleAt: null,
+    previewImage: null,
+    favicon: null,
+    video: null,
+    createdAt: "2026-01-01T00:00:00Z",
+    position: null,
+  };
+
+  it("resumes polling pending links loaded from collections and inbox", async () => {
+    vi.spyOn(fetchers, "fetchCollectionContents").mockResolvedValue(
+      contentsWith([pending]),
+    );
+    vi.spyOn(fetchers, "fetchInboxContents").mockResolvedValue({
+      collection: { id: 0, name: "Inbox", slug: "inbox" },
+      breadcrumbs: [],
+      nodes: [pending],
+    });
+    const client = new QueryClient();
+    await client.fetchQuery(collectionContentsQueryOptions("personal", "ref"));
+    expect(
+      useLinkResolutionTracker.getState().pendingByWorkspace.personal,
+    ).toEqual([pending.id]);
+    useLinkResolutionTracker.setState({ pendingByWorkspace: {} });
+    await client.fetchQuery(inboxContentsQueryOptions("personal"));
+    expect(
+      useLinkResolutionTracker.getState().pendingByWorkspace.personal,
+    ).toEqual([pending.id]);
+  });
+
+  it("retains a visible preview during pending snapshots but accepts terminal removal", () => {
+    const previewImage = {
+      url: "https://media.test/preview.webp",
+      width: 960,
+      height: 480,
+    };
+    const previous = contentsWith([
+      { ...pending, resolutionStatus: "ready", previewImage },
+    ]);
+    expect(
+      keepLocalMediaDuringRefetch(previous, contentsWith([pending])).nodes[0],
+    ).toMatchObject({ previewImage });
+    expect(
+      keepLocalMediaDuringRefetch(
+        previous,
+        contentsWith([{ ...pending, resolutionStatus: "ready" }]),
+      ).nodes[0],
+    ).toMatchObject({ previewImage: null });
+  });
+});
 
 describe("collection query keys", () => {
   it("invalidates cached counts at every folder level in one collection", async () => {

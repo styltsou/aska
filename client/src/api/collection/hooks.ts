@@ -80,6 +80,7 @@ import { collectionQueryKeys } from "./query-keys";
 import { applySavedNoteToWorkspaceAsset } from "./note-asset-cache";
 import type { PeekableAssetResponse } from "./types";
 import { colorSearchQueryKeys } from "@/api/color-search/hooks";
+import { trackLinkResolution } from "@/api/url-unfurl/link-resolution-poller";
 import { colorGradientTitle } from "@/lib/color-gradient";
 import {
   showGradientNamingFailure,
@@ -120,6 +121,17 @@ export function keepLocalMediaDuringRefetch<
     .filter((node) => !serverIdsBeingUploaded.has(node.id))
     .map((node) => {
       const local = previousById.get(node.id);
+      if (
+        local?.type === "link" &&
+        node.type === "link" &&
+        (node.resolutionStatus === "queued" ||
+          node.resolutionStatus === "resolving")
+      )
+        return {
+          ...node,
+          previewImage: node.previewImage ?? local.previewImage,
+          favicon: node.favicon ?? local.favicon,
+        };
       if (local?.type === "image" && local.uploadStatus === "uploading")
         return local;
       if (
@@ -211,6 +223,9 @@ export function inboxContentsQueryOptions(
       client: ReturnType<typeof useQueryClient>;
     }) => {
       const fetched = await fetchInboxContents(workspaceSlug, normalizedTypes);
+      for (const node of fetched.nodes)
+        if (node.type === "link")
+          trackLinkResolution(workspaceSlug, node, client);
       return keepLocalMediaDuringRefetch(
         client.getQueryData<InboxContentsResponse>(
           collectionQueryKeys.inbox(workspaceSlug, typeSignature),
@@ -248,6 +263,9 @@ export function collectionContentsQueryOptions(
         folderPath,
         normalizedTypes,
       );
+      for (const node of fetched.nodes)
+        if (node.type === "link")
+          trackLinkResolution(workspaceSlug, node, client);
       return keepLocalMediaDuringRefetch(
         client.getQueryData<CollectionContentsResponse>(
           collectionQueryKeys.contents(

@@ -270,7 +270,7 @@ export function useCreateLink(workspaceSlug: string, collectionSlug: string) {
       void queryClient.invalidateQueries({
         queryKey: collectionQueryKeys.collections(workspaceSlug),
       });
-      trackLinkResolution(workspaceSlug, data.link);
+      trackLinkResolution(workspaceSlug, data.link, queryClient);
     },
   });
 }
@@ -330,7 +330,7 @@ export function useCreateInboxLink(workspaceSlug: string) {
       void queryClient.invalidateQueries({
         queryKey: ["workspace", workspaceSlug],
       });
-      trackLinkResolution(workspaceSlug, data.link);
+      trackLinkResolution(workspaceSlug, data.link, queryClient);
     },
   });
 }
@@ -341,7 +341,7 @@ export function useRefreshLink(workspaceSlug: string) {
     mutationFn: (assetId: string) => refreshLink(workspaceSlug, assetId),
     onSuccess: (data) => {
       patchLinkInCaches(queryClient, workspaceSlug, data.link);
-      trackLinkResolution(workspaceSlug, data.link);
+      trackLinkResolution(workspaceSlug, data.link, queryClient);
     },
   });
 }

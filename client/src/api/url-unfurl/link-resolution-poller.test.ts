@@ -23,11 +23,52 @@ beforeEach(() => {
 
 describe("link resolution tracker", () => {
   it("tracks only active link work", () => {
-    trackLinkResolution(workspaceSlug, link({ resolutionStatus: "queued" }));
-    trackLinkResolution(workspaceSlug, link({ resolutionStatus: "ready" }));
+    const client = new QueryClient();
+    trackLinkResolution(
+      workspaceSlug,
+      link({ resolutionStatus: "queued" }),
+      client,
+    );
+    trackLinkResolution(
+      workspaceSlug,
+      link({ resolutionStatus: "ready" }),
+      client,
+    );
 
     expect(useLinkResolutionTracker.getState().pendingByWorkspace).toEqual({
       [workspaceSlug]: ["link-42"],
+    });
+  });
+
+  it("discards an earlier terminal poll when a new refresh starts", () => {
+    const client = new QueryClient();
+    const key = ["linkResolution", workspaceSlug, "link-42"];
+    client.setQueryData(key, resolvedLink());
+    trackLinkResolution(
+      workspaceSlug,
+      link({ resolutionStatus: "queued" }),
+      client,
+    );
+    expect(client.getQueryData(key)).toBeUndefined();
+    client.setQueryData(key, link());
+    trackLinkResolution(workspaceSlug, link(), client);
+    expect(client.getQueryData(key)).toEqual(link());
+  });
+
+  it("keeps an existing generic preview while a refresh is pending", () => {
+    const client = new QueryClient();
+    const key = collectionQueryKeys.contents(workspaceSlug, "ideas");
+    client.setQueryData(key, contents(resolvedLink()));
+    patchLinkInCaches(
+      client,
+      workspaceSlug,
+      link({ resolutionStatus: "queued" }),
+    );
+    expect(
+      client.getQueryData<CollectionContentsResponse>(key)?.nodes[0],
+    ).toMatchObject({
+      resolutionStatus: "queued",
+      previewImage: resolvedLink().previewImage,
     });
   });
 
@@ -207,6 +248,20 @@ describe("link resolution tracker", () => {
     expect(collectionPreview).toMatchObject(resolvedPreview());
     expect(folderPreview).toMatchObject({
       previews: [expect.objectContaining(resolvedPreview()), untouchedPreview],
+    });
+
+    patchLinkInCaches(queryClient, workspaceSlug, link());
+    expect(
+      queryClient.getQueryData<CollectionsData>(collectionsKey)?.collections[0]
+        ?.previews[0],
+    ).toMatchObject({ url: resolvedPreview().url });
+    expect(
+      queryClient.getQueryData<CollectionContentsResponse>(folderKey)?.nodes[0],
+    ).toMatchObject({
+      previews: [
+        expect.objectContaining({ url: resolvedPreview().url }),
+        untouchedPreview,
+      ],
     });
   });
 
