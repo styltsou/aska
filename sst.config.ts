@@ -324,7 +324,7 @@ export default $config({
       },
     });
     // REST API response streaming shares the existing API hostname under its
-    // own mapping. API Gateway strips `/api/ai` before matching this route.
+    // own mapping. API Gateway strips `/ai` before matching this route.
     const aiApi = new sst.aws.ApiGatewayV1("AiApi", {
       endpoint: { type: "regional" },
       cors: false,
@@ -332,7 +332,7 @@ export default $config({
         ? {
             domain: {
               nameId: api.nodes.domainName.id,
-              path: "api/ai",
+              path: "ai",
             },
           }
         : {}),
