@@ -2,10 +2,6 @@ import type { APIGatewayProxyEvent } from "aws-lambda";
 import { z } from "zod";
 
 import { configureEnv } from "@/config/env";
-import { auth } from "@/lib/auth";
-import { createNoteEditGraph } from "@/ai/note-graph";
-
-configureEnv(process.env as Record<string, unknown>);
 
 const allowedOrigins = new Set(
   (process.env.CORS_ORIGINS ?? "").split(",").filter(Boolean),
@@ -59,11 +55,20 @@ export const handler = awslambda.streamifyResponse(
       return;
     }
 
-    const session = await auth.api.getSession({
-      headers: new Headers({
-        cookie: event.headers.cookie ?? event.headers.Cookie ?? "",
-      }),
-    });
+    let session;
+    try {
+      configureEnv(process.env as Record<string, unknown>);
+      const { auth } = await import("@/lib/auth");
+      session = await auth.api.getSession({
+        headers: new Headers({
+          cookie: event.headers.cookie ?? event.headers.Cookie ?? "",
+        }),
+      });
+    } catch (error) {
+      console.error("AI note stream initialization failed", error);
+      respond(503, "application/json").end('{"error":"AI is unavailable"}');
+      return;
+    }
     if (!session?.user) {
       respond(401, "application/json").end('{"error":"Unauthorized"}');
       return;
@@ -94,6 +99,7 @@ export const handler = awslambda.streamifyResponse(
       stream.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
     };
     try {
+      const { createNoteEditGraph } = await import("@/ai/note-graph");
       const graph = createNoteEditGraph(apiKey);
       for await (const [chunk] of await graph.stream(input, {
         streamMode: "messages",
