@@ -54,7 +54,6 @@ export default $config({
         ? {
             app: "aska-app.styltsou.com",
             api: "aska-api.styltsou.com",
-            ai: "aska-ai.styltsou.com",
             apiDns: sst.cloudflare.dns({
               // Supplying the zone explicitly keeps the DNS token narrowly
               // scoped to styltsou.com and avoids account-wide zone discovery.
@@ -324,21 +323,21 @@ export default $config({
         ...sentryEnvironment,
       },
     });
-    // REST API response streaming lets the local Vite client receive chunks
-    // while the existing HTTP API continues to serve ordinary requests.
+    // REST API response streaming shares the existing API hostname under its
+    // own mapping. API Gateway strips `/api/ai` before matching this route.
     const aiApi = new sst.aws.ApiGatewayV1("AiApi", {
       endpoint: { type: "regional" },
       cors: false,
       ...(stableCloudDomains
         ? {
             domain: {
-              name: stableCloudDomains.ai,
-              dns: stableCloudDomains.apiDns,
+              nameId: api.nodes.domainName.id,
+              path: "api/ai",
             },
           }
         : {}),
     });
-    aiApi.route("ANY /api/ai/stream", {
+    aiApi.route("ANY /stream", {
       handler: "server/src/ai-stream-lambda.handler",
       runtime: "nodejs22.x",
       streaming: true,
@@ -568,7 +567,7 @@ export default $config({
         : {}),
       environment: {
         VITE_SERVER_URL: api.url,
-        VITE_AI_STREAM_URL: $interpolate`${aiApi.url}/api/ai/stream`,
+        VITE_AI_STREAM_URL: $interpolate`${aiApi.url}stream`,
         VITE_SENTRY_DSN: sentryDsn.value,
         VITE_SENTRY_ENVIRONMENT: $app.stage,
         VITE_SENTRY_TRACES_SAMPLE_RATE:
