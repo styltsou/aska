@@ -62,7 +62,7 @@ function CollectionItem({ item }: { item: NavCollection }) {
     const name = row.querySelector<HTMLElement>(".collection-name-text");
     if (!viewport || !name) return;
 
-    const distance = Math.max(0, name.offsetWidth - viewport.clientWidth + 8);
+    const distance = Math.max(0, name.offsetWidth - viewport.clientWidth + 4);
     const overflowing = distance > 0;
     row.style.setProperty("--collection-name-distance", `${distance}px`);
     row.style.setProperty(
@@ -86,7 +86,7 @@ function CollectionItem({ item }: { item: NavCollection }) {
             {item.name}
           </span>
         </span>
-        <span className="shrink-0 text-xs text-sidebar-foreground/40">
+        <span className="shrink-0 translate-y-px text-xs text-sidebar-foreground/40">
           {item.count}
         </span>
       </SidebarMenuButton>
