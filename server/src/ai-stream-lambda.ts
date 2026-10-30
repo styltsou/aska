@@ -33,16 +33,22 @@ export const handler = awslambda.streamifyResponse(
         statusCode,
         headers: { ...headers, "Content-Type": contentType },
       });
+    const respondJson = (statusCode: number, body: string) => {
+      const stream = respond(statusCode, "application/json");
+      stream.write(body);
+      stream.end();
+    };
 
     if (event.httpMethod === "OPTIONS") {
       const stream = awslambda.HttpResponseStream.from(responseStream, {
-        statusCode: origin && allowedOrigins.has(origin) ? 204 : 403,
+        statusCode: origin && allowedOrigins.has(origin) ? 200 : 403,
         headers: {
           ...headers,
           "Access-Control-Allow-Methods": "POST, OPTIONS",
           "Access-Control-Allow-Headers": "Content-Type",
         },
       });
+      stream.write("ok");
       stream.end();
       return;
     }
@@ -51,7 +57,7 @@ export const handler = awslambda.streamifyResponse(
       event.httpMethod !== "POST" ||
       (origin && !allowedOrigins.has(origin))
     ) {
-      respond(403, "application/json").end('{"error":"Forbidden"}');
+      respondJson(403, '{"error":"Forbidden"}');
       return;
     }
 
@@ -66,11 +72,11 @@ export const handler = awslambda.streamifyResponse(
       });
     } catch (error) {
       console.error("AI note stream initialization failed", error);
-      respond(503, "application/json").end('{"error":"AI is unavailable"}');
+      respondJson(503, '{"error":"AI is unavailable"}');
       return;
     }
     if (!session?.user) {
-      respond(401, "application/json").end('{"error":"Unauthorized"}');
+      respondJson(401, '{"error":"Unauthorized"}');
       return;
     }
 
@@ -82,15 +88,13 @@ export const handler = awslambda.streamifyResponse(
       const request = JSON.parse(body ?? "");
       input = requestSchema.parse(request.input ?? request);
     } catch {
-      respond(400, "application/json").end(
-        '{"error":"Invalid prompt or note"}',
-      );
+      respondJson(400, '{"error":"Invalid prompt or note"}');
       return;
     }
 
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
-      respond(503, "application/json").end('{"error":"AI is unavailable"}');
+      respondJson(503, '{"error":"AI is unavailable"}');
       return;
     }
 

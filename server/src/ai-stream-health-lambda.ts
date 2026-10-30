@@ -4,6 +4,7 @@ export const handler = awslambda.streamifyResponse(
       statusCode: 200,
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
-    stream.end("ok");
+    stream.write("ok");
+    stream.end();
   },
 );
