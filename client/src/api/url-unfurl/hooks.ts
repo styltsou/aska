@@ -310,7 +310,14 @@ export function useCreateInboxLink(workspaceSlug: string) {
     onError: (_error, _variables, context) => {
       if (context) {
         context.oembedController?.abort();
-        queryClient.setQueryData(context.key, context.previous);
+        queryClient.setQueryData(
+          context.key,
+          context.previous ?? {
+            collection: { id: 0, name: "Inbox", slug: "inbox" },
+            breadcrumbs: [],
+            nodes: [],
+          },
+        );
       }
     },
     onSuccess: (data, _variables, context) => {

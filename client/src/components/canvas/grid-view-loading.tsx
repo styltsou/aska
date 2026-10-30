@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
-const ASSET_SKELETONS = [
+export const ASSET_SKELETONS = [
   { type: "image", aspectRatio: 4 / 3 },
   { type: "note", variant: 0 },
   { type: "image", aspectRatio: 4 / 5 },

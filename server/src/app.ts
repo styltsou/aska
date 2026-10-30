@@ -25,7 +25,13 @@ baseApp.use(
   cors({
     origin: (origin) =>
       env.CORS_ORIGINS.includes(origin) ? origin : undefined,
-    allowHeaders: ["Content-Type", "Authorization", "Baggage", "Sentry-Trace"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Baggage",
+      "Sentry-Trace",
+      "X-Inbox-Visible",
+    ],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     exposeHeaders: ["Content-Length", "X-Request-Id"],
     maxAge: 600,
@@ -36,6 +42,33 @@ baseApp.use(
 baseApp.use("*", securityHeaders);
 baseApp.use("*", requestId());
 baseApp.use("*", requestLogger);
+
+baseApp.use("/api/v1/workspace/:workspaceSlug/inbox/*", async (c, next) => {
+  const isCreation =
+    c.req.method === "POST" &&
+    /\/inbox\/(?:notes|colors|links|images\/(?:uploads|remote)|videos\/(?:uploads|remote))$/.test(
+      c.req.path,
+    );
+  await next();
+  if (
+    !isCreation ||
+    c.req.header("X-Inbox-Visible") !== "1" ||
+    c.res.status >= 400
+  )
+    return;
+  const userId = c.get("userId");
+  const workspaceSlug = c.req.param("workspaceSlug");
+  if (!userId || !workspaceSlug) return;
+  try {
+    const workspace = await container.collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      userId,
+    );
+    await container.assetService.markInboxSeen(workspace.id, userId);
+  } catch (error) {
+    loggerService.error("Failed to mark inbox seen after creation", { error });
+  }
+});
 
 baseApp.onError((err, c) => {
   if (err instanceof AppError) {

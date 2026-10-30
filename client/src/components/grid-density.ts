@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 export type GridDensity = "spacious" | "balanced" | "compact";
 
@@ -20,12 +20,25 @@ export function getSavedGridDensity(): GridDensity {
 }
 
 export function useGridDensity() {
-  const [density, setDensityState] = useState<GridDensity>(getSavedGridDensity);
+  const density = useSyncExternalStore<GridDensity>(
+    subscribeDensity,
+    getSavedGridDensity,
+    () => "balanced",
+  );
   const setDensity = useCallback((next: GridDensity) => {
-    setDensityState(next);
     window.localStorage.setItem("aska:grid-density", next);
+    window.dispatchEvent(new Event("aska:grid-density-change"));
   }, []);
   return { density, setDensity };
+}
+
+function subscribeDensity(onChange: () => void) {
+  window.addEventListener("aska:grid-density-change", onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener("aska:grid-density-change", onChange);
+    window.removeEventListener("storage", onChange);
+  };
 }
 
 export function columnsForGrid(width: number, density: GridDensity): number {

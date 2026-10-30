@@ -6,6 +6,7 @@ import {
   useMutation,
   useQueryClient,
   useInfiniteQuery,
+  type InfiniteData,
 } from "@tanstack/react-query";
 import {
   bulkDeleteNodes,
@@ -58,6 +59,7 @@ import type {
   FolderChildPreview,
   ImageUploadStatus,
   InboxContentsResponse,
+  InboxGridResponse,
   UpdateNodePositionInput,
   UpdateNodePositionsInput,
   UpdatedNote,
@@ -544,7 +546,12 @@ function updateInboxUnreadCount(
         ...current,
         inbox: {
           ...current.inbox,
-          unreadCount: Math.max(0, update(current.inbox.unreadCount)),
+          unreadCount:
+            typeof window !== "undefined" &&
+            (window.location.pathname === `/${workspaceSlug}/inbox` ||
+              window.location.pathname.startsWith(`/${workspaceSlug}/inbox/`))
+              ? 0
+              : Math.max(0, update(current.inbox.unreadCount)),
         },
       };
     },
@@ -585,12 +592,14 @@ function appendNodeToInboxContents(
   queryClient.setQueryData<InboxContentsResponse>(
     collectionQueryKeys.inbox(workspaceSlug),
     (current) => {
-      if (
-        !current ||
-        current.nodes.some((existing) => existing.id === node.id)
-      ) {
+      if (!current)
+        return {
+          collection: { id: 0, name: "Inbox", slug: "inbox" },
+          breadcrumbs: [],
+          nodes: [node],
+        };
+      if (current.nodes.some((existing) => existing.id === node.id))
         return current;
-      }
 
       return {
         ...current,
@@ -1333,11 +1342,11 @@ export function useInboxGrid(
 ) {
   const normalizedTypes = types ? [...types].sort() : undefined;
   const typeSignature = normalizedTypes?.join(",");
-  return useInfiniteQuery({
-    queryKey: [
-      ...collectionQueryKeys.inbox(workspaceSlug, typeSignature),
-      "grid",
-    ],
+  const queryClient = useQueryClient();
+  useQuery({ ...inboxContentsQueryOptions(workspaceSlug), enabled: false });
+  const gridKey = ["inboxGrid", workspaceSlug, typeSignature ?? ""];
+  const query = useInfiniteQuery({
+    queryKey: gridKey,
     initialPageParam: undefined as string | undefined,
     queryFn: async ({ pageParam, client }) => {
       const page = await fetchInboxGrid(
@@ -1354,6 +1363,61 @@ export function useInboxGrid(
     enabled: !!workspaceSlug,
     staleTime: COLLECTION_CONTENTS_STALE_TIME,
   });
+  React.useEffect(() => {
+    const baseKey = collectionQueryKeys.inbox(workspaceSlug);
+    let previous = queryClient.getQueryData<InboxContentsResponse>(baseKey);
+    return queryClient.getQueryCache().subscribe((event) => {
+      if (
+        event.type !== "updated" ||
+        event.query.queryKey.length !== 2 ||
+        event.query.queryKey[0] !== "inboxContents" ||
+        event.query.queryKey[1] !== workspaceSlug
+      )
+        return;
+      const next = event.query.state.data as InboxContentsResponse | undefined;
+      if (event.action.type === "invalidate") {
+        void queryClient.invalidateQueries({
+          queryKey: ["inboxGrid", workspaceSlug],
+        });
+      }
+      if (event.action.type === "success" && event.action.manual && next) {
+        const before = new Map(
+          (previous?.nodes ?? []).map((node) => [node.id, node]),
+        );
+        const after = new Map(next.nodes.map((node) => [node.id, node]));
+        const added = next.nodes.filter(
+          (node) =>
+            !before.has(node.id) &&
+            (!typeSignature || typeSignature.split(",").includes(node.type)),
+        );
+        queryClient.setQueryData<InfiniteData<InboxGridResponse>>(
+          ["inboxGrid", workspaceSlug, typeSignature ?? ""],
+          (current) => {
+            if (!current?.pages.length) return current;
+            const pages = current.pages.map((page) => ({
+              ...page,
+              nodes: page.nodes
+                .filter((node) => !before.has(node.id) || after.has(node.id))
+                .map((node) => after.get(node.id) ?? node),
+            }));
+            const existing = new Set(
+              pages.flatMap((page) => page.nodes.map((node) => node.id)),
+            );
+            pages[0] = {
+              ...pages[0]!,
+              nodes: [
+                ...added.filter((node) => !existing.has(node.id)),
+                ...pages[0]!.nodes,
+              ],
+            };
+            return { ...current, pages };
+          },
+        );
+      }
+      previous = next;
+    });
+  }, [queryClient, workspaceSlug, typeSignature]);
+  return query;
 }
 
 export function useMarkInboxSeen(workspaceSlug: string) {
@@ -1435,7 +1499,14 @@ export function useCreateInboxNote(workspaceSlug: string) {
     },
     onError: (_error, _variables, context) => {
       if (!context) return;
-      queryClient.setQueryData(context.inboxKey, context.previousInbox);
+      queryClient.setQueryData(
+        context.inboxKey,
+        context.previousInbox ?? {
+          collection: { id: 0, name: "Inbox", slug: "inbox" },
+          breadcrumbs: [],
+          nodes: [],
+        },
+      );
       queryClient.setQueryData(context.workspaceKey, context.previousWorkspace);
     },
     onSuccess: (data, _variables, context) => {
@@ -1521,7 +1592,14 @@ export function useCreateInboxColor(workspaceSlug: string) {
     onError: (_error, _variables, context) => {
       if (!context) return;
 
-      queryClient.setQueryData(context.inboxKey, context.previousInbox);
+      queryClient.setQueryData(
+        context.inboxKey,
+        context.previousInbox ?? {
+          collection: { id: 0, name: "Inbox", slug: "inbox" },
+          breadcrumbs: [],
+          nodes: [],
+        },
+      );
       queryClient.setQueryData(context.workspaceKey, context.previousWorkspace);
     },
     onSuccess: (data, _variables, context) => {
@@ -2669,7 +2747,12 @@ export function useUploadInboxImages(workspaceSlug: string) {
       );
 
       queryClient.setQueryData<InboxContentsResponse>(inboxKey, (current) => {
-        if (!current) return current;
+        if (!current)
+          return {
+            collection: { id: 0, name: "Inbox", slug: "inbox" },
+            breadcrumbs: [],
+            nodes: optimisticImages,
+          };
 
         return {
           ...current,
@@ -2775,7 +2858,14 @@ export function useUploadInboxImages(workspaceSlug: string) {
       } catch (error) {
         toast.error("Upload failed", { id: toastId });
         revokeOptimisticImageUrls(optimisticImages);
-        queryClient.setQueryData(inboxKey, previousInbox);
+        queryClient.setQueryData(
+          inboxKey,
+          previousInbox ?? {
+            collection: { id: 0, name: "Inbox", slug: "inbox" },
+            breadcrumbs: [],
+            nodes: [],
+          },
+        );
         queryClient.setQueryData(workspaceKey, previousWorkspace);
         throw error;
       }
@@ -3000,20 +3090,67 @@ export function useCreateInboxRemoteImage(workspaceSlug: string) {
         created.upload,
       );
     },
-    onMutate: () => {
+    onMutate: (variables) => {
       const workspaceKey = ["workspace", workspaceSlug] as const;
       const previousWorkspace =
         queryClient.getQueryData<WorkspaceData>(workspaceKey);
+      const optimisticId = `image-importing-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimisticImage: Extract<CollectionNode, { type: "image" }> = {
+        id: optimisticId,
+        type: "image",
+        url: variables.preview?.url ?? variables.url,
+        localPreviewUrl:
+          variables.preview?.fallbackUrl ?? variables.preview?.url,
+        width: variables.preview?.width ?? UNKNOWN_IMAGE_DIMENSIONS.width,
+        height: variables.preview?.height ?? UNKNOWN_IMAGE_DIMENSIONS.height,
+        title: variables.title ?? null,
+        alt: variables.alt ?? null,
+        note: null,
+        sourceLabel: null,
+        sourceUrl: variables.provenance?.url ?? variables.url,
+        isFavorite: false,
+        uploadStatus: "processing",
+        uploadProgress: 100,
+        clientId: optimisticId,
+        createdAt: new Date().toISOString(),
+        position: null,
+      };
+      appendNodeToInboxContents(queryClient, workspaceSlug, optimisticImage);
       updateInboxUnreadCount(queryClient, workspaceSlug, (count) => count + 1);
 
-      return { workspaceKey, previousWorkspace };
+      return { workspaceKey, previousWorkspace, optimisticId };
     },
     onError: (_error, _variables, context) => {
       if (!context) return;
+      queryClient.setQueryData<InboxContentsResponse>(
+        collectionQueryKeys.inbox(workspaceSlug),
+        (current) =>
+          current
+            ? {
+                ...current,
+                nodes: current.nodes.filter(
+                  (node) => node.id !== context.optimisticId,
+                ),
+              }
+            : current,
+      );
       queryClient.setQueryData(context.workspaceKey, context.previousWorkspace);
     },
-    onSuccess: (data) => {
-      appendNodeToInboxContents(queryClient, workspaceSlug, data);
+    onSuccess: (data, _variables, context) => {
+      queryClient.setQueryData<InboxContentsResponse>(
+        collectionQueryKeys.inbox(workspaceSlug),
+        (current) =>
+          current
+            ? {
+                ...current,
+                nodes: current.nodes.map((node) =>
+                  node.id === context.optimisticId
+                    ? { ...data, clientId: context.optimisticId }
+                    : node,
+                ),
+              }
+            : current,
+      );
     },
   });
 }

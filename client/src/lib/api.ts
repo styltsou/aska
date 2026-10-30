@@ -35,10 +35,22 @@ export function getUserFacingApiErrorMessage(
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers = new Headers(options?.headers);
+  if (!headers.has("Content-Type"))
+    headers.set("Content-Type", "application/json");
+  const inboxPath = /^\/api\/v1\/workspace\/([^/]+)\/inbox\//.exec(path);
+  if (
+    options?.method === "POST" &&
+    inboxPath &&
+    typeof window !== "undefined" &&
+    window.location.pathname.startsWith(`/${inboxPath[1]}/inbox`)
+  ) {
+    headers.set("X-Inbox-Visible", "1");
+  }
   const res = await fetch(`${SERVER_URL}${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers,
   });
 
   if (!res.ok) {

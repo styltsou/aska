@@ -226,7 +226,11 @@ export function useBoardAssetActions({
           queryClient.setQueryData<InboxContentsResponse>(key, (current) =>
             current
               ? { ...current, nodes: [...pendingCards, ...current.nodes] }
-              : current,
+              : {
+                  collection: { id: 0, name: "Inbox", slug: "inbox" },
+                  breadcrumbs: [],
+                  nodes: pendingCards,
+                },
           );
         }
 
