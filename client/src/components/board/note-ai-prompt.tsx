@@ -5,8 +5,14 @@ import {
 } from "@langchain/langgraph-sdk/react";
 
 import { Button } from "@/components/ui/button";
+import { apiUrl } from "@/lib/api";
 
 type AiEvent = { type: "delta"; text: string } | { type: "done" };
+const streamApiUrl =
+  import.meta.env.VITE_AI_STREAM_URL?.replace(
+    /^(https?:\/\/[^/]+)\/ai\/stream$/,
+    "$1/api/ai/stream",
+  ) ?? apiUrl("/api/ai/stream");
 
 export function NoteAiPrompt({
   note,
@@ -24,9 +30,7 @@ export function NoteAiPrompt({
   const transport = useMemo(
     () =>
       new FetchStreamTransport({
-        apiUrl:
-          import.meta.env.VITE_AI_STREAM_URL ??
-          "http://localhost:3000/api/ai/stream",
+        apiUrl: streamApiUrl,
         onRequest: (_url, init) => ({ ...init, credentials: "include" }),
       }),
     [],
