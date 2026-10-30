@@ -30,6 +30,7 @@ import type {
   DeleteAssetResponse,
   DeleteNoteIfUnchangedInput,
   InboxContentsResponse,
+  InboxGridResponse,
   ImageUploadStatusResponse,
   MoveCollectionNodesToFolderInput,
   MoveCollectionNodesToFolderResponse,
@@ -268,6 +269,20 @@ export async function fetchInboxContents(
   const query = buildTypesQuery(types);
   return apiGet<InboxContentsResponse>(
     `/api/v1/workspace/${workspaceSlug}/inbox${query}`,
+  );
+}
+
+export async function fetchInboxGrid(
+  workspaceSlug: string,
+  types?: readonly ContentTypeFilter[],
+  cursor?: string,
+): Promise<InboxGridResponse> {
+  const params = new URLSearchParams();
+  if (types?.length) params.set("types", types.join(","));
+  if (cursor) params.set("cursor", cursor);
+  params.set("limit", "48");
+  return apiGet<InboxGridResponse>(
+    `/api/v1/workspace/${workspaceSlug}/inbox/grid?${params}`,
   );
 }
 

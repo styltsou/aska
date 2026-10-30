@@ -6,7 +6,10 @@ import {
   gt,
   inArray,
   isNotNull,
+  lt,
   notExists,
+  or,
+  sql,
 } from "drizzle-orm";
 
 import { db } from "@/db";
@@ -37,6 +40,7 @@ import type {
   DeleteNoteIfUnchangedInput,
   CreateColorInput,
   InboxContentsResponse,
+  InboxGridResponse,
   UpdatedNote,
   UpdateNoteInput,
   UpdatedImage,
@@ -62,6 +66,10 @@ import {
 } from "@/lib/color-gradient";
 import { calculateNoteMetrics } from "@/lib/note-metrics";
 import { normalizeNoteTitle } from "@/lib/note-title";
+import {
+  decodeGridCursor,
+  encodeGridCursor,
+} from "@/services/collection/grid-cursor";
 import {
   reconcileNoteReferences,
   rewriteReferencedTargetLabel,
@@ -118,7 +126,8 @@ export interface IAssetService {
   getInboxContents(
     orgId: string,
     types?: ContentTypeFilter[],
-  ): Promise<InboxContentsResponse>;
+    gridPage?: { cursor?: string | undefined; limit: number },
+  ): Promise<InboxContentsResponse | InboxGridResponse>;
   getInboxStatus(
     orgId: string,
     userId: string,
@@ -324,7 +333,12 @@ export class AssetService implements IAssetService {
   async getInboxContents(
     orgId: string,
     types?: ContentTypeFilter[],
-  ): Promise<InboxContentsResponse> {
+    gridPage?: { cursor?: string | undefined; limit: number },
+  ): Promise<InboxContentsResponse | InboxGridResponse> {
+    const cursor = gridPage?.cursor ? decodeGridCursor(gridPage.cursor) : null;
+    if (gridPage?.cursor && !cursor) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid inbox cursor");
+    }
     const assetTypes = types?.filter(
       (type): type is "image" | "video" | "note" | "link" | "color" =>
         type !== "folder",
@@ -335,16 +349,18 @@ export class AssetService implements IAssetService {
         collection: { id: 0, name: "Inbox", slug: "inbox" },
         breadcrumbs: [],
         nodes: [],
+        ...(gridPage ? { nextCursor: null } : {}),
       };
     }
 
-    const rows = await db
+    const rowsQuery = db
       .select({
         assetId: assets.id,
         assetType: assets.type,
         title: assets.title,
         isFavorite: assets.isFavorite,
         createdAt: assets.createdAt,
+        createdAtCursor: sql<string>`${assets.createdAt}::text`,
         updatedAt: assets.updatedAt,
         imageAlt: imageAssets.alt,
         imageNote: imageAssets.note,
@@ -400,6 +416,15 @@ export class AssetService implements IAssetService {
       .where(
         and(
           eq(assets.organizationId, orgId),
+          cursor
+            ? or(
+                sql`${assets.createdAt} < ${cursor.timestamp}::timestamp`,
+                and(
+                  sql`${assets.createdAt} = ${cursor.timestamp}::timestamp`,
+                  lt(assets.id, cursor.nodeId),
+                ),
+              )
+            : undefined,
           notExists(
             db
               .select({ id: collectionNodes.id })
@@ -419,6 +444,19 @@ export class AssetService implements IAssetService {
       )
       .orderBy(desc(assets.createdAt), desc(assets.id));
 
+    const pageRows = gridPage
+      ? await rowsQuery.limit(gridPage.limit + 1)
+      : await rowsQuery;
+    const hasNextPage = !!gridPage && pageRows.length > gridPage.limit;
+    const visibleRows = hasNextPage
+      ? pageRows.slice(0, gridPage!.limit)
+      : pageRows;
+    const lastRow = visibleRows.at(-1);
+    const nextCursor =
+      hasNextPage && lastRow
+        ? encodeGridCursor(lastRow.createdAtCursor, lastRow.assetId)
+        : null;
+
     return {
       collection: {
         id: 0,
@@ -426,7 +464,8 @@ export class AssetService implements IAssetService {
         slug: "inbox",
       },
       breadcrumbs: [],
-      nodes: await this.rowsToAssetNodes(rows, orgId),
+      nodes: await this.rowsToAssetNodes(visibleRows, orgId),
+      ...(gridPage ? { nextCursor } : {}),
     };
   }
 

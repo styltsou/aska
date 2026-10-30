@@ -6,6 +6,7 @@ import {
   downloadAsset,
   getPeekableAsset,
   getInboxContents,
+  getInboxGrid,
   markInboxSeen,
   updateNote,
   updateColor,
@@ -18,6 +19,7 @@ import { factory } from "@/factory";
 
 const assetRoutes = factory
   .createApp()
+  .get("/workspace/:workspaceSlug/inbox/grid", ...getInboxGrid)
   .get("/workspace/:workspaceSlug/inbox", ...getInboxContents)
   .post("/workspace/:workspaceSlug/inbox/seen", ...markInboxSeen)
   .post("/workspace/:workspaceSlug/inbox/notes", ...createInboxNote)

@@ -5,6 +5,7 @@ import {
   useQuery,
   useMutation,
   useQueryClient,
+  useInfiniteQuery,
 } from "@tanstack/react-query";
 import {
   bulkDeleteNodes,
@@ -27,6 +28,7 @@ import {
   deleteCollectionNode,
   fetchCollectionContents,
   fetchInboxContents,
+  fetchInboxGrid,
   flattenFolder,
   markInboxSeen,
   updateCollectionNodePosition,
@@ -1322,6 +1324,35 @@ export function useInboxContents(
     ...inboxContentsQueryOptions(workspaceSlug, types),
     enabled: !!workspaceSlug,
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useInboxGrid(
+  workspaceSlug: string,
+  types?: readonly ContentTypeFilter[],
+) {
+  const normalizedTypes = types ? [...types].sort() : undefined;
+  const typeSignature = normalizedTypes?.join(",");
+  return useInfiniteQuery({
+    queryKey: [
+      ...collectionQueryKeys.inbox(workspaceSlug, typeSignature),
+      "grid",
+    ],
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam, client }) => {
+      const page = await fetchInboxGrid(
+        workspaceSlug,
+        normalizedTypes,
+        pageParam,
+      );
+      for (const node of page.nodes)
+        if (node.type === "link")
+          trackLinkResolution(workspaceSlug, node, client);
+      return page;
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    enabled: !!workspaceSlug,
+    staleTime: COLLECTION_CONTENTS_STALE_TIME,
   });
 }
 

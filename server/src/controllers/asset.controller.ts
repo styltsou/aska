@@ -2,6 +2,7 @@ import {
   AssetPathParamSchema,
   CropInputSchema,
   ContentTypeQuerySchema,
+  InboxGridQuerySchema,
   CreateNoteSchema,
   CreateColorSchema,
   DeleteNoteIfUnchangedSchema,
@@ -44,6 +45,26 @@ export const getInboxContents = factory.createHandlers(
       userId,
     );
     const contents = await assetService.getInboxContents(workspace.id, types);
+
+    return c.json(success(contents));
+  },
+);
+
+export const getInboxGrid = factory.createHandlers(
+  authMiddleware,
+  validate.param(WorkspaceParamSchema),
+  validate.query(InboxGridQuerySchema),
+  async (c) => {
+    const { workspaceSlug } = c.req.valid("param");
+    const { types, cursor, limit } = c.req.valid("query");
+    const workspace = await collectionService.getWorkspaceBySlug(
+      workspaceSlug,
+      c.get("userId"),
+    );
+    const contents = await assetService.getInboxContents(workspace.id, types, {
+      cursor,
+      limit,
+    });
 
     return c.json(success(contents));
   },

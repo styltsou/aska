@@ -3,6 +3,8 @@ import type { MouseEvent, ReactNode } from "react";
 
 import { MasonryEmptyState } from "@/components/masonry-empty-state";
 import { Masonry } from "@/components/masonry-grid";
+import { VirtualMasonry } from "@/components/virtual-masonry";
+import type { GridDensity } from "@/components/grid-density";
 import type { Asset, ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import { AssetCard } from "./asset-card";
 import {
@@ -19,6 +21,7 @@ import {
 import { useTransientStore } from "@/store";
 import { useBulkDelete } from "@/api/collection";
 import { MoveToDialog } from "@/components/move-to-dialog";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
 type CollectionDeleteContext = {
   workspaceSlug: string;
@@ -48,6 +51,11 @@ export function AssetBoard({
   focusedAssetId,
   focusRequestId,
   onDismissFocusedAsset,
+  density,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
+  onSelectAll,
 }: {
   assets: Asset[];
   emptyTitle: string;
@@ -63,6 +71,11 @@ export function AssetBoard({
   focusedAssetId?: string;
   focusRequestId?: number;
   onDismissFocusedAsset?: () => void;
+  density?: GridDensity;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
+  onSelectAll?: () => Promise<string[]>;
 }) {
   const scopeKey = inboxContext
     ? `inbox:${inboxContext.workspaceSlug}`
@@ -77,6 +90,10 @@ export function AssetBoard({
   );
   const clearSelection = useTransientStore((state) => state.clearSelection);
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const loadMoreInFlightRef = useRef(false);
+  const [contentWidth, setContentWidth] = useState(0);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const eligibleIds = useMemo(
     () =>
@@ -142,8 +159,56 @@ export function AssetBoard({
     return () => cancelAnimationFrame(frame);
   }, [assets, focusedAssetId, focusRequestId]);
 
+  useIsomorphicLayoutEffect(() => {
+    const surface = surfaceRef.current;
+    if (!surface) return;
+    const viewport = surface.closest<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    if (!viewport) return;
+    scrollRef.current = viewport as HTMLDivElement;
+    const updateWidth = () => setContentWidth(surface.clientWidth);
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(surface);
+    return () => {
+      observer.disconnect();
+      scrollRef.current = null;
+    };
+  }, [inboxContext]);
+
   useEffect(() => {
-    if (!scopeKey || selection.scopeKey !== scopeKey) return;
+    if (!isLoadingMore) loadMoreInFlightRef.current = false;
+  }, [isLoadingMore]);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    const sentinel = loadMoreRef.current;
+    if (!root || !sentinel || !hasMore || !onLoadMore) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (
+          entry?.isIntersecting &&
+          !isLoadingMore &&
+          !loadMoreInFlightRef.current
+        ) {
+          loadMoreInFlightRef.current = true;
+          onLoadMore();
+        }
+      },
+      { root, rootMargin: "900px 0px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [assets.length, hasMore, isLoadingMore, onLoadMore]);
+
+  useEffect(() => {
+    if (
+      !scopeKey ||
+      selection.scopeKey !== scopeKey ||
+      (inboxContext && hasMore)
+    )
+      return;
     replaceSelection(
       scopeKey,
       selectedIds.filter((nodeId) => eligibleIds.has(nodeId)),
@@ -154,6 +219,8 @@ export function AssetBoard({
     scopeKey,
     selectedIds,
     selection.scopeKey,
+    inboxContext,
+    hasMore,
   ]);
 
   useEffect(() => {
@@ -166,12 +233,18 @@ export function AssetBoard({
       }
       if (isSelectionShortcut(event)) {
         event.preventDefault();
-        replaceSelection(scopeKey, eligibleIds);
+        if (onSelectAll) {
+          void onSelectAll()
+            .then((nodeIds) => replaceSelection(scopeKey, nodeIds))
+            .catch(() => undefined);
+        } else {
+          replaceSelection(scopeKey, eligibleIds);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [clearSelection, eligibleIds, replaceSelection, scopeKey]);
+  }, [clearSelection, eligibleIds, onSelectAll, replaceSelection, scopeKey]);
 
   const bulkDelete = useBulkDelete(inboxContext?.workspaceSlug ?? "");
   const handleBulkDelete = useCallback(() => {
@@ -223,31 +296,31 @@ export function AssetBoard({
         <MasonryEmptyState title={emptyTitle} description={emptyDescription}>
           {emptyStateChildren}
         </MasonryEmptyState>
+      ) : inboxContext && density && contentWidth > 0 && scrollRef.current ? (
+        <>
+          <VirtualMasonry
+            width={contentWidth}
+            density={density}
+            scrollElementRef={scrollRef}
+            focusedIndex={
+              focusedAssetId
+                ? assets.findIndex((asset) => asset.id === focusedAssetId)
+                : undefined
+            }
+            focusRequestId={focusRequestId}
+          >
+            {assets.map((asset) => renderAssetCard(asset))}
+          </VirtualMasonry>
+          <div ref={loadMoreRef} className="h-px" aria-hidden="true" />
+          {isLoadingMore ? (
+            <div className="py-3 text-center text-xs text-muted-foreground">
+              Loading more…
+            </div>
+          ) : null}
+        </>
       ) : (
         <Masonry className="min-w-0">
-          {assets.map((asset) => (
-            <AssetCard
-              key={
-                asset.type === "image" || asset.type === "link"
-                  ? (asset.clientId ?? asset.id)
-                  : asset.id
-              }
-              asset={asset}
-              isFocused={focusedAssetId === asset.id}
-              deleteContext={deleteContext}
-              inboxContext={inboxContext}
-              isSelected={selectedIdSet.has(asset.id)}
-              onToggleSelection={scopeKey ? toggleSelection : undefined}
-              onSelectionContextMenu={
-                scopeKey ? handleSelectionContextMenu : undefined
-              }
-              onOpenFolder={onOpenFolder}
-              onOpenImage={onOpenImage}
-              onOpenNote={onOpenNote}
-              onOpenColor={onOpenColor}
-              onOpenVideo={onOpenVideo}
-            />
-          ))}
+          {assets.map((asset) => renderAssetCard(asset))}
         </Masonry>
       )}
       {marquee.marquee ? (
@@ -281,4 +354,30 @@ export function AssetBoard({
       ) : null}
     </div>
   );
+
+  function renderAssetCard(asset: Asset) {
+    return (
+      <AssetCard
+        key={
+          asset.type === "image" || asset.type === "link"
+            ? (asset.clientId ?? asset.id)
+            : asset.id
+        }
+        asset={asset}
+        isFocused={focusedAssetId === asset.id}
+        deleteContext={deleteContext}
+        inboxContext={inboxContext}
+        isSelected={selectedIdSet.has(asset.id)}
+        onToggleSelection={scopeKey ? toggleSelection : undefined}
+        onSelectionContextMenu={
+          scopeKey ? handleSelectionContextMenu : undefined
+        }
+        onOpenFolder={onOpenFolder}
+        onOpenImage={onOpenImage}
+        onOpenNote={onOpenNote}
+        onOpenColor={onOpenColor}
+        onOpenVideo={onOpenVideo}
+      />
+    );
+  }
 }

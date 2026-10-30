@@ -1,3 +1,5 @@
+import { useCallback, useState } from "react";
+
 export type GridDensity = "spacious" | "balanced" | "compact";
 
 export const GRID_DENSITIES: Record<
@@ -15,6 +17,15 @@ export function getSavedGridDensity(): GridDensity {
   if (typeof window === "undefined") return "balanced";
   const saved = window.localStorage.getItem("aska:grid-density");
   return saved === "spacious" || saved === "compact" ? saved : "balanced";
+}
+
+export function useGridDensity() {
+  const [density, setDensityState] = useState<GridDensity>(getSavedGridDensity);
+  const setDensity = useCallback((next: GridDensity) => {
+    setDensityState(next);
+    window.localStorage.setItem("aska:grid-density", next);
+  }, []);
+  return { density, setDensity };
 }
 
 export function columnsForGrid(width: number, density: GridDensity): number {

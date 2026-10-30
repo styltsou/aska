@@ -13,7 +13,6 @@ import {
   useDroppable,
 } from "@dnd-kit/react";
 import { toast } from "sonner";
-import { motion, useReducedMotion } from "motion/react";
 
 import {
   useBulkDelete,
@@ -28,16 +27,11 @@ import {
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
 import { MoveToDialog } from "@/components/move-to-dialog";
 import { VirtualMasonry } from "@/components/virtual-masonry";
-import {
-  columnsForGrid,
-  getSavedGridDensity,
-  GRID_DENSITIES,
-  type GridDensity,
-} from "@/components/grid-density";
+import { GridDensityControl } from "@/components/grid-density-control";
+import { columnsForGrid, useGridDensity } from "@/components/grid-density";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
-import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { sortCollectionNodesByMostRecent } from "@/lib/collection-node-order";
 import {
   isPersistedSelectableAsset,
@@ -122,7 +116,7 @@ export function CollectionGridView({
   const contentRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [contentWidth, setContentWidth] = useState(0);
-  const [density, setDensity] = useState<GridDensity>(getSavedGridDensity);
+  const { density, setDensity } = useGridDensity();
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [activeDrag, setActiveDrag] = useState<GridNodeDragData>();
   const [pendingFolderDrop, setPendingFolderDrop] =
@@ -199,11 +193,6 @@ export function CollectionGridView({
     observer.observe(content);
     return () => observer.disconnect();
   }, [folders.length, assets.length]);
-
-  const setGridDensity = (next: GridDensity) => {
-    setDensity(next);
-    window.localStorage.setItem("aska:grid-density", next);
-  };
 
   useDragDropMonitor({
     onDragStart(event) {
@@ -432,7 +421,7 @@ export function CollectionGridView({
           ) : (
             <div ref={contentRef} className="w-full">
               <div className="pointer-events-none sticky top-5 z-10 flex h-0 justify-end">
-                <GridDensityControl value={density} onChange={setGridDensity} />
+                <GridDensityControl value={density} onChange={setDensity} />
               </div>
               <div className="mb-3 flex min-h-[30px] items-center gap-2 pr-64">
                 <h2
@@ -545,86 +534,6 @@ export function CollectionGridView({
         dropTargetRectRef={dropTargetRectRef}
       />
     </>
-  );
-}
-
-function GridDensityControl({
-  value,
-  onChange,
-}: {
-  value: GridDensity;
-  onChange: (value: GridDensity) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [thumb, setThumb] = useState<{ left: number; width: number }>();
-  const reduceMotion = useReducedMotion();
-
-  useIsomorphicLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const update = () => {
-      const active = container.querySelector<HTMLButtonElement>(
-        'button[aria-pressed="true"]',
-      );
-      if (active) {
-        setThumb({ left: active.offsetLeft, width: active.offsetWidth });
-      }
-    };
-    update();
-    const observer = new ResizeObserver(update);
-    container
-      .querySelectorAll("button")
-      .forEach((button) => observer.observe(button));
-    return () => observer.disconnect();
-  }, [value]);
-
-  return (
-    <div
-      ref={containerRef}
-      data-grid-control
-      role="group"
-      aria-label="Grid size"
-      className={cn(
-        "pointer-events-auto relative ml-auto flex h-fit items-center rounded-lg border border-border/70 p-0.5 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-background/50",
-        GLASS_FRAME_CLASS,
-        "ring-0",
-      )}
-    >
-      {thumb ? (
-        <motion.span
-          aria-hidden="true"
-          initial={false}
-          animate={{ x: thumb.left, width: thumb.width }}
-          transition={
-            reduceMotion
-              ? { duration: 0 }
-              : { type: "spring", stiffness: 500, damping: 35, mass: 0.9 }
-          }
-          className="pointer-events-none absolute inset-y-0.5 left-0 rounded-md bg-foreground shadow-sm"
-        />
-      ) : null}
-      {(
-        Object.entries(GRID_DENSITIES) as [
-          GridDensity,
-          (typeof GRID_DENSITIES)[GridDensity],
-        ][]
-      ).map(([option, preset]) => (
-        <button
-          key={option}
-          type="button"
-          aria-pressed={value === option}
-          onClick={() => onChange(option)}
-          className={cn(
-            "relative rounded-md px-2.5 py-1 text-xs transition-colors",
-            value === option
-              ? "text-background"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {preset.label}
-        </button>
-      ))}
-    </div>
   );
 }
 

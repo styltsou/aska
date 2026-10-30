@@ -1,8 +1,12 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { useInboxContents, useMarkInboxSeen } from "@/api/collection";
+import {
+  fetchInboxContents,
+  useInboxGrid,
+  useMarkInboxSeen,
+} from "@/api/collection";
 import {
   type ColorSearchResult,
   useColorImageSearch,
@@ -16,11 +20,13 @@ import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { useSessionStore } from "@/store";
 import type { Asset, ImageAsset } from "@/types/asset";
 import { ResourceLoadError } from "@/components/resource-load-error";
+import { useGridDensity } from "@/components/grid-density";
 import {
   useWorkspacePeek,
   type BoardShowRequest,
 } from "@/components/app-shell/workspace-peek";
 import { useWorkspaceAssetView } from "@/components/app-shell/workspace-asset-view";
+import { isPersistedSelectableAsset } from "@/lib/selection";
 
 const EMPTY_ASSETS: Asset[] = [];
 const StableAssetBoard = memo(AssetBoard);
@@ -52,11 +58,22 @@ function InboxPage() {
   );
   const selectedAssetTypes =
     filterBar.filterType === "Type" ? (filterBar.selectedAssetTypes ?? []) : [];
-  const { data, isLoading, isFetching, isError, refetch } = useInboxContents(
-    workspaceSlug,
-    selectedAssetTypes,
+  const gridQuery = useInboxGrid(workspaceSlug, selectedAssetTypes);
+  const pages = gridQuery.data?.pages;
+  const data = useMemo(
+    () =>
+      pages?.[0]
+        ? {
+            collection: pages[0].collection,
+            breadcrumbs: pages[0].breadcrumbs,
+            nodes: pages.flatMap((page) => page.nodes),
+          }
+        : undefined,
+    [pages],
   );
+  const { density } = useGridDensity();
   const { mutate: markInboxSeen } = useMarkInboxSeen(workspaceSlug);
+  const didMarkInboxSeen = useRef(false);
   const [focusedShowRequest, setFocusedShowRequest] =
     useState<BoardShowRequest>();
   const selectedColorHexes =
@@ -69,7 +86,10 @@ function InboxPage() {
   );
 
   useEffect(() => {
-    if (data) markInboxSeen();
+    if (data && !didMarkInboxSeen.current) {
+      didMarkInboxSeen.current = true;
+      markInboxSeen();
+    }
   }, [data, markInboxSeen]);
 
   const assets = useMemo(
@@ -90,7 +110,11 @@ function InboxPage() {
   useEffect(() => {
     if (!showRequest || showRequest.scopeKey !== filterScope || !data) return;
     if (!data.nodes.some((node) => node.id === showRequest.assetId)) {
-      if (isFetching) return;
+      if (gridQuery.isFetching) return;
+      if (gridQuery.hasNextPage) {
+        void gridQuery.fetchNextPage();
+        return;
+      }
       toast.error("This asset is no longer at that location.");
       consumeShowRequest(showRequest.id);
       return;
@@ -98,7 +122,15 @@ function InboxPage() {
 
     setFocusedShowRequest(showRequest);
     consumeShowRequest(showRequest.id);
-  }, [consumeShowRequest, data, filterScope, isFetching, showRequest]);
+  }, [
+    consumeShowRequest,
+    data,
+    filterScope,
+    gridQuery.fetchNextPage,
+    gridQuery.hasNextPage,
+    gridQuery.isFetching,
+    showRequest,
+  ]);
 
   const dismissFocusedAsset = useCallback(
     () => setFocusedShowRequest(undefined),
@@ -126,15 +158,30 @@ function InboxPage() {
     (node: { id: string }) => handleOpenAsset(node.id),
     [handleOpenAsset],
   );
+  const handleSelectAll = useCallback(async () => {
+    try {
+      const contents = await fetchInboxContents(
+        workspaceSlug,
+        selectedAssetTypes,
+      );
+      return contents.nodes
+        .map(collectionNodeToAsset)
+        .filter(isPersistedSelectableAsset)
+        .map((asset) => asset.id);
+    } catch {
+      toast.error("Couldn't select all inbox items.");
+      throw new Error("Inbox selection failed");
+    }
+  }, [selectedAssetTypes, workspaceSlug]);
 
-  if (isLoading) return <MasonryGridSkeleton />;
+  if (gridQuery.isLoading) return <MasonryGridSkeleton />;
 
-  if (isError && !data) {
+  if (gridQuery.isError && !data) {
     return (
       <ResourceLoadError
-        isRetrying={isFetching}
+        isRetrying={gridQuery.isFetching}
         resourceName="inbox"
-        onRetry={() => void refetch()}
+        onRetry={() => void gridQuery.refetch()}
       />
     );
   }
@@ -153,6 +200,11 @@ function InboxPage() {
         <StableAssetBoard
           assets={displayAssets}
           inboxContext={inboxContext}
+          density={density}
+          hasMore={!hasResolvedColorSearch && gridQuery.hasNextPage}
+          isLoadingMore={gridQuery.isFetchingNextPage}
+          onLoadMore={() => void gridQuery.fetchNextPage()}
+          onSelectAll={handleSelectAll}
           focusedAssetId={focusedShowRequest?.assetId}
           focusRequestId={focusedShowRequest?.id}
           onDismissFocusedAsset={dismissFocusedAsset}
@@ -179,11 +231,12 @@ function InboxPage() {
             searchStatus={{
               resultCount: hasResolvedColorSearch
                 ? colorSearch.data.results.length
-                : isTypeFilterActive && !isFetching
+                : isTypeFilterActive && !gridQuery.isFetching
                   ? assets.length
                   : undefined,
               isSearching:
-                colorSearch.isSearching || (isTypeFilterActive && isFetching),
+                colorSearch.isSearching ||
+                (isTypeFilterActive && gridQuery.isFetching),
             }}
           />
         )}

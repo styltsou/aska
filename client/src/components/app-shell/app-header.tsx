@@ -18,6 +18,8 @@ import { titleFromSlug } from "@/lib/slug";
 import { getCollectionViewScope, usePersistedStore } from "@/store";
 import { makeBoardKey } from "@/components/canvas/canvas-key";
 import { CollectionViewMenu } from "@/components/collection-view-menu";
+import { GridDensityControl } from "@/components/grid-density-control";
+import { useGridDensity } from "@/components/grid-density";
 import { useCommittedPathname } from "./use-committed-pathname";
 import { mergeWorkspaceOverlaySearch } from "@/lib/workspace-overlay-search";
 import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";
@@ -140,12 +142,16 @@ export function AppHeader() {
   const setCollectionView = usePersistedStore(
     (state) => state.setCollectionView,
   );
+  const { density, setDensity } = useGridDensity();
 
   return (
     <header className="sticky top-0 z-20 flex h-12 min-w-0 shrink-0 items-center gap-2 bg-sidebar px-2 transition-[height] duration-120 ease-linear group-has-[[data-slot=sidebar][data-state=collapsed]]/sidebar-wrapper:h-12 md:h-14 md:px-0 md:group-data-[canvas-sidebar=floating]/sidebar-wrapper:h-12">
       <SidebarTrigger />
       <AppBreadcrumbs />
       <div className="ml-auto flex items-center gap-2">
+        {collectionsSegment === "inbox" ? (
+          <GridDensityControl value={density} onChange={setDensity} />
+        ) : null}
         {isCollectionsView ? (
           <CreateCollectionDialog workspaceSlug={workspaceSlug}>
             <Button type="button" size="sm">

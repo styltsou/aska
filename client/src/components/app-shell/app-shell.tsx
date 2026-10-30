@@ -32,6 +32,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isBoardView =
     pathnameSegments[1] === "collections" && pathnameSegments.length >= 3;
   const isWorkspaceOverview = pathnameSegments.length === 1;
+  const isInbox = pathnameSegments[1] === "inbox";
+  const isScrollablePage = isWorkspaceOverview || isInbox;
   const { workspaceSlug, collectionSlug, folderPath } =
     getSidebarCollectionLocation(pathname);
   const collectionViewScope = getCollectionViewScope(
@@ -87,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className={cn(
                 "min-h-0 md:mb-[var(--app-shell-inset)]",
                 isBoardView && "h-[calc(100svh-0.5rem)] overflow-hidden",
-                isWorkspaceOverview &&
+                isScrollablePage &&
                   "h-svh overflow-hidden md:h-[calc(100svh-var(--app-shell-inset))]",
                 isBoardView && pexelsBrowserOpen ? "md:mr-0" : "md:mr-2",
                 "md:mr-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--app-shell-inset))] md:transition-[margin-right] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none",
@@ -102,11 +104,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       ? "min-h-0 overflow-hidden rounded-xl bg-card"
                       : cn(
                           "gap-4 rounded-xl bg-card p-3 shadow-sm",
-                          isWorkspaceOverview && "min-h-0 overflow-hidden",
+                          isScrollablePage && "min-h-0 overflow-hidden",
                         ),
                   )}
                 >
-                  {isWorkspaceOverview ? (
+                  {isScrollablePage ? (
                     <ScrollArea
                       className="-mr-2 min-h-0 min-w-0 flex-1"
                       contentClassName="flex min-h-full flex-col pr-2"

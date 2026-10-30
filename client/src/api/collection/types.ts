@@ -768,3 +768,11 @@ export type InboxContentsResponse = Omit<
   CollectionContentsResponse,
   "canvasObjects"
 >;
+
+export type InboxGridResponse = Pick<
+  InboxContentsResponse,
+  "collection" | "breadcrumbs"
+> & {
+  nodes: CollectionNode[];
+  nextCursor: string | null;
+};

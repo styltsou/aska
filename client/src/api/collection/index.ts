@@ -16,6 +16,7 @@ export {
   useFlattenFolder,
   useCollectionContents,
   useInboxContents,
+  useInboxGrid,
   useMarkInboxSeen,
   useUploadInboxImages,
   useUploadLocalImages,
@@ -31,6 +32,7 @@ export {
 } from "./hooks";
 export { useMoveCollectionNodesToFolder } from "./use-move-collection-node";
 export { useUpdateCanvasItemsGeometry } from "./use-update-canvas-items-geometry";
+export { fetchInboxContents } from "./fetchers";
 export {
   useCreateCanvasArrow,
   useCreateCanvasText,
@@ -86,6 +88,7 @@ export type {
   FlattenFolderResponse,
   FolderChildPreview,
   InboxContentsResponse,
+  InboxGridResponse,
   BoardInsertionPlacement,
   BoardPosition,
   BoardVisibleBounds,

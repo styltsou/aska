@@ -702,6 +702,13 @@ export const InboxContentsResponseSchema =
   });
 
 export type InboxContentsResponse = z.infer<typeof InboxContentsResponseSchema>;
+export type InboxGridResponse = Pick<
+  InboxContentsResponse,
+  "collection" | "breadcrumbs"
+> & {
+  nodes: CollectionNode[];
+  nextCursor: string | null;
+};
 
 const AssetNodeIdSchema = z
   .string()
@@ -921,6 +928,15 @@ export const CollectionContentsQuerySchema = ContentTypeQuerySchema.extend({
 });
 
 export const CollectionGridQuerySchema = CollectionContentsQuerySchema.extend({
+  cursor: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]+$/)
+    .max(128)
+    .optional(),
+  limit: z.coerce.number().int().min(12).max(100).default(48),
+});
+
+export const InboxGridQuerySchema = ContentTypeQuerySchema.extend({
   cursor: z
     .string()
     .regex(/^[A-Za-z0-9_-]+$/)
