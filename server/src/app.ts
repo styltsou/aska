@@ -25,13 +25,7 @@ baseApp.use(
   cors({
     origin: (origin) =>
       env.CORS_ORIGINS.includes(origin) ? origin : undefined,
-    allowHeaders: [
-      "Content-Type",
-      "Authorization",
-      "Baggage",
-      "Sentry-Trace",
-      "X-Inbox-Visible",
-    ],
+    allowHeaders: ["Content-Type", "Authorization", "Baggage", "Sentry-Trace"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     exposeHeaders: ["Content-Length", "X-Request-Id"],
     maxAge: 600,
@@ -50,11 +44,7 @@ baseApp.use("/api/v1/workspace/:workspaceSlug/inbox/*", async (c, next) => {
       c.req.path,
     );
   await next();
-  if (
-    !isCreation ||
-    c.req.header("X-Inbox-Visible") !== "1" ||
-    c.res.status >= 400
-  )
+  if (!isCreation || c.req.query("inboxVisible") !== "1" || c.res.status >= 400)
     return;
   const userId = c.get("userId");
   const workspaceSlug = c.req.param("workspaceSlug");

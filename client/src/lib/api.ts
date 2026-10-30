@@ -43,9 +43,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     options?.method === "POST" &&
     inboxPath &&
     typeof window !== "undefined" &&
-    window.location.pathname.startsWith(`/${inboxPath[1]}/inbox`)
+    (window.location.pathname === `/${inboxPath[1]}/inbox` ||
+      window.location.pathname.startsWith(`/${inboxPath[1]}/inbox/`))
   ) {
-    headers.set("X-Inbox-Visible", "1");
+    path += `${path.includes("?") ? "&" : "?"}inboxVisible=1`;
   }
   const res = await fetch(`${SERVER_URL}${path}`, {
     credentials: "include",
