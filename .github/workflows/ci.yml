@@ -220,8 +220,9 @@ jobs:
           resource_id="$(aws apigateway get-resources --rest-api-id 77do6h6v54 --query 'items[?path==`/health`].id | [0]' --output text)"
           aws apigateway get-integration --rest-api-id 77do6h6v54 --resource-id "$resource_id" --http-method GET
           aws lambda get-policy --function-name "$function_name"
-          aws lambda get-function-configuration --function-name "$function_name"
           log_group="$(aws lambda get-function-configuration --function-name "$function_name" --query 'LoggingConfig.LogGroup' --output text)"
+          aws apigateway get-account --query '{cloudwatchRoleArn:cloudwatchRoleArn}'
+          aws apigateway get-stage --rest-api-id 77do6h6v54 --stage-name dev --query '{stageName:stageName,accessLogSettings:accessLogSettings,methodSettings:methodSettings}'
           bun --cwd server -e 'import { LambdaClient, InvokeWithResponseStreamCommand } from "@aws-sdk/client-lambda"; const response = await new LambdaClient({}).send(new InvokeWithResponseStreamCommand({ FunctionName: process.argv[1], Payload: new TextEncoder().encode("{}") })); for await (const event of response.EventStream) { if (event.PayloadChunk) process.stdout.write(new TextDecoder().decode(event.PayloadChunk.Payload)); if (event.InvokeComplete) console.log(event.InvokeComplete); }' "$function_name" || true
           aws apigateway test-invoke-method --rest-api-id 77do6h6v54 --resource-id "$resource_id" --http-method GET
           curl --silent --show-error --no-buffer "https://aska-api.styltsou.com/ai/health?ci-probe=${GITHUB_SHA}" || true
