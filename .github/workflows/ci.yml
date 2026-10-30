@@ -213,23 +213,17 @@ jobs:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SENTRY_RELEASE: aska@${{ github.sha }}
-      - name: Diagnose AI stream Lambda
+      - name: Smoke test AI streaming API
         run: |
-          function_name="$(aws lambda list-functions --query 'Functions[?contains(FunctionName, `AiApiRoute`)].FunctionName | [0]' --output text)"
-          test "$function_name" != "None"
-          resource_id="$(aws apigateway get-resources --rest-api-id 77do6h6v54 --query 'items[?path==`/health`].id | [0]' --output text)"
-          aws apigateway get-integration --rest-api-id 77do6h6v54 --resource-id "$resource_id" --http-method GET
-          aws lambda get-policy --function-name "$function_name"
-          log_group="$(aws lambda get-function-configuration --function-name "$function_name" --query 'LoggingConfig.LogGroup' --output text)"
-          aws apigateway get-account --query '{cloudwatchRoleArn:cloudwatchRoleArn}'
-          aws apigateway get-stage --rest-api-id 77do6h6v54 --stage-name dev --query '{stageName:stageName,accessLogSettings:accessLogSettings,methodSettings:methodSettings}'
-          aws apigateway update-stage --rest-api-id 77do6h6v54 --stage-name dev --patch-operations 'op=replace,path=/accessLogSettings/format,value=$context.requestId $context.status $context.integrationErrorMessage $context.error.message $context.integration.status' --query 'accessLogSettings'
-          bun --cwd server -e 'import { LambdaClient, InvokeWithResponseStreamCommand } from "@aws-sdk/client-lambda"; const response = await new LambdaClient({}).send(new InvokeWithResponseStreamCommand({ FunctionName: process.argv[1], Payload: new TextEncoder().encode("{}") })); for await (const event of response.EventStream) { if (event.PayloadChunk) process.stdout.write(new TextDecoder().decode(event.PayloadChunk.Payload)); if (event.InvokeComplete) console.log(event.InvokeComplete); }' "$function_name" || true
-          aws apigateway test-invoke-method --rest-api-id 77do6h6v54 --resource-id "$resource_id" --http-method GET
-          curl --silent --show-error --no-buffer "https://aska-api.styltsou.com/ai/health?ci-probe=${GITHUB_SHA}" || true
-          sleep 20
-          aws logs tail /aws/vendedlogs/apis/aska-dev-AiApi-cuozfaou --since 20m || true
-          aws logs tail "$log_group" --since 5m || true
+          ai_url="https://aska-api.styltsou.com/ai"
+          status="$(curl --silent --show-error --output /tmp/ai-health.txt --write-out '%{http_code}' "$ai_url/health")"
+          test "$status" = "200"
+          test "$(cat /tmp/ai-health.txt)" = "ok"
+          status="$(curl --silent --show-error --output /tmp/ai-options.txt --dump-header /tmp/ai-options.headers --write-out '%{http_code}' --request OPTIONS --header 'Origin: http://localhost:5173' --header 'Access-Control-Request-Method: POST' "$ai_url/stream")"
+          test "$status" = "200"
+          grep -iq '^access-control-allow-origin: http://localhost:5173' /tmp/ai-options.headers
+          status="$(curl --silent --show-error --output /tmp/ai-unauthorized.txt --write-out '%{http_code}' --request POST --header 'Origin: http://localhost:5173' --header 'Content-Type: application/json' --data '{"prompt":"test","note":""}' "$ai_url/stream")"
+          test "$status" = "401"
       - name: Queue missing video storyboards
         run: bunx sst shell --stage dev -- bun run --cwd server backfill:video-storyboards --enqueue --wait
         env:
