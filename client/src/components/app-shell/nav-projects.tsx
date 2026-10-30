@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import "./nav-projects.css";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -45,16 +46,50 @@ export function NavProjects({ collections, isLoading }: NavProjectsProps) {
       <SidebarGroupLabel>Collections</SidebarGroupLabel>
       <SidebarMenu className="gap-1">
         {collections.map((item) => (
-          <SidebarMenuItem key={item.name}>
-            <SidebarMenuButton data-active={item.isActive} render={item.link}>
-              <span>{item.name}</span>
-              <span className="ml-auto text-xs text-sidebar-foreground/40">
-                {item.count}
-              </span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          <CollectionItem key={item.name} item={item} />
         ))}
       </SidebarMenu>
     </SidebarGroup>
+  );
+}
+
+function CollectionItem({ item }: { item: NavCollection }) {
+  function measureOverflow(event: React.SyntheticEvent<HTMLElement>) {
+    const row = event.currentTarget;
+    const viewport = row.querySelector<HTMLElement>(
+      ".collection-name-viewport",
+    );
+    const name = row.querySelector<HTMLElement>(".collection-name-text");
+    if (!viewport || !name) return;
+
+    const distance = Math.max(0, name.offsetWidth - viewport.clientWidth + 8);
+    const overflowing = distance > 0;
+    row.style.setProperty("--collection-name-distance", `${distance}px`);
+    row.style.setProperty(
+      "--collection-name-duration",
+      `${Math.max(0.6, distance / 50)}s`,
+    );
+    row.toggleAttribute("data-name-overflow", overflowing);
+  }
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        data-active={item.isActive}
+        render={item.link}
+        onMouseEnter={measureOverflow}
+        onFocus={measureOverflow}
+        title={item.name}
+      >
+        <span className="collection-name-viewport min-w-0 flex-1 overflow-hidden">
+          <span className="collection-name-text block w-max whitespace-nowrap">
+            {item.name}
+          </span>
+        </span>
+        <span className="shrink-0 text-xs text-sidebar-foreground/40">
+          {item.count}
+        </span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   );
 }

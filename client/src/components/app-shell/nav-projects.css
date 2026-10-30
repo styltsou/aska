@@ -1,0 +1,19 @@
+.collection-name-viewport {
+  mask-image: linear-gradient(to right, #000 calc(100% - 12px), transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-name-overflow]:is(:hover, :focus-visible) .collection-name-text {
+    animation: collection-name-scroll var(--collection-name-duration)
+      ease-in-out 150ms forwards;
+  }
+}
+
+@keyframes collection-name-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-1 * var(--collection-name-distance)));
+  }
+}
