@@ -215,7 +215,7 @@ jobs:
           SENTRY_RELEASE: aska@${{ github.sha }}
       - name: Smoke test AI streaming API
         run: |
-          ai_url="https://aska-api.styltsou.com/ai"
+          ai_url="https://aska-api.styltsou.com/api/ai"
           status="$(curl --silent --show-error --output /tmp/ai-health.txt --write-out '%{http_code}' "$ai_url/health")"
           test "$status" = "200"
           test "$(cat /tmp/ai-health.txt)" = "ok"

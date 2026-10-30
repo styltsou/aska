@@ -323,19 +323,11 @@ export default $config({
         ...sentryEnvironment,
       },
     });
-    // REST API response streaming shares the existing API hostname under its
-    // own mapping. API Gateway strips `/ai` before matching this route.
+    // API Gateway strips the mapping path before matching the streaming route.
+    // Keep it below /api so the browser sends Better Auth's path-scoped cookie.
     const aiApi = new sst.aws.ApiGatewayV1("AiApi", {
       endpoint: { type: "regional" },
       cors: false,
-      ...(stableCloudDomains
-        ? {
-            domain: {
-              nameId: api.nodes.domainName.id,
-              path: "ai",
-            },
-          }
-        : {}),
     });
     aiApi.route("ANY /stream", {
       handler: "server/src/ai-stream-lambda.handler",
@@ -361,9 +353,21 @@ export default $config({
       runtime: "nodejs22.x",
       streaming: true,
     });
-    // ApiGatewayV1 requires an explicit deployment after its routes are added;
-    // this also creates the stage and custom-domain base-path mapping.
+    // ApiGatewayV1 requires an explicit deployment after its routes are added.
     aiApi.deploy();
+    // Multi-level mappings require the V2 API mapping resource, even for a
+    // REST API. The V1 component only creates single-level base-path mappings.
+    const aiApiMapping = stableCloudDomains
+      ? new aws.apigatewayv2.ApiMapping("AiApiMapping", {
+          apiId: aiApi.nodes.api.id,
+          domainName: api.nodes.domainName.id,
+          stage: aiApi.nodes.stage!.stageName,
+          apiMappingKey: "api/ai",
+        })
+      : undefined;
+    const aiApiUrl = aiApiMapping
+      ? $interpolate`https://${api.nodes.domainName.domainName}/${aiApiMapping.apiMappingKey}/`
+      : aiApi.url;
     new sst.aws.CronV2("MediaCleanup", {
       schedule: "rate(5 minutes)",
       function: {
@@ -575,7 +579,7 @@ export default $config({
         : {}),
       environment: {
         VITE_SERVER_URL: api.url,
-        VITE_AI_STREAM_URL: $interpolate`${aiApi.url}stream`,
+        VITE_AI_STREAM_URL: $interpolate`${aiApiUrl}stream`,
         VITE_SENTRY_DSN: sentryDsn.value,
         VITE_SENTRY_ENVIRONMENT: $app.stage,
         VITE_SENTRY_TRACES_SAMPLE_RATE:
@@ -587,7 +591,7 @@ export default $config({
     });
     return {
       api: api.url,
-      aiApi: aiApi.url,
+      aiApi: aiApiUrl,
       client: client.url,
       assetsBucket: assets.name,
       media: media?.domainUrl,
