@@ -112,6 +112,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <ScrollArea
                       className="-mr-2 min-h-0 min-w-0 flex-1"
                       contentClassName="flex min-h-full flex-col pr-2"
+                      viewportClassName={
+                        isInbox
+                          ? "outline-none focus-visible:outline-none"
+                          : undefined
+                      }
                     >
                       {children}
                     </ScrollArea>
