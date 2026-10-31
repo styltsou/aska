@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from "react";
 
 import { getCanvasDropFanOffset } from "@/components/canvas/canvas-drop-stack";
 import { BOARD_CARD_WIDTH } from "@/components/canvas/canvas-node-layout";
+import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { hasSelectionModifier } from "@/lib/selection";
 import { cn } from "@/lib/utils";
 import type { FolderAsset, FolderAssetPreview } from "@/types/asset";
@@ -199,20 +200,42 @@ function FolderPreviewCard({
     return (
       <div
         className={cn(
-          "absolute top-1/2 left-1/2 w-max max-w-[65cqw] overflow-hidden rounded-lg bg-card ring-1 ring-border/30",
+          "absolute top-1/2 left-1/2 w-max max-w-[65cqw] overflow-hidden rounded-lg",
           motionEnabled &&
             "transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none",
         )}
         style={positionStyle}
       >
         <img
+          src={
+            preview.blurDataURL && preview.width && preview.height
+              ? preview.blurDataURL
+              : preview.url
+          }
+          alt=""
+          aria-hidden="true"
+          width={preview.width}
+          height={preview.height}
+          loading="lazy"
+          className="block h-auto max-h-[52cqh] w-auto max-w-[65cqw] opacity-0"
+          style={
+            preview.blurDataURL && preview.width && preview.height
+              ? {
+                  width: preview.width,
+                  aspectRatio: `${preview.width} / ${preview.height}`,
+                }
+              : undefined
+          }
+        />
+        <ProgressiveImage
           src={preview.url}
+          blurDataURL={preview.blurDataURL}
           alt=""
           width={preview.width}
           height={preview.height}
           loading="lazy"
           decoding="async"
-          className="block h-auto max-h-[52cqh] w-auto max-w-[65cqw]"
+          className="absolute inset-0 size-full object-fill"
         />
         {preview.type === "video" ? (
           <span className="absolute inset-0 flex items-center justify-center">

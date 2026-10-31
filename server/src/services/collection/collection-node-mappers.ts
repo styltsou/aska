@@ -57,6 +57,8 @@ export function toFolderPreview(
       assetId: `image-${row.assetId}`,
       type: "image",
       url: previewUrl,
+      width: (variants?.preview ?? variants?.original)?.width,
+      height: (variants?.preview ?? variants?.original)?.height,
       blurDataURL: variants?.blurDataURL,
     };
   }

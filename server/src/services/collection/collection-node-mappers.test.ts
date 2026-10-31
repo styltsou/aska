@@ -60,6 +60,9 @@ describe("collection node mappers", () => {
       assetId: "image-7",
       type: "image",
       url: "https://example.test/preview.webp",
+      width: 200,
+      height: 100,
+      blurDataURL: "data:image/webp;base64,AA==",
     });
     expect(
       toFolderPreview(

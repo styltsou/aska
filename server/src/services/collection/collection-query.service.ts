@@ -268,6 +268,8 @@ export class CollectionQueryService {
             assetId: `image-${row.assetId}`,
             type: "image",
             url,
+            width: (variants?.preview ?? variants?.original)?.width,
+            height: (variants?.preview ?? variants?.original)?.height,
             blurDataURL: variants?.blurDataURL,
           };
       } else if (row.assetType === "video") {
@@ -279,6 +281,7 @@ export class CollectionQueryService {
             url: video.posterPreviewUrl,
             width: video.poster?.preview.width,
             height: video.poster?.preview.height,
+            blurDataURL: video.poster?.blurDataURL,
             durationSeconds: video.durationSeconds,
           };
       } else if (row.assetType === "note") {
@@ -638,6 +641,7 @@ export class CollectionQueryService {
             url: video.posterPreviewUrl,
             width: video.poster?.preview.width,
             height: video.poster?.preview.height,
+            blurDataURL: video.poster?.blurDataURL,
             durationSeconds: video.durationSeconds,
           }
         : toFolderPreview(row, imageVariants, resourceMedia, mentionColors);

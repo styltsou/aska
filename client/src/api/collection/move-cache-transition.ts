@@ -76,6 +76,7 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
       url: node.posterUrl ?? undefined,
       width: node.width ?? undefined,
       height: node.height ?? undefined,
+      blurDataURL: node.posterBlurDataURL,
       title: node.title,
     };
   }

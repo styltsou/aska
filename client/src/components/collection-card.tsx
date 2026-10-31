@@ -460,6 +460,15 @@ function CollectionPreviewCard({
         className="pointer-events-auto absolute w-max max-w-[62cqw] overflow-hidden rounded-lg"
         style={positionStyle}
       >
+        <img
+          src={preview.url}
+          alt=""
+          aria-hidden="true"
+          width={preview.width}
+          height={preview.height}
+          loading="lazy"
+          className="block h-auto max-h-[75cqh] w-auto max-w-[62cqw] opacity-0"
+        />
         <ProgressiveImage
           src={preview.url}
           blurDataURL={preview.blurDataURL}
@@ -468,7 +477,7 @@ function CollectionPreviewCard({
           height={preview.height}
           loading="lazy"
           decoding="async"
-          className="block h-auto max-h-[75cqh] w-auto max-w-[62cqw] object-contain"
+          className="absolute inset-0 size-full object-contain"
         />
         {preview.type === "video" && preview.durationSeconds ? (
           <span
