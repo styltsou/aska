@@ -42,7 +42,7 @@ export function GridDensityControl({
       role="group"
       aria-label="Grid size"
       className={cn(
-        "relative flex h-fit items-center rounded-lg border border-border/70 p-0.5 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-background/50",
+        "pointer-events-auto relative flex h-fit items-center rounded-lg border border-border/70 p-0.5 before:pointer-events-none before:absolute before:inset-0 before:rounded-[inherit] before:bg-background/50",
         GLASS_FRAME_CLASS,
         "ring-0",
       )}
