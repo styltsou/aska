@@ -123,7 +123,7 @@ export function ColorAssetCard({
           {label}
         </span>
         {name && !asset.gradient && hex ? (
-          <span className="ml-auto shrink-0 font-mono text-sm font-semibold tracking-tight text-sidebar-foreground/70">
+          <span className="ml-auto shrink-0 font-mono text-[13px] font-normal tracking-wide text-sidebar-foreground/60">
             {hex}
           </span>
         ) : null}

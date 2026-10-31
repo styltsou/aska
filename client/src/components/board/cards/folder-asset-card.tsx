@@ -257,6 +257,7 @@ function FolderPreviewCard({
           hex={preview.hex}
           gradient={preview.gradient}
           title={preview.title}
+          textScale={0.75}
         />
       ) : preview.type === "video" ? (
         <div className="flex size-full items-center justify-center bg-sidebar-foreground/5">
