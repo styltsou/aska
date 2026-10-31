@@ -10,6 +10,7 @@ import {
   refreshLink,
 } from "@/api/collection/fetchers";
 import { collectionQueryKeys } from "@/api/collection/query-keys";
+import { updateCollectionContents } from "@/api/collection/grid-cache";
 import type {
   BoardInsertionPlacement,
   CollectionContentsResponse,
@@ -223,7 +224,7 @@ export function useCreateLink(workspaceSlug: string, collectionSlug: string) {
           [link],
           variables.placement ?? variables.position,
         )[0] ?? null;
-      queryClient.setQueryData<CollectionContentsResponse>(key, (current) =>
+      updateCollectionContents(queryClient, key, (current) =>
         current ? { ...current, nodes: [...current.nodes, link] } : current,
       );
       return {
@@ -241,31 +242,40 @@ export function useCreateLink(workspaceSlug: string, collectionSlug: string) {
     onError: (_error, _variables, context) => {
       if (context) {
         context.oembedController?.abort();
-        queryClient.setQueryData(context.key, context.previous);
+        updateCollectionContents(
+          queryClient,
+          context.key,
+          (current) =>
+            context.previous ??
+            (current
+              ? {
+                  ...current,
+                  nodes: current.nodes.filter((node) => node.id !== context.id),
+                }
+              : current),
+        );
       }
     },
     onSuccess: (data, _variables, context) => {
       if (!context) return;
-      queryClient.setQueryData<CollectionContentsResponse>(
-        context.key,
-        (current) =>
-          current
-            ? {
-                ...current,
-                nodes: current.nodes.map((node) =>
-                  node.type === "link" && node.id === context.id
-                    ? {
-                        ...reconcileOptimisticYouTubeLink(
-                          data.link,
-                          node,
-                          context.id,
-                        ),
-                        position: data.link.position ?? node.position,
-                      }
-                    : node,
-                ),
-              }
-            : current,
+      updateCollectionContents(queryClient, context.key, (current) =>
+        current
+          ? {
+              ...current,
+              nodes: current.nodes.map((node) =>
+                node.type === "link" && node.id === context.id
+                  ? {
+                      ...reconcileOptimisticYouTubeLink(
+                        data.link,
+                        node,
+                        context.id,
+                      ),
+                      position: data.link.position ?? node.position,
+                    }
+                  : node,
+              ),
+            }
+          : current,
       );
       void queryClient.invalidateQueries({
         queryKey: collectionQueryKeys.collections(workspaceSlug),

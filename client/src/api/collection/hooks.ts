@@ -45,6 +45,7 @@ import { calculateNoteMetrics } from "@/lib/note-metrics";
 import type {
   BoardInsertionPlacement,
   CollectionContentsResponse,
+  CollectionGridResponse,
   CollectionImageNode,
   CollectionNode,
   ContentTypeFilter,
@@ -81,6 +82,7 @@ import { readUploadImageDimensions } from "@/lib/upload-image-dimensions";
 import { getVideoUploadPreview } from "@/lib/video-upload-preview";
 import { readRemoteImageDimensions } from "@/lib/remote-image-dimensions";
 import { collectionQueryKeys } from "./query-keys";
+import { updateCollectionContents } from "./grid-cache";
 import { applySavedNoteToWorkspaceAsset } from "./note-asset-cache";
 import type { PeekableAssetResponse } from "./types";
 import { colorSearchQueryKeys } from "@/api/color-search/hooks";
@@ -679,7 +681,8 @@ function updateOptimisticImage(
   imageId: string,
   update: Partial<Extract<CollectionNode, { type: "image" }>>,
 ) {
-  queryClient.setQueryData<CollectionContentsResponse>(
+  updateCollectionContents(
+    queryClient,
     collectionQueryKeys.contents(workspaceSlug, collectionSlug, folderPath),
     (current) => {
       if (!current) return current;
@@ -911,7 +914,9 @@ export function useCreateFolder(workspaceSlug: string, collectionSlug: string) {
         position: null,
       };
       const position = reserveNodePositions(
-        current?.nodes ?? [],
+        current?.nodes.filter(
+          (node) => !node.id.startsWith("folder-optimistic-"),
+        ) ?? [],
         [placeholder],
         placement ?? data.position,
       )[0];
@@ -920,25 +925,73 @@ export function useCreateFolder(workspaceSlug: string, collectionSlug: string) {
         position,
       });
     },
-    onSuccess: (data, variables) => {
-      queryClient.setQueryData<CollectionContentsResponse>(
+    onMutate: (variables) => {
+      const key = collectionQueryKeys.contents(
+        workspaceSlug,
+        collectionSlug,
+        variables.parentFolderPath,
+      );
+      const id = `folder-optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const folder: CollectionNode = {
+        id,
+        type: "folder",
+        name: variables.name,
+        slug: id,
+        count: 0,
+        folderCount: 0,
+        previews: [],
+        createdAt: new Date().toISOString(),
+        position: null,
+      };
+      folder.position =
+        reserveNodePositions(
+          queryClient.getQueryData<CollectionContentsResponse>(key)?.nodes ??
+            [],
+          [folder],
+          variables.placement ?? variables.position,
+        )[0] ?? null;
+      updateCollectionContents(
+        queryClient,
+        key,
+        (current) =>
+          current && { ...current, nodes: [...current.nodes, folder] },
+      );
+      return { key, id };
+    },
+    onError: (_error, _variables, context) => {
+      if (context)
+        updateCollectionContents(
+          queryClient,
+          context.key,
+          (current) =>
+            current && {
+              ...current,
+              nodes: current.nodes.filter((node) => node.id !== context.id),
+            },
+        );
+    },
+    onSuccess: (data, variables, context) => {
+      updateCollectionContents(
+        queryClient,
         collectionQueryKeys.contents(
           workspaceSlug,
           collectionSlug,
           variables.parentFolderPath,
         ),
         (current) => {
+          if (!current) return current;
           if (
-            !current ||
             current.nodes.some((node) => node.id === `folder-${data.folder.id}`)
-          ) {
-            return current;
-          }
+          )
+            return {
+              ...current,
+              nodes: current.nodes.filter((node) => node.id !== context?.id),
+            };
 
           return {
             ...current,
             nodes: [
-              ...current.nodes,
+              ...current.nodes.filter((node) => node.id !== context?.id),
               {
                 id: `folder-${data.folder.id}`,
                 type: "folder",
@@ -1028,17 +1081,14 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
           variables.placement ?? variables.position,
         )[0] ?? null;
 
-      queryClient.setQueryData<CollectionContentsResponse>(
-        contentsKey,
-        (current) => {
-          if (!current) return current;
+      updateCollectionContents(queryClient, contentsKey, (current) => {
+        if (!current) return current;
 
-          return {
-            ...current,
-            nodes: [...current.nodes, optimisticNote],
-          };
-        },
-      );
+        return {
+          ...current,
+          nodes: [...current.nodes, optimisticNote],
+        };
+      });
       updateCollectionAssetCount(queryClient, workspaceSlug, collectionSlug, 1);
       updateFolderAncestorCounts(
         queryClient,
@@ -1060,7 +1110,20 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
     onError: (_error, _variables, context) => {
       if (!context) return;
 
-      queryClient.setQueryData(context.contentsKey, context.previousContents);
+      updateCollectionContents(
+        queryClient,
+        context.contentsKey,
+        (current) =>
+          context.previousContents ??
+          (current
+            ? {
+                ...current,
+                nodes: current.nodes.filter(
+                  (node) => node.id !== context.optimisticId,
+                ),
+              }
+            : current),
+      );
       queryClient.setQueryData(
         collectionQueryKeys.collections(workspaceSlug),
         context.previousCollections,
@@ -1078,7 +1141,8 @@ export function useCreateNote(workspaceSlug: string, collectionSlug: string) {
       );
     },
     onSuccess: (data, variables, context) => {
-      queryClient.setQueryData<CollectionContentsResponse>(
+      updateCollectionContents(
+        queryClient,
         collectionQueryKeys.contents(
           workspaceSlug,
           collectionSlug,
@@ -1212,12 +1276,10 @@ export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
           variables.placement ?? variables.position,
         )[0] ?? null;
 
-      queryClient.setQueryData<CollectionContentsResponse>(
-        contentsKey,
-        (current) =>
-          current
-            ? { ...current, nodes: [...current.nodes, optimisticColor] }
-            : current,
+      updateCollectionContents(queryClient, contentsKey, (current) =>
+        current
+          ? { ...current, nodes: [...current.nodes, optimisticColor] }
+          : current,
       );
       updateCollectionAssetCount(queryClient, workspaceSlug, collectionSlug, 1);
       updateFolderAncestorCounts(
@@ -1240,7 +1302,20 @@ export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
     onError: (_error, variables, context) => {
       if (!context) return;
 
-      queryClient.setQueryData(context.contentsKey, context.previousContents);
+      updateCollectionContents(
+        queryClient,
+        context.contentsKey,
+        (current) =>
+          context.previousContents ??
+          (current
+            ? {
+                ...current,
+                nodes: current.nodes.filter(
+                  (node) => node.id !== context.optimisticId,
+                ),
+              }
+            : current),
+      );
       queryClient.setQueryData(
         collectionQueryKeys.collections(workspaceSlug),
         context.previousCollections,
@@ -1258,7 +1333,8 @@ export function useCreateColor(workspaceSlug: string, collectionSlug: string) {
       );
     },
     onSuccess: (data, variables, context) => {
-      queryClient.setQueryData<CollectionContentsResponse>(
+      updateCollectionContents(
+        queryClient,
         collectionQueryKeys.contents(
           workspaceSlug,
           collectionSlug,
@@ -1342,7 +1418,6 @@ export function useInboxGrid(
 ) {
   const normalizedTypes = types ? [...types].sort() : undefined;
   const typeSignature = normalizedTypes?.join(",");
-  const queryClient = useQueryClient();
   useQuery({ ...inboxContentsQueryOptions(workspaceSlug), enabled: false });
   const gridKey = ["inboxGrid", workspaceSlug, typeSignature ?? ""];
   const query = useInfiniteQuery({
@@ -1363,60 +1438,6 @@ export function useInboxGrid(
     enabled: !!workspaceSlug,
     staleTime: COLLECTION_CONTENTS_STALE_TIME,
   });
-  React.useEffect(() => {
-    const baseKey = collectionQueryKeys.inbox(workspaceSlug);
-    let previous = queryClient.getQueryData<InboxContentsResponse>(baseKey);
-    return queryClient.getQueryCache().subscribe((event) => {
-      if (
-        event.type !== "updated" ||
-        event.query.queryKey.length !== 2 ||
-        event.query.queryKey[0] !== "inboxContents" ||
-        event.query.queryKey[1] !== workspaceSlug
-      )
-        return;
-      const next = event.query.state.data as InboxContentsResponse | undefined;
-      if (event.action.type === "invalidate") {
-        void queryClient.invalidateQueries({
-          queryKey: ["inboxGrid", workspaceSlug],
-        });
-      }
-      if (event.action.type === "success" && event.action.manual && next) {
-        const before = new Map(
-          (previous?.nodes ?? []).map((node) => [node.id, node]),
-        );
-        const after = new Map(next.nodes.map((node) => [node.id, node]));
-        const added = next.nodes.filter(
-          (node) =>
-            !before.has(node.id) &&
-            (!typeSignature || typeSignature.split(",").includes(node.type)),
-        );
-        queryClient.setQueryData<InfiniteData<InboxGridResponse>>(
-          ["inboxGrid", workspaceSlug, typeSignature ?? ""],
-          (current) => {
-            if (!current?.pages.length) return current;
-            const pages = current.pages.map((page) => ({
-              ...page,
-              nodes: page.nodes
-                .filter((node) => !before.has(node.id) || after.has(node.id))
-                .map((node) => after.get(node.id) ?? node),
-            }));
-            const existing = new Set(
-              pages.flatMap((page) => page.nodes.map((node) => node.id)),
-            );
-            pages[0] = {
-              ...pages[0]!,
-              nodes: [
-                ...added.filter((node) => !existing.has(node.id)),
-                ...pages[0]!.nodes,
-              ],
-            };
-            return { ...current, pages };
-          },
-        );
-      }
-      previous = next;
-    });
-  }, [queryClient, workspaceSlug, typeSignature]);
   return query;
 }
 
@@ -2488,7 +2509,7 @@ export function useUploadLocalImages(
       // wait for an in-flight refetch before placing it on the canvas.
       void queryClient.cancelQueries({ queryKey: contentsKey });
 
-      const imageDimensions = await Promise.all(
+      const dimensionsPromise = Promise.all(
         files.map(async (file) => {
           try {
             return await readUploadImageDimensions(file);
@@ -2499,6 +2520,9 @@ export function useUploadLocalImages(
       );
       const previousContents =
         queryClient.getQueryData<CollectionContentsResponse>(contentsKey);
+      const imageDimensions = previousContents
+        ? await dimensionsPromise
+        : files.map(() => UNKNOWN_IMAGE_DIMENSIONS);
       const previousCollections = queryClient.getQueryData<CollectionsData>(
         collectionQueryKeys.collections(workspaceSlug),
       );
@@ -2525,17 +2549,30 @@ export function useUploadLocalImages(
         image.position = positions[index] ?? null;
       }
 
-      queryClient.setQueryData<CollectionContentsResponse>(
-        contentsKey,
-        (current) => {
-          if (!current) return current;
+      updateCollectionContents(queryClient, contentsKey, (current) => {
+        if (!current) return current;
 
-          return {
-            ...current,
-            nodes: replaceCollectionNodes(current.nodes, optimisticImages),
-          };
-        },
-      );
+        return {
+          ...current,
+          nodes: replaceCollectionNodes(current.nodes, optimisticImages),
+        };
+      });
+      if (!previousContents) {
+        const dimensions = await dimensionsPromise;
+        for (const [index, image] of optimisticImages.entries()) {
+          const size = dimensions[index]!;
+          image.width = size.width;
+          image.height = size.height;
+          updateOptimisticImage(
+            queryClient,
+            workspaceSlug,
+            collectionSlug,
+            parentFolderPath,
+            image.id,
+            size,
+          );
+        }
+      }
       if (optimisticImages.length > 1) {
         const placedImages = optimisticImages.filter(
           (image) => image.position !== null,
@@ -2634,17 +2671,15 @@ export function useUploadLocalImages(
             localPreviewUrl: optimisticImage.previewObjectUrl,
           };
           images.push(image);
-          queryClient.setQueryData<CollectionContentsResponse>(
-            contentsKey,
-            (current) =>
-              !current
-                ? current
-                : {
-                    ...current,
-                    nodes: current.nodes.map((node) =>
-                      node.id === optimisticImage.id ? image : node,
-                    ),
-                  },
+          updateCollectionContents(queryClient, contentsKey, (current) =>
+            !current
+              ? current
+              : {
+                  ...current,
+                  nodes: current.nodes.map((node) =>
+                    node.id === optimisticImage.id ? image : node,
+                  ),
+                },
           );
           const preview: FolderChildPreview = {
             assetId: image.id,
@@ -2678,7 +2713,25 @@ export function useUploadLocalImages(
       } catch (error) {
         toast.error("Upload failed", { id: toastId });
         revokeOptimisticImageUrls(optimisticImages);
-        queryClient.setQueryData(contentsKey, previousContents);
+        updateCollectionContents(
+          queryClient,
+          contentsKey,
+          (current) =>
+            previousContents ??
+            (current
+              ? {
+                  ...current,
+                  nodes: current.nodes.filter(
+                    (node) =>
+                      !optimisticImages.some(
+                        (image) =>
+                          image.id === node.id ||
+                          image.serverAssetId === node.id,
+                      ),
+                  ),
+                }
+              : current),
+        );
         queryClient.setQueryData(
           collectionQueryKeys.collections(workspaceSlug),
           previousCollections,
@@ -2930,17 +2983,14 @@ export function useCreateRemoteImage(
       )[0];
       optimisticImage.position = reservedPosition ?? null;
 
-      queryClient.setQueryData<CollectionContentsResponse>(
-        contentsKey,
-        (contents) => {
-          if (!contents) return contents;
+      updateCollectionContents(queryClient, contentsKey, (contents) => {
+        if (!contents) return contents;
 
-          return {
-            ...contents,
-            nodes: [...contents.nodes, optimisticImage],
-          };
-        },
-      );
+        return {
+          ...contents,
+          nodes: [...contents.nodes, optimisticImage],
+        };
+      });
 
       updateCollectionAssetCount(queryClient, workspaceSlug, collectionSlug, 1);
       updateFolderAncestorCounts(
@@ -3005,19 +3055,16 @@ export function useCreateRemoteImage(
           // the optimistic id is replaced by the persisted image id.
           localPreviewUrl: optimisticImage.localPreviewUrl,
         };
-        queryClient.setQueryData<CollectionContentsResponse>(
-          contentsKey,
-          (contents) => {
-            if (!contents) return contents;
+        updateCollectionContents(queryClient, contentsKey, (contents) => {
+          if (!contents) return contents;
 
-            return {
-              ...contents,
-              nodes: contents.nodes.map((node) =>
-                node.id === optimisticImage.id ? completedImage : node,
-              ),
-            };
-          },
-        );
+          return {
+            ...contents,
+            nodes: contents.nodes.map((node) =>
+              node.id === optimisticImage.id ? completedImage : node,
+            ),
+          };
+        });
         const preview: FolderChildPreview = {
           assetId: completedImage.id,
           type: "image",
@@ -3043,19 +3090,16 @@ export function useCreateRemoteImage(
         reconcileCollectionMetadata(queryClient, workspaceSlug);
         return completedImage;
       } catch (error) {
-        queryClient.setQueryData<CollectionContentsResponse>(
-          contentsKey,
-          (contents) => {
-            if (!contents) return contents;
+        updateCollectionContents(queryClient, contentsKey, (contents) => {
+          if (!contents) return contents;
 
-            return {
-              ...contents,
-              nodes: contents.nodes.filter(
-                (node) => node.id !== optimisticImage.id,
-              ),
-            };
-          },
-        );
+          return {
+            ...contents,
+            nodes: contents.nodes.filter(
+              (node) => node.id !== optimisticImage.id,
+            ),
+          };
+        });
         updateCollectionAssetCount(
           queryClient,
           workspaceSlug,
@@ -3301,6 +3345,37 @@ export function useDeleteAsset(workspaceSlug: string) {
       await queryClient.cancelQueries({ queryKey: inboxKey });
       await queryClient.cancelQueries({ queryKey: contentsKey });
 
+      const gridKeys = [
+        ["inboxGrid", workspaceSlug],
+        ["collectionGrid", workspaceSlug],
+      ];
+      await Promise.all(
+        gridKeys.map((queryKey) => queryClient.cancelQueries({ queryKey })),
+      );
+      const previousGrids = gridKeys.flatMap((queryKey) =>
+        queryClient.getQueriesData<
+          InfiniteData<CollectionGridResponse | InboxGridResponse>
+        >({ queryKey }),
+      );
+      for (const [key, grid] of previousGrids) {
+        if (!grid) continue;
+        queryClient.setQueryData(key, {
+          ...grid,
+          pages: grid.pages.map((page) =>
+            "nodes" in page
+              ? {
+                  ...page,
+                  nodes: page.nodes.filter((node) => node.id !== assetId),
+                }
+              : {
+                  ...page,
+                  folders: page.folders.filter((node) => node.id !== assetId),
+                  assets: page.assets.filter((node) => node.id !== assetId),
+                },
+          ),
+        });
+      }
+
       const previousInbox =
         queryClient.getQueryData<InboxContentsResponse>(inboxKey);
       const previousContentsMap = new Map(
@@ -3375,12 +3450,16 @@ export function useDeleteAsset(workspaceSlug: string) {
         previousContentsMap,
         previousCollections,
         previousWorkspace,
+        previousGrids,
         affectedCollectionSlugs,
         removedLocations,
       };
     },
     onError: (_error, _assetId, context) => {
       if (!context) return;
+
+      for (const [key, grid] of context.previousGrids)
+        queryClient.setQueryData(key, grid);
 
       queryClient.setQueryData(context.inboxKey, context.previousInbox);
       for (const [key, data] of context.previousContentsMap) {
@@ -3448,18 +3527,15 @@ export function useDeleteCollectionNode(
       ]);
       let removedNode: CollectionNode | undefined;
 
-      queryClient.setQueryData<CollectionContentsResponse>(
-        contentsKey,
-        (current) => {
-          if (!current) return current;
+      updateCollectionContents(queryClient, contentsKey, (current) => {
+        if (!current) return current;
 
-          removedNode = current.nodes.find((node) => node.id === nodeId);
-          return {
-            ...current,
-            nodes: current.nodes.filter((node) => node.id !== nodeId),
-          };
-        },
-      );
+        removedNode ??= current.nodes.find((node) => node.id === nodeId);
+        return {
+          ...current,
+          nodes: current.nodes.filter((node) => node.id !== nodeId),
+        };
+      });
 
       const optimisticDeletedAssetCount = removedNode
         ? removedNode.type === "folder"
@@ -3499,6 +3575,7 @@ export function useDeleteCollectionNode(
       return {
         contentsKey,
         optimisticDeletedAssetCount,
+        removedNode,
         previousContentsMap,
         previousCollections,
         previousWorkspace,
@@ -3509,6 +3586,18 @@ export function useDeleteCollectionNode(
 
       for (const [key, data] of context.previousContentsMap) {
         queryClient.setQueryData(key, data);
+      }
+      if (
+        context.removedNode &&
+        !queryClient.getQueryData(context.contentsKey)
+      ) {
+        const removedNode = context.removedNode;
+        updateCollectionContents(
+          queryClient,
+          context.contentsKey,
+          (current) =>
+            current && { ...current, nodes: [...current.nodes, removedNode] },
+        );
       }
       queryClient.setQueryData(
         collectionQueryKeys.collections(workspaceSlug),
@@ -3644,6 +3733,68 @@ export function useBulkDelete(workspaceSlug: string) {
       nodeIds: string[];
       collectionSlug?: string;
     }) => bulkDeleteNodes(workspaceSlug, nodeIds, collectionSlug),
+    onMutate: async ({ nodeIds, collectionSlug }) => {
+      const key = collectionSlug
+        ? ["collectionGrid", workspaceSlug, collectionSlug]
+        : ["inboxGrid", workspaceSlug];
+      const contentsKey = collectionSlug
+        ? ["collectionContents", workspaceSlug, collectionSlug]
+        : ["inboxContents", workspaceSlug];
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: key }),
+        queryClient.cancelQueries({ queryKey: contentsKey }),
+      ]);
+      const previous = queryClient.getQueriesData<
+        InfiniteData<CollectionGridResponse | InboxGridResponse>
+      >({ queryKey: key });
+      const deleted = new Set(nodeIds);
+      const previousContents = queryClient.getQueriesData<
+        CollectionContentsResponse | InboxContentsResponse
+      >({ queryKey: contentsKey });
+      queryClient.setQueriesData<
+        CollectionContentsResponse | InboxContentsResponse
+      >(
+        { queryKey: contentsKey },
+        (current) =>
+          current && {
+            ...current,
+            nodes: current.nodes.filter((node) => !deleted.has(node.id)),
+          },
+      );
+      queryClient.setQueriesData<
+        InfiniteData<CollectionGridResponse | InboxGridResponse>
+      >(
+        { queryKey: key },
+        (current) =>
+          current && {
+            ...current,
+            pages: current.pages.map((page) =>
+              "nodes" in page
+                ? {
+                    ...page,
+                    nodes: page.nodes.filter((node) => !deleted.has(node.id)),
+                  }
+                : {
+                    ...page,
+                    folders: page.folders.filter(
+                      (node) => !deleted.has(node.id),
+                    ),
+                    assets: page.assets.filter((node) => !deleted.has(node.id)),
+                  },
+            ),
+          },
+      );
+      return { previous, previousContents, key };
+    },
+    onError: (_error, _variables, context) => {
+      if (!context) return;
+      for (const [key, data] of context.previousContents)
+        queryClient.setQueryData(key, data);
+      for (const [key, data] of context.previous) {
+        queryClient.setQueryData(key, data);
+      }
+      void queryClient.invalidateQueries({ queryKey: context.key });
+    },
     onSuccess: (data) => {
       void queryClient.invalidateQueries({
         queryKey: ["collectionContents", workspaceSlug],

@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ApiError } from "@/lib/api";
 import { initializeSentry } from "@/lib/sentry";
 import { routeTree } from "./routeTree.gen";
+import { synchronizeGridCaches } from "@/api/collection/grid-cache";
 
 import "./index.css";
 
@@ -31,6 +32,7 @@ const queryClient = new QueryClient({
     },
   },
 });
+synchronizeGridCaches(queryClient);
 const router = createRouter({
   routeTree,
   notFoundMode: "root",

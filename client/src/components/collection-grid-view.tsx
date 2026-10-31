@@ -640,7 +640,9 @@ function GridNodeCard({
             : undefined
         }
         onOpenFolder={
-          node.type === "folder" ? () => onOpenFolder(node) : undefined
+          node.type === "folder" && !node.id.startsWith("folder-optimistic-")
+            ? () => onOpenFolder(node)
+            : undefined
         }
         onOpenImage={
           node.type === "image" ? () => onOpenImage(node) : undefined

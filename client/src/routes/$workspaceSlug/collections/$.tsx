@@ -171,39 +171,6 @@ function CollectionPage() {
   const error = useGridPages ? gridQuery.error : canvasError;
   const refetch = useGridPages ? gridQuery.refetch : refetchCanvas;
 
-  useEffect(
-    () =>
-      queryClient.getQueryCache().subscribe((event) => {
-        if (event.type !== "updated") return;
-        const key = event.query.queryKey;
-        if (
-          key[0] === "collectionContents" &&
-          key[1] === workspaceSlug &&
-          key[2] === collectionSlug
-        ) {
-          void queryClient.invalidateQueries({
-            queryKey: ["collectionGrid", workspaceSlug, collectionSlug],
-          });
-        }
-      }),
-    [queryClient, workspaceSlug, collectionSlug],
-  );
-
-  useEffect(
-    () =>
-      queryClient.getMutationCache().subscribe((event) => {
-        if (
-          event.type === "updated" &&
-          event.mutation.state.status === "success"
-        ) {
-          void queryClient.invalidateQueries({
-            queryKey: ["collectionGrid", workspaceSlug, collectionSlug],
-          });
-        }
-      }),
-    [queryClient, workspaceSlug, collectionSlug],
-  );
-
   const cachedCollectionName = queryClient
     .getQueryData<{ collections: Array<{ slug: string; name: string }> }>(
       collectionQueryKeys.collections(workspaceSlug),

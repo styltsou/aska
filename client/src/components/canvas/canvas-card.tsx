@@ -189,7 +189,11 @@ export const CanvasCard = memo(function CanvasCard({
           incomingAssetId={data.incomingDropAssetId}
           incomingAssetCount={data.incomingDropCount}
           isDropTarget={data.isDropTarget}
-          onOpen={() => data.onOpenFolder(node)}
+          onOpen={
+            node.id.startsWith("folder-optimistic-")
+              ? undefined
+              : () => data.onOpenFolder(node)
+          }
           isContextMenuOpen={isContextMenuOpen}
           selected={selected}
         />

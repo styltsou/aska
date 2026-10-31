@@ -30,6 +30,7 @@ export function isPersistedSelectableAsset(asset: SelectionCandidate): boolean {
     asset.uploadStatus !== undefined ||
     (asset.type === "note" && asset.id.startsWith("note-optimistic-")) ||
     (asset.type === "link" && asset.id.startsWith("link-optimistic-")) ||
+    (asset.type === "folder" && asset.id.startsWith("folder-optimistic-")) ||
     (asset.type === "color" && asset.id.startsWith("color-optimistic-"))
   );
 }
