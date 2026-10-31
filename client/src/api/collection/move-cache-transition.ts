@@ -73,7 +73,8 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
     return {
       assetId: node.id,
       type: "video",
-      url: node.posterUrl ?? undefined,
+      url: node.posterPreviewUrl ?? node.posterUrl ?? undefined,
+      displayUrl: node.posterUrl ?? undefined,
       width: node.width ?? undefined,
       height: node.height ?? undefined,
       blurDataURL: node.posterBlurDataURL,

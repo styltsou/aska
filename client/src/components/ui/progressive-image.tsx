@@ -29,6 +29,7 @@ type ProgressiveImageProps = Omit<
   /** Set false when another component owns the Blob URL lifecycle. */
   revokeFallbackBlob?: boolean;
   blurDataURL?: string | null;
+  fallbackClassName?: string;
   placeholderClassName?: string;
   style?: MotionStyle;
 };
@@ -38,6 +39,7 @@ export function ProgressiveImage({
   fallbackSrc,
   revokeFallbackBlob = true,
   blurDataURL,
+  fallbackClassName,
   alt = "",
   className,
   placeholderClassName,
@@ -157,6 +159,7 @@ export function ProgressiveImage({
           className={cn(
             className,
             "pointer-events-none transition-opacity duration-150 ease-out motion-reduce:transition-none",
+            fallbackClassName,
           )}
           style={{ ...style, opacity: showFallback ? 1 : 0 }}
         />

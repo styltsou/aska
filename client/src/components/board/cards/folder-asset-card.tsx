@@ -228,7 +228,15 @@ function FolderPreviewCard({
           }
         />
         <ProgressiveImage
-          src={preview.url}
+          src={preview.displayUrl ?? preview.url}
+          fallbackSrc={
+            preview.type === "video" &&
+            !preview.blurDataURL &&
+            preview.displayUrl
+              ? preview.url
+              : undefined
+          }
+          fallbackClassName="scale-[1.03] blur-[5px] brightness-90 saturate-75"
           blurDataURL={preview.blurDataURL}
           alt=""
           width={preview.width}

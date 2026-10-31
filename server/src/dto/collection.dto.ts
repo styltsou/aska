@@ -204,6 +204,7 @@ export const FolderChildPreviewSchema = z.object({
   assetId: z.string(),
   type: z.enum(["image", "video", "note", "link", "color"]),
   url: z.string().optional(),
+  displayUrl: z.string().optional(),
   width: z.number().optional(),
   height: z.number().optional(),
   durationSeconds: z.number().nullable().optional(),

@@ -140,6 +140,7 @@ export interface FolderAssetPreview {
   assetId: string;
   type: "image" | "video" | "note" | "link" | "color";
   url?: string;
+  displayUrl?: string;
   width?: number;
   height?: number;
   blurDataURL?: string | null;

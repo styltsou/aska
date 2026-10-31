@@ -2,6 +2,7 @@ export type FolderChildPreview = {
   assetId: string;
   type: "image" | "video" | "note" | "link" | "color";
   url?: string;
+  displayUrl?: string;
   width?: number;
   height?: number;
   durationSeconds?: number | null;
