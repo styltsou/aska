@@ -6,7 +6,6 @@ import {
   cloneElement,
   createElement,
   isValidElement,
-  type CSSProperties,
   type ReactElement,
   type ReactNode,
   useCallback,
@@ -42,6 +41,7 @@ import { useUpdateNote } from "@/api/collection/hooks";
 import {
   NOTE_MENTION_CHIP_CLASS,
   MentionPillBody,
+  mentionPillStyle,
 } from "@/components/board/note-mentions";
 import { NoteMermaidPreview } from "@/components/board/note-mermaid-preview";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -348,13 +348,11 @@ function createMDComponents(
 
       return (
         <li
+          data-checked={isTaskItem ? isChecked : undefined}
           className={cn(
             isTaskItem
               ? "note-task-item ml-0 flex items-start gap-2 pl-0"
               : "pl-0",
-            isTaskItem &&
-              isChecked &&
-              "text-sidebar-foreground/50 line-through",
             "[&>p]:my-0",
             compact ? "leading-[1.35]" : "leading-6",
             className,
@@ -364,7 +362,14 @@ function createMDComponents(
           {isTaskItem ? (
             <>
               {taskChildren[0]}
-              <div className="min-w-0 flex-1">{taskChildren.slice(1)}</div>
+              <div
+                className={cn(
+                  "min-w-0 flex-1",
+                  isChecked && "note-task-completed-content",
+                )}
+              >
+                {taskChildren.slice(1)}
+              </div>
             </>
           ) : (
             children
@@ -382,11 +387,9 @@ function createMDComponents(
           aria-label={checked ? "Completed task" : "Incomplete task"}
           checked={checked === true}
           className={cn(
-            "pointer-events-none shrink-0",
-            // Nudge the 1rem box onto the first line's optical centre: the
-            // regular row is a 1.5rem line box, the compact one is shorter
-            // than the checkbox so it already sits flush.
-            compact ? "mt-0" : "mt-[0.25rem]",
+            "pointer-events-none size-[1.125em] shrink-0 [&_[data-slot=checkbox-indicator]>svg]:size-[0.875em]",
+            // Match the editor's checkbox-to-text proportions in each preview.
+            compact ? "mt-[0.125em]" : "mt-[0.375em]",
             className,
           )}
           onCheckedChange={() => undefined}
@@ -410,13 +413,12 @@ function createMDComponents(
           <span
             className={cn(NOTE_MENTION_CHIP_CLASS, "cursor-inherit", className)}
             data-asset-mention={assetType}
-            style={
-              tint ? ({ "--mention-tint": tint } as CSSProperties) : undefined
-            }
+            style={mentionPillStyle(tint)}
           >
             <MentionPillBody
               assetType={assetType}
               label={label}
+              scaleToText
               swatchBackground={
                 assetType === "color"
                   ? visual?.gradient
@@ -434,7 +436,7 @@ function createMDComponents(
       return (
         <span
           className={cn(
-            "text-primary font-medium break-words underline underline-offset-4",
+            "note-preview-link text-primary font-medium break-words",
             className,
           )}
           {...props}
@@ -521,11 +523,7 @@ function createMDComponents(
       if (inline) {
         return (
           <code
-            className={cn(
-              "bg-muted text-sidebar-foreground rounded px-1 py-0.5 font-mono font-medium",
-              compact ? "text-[0.6875rem]" : "text-[0.8125rem]",
-              className,
-            )}
+            className={cn(compact && "text-[0.6875rem]", className)}
             {...props}
           >
             {children}

@@ -76,7 +76,7 @@ describe("NoteMarkdown", () => {
     expect(html).toContain("note-task-list ml-0 list-none pl-0");
     expect(html).toContain("task-list-item");
     expect(html).toContain("note-task-item ml-0 flex items-start gap-2 pl-0");
-    expect(html).toContain("text-sidebar-foreground/50 line-through");
+    expect(html).toContain("note-task-completed-content");
     expect(html).toContain('data-slot="checkbox"');
   });
 
@@ -91,7 +91,7 @@ describe("NoteMarkdown", () => {
     );
 
     expect(html).toMatch(
-      /<div class="min-w-0 flex-1">\s*first words <mark[^>]*>highlighted words across lines<\/mark><\/div>/,
+      /<div class="min-w-0 flex-1 note-task-completed-content">\s*first words <mark[^>]*>highlighted words across lines<\/mark><\/div>/,
     );
     expect(html).toMatch(
       /<div class="min-w-0 flex-1">\s*<mark[^>]*>all highlighted<\/mark><\/div>/,
@@ -151,7 +151,18 @@ describe("NoteMarkdown", () => {
 
     expect(html).toContain("the source");
     expect(html).toContain("text-primary");
+    expect(html).toContain("note-preview-link");
     expect(html).not.toContain('href="https://example.com"');
+  });
+
+  it("keeps checked task formatting around inline code and strikethrough", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown content="- [x] Done with `code` and ~~removed text~~" />,
+    );
+
+    expect(html).toMatch(
+      /<div class="min-w-0 flex-1 note-task-completed-content">.*<code[^>]*>code<\/code>.*<del>removed text<\/del><\/div>/,
+    );
   });
 
   it("renders a note pill with a leading note icon", () => {
@@ -234,7 +245,7 @@ describe("NoteMarkdown", () => {
         />,
       );
 
-      expect(html).not.toContain("hover:");
+      expect(html).not.toMatch(/\s+hover:/);
     }
   });
 

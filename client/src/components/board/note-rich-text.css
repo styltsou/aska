@@ -93,7 +93,7 @@
   }
 
   .note-rich-text-content ul[data-type="taskList"] .note-task-checkbox {
-    @apply mt-[0.4rem] flex size-4 shrink-0 items-center justify-center;
+    @apply mt-[0.3125rem] flex size-4.5 shrink-0 items-center justify-center;
   }
 
   .note-rich-text-content ul[data-type="taskList"] > li > div {
@@ -108,16 +108,48 @@
     @apply mb-0;
   }
 
+  .note-rich-text-content :is(s, del),
   .note-rich-text-content
     ul[data-type="taskList"]
     li[data-type="taskItem"][data-checked="true"]
-    > div {
-    @apply text-sidebar-foreground/50 line-through;
+    > div,
+  .note-rich-text-content
+    li.task-list-item:has(> input[type="checkbox"]:checked)
+    > div,
+  .note-rich-text-content .note-task-completed-content {
+    /* Draw the line at a consistent, adjustable height across inline text. */
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: calc(-0.25em - 1px);
+    text-decoration-skip-ink: none;
+  }
+
+  .note-rich-text-content :is(s, del) :is(s, del) {
+    text-decoration: none;
   }
 
   .note-rich-text-content
-    li.task-list-item:has(> input[type="checkbox"]:checked) {
-    @apply text-sidebar-foreground/50 line-through;
+    ul[data-type="taskList"]
+    li[data-type="taskItem"][data-checked="true"]
+    > div,
+  .note-rich-text-content
+    li.task-list-item:has(> input[type="checkbox"]:checked)
+    > div,
+  .note-rich-text-content .note-task-completed-content {
+    opacity: 0.5;
+  }
+
+  .note-rich-text-content
+    ul[data-type="taskList"]
+    li[data-type="taskItem"][data-checked="true"]
+    > div
+    *,
+  .note-rich-text-content
+    li.task-list-item:has(> input[type="checkbox"]:checked)
+    > div
+    *,
+  .note-rich-text-content li.note-task-item[data-checked="true"] > div * {
+    text-decoration: none !important;
   }
 
   .note-rich-text-content blockquote {
@@ -272,7 +304,7 @@
     @apply font-semibold;
   }
 
-  .note-rich-text-content a {
+  .note-rich-text-content :is(a, .note-preview-link) {
     @apply font-medium text-primary;
     text-decoration: none;
     background-image: linear-gradient(currentColor, currentColor);
@@ -283,7 +315,7 @@
     box-decoration-break: clone;
   }
 
-  .note-rich-text-content a::before {
+  .note-rich-text-content :is(a, .note-preview-link)::before {
     content: "";
     @apply mr-1 inline-block size-[0.9em] align-[-0.1em];
     background-color: currentColor;

@@ -2148,7 +2148,7 @@ function LinkInteractionPopover({ editor }: { editor: Editor }) {
           >
             <div ref={hoverCardRef} className="flex items-center gap-2">
               <span
-                className="block max-w-56 truncate px-1.5 py-1 text-xs leading-5 text-foreground"
+                className="block max-w-56 min-w-0 flex-1 truncate px-1.5 py-1 text-xs leading-5 text-foreground"
                 title={hoveredLink.href}
               >
                 {hoveredLink.href}

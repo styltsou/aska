@@ -365,15 +365,18 @@ export function NotePreviewRail({
                   shouldReduceMotion
                     ? { duration: 0 }
                     : {
-                        duration: 0.15,
+                        duration: 0.12,
                         ease: "easeOut",
                       }
                 }
                 className={cn(
-                  "block h-0.5 w-4.5 origin-left bg-current",
-                  isHighlighted
-                    ? "text-sidebar-foreground"
-                    : "text-sidebar-foreground/35",
+                  "block h-0.5 origin-left",
+                  section.level === 1
+                    ? "w-7"
+                    : section.level === 2
+                      ? "w-6"
+                      : "w-5",
+                  isHighlighted ? "bg-primary" : "bg-muted-foreground/70",
                 )}
               />
             </button>
@@ -389,7 +392,7 @@ export function NotePreviewRail({
               ? { duration: 0 }
               : { duration: 0.15, ease: "easeOut" }
           }
-          className="absolute top-1/2 left-9 max-h-[40dvh] w-72 -translate-y-1/2 rounded-lg border border-border bg-popover/95 p-1.5 text-popover-foreground shadow-lg backdrop-blur-xl"
+          className="absolute top-1/2 left-8 max-h-[40dvh] w-72 -translate-y-1/2 rounded-lg border-border/60 bg-background/95 p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10 backdrop-blur-xl"
         >
           <ScrollArea
             viewportClassName="h-auto max-h-[calc(40dvh-0.75rem)]"

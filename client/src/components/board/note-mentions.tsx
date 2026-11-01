@@ -89,14 +89,14 @@ const mentionSuggestionPluginKey = new PluginKey("assetMentionSuggestion");
 // Static pills (canvas cards, folder and collection previews) are read-only, so
 // the base class carries no hover. Only the editor's interactive pill opts in.
 const MENTION_CHIP_BASE_CLASS =
-  "mx-[0.08em] inline-flex max-w-full items-center gap-1 rounded-md border border-foreground/10 bg-[color-mix(in_oklab,var(--background)_90%,var(--mention-tint,var(--foreground)))] px-1.5 py-0.5 align-baseline text-[0.875em] leading-none font-medium text-foreground no-underline transition-[background-color,border-color,box-shadow,opacity] duration-100";
+  "mx-[0.08em] inline-flex max-w-full items-center gap-1 rounded-md border border-foreground/10 bg-[color-mix(in_oklab,var(--background)_var(--mention-background-rest,90%),var(--mention-tint,var(--foreground)))] px-1.5 py-0.5 align-baseline text-[0.875em] leading-none font-medium text-foreground no-underline transition-[background-color,border-color,box-shadow,opacity] duration-100";
 export const NOTE_MENTION_CHIP_CLASS = MENTION_CHIP_BASE_CLASS;
 export const NOTE_MENTION_CHIP_HOVER_CLASS =
-  "cursor-pointer hover:border-foreground/20 hover:bg-[color-mix(in_oklab,var(--background)_80%,var(--mention-tint,var(--foreground)))]";
+  "cursor-pointer hover:border-foreground/20 hover:bg-[color-mix(in_oklab,var(--background)_var(--mention-background-hover,85%),var(--mention-tint,var(--foreground)))] active:bg-[color-mix(in_oklab,var(--background)_var(--mention-background-active,80%),var(--mention-tint,var(--foreground)))]";
 export const NOTE_MENTION_SELECTED_CLASS = "ring-2 ring-ring/35";
 export const NOTE_MENTION_UNAVAILABLE_CLASS =
   "cursor-default border-transparent bg-muted/45 text-muted-foreground opacity-65 grayscale";
-export const NOTE_MENTION_GLYPH_CLASS = "size-3 shrink-0";
+export const NOTE_MENTION_GLYPH_CLASS = "size-3.5 shrink-0 -translate-y-px";
 export const NOTE_MENTION_SWATCH_CLASS = `${NOTE_MENTION_GLYPH_CLASS} rounded-[0.2rem] border border-foreground/15`;
 
 // One preview card serves every mention in the editor: the triggers point at it
@@ -120,18 +120,28 @@ export function MentionGlyph({
   previewUrl,
   faviconUrl,
   isVideo,
+  scaleToText = false,
 }: {
   assetType: NoteMentionType;
   swatchBackground?: string;
   previewUrl?: string | null;
   faviconUrl?: string | null;
   isVideo?: boolean;
+  scaleToText?: boolean;
 }) {
+  const glyphClass = cn(
+    NOTE_MENTION_GLYPH_CLASS,
+    scaleToText && "size-[1em] -translate-y-[0.07em]",
+  );
+  const thumbnailIconClass = cn(
+    "text-foreground/75",
+    scaleToText ? "size-[0.857em]" : "size-3",
+  );
   if (assetType === "note") {
     return (
       <FileTextIcon
         aria-hidden="true"
-        className={NOTE_MENTION_GLYPH_CLASS}
+        className={glyphClass}
         strokeWidth={2.5}
       />
     );
@@ -142,8 +152,8 @@ export function MentionGlyph({
         previewUrl={previewUrl ?? undefined}
         faviconUrl={faviconUrl ?? undefined}
         isVideo={isVideo || assetType === "video"}
-        className={NOTE_MENTION_GLYPH_CLASS}
-        iconClassName="size-2.5 text-foreground/75"
+        className={glyphClass}
+        iconClassName={thumbnailIconClass}
       />
     );
   }
@@ -151,8 +161,8 @@ export function MentionGlyph({
     return (
       <ImageMentionThumbnail
         previewUrl={previewUrl ?? undefined}
-        className={NOTE_MENTION_GLYPH_CLASS}
-        iconClassName="size-2.5 text-foreground/75"
+        className={glyphClass}
+        iconClassName={thumbnailIconClass}
       />
     );
   }
@@ -160,7 +170,7 @@ export function MentionGlyph({
   return (
     <span
       aria-hidden="true"
-      className={NOTE_MENTION_SWATCH_CLASS}
+      className={cn(NOTE_MENTION_SWATCH_CLASS, glyphClass)}
       style={{ background: swatchBackground }}
     />
   );
@@ -173,6 +183,7 @@ export function MentionPillBody({
   previewUrl,
   faviconUrl,
   isVideo,
+  scaleToText = false,
 }: {
   assetType: NoteMentionType;
   label: ReactNode;
@@ -180,6 +191,7 @@ export function MentionPillBody({
   previewUrl?: string | null;
   faviconUrl?: string | null;
   isVideo?: boolean;
+  scaleToText?: boolean;
 }) {
   return (
     <>
@@ -189,6 +201,7 @@ export function MentionPillBody({
         previewUrl={previewUrl}
         faviconUrl={faviconUrl}
         isVideo={isVideo}
+        scaleToText={scaleToText}
       />
       <span className="max-w-64 truncate leading-[1.2]">{label}</span>
     </>
@@ -311,6 +324,18 @@ export function mentionTint(
   return resolved.gradient
     ? gradientRepresentativeColor(resolved.gradient)
     : resolved.hex;
+}
+
+export function mentionPillStyle(
+  tint?: string | null,
+): CSSProperties | undefined {
+  if (!tint) return undefined;
+  return {
+    "--mention-tint": tint,
+    "--mention-background-rest": "80%",
+    "--mention-background-hover": "75%",
+    "--mention-background-active": "75%",
+  } as CSSProperties;
 }
 
 export const AssetMention = Node.create({
@@ -510,7 +535,7 @@ function NoteMentionChip({ node, selected }: ReactNodeViewProps) {
         selected && NOTE_MENTION_SELECTED_CLASS,
         unavailable && NOTE_MENTION_UNAVAILABLE_CLASS,
       )}
-      style={tint ? ({ "--mention-tint": tint } as CSSProperties) : undefined}
+      style={mentionPillStyle(tint)}
       aria-label={`${unavailable ? "Unavailable reference" : "Open reference"}: ${label}`}
       onMouseDown={(event) => event.preventDefault()}
       onClick={() => onOpen?.({ assetId, assetType }, resolved)}
@@ -587,7 +612,7 @@ function colorHasAlphaChannel(value?: string | null) {
 }
 
 function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
-  const colorLabel = target.label;
+  const colorCode = target.gradient ? undefined : target.hex;
   const background = target.gradient
     ? resolveGradientCss(target.gradient)
     : (target.hex ?? "currentColor");
@@ -602,7 +627,7 @@ function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
     : colorHasAlphaChannel(target.hex);
 
   return (
-    <div className="flex items-center gap-3 p-3.5">
+    <div className="flex items-stretch gap-3 p-3.5">
       <div
         aria-hidden="true"
         className="relative size-14 shrink-0 overflow-hidden rounded-md"
@@ -612,14 +637,16 @@ function ColorMentionHoverCard({ target }: { target: NoteMentionTarget }) {
         ) : null}
         <div className="absolute inset-0 rounded-md" style={{ background }} />
       </div>
-      <div className="min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col justify-between">
         <p className="truncate text-sm font-semibold text-foreground">
           {target.label}
         </p>
-        <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
-          {colorLabel}
-        </p>
-        <p className="mt-1.5 truncate text-[11px] text-muted-foreground/75">
+        {colorCode ? (
+          <p className="truncate font-mono text-xs text-muted-foreground">
+            {colorCode}
+          </p>
+        ) : null}
+        <p className="truncate text-[11px] text-muted-foreground/75">
           {target.locationLabel}
         </p>
       </div>
@@ -649,7 +676,7 @@ function ImageMentionHoverCard({ target }: { target: NoteMentionTarget }) {
 
 function LinkMentionHoverCard({ target }: { target: NoteMentionTarget }) {
   return (
-    <div className="flex items-start gap-3 p-3.5">
+    <div className="flex items-stretch gap-3 p-3.5">
       <LinkMentionThumbnail
         previewUrl={target.previewUrl ?? undefined}
         faviconUrl={target.faviconUrl ?? undefined}
@@ -658,21 +685,21 @@ function LinkMentionHoverCard({ target }: { target: NoteMentionTarget }) {
         iconClassName="size-5 text-foreground/75"
         showVideoBadge
       />
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col justify-between">
         <p className="truncate text-sm font-semibold text-foreground">
           {target.label}
-        </p>
-        <p className="mt-1 truncate text-[11px] text-muted-foreground">
-          {target.locationLabel}
         </p>
         {target.url ? (
           <p
             title={target.url}
-            className="mt-1.5 line-clamp-2 text-[10px] leading-3 break-all text-muted-foreground/75"
+            className="truncate text-xs leading-4 text-muted-foreground"
           >
             {target.url}
           </p>
         ) : null}
+        <p className="truncate text-[11px] text-muted-foreground/75">
+          {target.locationLabel}
+        </p>
       </div>
     </div>
   );
