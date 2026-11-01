@@ -54,8 +54,11 @@ import { common, createLowlight } from "lowlight";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import { TableKit } from "@tiptap/extension-table";
-import { Markdown } from "@tiptap/markdown";
+import { Markdown, MarkdownManager } from "@tiptap/markdown";
+import DragHandle from "@tiptap/extension-drag-handle";
+import StarterKit from "@tiptap/starter-kit";
 import { PluginKey, TextSelection, type EditorState } from "@tiptap/pm/state";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import {
   EditorContent,
   NodeViewContent,
@@ -67,7 +70,6 @@ import {
   useEditorState,
 } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import StarterKit from "@tiptap/starter-kit";
 import Suggestion, {
   type SuggestionKeyDownProps,
   type SuggestionProps,
@@ -75,6 +77,13 @@ import Suggestion, {
 import { toast } from "sonner";
 
 import { NotePreviewRail } from "@/components/board/note-preview-rail";
+import { NoteTableControls } from "@/components/board/note-table-controls";
+import { NoteTableView } from "@/components/board/note-table-view";
+import {
+  getMarkdownPaste,
+  normalizeMarkdownBlocks,
+  PreserveMarkdownImages,
+} from "@/components/board/note-markdown-paste";
 import { NoteCodeBlockEditing } from "@/components/board/note-code-block-editing";
 import { NoteMermaidBlock } from "@/components/board/note-mermaid-block";
 import {
@@ -1183,54 +1192,213 @@ export const NoteHighlight = Highlight.extend({
   HTMLAttributes: { class: "note-highlight" },
 });
 
-const BASE_NOTE_EXTENSIONS = [
-  StarterKit.configure({
-    heading: { levels: [1, 2, 3, 4] },
-    underline: false,
-    link: {
-      autolink: true,
-      openOnClick: false,
-      HTMLAttributes: {
-        class: "cursor-pointer",
-        rel: "noopener noreferrer",
-        target: "_blank",
-      },
+/**
+ * Floating block-gutter controls in the spirit of Notion: a "+" button and a
+ * drag handle that follow the hovered block in the editor's left gutter.
+ * The DragHandle extension owns hover detection, read-only hiding, and the
+ * drag-and-drop wiring.
+ */
+function createBlockDragHandleExtension() {
+  let target:
+    | { editor: Editor; node: ProseMirrorNode; pos: number }
+    | undefined;
+  let dragDataListenerAttached = false;
+  const preserveBlockControlsOnAlt = (event: KeyboardEvent) => {
+    if (event.key !== "Alt" || !controls.matches(":hover")) return;
+    // The drag-handle extension hides its controls on any editor keydown.
+    // Keep Alt available for the add button's Alt-click while the pointer is
+    // over the controls, and prevent the browser menu from stealing focus.
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const controls = document.createElement("div");
+  controls.className = "note-float-block-controls";
+  // The extension positions and reveals the controls on the first block hover.
+  controls.style.visibility = "hidden";
+  controls.addEventListener("mouseenter", () => {
+    document.addEventListener("keydown", preserveBlockControlsOnAlt, true);
+  });
+  controls.addEventListener("mouseleave", (event) => {
+    document.removeEventListener("keydown", preserveBlockControlsOnAlt, true);
+    if (!target || controls.dataset.dragging === "true") return;
+    const editorElement = target.editor.view.dom;
+    if (
+      event.relatedTarget instanceof Node &&
+      editorElement.contains(event.relatedTarget)
+    )
+      return;
+    // Let the extension clear its hover target when leaving the controls as well.
+    editorElement.dispatchEvent(
+      new MouseEvent("mouseleave", { relatedTarget: event.relatedTarget }),
+    );
+  });
+
+  const addButtonMount = document.createElement("div");
+  addButtonMount.className = "flex";
+  const dragButtonMount = document.createElement("div");
+  dragButtonMount.className = "flex";
+  function addBlock(above: boolean) {
+    if (!target) return;
+    const insertPosition = above
+      ? target.pos
+      : target.pos + target.node.nodeSize;
+    target.editor
+      .chain()
+      .focus()
+      .insertContentAt(
+        insertPosition,
+        { type: "paragraph" },
+        { updateSelection: true },
+      )
+      .focus()
+      .run();
+  }
+
+  controls.append(addButtonMount, dragButtonMount);
+
+  const extension = DragHandle.configure({
+    nested: {
+      edgeDetection: "none",
+      rules: [
+        {
+          id: "table-cell-content",
+          evaluate: ({ $pos, depth }) =>
+            Array.from({ length: depth }, (_, index) => $pos.node(index)).some(
+              (node) => node.type.name === "table",
+            )
+              ? 1000
+              : 0,
+        },
+      ],
     },
-    codeBlock: false,
-  }),
-  CodeBlockLowlight.extend({
-    addNodeView() {
-      return ReactNodeViewRenderer(NoteCodeBlock);
+    computePositionConfig: {
+      placement: "left-start",
+      strategy: "absolute",
     },
-  }).configure({
-    lowlight: noteLowlight,
-    defaultLanguage: null,
-  }),
-  NoteCodeBlockEditing,
-  NoteMermaidBlock,
-  TableKit.configure({ table: { resizable: true } }),
-  TaskList,
-  AskaTaskItem.configure({ nested: true }),
-  NoteCutListItemCleanup,
-  NoteHighlight,
-  Placeholder.configure({
-    // Notes can intentionally start with a blank paragraph. Only show the
-    // prompt for the paragraph containing the caret so a blank first line
-    // does not display a second placeholder while the editor is focused at
-    // the end of the note.
-    showOnlyCurrent: true,
-    placeholder: ({ node }) => {
-      if (node.type.name === "heading") {
-        return `Heading ${node.attrs.level}`;
+    getReferencedVirtualElement: () => {
+      if (!target) return null;
+      const editorElement = target.editor.view.dom;
+      const blockElement = target.editor.view.nodeDOM(target.pos);
+      if (!(blockElement instanceof Element)) return null;
+      return {
+        contextElement: editorElement,
+        getBoundingClientRect: () => {
+          const editorRect = editorElement.getBoundingClientRect();
+          const blockRect = blockElement.getBoundingClientRect();
+          const padding =
+            parseFloat(getComputedStyle(editorElement).paddingLeft) || 0;
+          return new DOMRect(
+            editorRect.left + padding,
+            blockRect.top,
+            0,
+            blockRect.height,
+          );
+        },
+      };
+    },
+    render: () => controls,
+    onNodeChange: ({
+      node,
+      editor: targetEditor,
+      pos,
+    }: {
+      node: ProseMirrorNode | null;
+      editor: Editor;
+      pos?: number;
+    }) => {
+      const wrapper = controls.parentElement;
+      if (wrapper && !dragDataListenerAttached) {
+        dragDataListenerAttached = true;
+        // The extension clears DataTransfer during dragstart. Populate it after
+        // its handler so browsers recognize the operation as a native drag.
+        wrapper.addEventListener("dragstart", (event) => {
+          if (
+            !(event.target instanceof Node) ||
+            !dragButtonMount.contains(event.target) ||
+            !event.dataTransfer ||
+            !target
+          )
+            return;
+          event.dataTransfer.setData("text/plain", target.node.textContent);
+          event.dataTransfer.effectAllowed = "copyMove";
+        });
       }
-      return "Type '/' for blocks or '@' for mentions…";
+      target =
+        node && typeof pos === "number" && pos >= 0
+          ? { editor: targetEditor, node, pos }
+          : undefined;
     },
-  }),
-  Markdown.configure({
-    markedOptions: { gfm: true, breaks: false },
-  }),
-  SlashCommands,
-];
+  });
+  return {
+    extension,
+    controls,
+    addButtonMount,
+    dragButtonMount,
+    addBlock,
+    clearAltGuard: () =>
+      document.removeEventListener("keydown", preserveBlockControlsOnAlt, true),
+  };
+}
+
+// Built per editor instance because each DragHandle extension owns its own
+// floating controls DOM and hover target state.
+function createBaseNoteExtensions(
+  blockDragHandle: ReturnType<
+    typeof createBlockDragHandleExtension
+  >["extension"],
+) {
+  return [
+    StarterKit.configure({
+      heading: { levels: [1, 2, 3, 4] },
+      dropcursor: { color: "var(--primary)", width: 2 },
+      underline: false,
+      link: {
+        autolink: true,
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "cursor-pointer",
+          rel: "noopener noreferrer",
+          target: "_blank",
+        },
+      },
+      codeBlock: false,
+    }),
+    CodeBlockLowlight.extend({
+      addNodeView() {
+        return ReactNodeViewRenderer(NoteCodeBlock);
+      },
+    }).configure({
+      lowlight: noteLowlight,
+      defaultLanguage: null,
+    }),
+    NoteCodeBlockEditing,
+    NoteMermaidBlock,
+    TableKit.configure({ table: { resizable: true, View: NoteTableView } }),
+    TaskList,
+    AskaTaskItem.configure({ nested: true }),
+    NoteCutListItemCleanup,
+    NoteHighlight,
+    Placeholder.configure({
+      // Notes can intentionally start with a blank paragraph. Only show the
+      // prompt for the paragraph containing the caret so a blank first line
+      // does not display a second placeholder while the editor is focused at
+      // the end of the note.
+      showOnlyCurrent: true,
+      placeholder: ({ node }) => {
+        if (node.type.name === "heading") {
+          return `Heading ${node.attrs.level}`;
+        }
+        return "Type '/' for blocks or '@' for mentions…";
+      },
+    }),
+    Markdown.configure({
+      markedOptions: { gfm: true, breaks: false },
+    }),
+    SlashCommands,
+    blockDragHandle,
+  ];
+}
 
 const BLOCK_STYLE_ICONS: Record<BlockStyleValue, typeof CaseSensitiveIcon> = {
   "task-list": CheckSquareIcon,
@@ -1974,7 +2142,7 @@ function LinkInteractionPopover({ editor }: { editor: Editor }) {
             anchor={hoveredLink.anchor}
             side="top"
             sideOffset={8}
-            className="w-auto max-w-[calc(100vw-2rem)] rounded-xl px-1.5 py-1"
+            className="w-auto max-w-[calc(100vw-2rem)] rounded-xl border-border/60 bg-background/95 px-1.5 py-1 shadow-md ring-1 ring-foreground/10 backdrop-blur-xl"
             onPointerEnter={cancelClose}
             onPointerLeave={scheduleClose}
           >
@@ -2037,7 +2205,7 @@ function LinkInteractionPopover({ editor }: { editor: Editor }) {
             anchor={editingLink.anchor}
             side="top"
             sideOffset={8}
-            className="w-[min(22rem,calc(100vw-2rem))] gap-2 rounded-xl p-1.5"
+            className="w-[min(22rem,calc(100vw-2rem))] gap-2 rounded-xl border-border/60 bg-background/95 p-1.5 shadow-md ring-1 ring-foreground/10 backdrop-blur-xl"
           >
             <form className="grid gap-2" onSubmit={saveLink}>
               <label className="grid gap-1 px-1 text-xs font-medium text-muted-foreground">
@@ -2165,9 +2333,10 @@ export const NoteRichText = forwardRef<
   onHighlightSelectionChangeRef.current = onHighlightSelectionChange;
   const sourceAssetId = parseNumericAssetId(sourceNoteId);
   const queryClient = useQueryClient();
+  const blockControls = useMemo(createBlockDragHandleExtension, []);
   const noteExtensions = useMemo(
     () => [
-      ...BASE_NOTE_EXTENSIONS,
+      ...createBaseNoteExtensions(blockControls.extension),
       AssetMention,
       ...(workspaceSlug
         ? [
@@ -2179,7 +2348,7 @@ export const NoteRichText = forwardRef<
           ]
         : []),
     ],
-    [queryClient, sourceAssetId, workspaceSlug],
+    [blockControls, queryClient, sourceAssetId, workspaceSlug],
   );
 
   useEffect(() => {
@@ -2249,16 +2418,39 @@ export const NoteRichText = forwardRef<
       },
       handlePaste: (_view: unknown, event: ClipboardEvent) => {
         if (!editableRef.current) return false;
+        const currentEditor = editorInstanceRef.current;
+        if (!currentEditor || !event.clipboardData) return false;
         const source = parseMermaidFence(
-          event.clipboardData?.getData("text/plain") ?? "",
+          event.clipboardData.getData("text/plain"),
         );
-        if (source === undefined) return false;
+        if (source !== undefined && !currentEditor.isActive("codeBlock")) {
+          event.preventDefault();
+          currentEditor
+            .chain()
+            .focus()
+            .insertContent({ type: "mermaidBlock", attrs: { source } })
+            .run();
+          return true;
+        }
+        if (currentEditor.isActive("codeBlock")) return false;
+        const markdown = getMarkdownPaste(event.clipboardData);
+        if (!markdown) return false;
+        const parser = new MarkdownManager({
+          extensions: [
+            ...currentEditor.extensionManager.baseExtensions,
+            PreserveMarkdownImages,
+          ],
+          markedOptions: { gfm: true, breaks: false },
+        });
+        const parsed = normalizeMarkdownBlocks(
+          parser.parse(markdown),
+          currentEditor.schema,
+        );
+        const inserted = currentEditor.commands.insertContent(
+          parsed.content ?? [],
+        );
+        if (!inserted) return false;
         event.preventDefault();
-        editorInstanceRef.current
-          ?.chain()
-          .focus()
-          .insertContent({ type: "mermaidBlock", attrs: { source } })
-          .run();
         return true;
       },
       handleDOMEvents: {
@@ -2359,6 +2551,98 @@ export const NoteRichText = forwardRef<
     editorProps,
   });
   editorInstanceRef.current = editor;
+
+  useEffect(() => {
+    if (!editor) return;
+
+    let pointer: { x: number; y: number } | undefined;
+    let pointerAtScroll: { x: number; y: number } | undefined;
+    let suppressed = false;
+
+    const isBetweenListItems = (event: MouseEvent) => {
+      if (
+        !(event.target instanceof Element) ||
+        !editor.view.dom.contains(event.target)
+      )
+        return false;
+
+      const list = event.target.closest("ul, ol");
+      if (!list || !editor.view.dom.contains(list)) return false;
+
+      const lists = [list, ...list.querySelectorAll("ul, ol")];
+      const hoveredList = lists.findLast((candidate) => {
+        const rect = candidate.getBoundingClientRect();
+        return event.clientY >= rect.top && event.clientY < rect.bottom;
+      });
+      if (!hoveredList) return false;
+
+      return !Array.from(hoveredList.children).some((child) => {
+        if (!child.matches("li")) return false;
+        const rect = child.getBoundingClientRect();
+        return event.clientY >= rect.top && event.clientY < rect.bottom;
+      });
+    };
+
+    const onScroll = (event: Event) => {
+      const scrollTarget = event.target;
+      if (
+        scrollTarget instanceof Node &&
+        scrollTarget !== document &&
+        !scrollTarget.contains(editor.view.dom)
+      )
+        return;
+
+      suppressed = true;
+      pointerAtScroll = pointer;
+      blockControls.controls.dataset.scrollSuppressed = "true";
+      blockControls.clearAltGuard();
+      editor.commands.setMeta("hideDragHandle", true);
+    };
+
+    const onMouseMove = (event: MouseEvent) => {
+      const moved =
+        pointerAtScroll &&
+        (event.clientX !== pointerAtScroll.x ||
+          event.clientY !== pointerAtScroll.y);
+      pointer = { x: event.clientX, y: event.clientY };
+      if (!suppressed) {
+        // A nested list's vertical gap belongs to its outer list item in the
+        // document tree. Keep the previous target until an actual item is hit.
+        if (isBetweenListItems(event)) event.stopPropagation();
+        return;
+      }
+      if (!moved) {
+        pointerAtScroll ??= pointer;
+        if (
+          event.target instanceof Node &&
+          editor.view.dom.contains(event.target)
+        ) {
+          event.stopPropagation();
+        }
+        return;
+      }
+      suppressed = false;
+      editor.commands.setMeta("hideDragHandle", true);
+      delete blockControls.controls.dataset.scrollSuppressed;
+    };
+
+    const rememberPointer = (event: MouseEvent) => {
+      pointer = { x: event.clientX, y: event.clientY };
+    };
+
+    document.addEventListener("mousemove", onMouseMove, true);
+    document.addEventListener("mousedown", rememberPointer, true);
+    document.addEventListener("wheel", rememberPointer, true);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove, true);
+      document.removeEventListener("mousedown", rememberPointer, true);
+      document.removeEventListener("wheel", rememberPointer, true);
+      window.removeEventListener("scroll", onScroll, true);
+      delete blockControls.controls.dataset.scrollSuppressed;
+      blockControls.clearAltGuard();
+    };
+  }, [editor, blockControls]);
 
   useEffect(() => {
     editor?.setEditable(editable && !aiTarget, false);
@@ -2569,6 +2853,82 @@ export const NoteRichText = forwardRef<
       sourceAssetId={sourceAssetId}
       onOpen={onOpenMention}
     >
+      {createPortal(
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                className="note-block-add-button"
+                aria-label="Add block below; Alt-click to add above"
+                onClick={(event) => blockControls.addBlock(event.altKey)}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </button>
+            }
+          />
+          <TooltipContent className="block space-y-1 text-center">
+            <div>
+              <span className="font-semibold text-foreground">Click</span>
+              <span className="text-muted-foreground"> to add below</span>
+            </div>
+            <div>
+              <span className="font-semibold text-foreground">Alt-Click</span>
+              <span className="text-muted-foreground"> to add above</span>
+            </div>
+          </TooltipContent>
+        </Tooltip>,
+        blockControls.addButtonMount,
+      )}
+      {createPortal(
+        <Tooltip>
+          <TooltipTrigger
+            delay={0}
+            render={
+              <button
+                type="button"
+                draggable
+                data-drag-handle=""
+                aria-label="Drag block to move"
+                className="note-block-drag-button"
+              >
+                <svg
+                  viewBox="6 2 12 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="9" cy="12" r="1" />
+                  <circle cx="9" cy="5" r="1" />
+                  <circle cx="9" cy="19" r="1" />
+                  <circle cx="15" cy="12" r="1" />
+                  <circle cx="15" cy="5" r="1" />
+                  <circle cx="15" cy="19" r="1" />
+                </svg>
+              </button>
+            }
+          />
+          <TooltipContent className="transition-none">
+            <span className="font-semibold text-foreground">Drag</span>
+            <span className="text-muted-foreground"> to move</span>
+          </TooltipContent>
+        </Tooltip>,
+        blockControls.dragButtonMount,
+      )}
       {editable ? (
         <>
           <BubbleMenu
@@ -2587,6 +2947,7 @@ export const NoteRichText = forwardRef<
             />
           </BubbleMenu>
           <LinkInteractionPopover editor={editor} />
+          <NoteTableControls editor={editor} />
         </>
       ) : null}
       <div

@@ -121,7 +121,7 @@
   }
 
   .note-rich-text-content blockquote {
-    @apply my-3 border-l-2 border-sidebar-border pl-3 text-sidebar-foreground/65 italic;
+    @apply my-3 border-l-2 border-sidebar-foreground/45 pl-3 text-sidebar-foreground/65 italic;
   }
 
   .note-rich-text-content hr {
@@ -273,12 +273,19 @@
   }
 
   .note-rich-text-content a {
-    @apply font-medium text-primary underline underline-offset-4;
+    @apply font-medium text-primary;
+    text-decoration: none;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0 calc(100% - 0.06em);
+    background-repeat: repeat-x;
+    background-size: 1px 1px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
 
-  .note-rich-text-content a::after {
+  .note-rich-text-content a::before {
     content: "";
-    @apply ml-1 inline-block size-[0.9em] align-[-0.1em];
+    @apply mr-1 inline-block size-[0.9em] align-[-0.1em];
     background-color: currentColor;
     /* Lucide's external-link icon, kept decorative so note Markdown stays clean. */
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 3h6v6'/%3E%3Cpath d='M10 14 21 3'/%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3C/svg%3E")
@@ -358,6 +365,107 @@
     border-spacing: 0;
   }
 
+  .note-rich-text-editable .note-table-scroll-area {
+    margin: 0.75rem 0;
+    max-width: 100%;
+  }
+
+  .note-rich-text-editable .tableWrapper {
+    position: relative;
+    padding: 0 20px 20px 0;
+  }
+
+  .note-rich-text-editable .note-table-scrollbar {
+    height: 18px;
+    margin-top: 3px;
+    padding: 4px 0 !important;
+    width: 100%;
+    cursor: pointer;
+  }
+
+  .note-rich-text-editable .note-table-scrollbar-thumb {
+    height: 10px !important;
+    background: color-mix(
+      in oklab,
+      var(--sidebar-foreground) 20%,
+      transparent
+    ) !important;
+  }
+
+  .note-rich-text-editable
+    .note-table-scrollbar:hover
+    .note-table-scrollbar-thumb,
+  .note-rich-text-editable
+    .note-table-scrollbar:active
+    .note-table-scrollbar-thumb {
+    background: color-mix(
+      in oklab,
+      var(--sidebar-foreground) 40%,
+      transparent
+    ) !important;
+  }
+
+  .note-rich-text-editable .tableWrapper table {
+    margin: 0;
+    width: 100%;
+  }
+
+  .note-rich-text-editable .tableWrapper th,
+  .note-rich-text-editable .tableWrapper td {
+    min-width: 120px;
+  }
+
+  .note-table-control {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--sidebar-border);
+    border-radius: 4px;
+    color: var(--muted-foreground);
+    background: transparent;
+    opacity: 0;
+    touch-action: none;
+    z-index: 2;
+  }
+
+  .note-table-control:hover,
+  .note-table-control:focus-visible,
+  .tableWrapper[data-near-row-control] .note-table-control-row,
+  .tableWrapper[data-near-column-control] .note-table-control-column,
+  .note-table-control[data-dragging="true"] {
+    opacity: 1;
+    outline: none;
+  }
+
+  .note-table-control:hover {
+    @apply bg-sidebar-foreground/8 text-sidebar-foreground;
+  }
+
+  .note-table-control:active,
+  .note-table-control[data-dragging="true"] {
+    @apply bg-sidebar-foreground/15 text-sidebar-foreground;
+  }
+
+  .note-table-control svg {
+    width: 12px;
+    height: 12px;
+  }
+  .note-table-control-row {
+    left: 0;
+    top: calc(var(--note-table-height, 0px) + 4px);
+    width: var(--note-table-width, 0px);
+    height: 16px;
+    cursor: row-resize;
+  }
+  .note-table-control-column {
+    left: calc(var(--note-table-width, 0px) + 4px);
+    top: 0;
+    height: var(--note-table-height, 0px);
+    width: 16px;
+    cursor: col-resize;
+  }
+
   .note-rich-text-content th,
   .note-rich-text-content td {
     @apply relative px-3 py-2 text-left align-top;
@@ -418,6 +526,13 @@
     @apply cursor-text pt-20 pb-10 text-base leading-7 sm:pb-14;
   }
 
+  @media (min-width: 64rem) {
+    .note-rich-text-editable .ProseMirror {
+      margin-left: -5rem;
+      padding-left: 5rem;
+    }
+  }
+
   .note-rich-text-editable .ProseMirror-focused p.is-empty::before,
   .note-rich-text-editable .ProseMirror-focused h1.is-empty::before,
   .note-rich-text-editable .ProseMirror-focused h2.is-empty::before,
@@ -425,6 +540,60 @@
     @apply pointer-events-none float-left h-0 font-normal text-muted-foreground;
     content: attr(data-placeholder);
   }
+
+  .note-rich-text-editable
+    .ProseMirror
+    li
+    p:has(> br.ProseMirror-trailingBreak:only-child)::before {
+    @apply pointer-events-none float-left h-0 font-normal text-muted-foreground/60;
+    content: "List item";
+  }
+}
+
+/* ProseMirror hides the native selection for a selected block. Keep the
+   selected text visible when the app-wide selection color is reversed. */
+.note-rich-text-content.ProseMirror-hideselection *::selection {
+  color: var(--sidebar-foreground);
+}
+
+/* Floating block-gutter controls: "+" to insert a block and the drag handle.
+   The cluster lives in the drawer's left padding, which only fits from lg up. */
+.note-float-block-controls {
+  display: none;
+  align-items: center;
+  gap: 0.125rem;
+  translate: -0.75rem 0;
+}
+
+.note-float-block-controls[data-scroll-suppressed="true"] {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+@media (min-width: 64rem) {
+  .note-float-block-controls {
+    display: flex;
+  }
+}
+
+.note-block-add-button {
+  @apply flex size-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground active:bg-sidebar-foreground/15;
+}
+
+.note-float-block-controls [data-drag-handle] {
+  @apply flex shrink-0 cursor-grab items-center justify-center rounded-md p-1 text-sidebar-foreground/60 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground active:cursor-grabbing active:bg-sidebar-foreground/15;
+}
+
+.note-float-block-controls[data-dragging="true"] [data-drag-handle] {
+  @apply cursor-grabbing bg-sidebar-foreground/15 text-sidebar-foreground;
+}
+
+.note-block-add-button svg {
+  @apply size-4;
+}
+
+.note-float-block-controls [data-drag-handle] svg {
+  @apply size-4;
 }
 
 /* Keep the editable document's block hierarchy above Tailwind's heading

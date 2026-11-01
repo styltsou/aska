@@ -36,6 +36,7 @@
     "@tanstack/react-virtual": "^3.14.23",
     "@tanstack/router-plugin": "^1.168.19",
     "@tiptap/extension-code-block-lowlight": "^3.30.2",
+    "@tiptap/extension-drag-handle": "^3.30.2",
     "@tiptap/extension-highlight": "^3.30.2",
     "@tiptap/extension-placeholder": "^3.30.2",
     "@tiptap/extension-table": "^3.30.2",
@@ -89,5 +90,8 @@
     "typescript": "~6",
     "vite": "^8",
     "vitest": "^4.1.10"
+  },
+  "patchedDependencies": {
+    "@tiptap/extension-drag-handle@3.32.2": "patches/@tiptap%2Fextension-drag-handle@3.32.2.patch"
   }
 }

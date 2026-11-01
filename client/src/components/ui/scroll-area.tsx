@@ -9,20 +9,26 @@ function ScrollArea({
   viewportClassName,
   viewportRef,
   contentClassName,
+  contentRef,
+  contentStyle,
   verticalScrollbarClassName,
   verticalScrollbarStyle,
   verticalThumbClassName,
   horizontalScrollbarClassName,
+  horizontalScrollbarStyle,
   horizontalThumbClassName,
   ...props
 }: ScrollAreaPrimitive.Root.Props & {
   viewportClassName?: string;
   viewportRef?: React.Ref<HTMLDivElement>;
   contentClassName?: string;
+  contentRef?: React.Ref<HTMLDivElement>;
+  contentStyle?: React.CSSProperties;
   verticalScrollbarClassName?: string;
   verticalScrollbarStyle?: React.CSSProperties;
   verticalThumbClassName?: string;
   horizontalScrollbarClassName?: string;
+  horizontalScrollbarStyle?: React.CSSProperties;
   horizontalThumbClassName?: string;
 }) {
   return (
@@ -38,8 +44,9 @@ function ScrollArea({
       >
         {contentClassName ? (
           <ScrollAreaPrimitive.Content
+            ref={contentRef}
             className={cn("w-full min-w-0", contentClassName)}
-            style={{ minWidth: 0 }}
+            style={{ minWidth: 0, ...contentStyle }}
           >
             {children}
           </ScrollAreaPrimitive.Content>
@@ -67,6 +74,7 @@ function ScrollArea({
       <ScrollAreaPrimitive.Scrollbar
         data-slot="scroll-area-scrollbar"
         orientation="horizontal"
+        style={horizontalScrollbarStyle}
         className={cn(
           "flex touch-none p-0.5 opacity-0 transition-opacity duration-150 select-none data-hovering:opacity-100 data-scrolling:opacity-100",
           horizontalScrollbarClassName,
