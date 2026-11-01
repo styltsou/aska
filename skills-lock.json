@@ -49,6 +49,12 @@
       "skillPath": "better-auth/create-auth/SKILL.md",
       "computedHash": "31c027d02dbf1faa37f58191f574b9443143042fb2b684fe32df53ab0270487c"
     },
+    "create-pr": {
+      "source": "ueberdosis/tiptap",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/create-pr/SKILL.md",
+      "computedHash": "a89d9729e1f83afd4c7b8ba815764f70426b229cca9126d0cd8bd2e91e1738b6"
+    },
     "deep-agents-core": {
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
@@ -258,6 +264,12 @@
       "sourceType": "github",
       "skillPath": "cursor-team-kit/skills/thermo-nuclear-code-quality-review/SKILL.md",
       "computedHash": "9052b01b46b1d8dbf94c45f9313ec1983443f9a460e83d49cdc7fe0f640ca476"
+    },
+    "tiptap": {
+      "source": "ueberdosis/tiptap",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/tiptap/SKILL.md",
+      "computedHash": "4b9b69928eda79fa0904393c7bdfa520d5ca3fc5e5f5e3b7d02682078e671d72"
     },
     "transitions-polish": {
       "source": "Jakubantalik/transitions.dev",
