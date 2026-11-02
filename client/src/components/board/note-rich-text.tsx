@@ -34,6 +34,7 @@ import {
   Heading3Icon,
   Heading4Icon,
   HighlighterIcon,
+  ImageIcon,
   ItalicIcon,
   LinkIcon,
   ListIcon,
@@ -49,6 +50,7 @@ import {
 } from "lucide-react";
 import { Extension, getMarkRange, type Editor, type Range } from "@tiptap/core";
 import Highlight from "@tiptap/extension-highlight";
+import Image from "@tiptap/extension-image";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -82,7 +84,6 @@ import { NoteTableView } from "@/components/board/note-table-view";
 import {
   getMarkdownPaste,
   normalizeMarkdownBlocks,
-  PreserveMarkdownImages,
 } from "@/components/board/note-markdown-paste";
 import { NoteCodeBlockEditing } from "@/components/board/note-code-block-editing";
 import { NoteMermaidBlock } from "@/components/board/note-mermaid-block";
@@ -250,6 +251,30 @@ function docEnd(editor: Editor) {
   return editor.state.doc.content.size;
 }
 
+function insertRemoteImage(editor: Editor, range: Range) {
+  const source = window.prompt("Paste an image URL")?.trim();
+  if (!source) return;
+
+  let url: URL;
+  try {
+    url = new URL(source);
+  } catch {
+    toast.error("Enter a valid HTTPS image URL.");
+    return;
+  }
+  if (url.protocol !== "https:") {
+    toast.error("Use an HTTPS image URL.");
+    return;
+  }
+
+  editor
+    .chain()
+    .focus()
+    .deleteRange(range)
+    .setImage({ src: url.href })
+    .run();
+}
+
 function headingDescription(level: number) {
   switch (level) {
     case 1:
@@ -356,6 +381,13 @@ const SLASH_COMMAND_GROUPS: SlashCommandGroup[] = [
         icon: CodeXmlIcon,
         command: (editor, range) =>
           editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
+      },
+      {
+        title: "Image",
+        description: "Embed an image from a URL.",
+        keywords: ["photo", "picture", "media"],
+        icon: ImageIcon,
+        command: insertRemoteImage,
       },
       {
         title: "Diagram",
@@ -474,6 +506,12 @@ function SlashBlockPreview({ item }: { item: SlashCommandItem }) {
         <pre className="overflow-hidden rounded-md bg-muted p-2.5 font-mono text-xs text-foreground">
           <code>const idea = "hello";</code>
         </pre>
+      );
+    case "Image":
+      return (
+        <div className="flex aspect-[16/10] items-center justify-center overflow-hidden rounded-md border border-border bg-linear-to-br from-sky-200 via-indigo-100 to-rose-100 dark:from-sky-950 dark:via-indigo-950 dark:to-rose-950">
+          <ImageIcon className="size-7 text-foreground/55" strokeWidth={1.5} />
+        </div>
       );
     case "Diagram":
       return (
@@ -1379,6 +1417,10 @@ function createBaseNoteExtensions(
     AskaTaskItem.configure({ nested: true }),
     NoteCutListItemCleanup,
     NoteHighlight,
+    Image.configure({
+      allowBase64: false,
+      HTMLAttributes: { class: "note-image" },
+    }),
     Placeholder.configure({
       // Notes can intentionally start with a blank paragraph. Only show the
       // prompt for the paragraph containing the caret so a blank first line
@@ -2436,10 +2478,7 @@ export const NoteRichText = forwardRef<
         const markdown = getMarkdownPaste(event.clipboardData);
         if (!markdown) return false;
         const parser = new MarkdownManager({
-          extensions: [
-            ...currentEditor.extensionManager.baseExtensions,
-            PreserveMarkdownImages,
-          ],
+          extensions: currentEditor.extensionManager.baseExtensions,
           markedOptions: { gfm: true, breaks: false },
         });
         const parsed = normalizeMarkdownBlocks(
