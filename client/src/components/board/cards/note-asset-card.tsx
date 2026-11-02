@@ -1,5 +1,6 @@
 import "../note-highlight-colors.css";
 import "../note-rich-text.css";
+import "./note-card-table.css";
 
 import {
   Children,
@@ -61,6 +62,58 @@ const CARD_MAX_HEIGHT = 320;
 const EXPANSION_CONTROL_SPACE = 32;
 const EXPANDED_BOTTOM_GUTTER = 8;
 const lowlight = createLowlight(common);
+
+// Tiptap saves nested lists with two-space indentation, including ordered
+// lists. CommonMark needs enough indentation to clear each parent marker.
+function normalizePreviewListIndentation(markdown: string): string {
+  const levels: { source: number; output: number; markerWidth: number }[] = [];
+  let fence: string | undefined;
+
+  return markdown
+    .split("\n")
+    .map((line) => {
+      const match = /^( *)([-+*]|\d+[.)])(?=\s|$)/.exec(line);
+      const indentation = /^( *)/.exec(line)?.[1].length ?? 0;
+      if (!fence && match) {
+        while (
+          levels.length &&
+          levels[levels.length - 1].source >= indentation
+        ) {
+          levels.pop();
+        }
+        const parent = levels[levels.length - 1];
+        const output = parent
+          ? parent.output + parent.markerWidth
+          : indentation;
+        levels.push({
+          source: indentation,
+          output,
+          markerWidth: Math.max(4, match[2].length + 1),
+        });
+        const content = line.slice(indentation);
+        // GFM needs content after an empty task marker to recognize its checkbox.
+        const previewContent = /^[-+*]\s+\[[ xX]\]\s*$/.test(content)
+          ? `${content.trimEnd()} &#8203;`
+          : content;
+        return " ".repeat(output) + previewContent;
+      }
+
+      const parent = [...levels]
+        .reverse()
+        .find((level) => indentation > level.source);
+      const adjusted = parent
+        ? " ".repeat(Math.max(0, indentation + parent.output - parent.source)) +
+          line.slice(indentation)
+        : line;
+      const fenceMatch = /^\s*(`{3,}|~{3,})/.exec(line);
+      if (fenceMatch && (!fence || fenceMatch[1][0] === fence[0])) {
+        fence = fence ? undefined : fenceMatch[1];
+      }
+      if (!fence && line.trim() && !parent) levels.length = 0;
+      return adjusted;
+    })
+    .join("\n");
+}
 
 function getMeasuredContentHeight(content: HTMLDivElement): number {
   let lastElement = content.lastElementChild;
@@ -214,7 +267,7 @@ function renderBulletListItems(children: ReactNode) {
       },
       <>
         <span aria-hidden="true" className="flex h-[1lh] shrink-0 items-center">
-          <span className="size-1.5 rounded-full bg-current" />
+          <span className="note-preview-bullet" />
         </span>
         <div className="min-w-0 flex-1 [&>p]:my-0">{child.props.children}</div>
       </>,
@@ -334,7 +387,7 @@ function createMDComponents(
     ol: ({ className, ...props }) => (
       <ol
         className={cn(
-          "text-sidebar-foreground/80 marker:text-sidebar-foreground/80 list-decimal",
+          "note-preview-ordered-list text-sidebar-foreground/80 marker:text-sidebar-foreground/80",
           compact ? "my-1 ml-3 space-y-0.5" : "my-3 ml-4 space-y-1.5",
           className,
         )}
@@ -368,7 +421,15 @@ function createMDComponents(
                   isChecked && "note-task-completed-content",
                 )}
               >
-                {taskChildren.slice(1)}
+                {taskChildren.slice(1).map((child, index) =>
+                  typeof child === "string" && /^\s*\u200b\s*$/.test(child) ? (
+                    <span key={index} className="text-muted-foreground/60">
+                      List item
+                    </span>
+                  ) : (
+                    child
+                  ),
+                )}
               </div>
             </>
           ) : (
@@ -600,7 +661,7 @@ export function NoteMarkdown({
               : defaultUrlTransform(url)
           }
         >
-          {linkifyBareUrls(body)}
+          {linkifyBareUrls(normalizePreviewListIndentation(body))}
         </ReactMarkdown>
       </div>
     </div>

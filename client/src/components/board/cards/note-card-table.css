@@ -1,0 +1,22 @@
+/* Match the editor's table proportions at the note preview's text scale. */
+.note-card-markdown table {
+  margin-block: calc(0.75rem * var(--note-preview-scale));
+  border-radius: calc(var(--radius) * var(--note-preview-scale));
+  font-size: calc(0.875rem * var(--note-preview-scale));
+  line-height: calc(1.25rem * var(--note-preview-scale));
+}
+
+.note-card-markdown :is(th, td) {
+  padding: calc(0.5rem * var(--note-preview-scale))
+    calc(0.75rem * var(--note-preview-scale));
+}
+
+.note-card-markdown tbody tr:first-child td:first-child,
+.note-card-markdown tbody tr:has(th) + tr td:first-child {
+  border-top-left-radius: calc(var(--radius) * var(--note-preview-scale));
+}
+
+.note-card-markdown tbody tr:first-child td:last-child,
+.note-card-markdown tbody tr:has(th) + tr td:last-child {
+  border-top-right-radius: calc(var(--radius) * var(--note-preview-scale));
+}

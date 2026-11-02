@@ -56,8 +56,145 @@
     @apply my-3 ml-4 list-disc space-y-1.5 marker:text-sidebar-foreground/80;
   }
 
+  .note-rich-text-content :is(ul, ol) :is(ul, ol) {
+    /* A nested item no longer receives its former sibling's space-y gap. */
+    margin-block: var(--note-list-gap, calc(var(--spacing) * 1.5)) 0 !important;
+  }
+
   .note-rich-text-content ul.note-preview-bullet-list {
     @apply list-none;
+  }
+
+  .note-rich-text-content ul:not([data-type="taskList"]),
+  .note-rich-text-content ul.note-preview-bullet-list {
+    list-style-type: disc;
+  }
+
+  .note-rich-text-content ul:not([data-type="taskList"]) ul,
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list {
+    list-style-type: circle;
+  }
+
+  .note-rich-text-content ul:not([data-type="taskList"]) ul ul,
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list {
+    list-style-type: square;
+  }
+
+  .note-rich-text-content ul:not([data-type="taskList"]) ul ul ul,
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list {
+    list-style-type: disc;
+  }
+
+  .note-rich-text-content ul:not([data-type="taskList"]) ul ul ul ul,
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list {
+    list-style-type: circle;
+  }
+
+  .note-rich-text-content ul:not([data-type="taskList"]) ul ul ul ul ul,
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list {
+    list-style-type: square;
+  }
+
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    .note-preview-bullet-list {
+    @apply ml-4;
+  }
+
+  .note-rich-text-content .note-preview-bullet {
+    width: calc(0.375rem * var(--note-preview-scale, 1));
+    height: calc(0.375rem * var(--note-preview-scale, 1));
+    flex-shrink: 0;
+  }
+
+  .note-card-markdown .note-bullet-list-item > div:empty::before,
+  .note-card-markdown ol.note-preview-ordered-list > li:empty::before {
+    content: "List item";
+    color: var(--muted-foreground);
+    opacity: 0.6;
+  }
+
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    > li
+    > span:first-child
+    > span {
+    @apply rounded-full border-0 bg-current;
+  }
+
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    > li
+    > span:first-child
+    > span {
+    @apply rounded-full border border-current bg-transparent;
+  }
+
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    > li
+    > span:first-child
+    > span {
+    @apply rounded-none border-0 bg-current;
+  }
+
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    > li
+    > span:first-child
+    > span {
+    @apply rounded-full border-0 bg-current;
+  }
+
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    > li
+    > span:first-child
+    > span {
+    @apply rounded-full border border-current bg-transparent;
+  }
+
+  .note-rich-text-content
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    ul.note-preview-bullet-list
+    > li
+    > span:first-child
+    > span {
+    @apply rounded-none border-0 bg-current;
   }
 
   .note-rich-text-content > div > ul.note-preview-bullet-list {
@@ -65,7 +202,20 @@
   }
 
   .note-rich-text-content ol {
-    @apply my-3 ml-4 list-decimal space-y-1.5 marker:text-sidebar-foreground/80;
+    @apply my-3 ml-4 space-y-1.5 marker:text-sidebar-foreground/80;
+    list-style-type: decimal;
+  }
+
+  .note-rich-text-content ol ol {
+    list-style-type: lower-alpha;
+  }
+
+  .note-rich-text-content ol ol ol {
+    list-style-type: lower-roman;
+  }
+
+  .note-rich-text-content ol ol ol ol {
+    list-style-type: lower-alpha;
   }
 
   .note-rich-text-content li {
@@ -673,6 +823,7 @@
 
 .note-card-markdown--compact {
   --note-preview-scale: 0.6875;
+  --note-list-gap: calc(var(--spacing) * 0.5);
 }
 
 .note-card-markdown .note-code-block--preview {

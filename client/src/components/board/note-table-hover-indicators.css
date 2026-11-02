@@ -1,0 +1,41 @@
+.note-rich-text-editable .note-table-viewport {
+  /* Leave room for the marks where they straddle the table's outer edges. */
+  padding-top: 3px;
+  padding-left: 3px;
+}
+
+.note-table-hover-indicator {
+  position: absolute;
+  z-index: 3;
+  display: block;
+  pointer-events: none;
+  border-radius: 999px;
+}
+
+.note-table-hover-indicator::before {
+  position: absolute;
+  inset: -1px;
+  content: "";
+  background: var(--background);
+  border-radius: inherit;
+}
+
+.note-table-hover-indicator::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: var(--primary);
+  border-radius: inherit;
+}
+
+.note-table-hover-indicator-column {
+  width: 18px;
+  height: 2px;
+  transform: translate(-50%, -50%);
+}
+
+.note-table-hover-indicator-row {
+  width: 2px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+}

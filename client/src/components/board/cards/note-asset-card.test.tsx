@@ -4,6 +4,27 @@ import { describe, expect, it } from "vitest";
 import { NoteMarkdown } from "./note-asset-card";
 
 describe("NoteMarkdown", () => {
+  it("preserves editor-style indentation in nested ordered lists", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown content={"1. First\n  1. Second\n    1. Third"} />,
+    );
+    expect(html).toMatch(
+      /First\s*<ol[^>]*>\s*<li[^>]*>Second\s*<ol[^>]*>\s*<li[^>]*>Third/,
+    );
+  });
+
+  it("keeps empty list items available for preview placeholders", () => {
+    const html = renderToStaticMarkup(
+      <NoteMarkdown content={"- \n- Next\n\n1. \n2. Next\n\n- [ ] "} />,
+    );
+    expect(html).toContain('note-preview-bullet"');
+    expect(html).toContain(
+      '<div class="min-w-0 flex-1 [&amp;&gt;p]:my-0"></div>',
+    );
+    expect(html).toMatch(/<ol[^>]*>\s*<li[^>]*><\/li>/);
+    expect(html).toContain('aria-label="Incomplete task"');
+    expect(html).toContain(">List item</span>");
+  });
   it("renders the saved title as the document heading", () => {
     const html = renderToStaticMarkup(
       <NoteMarkdown title="Project plan" content="Outline the next steps." />,
