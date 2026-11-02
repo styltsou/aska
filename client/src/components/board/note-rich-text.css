@@ -36,6 +36,10 @@
     @apply my-2.5;
   }
 
+  .note-rich-text-content .note-image {
+    @apply my-3 block h-auto max-w-full rounded-lg border border-sidebar-border;
+  }
+
   .note-rich-text-content h1 {
     @apply mt-7 mb-4 text-3xl leading-tight font-semibold tracking-tight text-sidebar-foreground;
   }
