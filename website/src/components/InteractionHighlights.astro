@@ -1,713 +1,113 @@
 ---
-import { Image, getImage } from 'astro:assets';
-import toolsBlue01 from '../assets/images/tools-blue-01.webp';
-import toolsFuchsia02 from '../assets/images/tools-fuchsia-02.webp';
-import toolsGreen01 from '../assets/images/tools-green-01.webp';
-import toolsRed01 from '../assets/images/tools-red-01.webp';
+import { Image } from 'astro:assets';
+import bauhausRoom01 from '../assets/images/bauhaus-room-01.jpg';
+import blueRedWall from '../assets/images/blue-red-wall.jpg';
 import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
-const miniPreviewImageProps = { width: 220, densities: [1, 2], quality: 78 };
-const miniPreviewImages = [toolsRed01, toolsFuchsia02, toolsGreen01, toolsBlue01, concreteSculptures];
-const getBlurStyle = async (image) => {
-	const placeholder = await getImage({ src: image, width: 28, format: 'webp', quality: 30 });
-	return `--blur-image: url("${placeholder.src}");`;
-};
-const miniPreviewBlurStyles = Object.fromEntries(
-	await Promise.all(miniPreviewImages.map(async (image) => [image.src, await getBlurStyle(image)])),
-);
-const withMiniPreviewBlur = (image) => ({ ...miniPreviewImageProps, src: image, class: 'blur-image', style: miniPreviewBlurStyles[image.src] });
+import curvedArchitecture from '../assets/images/curved-architecture.jpg';
+import greenAbstract02 from '../assets/images/green-abstract-02.webp';
+import greenAbstract03 from '../assets/images/green-abstract-03.webp';
+import greenAbstract05 from '../assets/images/green-abstract-05.webp';
 ---
 
-<section class="interaction-highlights page-width" aria-labelledby="interaction-heading">
-	<div class="interaction-highlights__intro">
-		<h2 id="interaction-heading">Small tools that keep the work moving.</h2>
-		<p>Quick actions stay close to the canvas, so you can keep sorting, capturing, and moving without losing context.</p>
-	</div>
-	<div class="interaction-grid">
-		<span class="interaction-grid__rule interaction-grid__rule--top" aria-hidden="true"></span>
-		<span class="interaction-grid__rule interaction-grid__rule--middle" aria-hidden="true"></span>
-		<span class="interaction-grid__rule interaction-grid__rule--lower" aria-hidden="true"></span>
-		<span class="interaction-grid__rule interaction-grid__rule--bottom" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--top interaction-grid__junction--start" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--top interaction-grid__junction--one" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--top interaction-grid__junction--two" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--top interaction-grid__junction--end" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--middle interaction-grid__junction--start" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--middle interaction-grid__junction--one" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--middle interaction-grid__junction--two" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--middle interaction-grid__junction--end" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--lower interaction-grid__junction--start" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--lower interaction-grid__junction--one" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--lower interaction-grid__junction--end" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--bottom interaction-grid__junction--start" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--bottom interaction-grid__junction--one" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--bottom interaction-grid__junction--two" aria-hidden="true"></span>
-		<span class="interaction-grid__junction interaction-grid__junction--bottom interaction-grid__junction--end" aria-hidden="true"></span>
-		<article class="interaction-item">
-			<div class="interaction-item__copy">
-				<h3>Paste to capture</h3>
-				<p>Use the clipboard as an inbox. Paste anything and Aska reads the format for you.</p>
+<section class="reference-workflow page-width" aria-labelledby="reference-workflow-heading">
+	<header class="reference-workflow__intro">
+		<p class="eyebrow">A working archive</p>
+		<h2 id="reference-workflow-heading">Keep the trail of an idea intact.</h2>
+		<p>A reference is more useful when its source, the thought it sparked, and the work it informed can stay connected.</p>
+	</header>
+
+	<div class="reference-workflow__stages">
+		<article class="workflow-stage workflow-stage--capture">
+			<div class="workflow-stage__copy">
+				<span>01</span>
+				<h3>Capture the original, with its context.</h3>
+				<p>Save a page, image, video, or note before the useful detail disappears. Aska keeps the source alongside the material you collect.</p>
 			</div>
-			<div class="paste-preview" role="img" aria-label="A focused Aska board receiving pasted image, URL, or text content">
-				<div class="paste-preview__surface">
-					<div class="paste-preview__gesture" aria-hidden="true"><span>⌘ + V</span></div>
-					<div class="paste-preview__payloads">
-						<div class="paste-preview__payload paste-preview__payload--image">
-							<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
-							<span>Image</span>
-						</div>
-						<div class="paste-preview__payload paste-preview__payload--url">
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L11 4.93"></path><path d="M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 0 0 7.07 7.07L13 19.07"></path></svg>
-							<span>URL</span>
-						</div>
-						<div class="paste-preview__payload paste-preview__payload--text">
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 13H8"></path><path d="M16 17H8"></path></svg>
-							<span>Text</span>
-						</div>
-					</div>
-					<svg class="paste-preview__flow" viewBox="0 0 284 120" aria-hidden="true">
-						<path d="M78 20 C112 20 130 45 171 45"></path>
-						<path d="M88 63 C116 63 134 48 171 47"></path>
-						<path d="M54 107 C104 107 130 54 171 49"></path>
-					</svg>
-					<div class="paste-preview__inserted">
-						<Image {...withMiniPreviewBlur(toolsGreen01)} alt="" />
-					</div>
+			<div class="capture-story" role="img" aria-label="A web reference and a visual asset arriving in an Aska collection">
+				<div class="source-window">
+					<div class="source-window__bar"><i></i><i></i><i></i><span>archdaily.com</span></div>
+					<Image src={curvedArchitecture} width={480} densities={[1, 2]} quality={80} alt="" />
+					<div class="source-window__title"><small>Architecture</small><strong>A curved concrete gallery in Lisbon</strong></div>
+				</div>
+				<svg class="capture-story__path" viewBox="0 0 240 126" aria-hidden="true"><path d="M28 40C87 40 79 99 157 99"></path><path d="M121 17c30 0 31 53 39 80"></path></svg>
+				<div class="capture-story__asset"><Image src={blueRedWall} width={230} densities={[1, 2]} quality={78} alt="" /></div>
+				<div class="capture-story__inbox"><span>Inbox</span><strong>Saved just now</strong></div>
+			</div>
+		</article>
+
+		<article class="workflow-stage workflow-stage--context">
+			<div class="workflow-stage__copy">
+				<span>02</span>
+				<h3>Let related material become a point of view.</h3>
+				<p>Bring references, notes, colour, and folders into the same canvas. Make the relationships visible while the direction is still taking shape.</p>
+			</div>
+			<div class="context-story" role="img" aria-label="An Aska canvas connecting visual references, a note, and a folder">
+				<div class="context-story__bar"><i></i><strong>Entrance study</strong><span>48 items</span></div>
+				<div class="context-story__canvas">
+					<svg class="context-story__line context-story__line--one" viewBox="0 0 180 100" aria-hidden="true"><path d="M9 90C74 82 74 25 170 11"></path></svg>
+					<svg class="context-story__line context-story__line--two" viewBox="0 0 150 95" aria-hidden="true"><path d="M7 8c67 15 63 57 137 80"></path></svg>
+					<div class="context-card context-card--image-one"><Image src={bauhausRoom01} width={250} densities={[1, 2]} quality={78} alt="" /></div>
+					<div class="context-card context-card--note"><small>Note</small><strong>Let the hard edge sit beside a softer curve.</strong><p>The contrast makes the entry feel deliberate.</p></div>
+					<div class="context-card context-card--image-two"><Image src={concreteSculptures} width={220} densities={[1, 2]} quality={78} alt="" /></div>
+					<div class="context-card context-card--folder"><div><Image src={blueRedWall} width={84} densities={[1, 2]} quality={76} alt="" /><Image src={curvedArchitecture} width={84} densities={[1, 2]} quality={76} alt="" /><Image src={bauhausRoom01} width={84} densities={[1, 2]} quality={76} alt="" /><b>+21</b></div><span>Material studies <small>24</small></span></div>
 				</div>
 			</div>
 		</article>
-		<article class="interaction-item">
-			<div class="interaction-item__copy">
-				<h3>Command palette</h3>
-				<p>Search the archive, jump between collections, or create something new from one keyboard-first menu.</p>
+
+		<article class="workflow-stage workflow-stage--return">
+			<div class="workflow-stage__copy">
+				<span>03</span>
+				<h3>Return to a direction by any clue.</h3>
+				<p>Find material by colour, source, or a phrase you wrote down. The archive stays useful when you no longer remember where you put something.</p>
 			</div>
-			<div class="command-preview__clip">
-			<div class="command-preview" role="img" aria-label="A compact Aska command palette">
-				<div class="command-preview__dialog">
-					<div class="command-preview__body">
-						<div class="command-preview__search">
-							<span class="command-preview__placeholder">Type a command or search...</span>
-							<span class="command-preview__query">search</span>
-							<i class="command-preview__caret" aria-hidden="true"></i>
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
-						</div>
-						<div class="command-preview__list">
-							<div class="command-preview__group command-preview__filter-away">Create</div>
-							<div class="command-preview__item command-preview__item--active command-preview__filter-away">
-								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
-								<span>New note</span>
-								<strong>N</strong>
-							</div>
-							<div class="command-preview__item command-preview__filter-away">
-								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 10v6"></path><path d="M9 13h6"></path><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>
-								<span>New folder</span>
-								<strong>F</strong>
-							</div>
-							<div class="command-preview__item command-preview__filter-away">
-								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h6"></path><path d="M19 2v6"></path><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"></path><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"></path><circle cx="9" cy="9" r="2"></circle></svg>
-								<span>Upload images</span>
-								<strong>U</strong>
-							</div>
-							<div class="command-preview__separator command-preview__filter-away"></div>
-							<div class="command-preview__group command-preview__group--navigate">Navigate</div>
-							<div class="command-preview__item command-preview__item--search-result">
-								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg>
-								<span>Search all assets</span>
-								<strong>/</strong>
-							</div>
-							<div class="command-preview__item command-preview__filter-away">
-								<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
-								<span>Open Inbox</span>
-								<strong>I</strong>
-							</div>
-						</div>
-					</div>
-					<div class="command-preview__footer">
-						<span><kbd>Esc</kbd> Close</span>
-						<span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
-						<span><kbd>Enter</kbd> Select</span>
-					</div>
-				</div>
-			</div>
-			</div>
-		</article>
-		<article class="interaction-item">
-			<div class="interaction-item__copy">
-				<h3>Folders on the canvas</h3>
-				<p>Group related material spatially, without losing its place in the larger picture.</p>
-			</div>
-			<div class="folder-canvas-preview" role="img" aria-label="An Aska canvas with a folder containing references">
-				<div class="folder-canvas-preview__grid">
-					<div class="folder-canvas-preview__source"><Image {...withMiniPreviewBlur(toolsBlue01)} alt="" /></div>
-					<svg class="folder-canvas-preview__cursor" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 12V6.5a1.5 1.5 0 0 1 3 0V10M10.5 10V5a1.5 1.5 0 0 1 3 0v5M13.5 10V6.5a1.5 1.5 0 0 1 3 0v4M16.5 11V8a1.5 1.5 0 0 1 3 0v6.5c0 4-2.8 6.5-6.4 6.5h-1.3c-2.5 0-4.3-1.2-5.4-3.3L4.8 14.8a1.5 1.5 0 0 1 2.5-1.6Z"></path></svg>
-					<div class="folder-canvas-preview__folder">
-						<div class="folder-canvas-preview__folder-grid">
-							<div class="folder-canvas-preview__preview folder-canvas-preview__preview--one"><Image {...withMiniPreviewBlur(toolsRed01)} alt="" /></div>
-							<div class="folder-canvas-preview__preview folder-canvas-preview__preview--two"><Image {...withMiniPreviewBlur(toolsGreen01)} alt="" /></div>
-							<div class="folder-canvas-preview__preview folder-canvas-preview__preview--three"><Image {...withMiniPreviewBlur(toolsFuchsia02)} alt="" /></div>
-							<div class="folder-canvas-preview__preview folder-canvas-preview__preview--four"><Image {...withMiniPreviewBlur(concreteSculptures)} alt="" /></div>
-							<div class="folder-canvas-preview__slot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></div>
-							<div class="folder-canvas-preview__incoming"><Image {...withMiniPreviewBlur(toolsBlue01)} alt="" /></div>
-						</div>
-						<div class="folder-canvas-preview__folder-label"><strong>Material studies</strong><small><span class="folder-canvas-preview__count folder-canvas-preview__count--before">24</span><span class="folder-canvas-preview__count folder-canvas-preview__count--after">25</span></small></div>
-					</div>
-				</div>
-			</div>
-		</article>
-		<article class="interaction-item">
-			<div class="interaction-item__copy">
-				<h3>Global scratchpad</h3>
-				<p>Catch a loose thought from anywhere and move it into the right collection later.</p>
-			</div>
-			<div class="scratchpad-preview" role="img" aria-label="An Aska global scratchpad note">
-				<div class="scratchpad-preview__overlay">
-					<div class="scratchpad-preview__panel">
-						<div class="scratchpad-preview__frame">
-							<div class="scratchpad-preview__surface">
-								<div class="scratchpad-preview__textarea">
-									<span class="scratchpad-preview__placeholder">Capture to Inbox...</span>
-									<span class="scratchpad-preview__note">Keep useful friction in play.</span>
-									<i class="scratchpad-preview__caret" aria-hidden="true"></i>
-								</div>
-							</div>
-							<div class="scratchpad-preview__shortcuts">
-								<span class="scratchpad-preview__shortcut scratchpad-preview__shortcut--close"><kbd>Esc</kbd> Close</span>
-								<span class="scratchpad-preview__shortcut"><kbd>Shift</kbd><em>+</em><kbd>Enter</kbd> New line</span>
-								<span class="scratchpad-preview__shortcut"><kbd>Enter</kbd> Save</span>
-							</div>
-						</div>
-					</div>
-					<div class="scratchpad-preview__toast" aria-hidden="true">
-						<svg viewBox="0 0 24 24"><path d="m5 12 4.2 4.2L19 6.8"></path></svg>
-						<span>Saved to Inbox</span>
-					</div>
-				</div>
-			</div>
-		</article>
-		<article class="interaction-item">
-			<div class="interaction-item__copy">
-				<h3>Multi-select actions</h3>
-				<p>Select a set of references, then move, arrange, or group them while the canvas stays in view.</p>
-			</div>
-			<div class="selection-preview" role="img" aria-label="Two selected Aska image assets with a bounding selection box and floating action bar">
-				<div class="selection-preview__board">
-					<div class="selection-preview__marquee" aria-hidden="true">
-						<svg viewBox="0 0 264 166" preserveAspectRatio="none">
-							<rect x="0.75" y="0.75" width="262.5" height="164.5" rx="9"></rect>
-						</svg>
-					</div>
-					<svg class="selection-preview__cursor" viewBox="0 0 24 24" aria-hidden="true">
-						<path d="M5 3.5 18.5 15 12.2 15.8 15.1 21.6 12.7 22.8 9.8 17 5 21.1Z"></path>
-					</svg>
-					<div class="selection-preview__card selection-preview__card--image selection-preview__card--selected">
-						<Image {...withMiniPreviewBlur(concreteSculptures)} alt="" />
-					</div>
-					<div class="selection-preview__card selection-preview__card--image-two selection-preview__card--selected">
-						<Image {...withMiniPreviewBlur(toolsFuchsia02)} alt="" />
-					</div>
-				</div>
-				<div class="selection-preview__action-bar">
-					<span class="selection-preview__count">2 selected</span>
-					<i></i>
-					<button aria-label="Move" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"></path></svg></button>
-					<button aria-label="Favorite" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"></path></svg></button>
-					<button aria-label="Arrange in grid" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></button>
-					<button aria-label="Delete" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg></button>
-					<i></i>
-					<button aria-label="Clear selection"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
-				</div>
+			<div class="return-story" role="img" aria-label="An Aska search for forest green with visual results and a related note">
+				<div class="return-story__search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><span>forest green</span><kbd>⌘ K</kbd></div>
+				<div class="return-story__filters"><i></i><i></i><i></i><i></i><span>Colour match</span></div>
+				<div class="return-story__results"><Image src={greenAbstract05} width={180} densities={[1, 2]} quality={78} alt="" /><Image src={greenAbstract02} width={180} densities={[1, 2]} quality={78} alt="" /><Image src={greenAbstract03} width={180} densities={[1, 2]} quality={78} alt="" /></div>
+				<div class="return-story__note"><small>Found in a note</small><strong>Use the deeper green as the anchor.</strong><span>Colour studies · 2 days ago</span></div>
 			</div>
 		</article>
 	</div>
 </section>
 
 <style>
-	.interaction-highlights { max-width: 980px; padding-top: 176px; padding-bottom: 132px; }
-	.interaction-highlights__intro { max-width: 545px; margin: 0 auto 80px; text-align: center; }
-	.interaction-highlights__intro h2 { margin-bottom: 12px; font-size: clamp(27px, 3vw, 39px); line-height: 1.12; }
-	.interaction-highlights__intro p { margin: 0; color: var(--ink-muted); font-size: 14px; line-height: 1.55; }
-	.interaction-grid { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
-	.interaction-grid::before, .interaction-grid::after { position: absolute; top: -44px; bottom: -44px; z-index: 1; width: 1px; background: linear-gradient(to bottom, transparent, var(--line) 44px, var(--line) calc(100% - 44px), transparent); content: ""; }
-	.interaction-grid::before { left: 0; }
-	.interaction-grid::after { right: 0; }
-	.interaction-grid__rule { position: absolute; right: -24px; left: -24px; z-index: 1; height: 1px; background: linear-gradient(to right, transparent, var(--line) 44px, var(--line) calc(100% - 44px), transparent); }
-	.interaction-grid__rule--top { top: 0; }
-	.interaction-grid__rule--middle { top: 50%; }
-	.interaction-grid__rule--lower { display: none; }
-	.interaction-grid__rule--bottom { bottom: 0; }
-	.interaction-grid__junction { position: absolute; z-index: 2; width: 7px; height: 7px; pointer-events: none; }
-	.interaction-grid__junction::before, .interaction-grid__junction::after { position: absolute; background: rgb(21 21 21 / 48%); content: ""; }
-	.interaction-grid__junction::before { top: 3px; left: 0; width: 7px; height: 1px; }
-	.interaction-grid__junction::after { top: 0; left: 3px; width: 1px; height: 7px; }
-	.interaction-grid__junction--top { top: 0; transform: translate(-50%, -50%); }
-	.interaction-grid__junction--middle { top: 50%; transform: translate(-50%, -50%); }
-	.interaction-grid__junction--lower { display: none; }
-	.interaction-grid__junction--bottom { bottom: 0; transform: translate(-50%, 50%); }
-	.interaction-grid__junction--start { left: 0; }
-	.interaction-grid__junction--one { left: 33.333%; }
-	.interaction-grid__junction--two { left: 66.667%; }
-	.interaction-grid__junction--end { left: 100%; }
-	.interaction-item { position: relative; min-width: 0; padding: 34px 30px 36px; }
-	.interaction-item:not(:nth-of-type(3n + 1))::before { position: absolute; top: -44px; bottom: -44px; left: -1px; width: 1px; background: linear-gradient(to bottom, transparent, var(--line) 44px, var(--line) calc(100% - 44px), transparent); content: ""; }
-	.interaction-item__copy { min-height: 135px; }
-	.interaction-item h3 { margin: 0 0 8px; font-size: 17px; font-weight: 600; }
-	.interaction-item p { margin: 0; color: var(--ink-muted); font-size: 13px; line-height: 1.5; }
-	.command-preview, .scratchpad-preview, .folder-canvas-preview, .source-import-preview, .paste-preview, .selection-preview { position: relative; min-height: 205px; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #fff; box-shadow: 0 2px 7px rgb(21 21 21 / 3%); }
-	.source-import-preview { border: 0; background-color: transparent; box-shadow: none; }
-	.source-import-preview__connector { position: absolute; z-index: 1; color: rgb(21 21 21 / 38%); overflow: visible; pointer-events: none; }
-	.source-import-preview__connector path { fill: none; stroke: currentColor; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-	.source-import-preview__connector-rail { stroke-width: 1.15; }
-	.source-import-preview__connector-flow { animation: source-import-flow 1.8s linear infinite; filter: drop-shadow(0 0 5px rgb(21 21 21 / 18%)); opacity: .68; stroke: rgb(21 21 21 / 58%); stroke-dasharray: 5 18; stroke-dashoffset: 46; stroke-width: 1.55; }
-	.source-import-preview__flow-dot { display: none; }
-	.source-import-preview__pulse { display: none; }
-	.source-import-preview__pulse--instagram { top: 63px; left: calc(50% - 90px); animation: source-import-pulse-left-top 1.35s linear infinite; }
-	.source-import-preview__pulse--pinterest { top: 130px; left: calc(50% - 90px); animation: source-import-pulse-left-bottom 1.35s linear .3s infinite; }
-	.source-import-preview__pulse--x { top: 61px; right: calc(50% - 90px); animation: source-import-pulse-right-top 1.35s linear .15s infinite; }
-	.source-import-preview__pulse--dribbble { top: 131px; right: calc(50% - 90px); animation: source-import-pulse-right-bottom 1.35s linear .45s infinite; }
-	.source-import-preview__connector--instagram { top: 61px; left: calc(50% - 88px); width: 18px; height: 28px; }
-	.source-import-preview__connector--pinterest { top: 106px; left: calc(50% - 88px); width: 18px; height: 28px; }
-	.source-import-preview__connector--pinterest .source-import-preview__connector-flow { animation-delay: .3s; }
-	.source-import-preview__connector--x { top: 59px; left: calc(50% + 70px); width: 18px; height: 28px; }
-	.source-import-preview__connector--x .source-import-preview__connector-flow,
-	.source-import-preview__connector--dribbble .source-import-preview__connector-flow { animation-name: source-import-flow-reverse; }
-	.source-import-preview__connector--x .source-import-preview__connector-flow { animation-delay: .15s; }
-	.source-import-preview__connector--dribbble { top: 107px; left: calc(50% + 70px); width: 18px; height: 28px; }
-	.source-import-preview__connector--dribbble .source-import-preview__connector-flow { animation-delay: .45s; }
-	.source-import-preview__social { position: absolute; z-index: 3; display: grid; width: 44px; height: 44px; border: 1px solid rgb(21 21 21 / 9%); border-radius: 50%; background: rgb(255 255 255 / 76%); box-shadow: 0 3px 9px rgb(21 21 21 / 6%); color: #282824; backdrop-filter: blur(14px) saturate(145%); place-items: center; }
-	.source-import-preview__social svg { width: 17px; height: 17px; fill: currentColor; }
-	.source-import-preview__social--instagram { top: 40px; left: calc(50% - 132px); color: #c13584; }
-	.source-import-preview__social--pinterest { top: 109px; left: calc(50% - 132px); color: #bd081c; }
-	.source-import-preview__social--x { top: 38px; right: calc(50% - 132px); color: #151515; }
-	.source-import-preview__social--dribbble { top: 110px; right: calc(50% - 132px); color: #ea4c89; }
-	.source-import-preview__collection { position: absolute; top: 46px; left: 50%; z-index: 2; width: 140px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 4px 10px rgb(21 21 21 / 5%); transform: translateX(-50%); }
-	.source-import-preview__collection-preview { position: relative; display: flex; aspect-ratio: 3 / 2; align-items: center; justify-content: center; overflow: hidden; background: #fff; }
-	.source-import-preview__collection-meta { display: flex; align-items: center; gap: 5px; padding: 7px 8px; border-top: 1px solid var(--line); background: #fff; color: #3d3d38; }
-	.source-import-preview__collection-meta strong { min-width: 0; overflow: hidden; font-size: 8px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-	.source-import-preview__collection-meta span { margin-left: auto; color: #8a8a83; font-size: 7px; }
-	.source-import-preview__asset { position: absolute; top: 50%; left: 50%; width: 60%; height: 60%; overflow: hidden; border: 1px solid rgb(0 0 0 / 8%); border-radius: 8px; background: #fff; box-shadow: 0 3px 8px rgb(21 21 21 / 10%); transform-origin: bottom center; }
-	.source-import-preview__asset img { display: block; width: 100%; height: 100%; object-fit: cover; }
-	.source-import-preview__asset--one { z-index: 2; transform: translate(calc(-50% - 4px), calc(-50% - 5px)) rotate(-4deg); }
-	.source-import-preview__asset--two { z-index: 1; transform: translate(-50%, -50%) rotate(0deg); }
-	.source-import-preview__asset--three { z-index: 0; display: flex; align-items: flex-start; justify-content: flex-start; padding: 8px; color: #575750; transform: translate(calc(-50% + 4px), calc(-50% + 5px)) rotate(4deg); }
-	.source-import-preview__asset--three span { font-size: 7px; font-weight: 600; line-height: 1.2; opacity: .55; }
-	@keyframes source-import-flow { to { stroke-dashoffset: 0; } }
-	@keyframes paste-preview-flow { to { stroke-dashoffset: 0; } }
-	@keyframes source-import-flow-reverse { to { stroke-dashoffset: 92; } }
-	@keyframes source-import-pulse-left-top {
-		0% { opacity: 0; transform: translate(0, 0) rotate(18deg) scale(.65); }
-		18%, 78% { opacity: 1; }
-		100% { opacity: 0; transform: translate(44px, 23px) rotate(18deg) scale(1); }
-	}
-	@keyframes source-import-pulse-left-bottom {
-		0% { opacity: 0; transform: translate(0, 0) rotate(-18deg) scale(.65); }
-		18%, 78% { opacity: 1; }
-		100% { opacity: 0; transform: translate(44px, -23px) rotate(-18deg) scale(1); }
-	}
-	@keyframes source-import-pulse-right-top {
-		0% { opacity: 0; transform: translate(0, 0) rotate(-18deg) scale(.65); }
-		18%, 78% { opacity: 1; }
-		100% { opacity: 0; transform: translate(-44px, 23px) rotate(-18deg) scale(1); }
-	}
-	@keyframes source-import-pulse-right-bottom {
-		0% { opacity: 0; transform: translate(0, 0) rotate(18deg) scale(.65); }
-		18%, 78% { opacity: 1; }
-		100% { opacity: 0; transform: translate(-44px, -23px) rotate(18deg) scale(1); }
-	}
-	@keyframes selection-marquee-draw {
-		0%, 2% { opacity: 0; transform: translate(40px, 28px) scale(.02, .02); }
-		4% { opacity: 1; transform: translate(40px, 28px) scale(.02, .02); }
-		22% { opacity: 1; transform: translate(14px, 10px) scale(.55, .86); }
-		36%, 74% { opacity: 1; transform: translate(0, 0) scale(1); }
-		78%, 100% { opacity: 0; transform: translate(0, 0) scale(1); }
-	}
-	@keyframes selection-marquee-dash {
-		to { stroke-dashoffset: -24; }
-	}
-	@keyframes selection-cursor-drag {
-		0%, 2% { opacity: 0; transform: translate(40px, 28px) scale(.96); }
-		4% { opacity: 1; transform: translate(40px, 28px) scale(.96); }
-		23% { opacity: 1; transform: translate(158px, 150px) scale(.96); }
-		36%, 74% { opacity: 1; transform: translate(258px, 162px) scale(.96); }
-		78%, 100% { opacity: 0; transform: translate(258px, 162px) scale(.96); }
-	}
-	@keyframes selection-card-one {
-		0%, 10.4%, 78%, 100% { outline-color: transparent; box-shadow: 0 0 0 0 rgb(38 38 34 / 0%); transform: translateY(0); }
-		10.5%, 74% { outline-color: var(--selection-outline); box-shadow: var(--selection-card-shadow); transform: translateY(-1px); }
-	}
-	@keyframes selection-card-two {
-		0%, 24.4%, 78%, 100% { outline-color: transparent; box-shadow: 0 0 0 0 rgb(38 38 34 / 0%); transform: translateY(0); }
-		24.5%, 74% { outline-color: var(--selection-outline); box-shadow: var(--selection-card-shadow); transform: translateY(-1px); }
-	}
-	@keyframes selection-action-bar-reveal {
-		0%, 24.8% { opacity: 0; transform: translate(-50%, 10px) scale(.96); }
-		25.8%, 74% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-		78%, 100% { opacity: 0; transform: translate(-50%, 6px) scale(.98); }
-	}
-	@keyframes command-query {
-		0%, 12% { width: 0; opacity: 0; }
-		16% { width: 0; opacity: 1; }
-		38%, 68% { width: 43px; opacity: 1; }
-		74%, 100% { width: 0; opacity: 0; }
-	}
-	@keyframes command-placeholder {
-		0%, 21% { opacity: 1; transform: translate(0, -50%); }
-		27%, 70% { opacity: 0; transform: translate(-4px, -50%); }
-		77%, 100% { opacity: 1; transform: translate(0, -50%); }
-	}
-	@keyframes command-filter-away {
-		0%, 35% { min-height: 35px; max-height: 46px; margin-top: 0; margin-bottom: 0; padding-top: 8px; padding-bottom: 8px; opacity: 1; transform: translateX(0); }
-		44%, 72% { min-height: 0; max-height: 0; margin-top: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; opacity: 0; transform: translateX(-6px); }
-		80%, 100% { min-height: 35px; max-height: 46px; margin-top: 0; margin-bottom: 0; padding-top: 8px; padding-bottom: 8px; opacity: 1; transform: translateX(0); }
-	}
-	@keyframes command-filter-away-group {
-		0%, 35% { max-height: 23px; padding-top: 7px; padding-bottom: 5px; opacity: 1; transform: translateX(0); }
-		44%, 72% { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; transform: translateX(-6px); }
-		80%, 100% { max-height: 23px; padding-top: 7px; padding-bottom: 5px; opacity: 1; transform: translateX(0); }
-	}
-	@keyframes command-filter-away-separator {
-		0%, 35% { max-height: 1px; margin: 5px -8px; opacity: 1; }
-		44%, 72% { max-height: 0; margin: 0 -8px; opacity: 0; }
-		80%, 100% { max-height: 1px; margin: 5px -8px; opacity: 1; }
-	}
-	@keyframes command-search-match {
-		0%, 39% { color: var(--ink-muted); background: transparent; }
-		46%, 72% { color: var(--ink); background: color-mix(in srgb, var(--ink) 8%, transparent); }
-		80%, 100% { color: var(--ink-muted); background: transparent; }
-	}
-	@keyframes command-search-match-icon {
-		0%, 39% { color: var(--ink-muted); }
-		46%, 72% { color: var(--ink); }
-		80%, 100% { color: var(--ink-muted); }
-	}
-	@keyframes command-caret-position {
-		0%, 12% { opacity: 0; transform: translate(0, -50%); }
-		16% { opacity: 1; transform: translate(0, -50%); }
-		38%, 68% { opacity: 1; transform: translate(43px, -50%); }
-		74%, 100% { opacity: 0; transform: translate(0, -50%); }
-	}
-	@keyframes command-caret { 50% { opacity: 0; } }
-	@keyframes scratchpad-panel {
-		0%, 57% { opacity: 1; transform: translateY(0) scale(1); }
-		61% { opacity: 1; transform: translateY(0) scale(.985); }
-		70%, 86% { opacity: 0; transform: translateY(-14px) scale(.97); }
-		94%, 100% { opacity: 1; transform: translateY(0) scale(1); }
-	}
-	@keyframes scratchpad-placeholder {
-		0%, 7% { opacity: 1; transform: translateY(0); }
-		13%, 86% { opacity: 0; transform: translateY(-3px); }
-		94%, 100% { opacity: 1; transform: translateY(0); }
-	}
-	@keyframes scratchpad-note {
-		0%, 7% { width: 0; opacity: 0; }
-		13% { width: 0; opacity: 1; }
-		48%, 57% { width: 143px; opacity: 1; }
-		64%, 100% { width: 143px; opacity: 0; }
-	}
-	@keyframes scratchpad-caret-position {
-		0%, 7% { opacity: 0; transform: translateX(0); }
-		13% { opacity: 1; transform: translateX(0); }
-		48%, 57% { opacity: 1; transform: translateX(143px); }
-		64%, 100% { opacity: 0; transform: translateX(143px); }
-	}
-	@keyframes scratchpad-submit {
-		0%, 51% { box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); }
-		56% { box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 2px rgb(21 21 21 / 32%); }
-		61%, 100% { box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); }
-	}
-	@keyframes scratchpad-toast {
-		0%, 63% { opacity: 0; transform: translate(-50%, 8px) scale(.96); }
-		69%, 84% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-		91%, 100% { opacity: 0; transform: translate(-50%, -4px) scale(.98); }
-	}
-	.paste-preview { border: 0; background: transparent; box-shadow: none; }
-	.paste-preview__surface { position: absolute; inset: 0; overflow: hidden; }
-	.paste-preview__gesture { position: absolute; top: 19px; left: 50%; display: inline-flex; align-items: baseline; color: rgb(21 21 21 / 13%); font-size: 26px; font-weight: 700; line-height: 1; pointer-events: none; transform: translateX(-50%); }
-	.paste-preview__gesture span { font: inherit; }
-	.paste-preview__payloads { position: absolute; top: 68px; left: calc(50% - 140px); z-index: 3; width: 92px; height: 118px; }
-	.paste-preview__payload { position: absolute; display: inline-flex; align-items: center; gap: 7px; padding: 9px 11px; border: 1px solid rgb(0 0 0 / 9%); border-radius: 999px; background: #fff; box-shadow: 0 3px 10px rgb(21 21 21 / 5%); color: #464641; font-size: 10px; font-weight: 600; line-height: 1; }
-	.paste-preview__payload--image { top: 0; left: 4px; }
-	.paste-preview__payload--url { top: 43px; left: 24px; }
-	.paste-preview__payload--text { bottom: 0; left: 0; }
-	.paste-preview__payload svg { width: 14px; height: 14px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
-	.paste-preview__payload span { white-space: nowrap; }
-	.paste-preview__flow { position: absolute; top: 64px; left: calc(50% - 142px); z-index: 2; width: 284px; height: 120px; overflow: visible; }
-	.paste-preview__flow path { animation: paste-preview-flow 1.25s linear infinite; fill: none; opacity: .9; stroke: rgb(21 21 21 / 54%); stroke-dasharray: 6 12; stroke-dashoffset: 36; stroke-linecap: round; stroke-width: 1.35; vector-effect: non-scaling-stroke; }
-	.paste-preview__flow path:nth-child(2) { animation-delay: .16s; }
-	.paste-preview__flow path:nth-child(3) { animation-delay: .32s; }
-	.paste-preview__inserted { position: absolute; top: 62px; right: calc(50% - 140px); z-index: 3; width: 112px; height: 86px; overflow: hidden; border: 1px solid rgb(21 21 21 / 10%); border-radius: 9px; background: #fff; box-shadow: 0 7px 18px rgb(21 21 21 / 12%); transform-origin: bottom center; }
-	.paste-preview__inserted img { display: block; width: 100%; height: 100%; object-fit: cover; }
-	.selection-preview { --selection-cycle: 4.2s; --selection-outline: #262622; --selection-card-shadow: 0 6px 15px rgb(21 21 21 / 12%); min-height: 260px; border: 0; background-color: transparent; box-shadow: none; }
-	.selection-preview__board { position: absolute; inset: 0; }
-	.selection-preview__marquee { position: absolute; top: 0; left: calc(50% - 132px); z-index: 1; width: 264px; height: 166px; border-radius: 9px; background: rgb(32 32 30 / 10%); opacity: 0; transform-origin: 0 0; animation: selection-marquee-draw var(--selection-cycle) cubic-bezier(.2, .78, .18, 1) infinite; will-change: opacity, transform; }
-	.selection-preview__marquee svg { display: block; width: 100%; height: 100%; overflow: visible; }
-	.selection-preview__marquee rect { fill: none; stroke: rgb(32 32 30 / 100%); stroke-dasharray: 7 5; stroke-dashoffset: 0; stroke-linecap: round; stroke-width: 1.5; vector-effect: non-scaling-stroke; animation: selection-marquee-dash 820ms linear infinite; }
-	.selection-preview__cursor { position: absolute; top: 0; left: calc(50% - 132px); z-index: 6; width: 24px; height: 24px; overflow: visible; color: #252522; filter: drop-shadow(0 2px 3px rgb(21 21 21 / 18%)); opacity: 0; pointer-events: none; animation: selection-cursor-drag var(--selection-cycle) cubic-bezier(.2, .78, .18, 1) infinite; will-change: opacity, transform; }
-	.selection-preview__cursor path { fill: #fff; stroke: currentColor; stroke-linejoin: round; stroke-width: 1.4; }
-	.selection-preview__card { position: absolute; overflow: hidden; border: 1px solid transparent; border-radius: 8px; outline: 2px solid transparent; outline-offset: 2px; will-change: outline-color, box-shadow, transform; }
-	.selection-preview__card--selected { outline-color: transparent; }
-	.selection-preview__card--image { top: 20px; left: calc(50% - 100px); z-index: 2; width: 92px; height: 124px; animation: selection-card-one var(--selection-cycle) linear infinite; }
-	.selection-preview__card--image-two { top: 34px; left: calc(50% + 7px); z-index: 2; width: 88px; height: 108px; animation: selection-card-two var(--selection-cycle) linear infinite; }
-	.selection-preview__card--image img, .selection-preview__card--image-two img { display: block; width: 100%; height: 100%; border-radius: 6px; object-fit: cover; }
-	.selection-preview__action-bar { position: absolute; bottom: 12px; left: 50%; z-index: 5; display: flex; align-items: center; justify-content: center; gap: 4px; width: max-content; max-width: calc(100% - 24px); padding: 4px 6px; border: 1px solid rgb(222 222 217 / 60%); border-radius: 8px; background: rgb(255 255 255 / 70%); box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); color: #262622; opacity: 0; transform: translate(-50%, 10px) scale(.96); transform-origin: bottom center; backdrop-filter: blur(18px) saturate(150%); animation: selection-action-bar-reveal var(--selection-cycle) ease-in-out infinite; will-change: opacity, transform; }
-	.selection-preview__count { padding: 0 6px; font-size: 10px; font-weight: 500; line-height: 22px; white-space: nowrap; }
-	.selection-preview__action-bar i { width: 1px; height: 20px; background: rgb(222 222 217 / 70%); }
-	.selection-preview__action-bar button { display: grid; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #55554e; place-items: center; }
-	.selection-preview__action-bar button:disabled { opacity: 1; }
-	.selection-preview__action-bar svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
-	.command-preview__clip { min-width: 0; }
-	.command-preview { --command-cycle: 5.4s; min-height: 241px; margin-bottom: -36px; border: 0; background: transparent; box-shadow: none; }
-	.command-preview__dialog { position: absolute; top: 10px; left: 0; width: 330px; overflow: hidden; padding: 6px; border: 1px solid rgb(229 229 229 / 50%); border-radius: 8px; background: rgb(255 255 255 / 30%); box-shadow: 0 10px 15px -3px rgb(21 21 21 / 10%), 0 4px 6px -4px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); color: #2d2d29; backdrop-filter: blur(24px) saturate(150%); }
-	.command-preview__body { padding: 8px; border: 1px solid rgb(229 229 229 / 60%); border-radius: 6px; background: rgb(255 255 255 / 70%); box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); backdrop-filter: blur(24px) saturate(150%); }
-	.command-preview__search { position: relative; display: flex; align-items: center; height: 40px; padding: 0 38px 0 12px; border-bottom: 1px solid rgb(21 21 21 / 8%); color: #8b8b84; font-size: 12px; line-height: 1; }
-	.command-preview__search span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1; }
-	.command-preview__placeholder { position: absolute; top: 50%; left: 12px; animation: command-placeholder var(--command-cycle) ease-in-out infinite; }
-	.command-preview__query { position: absolute; top: 50%; left: 12px; display: block; width: 0; color: #4b4b46; opacity: 0; text-overflow: clip !important; transform: translateY(-50%); animation: command-query var(--command-cycle) steps(6, end) infinite; }
-	.command-preview__caret { position: absolute; top: 50%; left: 12px; width: 1px; height: 13px; opacity: 0; pointer-events: none; animation: command-caret-position var(--command-cycle) steps(6, end) infinite; }
-	.command-preview__caret::after { position: absolute; inset: 0; background: #4b4b46; content: ""; animation: command-caret 650ms steps(1, end) infinite; }
-	.command-preview svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
-	.command-preview__search svg { position: absolute; top: 50%; right: 12px; display: block; width: 16px; height: 16px; opacity: .55; transform: translateY(-50%); }
-	.command-preview__list { overflow: hidden; padding-top: 7px; }
-	.command-preview__group { overflow: hidden; padding: 7px 10px 5px; color: #8f8f88; font-size: 11px; font-weight: 500; line-height: 1; }
-	.command-preview__separator { height: 1px; margin: 5px -8px; background: rgb(21 21 21 / 8%); }
-	.command-preview__item { display: flex; align-items: center; min-height: 35px; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #3f3f3a; font-size: 12px; line-height: 1; }
-	.command-preview__filter-away { overflow: hidden; animation: command-filter-away var(--command-cycle) cubic-bezier(.22, .8, .24, 1) infinite; }
-	.command-preview__group.command-preview__filter-away { animation-name: command-filter-away-group; }
-	.command-preview__separator.command-preview__filter-away { overflow: hidden; animation-name: command-filter-away-separator; }
-	.command-preview__item svg { width: 16px; height: 16px; color: #8b8b84; }
-	.command-preview__item span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	.command-preview__item strong { margin-left: auto; color: #8f8f88; font-size: 10px; font-weight: 500; letter-spacing: .08em; }
-	.command-preview__item--active { color: #20201e; background: rgb(21 21 21 / 8%); }
-	.command-preview__item--active svg, .command-preview__item--active strong { color: #20201e; }
-	.command-preview__item--search-result { animation: command-search-match var(--command-cycle) ease-in-out infinite; }
-	.command-preview__item--search-result svg, .command-preview__item--search-result strong { animation: command-search-match-icon var(--command-cycle) ease-in-out infinite; }
-	.command-preview__footer { display: flex; align-items: center; gap: 12px; padding: 8px 2px 2px; color: #8b8b84; font-size: 10px; line-height: 1; }
-	.command-preview__footer span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-	kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; border: 0; border-radius: 2px; background: #eeeeea; color: #6f6f69; font: inherit; font-size: 9px; font-weight: 500; line-height: 1; }
-	.scratchpad-preview { --scratchpad-cycle: 5.4s; border: 0; background: transparent; box-shadow: none; text-align: left; }
-	.scratchpad-preview__overlay { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: flex-start; padding: 47px 0 0 24px; background: transparent; }
-	.scratchpad-preview__panel { width: 455px; color: #242420; transform-origin: top center; animation: scratchpad-panel var(--scratchpad-cycle) cubic-bezier(.22, .8, .24, 1) infinite; }
-	.scratchpad-preview__frame { border: 1px solid rgb(229 229 229 / 50%); border-radius: 8px; background: rgb(255 255 255 / 30%); box-shadow: 0 10px 15px -3px rgb(21 21 21 / 10%), 0 4px 6px -4px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); padding: 6px; backdrop-filter: blur(24px) saturate(150%); }
-	.scratchpad-preview__surface { border: 1px solid rgb(229 229 229 / 60%); border-radius: 6px; background: rgb(255 255 255 / 70%); box-shadow: 0 4px 6px -1px rgb(21 21 21 / 10%), 0 2px 4px -2px rgb(21 21 21 / 10%), 0 0 0 1px rgb(21 21 21 / 10%); backdrop-filter: blur(24px) saturate(150%); animation: scratchpad-submit var(--scratchpad-cycle) ease-in-out infinite; }
-	.scratchpad-preview__textarea { position: relative; min-height: 40px; padding: 10px 12px; color: #8a8a83; font-size: 13px; line-height: 1.45; }
-	.scratchpad-preview__placeholder { display: block; animation: scratchpad-placeholder var(--scratchpad-cycle) ease-in-out infinite; }
-	.scratchpad-preview__note { position: absolute; top: 10px; left: 12px; display: block; width: 0; overflow: hidden; color: var(--ink); font-size: 12px; line-height: 1.45; white-space: nowrap; animation: scratchpad-note var(--scratchpad-cycle) steps(14, end) infinite; }
-	.scratchpad-preview__caret { position: absolute; top: 10px; left: 12px; width: 1px; height: 17px; opacity: 0; pointer-events: none; animation: scratchpad-caret-position var(--scratchpad-cycle) steps(14, end) infinite; }
-	.scratchpad-preview__caret::after { position: absolute; inset: 0; background: var(--ink); content: ""; animation: command-caret 650ms steps(1, end) infinite; }
-	.scratchpad-preview__shortcuts { display: flex; flex-wrap: nowrap; align-items: center; justify-content: flex-end; gap: 4px 10px; padding: 7px 2px 1px; color: #777770; font-size: 10px; line-height: 18px; }
-	.scratchpad-preview__shortcut { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
-	.scratchpad-preview__shortcut--close { margin-right: auto; }
-	.scratchpad-preview__shortcut em { color: rgb(119 119 112 / 50%); font-style: normal; }
-	.scratchpad-preview__toast { position: absolute; top: 72px; left: 50%; z-index: 2; display: inline-flex; align-items: center; gap: 7px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: color-mix(in srgb, var(--surface) 82%, transparent); box-shadow: 0 6px 16px rgb(21 21 21 / 12%); color: var(--ink); font-size: 10px; font-weight: 600; line-height: 1; opacity: 0; pointer-events: none; transform: translate(-50%, 8px) scale(.96); backdrop-filter: blur(14px) saturate(150%); animation: scratchpad-toast var(--scratchpad-cycle) cubic-bezier(.22, .8, .24, 1) infinite; }
-	.scratchpad-preview__toast svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
-	.folder-canvas-preview { --folder-cycle: 4.2s; border: 0; background-color: transparent; box-shadow: none; }
-	.folder-canvas-preview__grid { position: absolute; inset: 0; }
-	.folder-canvas-preview__folder { position: absolute; top: 7px; left: 50%; z-index: 2; width: 178px; height: 192px; overflow: hidden; border: 1px solid rgb(0 0 0 / 9%); border-radius: 6px; background: #fff; box-shadow: 0 3px 10px rgb(21 21 21 / 5%); transform: translateX(-50%); }
-	.folder-canvas-preview__folder-grid { position: relative; width: 100%; height: 178px; padding: 6px; }
-	.folder-canvas-preview__preview, .folder-canvas-preview__slot, .folder-canvas-preview__incoming { position: absolute; width: calc(50% - 10px); height: calc(50% - 10px); overflow: hidden; border-radius: 2px; }
-	.folder-canvas-preview__preview { background: #f3f3f1; animation-duration: var(--folder-cycle); animation-fill-mode: both; animation-iteration-count: infinite; animation-timing-function: cubic-bezier(.16, 1, .3, 1); }
-	.folder-canvas-preview__preview img, .folder-canvas-preview__incoming img, .folder-canvas-preview__source img { display: block; width: 100%; height: 100%; object-fit: cover; }
-	.folder-canvas-preview__preview--one { top: 6px; left: 6px; animation-name: folder-preview-one; }
-	.folder-canvas-preview__preview--two { top: 6px; right: 6px; animation-name: folder-preview-two; }
-	.folder-canvas-preview__preview--three { bottom: 6px; left: 6px; animation-name: folder-preview-three; }
-	.folder-canvas-preview__preview--four { right: 6px; bottom: 6px; animation-name: folder-preview-four; }
-	.folder-canvas-preview__slot, .folder-canvas-preview__incoming { top: 6px; left: 6px; }
-	.folder-canvas-preview__slot { display: grid; border: 1px dashed rgb(21 21 21 / 42%); background: rgb(21 21 21 / 4%); color: rgb(21 21 21 / 58%); opacity: 0; place-items: center; animation: folder-slot var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
-	.folder-canvas-preview__slot svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.5; }
-	.folder-canvas-preview__incoming { opacity: 0; animation: folder-incoming var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
-	.folder-canvas-preview__folder-label { position: absolute; right: 1px; bottom: 1px; left: 1px; z-index: 3; display: flex; align-items: center; min-height: 29px; gap: 6px; padding: 6px 8px; border-radius: 0 0 5px 5px; background: rgb(255 255 255 / 70%); backdrop-filter: blur(10px); color: #464641; font-size: 8px; }
-	.folder-canvas-preview__folder-label strong { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-	.folder-canvas-preview__folder-label small { position: relative; width: 12px; height: 10px; margin-left: auto; color: #85857e; }
-	.folder-canvas-preview__count { position: absolute; top: 0; right: 0; animation-duration: var(--folder-cycle); animation-iteration-count: infinite; }
-	.folder-canvas-preview__count--before { animation-name: folder-count-before; }
-	.folder-canvas-preview__count--after { opacity: 0; animation-name: folder-count-after; }
-	.folder-canvas-preview__source { position: absolute; bottom: 12px; left: calc(50% - 124px); z-index: 4; width: 62px; height: 62px; overflow: hidden; border: 1px solid rgb(0 0 0 / 11%); border-radius: 4px; background: #fff; box-shadow: 0 6px 16px rgb(21 21 21 / 14%); animation: folder-source-drag var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
-	.folder-canvas-preview__cursor { position: absolute; bottom: 31px; left: calc(50% - 105px); z-index: 5; width: 24px; height: 24px; overflow: visible; color: #252522; filter: drop-shadow(0 2px 3px rgb(21 21 21 / 18%)); opacity: 0; pointer-events: none; animation: folder-cursor-drag var(--folder-cycle) cubic-bezier(.16, 1, .3, 1) infinite; will-change: opacity, transform; }
-	.folder-canvas-preview__cursor path { fill: #fff; stroke: currentColor; stroke-linejoin: round; stroke-width: 1.4; }
-	@keyframes folder-cursor-drag {
-		0%, 6% { opacity: 1; transform: translate(0, 0) scale(1); }
-		17% { opacity: 1; transform: translate(43px, -94px) scale(1); }
-		22% { opacity: 1; transform: translate(50px, -109px) scale(1); }
-		26%, 52% { opacity: 0; transform: translate(50px, -109px) scale(1); }
-		95%, 100% { opacity: 1; transform: translate(0, 0) scale(1); }
-	}
-	@keyframes folder-source-drag {
-		0%, 6% { opacity: 1; transform: translate(0, 0) scale(1); }
-		7% { opacity: 1; transform: translate(0, 0) scale(.98); }
-		17% { opacity: 1; transform: translate(43px, -94px) scale(1.22); }
-		22% { opacity: 1; transform: translate(50px, -109px) scale(1.3); }
-		26%, 52% { opacity: 0; transform: translate(50px, -109px) scale(1.3); }
-		56%, 100% { opacity: 1; transform: translate(0, 0) scale(1); }
-	}
-	@keyframes folder-slot {
-		0%, 12% { opacity: 0; transform: scale(.9); }
-		15%, 22% { opacity: 1; transform: scale(1); }
-		26%, 100% { opacity: 0; transform: scale(.96); }
-	}
-	@keyframes folder-incoming {
-		0%, 22% { opacity: 0; transform: scale(.96); }
-		26%, 46% { opacity: 1; transform: scale(1); }
-		50%, 100% { opacity: 0; transform: scale(.96); }
-	}
-	@keyframes folder-preview-one {
-		0%, 12% { transform: translate(0, 0); }
-		15%, 46% { transform: translate(calc(100% + 8px), 0); }
-		50%, 100% { transform: translate(0, 0); }
-	}
-	@keyframes folder-preview-two {
-		0%, 12% { transform: translate(0, 0); }
-		15%, 46% { transform: translate(calc(-100% - 8px), calc(100% + 8px)); }
-		50%, 100% { transform: translate(0, 0); }
-	}
-	@keyframes folder-preview-three {
-		0%, 12% { transform: translate(0, 0); }
-		15%, 46% { transform: translate(calc(100% + 8px), 0); }
-		50%, 100% { transform: translate(0, 0); }
-	}
-	@keyframes folder-preview-four {
-		0%, 12% { opacity: 1; transform: scale(1); }
-		15%, 46% { opacity: 0; transform: scale(.94); }
-		50%, 100% { opacity: 1; transform: scale(1); }
-	}
-	@keyframes folder-count-before {
-		0%, 22% { opacity: 1; transform: translateY(0); }
-		26%, 46% { opacity: 0; transform: translateY(-3px); }
-		50%, 100% { opacity: 1; transform: translateY(0); }
-	}
-	@keyframes folder-count-after {
-		0%, 22% { opacity: 0; transform: translateY(3px); }
-		26%, 46% { opacity: 1; transform: translateY(0); }
-		50%, 100% { opacity: 0; transform: translateY(3px); }
-	}
-
-
-	:global(html[data-theme='dark']) .interaction-grid__junction::before,
-	:global(html[data-theme='dark']) .interaction-grid__junction::after { background: rgb(241 243 238 / 46%); }
-	:global(html[data-theme='dark']) .command-preview { background: transparent; box-shadow: none; }
-	:global(html[data-theme='dark']) .paste-preview { background: transparent; box-shadow: none; }
-	:global(html[data-theme='dark']) .scratchpad-preview { background: transparent; }
-	:global(html[data-theme='dark']) .source-import-preview__collection,
-	:global(html[data-theme='dark']) .source-import-preview__collection-meta { border-color: var(--line); background: var(--surface); color: var(--ink); }
-	:global(html[data-theme='dark']) .source-import-preview__collection-preview { background: var(--surface); }
-	:global(html[data-theme='dark']) .source-import-preview__collection-meta span,
-	:global(html[data-theme='dark']) .source-import-preview__asset--three span { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .source-import-preview__social,
-	:global(html[data-theme='dark']) .source-import-preview__asset { border-color: var(--line); background: var(--surface-muted); box-shadow: 0 4px 12px rgb(0 0 0 / 24%); }
-	:global(html[data-theme='dark']) .paste-preview__payload,
-	:global(html[data-theme='dark']) .paste-preview__inserted { border-color: var(--line); background: var(--surface); box-shadow: 0 4px 12px rgb(0 0 0 / 24%); }
-	:global(html[data-theme='dark']) .paste-preview__flow path { stroke: rgb(241 243 238 / 58%); }
-	:global(html[data-theme='dark']) .paste-preview__gesture { color: rgb(241 243 238 / 14%); }
-	:global(html[data-theme='dark']) .paste-preview__payload { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .source-import-preview__connector { color: rgb(241 243 238 / 36%); }
-	:global(html[data-theme='dark']) .source-import-preview__connector-flow { stroke: rgb(241 243 238 / 82%); filter: drop-shadow(0 0 2px rgb(241 243 238 / 22%)); }
-	:global(html[data-theme='dark']) .source-import-preview__flow-dot { fill: rgb(241 243 238 / 92%); filter: drop-shadow(0 0 7px rgb(241 243 238 / 55%)); }
-	:global(html[data-theme='dark']) .source-import-preview__pulse { background: rgb(241 243 238 / 96%); box-shadow: 0 0 0 1px rgb(241 243 238 / 26%), 0 0 14px rgb(241 243 238 / 68%); }
-	:global(html[data-theme='dark']) .source-import-preview__social--instagram { color: #ff7ac4; }
-	:global(html[data-theme='dark']) .source-import-preview__social--pinterest { color: #ff6b77; }
-	:global(html[data-theme='dark']) .source-import-preview__social--x { color: var(--ink); }
-	:global(html[data-theme='dark']) .source-import-preview__social--dribbble { color: #ff8fbd; }
-	:global(html[data-theme='dark']) .command-preview__dialog { border-color: oklch(1 0 0 / 5%); background: color-mix(in srgb, var(--surface) 30%, transparent); color: var(--ink); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%), 0 0 0 1px var(--line); }
-	:global(html[data-theme='dark']) .command-preview__body { border-color: oklch(1 0 0 / 6%); background: color-mix(in srgb, var(--surface) 70%, transparent); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%), 0 0 0 1px var(--line); }
-	:global(html[data-theme='dark']) .command-preview__search,
-	:global(html[data-theme='dark']) .command-preview__group,
-	:global(html[data-theme='dark']) .command-preview__footer,
-	:global(html[data-theme='dark']) .scratchpad-preview__shortcuts { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .command-preview__search { border-color: var(--line); }
-	:global(html[data-theme='dark']) .command-preview__separator { background-color: var(--line); }
-	:global(html[data-theme='dark']) kbd { border-color: var(--line-strong); background: var(--surface-muted); color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .command-preview__item { color: var(--ink); }
-	:global(html[data-theme='dark']) .command-preview__item svg,
-	:global(html[data-theme='dark']) .command-preview__item strong { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .command-preview__item--active { color: var(--ink); background: color-mix(in srgb, var(--ink) 10%, transparent); }
-	:global(html[data-theme='dark']) .command-preview__item--active svg,
-	:global(html[data-theme='dark']) .command-preview__item--active strong { color: var(--ink); }
-	:global(html[data-theme='dark']) .scratchpad-preview__overlay { background: transparent; }
-	:global(html[data-theme='dark']) .scratchpad-preview__frame { border-color: oklch(1 0 0 / 5%); background: color-mix(in srgb, var(--surface) 30%, transparent); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%), 0 0 0 1px var(--line); }
-	:global(html[data-theme='dark']) .scratchpad-preview__surface { border-color: oklch(1 0 0 / 6%); background: color-mix(in srgb, var(--surface) 70%, transparent); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -2px rgb(0 0 0 / 10%), 0 0 0 1px var(--line); }
-	:global(html[data-theme='dark']) .scratchpad-preview__textarea { color: var(--ink-muted); }
-	:global(html[data-theme=dark]) .selection-preview { --selection-outline: var(--ink); --selection-card-shadow: 0 6px 16px rgb(0 0 0 / 26%); }
-	:global(html[data-theme=dark]) .selection-preview__cursor { color: var(--ink); filter: drop-shadow(0 2px 4px rgb(0 0 0 / 38%)); }
-	:global(html[data-theme=dark]) .selection-preview__cursor path { fill: var(--surface); }
-	:global(html[data-theme=dark]) .folder-canvas-preview__cursor { color: var(--ink); filter: drop-shadow(0 2px 4px rgb(0 0 0 / 38%)); }
-	:global(html[data-theme=dark]) .folder-canvas-preview__cursor path { fill: var(--surface); }
-	:global(html[data-theme='dark']) .selection-preview__marquee { border-color: rgb(241 243 238 / 100%); background: rgb(241 243 238 / 10%); box-shadow: none; }
-	:global(html[data-theme='dark']) .selection-preview__marquee rect { stroke: rgb(241 243 238 / 100%); }
-	:global(html[data-theme='dark']) .selection-preview__card { background: var(--surface); }
-	:global(html[data-theme='dark']) .selection-preview__card--selected { outline-color: var(--ink); }
-	:global(html[data-theme='dark']) .selection-preview__action-bar { border-color: rgb(255 255 255 / 10%); background: rgb(0 0 0 / 70%); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 30%), 0 2px 4px -2px rgb(0 0 0 / 30%), 0 0 0 1px rgb(241 243 238 / 10%); color: var(--ink); }
-	:global(html[data-theme='dark']) .selection-preview__action-bar i { background: var(--line); }
-	:global(html[data-theme='dark']) .selection-preview__action-bar button { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .folder-canvas-preview__folder { border-color: rgb(255 255 255 / 10%); background: var(--surface); box-shadow: 0 3px 10px rgb(0 0 0 / 24%); }
-	:global(html[data-theme='dark']) .folder-canvas-preview__preview { background: var(--surface-muted); }
-	:global(html[data-theme='dark']) .folder-canvas-preview__slot { border-color: rgb(241 243 238 / 48%); background: rgb(241 243 238 / 8%); color: rgb(241 243 238 / 68%); }
-	:global(html[data-theme='dark']) .folder-canvas-preview__source { border-color: var(--line); background: var(--surface); box-shadow: 0 6px 16px rgb(0 0 0 / 30%); }
-	:global(html[data-theme='dark']) .folder-canvas-preview__folder-label { color: var(--ink); background: var(--surface); }
-	:global(html[data-theme='dark']) .folder-canvas-preview__folder-label small { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .folder-canvas-preview__bubble { border-color: rgb(255 255 255 / 11%); background: rgb(27 30 27 / 76%); box-shadow: 0 3px 10px rgb(0 0 0 / 28%); }
-	:global(html[data-theme='dark']) .folder-canvas-preview__bubble svg { stroke: var(--ink); }
-
-	@media (min-width: 821px) {
-		.interaction-item { min-height: 430px; }
-		.command-preview, .scratchpad-preview, .folder-canvas-preview, .source-import-preview, .paste-preview, .selection-preview { position: absolute; top: 158px; right: 0; bottom: 0; left: 0; width: auto; min-height: 0; margin-left: 0; }
-		.command-preview { margin-bottom: 0; }
-		.command-preview__dialog { left: 30px; }
-		.scratchpad-preview__overlay { justify-content: center; padding: 54px 18px 0; }
-		.scratchpad-preview__panel { width: min(100% - 36px, 316px); }
-		.scratchpad-preview__shortcuts { gap: 4px 6px; font-size: 9px; }
-		.scratchpad-preview__shortcut { gap: 3px; }
-		.scratchpad-preview kbd { min-width: 16px; height: 16px; padding: 0 3px; font-size: 8px; }
-	}
-
-	@media (min-width: 821px) and (max-width: 1040px) {
-		.interaction-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); }
-		.interaction-grid__rule--middle { top: 33.333%; }
-		.interaction-grid__rule--lower { top: 66.667%; display: block; }
-		.interaction-grid__junction--middle { top: 33.333%; }
-		.interaction-grid__junction--lower { top: 66.667%; display: block; transform: translate(-50%, -50%); }
-		.interaction-grid__junction--one { left: 50%; }
-		.interaction-grid__junction--two { display: none; }
-		.interaction-item:not(:nth-of-type(3n + 1))::before { display: none; }
-		.interaction-item:nth-of-type(2n)::before { position: absolute; top: -44px; bottom: -44px; left: -1px; display: block; width: 1px; background: linear-gradient(to bottom, transparent, var(--line) 44px, var(--line) calc(100% - 44px), transparent); content: ""; }
-	}
-
-	@media (max-width: 820px) {
-		.interaction-grid { grid-template-columns: 1fr; grid-template-rows: none; }
-		.interaction-grid__rule--middle, .interaction-grid__rule--lower, .interaction-grid__junction--middle, .interaction-grid__junction--lower { display: none; }
-		.interaction-item:not(:nth-of-type(3n + 1))::before { display: none; }
-		.interaction-item + .interaction-item::before { position: absolute; top: 0; right: -24px; bottom: auto; left: -24px; width: auto; height: 1px; background: linear-gradient(to right, transparent, var(--line) 44px, var(--line) calc(100% - 44px), transparent); display: block; content: ""; }
-		.interaction-item + .interaction-item::after { position: absolute; top: 0; right: -3px; left: -3px; z-index: 2; height: 7px; background: linear-gradient(rgb(21 21 21 / 48%), rgb(21 21 21 / 48%)) left center / 7px 1px no-repeat, linear-gradient(rgb(21 21 21 / 48%), rgb(21 21 21 / 48%)) left 3px center / 1px 7px no-repeat, linear-gradient(rgb(21 21 21 / 48%), rgb(21 21 21 / 48%)) right center / 7px 1px no-repeat, linear-gradient(rgb(21 21 21 / 48%), rgb(21 21 21 / 48%)) right 3px center / 1px 7px no-repeat; content: ""; pointer-events: none; transform: translateY(-50%); }
-		.interaction-grid__junction--one, .interaction-grid__junction--two { display: none; }
-		.interaction-item__copy { min-height: auto; margin-bottom: 24px; }
-		.command-preview, .scratchpad-preview, .folder-canvas-preview, .source-import-preview, .paste-preview, .selection-preview { overflow: hidden; }
-		.command-preview__dialog { left: 50%; transform: translateX(-50%); }
-		.scratchpad-preview__panel { width: calc(100% - 24px); }
-		.scratchpad-preview__shortcuts { flex-wrap: wrap; }
-	}
-
-	@media (min-width: 641px) and (max-width: 820px) {
-		.command-preview__clip { width: calc(100% + 30px); min-height: 300px; margin-bottom: -36px; overflow: hidden; }
-		.command-preview { width: calc(100% + 30px); min-height: 300px; margin-bottom: 0; overflow: hidden; }
-		.command-preview__dialog { left: 0; width: calc(100% + 48px); transform: none; }
-		.selection-preview__board { transform: translateY(8px); }
-		.selection-preview__action-bar { bottom: 4px; }
-	}
-
-	:global(html[data-theme=dark]) .interaction-item + .interaction-item::after { background: linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) left center / 7px 1px no-repeat, linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) left 3px center / 1px 7px no-repeat, linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) right center / 7px 1px no-repeat, linear-gradient(rgb(241 243 238 / 46%), rgb(241 243 238 / 46%)) right 3px center / 1px 7px no-repeat; }
-
-
-	@media (max-width: 640px) {
-		.interaction-highlights { padding-top: 126px; padding-bottom: 92px; }
-		.interaction-highlights__intro { margin-bottom: 60px; }
-		.interaction-grid__rule { right: -16px; left: -16px; }
-		.interaction-item + .interaction-item::before { right: -16px; left: -16px; }
-		.interaction-item { padding: 28px 18px 32px; }
-		.command-preview, .scratchpad-preview, .folder-canvas-preview, .source-import-preview, .paste-preview, .selection-preview { min-height: 196px; }
-		.command-preview__clip { width: calc(100% + 18px); min-height: 228px; margin-bottom: -32px; overflow: hidden; }
-		.command-preview { width: calc(100% + 34px); min-height: 228px; margin-bottom: 0; overflow: hidden; }
-		.command-preview__dialog { left: 0; width: 100%; transform: none; }
-		.scratchpad-preview { overflow: visible; }
-		.scratchpad-preview__overlay { padding-left: 0; }
-		.scratchpad-preview__panel { width: calc(100% + 34px); }
-		.scratchpad-preview__shortcuts { flex-wrap: nowrap; }
-		.selection-preview { overflow: visible; }
-		.selection-preview__action-bar { bottom: -18px; }
-	}
+	.reference-workflow { max-width: 980px; padding-block: clamp(108px, 14vw, 176px) clamp(114px, 14vw, 168px); }
+	.reference-workflow__intro { max-width: 580px; margin: 0 auto clamp(54px, 7vw, 82px); text-align: center; }
+	.eyebrow { margin: 0 0 14px; color: var(--ink-muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+	.reference-workflow h2 { margin: 0 0 14px; font-size: clamp(30px, 3.4vw, 44px); line-height: 1.08; }
+	.reference-workflow__intro > p:last-child { max-width: 470px; margin: 0 auto; color: var(--ink-muted); font-size: 14px; line-height: 1.58; }
+	.reference-workflow__stages { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
+	.workflow-stage { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 2px 9px rgb(21 21 21 / 3%); }
+	.workflow-stage--capture { grid-column: span 5; }
+	.workflow-stage--context { grid-column: span 7; }
+	.workflow-stage--return { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(215px, .55fr) minmax(0, 1.45fr); align-items: center; gap: clamp(36px, 6vw, 82px); }
+	.workflow-stage__copy { padding: 31px 31px 0; }
+	.workflow-stage--return .workflow-stage__copy { padding: 38px; }
+	.workflow-stage__copy > span { display: block; margin-bottom: 28px; color: var(--ink-muted); font-size: 11px; }
+	.workflow-stage__copy h3 { max-width: 310px; margin: 0 0 11px; font-size: clamp(21px, 2.2vw, 28px); font-weight: 570; line-height: 1.12; }
+	.workflow-stage__copy p { max-width: 340px; margin: 0; color: var(--ink-muted); font-size: 13px; line-height: 1.58; }
+	.capture-story, .context-story, .return-story { position: relative; overflow: hidden; border: 1px solid rgb(21 21 21 / 10%); border-radius: 7px; background: #fff; color: #282824; }
+	.capture-story { min-height: 302px; margin: 38px -30px -38px 38px; }
+	.source-window { position: absolute; top: 30px; left: -18px; width: 68%; overflow: hidden; border: 1px solid rgb(21 21 21 / 12%); border-radius: 6px; background: #fff; box-shadow: 0 8px 22px rgb(21 21 21 / 12%); transform: rotate(-3deg); }
+	.source-window__bar, .context-story__bar { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px; border-bottom: 1px solid #e5e5df; color: #7d7d75; font-size: 7px; }
+	.source-window__bar i, .context-story__bar i { width: 5px; height: 5px; border-radius: 50%; background: #bdbdb5; }
+	.source-window__bar i:nth-child(2) { background: #d1d1c8; }.source-window__bar i:nth-child(3) { background: #e0e0da; }.source-window__bar span { margin-left: 4px; }
+	.source-window > img { display: block; width: 100%; height: 134px; object-fit: cover; }
+	.source-window__title { display: grid; gap: 4px; padding: 10px; }.source-window__title small { color: #86867e; font-size: 7px; }.source-window__title strong { font-size: 10px; line-height: 1.25; }
+	.capture-story__path { position: absolute; top: 75px; right: 12px; width: 70%; height: 128px; fill: none; stroke: #98988f; stroke-dasharray: 3 4; stroke-width: 1.2; }
+	.capture-story__asset { position: absolute; right: 22px; bottom: 38px; z-index: 2; width: 37%; height: 130px; overflow: hidden; border: 1px solid rgb(21 21 21 / 12%); border-radius: 5px; box-shadow: 0 7px 18px rgb(21 21 21 / 12%); transform: rotate(5deg); }.capture-story__asset img { width: 100%; height: 100%; object-fit: cover; }
+	.capture-story__inbox { position: absolute; right: 13px; bottom: 10px; z-index: 3; display: grid; gap: 2px; padding: 7px 9px; border: 1px solid rgb(21 21 21 / 9%); border-radius: 5px; background: rgb(255 255 255 / 88%); box-shadow: 0 3px 8px rgb(21 21 21 / 7%); backdrop-filter: blur(8px); }.capture-story__inbox span { color: #83837b; font-size: 7px; }.capture-story__inbox strong { font-size: 8px; }
+	.context-story { min-height: 405px; margin: 32px 32px -42px -10px; background: #fff; }.context-story__bar { position: relative; z-index: 2; height: 38px; gap: 7px; padding-inline: 10px; font-size: 8px; }.context-story__bar strong { color: #474740; font-weight: 600; }.context-story__bar span { margin-left: auto; color: #92928a; }
+	.context-story__canvas { position: relative; height: 367px; overflow: hidden; background-color: #f5f5f1; background-image: radial-gradient(#cdcdc6 .65px, transparent .7px); background-size: 15px 15px; }
+	.context-story__line { position: absolute; z-index: 0; overflow: visible; fill: none; stroke: #9d9d94; stroke-dasharray: 3 4; stroke-width: 1.1; }.context-story__line--one { top: 118px; left: 15%; width: 45%; }.context-story__line--two { right: 8%; bottom: 50px; width: 37%; }
+	.context-card { position: absolute; z-index: 1; overflow: hidden; border: 1px solid rgb(21 21 21 / 12%); border-radius: 5px; background: #fff; box-shadow: 0 5px 13px rgb(21 21 21 / 10%); }.context-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+	.context-card--image-one { top: 42px; left: 9%; width: 31%; height: 180px; transform: rotate(-4deg); }.context-card--image-two { right: 8%; bottom: 33px; width: 29%; height: 125px; transform: rotate(5deg); }
+	.context-card--note { top: 57px; right: 9%; width: 36%; padding: 12px; transform: rotate(3deg); }.context-card--note small { color: #8b8b83; font-size: 7px; }.context-card--note strong { display: block; margin: 7px 0 6px; font-size: 10px; line-height: 1.28; }.context-card--note p { margin: 0; color: #73736c; font-size: 8px; line-height: 1.35; }
+	.context-card--folder { bottom: 24px; left: 27%; width: 32%; }.context-card--folder > div { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 5px; }.context-card--folder img, .context-card--folder b { min-width: 0; height: 41px; border-radius: 2px; object-fit: cover; }.context-card--folder b { display: grid; background: #e5e5df; color: #6d6d66; font-size: 8px; place-items: center; }.context-card--folder > span { display: flex; padding: 7px 8px; border-top: 1px solid #ededE8; font-size: 8px; font-weight: 600; }.context-card--folder small { margin-left: auto; color: #93938b; font-size: 7px; font-weight: 400; }
+	.return-story { min-height: 318px; margin: 26px 34px 26px -16px; padding: 36px; background: #f8f8f5; }.return-story__search { display: flex; align-items: center; max-width: 470px; height: 39px; gap: 9px; padding: 0 11px; border: 1px solid #d9d9d2; border-radius: 5px; background: #fff; box-shadow: 0 1px 3px rgb(21 21 21 / 3%); font-size: 10px; }.return-story__search svg { width: 15px; height: 15px; fill: none; stroke: #74746d; stroke-width: 1.7; }.return-story__search kbd { margin-left: auto; color: #989890; font-size: 8px; }
+	.return-story__filters { display: flex; align-items: center; gap: 4px; padding: 13px 2px 10px; color: #7c7c74; font-size: 8px; }.return-story__filters i { width: 13px; height: 13px; border-radius: 50%; }.return-story__filters i:nth-child(1) { background: #173a2a; }.return-story__filters i:nth-child(2) { background: #315a40; }.return-story__filters i:nth-child(3) { background: #5d7858; }.return-story__filters i:nth-child(4) { background: #a0b091; }.return-story__filters span { margin-left: 5px; }
+	.return-story__results { display: grid; max-width: 470px; grid-template-columns: repeat(3, 1fr); gap: 7px; }.return-story__results img { width: 100%; height: 142px; border: 1px solid rgb(21 21 21 / 8%); border-radius: 4px; object-fit: cover; }.return-story__note { position: absolute; right: 22px; bottom: 19px; width: 33%; padding: 12px; border: 1px solid rgb(21 21 21 / 10%); border-radius: 5px; background: rgb(255 255 255 / 94%); box-shadow: 0 7px 16px rgb(21 21 21 / 8%); }.return-story__note small, .return-story__note span { display: block; color: #85857d; font-size: 7px; }.return-story__note strong { display: block; margin: 7px 0; font-size: 9px; line-height: 1.3; }
+	:global(html[data-theme='dark']) .workflow-stage { box-shadow: 0 2px 10px rgb(0 0 0 / 20%); }.context-story, .capture-story { background: #000; }.source-window, .capture-story__inbox, .context-card, .return-story__search, .return-story__note { border-color: var(--line); background: var(--surface); color: var(--ink); }.source-window__bar, .context-story__bar, .context-card--folder > span { border-color: var(--line); }.source-window__title small, .capture-story__inbox span, .context-story__bar span, .context-card--note small, .context-card--note p, .context-card--folder small, .return-story__filters, .return-story__note small, .return-story__note span { color: var(--ink-muted); }.context-story__canvas, .return-story { background-color: var(--canvas); }.context-story__canvas { background-image: radial-gradient(rgb(241 243 238 / 28%) .65px, transparent .7px); }.context-card--folder b { background: var(--surface-muted); color: var(--ink-muted); }.return-story__search svg { stroke: var(--ink-muted); }.return-story__results img { border-color: var(--line); }
+	@media (max-width: 800px) { .workflow-stage--capture, .workflow-stage--context, .workflow-stage--return { grid-column: 1 / -1; }.workflow-stage--return { grid-template-columns: 1fr; gap: 2px; }.workflow-stage--return .workflow-stage__copy { padding-bottom: 0; }.capture-story { margin-left: 30px; }.context-story { margin-left: 18px; }.return-story { margin: 30px 22px -18px; }.workflow-stage--return { padding-bottom: 24px; } }
+	@media (max-width: 560px) { .reference-workflow { padding-block: 84px 94px; }.reference-workflow__intro { margin-bottom: 48px; }.workflow-stage__copy, .workflow-stage--return .workflow-stage__copy { padding: 24px 22px 0; }.workflow-stage__copy > span { margin-bottom: 20px; }.capture-story { min-height: 274px; margin: 28px -20px -34px 22px; }.source-window { top: 25px; width: 72%; }.source-window > img { height: 115px; }.capture-story__asset { right: 18px; width: 35%; height: 110px; }.context-story { min-height: 327px; margin: 28px -18px -22px 14px; }.context-story__canvas { height: 289px; }.context-card--image-one { width: 34%; height: 142px; }.context-card--note { width: 42%; padding: 9px; }.context-card--folder { width: 37%; left: 21%; }.context-card--image-two { width: 31%; height: 96px; }.context-card--folder img, .context-card--folder b { height: 32px; }.return-story { min-height: 280px; margin: 24px 12px 0; padding: 22px; }.return-story__results img { height: 105px; }.return-story__note { right: 13px; bottom: 13px; width: 43%; }.return-story__search { font-size: 9px; } }
 </style>
