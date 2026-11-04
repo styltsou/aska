@@ -30,15 +30,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ChevronsUpDownIcon,
-  SparklesIcon,
-  BadgeCheckIcon,
-  CreditCardIcon,
+  LifeBuoyIcon,
   LoaderCircleIcon,
   LogOutIcon,
+  SettingsIcon,
 } from "lucide-react";
 import { signOut, type AuthUser } from "@/lib/auth-client";
 import { clearAuthStateCache } from "@/lib/auth-flow";
 import { clearMediaSession } from "@/lib/media-session";
+import { openSettings } from "@/lib/settings-dialog";
 import { useRouter } from "@tanstack/react-router";
 
 export function NavUser({ user }: { user: AuthUser }) {
@@ -95,20 +95,16 @@ export function NavUser({ user }: { user: AuthUser }) {
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem className="cursor-pointer hover:bg-primary! hover:text-primary-foreground! hover:**:text-primary-foreground! focus:bg-primary! focus:text-primary-foreground! focus:**:text-primary-foreground! data-highlighted:bg-primary! data-highlighted:text-primary-foreground! data-highlighted:**:text-primary-foreground!">
-                  <SparklesIcon />
-                  Upgrade to Pro
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={openSettings}
+                >
+                  <SettingsIcon />
+                  Settings
                 </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem className="cursor-pointer">
-                  <BadgeCheckIcon />
-                  Account
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">
-                  <CreditCardIcon />
-                  Billing
+                <DropdownMenuItem disabled>
+                  <LifeBuoyIcon />
+                  Support
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

@@ -14,14 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import {
-  FolderOpenIcon,
-  InboxIcon,
-  LifeBuoyIcon,
-  SendIcon,
-  SettingsIcon,
-  StarIcon,
-} from "lucide-react";
+import { FolderOpenIcon, InboxIcon, SendIcon, StarIcon } from "lucide-react";
 import type { AuthState } from "@/lib/auth-flow";
 import { useWorkspace } from "@/api/workspace";
 import { useMarkInboxSeen } from "@/api/collection";
@@ -59,13 +52,7 @@ export function AppSidebar({
   );
 
   const navSecondary = [
-    { title: "Support", icon: <LifeBuoyIcon />, disabled: true },
     { title: "Feedback", icon: <SendIcon />, disabled: true },
-    {
-      title: "Settings",
-      icon: <SettingsIcon />,
-      onClick: openSettings,
-    },
   ];
   const { workspaceSlug, collectionSlug: activeCollectionSlug } =
     getSidebarCollectionLocation(pathname);
