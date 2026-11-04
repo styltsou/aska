@@ -267,12 +267,7 @@ function insertRemoteImage(editor: Editor, range: Range) {
     return;
   }
 
-  editor
-    .chain()
-    .focus()
-    .deleteRange(range)
-    .setImage({ src: url.href })
-    .run();
+  editor.chain().focus().deleteRange(range).setImage({ src: url.href }).run();
 }
 
 function headingDescription(level: number) {
