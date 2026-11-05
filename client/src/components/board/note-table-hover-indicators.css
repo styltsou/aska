@@ -1,6 +1,6 @@
 .note-rich-text-editable .note-table-viewport {
   /* Leave room for the marks where they straddle the table's outer edges. */
-  padding-top: 3px;
+  padding-top: 4px;
   padding-left: 3px;
 }
 
@@ -14,7 +14,7 @@
 
 .note-table-hover-indicator::before {
   position: absolute;
-  inset: -1px;
+  inset: -2px;
   content: "";
   background: var(--background);
   border-radius: inherit;
@@ -24,18 +24,18 @@
   position: absolute;
   inset: 0;
   content: "";
-  background: var(--primary);
+  background: var(--muted-foreground);
   border-radius: inherit;
 }
 
 .note-table-hover-indicator-column {
-  width: 18px;
-  height: 2px;
-  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 3px;
+  transform: translate(-50%, calc(-50% + 0.5px));
 }
 
 .note-table-hover-indicator-row {
-  width: 2px;
-  height: 18px;
-  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 16px;
+  transform: translate(calc(-50% + 0.5px), -50%);
 }

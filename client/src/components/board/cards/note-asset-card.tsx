@@ -45,6 +45,7 @@ import {
   mentionPillStyle,
 } from "@/components/board/note-mentions";
 import { NoteMermaidPreview } from "@/components/board/note-mermaid-preview";
+import { NoteCardTable } from "./note-card-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   CodeBlock,
@@ -280,6 +281,7 @@ function createMDComponents(
   mentionColors: MentionColors | undefined,
 ): Components {
   return {
+    table: ({ node: _node, ...props }) => <NoteCardTable {...props} />,
     h1: ({ className, ...props }) => (
       <h1
         className={cn(

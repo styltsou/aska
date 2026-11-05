@@ -18,12 +18,9 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowDownIcon,
-  ArrowUpIcon,
   BoldIcon,
   CaseSensitiveIcon,
   CheckSquareIcon,
-  CornerDownLeftIcon,
   CheckIcon,
   ChevronDownIcon,
   CodeIcon,
@@ -133,7 +130,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { cn } from "@/lib/utils";
 import { markdownFromSelection } from "@/lib/markdown";
 import { DEFAULT_MERMAID_SOURCE, parseMermaidFence } from "@/lib/diagram";
@@ -590,12 +586,14 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
       return starts;
     }, [items]);
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const [hasMoreBelow, setHasMoreBelow] = useState(false);
     const [previewPosition, setPreviewPosition] = useState<{
       top: number;
       left: number;
       side: "left" | "right" | "stacked";
     } | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
+    const surfaceRef = useRef<HTMLDivElement>(null);
     const itemRefs = useRef(new Map<number, HTMLButtonElement>());
     const navigationDirectionRef = useRef<SlashMenuNavigationDirection | null>(
       null,
@@ -605,6 +603,25 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
       navigationDirectionRef.current = null;
       setSelectedIndex(0);
       if (listRef.current) listRef.current.scrollTop = 0;
+    }, [flatItems]);
+
+    useLayoutEffect(() => {
+      const list = listRef.current;
+      if (!list) return;
+
+      const updateFade = () => {
+        setHasMoreBelow(
+          list.scrollHeight - list.clientHeight - list.scrollTop > 1,
+        );
+      };
+      updateFade();
+      list.addEventListener("scroll", updateFade, { passive: true });
+      const observer = new ResizeObserver(updateFade);
+      observer.observe(list);
+      return () => {
+        list.removeEventListener("scroll", updateFade);
+        observer.disconnect();
+      };
     }, [flatItems]);
 
     useLayoutEffect(() => {
@@ -632,17 +649,33 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
     useLayoutEffect(() => {
       const list = listRef.current;
       const item = itemRefs.current.get(selectedIndex);
-      if (!list || !item) return;
+      const surface = surfaceRef.current;
+      if (!list || !item || !surface) return;
 
       const updatePosition = () => {
+        const surfaceRect = surface.getBoundingClientRect();
         const itemRect = item.getBoundingClientRect();
         const menuRect = list.getBoundingClientRect();
+        const scaleX = surfaceRect.width / surface.offsetWidth || 1;
+        const scaleY = surfaceRect.height / surface.offsetHeight || 1;
+        const surfaceLeft =
+          surfaceRect.left - (surface.offsetWidth - surfaceRect.width) / 2;
+        const surfaceTop =
+          surfaceRect.top - (surface.offsetHeight - surfaceRect.height) / 2;
+        const menuLeft =
+          surfaceLeft + (menuRect.left - surfaceRect.left) / scaleX;
+        const menuRight =
+          surfaceLeft + (menuRect.right - surfaceRect.left) / scaleX;
+        const menuTop = surfaceTop + (menuRect.top - surfaceRect.top) / scaleY;
+        const menuBottom =
+          surfaceTop + (menuRect.bottom - surfaceRect.top) / scaleY;
+        const itemTop = surfaceTop + (itemRect.top - surfaceRect.top) / scaleY;
         const cardWidth = 208;
         const cardHeight = 170;
         const gap = 8;
         const margin = 8;
-        const right = menuRect.right + gap;
-        const left = menuRect.left - cardWidth - gap;
+        const right = menuRight + gap;
+        const left = menuLeft - cardWidth - gap;
         const hasRoomOnRight = right + cardWidth + margin <= window.innerWidth;
         const hasRoomOnLeft = left >= margin;
         const fitsBesideMenu = hasRoomOnRight || hasRoomOnLeft;
@@ -651,28 +684,27 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
           left: fitsBesideMenu
             ? hasRoomOnRight
               ? right
-              : menuRect.left - gap
+              : menuLeft - gap
             : Math.max(
                 margin,
-                Math.min(menuRect.left, window.innerWidth - cardWidth - margin),
+                Math.min(menuLeft, window.innerWidth - cardWidth - margin),
               ),
           top: fitsBesideMenu
             ? Math.max(
                 margin,
                 Math.min(
-                  itemRect.top - 12,
+                  itemTop - 12,
                   window.innerHeight - cardHeight - margin,
                 ),
               )
-            : menuRect.bottom + gap + cardHeight + margin <= window.innerHeight
-              ? menuRect.bottom + gap
-              : Math.max(margin, menuRect.top - cardHeight - gap),
+            : menuBottom + gap + cardHeight + margin <= window.innerHeight
+              ? menuBottom + gap
+              : Math.max(margin, menuTop - cardHeight - gap),
         });
       };
 
-      updatePosition();
       // The suggestion surface is mounted into its floating container after
-      // React renders; measure again once that container has been positioned.
+      // React renders; measure once that container has been positioned.
       const frame = window.requestAnimationFrame(updatePosition);
       list.addEventListener("scroll", updatePosition, { passive: true });
       window.addEventListener("resize", updatePosition);
@@ -749,6 +781,7 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
         onExitComplete={onExitComplete}
       >
         <div
+          ref={surfaceRef}
           className={cn(
             "relative z-10 overflow-hidden rounded-lg text-popover-foreground shadow-2xl",
             GLASS_FRAME_CLASS,
@@ -817,25 +850,13 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
                 );
               })}
             </div>
-          </div>
-          <div className="relative z-0 flex flex-wrap items-center justify-end gap-x-3 gap-y-1 px-3 py-1.5 text-[10px] leading-4 text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <KbdGroup className="gap-0.5">
-                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                  <ArrowUpIcon />
-                </Kbd>
-                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                  <ArrowDownIcon />
-                </Kbd>
-              </KbdGroup>
-              <span>to navigate</span>
-            </span>
-            <span className="ml-3 inline-flex items-center gap-1">
-              <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                <CornerDownLeftIcon />
-              </Kbd>
-              <span>to insert</span>
-            </span>
+            <div
+              aria-hidden="true"
+              className={cn(
+                "pointer-events-none absolute inset-x-0 bottom-0 h-5 bg-gradient-to-t from-background to-transparent transition-opacity duration-150 motion-reduce:transition-none",
+                hasMoreBelow ? "opacity-100" : "opacity-0",
+              )}
+            />
           </div>
         </div>
         {!exiting && previewPosition && typeof document !== "undefined"

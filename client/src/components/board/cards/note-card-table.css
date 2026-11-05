@@ -1,22 +1,45 @@
-/* Match the editor's table proportions at the note preview's text scale. */
-.note-card-markdown table {
+/* Lay tables out at editor dimensions, then scale the entire table to fit. */
+.note-card-table-scroll {
+  max-width: 100%;
   margin-block: calc(0.75rem * var(--note-preview-scale));
-  border-radius: calc(var(--radius) * var(--note-preview-scale));
-  font-size: calc(0.875rem * var(--note-preview-scale));
-  line-height: calc(1.25rem * var(--note-preview-scale));
+}
+
+.note-card-markdown table {
+  width: 100%;
+  margin: 0;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
 }
 
 .note-card-markdown :is(th, td) {
-  padding: calc(0.5rem * var(--note-preview-scale))
-    calc(0.75rem * var(--note-preview-scale));
+  min-width: 120px;
+  padding: 0.5rem 0.75rem;
+  overflow-wrap: anywhere;
 }
 
 .note-card-markdown tbody tr:first-child td:first-child,
 .note-card-markdown tbody tr:has(th) + tr td:first-child {
-  border-top-left-radius: calc(var(--radius) * var(--note-preview-scale));
+  border-top-left-radius: var(--radius);
 }
 
 .note-card-markdown tbody tr:first-child td:last-child,
 .note-card-markdown tbody tr:has(th) + tr td:last-child {
-  border-top-right-radius: calc(var(--radius) * var(--note-preview-scale));
+  border-top-right-radius: var(--radius);
+}
+
+.note-card-table-scrollbar {
+  height: calc(18px * var(--note-table-scale));
+  margin-top: calc(3px * var(--note-table-scale));
+  padding: calc(4px * var(--note-table-scale)) 0;
+  cursor: pointer;
+}
+
+.note-card-table-thumb {
+  height: calc(10px * var(--note-table-scale));
+}
+
+.note-card-table-scrollbar:hover .note-card-table-thumb,
+.note-card-table-scrollbar:active .note-card-table-thumb {
+  background: color-mix(in oklab, var(--sidebar-foreground) 40%, transparent);
 }

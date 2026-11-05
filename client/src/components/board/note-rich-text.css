@@ -610,6 +610,7 @@
     border-radius: 4px;
     color: var(--muted-foreground);
     background: transparent;
+    background-clip: padding-box;
     opacity: 0;
     touch-action: none;
     z-index: 2;
