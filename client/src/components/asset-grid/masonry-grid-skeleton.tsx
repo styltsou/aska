@@ -1,13 +1,13 @@
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
-import { Masonry } from "@/components/masonry-grid";
+import { Masonry } from "@/components/asset-grid/masonry-grid";
 import { useRef, useState } from "react";
 import { ASSET_SKELETONS } from "@/components/canvas/grid-view-loading";
 import {
   ColorCardSkeleton,
   LinkCardSkeleton,
   NoteCardSkeleton,
-} from "@/components/asset-card-skeleton";
-import { useGridDensity } from "@/components/grid-density";
+} from "@/components/asset-grid/asset-card-skeleton";
+import { useGridDensity } from "@/components/asset-grid/grid-density";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
 export function MasonryGridSkeleton() {

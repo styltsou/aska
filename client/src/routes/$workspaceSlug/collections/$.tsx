@@ -43,7 +43,7 @@ import {
 } from "@/store";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { ResourceLoadError } from "@/components/resource-load-error";
-import { CollectionGridView } from "@/components/collection-grid-view";
+import { CollectionGridView } from "@/components/collections/collection-grid-view";
 import {
   useWorkspacePeek,
   type BoardShowRequest,

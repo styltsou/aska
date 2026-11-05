@@ -4,8 +4,8 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { CollectionCard } from "@/components/collection-card";
-import { CollectionGridSkeleton } from "@/components/collection-grid-skeleton";
+import { CollectionCard } from "@/components/collections/collection-card";
+import { CollectionGridSkeleton } from "@/components/collections/collection-grid-skeleton";
 import { CreateCollectionDialog } from "@/components/app-shell/create-collection-dialog";
 import { useCollections } from "@/api/collection";
 import { PlusIcon } from "lucide-react";

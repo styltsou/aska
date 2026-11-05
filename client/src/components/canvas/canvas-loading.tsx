@@ -7,8 +7,8 @@ import {
 } from "@xyflow/react";
 import { useRef, useState } from "react";
 
-import { NoteCardSkeleton } from "@/components/asset-card-skeleton";
-import { FolderCardSkeleton } from "@/components/preview-stack-skeleton";
+import { NoteCardSkeleton } from "@/components/asset-grid/asset-card-skeleton";
+import { FolderCardSkeleton } from "@/components/asset-grid/preview-stack-skeleton";
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import { usePersistedStore } from "@/store";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";

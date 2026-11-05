@@ -1,4 +1,4 @@
-import { PreviewStackSkeleton } from "@/components/preview-stack-skeleton";
+import { PreviewStackSkeleton } from "@/components/asset-grid/preview-stack-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const collectionSkeletons = Array.from({ length: 8 }, (_, i) => i);

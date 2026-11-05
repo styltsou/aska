@@ -77,7 +77,7 @@ import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/store";
 import { useBlocker, useRouterState } from "@tanstack/react-router";
 import { LinkResolutionPoller } from "@/api/url-unfurl/link-resolution-poller";
-import { YouTubeVideoContent } from "@/components/board/youtube-video-viewer";
+import { YouTubeVideoContent } from "@/components/board/video-asset-viewer/youtube-video-viewer";
 import {
   ImagePeek,
   ImagePeekHeaderActions,

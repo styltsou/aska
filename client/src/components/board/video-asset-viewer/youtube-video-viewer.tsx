@@ -50,9 +50,9 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 import type { AssetLocation } from "@/api/collection";
-import { YouTubeDescription } from "@/components/board/youtube-description";
+import { YouTubeDescription } from "./youtube-description";
 import { ChannelAvatar } from "@/components/board/cards/link-asset-card";
-import { createYouTubePlayerSeekController } from "@/components/board/youtube-player-seek";
+import { createYouTubePlayerSeekController } from "./youtube-player-seek";
 import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
 import { formatNoteHeaderEditTime } from "@/lib/note-date-format";
 import { getPlatformAlt, getPlatformShift } from "@/lib/platform";

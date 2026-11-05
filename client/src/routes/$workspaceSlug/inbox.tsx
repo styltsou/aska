@@ -15,12 +15,12 @@ import { AssetBoard } from "@/components/board/asset-board";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { BoardContextMenu, BoardUploadZone } from "@/components/board";
 import { FilterBar } from "@/components/filter-bar";
-import { MasonryGridSkeleton } from "@/components/masonry-grid-skeleton";
+import { MasonryGridSkeleton } from "@/components/asset-grid/masonry-grid-skeleton";
 import { DEFAULT_FILTER_BAR_STATE } from "@/store/slices/filter-bar-slice";
 import { useSessionStore } from "@/store";
 import type { Asset, ImageAsset } from "@/types/asset";
 import { ResourceLoadError } from "@/components/resource-load-error";
-import { useGridDensity } from "@/components/grid-density";
+import { useGridDensity } from "@/components/asset-grid/grid-density";
 import {
   useWorkspacePeek,
   type BoardShowRequest,

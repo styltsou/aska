@@ -26,9 +26,12 @@ import {
 } from "@/components/board/use-marquee-selection";
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
 import { MoveToDialog } from "@/components/move-to-dialog";
-import { VirtualMasonry } from "@/components/virtual-masonry";
-import { GridDensityControl } from "@/components/grid-density-control";
-import { columnsForGrid, useGridDensity } from "@/components/grid-density";
+import { VirtualMasonry } from "@/components/asset-grid/virtual-masonry";
+import { GridDensityControl } from "@/components/asset-grid/grid-density-control";
+import {
+  columnsForGrid,
+  useGridDensity,
+} from "@/components/asset-grid/grid-density";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { collectionNodeToAsset } from "@/lib/asset-transform";

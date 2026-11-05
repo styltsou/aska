@@ -3,10 +3,13 @@ import {
   ColorCardSkeleton,
   LinkCardSkeleton,
   NoteCardSkeleton,
-} from "@/components/asset-card-skeleton";
-import { columnsForGrid, getSavedGridDensity } from "@/components/grid-density";
-import { Masonry } from "@/components/masonry-grid";
-import { FolderCardSkeleton } from "@/components/preview-stack-skeleton";
+} from "@/components/asset-grid/asset-card-skeleton";
+import {
+  columnsForGrid,
+  getSavedGridDensity,
+} from "@/components/asset-grid/grid-density";
+import { Masonry } from "@/components/asset-grid/masonry-grid";
+import { FolderCardSkeleton } from "@/components/asset-grid/preview-stack-skeleton";
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";

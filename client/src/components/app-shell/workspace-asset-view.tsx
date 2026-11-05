@@ -26,7 +26,7 @@ import type { PeekableAssetResponse } from "@/api/collection/types";
 import { ColorDetailDrawer } from "@/components/board/color-detail-drawer";
 import { NoteDetailDrawer } from "@/components/board/note-detail-drawer";
 import { ImageAssetViewer } from "@/components/board/image-asset-viewer";
-import { YouTubeVideoViewer } from "@/components/board/youtube-video-viewer";
+import { YouTubeVideoViewer } from "@/components/board/video-asset-viewer/youtube-video-viewer";
 import { VideoAssetViewer } from "@/components/board/video-asset-viewer";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import { collectionNodeToAsset } from "@/lib/asset-transform";

@@ -1,7 +1,10 @@
 import { useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 
-import { GRID_DENSITIES, type GridDensity } from "@/components/grid-density";
+import {
+  GRID_DENSITIES,
+  type GridDensity,
+} from "@/components/asset-grid/grid-density";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";

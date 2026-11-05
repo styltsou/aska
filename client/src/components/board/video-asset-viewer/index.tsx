@@ -24,7 +24,7 @@ import {
   AssetNotesPanel,
 } from "@/components/board/asset-notes-panel";
 import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
-import { NativeVideoPlayer } from "@/components/board/native-video-player";
+import { NativeVideoPlayer } from "./native-video-player";
 import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Button } from "@/components/ui/button";

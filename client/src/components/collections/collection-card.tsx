@@ -11,16 +11,16 @@ import { FolderOpenIcon, MoreHorizontalIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
 import { cn } from "@/lib/utils";
-import { LinkCardPreview } from "./board/cards/link-asset-card";
+import { LinkCardPreview } from "../board/cards/link-asset-card";
 import {
   COLOR_CARD_PREVIEW_ASPECT_RATIO,
   ColorCardPreview,
-} from "./board/cards/color-card-preview";
-import { NoteMiniature } from "./board/cards/note-miniature";
+} from "../board/cards/color-card-preview";
+import { NoteMiniature } from "../board/cards/note-miniature";
 import {
   formatVideoDuration,
   VIDEO_CARD_TIME_BADGE_CLASS,
-} from "./board/video-card-control-styles";
+} from "../board/video-card-control-styles";
 import { useDeleteCollection } from "@/api/collection";
 import {
   DropdownMenu,

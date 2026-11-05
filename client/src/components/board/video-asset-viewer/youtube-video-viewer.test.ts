@@ -12,7 +12,7 @@ import {
   youtubeTimestampUrl,
 } from "./youtube-description";
 import { createYouTubePlayerSeekController } from "./youtube-player-seek";
-import { hasAssetBeenEdited } from "./asset-timestamp-card";
+import { hasAssetBeenEdited } from "../asset-timestamp-card";
 
 describe("youtubeEmbedUrl", () => {
   it("constructs a paused privacy-enhanced player URL", () => {

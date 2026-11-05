@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 
-import { MasonryEmptyState } from "@/components/masonry-empty-state";
-import { Masonry } from "@/components/masonry-grid";
-import { VirtualMasonry } from "@/components/virtual-masonry";
-import type { GridDensity } from "@/components/grid-density";
+import { MasonryEmptyState } from "@/components/asset-grid/masonry-empty-state";
+import { Masonry } from "@/components/asset-grid/masonry-grid";
+import { VirtualMasonry } from "@/components/asset-grid/virtual-masonry";
+import type { GridDensity } from "@/components/asset-grid/grid-density";
 import type { Asset, ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
 import { AssetCard } from "./asset-card";
 import {
