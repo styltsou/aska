@@ -77,6 +77,7 @@ import { toast } from "sonner";
 
 import { NotePreviewRail } from "@/components/board/note-preview-rail";
 import { NoteTableControls } from "@/components/board/note-table-controls";
+import { NoteTableActiveCell } from "@/components/board/note-table-active-cell";
 import { NoteTableView } from "@/components/board/note-table-view";
 import {
   getMarkdownPaste,
@@ -1332,8 +1333,9 @@ function createBlockDragHandleExtension() {
     },
     getReferencedVirtualElement: () => {
       if (!target) return null;
-      const editorElement = target.editor.view.dom;
-      const blockElement = target.editor.view.nodeDOM(target.pos);
+      const currentTarget = target;
+      const editorElement = currentTarget.editor.view.dom;
+      const blockElement = currentTarget.editor.view.nodeDOM(currentTarget.pos);
       if (!(blockElement instanceof Element)) return null;
       return {
         contextElement: editorElement,
@@ -1342,11 +1344,19 @@ function createBlockDragHandleExtension() {
           const blockRect = blockElement.getBoundingClientRect();
           const padding =
             parseFloat(getComputedStyle(editorElement).paddingLeft) || 0;
+          const firstRow =
+            currentTarget.node.type.name === "table"
+              ? blockElement.querySelector("table tr")
+              : null;
+          const rowRect = firstRow?.getBoundingClientRect();
+          const top = rowRect
+            ? rowRect.top + (rowRect.height - (controls.offsetHeight || 28)) / 2
+            : blockRect.top;
           return new DOMRect(
             editorRect.left + padding,
-            blockRect.top,
+            top,
             0,
-            blockRect.height,
+            rowRect?.height ?? blockRect.height,
           );
         },
       };
@@ -1429,6 +1439,7 @@ function createBaseNoteExtensions(
     NoteCodeBlockEditing,
     NoteMermaidBlock,
     TableKit.configure({ table: { resizable: true, View: NoteTableView } }),
+    NoteTableActiveCell,
     TaskList,
     AskaTaskItem.configure({ nested: true }),
     NoteCutListItemCleanup,

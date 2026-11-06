@@ -686,6 +686,14 @@
     @apply rounded-tr-lg;
   }
 
+  .note-rich-text-content tbody tr:first-child th:first-child {
+    border-top-left-radius: calc(var(--radius-lg) - 1px);
+  }
+
+  .note-rich-text-content tbody tr:first-child th:last-child {
+    border-top-right-radius: calc(var(--radius-lg) - 1px);
+  }
+
   .note-rich-text-content th > p,
   .note-rich-text-content td > p {
     @apply my-0;
@@ -694,6 +702,11 @@
   .note-rich-text-content .selectedCell::after {
     content: "";
     @apply pointer-events-none absolute inset-0 bg-primary/10;
+    border-radius: inherit;
+  }
+
+  .note-rich-text-editable .ProseMirror-focused .note-table-active-cell {
+    box-shadow: inset 0 0 0 1px var(--primary);
   }
 
   .note-rich-text-content .column-resize-handle {
