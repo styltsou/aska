@@ -130,10 +130,11 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
         isDragging && "cursor-grabbing",
       )}
     >
-      <span
+      <ImageSkeleton
+        as="span"
         aria-hidden
         className={cn(
-          "image-shimmer pointer-events-none absolute inset-0 transition-opacity duration-300",
+          "absolute inset-0 rounded-none transition-opacity duration-300",
           loaded ? "opacity-0" : "opacity-100",
         )}
       />

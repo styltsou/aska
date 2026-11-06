@@ -20,6 +20,7 @@ import { NoteAssetCard } from "@/components/board/cards/note-asset-card";
 import { LinkAssetCard } from "@/components/board/cards/link-asset-card";
 import { VideoAssetCard } from "@/components/board/cards/video-asset-card";
 import { ColorAssetCard } from "@/components/board/cards/color-asset-card";
+import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { cn } from "@/lib/utils";
 import { useTransientStore } from "@/store";
@@ -407,9 +408,9 @@ function PendingDropMediaCard({
       className="relative w-full overflow-hidden rounded-lg bg-muted"
       style={{ aspectRatio: `${width} / ${height}` }}
     >
-      <div
+      <ImageSkeleton
         aria-hidden="true"
-        className="image-shimmer pointer-events-none absolute inset-0"
+        className="absolute inset-0 rounded-none"
       />
       <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
         <Icon className="size-7 text-muted-foreground" strokeWidth={1.7} />

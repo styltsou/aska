@@ -2,6 +2,8 @@ import { Globe2Icon, ImageOffIcon, UserRoundIcon } from "lucide-react";
 import { useState, type ComponentProps, type MouseEvent } from "react";
 
 import { ProgressiveImage } from "@/components/ui/progressive-image";
+import { ImageSkeleton } from "@/components/ui/image-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { hasSelectionModifier } from "@/lib/selection";
 import { isYouTubeVideoUrl } from "@/lib/youtube-url";
 import { cn } from "@/lib/utils";
@@ -51,9 +53,9 @@ function LinkThumbnail({
   return (
     <>
       {!ready ? (
-        <div
+        <ImageSkeleton
           data-slot="youtube-thumbnail-loading"
-          className="image-shimmer pointer-events-none absolute inset-0"
+          className="absolute inset-0 rounded-none"
         />
       ) : null}
       <div
@@ -261,9 +263,9 @@ export function LinkAssetCard({
           />
         ) : null}
         {!previewUrl && isPreviewResolving ? (
-          <div
+          <ImageSkeleton
             data-slot="optimistic-link-preview"
-            className="image-shimmer pointer-events-none absolute inset-0 z-10"
+            className="absolute inset-0 z-10 rounded-none"
           />
         ) : null}
         {isPreviewUnavailable ? <LinkPreviewUnavailable /> : null}
@@ -281,8 +283,8 @@ export function LinkAssetCard({
         ) : null}
         {isYoutubeMetadataLoading ? (
           <div className="space-y-1.5 py-0.5">
-            <div className="h-4 w-full animate-pulse rounded bg-sidebar-foreground/10" />
-            <div className="h-4 w-3/5 animate-pulse rounded bg-sidebar-foreground/10" />
+            <Skeleton className="h-4 w-full rounded bg-sidebar-foreground/10" />
+            <Skeleton className="h-4 w-3/5 rounded bg-sidebar-foreground/10" />
           </div>
         ) : (
           <div className="line-clamp-2 text-base leading-snug font-medium">
@@ -291,8 +293,8 @@ export function LinkAssetCard({
         )}
         {isYoutubeMetadataLoading ? (
           <div className="flex items-center gap-1.5">
-            <span className="size-4.5 shrink-0 animate-pulse rounded-full bg-sidebar-foreground/10" />
-            <span className="h-3.5 w-28 animate-pulse rounded bg-sidebar-foreground/10" />
+            <Skeleton className="size-4.5 shrink-0 rounded-full bg-sidebar-foreground/10" />
+            <Skeleton className="h-3.5 w-28 rounded bg-sidebar-foreground/10" />
           </div>
         ) : isYoutube && channelName ? (
           <div className={cn(LINK_CARD_META_CLASS, "pt-0.5")}>

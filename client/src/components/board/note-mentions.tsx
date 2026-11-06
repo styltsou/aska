@@ -57,6 +57,7 @@ import {
   HoverCardViewport,
 } from "@/components/ui/hover-card";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   SuggestionMenuTransition,
   SUGGESTION_MENU_EXIT_FALLBACK_MS,
@@ -1071,12 +1072,12 @@ function MentionMenuSkeleton() {
     <div className="space-y-1 p-0.5" aria-label="Loading mentions">
       {Array.from({ length: 3 }, (_, index) => (
         <div key={index} className="flex items-center gap-3 px-2 py-2">
-          <span className="size-7 shrink-0 animate-pulse rounded-md bg-muted" />
-          <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <span className="h-3 w-2/5 animate-pulse rounded bg-muted" />
-            <span className="h-2.5 w-3/5 animate-pulse rounded bg-muted" />
-          </span>
-          <span className="h-2.5 w-14 animate-pulse rounded bg-muted" />
+          <Skeleton className="size-7 shrink-0 rounded-md bg-muted" />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <Skeleton className="h-3 w-2/5 rounded bg-muted" />
+            <Skeleton className="h-2.5 w-3/5 rounded bg-muted" />
+          </div>
+          <Skeleton className="h-2.5 w-14 rounded bg-muted" />
         </div>
       ))}
     </div>
