@@ -95,7 +95,7 @@ export function Tabs({
 
 const listVariantClasses: Record<TabsVariant, string> = {
   segment:
-    "relative gap-0.5 rounded-md border border-border/60 bg-muted p-0.5 shadow-[0_1px_1px_rgb(0_0_0_/_0.02)] ring-1 ring-foreground/[0.025] backdrop-blur-sm",
+    "relative inline-flex items-center gap-0.5 rounded-md border border-border/60 bg-muted p-0.5 shadow-[0_1px_1px_rgb(0_0_0_/_0.02)] ring-1 ring-foreground/[0.025] backdrop-blur-sm",
   "segment-contrast":
     "relative inline-flex items-center rounded-lg border border-border/70 bg-background/80 p-0.5",
   pill: "relative inline-flex items-center gap-1 rounded-full bg-card p-1",
@@ -223,30 +223,34 @@ function measureThumbGeometry(
 ): ThumbGeometry {
   const listRect = list.getBoundingClientRect();
   const triggerRect = trigger.getBoundingClientRect();
+  // Rectangles include transforms on ancestor drawers, while the thumb's
+  // positioning uses the list's untransformed coordinate space.
+  const scaleX = list.offsetWidth ? listRect.width / list.offsetWidth : 1;
+  const scaleY = list.offsetHeight ? listRect.height / list.offsetHeight : 1;
 
   // Absolute positioning resolves offsets against the list's padding box,
   // so measure from that origin. getBoundingClientRect spans the border box
   // and would shift the thumb by the list border width, breaking the
   // gutters against adjacent triggers. Fractional values are kept — that
   // mirrors how an inset-0 thumb inside the trigger would render.
-  const originLeft = listRect.left + list.clientLeft;
-  const originTop = listRect.top + list.clientTop;
+  const originLeft = listRect.left + list.clientLeft * scaleX;
+  const originTop = listRect.top + list.clientTop * scaleY;
 
   if (variant === "underline") {
     // 2px bar pinned to the trigger's bottom edge, 1px below its border box.
     return {
-      left: triggerRect.left - originLeft,
-      top: triggerRect.bottom - originTop - 1,
-      width: triggerRect.width,
+      left: (triggerRect.left - originLeft) / scaleX,
+      top: (triggerRect.bottom - originTop) / scaleY - 1,
+      width: triggerRect.width / scaleX,
       height: 2,
     };
   }
 
   return {
-    left: triggerRect.left - originLeft,
-    top: triggerRect.top - originTop,
-    width: triggerRect.width,
-    height: triggerRect.height,
+    left: (triggerRect.left - originLeft) / scaleX,
+    top: (triggerRect.top - originTop) / scaleY,
+    width: triggerRect.width / scaleX,
+    height: triggerRect.height / scaleY,
   };
 }
 
@@ -376,7 +380,7 @@ function TabsThumb() {
       <motion.div
         aria-hidden="true"
         ref={thumbRef}
-        className="absolute z-0 h-0.5 bg-primary"
+        className="absolute top-0 left-0 z-0 h-0.5 bg-primary"
         style={{ x, y, width, height }}
       />
     );
@@ -387,7 +391,7 @@ function TabsThumb() {
       aria-hidden="true"
       ref={thumbRef}
       className={cn(
-        "absolute z-0",
+        "absolute top-0 left-0 z-0",
         thumbSurfaceClasses[variant as Exclude<TabsVariant, "underline">],
         triggerRadiusClasses[variant as Exclude<TabsVariant, "underline">],
       )}
