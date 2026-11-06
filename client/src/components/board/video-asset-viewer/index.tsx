@@ -143,6 +143,11 @@ export function VideoAssetViewer({
       <Drawer
         open={open}
         onOpenChange={(next, details) => {
+          if (!next && details.reason === "escape-key" && notesOpen) {
+            details.cancel();
+            setNotesOpen(false);
+            return;
+          }
           if (!next) {
             if (details.reason === "outside-press" && onDismissAll)
               onDismissAll();
@@ -200,6 +205,11 @@ export function VideoAssetViewer({
     <Dialog
       open={open}
       onOpenChange={(next, details) => {
+        if (!next && details.reason === "escape-key" && notesOpen) {
+          details.cancel();
+          setNotesOpen(false);
+          return;
+        }
         if (!next) {
           if (details.reason === "outside-press" && onDismissAll)
             onDismissAll();
@@ -418,7 +428,6 @@ function NativeVideoToolbar({
       )}
       <div className="ml-auto flex items-center gap-0.5">
         <AssetNotesButton
-          hasNote={Boolean(asset?.note?.trim())}
           disabled={!asset}
           open={notesOpen}
           onClick={onToggleNotes}

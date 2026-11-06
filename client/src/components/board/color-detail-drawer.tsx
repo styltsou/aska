@@ -247,6 +247,11 @@ export function ColorDetailDrawer({
       open={open}
       modal={!split}
       onOpenChange={(next, details) => {
+        if (!next && details.reason === "escape-key" && notesOpen) {
+          details.cancel();
+          setNotesOpen(false);
+          return;
+        }
         if (!next) {
           if (details.reason === "outside-press" && onDismissAll)
             onDismissAll();
@@ -309,7 +314,6 @@ export function ColorDetailDrawer({
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
               <AssetNotesButton
-                hasNote={Boolean(displayedColor.note?.trim())}
                 open={notesOpen}
                 onClick={() => setNotesOpen((current) => !current)}
               />
@@ -591,6 +595,11 @@ function ColorDetailModal({
     <Dialog
       open={open}
       onOpenChange={(next, details) => {
+        if (!next && details.reason === "escape-key" && notesOpen) {
+          details.cancel();
+          onNotesOpenChange(false);
+          return;
+        }
         if (!next) {
           if (details.reason === "outside-press" && onDismissAll)
             onDismissAll();
@@ -725,7 +734,6 @@ function ColorDetailModal({
             />
           )}
           <AssetNotesButton
-            hasNote={Boolean(color?.note?.trim())}
             disabled={!color}
             open={notesOpen}
             onClick={() => onNotesOpenChange(!notesOpen)}
@@ -1098,12 +1106,7 @@ function ColorDetailLoading({
             <Skeleton className="h-4 w-32" />
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            <AssetNotesButton
-              hasNote={false}
-              open={false}
-              onClick={() => {}}
-              disabled
-            />
+            <AssetNotesButton open={false} onClick={() => {}} disabled />
             <Button
               type="button"
               variant="ghost"

@@ -3,10 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
 
 import { YouTubeDescription } from "./youtube-description";
-import {
-  formatVideoEditedLabel,
-  youtubeEmbedUrl,
-} from "./youtube-video-viewer";
+import { youtubeEmbedUrl } from "./youtube-video-viewer";
 import {
   parseYouTubeDescription,
   youtubeTimestampUrl,
@@ -151,30 +148,5 @@ describe("hasAssetBeenEdited", () => {
     expect(hasAssetBeenEdited(undefined, "2026-09-05T11:30:00.000Z")).toBe(
       true,
     );
-  });
-});
-
-describe("formatVideoEditedLabel", () => {
-  const now = new Date("2026-09-05T12:00:00.000Z").getTime();
-  const createdAt = "2026-09-05T09:00:00.000Z";
-
-  it("reports the note edit time", () => {
-    expect(
-      formatVideoEditedLabel("2026-09-05T11:30:00.000Z", createdAt, now),
-    ).toBe("Edited 30m ago");
-  });
-
-  it("stays hidden for a link nobody has edited", () => {
-    expect(formatVideoEditedLabel(undefined, createdAt, now)).toBeUndefined();
-    expect(formatVideoEditedLabel(createdAt, createdAt, now)).toBeUndefined();
-    expect(
-      formatVideoEditedLabel("2026-09-05T09:00:00.400Z", createdAt, now),
-    ).toBeUndefined();
-  });
-
-  it("reports an edit even without a creation time to compare against", () => {
-    expect(
-      formatVideoEditedLabel("2026-09-05T11:30:00.000Z", undefined, now),
-    ).toBe("Edited 30m ago");
   });
 });

@@ -4,44 +4,52 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { FLOATING_MENU_SURFACE_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 
 export function AssetNotesButton({
-  hasNote,
   open,
   onClick,
   className,
   disabled = false,
 }: {
-  hasNote: boolean;
   open: boolean;
   onClick: () => void;
   className?: string;
   disabled?: boolean;
 }) {
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className={cn(
-        "relative size-8 rounded-lg",
-        ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
-        className,
-      )}
-      aria-label={hasNote ? "Open notes; this asset has a note" : "Open notes"}
-      aria-haspopup="true"
-      aria-expanded={open}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      <NotebookPenIcon className="size-4" />
-      {hasNote ? (
-        <span className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />
-      ) : null}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "relative size-8 rounded-lg",
+              ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+              className,
+            )}
+            aria-label={open ? "Close notes" : "Open notes"}
+            aria-haspopup="true"
+            aria-expanded={open}
+            onClick={onClick}
+            disabled={disabled}
+          />
+        }
+      >
+        <NotebookPenIcon className="size-4" />
+      </TooltipTrigger>
+      <TooltipContent side="bottom">
+        {open ? "Close notes" : "Open notes"}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -66,40 +74,35 @@ export function AssetNotesPanel({
         <motion.aside
           key="asset-notes-panel"
           aria-label="Asset notes"
-          onKeyDownCapture={(event) => {
-            if (event.key !== "Escape") return;
-            event.preventDefault();
-            event.stopPropagation();
-            onClose();
-          }}
           initial={
             reduceMotion
               ? false
               : {
                   opacity: 0,
-                  x: isMobile ? 0 : 16,
-                  y: isMobile ? 16 : 0,
+                  transform: isMobile
+                    ? "translate(0px, 12px)"
+                    : "translate(12px, 0px)",
                 }
           }
-          animate={{ opacity: 1, x: 0, y: 0 }}
+          animate={{ opacity: 1, transform: "translate(0px, 0px)" }}
           exit={
             reduceMotion
               ? undefined
               : {
                   opacity: 0,
-                  x: isMobile ? 0 : 10,
-                  y: isMobile ? 10 : 0,
-                  transition: { duration: 0.15, ease },
+                  transform: isMobile
+                    ? "translate(0px, 12px)"
+                    : "translate(12px, 0px)",
                 }
           }
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.25, ease }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease }}
           className={cn(
             "z-40 flex min-h-0 flex-col overflow-hidden",
             expanded
               ? "relative hidden w-80 shrink-0 border-l border-border bg-background md:flex"
               : cn(
                   "absolute inset-y-3 right-3 w-[min(22rem,calc(100%-1.5rem))] rounded-xl border border-border/70",
-                  FLOATING_MENU_SURFACE_CLASS,
+                  "bg-popover/80 text-popover-foreground shadow-[0_8px_24px_-8px_rgb(0_0_0_/_0.18)] backdrop-blur-2xl backdrop-saturate-150",
                 ),
             "max-md:absolute max-md:inset-x-0 max-md:top-auto max-md:right-0 max-md:bottom-0 max-md:h-[min(65%,28rem)] max-md:w-full max-md:rounded-t-xl max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:border-t",
           )}

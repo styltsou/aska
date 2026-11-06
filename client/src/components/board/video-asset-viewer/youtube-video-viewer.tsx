@@ -12,10 +12,7 @@ import { toast } from "sonner";
 
 import { useUpdateLink } from "@/api/collection";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  AssetTimestampCard,
-  hasAssetBeenEdited,
-} from "@/components/board/asset-timestamp-card";
+import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import { AssetViewerModeIcon } from "@/components/board/asset-viewer-mode-icon";
 import {
   AssetNotesButton,
@@ -54,7 +51,6 @@ import { YouTubeDescription } from "./youtube-description";
 import { ChannelAvatar } from "@/components/board/cards/link-asset-card";
 import { createYouTubePlayerSeekController } from "./youtube-player-seek";
 import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
-import { formatNoteHeaderEditTime } from "@/lib/note-date-format";
 import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import type { LinkAsset } from "@/types/asset";
@@ -307,6 +303,11 @@ export function YouTubeVideoViewer({
       <Drawer
         open={open}
         onOpenChange={(next, details) => {
+          if (!next && details.reason === "escape-key" && notesOpen) {
+            details.cancel();
+            setNotesOpen(false);
+            return;
+          }
           if (!next) {
             if (details.reason === "outside-press" && onDismissAll)
               onDismissAll();
@@ -367,6 +368,11 @@ export function YouTubeVideoViewer({
       open={open}
       modal={!split}
       onOpenChange={(next, details) => {
+        if (!next && details.reason === "escape-key" && notesOpen) {
+          details.cancel();
+          setNotesOpen(false);
+          return;
+        }
         if (!next) {
           if (details.reason === "outside-press" && onDismissAll)
             onDismissAll();
@@ -662,7 +668,6 @@ function VideoViewerToolbar({
       ) : null}
       <div className="ml-auto flex items-center gap-0.5">
         <AssetNotesButton
-          hasNote={Boolean(asset?.note?.trim())}
           disabled={!asset}
           open={notesOpen}
           onClick={onToggleNotes}
@@ -1174,7 +1179,6 @@ function VideoLinkNoteEditor({
   const queryClient = useQueryClient();
   const { syncPeekVideoNote } = useWorkspacePeek();
   const [note, setNote] = useState("");
-  const editedLabel = formatVideoEditedLabel(asset.updatedAt, asset.createdAt);
   const assetIdRef = useRef<string | undefined>(undefined);
   const assetNoteRef = useRef(asset.note);
   const draftRef = useRef("");
@@ -1322,9 +1326,6 @@ function VideoLinkNoteEditor({
         rows={1}
         className="block min-h-6 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
       />
-      {editedLabel ? (
-        <p className="mt-1 text-xs text-muted-foreground/70">{editedLabel}</p>
-      ) : null}
     </div>
   );
 }
@@ -1333,20 +1334,6 @@ function isVideoLinkAsset(
   asset: LinkAsset | undefined,
 ): asset is VideoLinkAsset {
   return asset?.video?.provider === "youtube";
-}
-
-/**
- * Relative edit time for the note editor, matching the note editor's save
- * status copy. The card in the metadata block carries the absolute timestamps.
- */
-export function formatVideoEditedLabel(
-  updatedAt: string | undefined,
-  createdAt: string | undefined,
-  now = Date.now(),
-): string | undefined {
-  if (!updatedAt || !hasAssetBeenEdited(createdAt, updatedAt)) return undefined;
-  const time = formatNoteHeaderEditTime(updatedAt, now);
-  return time ? `Edited ${time}` : undefined;
 }
 
 export function youtubeEmbedUrl(videoId: string, origin?: string): string {
