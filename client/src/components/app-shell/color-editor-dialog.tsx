@@ -702,16 +702,16 @@ export function ColorEditorDialog({
                           />
                           <span
                             className="pointer-events-none absolute top-[calc(50%+1.375rem)] rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-muted-foreground tabular-nums shadow-sm"
-                            style={{
-                              ...(stop.position <= 1
+                            style={
+                              stop.position <= 1
                                 ? { left: 0, transform: "translateX(0)" }
                                 : stop.position >= 99
                                   ? { right: 0, transform: "translateX(0)" }
                                   : {
                                       left: `${stop.position}%`,
                                       transform: "translateX(-50%)",
-                                    }),
-                            }}
+                                    }
+                            }
                           >
                             {Math.round(stop.position)}
                           </span>

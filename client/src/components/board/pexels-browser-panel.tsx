@@ -391,6 +391,7 @@ export function PexelsBrowserPanel({
   const widthRef = useRef(width);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const search = usePexelsSearch(workspaceSlug, query);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = search;
   const createImage = useCreateRemoteImage(workspaceSlug, collectionSlug);
 
   widthRef.current = width;
@@ -442,22 +443,17 @@ export function PexelsBrowserPanel({
       (entries) => {
         if (
           entries.some((entry) => entry.isIntersecting) &&
-          search.hasNextPage &&
-          !search.isFetchingNextPage
+          hasNextPage &&
+          !isFetchingNextPage
         ) {
-          void search.fetchNextPage();
+          void fetchNextPage();
         }
       },
       { root: viewport, rootMargin: "600px" },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [
-    query,
-    search.hasNextPage,
-    search.isFetchingNextPage,
-    search.fetchNextPage,
-  ]);
+  }, [query, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   useEffect(() => {
     if (!open) return;

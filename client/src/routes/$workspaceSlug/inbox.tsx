@@ -29,6 +29,8 @@ import { useWorkspaceAssetView } from "@/components/app-shell/workspace-asset-vi
 import { isPersistedSelectableAsset } from "@/lib/selection";
 
 const EMPTY_ASSETS: Asset[] = [];
+const EMPTY_ASSET_TYPES: typeof DEFAULT_FILTER_BAR_STATE.selectedAssetTypes =
+  [];
 const StableAssetBoard = memo(AssetBoard);
 
 export const Route = createFileRoute("/$workspaceSlug/inbox")({
@@ -57,8 +59,11 @@ function InboxPage() {
     (state) => state.filterBars[filterScope] ?? DEFAULT_FILTER_BAR_STATE,
   );
   const selectedAssetTypes =
-    filterBar.filterType === "Type" ? (filterBar.selectedAssetTypes ?? []) : [];
+    filterBar.filterType === "Type"
+      ? (filterBar.selectedAssetTypes ?? EMPTY_ASSET_TYPES)
+      : EMPTY_ASSET_TYPES;
   const gridQuery = useInboxGrid(workspaceSlug, selectedAssetTypes);
+  const { isFetching, hasNextPage, fetchNextPage } = gridQuery;
   const pages = gridQuery.data?.pages;
   const data = useMemo(
     () =>
@@ -110,9 +115,9 @@ function InboxPage() {
   useEffect(() => {
     if (!showRequest || showRequest.scopeKey !== filterScope || !data) return;
     if (!data.nodes.some((node) => node.id === showRequest.assetId)) {
-      if (gridQuery.isFetching) return;
-      if (gridQuery.hasNextPage) {
-        void gridQuery.fetchNextPage();
+      if (isFetching) return;
+      if (hasNextPage) {
+        void fetchNextPage();
         return;
       }
       toast.error("This asset is no longer at that location.");
@@ -126,9 +131,9 @@ function InboxPage() {
     consumeShowRequest,
     data,
     filterScope,
-    gridQuery.fetchNextPage,
-    gridQuery.hasNextPage,
-    gridQuery.isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
     showRequest,
   ]);
 

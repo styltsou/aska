@@ -19,7 +19,6 @@ import type { AuthState } from "@/lib/auth-flow";
 import { useWorkspace } from "@/api/workspace";
 import { useMarkInboxSeen } from "@/api/collection";
 import { getSidebarCollectionLocation } from "@/components/app-shell/sidebar-collection-navigation";
-import { openSettings } from "@/lib/settings-dialog";
 import { parseWorkspaceAssetPath } from "@/lib/workspace-asset-url";
 import { mergeWorkspaceOverlaySearch } from "@/lib/workspace-overlay-search";
 import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";

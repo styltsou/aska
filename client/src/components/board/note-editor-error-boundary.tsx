@@ -7,24 +7,24 @@ type Props = {
   noteId: string;
 };
 
-type State = { error: Error | undefined };
+type State = { error: Error | undefined; noteId: string };
 
 /** Keeps a rich-text parsing or extension failure scoped to its note drawer. */
 export class NoteEditorErrorBoundary extends Component<Props, State> {
-  state: State = { error: undefined };
+  state: State = { error: undefined, noteId: this.props.noteId };
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Pick<State, "error"> {
     return { error };
+  }
+
+  static getDerivedStateFromProps(props: Props, state: State): State | null {
+    return props.noteId === state.noteId
+      ? null
+      : { noteId: props.noteId, error: undefined };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("Unable to render note editor", error, info);
-  }
-
-  componentDidUpdate(previousProps: Props) {
-    if (previousProps.noteId !== this.props.noteId && this.state.error) {
-      this.setState({ error: undefined });
-    }
   }
 
   render() {

@@ -266,6 +266,8 @@ describe("mention query parsing", () => {
             editor,
             workspaceSlug: "test",
             sourceAssetId: 42,
+            // createElement's types require the required children prop here.
+            // eslint-disable-next-line react/no-children-prop
             children: createElement("div", null, "Editor content"),
           }),
         ),
@@ -293,6 +295,8 @@ describe("mention query parsing", () => {
             editor,
             workspaceSlug: "test",
             sourceAssetId: 42,
+            // createElement's types require the required children prop here.
+            // eslint-disable-next-line react/no-children-prop
             children: createElement("div", null, "Editor content"),
           }),
         ),
