@@ -6,7 +6,7 @@ import {
 } from "@/components/asset-grid/asset-card-skeleton";
 import {
   columnsForGrid,
-  getSavedGridDensity,
+  useGridDensity,
 } from "@/components/asset-grid/grid-density";
 import { Masonry } from "@/components/asset-grid/masonry-grid";
 import { FolderCardSkeleton } from "@/components/asset-grid/preview-stack-skeleton";
@@ -32,7 +32,7 @@ export const ASSET_SKELETONS = [
 export function GridViewLoading() {
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentWidth, setContentWidth] = useState(0);
-  const [density] = useState(getSavedGridDensity);
+  const { density } = useGridDensity();
   const columnCount = columnsForGrid(contentWidth, density) || 1;
 
   useIsomorphicLayoutEffect(() => {

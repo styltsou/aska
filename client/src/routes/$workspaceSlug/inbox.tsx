@@ -1,5 +1,13 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 
 import {
@@ -21,6 +29,7 @@ import { useSessionStore } from "@/store";
 import type { Asset, ImageAsset } from "@/types/asset";
 import { ResourceLoadError } from "@/components/resource-load-error";
 import { useGridDensity } from "@/components/asset-grid/grid-density";
+import { GridLayoutStatus } from "@/components/asset-grid/grid-layout-status";
 import {
   useWorkspacePeek,
   type BoardShowRequest,
@@ -77,6 +86,8 @@ function InboxPage() {
     [pages],
   );
   const { density } = useGridDensity();
+  const renderedDensity = useDeferredValue(density);
+  const isLayoutPending = density !== renderedDensity;
   const { mutate: markInboxSeen } = useMarkInboxSeen(workspaceSlug);
   const didMarkInboxSeen = useRef(false);
   const [focusedShowRequest, setFocusedShowRequest] =
@@ -179,6 +190,10 @@ function InboxPage() {
     }
   }, [selectedAssetTypes, workspaceSlug]);
 
+  const handleLoadMore = useCallback(() => {
+    void fetchNextPage();
+  }, [fetchNextPage]);
+
   if (gridQuery.isLoading) return <MasonryGridSkeleton />;
 
   if (gridQuery.isError && !data) {
@@ -202,34 +217,37 @@ function InboxPage() {
         collectionPath=""
         target="inbox"
       >
-        <StableAssetBoard
-          assets={displayAssets}
-          inboxContext={inboxContext}
-          density={density}
-          hasMore={!hasResolvedColorSearch && gridQuery.hasNextPage}
-          isLoadingMore={gridQuery.isFetchingNextPage}
-          onLoadMore={() => void gridQuery.fetchNextPage()}
-          onSelectAll={handleSelectAll}
-          focusedAssetId={focusedShowRequest?.assetId}
-          focusRequestId={focusedShowRequest?.id}
-          onDismissFocusedAsset={dismissFocusedAsset}
-          onOpenNote={handleOpenNode}
-          onOpenImage={handleOpenNode}
-          onOpenColor={handleOpenNode}
-          onOpenVideo={handleOpenNode}
-          emptyTitle={
-            hasResolvedColorSearch || isTypeFilterActive
-              ? "No matching assets"
-              : "Inbox is empty"
-          }
-          emptyDescription={
-            hasResolvedColorSearch
-              ? "Try a different color combination."
-              : isTypeFilterActive
-                ? "Try a different asset type."
-                : "Quick captures and imports that are not in a collection yet will appear here."
-          }
-        />
+        <div className="relative min-h-0" aria-busy={isLayoutPending}>
+          <GridLayoutStatus pending={isLayoutPending} />
+          <StableAssetBoard
+            assets={displayAssets}
+            inboxContext={inboxContext}
+            density={renderedDensity}
+            hasMore={!hasResolvedColorSearch && gridQuery.hasNextPage}
+            isLoadingMore={gridQuery.isFetchingNextPage}
+            onLoadMore={handleLoadMore}
+            onSelectAll={handleSelectAll}
+            focusedAssetId={focusedShowRequest?.assetId}
+            focusRequestId={focusedShowRequest?.id}
+            onDismissFocusedAsset={dismissFocusedAsset}
+            onOpenNote={handleOpenNode}
+            onOpenImage={handleOpenNode}
+            onOpenColor={handleOpenNode}
+            onOpenVideo={handleOpenNode}
+            emptyTitle={
+              hasResolvedColorSearch || isTypeFilterActive
+                ? "No matching assets"
+                : "Inbox is empty"
+            }
+            emptyDescription={
+              hasResolvedColorSearch
+                ? "Try a different color combination."
+                : isTypeFilterActive
+                  ? "Try a different asset type."
+                  : "Quick captures and imports that are not in a collection yet will appear here."
+            }
+          />
+        </div>
         {(assets.length > 0 || selectedAssetTypes.length > 0) && (
           <FilterBar
             scope={filterScope}

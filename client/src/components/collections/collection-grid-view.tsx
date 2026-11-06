@@ -1,5 +1,7 @@
 import {
+  memo,
   useCallback,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -28,9 +30,11 @@ import { SelectionActionBar } from "@/components/selection/selection-action-bar"
 import { MoveToDialog } from "@/components/move-to-dialog";
 import { VirtualMasonry } from "@/components/asset-grid/virtual-masonry";
 import { GridDensityControl } from "@/components/asset-grid/grid-density-control";
+import { GridLayoutStatus } from "@/components/asset-grid/grid-layout-status";
 import {
   columnsForGrid,
   useGridDensity,
+  type GridDensity,
 } from "@/components/asset-grid/grid-density";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
@@ -88,7 +92,25 @@ type CollectionGridViewProps = {
   ) => void;
 };
 
-export function CollectionGridView({
+export function CollectionGridView(props: CollectionGridViewProps) {
+  const { density } = useGridDensity();
+  const renderedDensity = useDeferredValue(density);
+  const pending = density !== renderedDensity;
+
+  return (
+    <div
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col"
+      aria-busy={pending}
+    >
+      <GridLayoutStatus pending={pending} />
+      <CollectionGridContent {...props} density={renderedDensity} />
+    </div>
+  );
+}
+
+// Keep the grid out of the urgent selection update; the control subscribes
+// independently and can paint before the deferred layout is rendered.
+const CollectionGridContent = memo(function CollectionGridContent({
   boardKey,
   workspaceSlug,
   collectionSlug,
@@ -113,13 +135,13 @@ export function CollectionGridView({
   onOpenColor,
   onOpenVideo,
   onOpenNote,
-}: CollectionGridViewProps) {
+  density,
+}: CollectionGridViewProps & { density: GridDensity }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [contentWidth, setContentWidth] = useState(0);
-  const { density, setDensity } = useGridDensity();
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [activeDrag, setActiveDrag] = useState<GridNodeDragData>();
   const [pendingFolderDrop, setPendingFolderDrop] =
@@ -424,7 +446,7 @@ export function CollectionGridView({
           ) : (
             <div ref={contentRef} className="w-full">
               <div className="pointer-events-none sticky top-5 z-10 flex h-0 justify-end">
-                <GridDensityControl value={density} onChange={setDensity} />
+                <GridDensityControl />
               </div>
               <div className="mb-3 flex min-h-[30px] items-center gap-2 pr-64">
                 <h2
@@ -538,7 +560,7 @@ export function CollectionGridView({
       />
     </>
   );
-}
+});
 
 function GridNodeCard({
   node,

@@ -3,6 +3,7 @@ import type { MouseEvent, ReactNode } from "react";
 
 import { MasonryEmptyState } from "@/components/asset-grid/masonry-empty-state";
 import { Masonry } from "@/components/asset-grid/masonry-grid";
+import { MasonryGridSkeleton } from "@/components/asset-grid/masonry-grid-skeleton";
 import { VirtualMasonry } from "@/components/asset-grid/virtual-masonry";
 import type { GridDensity } from "@/components/asset-grid/grid-density";
 import type { Asset, ColorAsset, ImageAsset, NoteAsset } from "@/types/asset";
@@ -318,6 +319,8 @@ export function AssetBoard({
             </div>
           ) : null}
         </>
+      ) : inboxContext ? (
+        <MasonryGridSkeleton />
       ) : (
         <Masonry className="min-w-0">
           {assets.map((asset) => renderAssetCard(asset))}

@@ -455,7 +455,6 @@ export function ColorEditorDialog({
               onValueChange={(value) => setMode(value as EditorMode)}
               variant="segment"
               className="shrink-0"
-              transition={{ duration: 0 }}
             >
               <TabsList aria-label="Color type">
                 <TabsTrigger value="solid" className="px-3 py-1.5 capitalize">

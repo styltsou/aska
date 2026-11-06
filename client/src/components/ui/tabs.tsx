@@ -13,6 +13,8 @@ import {
   motion,
   useMotionValue,
   useReducedMotion,
+  useTransform,
+  type MotionValue,
   type Transition,
 } from "motion/react";
 
@@ -42,6 +44,21 @@ type TabsContextValue = {
 };
 
 const TabsContext = createContext<TabsContextValue | null>(null);
+
+type ThumbMotionValues = {
+  x: MotionValue<number>;
+  y: MotionValue<number>;
+  width: MotionValue<number>;
+  height: MotionValue<number>;
+};
+
+const TabsThumbContext = createContext<ThumbMotionValues | null>(null);
+
+function useTabsThumb() {
+  const context = useContext(TabsThumbContext);
+  if (!context) throw new Error("TabsTrigger must be used inside <TabsList>");
+  return context;
+}
 
 function useTabsContext() {
   const context = useContext(TabsContext);
@@ -108,16 +125,23 @@ export function TabsList({
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
   const { variant } = useTabsContext();
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const width = useMotionValue(0);
+  const height = useMotionValue(0);
+  const thumb = useMemo(() => ({ x, y, width, height }), [x, y, width, height]);
+
   return (
-    <TabsPrimitive.List
-      className={cn(listVariantClasses[variant], className)}
-      {...props}
-    >
-      {/* Thumb renders before the triggers so its surface stays behind
-          every trigger's label while painting above the list background. */}
-      <TabsThumb />
-      {children}
-    </TabsPrimitive.List>
+    <TabsThumbContext.Provider value={thumb}>
+      <TabsPrimitive.List
+        className={cn(listVariantClasses[variant], className)}
+        {...props}
+      >
+        {/* The surface and clipped labels share the same animated geometry. */}
+        <TabsThumb />
+        {children}
+      </TabsPrimitive.List>
+    </TabsThumbContext.Provider>
   );
 }
 
@@ -193,19 +217,81 @@ export function TabsTrigger({
         triggerSizeClasses[size],
         triggerIconSizeClasses[size],
         triggerRadiusClasses[variant],
-        active
-          ? variant === "segment-contrast"
-            ? "text-background"
-            : "text-foreground"
-          : triggerInactiveClasses,
+        triggerInactiveClasses,
         variant === "segment-contrast" && "font-normal",
         className,
       )}
     >
-      <span className="relative z-10 flex items-center justify-center gap-1">
-        {children}
-      </span>
+      <TabsMaskedLabel>{children}</TabsMaskedLabel>
     </TabsPrimitive.Tab>
+  );
+}
+
+function TabsMaskedLabel({ children }: { children: ReactNode }) {
+  const { variant } = useTabsContext();
+  const thumb = useTabsThumb();
+  const labelRef = useRef<HTMLSpanElement>(null);
+  const left = useMotionValue(0);
+  const top = useMotionValue(0);
+  const width = useMotionValue(0);
+  const height = useMotionValue(0);
+
+  useLayoutEffect(() => {
+    const label = labelRef.current;
+    const list = label?.closest<HTMLElement>('[role="tablist"]');
+    if (!label || !list) return;
+
+    const measure = () => {
+      const geometry = measureThumbGeometry(list, label, "segment");
+      left.set(geometry.left);
+      top.set(geometry.top);
+      width.set(geometry.width);
+      height.set(geometry.height);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(list);
+    // Sibling labels can move this label without changing its own size.
+    for (const trigger of list.querySelectorAll("[data-tab-value]")) {
+      observer.observe(trigger);
+    }
+    observer.observe(label);
+    return () => observer.disconnect();
+  }, [left, top, width, height]);
+
+  const radius =
+    variant === "pill"
+      ? "9999px"
+      : variant === "segment-contrast"
+        ? "var(--radius-md)"
+        : "calc(var(--radius-md) - 2px)";
+  const clipPath = useTransform(() => {
+    if (!thumb.width.get() || !thumb.height.get()) return "inset(50%)";
+    const x = thumb.x.get() - left.get();
+    const y = thumb.y.get() - top.get();
+    return `inset(${y}px ${width.get() - x - thumb.width.get()}px ${height.get() - y - thumb.height.get()}px ${x}px round ${radius})`;
+  });
+
+  return (
+    <span
+      ref={labelRef}
+      className="relative z-10 flex items-center justify-center gap-1"
+    >
+      {children}
+      <motion.span
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-0 flex items-center justify-center gap-1",
+          variant === "segment-contrast"
+            ? "text-background"
+            : "text-foreground",
+        )}
+        style={{ clipPath }}
+      >
+        {children}
+      </motion.span>
+    </span>
   );
 }
 
@@ -271,10 +357,7 @@ function TabsThumb() {
   const currentRef = useRef(current);
   currentRef.current = current;
 
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const width = useMotionValue(0);
-  const height = useMotionValue(0);
+  const { x, y, width, height } = useTabsThumb();
 
   useLayoutEffect(() => {
     const thumb = thumbRef.current;
