@@ -327,7 +327,7 @@ export function SimpleColorPicker({
                 className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-sm border-white shadow-sm ${rangeThumbClass}`}
                 style={{
                   left: `${alpha}%`,
-                  backgroundColor: opaqueHex,
+                  ...colorOverCheckerboard(currentHex),
                 }}
               />
             </div>
