@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
-import { NoteTableHoverIndicators } from "@/components/board/note-table-hover-indicators";
+import { NoteTableHoverIndicators } from "@/components/board/note-editor/tables/note-table-hover-indicators";
 import { updateColumns } from "@tiptap/extension-table";
 import { DOMSerializer } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";

@@ -1,5 +1,5 @@
 @reference "tailwindcss";
-@reference "../../index.css";
+@reference "../../../../index.css";
 
 .note-mermaid-block {
   @apply my-3 overflow-hidden rounded-lg border border-sidebar-border bg-background;

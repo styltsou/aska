@@ -6,8 +6,8 @@ import { TableKit } from "@tiptap/extension-table";
 import { MarkdownManager } from "@tiptap/markdown";
 import StarterKit from "@tiptap/starter-kit";
 import { NoteHighlight } from "@/components/board/note-rich-text";
-import { NoteMermaidBlock } from "@/components/board/note-mermaid-block";
-import { AssetMention } from "@/components/board/note-mentions";
+import { NoteMermaidBlock } from "@/components/board/note-editor/mermaid/note-mermaid-block";
+import { AssetMention } from "@/components/board/note-editor/mentions/note-mentions";
 import { describe, expect, it } from "vitest";
 
 const markdown = new MarkdownManager({

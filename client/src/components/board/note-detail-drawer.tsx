@@ -41,14 +41,14 @@ import { NoteEditorErrorBoundary } from "@/components/board/note-editor-error-bo
 import { NoteEditorLoading } from "@/components/board/note-editor-loading";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
 import { NoteBacklinks } from "@/components/board/note-backlinks";
-import { NoteSaveStatus } from "@/components/board/note-save-status";
-import { NoteSaveFeedback } from "@/components/board/note-save-feedback";
+import { NoteSaveStatus } from "@/components/board/note-editor/save/note-save-status";
+import { NoteSaveFeedback } from "@/components/board/note-editor/save/note-save-feedback";
 import { NoteScrollArea } from "@/components/board/note-scroll-area";
 import {
   isSameSaveSnapshot,
   resolveNoteSaveCompletion,
   type NoteSaveSnapshot,
-} from "@/components/board/note-save-reconciliation";
+} from "@/components/board/note-editor/save/note-save-reconciliation";
 import { NoteTitleField } from "@/components/board/note-title-field";
 import {
   NoteWorkspace,

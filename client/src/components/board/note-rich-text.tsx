@@ -74,22 +74,22 @@ import Suggestion, {
 import { toast } from "sonner";
 
 import { NotePreviewRail } from "@/components/board/note-preview-rail";
-import { NoteTableControls } from "@/components/board/note-table-controls";
-import { NoteTableActiveCell } from "@/components/board/note-table-active-cell";
-import { NoteTableView } from "@/components/board/note-table-view";
+import { NoteTableControls } from "@/components/board/note-editor/tables/note-table-controls";
+import { NoteTableActiveCell } from "@/components/board/note-editor/tables/note-table-active-cell";
+import { NoteTableView } from "@/components/board/note-editor/tables/note-table-view";
 import {
   getMarkdownPaste,
   normalizeMarkdownBlocks,
 } from "@/components/board/note-markdown-paste";
 import { NoteCodeBlockEditing } from "@/components/board/note-code-block-editing";
-import { NoteMermaidBlock } from "@/components/board/note-mermaid-block";
+import { NoteMermaidBlock } from "@/components/board/note-editor/mermaid/note-mermaid-block";
 import {
   AssetMention,
   NoteMentionProvider,
   createMentionsExtension,
   parseNumericAssetId,
   type OpenNoteMentionTarget,
-} from "@/components/board/note-mentions";
+} from "@/components/board/note-editor/mentions/note-mentions";
 import { NoteSelectionMenuSurface } from "@/components/board/note-selection-actions";
 import {
   blockStyleLabel,
@@ -97,12 +97,12 @@ import {
   type BlockStyleValue,
 } from "@/components/board/note-block-style";
 import { NoteCutListItemCleanup } from "@/components/board/note-cut-cleanup";
-import { NoteAiPrompt } from "@/components/board/note-ai-prompt";
+import { NoteAiPrompt } from "@/components/board/note-editor/ai/note-ai-prompt";
 import {
   isNoteAiSessionActive,
   NoteAiSession,
   startNoteAiSession,
-} from "@/components/board/note-ai-session";
+} from "@/components/board/note-editor/ai/note-ai-session";
 import { AskaTaskItem } from "@/components/board/task-item";
 import { Button } from "@/components/ui/button";
 import {

@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import type { NoteRichTextHandle } from "@/components/board/note-rich-text";
 import { NoteHighlightControl } from "@/components/board/note-highlight-control";
-import { NoteSaveStatus } from "@/components/board/note-save-status";
+import { NoteSaveStatus } from "@/components/board/note-editor/save/note-save-status";
 import { NoteScrollArea } from "@/components/board/note-scroll-area";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
 import {

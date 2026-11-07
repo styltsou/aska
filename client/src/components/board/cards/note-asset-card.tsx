@@ -43,8 +43,8 @@ import {
   NOTE_MENTION_CHIP_CLASS,
   MentionPillBody,
   mentionPillStyle,
-} from "@/components/board/note-mentions";
-import { NoteMermaidPreview } from "@/components/board/note-mermaid-preview";
+} from "@/components/board/note-editor/mentions/note-mentions";
+import { NoteMermaidPreview } from "@/components/board/note-editor/mermaid/note-mermaid-preview";
 import { NoteCardTable } from "./note-card-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import {

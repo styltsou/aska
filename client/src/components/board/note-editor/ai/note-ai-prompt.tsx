@@ -10,11 +10,11 @@ import {
   NOTE_AI_CURSOR_MARKER,
   setNoteAiContent,
   setNoteAiStreaming,
-} from "@/components/board/note-ai-session";
+} from "@/components/board/note-editor/ai/note-ai-session";
 import {
   streamNoteAi,
   type NoteAiRequest as AiRequest,
-} from "@/components/board/note-ai-stream";
+} from "@/components/board/note-editor/ai/note-ai-stream";
 import { Button } from "@/components/ui/button";
 import { GLASS_SURFACE_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
