@@ -392,6 +392,24 @@ describe("LinkCardPreview", () => {
     expect(html).not.toContain("i.ytimg.com");
   });
 
+  it("uses the canvas card's two-line description in collection previews", () => {
+    const html = renderToStaticMarkup(
+      <LinkCardPreview
+        variant="collection"
+        preview={{
+          type: "link",
+          assetId: "link-description",
+          title: "An article",
+          description: "A thorough writeup about the topic.",
+        }}
+      />,
+    );
+
+    expect(html).toContain("line-clamp-2 text-xs leading-relaxed");
+    expect(html).not.toContain("line-clamp-3");
+    expect(html).toContain("A thorough writeup about the topic.");
+  });
+
   it("shows an unavailable preview state when no thumbnail is resolved", () => {
     const html = renderToStaticMarkup(
       <LinkCardPreview

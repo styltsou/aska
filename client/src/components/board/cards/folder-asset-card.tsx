@@ -2,8 +2,6 @@ import { FolderIcon, PlayIcon, PlusIcon } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState, type CSSProperties } from "react";
 
-import { getCanvasDropFanOffset } from "@/components/canvas/canvas-drop-stack";
-import { BOARD_CARD_WIDTH } from "@/components/canvas/canvas-node-layout";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { hasSelectionModifier } from "@/lib/selection";
 import { cn } from "@/lib/utils";
@@ -15,12 +13,13 @@ import {
   ColorCardPreview,
 } from "./color-card-preview";
 import { NoteMiniature } from "./note-miniature";
+import {
+  usePreviewStackLayout,
+  PREVIEW_STACK_TRANSITION,
+  type PreviewStackPose,
+} from "./preview-stack-motion";
 
 const MAX_VISIBLE_PREVIEWS = 4;
-const RESTING_FAN_SCALE = 0.4;
-const HOVER_HORIZONTAL_FAN_SCALE = 1.25;
-const HOVER_VERTICAL_FAN_SCALE = 0.5;
-const HOVER_ROTATION_SCALE = 1.6;
 
 export function FolderAssetCard({
   asset,
@@ -49,12 +48,10 @@ export function FolderAssetCard({
     incomingAssetId !== undefined &&
     previews.some((preview) => preview.assetId === incomingAssetId);
   const showIncomingLayer = isDropTarget && !incomingPreviewIsReady;
-  const stackLift =
-    previews.length > 1
-      ? (getCanvasDropFanOffset(previews.length - 1, previews.length - 1).y *
-          (active ? HOVER_VERTICAL_FAN_SCALE : RESTING_FAN_SCALE)) /
-        2
-      : 0;
+  const { containerRef, poses } = usePreviewStackLayout(
+    active,
+    previews.map((preview) => preview.assetId).join(","),
+  );
 
   return (
     <div
@@ -89,20 +86,12 @@ export function FolderAssetCard({
       }}
     >
       <div
+        ref={containerRef}
         aria-hidden="true"
         className="absolute inset-0"
         style={{ containerType: "size" }}
       >
-        <div
-          className={cn(
-            "absolute inset-0",
-            stackInteracted &&
-              "transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none",
-          )}
-          style={{
-            transform: `translateY(-${(stackLift / BOARD_CARD_WIDTH) * 100}cqw)`,
-          }}
-        >
+        <div className="absolute inset-0">
           {previews.length === 0 ? <EmptyFolderPreview /> : null}
           {previews.map((preview, index) => (
             <FolderPreviewCard
@@ -110,8 +99,8 @@ export function FolderAssetCard({
               preview={preview}
               index={index}
               count={previews.length}
-              active={active}
               motionEnabled={stackInteracted}
+              pose={poses[index]}
             />
           ))}
           <AnimatePresence initial={false}>
@@ -175,34 +164,29 @@ function FolderPreviewCard({
   preview,
   index,
   count,
-  active,
   motionEnabled,
+  pose,
 }: {
   preview: FolderAssetPreview;
   index: number;
   count: number;
-  active: boolean;
   motionEnabled: boolean;
+  pose?: PreviewStackPose;
 }) {
-  const fan = index === 0 ? null : getCanvasDropFanOffset(index, count - 1);
-  const x =
-    (fan?.x ?? 0) * (active ? HOVER_HORIZONTAL_FAN_SCALE : RESTING_FAN_SCALE);
-  const y =
-    (fan?.y ?? 0) * (active ? HOVER_VERTICAL_FAN_SCALE : RESTING_FAN_SCALE);
-  const rotation = (fan?.rotation ?? 0) * (active ? HOVER_ROTATION_SCALE : 0.8);
-  const lift = active && index === 0 ? -2 : 0;
   const positionStyle: CSSProperties = {
     zIndex: count - index,
-    transform: `translate(calc(-50% + ${(x / BOARD_CARD_WIDTH) * 100}cqw), calc(-50% + ${((y + lift) / BOARD_CARD_WIDTH) * 100}cqw)) rotate(${rotation}deg)`,
+    translate: pose?.translate ?? "-50% -50%",
+    rotate: pose?.rotate,
+    transform: `scale(${pose?.scale ?? 1})`,
   };
 
   if ((preview.type === "image" || preview.type === "video") && preview.url) {
     return (
       <div
+        data-preview-stack-card
         className={cn(
           "absolute top-1/2 left-1/2 w-max max-w-[65cqw] overflow-hidden rounded-lg",
-          motionEnabled &&
-            "transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none",
+          motionEnabled && PREVIEW_STACK_TRANSITION,
         )}
         style={positionStyle}
       >
@@ -274,10 +258,10 @@ function FolderPreviewCard({
 
   return (
     <div
+      data-preview-stack-card
       className={cn(
         "absolute top-1/2 left-1/2 overflow-hidden rounded-lg border border-border bg-card",
-        motionEnabled &&
-          "transition-transform duration-[300ms] ease-[cubic-bezier(0.34,1.45,0.64,1)] motion-reduce:transition-none",
+        motionEnabled && PREVIEW_STACK_TRANSITION,
       )}
       style={style}
     >

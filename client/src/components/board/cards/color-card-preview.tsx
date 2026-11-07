@@ -27,7 +27,12 @@ export function ColorCardPreview({
     <div
       data-color-card-preview
       className="flex size-full min-h-0 flex-col bg-sidebar text-sidebar-foreground"
-      style={{ "--color-card-text-scale": textScale } as CSSProperties}
+      style={
+        {
+          containerType: "inline-size",
+          "--color-card-text-scale": textScale,
+        } as CSSProperties
+      }
     >
       <div
         data-color-card-preview-swatch
@@ -42,7 +47,14 @@ export function ColorCardPreview({
             : { backgroundColor: hex ?? "transparent" }
         }
       />
-      <div className="relative z-0 flex min-w-0 items-baseline gap-[4.3%] bg-sidebar px-[4.3%] py-[4.3%] text-[clamp(0.625rem,calc(4.6cqw*var(--color-card-text-scale,1)),calc(1rem*var(--color-card-text-scale,1)))] leading-tight">
+      <div
+        className={cn(
+          "relative z-0 flex min-w-0 items-baseline gap-[4.3%] bg-sidebar px-[4.3%] py-[4.3%] leading-tight",
+          !name && displayHex
+            ? "text-[clamp(0.5rem,calc(6.4cqw*var(--color-card-text-scale,1)),calc(1.125rem*var(--color-card-text-scale,1)))]"
+            : "text-[clamp(0.5rem,calc(5.7cqw*var(--color-card-text-scale,1)),calc(1rem*var(--color-card-text-scale,1)))]",
+        )}
+      >
         <span
           className={cn(
             "min-w-0 truncate font-medium",

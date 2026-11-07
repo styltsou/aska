@@ -14,6 +14,8 @@ const YOUTUBE_THUMBNAIL_URL = (videoId: string) =>
   `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 const LINK_CARD_META_CLASS =
   "flex min-w-0 items-center gap-1.5 text-[13px] leading-5 text-sidebar-foreground/65";
+const LINK_CARD_DESCRIPTION_CLASS =
+  "line-clamp-2 text-xs leading-relaxed whitespace-pre-line text-sidebar-foreground/60";
 
 async function waitForThumbnail(image: HTMLImageElement) {
   // Match ProgressiveImage's reveal timing before showing the play mark.
@@ -303,9 +305,7 @@ export function LinkAssetCard({
           </div>
         ) : null}
         {!isYoutube && asset.description ? (
-          <p className="line-clamp-2 text-xs leading-relaxed whitespace-pre-line text-sidebar-foreground/60">
-            {asset.description}
-          </p>
+          <p className={LINK_CARD_DESCRIPTION_CLASS}>{asset.description}</p>
         ) : null}
       </div>
     </>
@@ -446,16 +446,7 @@ export function LinkCardPreview({
           </div>
         ) : null}
         {!isYoutube && preview.description?.trim() ? (
-          <div
-            className={cn(
-              "text-muted-foreground",
-              compact
-                ? "line-clamp-3 text-[11px] leading-snug whitespace-pre-line"
-                : "line-clamp-3 text-xs leading-snug whitespace-pre-line",
-            )}
-          >
-            {preview.description.trim()}
-          </div>
+          <p className={LINK_CARD_DESCRIPTION_CLASS}>{preview.description}</p>
         ) : null}
       </div>
     </div>

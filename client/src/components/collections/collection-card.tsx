@@ -13,6 +13,11 @@ import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { LinkCardPreview } from "../board/cards/link-asset-card";
 import {
+  usePreviewStackLayout,
+  PREVIEW_STACK_TRANSITION,
+  type PreviewStackPose,
+} from "../board/cards/preview-stack-motion";
+import {
   COLOR_CARD_PREVIEW_ASPECT_RATIO,
   ColorCardPreview,
 } from "../board/cards/color-card-preview";
@@ -85,11 +90,14 @@ export function CollectionCard({
   const deleteCollection = useDeleteCollection(workspaceSlug);
   const previews = collection.previews.slice(0, MAX_VISIBLE_PREVIEWS);
   const active = pointerOver || focused || actionsOpen || contextMenuOpen;
+  const { containerRef, poses } = usePreviewStackLayout(
+    active,
+    previews.map((preview) => preview.assetId).join(","),
+  );
   const reduceMotion = useReducedMotion();
   const controlTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.3, ease: [0.34, 1.45, 0.64, 1] as const };
-  const stackDirection = (hashString(collection.slug) & 1) === 0 ? 1 : -1;
+    : { duration: 0.2, ease: [0.22, 1, 0.36, 1] as const };
   const collectionActions = [
     { label: "Rename", onClick: () => setRenameDialogOpen(true) },
     { label: "Properties", onClick: () => setPropertiesDialogOpen(true) },
@@ -167,6 +175,7 @@ export function CollectionCard({
             className="relative z-10 aspect-[3/2] w-full cursor-pointer @min-[64rem]:max-h-[calc((100svh-13.75rem)/2)]"
           >
             <div
+              ref={containerRef}
               className="pointer-events-none absolute inset-0 flex items-center justify-center"
               style={{ containerType: "size" }}
             >
@@ -177,19 +186,20 @@ export function CollectionCard({
                   onPointerLeave={handleHoverTargetLeave}
                 />
               ) : (
-                previews.map((preview, index) => (
-                  <CollectionPreviewCard
-                    key={preview.assetId}
-                    preview={preview}
-                    index={index}
-                    count={previews.length}
-                    stackDirection={stackDirection}
-                    active={active}
-                    motionEnabled={stackInteracted || active}
-                    onPointerEnter={handleHoverTargetEnter}
-                    onPointerLeave={handleHoverTargetLeave}
-                  />
-                ))
+                <div className="absolute inset-0">
+                  {previews.map((preview, index) => (
+                    <CollectionPreviewCard
+                      key={preview.assetId}
+                      preview={preview}
+                      index={index}
+                      count={previews.length}
+                      motionEnabled={stackInteracted || active}
+                      pose={poses[index]}
+                      onPointerEnter={handleHoverTargetEnter}
+                      onPointerLeave={handleHoverTargetLeave}
+                    />
+                  ))}
+                </div>
               )}
             </div>
 
@@ -360,7 +370,7 @@ function EmptyCollectionPreview({
       data-active={active}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
-      className="pointer-events-auto flex aspect-[4/3] shrink-0 flex-col items-center justify-center gap-2 rounded-lg border border-border bg-sidebar px-3 text-sidebar-foreground/55 transition-transform duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-[active=true]:scale-105 data-[active=true]:rotate-2 motion-reduce:transition-none"
+      className="pointer-events-auto flex aspect-[4/3] shrink-0 flex-col items-center justify-center gap-2 rounded-lg border border-border bg-sidebar px-3 text-sidebar-foreground/55 transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] data-[active=true]:scale-105 data-[active=true]:rotate-2 motion-reduce:transition-none"
       style={{ width: "min(68cqw, 95cqh, 12rem)" }}
     >
       <FolderOpenIcon
@@ -376,88 +386,40 @@ function CollectionPreviewCard({
   preview,
   index,
   count,
-  stackDirection,
-  active,
   motionEnabled,
+  pose,
   onPointerEnter,
   onPointerLeave,
 }: {
   preview: FolderChildPreview;
   index: number;
   count: number;
-  stackDirection: number;
-  active: boolean;
   motionEnabled: boolean;
+  pose?: PreviewStackPose;
   onPointerEnter: () => void;
   onPointerLeave: (event: ReactPointerEvent<HTMLElement>) => void;
 }) {
-  const reduceMotion = useReducedMotion();
-  const seed = hashString(preview.assetId);
-  const isSinglePreview = count === 1;
-  const side = (index % 2 === 0 ? 1 : -1) * stackDirection;
-  const horizontalDrift = (((seed >>> 4) & 7) - 3.5) * 0.15;
-  const verticalDrift = (((seed >>> 8) & 7) - 3.5) * 0.12;
-  const rotationDrift = (((seed >>> 12) & 7) - 3.5) * 0.08;
-  const restingX =
-    (isSinglePreview || index === 0 ? 0 : side * (4 + index * 3)) +
-    (isSinglePreview ? 0 : horizontalDrift);
-  const restingY =
-    (isSinglePreview || index === 0 ? 0 : 1 + index * 1.3) +
-    (isSinglePreview ? 0 : verticalDrift);
-  const computedRestingRotation =
-    (isSinglePreview ? 0 : side * (index === 0 ? 0.8 : 2 + index * 1.2)) +
-    rotationDrift;
-  const computedHoverX = isSinglePreview
-    ? restingX
-    : side * (index === 0 ? 3 : 8 + index * 3) + horizontalDrift;
-  const computedHoverY = isSinglePreview
-    ? restingY
-    : restingY - (index === 0 ? 1.5 : 1);
-  const computedHoverRotation = isSinglePreview
-    ? computedRestingRotation + side * 2
-    : side * (index === 0 ? 3 : 5 + Math.min(index, 2) * 0.8) + rotationDrift;
-  const computedScale = active
-    ? isSinglePreview
-      ? 1.05
-      : 1.015
-    : 0.94 + ((seed >>> 21) & 7) / 100;
-  const isVideoPreview = preview.type === "video";
-  const translateX = active ? computedHoverX : restingX;
-  const translateY = active ? computedHoverY : restingY;
-  const rotation = isVideoPreview
-    ? 0
-    : active
-      ? computedHoverRotation
-      : computedRestingRotation;
-  const scale = isVideoPreview ? 1 : computedScale;
-
   const positionStyle: CSSProperties = {
     left: "50%",
     top: "50%",
     zIndex: count - index,
+    translate: pose?.translate ?? "-50% -50%",
+    rotate: pose?.rotate,
+    transform: `scale(${pose?.scale ?? 1})`,
   };
-  const motionPosition = {
-    x: `calc(-50% + ${translateX}cqw)`,
-    y: `calc(-50% + ${translateY}cqh)`,
-    rotate: rotation,
-    scale,
-  };
-  const motionTransition =
-    reduceMotion || !motionEnabled
-      ? { duration: 0 }
-      : { duration: 0.3, ease: [0.34, 1.45, 0.64, 1] as const };
 
   if ((preview.type === "image" || preview.type === "video") && preview.url) {
     return (
-      <motion.div
+      <div
+        data-preview-stack-card
         data-collection-hover-target
         aria-hidden="true"
-        initial={false}
-        animate={motionPosition}
-        transition={motionTransition}
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
-        className="pointer-events-auto absolute w-max max-w-[62cqw] overflow-hidden rounded-lg"
+        className={cn(
+          "pointer-events-auto absolute w-max max-w-[62cqw] overflow-hidden rounded-lg",
+          motionEnabled && PREVIEW_STACK_TRANSITION,
+        )}
         style={positionStyle}
       >
         <img
@@ -489,7 +451,7 @@ function CollectionPreviewCard({
             {formatVideoDuration(preview.durationSeconds)}
           </span>
         ) : null}
-      </motion.div>
+      </div>
     );
   }
 
@@ -503,21 +465,22 @@ function CollectionPreviewCard({
     ...positionStyle,
     width:
       preview.type === "link"
-        ? "min(64cqw, 62cqh)"
+        ? "min(56cqw, 90cqh)"
         : `min(62cqw, ${ratio * 75}cqh)`,
     aspectRatio: preview.type === "link" ? undefined : ratio,
   };
 
   return (
-    <motion.div
+    <div
+      data-preview-stack-card
       data-collection-hover-target
       aria-hidden="true"
-      initial={false}
-      animate={motionPosition}
-      transition={motionTransition}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}
-      className="pointer-events-auto absolute overflow-hidden rounded-lg border border-border bg-card"
+      className={cn(
+        "pointer-events-auto absolute overflow-hidden rounded-lg border border-border bg-card",
+        motionEnabled && PREVIEW_STACK_TRANSITION,
+      )}
       style={style}
     >
       {preview.type === "link" ? (
@@ -537,15 +500,6 @@ function CollectionPreviewCard({
           />
         </div>
       )}
-    </motion.div>
+    </div>
   );
-}
-
-function hashString(value: string) {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
 }
