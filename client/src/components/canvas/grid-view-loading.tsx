@@ -9,6 +9,7 @@ import {
   useGridDensity,
 } from "@/components/asset-grid/grid-density";
 import { Masonry } from "@/components/asset-grid/masonry-grid";
+import { GridDensityControl } from "@/components/asset-grid/grid-density-control";
 import { FolderCardSkeleton } from "@/components/asset-grid/preview-stack-skeleton";
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -47,24 +48,32 @@ export function GridViewLoading() {
 
   return (
     <ScrollArea
-      className="h-full min-h-0 w-full min-w-0 flex-1"
-      viewportClassName="[scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="h-full min-h-0 w-full min-w-0 flex-1 rounded-[inherit]"
+      viewportClassName="[scrollbar-width:none] outline-none focus-visible:outline-none [&::-webkit-scrollbar]:hidden"
       verticalScrollbarClassName="w-[5px] p-0"
       verticalScrollbarStyle={{ top: 5, bottom: 5, right: 3 }}
     >
       <div
-        className="p-5 pb-20"
+        className="relative min-h-full w-full p-5 pb-20"
         role="status"
         aria-label="Loading collection grid view"
       >
         <span className="sr-only">Loading collection grid view</span>
 
-        <div ref={contentRef} className="w-full space-y-10">
-          <section aria-hidden="true">
-            <div className="mb-3 flex items-baseline gap-2">
-              <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-3 w-6" />
-            </div>
+        <div ref={contentRef} className="w-full">
+          <div className="pointer-events-none sticky top-5 z-10 flex h-0 justify-end">
+            <GridDensityControl />
+          </div>
+          <div className="mb-3 flex min-h-[30px] items-center gap-2 pr-64">
+            <h2
+              id="grid-folders-title"
+              className="text-xs font-semibold tracking-wide text-foreground/80 uppercase"
+            >
+              Folders
+            </h2>
+            <Skeleton className="h-3 w-6" />
+          </div>
+          <section aria-labelledby="grid-folders-title">
             <div
               className="grid gap-[10px]"
               style={{
@@ -77,9 +86,14 @@ export function GridViewLoading() {
             </div>
           </section>
 
-          <section aria-hidden="true">
-            <div className="mb-3 flex items-baseline gap-2">
-              <Skeleton className="h-3 w-14" />
+          <section aria-labelledby="grid-assets-title" className="mt-10">
+            <div className="mb-3 flex items-center gap-2">
+              <h2
+                id="grid-assets-title"
+                className="text-xs font-semibold tracking-wide text-foreground/80 uppercase"
+              >
+                Assets
+              </h2>
               <Skeleton className="h-3 w-8" />
             </div>
             <Masonry className="min-w-0" width={contentWidth} density={density}>

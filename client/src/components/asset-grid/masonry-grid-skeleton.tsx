@@ -26,7 +26,7 @@ export function MasonryGridSkeleton() {
   return (
     <div
       ref={ref}
-      className="relative"
+      className="relative min-h-0"
       role="status"
       aria-label="Loading inbox"
     >

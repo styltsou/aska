@@ -29,7 +29,6 @@ import { useSessionStore } from "@/store";
 import type { Asset, ImageAsset } from "@/types/asset";
 import { ResourceLoadError } from "@/components/resource-load-error";
 import { useGridDensity } from "@/components/asset-grid/grid-density";
-import { GridLayoutStatus } from "@/components/asset-grid/grid-layout-status";
 import {
   useWorkspacePeek,
   type BoardShowRequest,
@@ -218,7 +217,6 @@ function InboxPage() {
         target="inbox"
       >
         <div className="relative min-h-0" aria-busy={isLayoutPending}>
-          <GridLayoutStatus pending={isLayoutPending} />
           <StableAssetBoard
             assets={displayAssets}
             inboxContext={inboxContext}

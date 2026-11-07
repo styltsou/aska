@@ -30,7 +30,6 @@ import { SelectionActionBar } from "@/components/selection/selection-action-bar"
 import { MoveToDialog } from "@/components/move-to-dialog";
 import { VirtualMasonry } from "@/components/asset-grid/virtual-masonry";
 import { GridDensityControl } from "@/components/asset-grid/grid-density-control";
-import { GridLayoutStatus } from "@/components/asset-grid/grid-layout-status";
 import {
   columnsForGrid,
   useGridDensity,
@@ -102,7 +101,6 @@ export function CollectionGridView(props: CollectionGridViewProps) {
       className="relative flex min-h-0 min-w-0 flex-1 flex-col"
       aria-busy={pending}
     >
-      <GridLayoutStatus pending={pending} />
       <CollectionGridContent {...props} density={renderedDensity} />
     </div>
   );
