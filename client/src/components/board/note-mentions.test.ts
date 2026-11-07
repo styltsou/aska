@@ -18,6 +18,7 @@ import {
   filterRecentMentionTargets,
   getMentionMenuDisplayItems,
   getMentionTargetSignature,
+  nextMentionScope,
   parseMentionQuery,
   parseNumericAssetId,
   shouldShowMentionSuggestion,
@@ -199,6 +200,20 @@ describe("mention query parsing", () => {
     expect(createMentionScopeQuery(undefined, "note: design system")).toBe(
       "@design system",
     );
+  });
+
+  it("cycles mention filters in both directions and wraps at either end", () => {
+    expect(nextMentionScope(undefined, false)).toBe("note");
+    expect(nextMentionScope("note", false)).toBe("color");
+    expect(nextMentionScope("link", false)).toBeUndefined();
+    expect(nextMentionScope(undefined, true)).toBe("link");
+    expect(nextMentionScope("color", true)).toBe("note");
+    expect(
+      createMentionScopeQuery(
+        nextMentionScope("note", false),
+        "note: design system",
+      ),
+    ).toBe("@color:design system");
   });
 
   it("renders an image mention with its preview or image fallback", () => {

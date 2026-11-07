@@ -13,9 +13,6 @@ import {
 import "./note-mentions.css";
 import type { QueryClient } from "@tanstack/react-query";
 import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  CornerDownLeftIcon,
   FileTextIcon,
   ImageIcon,
   LinkIcon,
@@ -56,7 +53,6 @@ import {
   HoverCardTrigger,
   HoverCardViewport,
 } from "@/components/ui/hover-card";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   SuggestionMenuTransition,
@@ -710,6 +706,25 @@ type MentionMenuHandle = {
   onKeyDown: (props: SuggestionKeyDownProps) => boolean;
 };
 
+const MENTION_SCOPES = [
+  undefined,
+  "note",
+  "color",
+  "image",
+  "video",
+  "link",
+] as const;
+
+export function nextMentionScope(
+  scope: NoteMentionType | undefined,
+  reverse: boolean,
+) {
+  const index = MENTION_SCOPES.indexOf(scope);
+  return MENTION_SCOPES[
+    (index + (reverse ? -1 : 1) + MENTION_SCOPES.length) % MENTION_SCOPES.length
+  ];
+}
+
 type MentionMenuProps = SuggestionProps<
   NoteMentionTarget,
   NoteMentionTarget
@@ -877,6 +892,16 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
           });
           return true;
         }
+        if (
+          event.key === "Tab" &&
+          !event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey
+        ) {
+          event.preventDefault();
+          setScope(nextMentionScope(parsed.scope, event.shiftKey));
+          return true;
+        }
         if (event.key === "Enter") {
           select(selectedIndex);
           return true;
@@ -899,9 +924,7 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
         >
           <div className="relative z-10 overflow-hidden rounded-b-lg border-b border-border bg-background">
             <div className="flex items-center gap-1 border-b border-border/60 p-1.5">
-              {(
-                [undefined, "note", "color", "image", "video", "link"] as const
-              ).map((scope) => (
+              {MENTION_SCOPES.map((scope) => (
                 <button
                   key={scope ?? "all"}
                   type="button"
@@ -1032,33 +1055,6 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                   {emptyLabel}
                 </p>
               ) : null}
-            </div>
-          </div>
-          <div className="relative z-0 flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-1.5 text-[10px] leading-4 text-muted-foreground">
-            <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1">
-              <span className="inline-flex items-center gap-1">
-                <KbdGroup className="gap-0.5">
-                  <Kbd
-                    variant="solid"
-                    className="h-4 min-w-4 px-0.5 text-[10px]"
-                  >
-                    <ArrowUpIcon />
-                  </Kbd>
-                  <Kbd
-                    variant="solid"
-                    className="h-4 min-w-4 px-0.5 text-[10px]"
-                  >
-                    <ArrowDownIcon />
-                  </Kbd>
-                </KbdGroup>
-                <span>to navigate</span>
-              </span>
-              <span className="ml-3 inline-flex items-center gap-1">
-                <Kbd variant="solid" className="h-4 min-w-4 px-0.5 text-[10px]">
-                  <CornerDownLeftIcon />
-                </Kbd>
-                <span>to insert</span>
-              </span>
             </div>
           </div>
         </div>
