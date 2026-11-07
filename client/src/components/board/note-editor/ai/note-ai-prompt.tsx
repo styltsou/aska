@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/core";
-import { ArrowUp, Check, RotateCcw, Sparkles, Square } from "lucide-react";
+import { ArrowUp, Check, RotateCcw, Square } from "lucide-react";
 import { motion } from "motion/react";
 
 import {
@@ -16,7 +16,6 @@ import {
   type NoteAiRequest as AiRequest,
 } from "@/components/board/note-editor/ai/note-ai-stream";
 import { Button } from "@/components/ui/button";
-import { GLASS_SURFACE_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 
 type Phase = "prompt" | "streaming" | "review";
@@ -228,9 +227,9 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
   return (
     <motion.div
       ref={containerRef}
-      initial={{ opacity: 0, y: -2, scale: 0.99 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
       className="note-ai-prompt my-1.5 font-sans text-sm"
       onBlur={(event) => {
         const next = event.relatedTarget;
@@ -266,19 +265,16 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
         }
       }}
     >
+      {/* Same surface as the app's Input: a hairline field that sits in the
+          document rather than floating above it. */}
       <div
         className={cn(
-          "flex h-10 items-center gap-2 rounded-lg pr-1.5 pl-3",
-          GLASS_SURFACE_CLASS,
+          "flex h-10 items-center gap-2 rounded-lg border border-input bg-transparent pr-1.5 pl-3 transition-colors duration-100 dark:bg-input/30",
+          // The bar is always the focused thing while open, so a ring would be
+          // noise; a slightly stronger border is enough.
+          "focus-within:border-foreground/20",
         )}
       >
-        <Sparkles
-          aria-hidden="true"
-          className={cn(
-            "size-4 shrink-0 text-muted-foreground",
-            phase === "streaming" && "animate-pulse text-foreground",
-          )}
-        />
         <input
           ref={inputRef}
           autoFocus
@@ -320,7 +316,7 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
               <Button
                 type="button"
                 variant="ghost"
-                size="xs"
+                size="sm"
                 title="Discard (Ctrl+Backspace)"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => discard()}
@@ -330,7 +326,7 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-xs"
+                size="icon-sm"
                 aria-label="Try again"
                 title="Try again"
                 onMouseDown={(event) => event.preventDefault()}
@@ -341,7 +337,7 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
               <Button
                 type="button"
                 variant="secondary"
-                size="xs"
+                size="sm"
                 title="Keep (Enter)"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => keep()}
@@ -353,22 +349,21 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
           ) : phase === "streaming" ? (
             <Button
               type="button"
-              variant="ghost"
-              size="icon-xs"
+              variant="secondary"
+              size="icon-sm"
               aria-label="Stop"
-              title="Stop"
+              title="Stop (Esc)"
               onMouseDown={(event) => event.preventDefault()}
               onClick={stop}
             >
-              <Square className="fill-current" />
+              <Square className="size-2.5 fill-current" />
             </Button>
           ) : (
             <Button
               type="button"
               variant="default"
-              size="icon-xs"
+              size="icon-sm"
               aria-label="Send"
-              className="rounded-full"
               disabled={!prompt.trim()}
               onMouseDown={(event) => event.preventDefault()}
               onClick={submit}
