@@ -28,6 +28,10 @@ import { NoteHighlightControl } from "@/components/board/note-highlight-control"
 import { NoteSaveStatus } from "@/components/board/note-save-status";
 import { NoteScrollArea } from "@/components/board/note-scroll-area";
 import { AssetTimestampCard } from "@/components/board/asset-timestamp-card";
+import {
+  ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+  ASSET_VIEWER_HEADER_ICON_TOGGLE_BUTTON_CLASS,
+} from "@/components/board/asset-viewer-control-styles";
 import { NoteTitleField } from "@/components/board/note-title-field";
 import { NoteRichText } from "@/components/board/note-rich-text";
 import {
@@ -1068,7 +1072,7 @@ function WorkspacePeekLoading({
       type="button"
       variant="ghost"
       size="icon"
-      className="size-8 rounded-lg"
+      className={cn("size-8 rounded-lg", ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS)}
       aria-label={label}
       disabled
     >
@@ -1383,6 +1387,7 @@ function WorkspacePeekPanel({
                   createdAt={target.asset.createdAt}
                   updatedAt={target.asset.updatedAt}
                   label="Video details"
+                  triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
                 />
               }
             />
@@ -1414,6 +1419,7 @@ function WorkspacePeekPanel({
                   createdAt={target.asset.createdAt}
                   updatedAt={target.asset.updatedAt}
                   label="Image details"
+                  triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
                 />
               }
             >
@@ -1442,6 +1448,7 @@ function WorkspacePeekPanel({
                   createdAt={target.asset.createdAt}
                   updatedAt={target.asset.updatedAt}
                   label="Color details"
+                  triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
                 />
               }
             />
@@ -1511,7 +1518,10 @@ function PeekHeader({
                 variant="ghost"
                 size="icon"
                 aria-label="Close Peek"
-                className="size-8 rounded-lg"
+                className={cn(
+                  "size-8 rounded-lg",
+                  ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                )}
                 onClick={onClose}
               >
                 <XIcon className="size-4" />
@@ -1534,7 +1544,10 @@ function PeekHeader({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="size-8 rounded-lg"
+                  className={cn(
+                    "size-8 rounded-lg",
+                    ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                  )}
                   aria-label="Show in board"
                   disabled={disabled || !showEnabled || isShowing}
                   onClick={() => void handleShow()}
@@ -1584,7 +1597,10 @@ function PeekPromotionControl({
             size="icon"
             aria-label={label}
             disabled={isPromoting}
-            className="size-8 rounded-lg"
+            className={cn(
+              "size-8 rounded-lg",
+              ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+            )}
             onClick={() => void onPromote()}
           >
             <Maximize2Icon className="size-3.5" />
@@ -1593,7 +1609,7 @@ function PeekPromotionControl({
         }
       />
       <TooltipContent side="bottom">
-        <span>{label}</span>
+        <span>Full screen</span>
         <AssetShortcutKeys action="fullscreen" />
       </TooltipContent>
     </Tooltip>
@@ -1993,6 +2009,7 @@ function PeekNote({
             createdAt={note.createdAt}
             updatedAt={note.updatedAt}
             label="Note details"
+            triggerClassName={ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS}
           />
         }
       >
@@ -2008,7 +2025,11 @@ function PeekNote({
                     variant="ghost"
                     size="icon"
                     aria-label="Read-only Peek mirror"
-                    className="size-8 rounded-lg text-amber-600 hover:bg-amber-500/10 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-400/10 dark:hover:text-amber-300"
+                    className={cn(
+                      "size-8 rounded-lg",
+                      ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                      "text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300",
+                    )}
                   >
                     <TriangleAlertIcon className="size-4" />
                     <span className="sr-only">Read-only Peek mirror</span>
@@ -2043,6 +2064,7 @@ function PeekNote({
             canRemoveHighlight={canRemoveHighlight}
             onColorChange={setHighlightColor}
             onHighlightingChange={handleHighlightModeChange}
+            className={ASSET_VIEWER_HEADER_ICON_TOGGLE_BUTTON_CLASS}
           />
         ) : null}
         <Tooltip>
@@ -2052,7 +2074,10 @@ function PeekNote({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-8 rounded-lg"
+                className={cn(
+                  "size-8 rounded-lg",
+                  ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                )}
                 aria-label={copied ? "Note copied" : "Copy markdown"}
                 onClick={copyNote}
               >

@@ -6,6 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { fetchAssetImageBlob } from "@/api/collection/fetchers";
 import { Button } from "@/components/ui/button";
+import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-viewer-control-styles";
+import { cn } from "@/lib/utils";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { CopyFeedbackIcon } from "@/components/ui/copy-feedback-icon";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
@@ -301,7 +303,10 @@ export function ImagePeekHeaderActions({
               type="button"
               variant="ghost"
               size="icon"
-              className="size-8 rounded-lg"
+              className={cn(
+                "size-8 rounded-lg",
+                ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+              )}
               aria-label={copied ? "Copied image" : "Copy image"}
               onClick={() => void handleCopy()}
             />
@@ -320,7 +325,10 @@ export function ImagePeekHeaderActions({
               type="button"
               variant="ghost"
               size="icon"
-              className="size-8 rounded-lg"
+              className={cn(
+                "size-8 rounded-lg",
+                ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+              )}
               aria-label="Download"
               onClick={handleDownload}
             />
