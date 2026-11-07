@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/core";
-import { ArrowUp, Check, PencilLine, RotateCcw } from "lucide-react";
+import { ArrowUp, Check, RotateCcw } from "lucide-react";
 import { motion } from "motion/react";
 
 import {
@@ -25,10 +25,10 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * - `prompt`: asking — the only state with an input.
+ * - `prompt`: asking for the first draft.
  * - `streaming`: the AI is writing into the note; a status line, no input.
- * - `review`: a draft is in the note; an action row to keep, discard, retry,
- *   or refine. Refining brings the input back just for the follow-up.
+ * - `review`: a draft is in the note; an action row to retry, discard or keep
+ *   it, with a follow-up input below that rewrites the same draft.
  */
 type Phase = "prompt" | "streaming" | "review";
 
@@ -72,12 +72,10 @@ export function NoteAiPrompt({
 }) {
   const [prompt, setPrompt] = useState("");
   const [phase, setPhase] = useState<Phase>(restored ? "review" : "prompt");
-  const [refining, setRefining] = useState(false);
   const [error, setError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
-  const actionsRef = useRef<HTMLDivElement>(null);
   const outputRef = useRef(restored?.draft ?? "");
   const frameRef = useRef<number | null>(null);
   const lastRequestRef = useRef<AiRequest | null>(restored?.request ?? null);
@@ -87,7 +85,7 @@ export function NoteAiPrompt({
   const keepWhenDoneRef = useRef(false);
   const runningRef = useRef(false);
   const closingRef = useRef(false);
-  // Set while focus moves between the input, status line and action row, so
+  // Set while focus moves between the input and the status line, so
   // the hand-off isn't mistaken for the user leaving.
   const handingOffRef = useRef(false);
   const pointerDownRef = useRef(false);
@@ -115,8 +113,6 @@ export function NoteAiPrompt({
 
   const abortRef = useRef<AbortController | null>(null);
 
-  const showsInput = phase === "prompt" || (phase === "review" && refining);
-
   useEffect(() => {
     if (restored) setNoteAiContent(editor, restored.draft);
     // Only on mount: `restored` describes where this session started.
@@ -131,16 +127,12 @@ export function NoteAiPrompt({
       handingOffRef.current = false;
       return;
     }
-    const target = showsInput
-      ? inputRef.current
-      : phase === "streaming"
-        ? statusRef.current
-        : actionsRef.current;
+    const target = phase === "streaming" ? statusRef.current : inputRef.current;
     target?.focus({ preventScroll: true });
     // A long draft can push the controls below the fold; bring them back.
     target?.scrollIntoView({ block: "nearest" });
     handingOffRef.current = false;
-  }, [phase, showsInput]);
+  }, [phase]);
 
   const handOff = () => {
     handingOffRef.current = true;
@@ -194,7 +186,6 @@ export function NoteAiPrompt({
       return;
     }
     handOff();
-    setRefining(false);
     if (!outputRef.current) {
       setPhase(lastRequestRef.current?.draft ? "review" : "prompt");
     } else {
@@ -233,7 +224,6 @@ export function NoteAiPrompt({
     handOff();
     setError("");
     setPrompt("");
-    setRefining(false);
     setPhase("streaming");
     setNoteAiStreaming(editor, true);
 
@@ -288,25 +278,12 @@ export function NoteAiPrompt({
     finish();
   };
 
-  const startRefining = (initial = "") => {
-    handOff();
-    setPrompt(initial);
-    setRefining(true);
-  };
-
-  const stopRefining = () => {
-    handOff();
-    setPrompt("");
-    setRefining(false);
-  };
-
-  // Escape steps back one level: stop writing, leave refining, or close (a
+  // Escape steps back one level: stop writing, or close (a
   // draft is kept, an empty prompt just closes). Handled in the window capture
   // phase so the enclosing note drawer never reads it as "close the note".
   const escapeRef = useRef(() => {});
   escapeRef.current = () => {
     if (phase === "streaming") stop();
-    else if (phase === "review" && refining) stopRefining();
     else if (phase === "review") keep();
     else discard();
   };
@@ -393,36 +370,12 @@ export function NoteAiPrompt({
         </div>
       ) : phase === "review" ? (
         <div
-          ref={actionsRef}
-          tabIndex={-1}
           role="toolbar"
           aria-label="AI draft"
           // Secondary actions lead into the primary one on the far right,
-          // which also lines Keep up above the refine input's send button.
-          className="flex h-8 items-center justify-end gap-1 outline-none"
-          onKeyDown={(event) => {
-            if (event.target !== event.currentTarget) return;
-            if (event.key === "Enter") {
-              event.preventDefault();
-              keep();
-            } else if (event.key === "Backspace" || event.key === "Delete") {
-              event.preventDefault();
-              discard();
-            }
-          }}
+          // which also lines Keep up above the follow-up's send button.
+          className="flex h-8 items-center justify-end gap-1"
         >
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            aria-pressed={refining}
-            className="text-muted-foreground hover:text-foreground aria-pressed:text-foreground"
-            onMouseDown={keepFocus}
-            onClick={() => (refining ? stopRefining() : startRefining())}
-          >
-            <PencilLine data-icon="inline-start" />
-            Refine
-          </Button>
           <Tooltip>
             <TooltipTrigger
               render={
@@ -460,7 +413,8 @@ export function NoteAiPrompt({
           >
             <Check data-icon="inline-start" />
             Keep
-            {refining ? null : (
+            {/* Enter keeps only while the follow-up is empty. */}
+            {prompt.trim() ? null : (
               <Kbd className="h-3.5 min-w-3.5 bg-transparent px-0 text-[10px] text-current opacity-60">
                 ↵
               </Kbd>
@@ -468,26 +422,39 @@ export function NoteAiPrompt({
           </Button>
         </div>
       ) : null}
-      {showsInput ? (
+      {phase === "streaming" ? null : (
         <div
           className={cn(
             "flex h-10 items-center gap-2 rounded-lg border border-input bg-transparent pr-1.5 pl-3 transition-colors duration-100 focus-within:border-foreground/20 dark:bg-input/30",
-            refining && "mt-1.5",
+            phase === "review" && "mt-1.5",
           )}
         >
           <input
             ref={inputRef}
             value={prompt}
-            aria-label={refining ? "Refine with AI" : "Ask AI"}
+            aria-label={
+              phase === "review" ? "Ask AI to change the draft" : "Ask AI"
+            }
             placeholder={
-              refining ? "Tell AI what to change…" : "Ask AI to write anything…"
+              phase === "review"
+                ? "Ask a follow-up…"
+                : "Ask AI to write anything…"
             }
             onChange={(event) => setPrompt(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
+                // An empty Enter in review accepts the draft.
                 if (prompt.trim()) submit();
-                else if (refining) stopRefining();
+                else if (phase === "review") keep();
+              } else if (
+                phase === "review" &&
+                event.key === "Backspace" &&
+                (event.metaKey || event.ctrlKey) &&
+                !prompt
+              ) {
+                event.preventDefault();
+                discard();
               }
             }}
             className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
@@ -504,7 +471,7 @@ export function NoteAiPrompt({
             <ArrowUp />
           </Button>
         </div>
-      ) : null}
+      )}
       {error ? (
         <p className="mt-1 px-1 text-xs text-destructive">{error}</p>
       ) : null}
