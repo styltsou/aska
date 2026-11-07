@@ -693,19 +693,28 @@ function ColorDetailModal({
             expanded && "bg-background",
           )}
         >
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "size-8 rounded-lg",
-              ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
-            )}
-            aria-label="Close color"
-            title="Close color · Esc"
-            onClick={onDismissAll ?? onClose}
-          >
-            <XIcon className="size-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "size-8 rounded-lg",
+                    ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                  )}
+                  aria-label="Close color"
+                  onClick={onDismissAll ?? onClose}
+                />
+              }
+            >
+              <XIcon className="size-4" />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <span>Close color</span>
+              <AssetShortcutKeys action="close" />
+            </TooltipContent>
+          </Tooltip>
           {onPeek ? (
             <Tooltip>
               <TooltipTrigger
@@ -1159,16 +1168,25 @@ function ColorDetailLoading({
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <AssetNotesButton open={false} onClick={() => {}} disabled />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Close color"
-              title="Close color · Esc"
-              onClick={onClose}
-            >
-              <XIcon className="size-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Close color"
+                    onClick={onClose}
+                  />
+                }
+              >
+                <XIcon className="size-4" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <span>Close color</span>
+                <AssetShortcutKeys action="close" />
+              </TooltipContent>
+            </Tooltip>
             <Button
               type="button"
               variant="ghost"

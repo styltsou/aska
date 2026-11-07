@@ -516,7 +516,8 @@ function ToolbarButton({
         <span className="sr-only">{label}</span>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="flex items-center gap-2">
-        <span>{label === "Close video" ? "Close video · Esc" : label}</span>
+        <span>{label}</span>
+        {label === "Close video" ? <AssetShortcutKeys action="close" /> : null}
         {label === "Return to modal" || label === "Expand video" ? (
           <AssetShortcutKeys action="fullscreen" />
         ) : null}

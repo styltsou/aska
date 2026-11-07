@@ -9,12 +9,14 @@ import {
 export function AssetShortcutKeys({
   action,
 }: {
-  action: "peek" | "fullscreen";
+  action: "peek" | "fullscreen" | "close";
 }) {
   const keys =
     action === "peek"
       ? [getPlatformAlt(), getPlatformShift(), "P"]
-      : [getPlatformModifier(), "Enter"];
+      : action === "close"
+        ? ["Esc"]
+        : [getPlatformModifier(), "Enter"];
 
   return (
     <KbdGroup className="gap-0.5">

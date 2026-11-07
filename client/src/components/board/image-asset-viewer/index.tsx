@@ -1064,7 +1064,10 @@ function ImageViewerModalHeaderControls({
           <XIcon />
           <span className="sr-only">Close image</span>
         </TooltipTrigger>
-        <TooltipContent>Close image · Esc</TooltipContent>
+        <TooltipContent>
+          <span>Close image</span>
+          <AssetShortcutKeys action="close" />
+        </TooltipContent>
       </Tooltip>
       {onPeek ? (
         <Tooltip>
@@ -2161,7 +2164,10 @@ export function ImageAssetViewer({
                         <XIcon />
                         <span className="sr-only">Close image</span>
                       </TooltipTrigger>
-                      <TooltipContent>Close image · Esc</TooltipContent>
+                      <TooltipContent>
+                        <span>Close image</span>
+                        <AssetShortcutKeys action="close" />
+                      </TooltipContent>
                     </Tooltip>
                     {(location || (loading && assetModalId)) &&
                     (!asset || !asset.uploadStatus) &&

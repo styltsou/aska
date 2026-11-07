@@ -1891,7 +1891,10 @@ export function NoteDetailDrawer({
                   </Button>
                 }
               />
-              <TooltipContent side="bottom">Close note · Esc</TooltipContent>
+              <TooltipContent side="bottom">
+                <span>Close note</span>
+                <AssetShortcutKeys action="close" />
+              </TooltipContent>
             </Tooltip>
             {!isPeekMirror ? (
               <Tooltip>

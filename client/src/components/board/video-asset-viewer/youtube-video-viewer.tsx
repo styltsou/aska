@@ -588,7 +588,10 @@ function VideoViewerToolbar({
           <XIcon className="size-4" />
           <span className="sr-only">Close video</span>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Close video · Esc</TooltipContent>
+        <TooltipContent side="bottom">
+          <span>Close video</span>
+          <AssetShortcutKeys action="close" />
+        </TooltipContent>
       </Tooltip>
       {onPeek ? (
         <Tooltip>
