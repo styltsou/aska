@@ -1,117 +1,393 @@
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { Editor } from "@tiptap/core";
+import { ArrowUp, Check, RotateCcw, Sparkles, Square } from "lucide-react";
+import { motion } from "motion/react";
+
 import {
-  FetchStreamTransport,
-  useStream,
-} from "@langchain/langgraph-sdk/react";
-
+  acceptNoteAiSession,
+  discardNoteAiSession,
+  noteMarkdownAtAiCursor,
+  NOTE_AI_CURSOR_MARKER,
+  setNoteAiContent,
+  setNoteAiStreaming,
+} from "@/components/board/note-ai-session";
+import {
+  streamNoteAi,
+  type NoteAiRequest as AiRequest,
+} from "@/components/board/note-ai-stream";
 import { Button } from "@/components/ui/button";
-import { apiUrl } from "@/lib/api";
+import { GLASS_SURFACE_CLASS } from "@/lib/glass";
+import { cn } from "@/lib/utils";
 
-type AiEvent = { type: "delta"; text: string } | { type: "done" };
-const streamApiUrl =
-  import.meta.env.VITE_AI_STREAM_URL?.replace(
-    /^(https?:\/\/[^/]+)\/ai\/stream$/,
-    "$1/api/ai/stream",
-  ) ?? apiUrl("/api/ai/stream");
+type Phase = "prompt" | "streaming" | "review";
 
-export function NoteAiPrompt({
-  note,
-  onAccept,
-  onClose,
-}: {
-  note: string;
-  onAccept: (markdown: string) => void;
-  onClose: () => void;
-}) {
-  const [prompt, setPrompt] = useState("");
-  const [output, setOutput] = useState("");
-  const [complete, setComplete] = useState(false);
-  const [error, setError] = useState("");
-  const transport = useMemo(
-    () =>
-      new FetchStreamTransport({
-        apiUrl: streamApiUrl,
-        onRequest: (_url, init) => ({ ...init, credentials: "include" }),
-      }),
-    [],
+// Mirrors the server's note limit; long notes keep the text around the cursor.
+const NOTE_CONTEXT_LIMIT = 38_000;
+
+function trimAroundCursor(note: string) {
+  if (note.length <= NOTE_CONTEXT_LIMIT) return note;
+  const cursor = Math.max(0, note.indexOf(NOTE_AI_CURSOR_MARKER));
+  const start = Math.max(
+    0,
+    Math.min(
+      cursor - NOTE_CONTEXT_LIMIT * 0.7,
+      note.length - NOTE_CONTEXT_LIMIT,
+    ),
   );
-  const stream = useStream({
-    transport,
-    onCustomEvent: (event) => {
-      const update = event as AiEvent;
-      if (update.type === "delta" && typeof update.text === "string") {
-        setOutput((value) => value + update.text);
-      } else if (update.type === "done") {
-        setComplete(true);
-      }
-    },
-    onError: (cause) =>
-      setError(cause instanceof Error ? cause.message : "AI generation failed"),
-  });
+  return note.slice(Math.floor(start), Math.floor(start) + NOTE_CONTEXT_LIMIT);
+}
 
-  const submit = () => {
-    if (!prompt.trim() || stream.isLoading) return;
-    setOutput("");
-    setComplete(false);
-    setError("");
-    void stream.submit({ prompt: prompt.trim(), note });
+/**
+ * Inline one-line prompt rendered inside the note, directly below the content
+ * the AI is writing. Output streams straight into the note as pending blocks;
+ * leaving the bar keeps it, and Discard (or undo afterwards) removes it.
+ */
+export function NoteAiPrompt({ editor }: { editor: Editor }) {
+  const [prompt, setPrompt] = useState("");
+  const [phase, setPhase] = useState<Phase>("prompt");
+  const [error, setError] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const outputRef = useRef("");
+  const frameRef = useRef<number | null>(null);
+  const lastRequestRef = useRef<AiRequest | null>(null);
+  const keepWhenDoneRef = useRef(false);
+  const runningRef = useRef(false);
+  const closingRef = useRef(false);
+  const pointerDownRef = useRef(false);
+
+  useEffect(() => {
+    const down = () => {
+      pointerDownRef.current = true;
+    };
+    const up = () => {
+      pointerDownRef.current = false;
+    };
+    document.addEventListener("pointerdown", down, true);
+    document.addEventListener("pointerup", up, true);
+    document.addEventListener("pointercancel", up, true);
+    return () => {
+      document.removeEventListener("pointerdown", down, true);
+      document.removeEventListener("pointerup", up, true);
+      document.removeEventListener("pointercancel", up, true);
+    };
+  }, []);
+  // The note as it was when the bar opened; follow-ups revise the draft
+  // against this same context.
+  const noteRef = useRef<string | null>(null);
+  noteRef.current ??= trimAroundCursor(noteMarkdownAtAiCursor(editor));
+
+  const abortRef = useRef<AbortController | null>(null);
+
+  const flush = () => {
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    if (outputRef.current) setNoteAiContent(editor, outputRef.current);
   };
 
-  return (
-    <div className="fixed bottom-6 left-1/2 z-[100] w-[min(38rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-border bg-background p-3 shadow-xl">
-      <div className="mb-2 text-xs font-medium text-muted-foreground">
-        Ask AI to write or edit
-      </div>
-      <textarea
-        autoFocus
-        value={prompt}
-        onChange={(event) => setPrompt(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") onClose();
-          if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            submit();
-          }
-        }}
-        placeholder="What should I write?"
-        rows={2}
-        className="w-full resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-      />
-      {output ? (
-        <pre className="max-h-48 overflow-auto rounded-md bg-muted p-2 font-sans text-sm whitespace-pre-wrap">
-          {output}
-        </pre>
-      ) : null}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
-      <div className="mt-2 flex justify-end gap-2">
-        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-          Discard
-        </Button>
-        {stream.isLoading ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={stream.stop}
-          >
-            Stop
-          </Button>
-        ) : null}
-        {complete && output ? (
-          <Button type="button" size="sm" onClick={() => onAccept(output)}>
-            Insert
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            disabled={!prompt.trim() || stream.isLoading}
-            onClick={submit}
-          >
-            Generate
-          </Button>
-        )}
-      </div>
-    </div>
+  // Ending from inside the bar returns focus to the editor *before* the bar is
+  // removed; otherwise the removed input drops focus to the surrounding
+  // drawer. Ending because focus already left keeps the user's new selection.
+  const end = (
+    action: typeof acceptNoteAiSession,
+    { fromBlur = false } = {},
+  ) => {
+    if (!fromBlur) {
+      closingRef.current = true;
+      editor.view.focus();
+    }
+    action(editor, { select: !fromBlur });
+  };
+  const keep = (options?: { fromBlur?: boolean }) => {
+    flush();
+    end(acceptNoteAiSession, options);
+  };
+  const discard = (options?: { fromBlur?: boolean }) => {
+    end(discardNoteAiSession, options);
+  };
+
+  const finish = () => {
+    if (!runningRef.current) return;
+    runningRef.current = false;
+    flush();
+    setNoteAiStreaming(editor, false);
+    if (!outputRef.current) {
+      setPhase(lastRequestRef.current?.draft ? "review" : "prompt");
+    } else {
+      setPhase("review");
+    }
+    if (keepWhenDoneRef.current) {
+      keepWhenDoneRef.current = false;
+      if (outputRef.current) keep({ fromBlur: true });
+      else discard({ fromBlur: true });
+      return;
+    }
+  };
+
+  useEffect(
+    () => () => {
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+      abortRef.current?.abort();
+      abortRef.current = null;
+      // Don't end the session here: StrictMode replays this cleanup right
+      // after mount, and the bar only really unmounts once the session has
+      // ended or the editor itself is going away.
+    },
+    [],
   );
+
+  const run = (request: AiRequest) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const isCurrent = () => abortRef.current === controller;
+
+    lastRequestRef.current = request;
+    outputRef.current = "";
+    keepWhenDoneRef.current = false;
+    runningRef.current = true;
+    setError("");
+    setPrompt("");
+    setPhase("streaming");
+    setNoteAiStreaming(editor, true);
+
+    streamNoteAi(request, {
+      signal: controller.signal,
+      onDelta: (text) => {
+        if (!isCurrent()) return;
+        outputRef.current += text;
+        frameRef.current ??= requestAnimationFrame(() => {
+          frameRef.current = null;
+          setNoteAiContent(editor, outputRef.current);
+        });
+      },
+    })
+      .catch((cause: unknown) => {
+        if (!isCurrent() || controller.signal.aborted) return;
+        setError(
+          cause instanceof Error ? cause.message : "AI generation failed.",
+        );
+      })
+      .finally(() => {
+        if (!isCurrent()) return;
+        abortRef.current = null;
+        finish();
+      });
+  };
+
+  const submit = () => {
+    const instruction = prompt.trim();
+    if (!instruction || phase === "streaming") return;
+    const draft =
+      phase === "review" ? lastDraft(lastRequestRef.current, outputRef) : "";
+    run({
+      prompt: instruction,
+      note: noteRef.current ?? "",
+      ...(draft ? { draft } : {}),
+    });
+  };
+
+  const retry = () => {
+    if (lastRequestRef.current) run(lastRequestRef.current);
+  };
+
+  const stop = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    finish();
+  };
+
+  // Escape belongs to the bar: stop writing, or close it (keeping any output).
+  // Handled in the window capture phase so the enclosing note drawer never
+  // reads the press as a request to close the note.
+  const escapeRef = useRef(() => {});
+  escapeRef.current = () => {
+    if (phase === "streaming") stop();
+    else if (phase === "review") keep();
+    else discard();
+  };
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.repeat) return;
+      if (
+        !(event.target instanceof Node) ||
+        !containerRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      escapeRef.current();
+    };
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, []);
+
+  return (
+    <motion.div
+      ref={containerRef}
+      initial={{ opacity: 0, y: -2, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+      className="note-ai-prompt my-1.5 font-sans text-sm"
+      onBlur={(event) => {
+        const next = event.relatedTarget;
+        if (
+          closingRef.current ||
+          // Switching windows blurs too; the bar should still be there.
+          !document.hasFocus() ||
+          (next instanceof Node && containerRef.current?.contains(next))
+        ) {
+          return;
+        }
+        if (phase === "streaming") {
+          keepWhenDoneRef.current = true;
+          return;
+        }
+        const leave = () => {
+          // Focus may have come back to the bar while the click finished.
+          if (containerRef.current?.contains(document.activeElement)) return;
+          if (phase === "review") keep({ fromBlur: true });
+          else discard({ fromBlur: true });
+        };
+        // When a click moved focus away, let the editor place the caret
+        // first; changing the document mid-click would move the caret and
+        // lose focus to the surrounding drawer.
+        if (pointerDownRef.current) {
+          window.addEventListener(
+            "pointerup",
+            () => window.setTimeout(leave, 0),
+            { once: true },
+          );
+        } else {
+          leave();
+        }
+      }}
+    >
+      <div
+        className={cn(
+          "flex h-10 items-center gap-2 rounded-lg pr-1.5 pl-3",
+          GLASS_SURFACE_CLASS,
+        )}
+      >
+        <Sparkles
+          aria-hidden="true"
+          className={cn(
+            "size-4 shrink-0 text-muted-foreground",
+            phase === "streaming" && "animate-pulse text-foreground",
+          )}
+        />
+        <input
+          ref={inputRef}
+          autoFocus
+          value={prompt}
+          readOnly={phase === "streaming"}
+          aria-label="Ask AI"
+          aria-busy={phase === "streaming"}
+          placeholder={
+            phase === "streaming"
+              ? "Writing…"
+              : phase === "review"
+                ? "Tell AI what to change…"
+                : "Ask AI to write anything…"
+          }
+          onChange={(event) => setPrompt(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              if (phase === "streaming") return;
+              if (prompt.trim()) submit();
+              else if (phase === "review") keep();
+              return;
+            }
+            if (
+              event.key === "Backspace" &&
+              (event.metaKey || event.ctrlKey) &&
+              !prompt &&
+              phase === "review"
+            ) {
+              event.preventDefault();
+              discard();
+            }
+          }}
+          className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        />
+        <div className="flex shrink-0 items-center gap-1">
+          {phase === "review" && !prompt.trim() ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                title="Discard (Ctrl+Backspace)"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => discard()}
+              >
+                Discard
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Try again"
+                title="Try again"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={retry}
+              >
+                <RotateCcw />
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="xs"
+                title="Keep (Enter)"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => keep()}
+              >
+                <Check data-icon="inline-start" />
+                Keep
+              </Button>
+            </>
+          ) : phase === "streaming" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Stop"
+              title="Stop"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={stop}
+            >
+              <Square className="fill-current" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="default"
+              size="icon-xs"
+              aria-label="Send"
+              className="rounded-full"
+              disabled={!prompt.trim()}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={submit}
+            >
+              <ArrowUp />
+            </Button>
+          )}
+        </div>
+      </div>
+      {error ? (
+        <p className="mt-1 px-1 text-xs text-destructive">{error}</p>
+      ) : null}
+    </motion.div>
+  );
+}
+
+function lastDraft(
+  request: AiRequest | null,
+  output: { current: string },
+): string {
+  return output.current || request?.draft || "";
 }

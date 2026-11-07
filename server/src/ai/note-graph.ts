@@ -5,8 +5,32 @@ import { z } from "zod";
 const NoteEditState = new StateSchema({
   prompt: z.string(),
   note: z.string(),
+  draft: z.string().default(""),
   result: z.string().default(""),
 });
+
+const CURSOR_MARKER = "⟦cursor⟧";
+
+function userMessage({
+  prompt,
+  note,
+  draft,
+}: {
+  prompt: string;
+  note: string;
+  draft: string;
+}) {
+  const sections = [`Current note:\n<note>\n${note}\n</note>`];
+  if (draft) {
+    sections.push(
+      `Your previous draft at the cursor:\n<draft>\n${draft}\n</draft>`,
+      `Revise the draft according to this instruction and return the full replacement draft:\n${prompt}`,
+    );
+  } else {
+    sections.push(`Instruction:\n${prompt}`);
+  }
+  return sections.join("\n\n");
+}
 
 export function createNoteEditGraph(apiKey: string) {
   const model = new ChatGoogleGenerativeAI({
@@ -21,13 +45,15 @@ export function createNoteEditGraph(apiKey: string) {
         {
           role: "system",
           content:
-            "You are writing at the cursor in a note. Return only the new content to insert as Markdown; never repeat the current note. " +
+            "You are writing at the cursor in a note. " +
+            `The marker ${CURSOR_MARKER} in the note shows where your output will be inserted; never output the marker. ` +
+            "Return only the new content to insert as Markdown; never repeat the current note. " +
             "Preserve headings, lists, task lists, tables, quotes, code fences, links, images, and Mermaid fences when relevant. " +
             "Do not create mention syntax or claim to link another note. Do not wrap the whole answer in a code fence.",
         },
         {
           role: "user",
-          content: `Current note:\n<note>\n${state.note}\n</note>\n\nInstruction:\n${state.prompt}`,
+          content: userMessage(state),
         },
       ]);
       return {

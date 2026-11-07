@@ -3,8 +3,6 @@ import "./note-rich-text.css";
 
 import {
   forwardRef,
-  lazy,
-  Suspense,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -99,6 +97,12 @@ import {
   type BlockStyleValue,
 } from "@/components/board/note-block-style";
 import { NoteCutListItemCleanup } from "@/components/board/note-cut-cleanup";
+import { NoteAiPrompt } from "@/components/board/note-ai-prompt";
+import {
+  isNoteAiSessionActive,
+  NoteAiSession,
+  startNoteAiSession,
+} from "@/components/board/note-ai-session";
 import { AskaTaskItem } from "@/components/board/task-item";
 import { Button } from "@/components/ui/button";
 import {
@@ -2333,12 +2337,6 @@ function LinkInteractionPopover({ editor }: { editor: Editor }) {
   );
 }
 
-const NoteAiPrompt = lazy(() =>
-  import("@/components/board/note-ai-prompt").then((module) => ({
-    default: module.NoteAiPrompt,
-  })),
-);
-
 export const NoteRichText = forwardRef<
   NoteRichTextHandle,
   {
@@ -2389,9 +2387,7 @@ export const NoteRichText = forwardRef<
   const onHighlightSelectionChangeRef = useRef(onHighlightSelectionChange);
   const highlightPointerDownRef = useRef(false);
   const editorInstanceRef = useRef<Editor | null>(null);
-  const [aiTarget, setAiTarget] = useState<{ from: number; to: number } | null>(
-    null,
-  );
+  const [aiWidget, setAiWidget] = useState<HTMLElement | null>(null);
   const initialMarkdownRef = useRef(markdown);
   onChangeRef.current = onChange;
   onSaveShortcutRef.current = onSaveShortcut;
@@ -2407,6 +2403,7 @@ export const NoteRichText = forwardRef<
     () => [
       ...createBaseNoteExtensions(blockControls.extension),
       AssetMention,
+      NoteAiSession,
       ...(workspaceSlug
         ? [
             createMentionsExtension({
@@ -2451,14 +2448,17 @@ export const NoteRichText = forwardRef<
           !event.metaKey &&
           !event.altKey &&
           currentEditor?.state.selection.empty &&
+          !isNoteAiSessionActive(currentEditor.state) &&
           currentEditor.state.selection.$from.depth === 1 &&
           currentEditor.state.selection.$from.parent.type.name ===
             "paragraph" &&
           currentEditor.state.selection.$from.parent.content.size === 0
         ) {
           event.preventDefault();
-          const { from, to } = currentEditor.state.selection;
-          setAiTarget({ from, to });
+          const widget = document.createElement("div");
+          widget.className = "note-ai-widget";
+          widget.contentEditable = "false";
+          if (startNoteAiSession(currentEditor, widget)) setAiWidget(widget);
           return true;
         }
         if (event.key === "Escape" && highlightModeRef.current) {
@@ -2615,6 +2615,9 @@ export const NoteRichText = forwardRef<
     // its floating extensions from reading layout too early.
     immediatelyRender: false,
     onUpdate: ({ editor: currentEditor }) => {
+      // Hold autosave while AI output is pending; keeping or discarding it
+      // ends the session with a final update.
+      if (isNoteAiSessionActive(currentEditor.state)) return;
       onChangeRef.current?.(currentEditor.getMarkdown());
     },
     editorProps,
@@ -2714,8 +2717,8 @@ export const NoteRichText = forwardRef<
   }, [editor, blockControls]);
 
   useEffect(() => {
-    editor?.setEditable(editable && !aiTarget, false);
-  }, [aiTarget, editable, editor]);
+    editor?.setEditable(editable, false);
+  }, [editable, editor]);
 
   useEffect(() => {
     if (!autoFocus) return;
@@ -2770,6 +2773,19 @@ export const NoteRichText = forwardRef<
       editor.off("transaction", notifyHighlightSelectionChange);
     };
   }, [editor]);
+
+  useEffect(() => {
+    if (!editor || !aiWidget) return;
+    // The session can end from inside the prompt (keep/discard) or from
+    // outside it (content replaced); either way the prompt unmounts.
+    const closeEndedSession = () => {
+      if (!isNoteAiSessionActive(editor.state)) setAiWidget(null);
+    };
+    editor.on("transaction", closeEndedSession);
+    return () => {
+      editor.off("transaction", closeEndedSession);
+    };
+  }, [aiWidget, editor]);
 
   useImperativeHandle(
     ref,
@@ -3055,24 +3071,11 @@ export const NoteRichText = forwardRef<
           scrollContainerRef={scrollContainerRef}
         />
       ) : null}
-      {aiTarget ? (
-        <Suspense fallback={null}>
-          <NoteAiPrompt
-            note={editor.getMarkdown()}
-            onClose={() => {
-              setAiTarget(null);
-              editor.commands.focus();
-            }}
-            onAccept={(content) => {
-              editor.commands.insertContentAt(aiTarget, content, {
-                contentType: "markdown",
-              });
-              setAiTarget(null);
-              editor.commands.focus();
-            }}
-          />
-        </Suspense>
-      ) : null}
+      {aiWidget
+        ? // Rendered eagerly (not lazy) so the input exists before the next
+          // keystroke after space; typing that lands earlier is swallowed.
+          createPortal(<NoteAiPrompt editor={editor} />, aiWidget)
+        : null}
     </NoteMentionProvider>
   );
 });
