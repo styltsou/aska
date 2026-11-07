@@ -56,6 +56,7 @@ export type CanvasNodeData = {
   isDropTarget: boolean;
   incomingDropAssetId?: string;
   incomingDropCount?: number;
+  pendingDropPreviews?: Extract<CollectionNode, { type: "folder" }>["previews"];
   dropStackStyle?: CanvasDropStackStyle;
   handoffPillLabel?: string;
   presence?: "entering" | "exiting";
@@ -189,6 +190,7 @@ export const CanvasCard = memo(function CanvasCard({
           asset={asset}
           incomingAssetId={data.incomingDropAssetId}
           incomingAssetCount={data.incomingDropCount}
+          pendingPreviews={data.pendingDropPreviews}
           isDropTarget={data.isDropTarget}
           onOpen={
             node.id.startsWith("folder-optimistic-")

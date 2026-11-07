@@ -148,6 +148,8 @@ export type BoardInsertionPlacement = {
   batch?: {
     index: number;
     size: number;
+    /** Keep a dragged group in the same fan after it lands on the canvas. */
+    layout?: "stack";
     /** Complete image geometry for batches whose items are created one at a time. */
     imageDimensions?: readonly { width: number; height: number }[];
   };

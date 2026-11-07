@@ -35,4 +35,17 @@ describe("mixed-ratio preview stacks", () => {
     );
     expect(resting).not.toEqual(open);
   });
+
+  it("keeps the canvas fan's left-right and depth order", () => {
+    const poses = getPreviewStackTransforms(
+      Array.from({ length: 3 }, () => ({ width: 180, height: 180 })),
+      { width: 280, height: 280 },
+      true,
+    );
+    expect(poses.map((pose) => pose.rotate)).toEqual([
+      "0deg",
+      "-3.5deg",
+      "5deg",
+    ]);
+  });
 });

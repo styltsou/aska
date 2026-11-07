@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { getCanvasDropFanOffset } from "@/components/canvas/canvas-drop-stack";
 
 export const PREVIEW_STACK_TRANSITION =
   "transition-[translate,rotate] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none";
@@ -20,17 +21,18 @@ export function getPreviewStackTransforms(
   const front = sizes[0];
   const getPositions = (spread: boolean) =>
     sizes.map((size, index) => {
-      const side = index % 2 ? -1 : 1;
-      const reveal = ((spread ? 18 : 8) + index * (spread ? 5 : 3)) * unit;
+      const fan = index
+        ? getCanvasDropFanOffset(index, sizes.length - 1)
+        : { x: 0, y: 0, rotation: 0 };
+      const fanScale = (spread ? 1 : 0.55) * unit;
       return {
-        x: index ? side * ((front.width - size.width) / 2 + reveal) : 0,
+        x: index ? (front.width - size.width) / 2 + fan.x * fanScale : 0,
         y: index
-          ? (front.height - size.height) * 0.15 +
-            index * (spread ? 7 : 3) * unit
+          ? (front.height - size.height) * 0.15 + fan.y * fanScale
           : spread
             ? -2 * unit
             : 0,
-        rotation: index ? side * (0.8 + index * (spread ? 1 : 0.4)) : 0,
+        rotation: fan.rotation * (spread ? 1 : 0.55),
       };
     });
   const positions = getPositions(active);

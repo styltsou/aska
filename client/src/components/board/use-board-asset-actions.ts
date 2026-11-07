@@ -438,6 +438,7 @@ export function useBoardAssetActions({
     async (
       photos: readonly PexelsPhoto[],
       actionPlacement?: BoardInsertionPlacement,
+      onImported?: (photo: PexelsPhoto) => void,
     ) => {
       if (photos.length === 0) return;
 
@@ -453,9 +454,19 @@ export function useBoardAssetActions({
             await createInboxRemoteImage.mutateAsync(
               toPexelsRemoteImageInput(photo),
             );
+            onImported?.(photo);
           }
         } else {
-          for (const [index, photo] of photos.entries()) {
+          const indexedPhotos = photos.map((photo, index) => ({
+            photo,
+            index,
+          }));
+          // The first selected photo is the visible front of the fan. Save it
+          // last so persisted canvas z-order matches the drag preview.
+          if (insertionPlacement?.batch?.layout === "stack") {
+            indexedPhotos.reverse();
+          }
+          for (const { index, photo } of indexedPhotos) {
             await createRemoteImage.mutateAsync({
               ...toPexelsRemoteImageInput(photo),
               parentFolderPath,
@@ -466,10 +477,12 @@ export function useBoardAssetActions({
                       index,
                       size: photos.length,
                       imageDimensions,
+                      layout: insertionPlacement.batch?.layout,
                     },
                   }
                 : undefined,
             });
+            onImported?.(photo);
           }
         }
         toast.success(

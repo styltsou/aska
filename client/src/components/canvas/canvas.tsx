@@ -34,6 +34,7 @@ import type {
 } from "@/api/collection";
 import type { LinkAsset, VideoAsset } from "@/types/asset";
 import type { UpdateCanvasItemsGeometryInput } from "@/api/collection/types";
+import { getMovedFolderPreviews } from "@/api/collection/move-cache-transition";
 import {
   useBulkDelete,
   useMoveCollectionNodesToFolder,
@@ -201,6 +202,7 @@ type PendingFolderDrop = {
   nodeIds: string[];
   nodeIdsKey: string;
   targetFolderNodeId: string;
+  previews?: ReturnType<typeof getMovedFolderPreviews>;
 };
 
 type CanvasDragSession = {
@@ -1478,7 +1480,7 @@ function CanvasSurface({
           collectionNode.type === "folder" &&
           (isHoveredDropTarget || isPendingDropTarget),
         incomingDropAssetId: isPendingDropTarget
-          ? pendingFolderDrop.nodeIds[0]
+          ? pendingFolderDrop.nodeIds.at(-1)
           : isHoveredDropTarget
             ? dragSessionRef.current?.primaryNodeId
             : undefined,
@@ -1487,6 +1489,9 @@ function CanvasSurface({
           : isHoveredDropTarget
             ? dragSessionRef.current?.origins.size
             : undefined,
+        pendingDropPreviews: isPendingDropTarget
+          ? pendingFolderDrop.previews
+          : undefined,
         dropStackStyle: dropStackStylesRef.current.get(collectionNode.id),
         handoffPillLabel,
         presence,
@@ -2641,11 +2646,35 @@ function CanvasSurface({
               ),
             ];
             const nodeIdsKey = nodeIds.join(",");
+            const currentNodes = getNodes();
+            const targetFolder = currentNodes.find(
+              (current) =>
+                current.id === targetFolderNodeId && current.type === "asset",
+            );
+            const movedCollectionNodes = nodeIds.flatMap((id) => {
+              const current = currentNodes.find(
+                (candidate) =>
+                  candidate.id === id && candidate.type === "asset",
+              );
+              return current?.type === "asset"
+                ? [current.data.collectionNode]
+                : [];
+            });
+            const pendingPreviews =
+              targetFolder?.type === "asset" &&
+              targetFolder.data.collectionNode.type === "folder" &&
+              movedCollectionNodes.some((current) => current.type !== "folder")
+                ? getMovedFolderPreviews(
+                    targetFolder.data.collectionNode.previews,
+                    movedCollectionNodes,
+                  )
+                : undefined;
             suppressClicks(...nodeIds, targetFolderNodeId);
             setPendingFolderDrop({
               nodeIds,
               nodeIdsKey,
               targetFolderNodeId,
+              previews: pendingPreviews,
             });
             moveNodesToFolder.mutate(
               {

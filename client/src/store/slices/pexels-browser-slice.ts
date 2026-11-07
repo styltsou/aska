@@ -13,6 +13,7 @@ export interface PexelsBrowserScopeSlice {
   setPexelsBrowserOpen: (scope: string, open: boolean) => void;
   setPexelsBrowserQuery: (scope: string, query: string) => void;
   setPexelsBrowserSelected: (scope: string, selected: PexelsPhoto[]) => void;
+  removePexelsBrowserSelected: (scope: string, ids: readonly string[]) => void;
 }
 
 export function getPexelsBrowserScope(
@@ -20,6 +21,14 @@ export function getPexelsBrowserScope(
   collectionSlug: string,
 ): string {
   return `${workspaceSlug}/${collectionSlug}`;
+}
+
+export function getLastPexelsQuery(scope: string): string {
+  try {
+    return localStorage.getItem(`pexels-query:${scope}`) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 export const createPexelsBrowserScopeSlice: StateCreator<
@@ -38,7 +47,11 @@ export const createPexelsBrowserScopeSlice: StateCreator<
       };
       state.pexelsBrowserByScope[scope].open = open;
     }),
-  setPexelsBrowserQuery: (scope, query) =>
+  setPexelsBrowserQuery: (scope, query) => {
+    try {
+      if (query) localStorage.setItem(`pexels-query:${scope}`, query);
+      else localStorage.removeItem(`pexels-query:${scope}`);
+    } catch {}
     set((state) => {
       state.pexelsBrowserByScope[scope] ??= {
         open: false,
@@ -46,7 +59,8 @@ export const createPexelsBrowserScopeSlice: StateCreator<
         selected: [],
       };
       state.pexelsBrowserByScope[scope].query = query;
-    }),
+    });
+  },
   setPexelsBrowserSelected: (scope, selected) =>
     set((state) => {
       state.pexelsBrowserByScope[scope] ??= {
@@ -55,5 +69,14 @@ export const createPexelsBrowserScopeSlice: StateCreator<
         selected: [],
       };
       state.pexelsBrowserByScope[scope].selected = selected;
+    }),
+  removePexelsBrowserSelected: (scope, ids) =>
+    set((state) => {
+      const browser = state.pexelsBrowserByScope[scope];
+      if (browser) {
+        browser.selected = browser.selected.filter(
+          (photo) => !ids.includes(photo.id),
+        );
+      }
     }),
 });

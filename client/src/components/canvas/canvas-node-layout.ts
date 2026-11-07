@@ -3,6 +3,7 @@ import type {
   BoardInsertionPlacement,
   BoardPosition,
 } from "@/api/collection/types";
+import { getCanvasDropFanOffset } from "./canvas-drop-stack";
 
 export const BOARD_CARD_WIDTH = 280;
 export const BOARD_ITEM_GAP = 32;
@@ -93,10 +94,10 @@ export function reserveNodePositions(
   const batchStartIndex = getBatchStartIndex(placement);
   const anchor = requested;
   const preferredPositions = anchor
-    ? getInsertionGridPositions(placementNodes, anchor, anchorKind).slice(
-        batchStartIndex,
-        batchStartIndex + newNodes.length,
-      )
+    ? (isStackPlacement(placement)
+        ? getInsertionStackPositions(placementNodes, anchor, anchorKind)
+        : getInsertionGridPositions(placementNodes, anchor, anchorKind)
+      ).slice(batchStartIndex, batchStartIndex + newNodes.length)
     : newNodes.map((_, index) =>
         getFallbackPosition(existingNodes.length + index),
       );
@@ -114,6 +115,44 @@ export function reserveNodePositions(
 
     occupied.push(getNodeBounds(node, position));
     return position;
+  });
+}
+
+function isStackPlacement(
+  placement: BoardPosition | BoardInsertionPlacement | undefined,
+): placement is BoardInsertionPlacement & { batch: { layout: "stack" } } {
+  return (
+    !!placement && !("x" in placement) && placement.batch?.layout === "stack"
+  );
+}
+
+function getInsertionStackPositions(
+  nodes: CollectionNode[],
+  anchor: BoardPosition,
+  anchorKind: BoardInsertionPlacement["anchor"],
+): BoardPosition[] {
+  if (nodes.length === 0) return [];
+  const first = nodes[0]!;
+  const primary =
+    anchorKind === "center"
+      ? {
+          x: anchor.x - getNodeWidth(first) / 2,
+          y: anchor.y - getNodeHeight(first) / 2,
+        }
+      : anchorKind === "bottom-center"
+        ? {
+            x: anchor.x - getNodeWidth(first) / 2,
+            y: anchor.y - getNodeHeight(first),
+          }
+        : anchor;
+  return nodes.map((_, index) => {
+    if (index === 0)
+      return { x: Math.round(primary.x), y: Math.round(primary.y) };
+    const fan = getCanvasDropFanOffset(index, nodes.length - 1);
+    return {
+      x: Math.round(primary.x + fan.x),
+      y: Math.round(primary.y + fan.y),
+    };
   });
 }
 

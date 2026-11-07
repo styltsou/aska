@@ -166,6 +166,27 @@ describe("infinite canvas node placement", () => {
     ).toEqual([{ x: 100, y: 792 }]);
   });
 
+  it("keeps each sequential photo import in the dragged fan", () => {
+    const imageDimensions = [
+      { width: 280, height: 560 },
+      { width: 560, height: 280 },
+      { width: 280, height: 280 },
+    ];
+    const positions = imageDimensions.map(
+      (_, index) =>
+        reserveNodePositions([], [portraitImage], {
+          position: { x: 100, y: 200 },
+          collisionBehavior: "preserve-anchor",
+          batch: { index, size: 3, layout: "stack", imageDimensions },
+        })[0],
+    );
+    expect(positions).toEqual([
+      { x: 100, y: 200 },
+      { x: 85, y: 246 },
+      { x: 123, y: 282 },
+    ]);
+  });
+
   it("keeps a context-menu insertion at the requested canvas coordinate", () => {
     expect(
       reserveNodePositions([], [note], {

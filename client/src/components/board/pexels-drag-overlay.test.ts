@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PexelsPhoto } from "@/api/pexels";
-import { makeCanvasDropStackStyles } from "@/components/canvas/canvas-drop-stack";
+import { getCanvasDropFanOffset } from "@/components/canvas/canvas-drop-stack";
 import {
   getPexelsDropTopLeft,
   makePexelsOverlayStackStyles,
@@ -53,16 +53,24 @@ describe("Pexels drag overlay placement", () => {
       height: 300,
     };
     const width = 200;
-    const expected = makeCanvasDropStackStyles(
-      photo.id,
-      new Map([
-        [photo.id, { x: 0, y: 0, height: 300 }],
-        [landscape.id, { x: 0, y: 0, height: 100 }],
-      ]),
+    const fan = getCanvasDropFanOffset(1, 1);
+    const styles = makePexelsOverlayStackStyles([photo, landscape], width);
+    expect(styles.get(photo.id)).toMatchObject({
+      translateX: 0,
+      translateY: 0,
+      scale: 1,
+      stackOrder: 2,
+    });
+    expect(styles.get(landscape.id)).toMatchObject({
+      rotation: fan.rotation,
+      scale: 1,
+      stackOrder: 1,
+    });
+    expect(styles.get(landscape.id)!.translateX).toBeCloseTo(
+      (fan.x * width) / 280,
     );
-
-    expect(makePexelsOverlayStackStyles([photo, landscape], width)).toEqual(
-      expected,
+    expect(styles.get(landscape.id)!.translateY).toBeCloseTo(
+      (fan.y * width) / 280,
     );
   });
 

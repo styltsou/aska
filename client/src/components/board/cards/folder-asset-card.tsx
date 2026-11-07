@@ -25,6 +25,7 @@ export function FolderAssetCard({
   asset,
   incomingAssetId,
   incomingAssetCount = 1,
+  pendingPreviews,
   isDropTarget = false,
   onOpen,
   isContextMenuOpen = false,
@@ -33,6 +34,7 @@ export function FolderAssetCard({
   asset: FolderAsset;
   incomingAssetId?: string;
   incomingAssetCount?: number;
+  pendingPreviews?: FolderAssetPreview[];
   isDropTarget?: boolean;
   onOpen?: () => void;
   isContextMenuOpen?: boolean;
@@ -43,11 +45,19 @@ export function FolderAssetCard({
   const [stackInteracted, setStackInteracted] = useState(false);
   const [focused, setFocused] = useState(false);
   const active = pointerOver || focused;
-  const previews = asset.previews?.slice(0, MAX_VISIBLE_PREVIEWS) ?? [];
+  const previews = pendingPreviews
+    ? pendingPreviews.map(
+        (preview) =>
+          asset.previews?.find(
+            (current) => current.assetId === preview.assetId,
+          ) ?? preview,
+      )
+    : (asset.previews?.slice(0, MAX_VISIBLE_PREVIEWS) ?? []);
   const incomingPreviewIsReady =
     incomingAssetId !== undefined &&
     previews.some((preview) => preview.assetId === incomingAssetId);
-  const showIncomingLayer = isDropTarget && !incomingPreviewIsReady;
+  const showIncomingLayer =
+    isDropTarget && !pendingPreviews && !incomingPreviewIsReady;
   const { containerRef, poses } = usePreviewStackLayout(
     active,
     previews.map((preview) => preview.assetId).join(","),

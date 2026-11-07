@@ -18,7 +18,11 @@ import {
 } from "@/lib/pexels-dnd";
 import { getDroppedHttpUrl, getPreferredClipboardText } from "@/lib/clipboard";
 import { inferVideoMime } from "@/lib/video-url";
-import { useTransientStore } from "@/store";
+import {
+  getPexelsBrowserScope,
+  useSessionStore,
+  useTransientStore,
+} from "@/store";
 import { cn, parseHttpUrl } from "@/lib/utils";
 import { getPexelsDropTopLeft, PexelsDragOverlay } from "./pexels-drag-overlay";
 import { useBoardAssetActions } from "./use-board-asset-actions";
@@ -100,9 +104,20 @@ export function BoardUploadZone({
               "top-left",
             ),
             entranceAnimation: "none" as const,
+            collisionBehavior: "preserve-anchor" as const,
+            batch:
+              photos.length > 1
+                ? { index: 0, size: photos.length, layout: "stack" as const }
+                : undefined,
           }
         : {};
-      void importPexelsPhotos(photos, placement);
+      const collectionSlug = collectionPath.split("/")[0];
+      const scope = getPexelsBrowserScope(workspaceSlug, collectionSlug);
+      void importPexelsPhotos(photos, placement, (photo) => {
+        useSessionStore
+          .getState()
+          .removePexelsBrowserSelected(scope, [photo.id]);
+      });
     },
   });
 

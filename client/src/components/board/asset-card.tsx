@@ -4,6 +4,7 @@ import type {
   Asset,
   ColorAsset,
   FolderAsset,
+  FolderAssetPreview,
   ImageAsset,
   NoteAsset,
   VideoAsset,
@@ -64,6 +65,7 @@ export const AssetCard = memo(function AssetCard({
     isDropTarget: boolean;
     incomingAssetId?: string;
     incomingAssetCount?: number;
+    pendingPreviews?: FolderAssetPreview[];
   };
 }) {
   const selectable = isPersistedSelectableAsset(asset);
@@ -148,6 +150,7 @@ export const AssetCard = memo(function AssetCard({
                 isDropTarget={folderDropState?.isDropTarget}
                 incomingAssetId={folderDropState?.incomingAssetId}
                 incomingAssetCount={folderDropState?.incomingAssetCount}
+                pendingPreviews={folderDropState?.pendingPreviews}
                 onOpen={onOpenFolder ? () => onOpenFolder(asset) : undefined}
                 isContextMenuOpen={isContextMenuOpen}
               />

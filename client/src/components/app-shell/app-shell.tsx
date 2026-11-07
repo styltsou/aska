@@ -123,6 +123,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SidebarInset>
             {collectionSlug ? (
               <PexelsBrowserPanel
+                key={getPexelsBrowserScope(workspaceSlug, collectionSlug)}
                 open={pexelsBrowserOpen}
                 workspaceSlug={workspaceSlug}
                 collectionSlug={collectionSlug}

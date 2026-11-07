@@ -43,6 +43,7 @@ import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { useSessionStore, getPexelsBrowserScope } from "@/store";
+import { getLastPexelsQuery } from "@/store/slices/pexels-browser-slice";
 import {
   SIDE_PANEL_ANIMATE,
   SIDE_PANEL_EXIT,
@@ -55,6 +56,7 @@ const PEXELS_BROWSER_WIDTH_KEY = "pexels-browser-width";
 const PEXELS_BROWSER_MIN_WIDTH = 420;
 const PEXELS_BROWSER_MAX_WIDTH = 960;
 const DEFAULT_PEXELS_BROWSER_WIDTH = 520;
+const EMPTY_PHOTOS: PexelsPhoto[] = [];
 
 const DOCK_THUMBNAIL_SIZE = 44;
 const DOCK_THUMBNAIL_GAP = 6;
@@ -372,8 +374,8 @@ export function PexelsBrowserPanel({
   const persistedState = useSessionStore(
     (state) => state.pexelsBrowserByScope[scope],
   );
-  const savedQuery = persistedState?.query ?? "";
-  const savedSelected = persistedState?.selected ?? [];
+  const savedQuery = persistedState?.query || getLastPexelsQuery(scope);
+  const selected = persistedState?.selected ?? EMPTY_PHOTOS;
   const setSavedQuery = useSessionStore((state) => state.setPexelsBrowserQuery);
   const setSavedSelected = useSessionStore(
     (state) => state.setPexelsBrowserSelected,
@@ -381,13 +383,44 @@ export function PexelsBrowserPanel({
   const setSavedOpen = useSessionStore((state) => state.setPexelsBrowserOpen);
   const [input, setInput] = useState(savedQuery);
   const [query, setQuery] = useState(savedQuery);
-  const [selected, setSelected] = useState<PexelsPhoto[]>(savedSelected);
+  const setSelected = useCallback(
+    (update: PexelsPhoto[] | ((current: PexelsPhoto[]) => PexelsPhoto[])) => {
+      const current =
+        useSessionStore.getState().pexelsBrowserByScope[scope]?.selected ??
+        EMPTY_PHOTOS;
+      setSavedSelected(
+        scope,
+        typeof update === "function" ? update(current) : update,
+      );
+    },
+    [scope, setSavedSelected],
+  );
   const [width, setWidth] = useState(getStoredBrowserWidth);
   const [isResizing, setIsResizing] = useState(false);
   const [dockLayoutRevision, setDockLayoutRevision] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<
+    { scope: string; query: string; top: number } | undefined
+  >(undefined);
+  const setViewportRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (viewportRef.current) {
+        scrollPositionRef.current = {
+          scope,
+          query,
+          top: viewportRef.current.scrollTop,
+        };
+      }
+      viewportRef.current = element;
+      const saved = scrollPositionRef.current;
+      if (element && saved?.scope === scope && saved.query === query) {
+        element.scrollTop = saved.top;
+      }
+    },
+    [scope, query],
+  );
   const widthRef = useRef(width);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const search = usePexelsSearch(workspaceSlug, query);
@@ -416,16 +449,11 @@ export function PexelsBrowserPanel({
   useEffect(() => {
     setInput(savedQuery);
     setQuery(savedQuery);
-    setSelected(savedSelected);
   }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setSavedQuery(scope, query);
   }, [scope, query, setSavedQuery]);
-
-  useEffect(() => {
-    setSavedSelected(scope, selected);
-  }, [scope, selected, setSavedSelected]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -517,30 +545,41 @@ export function PexelsBrowserPanel({
     window.addEventListener("pointerup", handlePointerUp, { once: true });
   }
 
-  const togglePhoto = useCallback((photo: PexelsPhoto) => {
-    setSelected((current) =>
-      current.some((item) => item.id === photo.id)
-        ? current.filter((item) => item.id !== photo.id)
-        : [...current, photo],
-    );
-  }, []);
+  const togglePhoto = useCallback(
+    (photo: PexelsPhoto) => {
+      setSelected((current) =>
+        current.some((item) => item.id === photo.id)
+          ? current.filter((item) => item.id !== photo.id)
+          : [...current, photo],
+      );
+    },
+    [setSelected],
+  );
 
   async function addSelected() {
     if (selected.length === 0) return;
+    let imported = 0;
     try {
       for (const photo of selected) {
         await createImage.mutateAsync({
           ...toPexelsRemoteImageInput(photo),
           parentFolderPath,
         });
+        useSessionStore
+          .getState()
+          .removePexelsBrowserSelected(scope, [photo.id]);
+        imported += 1;
       }
       toast.success(
         `${selected.length} photo${selected.length === 1 ? "" : "s"} added to board`,
       );
-      setSelected([]);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Unable to add photo",
+        imported > 0
+          ? `${imported} added. The remaining photos are still selected.`
+          : error instanceof Error
+            ? error.message
+            : "Unable to add photo",
       );
     }
   }
@@ -654,7 +693,7 @@ export function PexelsBrowserPanel({
               <div className="relative min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background p-[var(--app-shell-inset)]">
                 <ScrollArea
                   className="size-full rounded-xl [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
-                  viewportRef={viewportRef}
+                  viewportRef={setViewportRef}
                 >
                   <div
                     className={cn(

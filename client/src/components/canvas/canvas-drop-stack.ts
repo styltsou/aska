@@ -28,6 +28,17 @@ export function getCanvasDropStackPlacementOrder(
   ];
 }
 
+/** Convert a visible front-first drag stack to the server's back-first move order. */
+export function getDropStackPlacementOrder(
+  primaryNodeId: string,
+  nodeIds: readonly string[],
+): string[] {
+  return getCanvasDropStackPlacementOrder(
+    primaryNodeId,
+    new Map(nodeIds.map((id) => [id, { x: 0, y: 0 }])),
+  );
+}
+
 /** The fan shared by cards in flight and previews resting inside a folder. */
 export function getCanvasDropFanOffset(depth: number, trailingCount: number) {
   const depthProgress = depth / trailingCount;

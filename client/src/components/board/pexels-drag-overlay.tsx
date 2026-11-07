@@ -3,7 +3,7 @@ import { DragOverlay } from "@dnd-kit/react";
 import type { PexelsPhoto } from "@/api/pexels";
 import { ImageAssetCard } from "@/components/board/cards/image-asset-card";
 import { getBoardViewportZoom } from "@/components/canvas/board-pointer-position";
-import { makeCanvasDropStackStyles } from "@/components/canvas/canvas-drop-stack";
+import { getCanvasDropFanOffset } from "@/components/canvas/canvas-drop-stack";
 import { BOARD_CARD_WIDTH } from "@/components/canvas/canvas-node-layout";
 import {
   PEXELS_PHOTO_DRAG_TYPE,
@@ -148,14 +148,24 @@ export function makePexelsOverlayStackStyles(
     ]);
   }
 
-  return makeCanvasDropStackStyles(
-    primaryPhoto.id,
-    new Map(
-      photos.map((photo) => [
+  return new Map(
+    photos.map((photo, index) => {
+      const fan = index
+        ? getCanvasDropFanOffset(index, photos.length - 1)
+        : { x: 0, y: 0, rotation: 0 };
+      const offsetScale = width / BOARD_CARD_WIDTH;
+      return [
         photo.id,
-        { x: 0, y: 0, height: getPhotoCardHeight(photo, width) },
-      ]),
-    ),
+        {
+          translateX: fan.x * offsetScale,
+          translateY: fan.y * offsetScale,
+          rotation: fan.rotation,
+          scale: 1,
+          stackOrder: photos.length - index,
+          delayMs: 0,
+        },
+      ] as const;
+    }),
   );
 }
 

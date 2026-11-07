@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getCanvasDropStackPlacementOrder,
+  getDropStackPlacementOrder,
   makeCanvasDropStackStyles,
 } from "./canvas-drop-stack";
 
@@ -21,6 +22,12 @@ describe("canvas drop stack", () => {
         .sort((left, right) => right[1].stackOrder - left[1].stackOrder)
         .map(([id]) => id),
     );
+  });
+
+  it("uses the same back-to-front order for grid moves", () => {
+    expect(
+      getDropStackPlacementOrder("note-2", ["image-1", "note-2", "color-3"]),
+    ).toEqual(["color-3", "image-1", "note-2"]);
   });
 
   it("keeps the grabbed card fixed and stacks the other cards around it", () => {

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendMovedNodeToContents,
   getAssetPreview,
+  getMovedFolderPreviews,
   promoteCollectionPreview,
   recomputeFolderPreviews,
   removeNodeFromContents,
@@ -218,6 +219,13 @@ describe("move cache transition", () => {
   });
 
   it("puts a moved batch on top of the target preview in placement order", () => {
+    expect(
+      getMovedFolderPreviews(targetFolder.previews, [remainingNote, movedNote]),
+    ).toEqual([
+      getAssetPreview(movedNote),
+      getAssetPreview(remainingNote),
+      ...targetFolder.previews,
+    ]);
     const root = makeContents([movedNote, remainingNote, targetFolder]);
     const targetKey = [
       "collectionContents",

@@ -91,6 +91,23 @@ export function getAssetPreview(node: AssetNode): FolderChildPreview {
   };
 }
 
+/** Matches the server's newest-first preview after a back-to-front move. */
+export function getMovedFolderPreviews(
+  existing: readonly FolderChildPreview[],
+  movedNodes: readonly CollectionNode[],
+): FolderChildPreview[] {
+  return movedNodes.reduce<FolderChildPreview[]>(
+    (previews, node) =>
+      node.type === "folder"
+        ? previews
+        : [
+            getAssetPreview(node),
+            ...previews.filter((preview) => preview.assetId !== node.id),
+          ].slice(0, MAX_COLLECTION_PREVIEWS),
+    [...existing],
+  );
+}
+
 export function removeNodeFromContents(
   contents: CollectionContentsResponse,
   nodeId: string,

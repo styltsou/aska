@@ -21,7 +21,12 @@ import {
   useMoveCollectionNodesToFolder,
   type CollectionNode,
 } from "@/api/collection";
+import { getMovedFolderPreviews } from "@/api/collection/move-cache-transition";
 import { AssetCard } from "@/components/board/asset-card";
+import {
+  getDropStackPlacementOrder,
+  makeCanvasDropStackStyles,
+} from "@/components/canvas/canvas-drop-stack";
 import {
   selectionMarqueeClassName,
   useMarqueeSelection,
@@ -59,6 +64,7 @@ type GridNodeDragData = {
 
 type PendingFolderDrop = GridNodeDragData & {
   targetFolderNodeId: string;
+  previews?: ReturnType<typeof getMovedFolderPreviews>;
 };
 
 type CollectionGridViewProps = {
@@ -242,8 +248,9 @@ const CollectionGridContent = memo(function CollectionGridContent({
         operation.target.element?.getBoundingClientRect();
       const { primaryNodeId, nodeIds } = operation.source
         .data as GridNodeDragData;
-      const movableNodeIds = nodeIds.filter(
-        (nodeId) => nodeId !== targetFolderNodeId,
+      const movableNodeIds = getDropStackPlacementOrder(
+        primaryNodeId,
+        nodeIds.filter((nodeId) => nodeId !== targetFolderNodeId),
       );
       if (movableNodeIds.length === 0) return;
 
@@ -251,6 +258,17 @@ const CollectionGridContent = memo(function CollectionGridContent({
         primaryNodeId,
         nodeIds: movableNodeIds,
         targetFolderNodeId,
+        previews: (() => {
+          const folder = nodeById.get(targetFolderNodeId);
+          if (folder?.type !== "folder") return undefined;
+          const movedNodes = movableNodeIds.flatMap((id) => {
+            const node = nodeById.get(id);
+            return node ? [node] : [];
+          });
+          return movedNodes.some((node) => node.type !== "folder")
+            ? getMovedFolderPreviews(folder.previews, movedNodes)
+            : undefined;
+        })(),
       };
       setPendingFolderDrop(pendingDrop);
       moveNodesToFolder.mutate(
@@ -657,8 +675,13 @@ function GridNodeCard({
           node.type === "folder"
             ? {
                 isDropTarget: showDropTarget,
-                incomingAssetId: incomingNodeIds?.[0],
+                incomingAssetId: isPendingDropTarget
+                  ? incomingNodeIds?.at(-1)
+                  : activeDrag?.primaryNodeId,
                 incomingAssetCount: incomingNodeIds?.length,
+                pendingPreviews: isPendingDropTarget
+                  ? pendingFolderDrop.previews
+                  : undefined,
               }
             : undefined
         }
@@ -744,6 +767,27 @@ function GridDragOverlay({
         if (previewNodes.length === 0) return null;
 
         const width = source.element?.getBoundingClientRect().width ?? 260;
+        const stackStyles =
+          previewNodes.length > 1
+            ? makeCanvasDropStackStyles(
+                primaryNodeId,
+                new Map(
+                  previewNodes.map((node) => [
+                    node.id,
+                    {
+                      x: 0,
+                      y: 0,
+                      height:
+                        (node.type === "image" || node.type === "video") &&
+                        node.width &&
+                        node.height
+                          ? width * (node.height / node.width)
+                          : width,
+                    },
+                  ]),
+                ),
+              )
+            : new Map();
         return (
           <div className="relative drop-shadow-xl" style={{ width }}>
             {previewNodes.map((node, index) => (
@@ -751,15 +795,14 @@ function GridDragOverlay({
                 key={node.id}
                 className={cn(
                   "rounded-lg bg-background ring-2 ring-ring ring-offset-2 ring-offset-background",
-                  index > 0 && "absolute inset-x-0 top-0",
+                  index > 0 ? "absolute inset-x-0 top-0" : "relative",
                 )}
                 style={{
-                  zIndex: previewNodes.length - index,
-                  transform:
-                    index === 0
-                      ? undefined
-                      : `translate3d(${index % 2 === 0 ? -index * 7 : index * 7}px, ${index * 11}px, 0) rotate(${index % 2 === 0 ? -index * 1.5 : index * 1.5}deg) scale(${1 - index * 0.035})`,
-                  transformOrigin: "top center",
+                  zIndex: stackStyles.get(node.id)?.stackOrder ?? 1,
+                  transform: stackStyles.has(node.id)
+                    ? `translate3d(${stackStyles.get(node.id)!.translateX}px, ${stackStyles.get(node.id)!.translateY}px, 0) rotate(${stackStyles.get(node.id)!.rotation}deg) scale(${stackStyles.get(node.id)!.scale})`
+                    : undefined,
+                  transformOrigin: "bottom center",
                 }}
               >
                 <AssetCard asset={collectionNodeToAsset(node)} />
