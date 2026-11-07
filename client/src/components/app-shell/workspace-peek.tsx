@@ -83,6 +83,8 @@ import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect"
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { positionResizeGrip } from "@/lib/resize-grip";
+import { getWorkspacePeekWidthBounds } from "@/lib/workspace-peek-width";
 import { useSessionStore } from "@/store";
 import { useBlocker, useRouterState } from "@tanstack/react-router";
 import { LinkResolutionPoller } from "@/api/url-unfurl/link-resolution-poller";
@@ -277,15 +279,10 @@ export type PeekUrlState = {
 const WorkspacePeekContext = createContext<WorkspacePeekContextValue | null>(
   null,
 );
-const PEEK_MIN_WIDTH = 720;
-const PEEK_WIDTH = 960;
-
 function getPeekWidthBounds() {
-  const viewportMax =
-    typeof window === "undefined" ? PEEK_WIDTH : window.innerWidth * 0.5;
-  const max = viewportMax;
-  const min = Math.min(PEEK_MIN_WIDTH, max);
-  return { min, max, defaultWidth: Math.min(PEEK_WIDTH, max) };
+  return getWorkspacePeekWidthBounds(
+    typeof window === "undefined" ? 1440 : window.innerWidth,
+  );
 }
 const storageKey = (workspaceSlug: string) =>
   `aska.workspace-peek:v1:${workspaceSlug}`;
@@ -619,6 +616,7 @@ export function WorkspacePeekProvider({
   const handleResizeStart = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
       event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
       if (resizeEndTimeoutRef.current !== undefined) {
         window.clearTimeout(resizeEndTimeoutRef.current);
         resizeEndTimeoutRef.current = undefined;
@@ -1259,6 +1257,7 @@ function WorkspacePeekPanel({
   const {
     activeNoteId,
     closePeek,
+    isResizing,
     promotePeekedAsset,
     setPeekImageFlushHandler,
     showPeekedAsset,
@@ -1267,6 +1266,7 @@ function WorkspacePeekPanel({
   } = useWorkspacePeek();
   const isMobile = useIsMobile();
   const reduceMotion = useReducedMotion();
+  const resizeGripRef = useRef<HTMLSpanElement>(null);
   const canPromote =
     !isMobile &&
     (target.type === "link" ||
@@ -1351,14 +1351,31 @@ function WorkspacePeekPanel({
       <div
         aria-label="Resize Peek"
         aria-orientation="vertical"
-        className="group/resize absolute top-1/2 left-0 z-30 hidden h-20 w-6 -translate-x-1/2 -translate-y-1/2 cursor-col-resize touch-none md:block"
+        data-resizing={isResizing ? "" : undefined}
+        className="group/resize absolute inset-y-0 left-0 z-30 hidden w-6 -translate-x-1/2 cursor-col-resize touch-none md:block"
         role="separator"
         onPointerDown={onResizeStart}
+        onPointerEnter={(event) => {
+          positionResizeGrip(
+            event.currentTarget,
+            resizeGripRef.current,
+            event.clientY,
+            36,
+          );
+        }}
+        onPointerMove={(event) => {
+          positionResizeGrip(
+            event.currentTarget,
+            resizeGripRef.current,
+            event.clientY,
+            36,
+          );
+        }}
       >
         <span
+          ref={resizeGripRef}
           aria-hidden
-          className="absolute top-1/2 left-1/2 h-16 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/35 transition-[background-color,height] duration-200 ease-out group-hover/resize:h-20 group-hover/resize:bg-foreground/50 group-active/resize:h-20 group-active/resize:bg-primary"
-          style={{ clipPath: "inset(0 50% 0 0)" }}
+          className="pointer-events-none absolute top-1/2 left-1/2 h-14 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/35 opacity-0 transition-[opacity,background-color] duration-150 group-hover/resize:bg-foreground/50 group-hover/resize:opacity-100 group-data-[resizing]/resize:!bg-primary group-data-[resizing]/resize:opacity-100 motion-reduce:transition-none"
         />
       </div>
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card">

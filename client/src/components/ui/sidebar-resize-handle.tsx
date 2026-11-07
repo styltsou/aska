@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { positionResizeGrip } from "@/lib/resize-grip";
 import {
   clampSidebarWidth,
   getSidebarMaxWidth,
@@ -16,6 +17,7 @@ export function SidebarResizeHandle({
   controls: string;
 }) {
   const handleRef = useRef<HTMLDivElement>(null);
+  const gripRef = useRef<HTMLSpanElement>(null);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -37,6 +39,7 @@ export function SidebarResizeHandle({
     const drag = dragRef.current;
     if (!drag) return;
     dragRef.current = null;
+    handleRef.current?.removeAttribute("data-resizing");
     if (cancel) {
       drag.root.style.setProperty(
         "--sidebar-preferred-width",
@@ -97,7 +100,15 @@ export function SidebarResizeHandle({
       aria-valuenow={SIDEBAR_DEFAULT_WIDTH}
       aria-description="Use left and right arrow keys to resize, Shift for larger steps, or Home and End for minimum and maximum width."
       title="Drag or use arrow keys to resize. Double-click to reset."
-      className={`absolute inset-y-0 z-20 w-2 cursor-col-resize touch-none outline-none before:absolute before:inset-y-2 before:left-1/2 before:w-px before:bg-transparent hover:before:bg-sidebar-border focus-visible:before:bg-sidebar-ring ${side === "left" ? "-right-1" : "-left-1"}`}
+      className={`group/resize absolute top-14 bottom-2 z-20 w-6 cursor-col-resize touch-none outline-none ${side === "left" ? "-right-5" : "-left-5"}`}
+      onPointerEnter={(event) => {
+        positionResizeGrip(
+          event.currentTarget,
+          gripRef.current,
+          event.clientY,
+          36,
+        );
+      }}
       onPointerDown={(event) => {
         if (!event.isPrimary || event.button !== 0 || dragRef.current) return;
         const root = event.currentTarget.closest<HTMLElement>(
@@ -115,6 +126,13 @@ export function SidebarResizeHandle({
         document.body.style.cursor = "col-resize";
         document.body.style.userSelect = "none";
         root.setAttribute("data-sidebar-resizing", "");
+        event.currentTarget.setAttribute("data-resizing", "");
+        positionResizeGrip(
+          event.currentTarget,
+          gripRef.current,
+          event.clientY,
+          36,
+        );
         setWidth(root, width);
         dragRef.current = {
           pointerId: event.pointerId,
@@ -131,6 +149,12 @@ export function SidebarResizeHandle({
         event.currentTarget.setPointerCapture(event.pointerId);
       }}
       onPointerMove={(event) => {
+        positionResizeGrip(
+          event.currentTarget,
+          gripRef.current,
+          event.clientY,
+          36,
+        );
         const drag = dragRef.current;
         if (!drag || drag.pointerId !== event.pointerId) return;
         drag.width = setWidth(
@@ -192,6 +216,12 @@ export function SidebarResizeHandle({
         root.getBoundingClientRect();
         root.removeAttribute("data-sidebar-resizing");
       }}
-    />
+    >
+      <span
+        ref={gripRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 left-1/2 h-14 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/35 opacity-0 transition-[opacity,background-color] duration-150 group-hover/resize:bg-sidebar-foreground/50 group-hover/resize:opacity-100 group-focus-visible/resize:bg-sidebar-ring group-focus-visible/resize:opacity-100 group-data-[resizing]/resize:!bg-primary group-data-[resizing]/resize:opacity-100 motion-reduce:transition-none"
+      />
+    </div>
   );
 }

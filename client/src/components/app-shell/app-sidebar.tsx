@@ -10,6 +10,8 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  useSidebar,
+  useSidebarPeek,
 } from "@/components/ui/sidebar";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { FolderOpenIcon, InboxIcon, SendIcon, StarIcon } from "lucide-react";
@@ -20,9 +22,22 @@ import { getSidebarCollectionLocation } from "@/components/app-shell/sidebar-col
 import { parseWorkspaceAssetPath } from "@/lib/workspace-asset-url";
 import { mergeWorkspaceOverlaySearch } from "@/lib/workspace-overlay-search";
 import type { WorkspaceRouteSearch } from "@/routes/$workspaceSlug/route";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
+  const { state, isMobile } = useSidebar();
+  const { peeking, cancelClose, scheduleClose, closePeek } = useSidebarPeek();
+  const showPeek = peeking && state === "collapsed" && !isMobile;
+  const peekRef = useRef<HTMLElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const handlePeekMenuOpenChange = (open: boolean) => {
+    setMenuOpen(open);
+    if (open) cancelClose();
+    else if (!peekRef.current?.matches(":hover")) scheduleClose();
+  };
+  useEffect(() => {
+    if (state === "expanded" || isMobile) closePeek();
+  }, [state, isMobile, closePeek]);
   const authState = useRouterState({
     select: (state) =>
       state.matches.find((match) => match.routeId === "/$workspaceSlug")
@@ -118,30 +133,69 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     ),
   }));
 
-  return (
-    <Sidebar variant="inset" className="pt-0 pb-0" {...props}>
-      <SidebarHeader>
-        <WorkspaceSwitcher />
-      </SidebarHeader>
-      <SidebarContent className="overflow-hidden">
-        <div className="shrink-0">
-          <SidebarSearchTrigger />
-          <NavMain items={navMain} />
-        </div>
-        <NavProjects
-          collections={navCollections}
-          isLoading={isWorkspaceLoading}
-        />
+  const navigation = (includeExtras: boolean) => (
+    <SidebarContent className="overflow-hidden">
+      <div className="shrink-0">
+        {includeExtras ? <SidebarSearchTrigger /> : null}
+        <NavMain items={navMain} />
+      </div>
+      <NavProjects
+        collections={navCollections}
+        isLoading={isWorkspaceLoading}
+      />
+      {includeExtras ? (
         <NavSecondary items={navSecondary} className="mt-auto shrink-0" />
-      </SidebarContent>
-      <SidebarFooter className="shrink-0">
-        {authState?.session?.user ? (
-          <NavUser user={authState.session.user} />
-        ) : (
-          <SidebarUserSkeleton />
-        )}
-      </SidebarFooter>
-    </Sidebar>
+      ) : null}
+    </SidebarContent>
+  );
+
+  return (
+    <>
+      <Sidebar variant="inset" className="pt-0 pb-0" {...props}>
+        <SidebarHeader>
+          <WorkspaceSwitcher />
+        </SidebarHeader>
+        {navigation(true)}
+        <SidebarFooter className="shrink-0">
+          {authState?.session?.user ? (
+            <NavUser user={authState.session.user} />
+          ) : (
+            <SidebarUserSkeleton />
+          )}
+        </SidebarFooter>
+      </Sidebar>
+      <aside
+        ref={peekRef}
+        aria-label="Sidebar preview"
+        aria-hidden={!showPeek}
+        inert={!showPeek}
+        data-slot="sidebar-peek"
+        data-open={showPeek ? "" : undefined}
+        className="pointer-events-none fixed top-13 bottom-3 left-3 z-30 hidden w-64 -translate-x-1 flex-col overflow-hidden rounded-xl border border-sidebar-border bg-sidebar text-sidebar-foreground opacity-0 shadow-xl transition-[opacity,transform] duration-150 ease-(--sidebar-ease) motion-reduce:transform-none motion-reduce:transition-opacity md:flex data-open:pointer-events-auto data-open:translate-x-0 data-open:opacity-100 data-open:duration-200"
+        onPointerEnter={cancelClose}
+        onPointerLeave={() => {
+          if (!menuOpen) scheduleClose();
+        }}
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("a[href]")) closePeek();
+        }}
+      >
+        <SidebarHeader>
+          <WorkspaceSwitcher onMenuOpenChange={handlePeekMenuOpenChange} />
+        </SidebarHeader>
+        {navigation(false)}
+        <SidebarFooter className="shrink-0">
+          {authState?.session?.user ? (
+            <NavUser
+              user={authState.session.user}
+              onMenuOpenChange={handlePeekMenuOpenChange}
+            />
+          ) : (
+            <SidebarUserSkeleton />
+          )}
+        </SidebarFooter>
+      </aside>
+    </>
   );
 }
 

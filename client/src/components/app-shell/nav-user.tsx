@@ -41,7 +41,13 @@ import { clearMediaSession } from "@/lib/media-session";
 import { openSettings } from "@/lib/settings-dialog";
 import { useRouter } from "@tanstack/react-router";
 
-export function NavUser({ user }: { user: AuthUser }) {
+export function NavUser({
+  user,
+  onMenuOpenChange,
+}: {
+  user: AuthUser;
+  onMenuOpenChange?: (open: boolean) => void;
+}) {
   const { isMobile } = useSidebar();
   const router = useRouter();
   const avatarUrl = user.image ?? undefined;
@@ -54,7 +60,7 @@ export function NavUser({ user }: { user: AuthUser }) {
     <>
       <SidebarMenu>
         <SidebarMenuItem>
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={onMenuOpenChange}>
             <DropdownMenuTrigger
               render={
                 <SidebarMenuButton

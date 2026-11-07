@@ -38,6 +38,24 @@ import { usePersistedStore, useTransientStore } from "@/store";
 
 type SidebarState = "expanded" | "collapsed";
 
+const SidebarPeekContext = React.createContext<{
+  peeking: boolean;
+  startPeek: () => void;
+  cancelClose: () => void;
+  scheduleClose: () => void;
+  closePeek: () => void;
+}>({
+  peeking: false,
+  startPeek: () => {},
+  cancelClose: () => {},
+  scheduleClose: () => {},
+  closePeek: () => {},
+});
+
+function useSidebarPeek() {
+  return React.useContext(SidebarPeekContext);
+}
+
 type SidebarContextProps = {
   state: SidebarState;
   open: boolean;
@@ -87,31 +105,68 @@ function SidebarProvider({
   const [preferredWidth] = React.useState(() =>
     readSidebarWidth(widthStorageKey),
   );
+  const [peeking, setPeeking] = React.useState(false);
+  const openTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClose = React.useCallback(() => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+  }, []);
+  const closePeek = React.useCallback(() => {
+    if (openTimer.current) clearTimeout(openTimer.current);
+    openTimer.current = null;
+    cancelClose();
+    setPeeking(false);
+  }, [cancelClose]);
+  const startPeek = React.useCallback(() => {
+    cancelClose();
+    if (openTimer.current) clearTimeout(openTimer.current);
+    openTimer.current = setTimeout(() => setPeeking(true), 300);
+  }, [cancelClose]);
+  const scheduleClose = React.useCallback(() => {
+    if (openTimer.current) clearTimeout(openTimer.current);
+    openTimer.current = null;
+    cancelClose();
+    closeTimer.current = setTimeout(() => setPeeking(false), 200);
+  }, [cancelClose]);
+  React.useEffect(() => closePeek, [closePeek]);
+  React.useEffect(() => {
+    if (!peeking) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closePeek();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [peeking, closePeek]);
   // The sidebar toggle shortcut (⌘/Ctrl+/) is handled globally in the
   // command palette's single keybinding listener.
 
   return (
-    <div
-      data-slot="sidebar-wrapper"
-      data-sidebar-width-key={widthStorageKey}
-      style={
-        {
-          "--sidebar-preferred-width": `${preferredWidth}px`,
-          "--sidebar-width": `clamp(${SIDEBAR_MIN_WIDTH}px, var(--sidebar-preferred-width), min(${SIDEBAR_MAX_WIDTH}px, 40vw))`,
-          "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-          "--sidebar-duration": "250ms",
-          "--sidebar-ease": "cubic-bezier(0.22, 1, 0.36, 1)",
-          ...style,
-        } as React.CSSProperties
-      }
-      className={cn(
-        "group/sidebar-wrapper has-data-[variant=inset]:bg-background flex min-h-svh w-full",
-        className,
-      )}
-      {...props}
+    <SidebarPeekContext.Provider
+      value={{ peeking, startPeek, cancelClose, scheduleClose, closePeek }}
     >
-      {children}
-    </div>
+      <div
+        data-slot="sidebar-wrapper"
+        data-sidebar-width-key={widthStorageKey}
+        style={
+          {
+            "--sidebar-preferred-width": `${preferredWidth}px`,
+            "--sidebar-width": `clamp(${SIDEBAR_MIN_WIDTH}px, var(--sidebar-preferred-width), min(${SIDEBAR_MAX_WIDTH}px, 40vw))`,
+            "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+            "--sidebar-duration": "250ms",
+            "--sidebar-ease": "cubic-bezier(0.22, 1, 0.36, 1)",
+            ...style,
+          } as React.CSSProperties
+        }
+        className={cn(
+          "group/sidebar-wrapper has-data-[variant=inset]:bg-background flex min-h-svh w-full",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </div>
+    </SidebarPeekContext.Provider>
   );
 }
 
@@ -230,7 +285,58 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, state, isMobile } = useSidebar();
+  const { peeking, startPeek, cancelClose, scheduleClose, closePeek } =
+    useSidebarPeek();
+  const handoffCleanup = React.useRef<(() => void) | null>(null);
+
+  React.useEffect(() => () => handoffCleanup.current?.(), []);
+
+  const guardPointerHandoff = (clientX: number, clientY: number) => {
+    handoffCleanup.current?.();
+    const panel = document.querySelector<HTMLElement>(
+      '[data-slot="sidebar-peek"][data-open]',
+    );
+    if (!panel) {
+      scheduleClose();
+      return;
+    }
+
+    const bounds = panel.getBoundingClientRect();
+    const cleanup = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.clearTimeout(timeout);
+      handoffCleanup.current = null;
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.target instanceof Node && panel.contains(event.target)) {
+        cleanup();
+        cancelClose();
+        return;
+      }
+      const progress = (event.clientY - clientY) / (bounds.top - clientY);
+      const left = clientX + (bounds.left - clientX) * progress - 8;
+      const right = clientX + (bounds.right - clientX) * progress + 8;
+      if (
+        progress >= 0 &&
+        progress <= 1 &&
+        event.clientX >= left &&
+        event.clientX <= right
+      ) {
+        cancelClose();
+      } else {
+        cleanup();
+        scheduleClose();
+      }
+    };
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      if (!panel.matches(":hover")) scheduleClose();
+    }, 700);
+    handoffCleanup.current = cleanup;
+    window.addEventListener("pointermove", onPointerMove);
+    cancelClose();
+  };
 
   return (
     <Tooltip>
@@ -243,10 +349,38 @@ function SidebarTrigger({
             size="icon-sm"
             className={cn(className)}
             onClick={(event) => {
+              handoffCleanup.current?.();
+              closePeek();
               onClick?.(event);
               toggleSidebar();
             }}
             {...props}
+            onPointerEnter={(event) => {
+              props.onPointerEnter?.(event);
+              handoffCleanup.current?.();
+              cancelClose();
+              if (
+                !isMobile &&
+                state === "collapsed" &&
+                !peeking &&
+                event.pointerType === "mouse"
+              )
+                startPeek();
+            }}
+            onPointerLeave={(event) => {
+              props.onPointerLeave?.(event);
+              if (
+                !isMobile &&
+                state === "collapsed" &&
+                !event.currentTarget.closest('[data-slot="sidebar-container"]')
+              ) {
+                if (peeking && event.pointerType === "mouse") {
+                  guardPointerHandoff(event.clientX, event.clientY);
+                } else {
+                  scheduleClose();
+                }
+              }
+            }}
           >
             <PanelLeftIcon />
             <span className="sr-only">Toggle Sidebar</span>
@@ -500,6 +634,7 @@ function SidebarMenuButton({
     tooltip?: string | React.ComponentProps<typeof TooltipContent>;
   } & VariantProps<typeof sidebarMenuButtonVariants>) {
   const { isMobile, state } = useSidebar();
+  const { peeking } = useSidebarPeek();
   const comp = useRender({
     defaultTagName: "button",
     props: mergeProps<"button">(
@@ -533,7 +668,7 @@ function SidebarMenuButton({
       <TooltipContent
         side="right"
         align="center"
-        hidden={state !== "collapsed" || isMobile}
+        hidden={state !== "collapsed" || isMobile || peeking}
         {...tooltip}
       />
     </Tooltip>
@@ -710,4 +845,5 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  useSidebarPeek,
 };

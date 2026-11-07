@@ -21,7 +21,11 @@ function workspaceInitial(name: string) {
   return name.charAt(0).toUpperCase();
 }
 
-export function WorkspaceSwitcher() {
+export function WorkspaceSwitcher({
+  onMenuOpenChange,
+}: {
+  onMenuOpenChange?: (open: boolean) => void;
+} = {}) {
   const navigate = useNavigate();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -37,7 +41,7 @@ export function WorkspaceSwitcher() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
+        <DropdownMenu onOpenChange={onMenuOpenChange}>
           <DropdownMenuTrigger
             render={(triggerProps) => (
               <button

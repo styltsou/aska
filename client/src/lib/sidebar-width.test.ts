@@ -14,7 +14,7 @@ describe("sidebar width", () => {
     expect(clampSidebarWidth(900)).toBe(384);
     expect(clampSidebarWidth(384, 800)).toBe(320);
     expect(getSidebarMaxWidth(1920)).toBe(384);
-    expect(clampSidebarWidth(NaN)).toBe(256);
+    expect(clampSidebarWidth(NaN)).toBe(240);
   });
 
   it("restores separate user preferences without shrinking the saved width for a narrow window", () => {
@@ -33,9 +33,9 @@ describe("sidebar width", () => {
     ).toBe(320);
     expect(readSidebarWidth("aska:sidebar-width:alice")).toBe(384);
     expect(readSidebarWidth("aska:sidebar-width:bob")).toBe(240);
-    expect(readSidebarWidth("aska:sidebar-width:charlie")).toBe(256);
+    expect(readSidebarWidth("aska:sidebar-width:charlie")).toBe(240);
     values.set("invalid", "bad data");
-    expect(readSidebarWidth("invalid")).toBe(256);
+    expect(readSidebarWidth("invalid")).toBe(240);
   });
 
   it("continues working when browser storage is blocked", () => {
@@ -44,7 +44,7 @@ describe("sidebar width", () => {
         throw new Error("blocked");
       },
     });
-    expect(readSidebarWidth("user")).toBe(256);
+    expect(readSidebarWidth("user")).toBe(240);
     expect(() => saveSidebarWidth("user", 320)).not.toThrow();
   });
 });
