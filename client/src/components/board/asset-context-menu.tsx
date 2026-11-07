@@ -16,6 +16,7 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
@@ -51,6 +52,11 @@ import { getPexelsBrowserScope, useSessionStore } from "@/store";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { downloadAssetOriginal } from "@/lib/asset-download";
 import { clearDeletedNoteDrafts } from "@/lib/note-edit-draft";
+import { getPlatformAlt } from "@/lib/platform";
+
+function PeekShortcut() {
+  return <ContextMenuShortcut>{getPlatformAlt()}+Click</ContextMenuShortcut>;
+}
 
 type ImagePrefetch = {
   controller: AbortController;
@@ -95,7 +101,9 @@ function imageActions(
       ) : null}
       <ContextMenuItem onClick={onCopy}>Copy image</ContextMenuItem>
       {onPeek ? (
-        <ContextMenuItem onClick={onPeek}>Peek image</ContextMenuItem>
+        <ContextMenuItem onClick={onPeek}>
+          Peek image <PeekShortcut />
+        </ContextMenuItem>
       ) : null}
     </>
   );
@@ -112,7 +120,9 @@ function noteActions(asset: NoteAsset, onPeek?: () => void) {
       <ContextMenuItem onClick={() => void copyText(asset)}>
         Copy markdown
       </ContextMenuItem>
-      <ContextMenuItem onClick={onPeek}>Peek note</ContextMenuItem>
+      <ContextMenuItem onClick={onPeek}>
+        Peek note <PeekShortcut />
+      </ContextMenuItem>
     </>
   );
 }
@@ -150,7 +160,9 @@ function colorActions(
         {copyLabel}
       </ContextMenuItem>
       <ContextMenuItem onClick={onEdit}>Edit color</ContextMenuItem>
-      <ContextMenuItem onClick={onPeek}>Peek color</ContextMenuItem>
+      <ContextMenuItem onClick={onPeek}>
+        Peek color <PeekShortcut />
+      </ContextMenuItem>
     </>
   );
 }
@@ -194,6 +206,7 @@ function linkActions(
       {asset.video && onPeekVideo ? (
         <ContextMenuItem onClick={() => onPeekVideo(asset)}>
           Peek video
+          <PeekShortcut />
         </ContextMenuItem>
       ) : null}
     </>
@@ -323,6 +336,32 @@ export function AssetContextMenu({
       );
     }
   };
+
+  function openPeek(): boolean {
+    if (asset.type === "note") {
+      closePexels();
+      void peekNote(asset, peekLocation);
+      return true;
+    }
+    if (asset.type === "color") {
+      closePexels();
+      void peekColor(displayAsset as ColorAsset, peekScope);
+      return true;
+    }
+    if (asset.type === "image" && !asset.uploadStatus) {
+      closePexels();
+      if (isMobile) onOpenImage?.(asset);
+      else void peekImage(asset, peekLocation);
+      return true;
+    }
+    if (asset.type === "link" && asset.video && onOpenVideo) {
+      closePexels();
+      if (isMobile) onOpenVideo(asset);
+      else void peekVideo(asset, peekLocation);
+      return true;
+    }
+    return false;
+  }
 
   useEffect(() => {
     return () => {
@@ -465,7 +504,37 @@ export function AssetContextMenu({
       >
         <ContextMenuTrigger
           render={(triggerProps, state) => (
-            <div {...triggerProps} className={triggerProps.className}>
+            <div
+              {...triggerProps}
+              className={triggerProps.className}
+              onClickCapture={(event) => {
+                if (
+                  !event.altKey ||
+                  event.ctrlKey ||
+                  event.metaKey ||
+                  event.shiftKey ||
+                  event.button !== 0 ||
+                  !(event.target instanceof Element) ||
+                  !event.currentTarget.contains(event.target)
+                )
+                  return;
+                const control = event.target.closest(
+                  "button, a, input, textarea, select, [contenteditable='true']",
+                );
+                if (
+                  control &&
+                  !(
+                    asset.type === "color" &&
+                    control instanceof HTMLButtonElement &&
+                    control.getAttribute("aria-label")?.startsWith("Open ")
+                  )
+                )
+                  return;
+                if (!openPeek()) return;
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+            >
               {children(state.open, displayAsset)}
             </div>
           )}
@@ -495,8 +564,7 @@ export function AssetContextMenu({
                 asset,
                 () => setColorEditorOpen(true),
                 () => {
-                  closePexels();
-                  peekColor(asset, peekScope);
+                  openPeek();
                 },
               )}
               <ContextMenuSeparator />
@@ -518,9 +586,7 @@ export function AssetContextMenu({
                   asset.uploadStatus
                     ? undefined
                     : () => {
-                        closePexels();
-                        if (isMobile) onOpenImage?.(asset);
-                        else void peekImage(asset, peekLocation);
+                        openPeek();
                       },
                 )
               ) : asset.type === "note" ? (
@@ -536,18 +602,15 @@ export function AssetContextMenu({
                     {asset.isExpanded ? "Collapse note" : "Expand note"}
                   </ContextMenuItem>
                   {noteActions(asset, () => {
-                    closePexels();
-                    peekNote(asset, peekLocation);
+                    openPeek();
                   })}
                 </>
               ) : asset.type === "link" ? (
                 linkActions(
                   asset,
                   onOpenVideo
-                    ? (video) => {
-                        closePexels();
-                        if (isMobile) onOpenVideo(video);
-                        else peekVideo(video, peekLocation);
+                    ? () => {
+                        openPeek();
                       }
                     : undefined,
                 )
