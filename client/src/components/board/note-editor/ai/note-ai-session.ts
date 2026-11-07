@@ -301,3 +301,50 @@ export function noteMarkdownAtAiCursor(editor: Editor) {
   );
   return editor.markdown.serialize(tr.doc.toJSON());
 }
+
+/**
+ * The note as it would be saved: a pending draft is not part of the note
+ * until it is kept, so it is swapped back for the empty line it opened on.
+ */
+export function noteMarkdownWithoutAiDraft(editor: Editor) {
+  const { range } = getNoteAiSession(editor.state);
+  if (!range || !editor.markdown) return editor.getMarkdown();
+  const tr = editor.state.tr.replaceWith(
+    range.from,
+    range.to,
+    editor.schema.nodes.paragraph.create(),
+  );
+  return editor.markdown.serialize(tr.doc.toJSON());
+}
+
+/** Index of the top-level block the session opened on. */
+export function noteAiSessionBlockIndex(state: EditorState) {
+  const { range } = getNoteAiSession(state);
+  if (!range) return null;
+  return state.doc.resolve(range.from).index(0);
+}
+
+/**
+ * Reopens a session on the top-level block at `index`, which must be an empty
+ * paragraph (the line a stored draft was written on).
+ */
+export function startNoteAiSessionAtBlock(
+  editor: Editor,
+  index: number,
+  widget: HTMLElement,
+) {
+  const { doc } = editor.state;
+  if (index < 0 || index >= doc.childCount) return false;
+  const node = doc.child(index);
+  if (node.type.name !== "paragraph" || node.content.size > 0) return false;
+  let from = 0;
+  for (let i = 0; i < index; i += 1) from += doc.child(i).nodeSize;
+  const range = { from, to: from + node.nodeSize };
+  editor.view.dispatch(
+    withMeta(editor.state.tr, { type: "start", range, widget }).setMeta(
+      "addToHistory",
+      false,
+    ),
+  );
+  return true;
+}

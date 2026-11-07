@@ -12,9 +12,12 @@ import {
   getNoteAiSession,
   isNoteAiSessionActive,
   NOTE_AI_CURSOR_MARKER,
+  noteAiSessionBlockIndex,
   noteMarkdownAtAiCursor,
+  noteMarkdownWithoutAiDraft,
   setNoteAiContent,
   startNoteAiSession,
+  startNoteAiSessionAtBlock,
 } from "./note-ai-session";
 
 // Headless Tiptap only registers plugins once mounted to a DOM, so drive the
@@ -171,5 +174,44 @@ describe("note AI session", () => {
     );
     acceptNoteAiSession(editor, { select: false });
     expect(editor.state.selection.from).toBe(3);
+  });
+
+  it("saves the note without a pending draft", () => {
+    const { editor } = withEmptyLine();
+    const before = editor.getMarkdown();
+    setNoteAiContent(editor, "# Draft\n\nMore draft");
+    expect(editor.getMarkdown()).toContain("# Draft");
+    expect(noteMarkdownWithoutAiDraft(editor)).toBe(before);
+  });
+
+  it("reopens a session on the same empty line by block index", () => {
+    const { editor } = withEmptyLine();
+    const index = noteAiSessionBlockIndex(editor.state);
+    expect(index).toBe(1);
+    const base = noteMarkdownWithoutAiDraft(editor);
+    discardNoteAiSession(editor);
+
+    expect(startNoteAiSessionAtBlock(editor, index!, {} as HTMLElement)).toBe(
+      true,
+    );
+    setNoteAiContent(editor, "Restored draft");
+    const markdown = editor.getMarkdown();
+    expect(markdown.indexOf("Intro")).toBeLessThan(
+      markdown.indexOf("Restored draft"),
+    );
+    expect(markdown.indexOf("Restored draft")).toBeLessThan(
+      markdown.indexOf("Outro"),
+    );
+    expect(noteMarkdownWithoutAiDraft(editor)).toBe(base);
+  });
+
+  it("refuses to reopen a session on a line that is not empty", () => {
+    const { editor } = withEmptyLine();
+    discardNoteAiSession(editor);
+    expect(startNoteAiSessionAtBlock(editor, 0, {} as HTMLElement)).toBe(false);
+    expect(startNoteAiSessionAtBlock(editor, 99, {} as HTMLElement)).toBe(
+      false,
+    );
+    expect(isNoteAiSessionActive(editor.state)).toBe(false);
   });
 });

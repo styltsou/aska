@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/core";
-import { ArrowUp, Check, RotateCcw } from "lucide-react";
+import { ArrowUp, Check, PencilLine, RotateCcw } from "lucide-react";
 import { motion } from "motion/react";
 
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/components/board/note-editor/ai/note-ai-stream";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
+import { cn } from "@/lib/utils";
 
 /**
  * - `prompt`: asking — the only state with an input.
@@ -42,33 +43,42 @@ function trimAroundCursor(note: string) {
   return note.slice(Math.floor(start), Math.floor(start) + NOTE_CONTEXT_LIMIT);
 }
 
-function isPrintableKey(event: React.KeyboardEvent) {
-  return (
-    event.key.length === 1 &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    !event.altKey &&
-    event.key !== " "
-  );
-}
+export type NoteAiDraft = { draft: string; request: AiRequest };
 
 /**
  * Inline AI controls rendered inside the note, directly below the content the
  * AI is writing. Output streams straight into the note as a pending draft;
  * leaving keeps it, and Discard (or undo afterwards) removes it.
+ *
+ * `restored` reopens a draft saved on an earlier visit, in review and without
+ * taking focus. `onDraft` reports each finished draft so it can be stored, and
+ * `onResolve` reports that the user kept or discarded it.
  */
-export function NoteAiPrompt({ editor }: { editor: Editor }) {
+export function NoteAiPrompt({
+  editor,
+  restored,
+  onDraft,
+  onResolve,
+}: {
+  editor: Editor;
+  restored?: NoteAiDraft;
+  onDraft?: (draft: NoteAiDraft) => void;
+  onResolve?: () => void;
+}) {
   const [prompt, setPrompt] = useState("");
-  const [phase, setPhase] = useState<Phase>("prompt");
+  const [phase, setPhase] = useState<Phase>(restored ? "review" : "prompt");
   const [refining, setRefining] = useState(false);
   const [error, setError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
-  const outputRef = useRef("");
+  const outputRef = useRef(restored?.draft ?? "");
   const frameRef = useRef<number | null>(null);
-  const lastRequestRef = useRef<AiRequest | null>(null);
+  const lastRequestRef = useRef<AiRequest | null>(restored?.request ?? null);
+  // A restored draft waits quietly in the note; it only takes focus once the
+  // user interacts with it.
+  const skipInitialFocusRef = useRef(Boolean(restored));
   const keepWhenDoneRef = useRef(false);
   const runningRef = useRef(false);
   const closingRef = useRef(false);
@@ -102,9 +112,20 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
 
   const showsInput = phase === "prompt" || (phase === "review" && refining);
 
+  useEffect(() => {
+    if (restored) setNoteAiContent(editor, restored.draft);
+    // Only on mount: `restored` describes where this session started.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Each state owns one focus target; move focus there whenever it changes.
   useLayoutEffect(() => {
     if (closingRef.current) return;
+    if (skipInitialFocusRef.current) {
+      skipInitialFocusRef.current = false;
+      handingOffRef.current = false;
+      return;
+    }
     const target = showsInput
       ? inputRef.current
       : phase === "streaming"
@@ -148,9 +169,11 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
   };
   const keep = (options?: { fromBlur?: boolean }) => {
     flush();
+    onResolve?.();
     end(acceptNoteAiSession, options);
   };
   const discard = (options?: { fromBlur?: boolean }) => {
+    onResolve?.();
     end(discardNoteAiSession, options);
   };
 
@@ -171,6 +194,12 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
       setPhase(lastRequestRef.current?.draft ? "review" : "prompt");
     } else {
       setPhase("review");
+      if (lastRequestRef.current) {
+        onDraft?.({
+          draft: outputRef.current,
+          request: lastRequestRef.current,
+        });
+      }
     }
   };
 
@@ -337,8 +366,99 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
         }
       }}
     >
+      {phase === "streaming" ? (
+        <div
+          ref={statusRef}
+          tabIndex={-1}
+          role="status"
+          className="flex h-8 items-center justify-between gap-3 outline-none"
+        >
+          <span className="note-ai-shimmer text-sm">Writing…</span>
+          <button
+            type="button"
+            onMouseDown={keepFocus}
+            onClick={stop}
+            className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            Stop
+            <Kbd className="h-4 min-w-4 px-1 text-[10px]">Esc</Kbd>
+          </button>
+        </div>
+      ) : phase === "review" ? (
+        <div
+          ref={actionsRef}
+          tabIndex={-1}
+          role="toolbar"
+          aria-label="AI draft"
+          className="flex h-8 items-center gap-1 outline-none"
+          onKeyDown={(event) => {
+            if (event.target !== event.currentTarget) return;
+            if (event.key === "Enter") {
+              event.preventDefault();
+              keep();
+            } else if (event.key === "Backspace" || event.key === "Delete") {
+              event.preventDefault();
+              discard();
+            }
+          }}
+        >
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onMouseDown={keepFocus}
+            onClick={() => keep()}
+          >
+            <Check data-icon="inline-start" />
+            Keep
+            {refining ? null : (
+              <Kbd className="h-4 min-w-4 bg-transparent px-0.5 text-[11px] text-current opacity-60">
+                ↵
+              </Kbd>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onMouseDown={keepFocus}
+            onClick={() => discard()}
+          >
+            Discard
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onMouseDown={keepFocus}
+            onClick={retry}
+          >
+            <RotateCcw data-icon="inline-start" />
+            Retry
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-pressed={refining}
+            className="text-muted-foreground hover:text-foreground aria-pressed:text-foreground"
+            onMouseDown={keepFocus}
+            onClick={() => (refining ? stopRefining() : startRefining())}
+          >
+            <PencilLine data-icon="inline-start" />
+            Refine
+          </Button>
+        </div>
+      ) : null}
       {showsInput ? (
-        <div className="flex h-10 items-center gap-2 rounded-lg border border-input bg-transparent pr-1.5 pl-3 transition-colors duration-100 focus-within:border-foreground/20 dark:bg-input/30">
+        <div
+          className={cn(
+            "flex h-10 items-center gap-2 rounded-lg border border-input bg-transparent pr-1.5 pl-3 transition-colors duration-100 focus-within:border-foreground/20 dark:bg-input/30",
+            refining && "mt-1.5",
+          )}
+        >
           <input
             ref={inputRef}
             value={prompt}
@@ -368,95 +488,7 @@ export function NoteAiPrompt({ editor }: { editor: Editor }) {
             <ArrowUp />
           </Button>
         </div>
-      ) : phase === "streaming" ? (
-        <div
-          ref={statusRef}
-          tabIndex={-1}
-          role="status"
-          className="flex h-8 items-center justify-between gap-3 outline-none"
-        >
-          <span className="note-ai-shimmer text-sm">Writing…</span>
-          <button
-            type="button"
-            onMouseDown={keepFocus}
-            onClick={stop}
-            className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            Stop
-            <Kbd className="h-4 min-w-4 px-1 text-[10px]">Esc</Kbd>
-          </button>
-        </div>
-      ) : (
-        <div
-          ref={actionsRef}
-          tabIndex={-1}
-          role="toolbar"
-          aria-label="AI draft"
-          className="flex h-8 items-center gap-1 outline-none"
-          onKeyDown={(event) => {
-            if (event.target !== event.currentTarget) return;
-            if (event.key === "Enter") {
-              event.preventDefault();
-              keep();
-            } else if (event.key === "Backspace" || event.key === "Delete") {
-              event.preventDefault();
-              discard();
-            } else if (isPrintableKey(event)) {
-              // Typing starts a follow-up instruction.
-              event.preventDefault();
-              startRefining(event.key);
-            }
-          }}
-        >
-          <Button
-            type="button"
-            variant="default"
-            size="sm"
-            onMouseDown={keepFocus}
-            onClick={() => keep()}
-          >
-            <Check data-icon="inline-start" />
-            Keep
-            <Kbd className="h-4 min-w-4 bg-transparent px-0.5 text-[11px] text-current opacity-60">
-              ↵
-            </Kbd>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-            onMouseDown={keepFocus}
-            onClick={() => discard()}
-          >
-            Discard
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-            onMouseDown={keepFocus}
-            onClick={retry}
-          >
-            <RotateCcw data-icon="inline-start" />
-            Retry
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
-            onMouseDown={keepFocus}
-            onClick={() => startRefining()}
-          >
-            Refine…
-          </Button>
-          <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">
-            Type to refine
-          </span>
-        </div>
-      )}
+      ) : null}
       {error ? (
         <p className="mt-1 px-1 text-xs text-destructive">{error}</p>
       ) : null}
