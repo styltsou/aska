@@ -1458,11 +1458,17 @@ function createBaseNoteExtensions(
       // does not display a second placeholder while the editor is focused at
       // the end of the note.
       showOnlyCurrent: true,
-      placeholder: ({ node }) => {
+      placeholder: ({ editor, node, pos }) => {
         if (node.type.name === "heading") {
           return `Heading ${node.attrs.level}`;
         }
-        return "Type '/' for blocks or '@' for mentions…";
+        // Space opens AI only on a top-level line, so only hint it there.
+        // '@' mentions are a convention users already expect, so the hint
+        // stays short by leaving them out.
+        const topLevel = editor.state.doc.resolve(pos).depth === 0;
+        return topLevel
+          ? "Press space for AI, '/' for blocks…"
+          : "Type '/' for blocks…";
       },
     }),
     Markdown.configure({
