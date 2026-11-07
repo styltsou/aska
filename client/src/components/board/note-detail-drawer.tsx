@@ -1743,7 +1743,11 @@ export function NoteDetailDrawer({
     const body =
       richTextRef.current?.getMarkdown() ??
       parseFrontMatter(draftRef.current).body;
-    const markdown = composeCopiedNoteMarkdown(activeNote?.content ?? "", body);
+    const markdown = composeCopiedNoteMarkdown(
+      activeNote?.content ?? "",
+      body,
+      titleRef.current,
+    );
     if (!markdown.trim()) {
       toast.error("Nothing to copy yet.");
       return;

@@ -1996,7 +1996,11 @@ function PeekNote({
     const body =
       richTextRef.current?.getMarkdown() ??
       parseFrontMatter(latest.current).body;
-    const markdown = composeCopiedNoteMarkdown(note.content, body);
+    const markdown = composeCopiedNoteMarkdown(
+      note.content,
+      body,
+      latestTitle.current,
+    );
     if (!markdown.trim()) {
       toast.error("Nothing to copy yet.");
       return;

@@ -3,6 +3,24 @@ import { describe, expect, it } from "vitest";
 import { composeCopiedNoteMarkdown } from "./note-copy";
 
 describe("composeCopiedNoteMarkdown", () => {
+  it("places the current title after front matter and before the edited body", () => {
+    expect(
+      composeCopiedNoteMarkdown(
+        "---\ntitle: Old\n---\nOld body",
+        "Edited body",
+        "New title",
+      ),
+    ).toBe("---\ntitle: Old\n---\n# New title\n\nEdited body");
+  });
+
+  it("copies a title even when the body is empty", () => {
+    expect(composeCopiedNoteMarkdown("", "", "My note")).toBe("# My note");
+  });
+
+  it("does not add a heading for a blank title", () => {
+    expect(composeCopiedNoteMarkdown("Body", "Body", "  ")).toBe("Body");
+  });
+
   it("preserves canonical front matter while using the edited body", () => {
     const stored = "---\ntitle: Original\ntags: [a, b]\n---\nOld body\n";
 

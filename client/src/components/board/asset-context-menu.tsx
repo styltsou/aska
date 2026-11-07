@@ -41,6 +41,8 @@ import {
   type MoveToDialogSource,
 } from "@/components/move-to-dialog";
 import { copyImageToClipboard } from "@/lib/clipboard";
+import { parseFrontMatter } from "@/lib/front-matter";
+import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
 import { resolveGradientCss } from "@/lib/color-gradient";
 import { ColorEditorDialog } from "@/components/app-shell/color-editor-dialog";
 import {
@@ -55,7 +57,11 @@ import { clearDeletedNoteDrafts } from "@/lib/note-edit-draft";
 import { getPlatformAlt } from "@/lib/platform";
 
 function PeekShortcut() {
-  return <ContextMenuShortcut>{getPlatformAlt()}+Click</ContextMenuShortcut>;
+  return (
+    <ContextMenuShortcut className="pl-2">
+      {getPlatformAlt()}+Click
+    </ContextMenuShortcut>
+  );
 }
 
 type ImagePrefetch = {
@@ -110,7 +116,13 @@ function imageActions(
 }
 
 async function copyText(asset: NoteAsset) {
-  await navigator.clipboard.writeText(asset.content);
+  await navigator.clipboard.writeText(
+    composeCopiedNoteMarkdown(
+      asset.content,
+      parseFrontMatter(asset.content).body,
+      asset.title,
+    ),
+  );
   toast.success("Copied note markdown.");
 }
 
