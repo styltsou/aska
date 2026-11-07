@@ -1,6 +1,7 @@
 import type { APIGatewayProxyEvent } from "aws-lambda";
 import { z } from "zod";
 
+import { describeAiError } from "@/ai/ai-error";
 import { configureEnv } from "@/config/env";
 
 const allowedOrigins = new Set(
@@ -121,7 +122,7 @@ export const handler = awslambda.streamifyResponse(
       send("custom", { type: "done" });
     } catch (error) {
       console.error("AI note stream failed", error);
-      send("error", { message: "AI generation failed" });
+      send("error", { message: describeAiError(error) });
     } finally {
       stream.end();
     }

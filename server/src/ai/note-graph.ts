@@ -37,6 +37,9 @@ export function createNoteEditGraph(apiKey: string) {
     model: "gemini-2.5-flash",
     apiKey,
     maxOutputTokens: 8192,
+    // The default retries a usage-limit error for most of a minute while the
+    // editor shows "Writing…"; fail fast so the reason reaches the user.
+    maxRetries: 1,
   });
 
   return new StateGraph(NoteEditState)
