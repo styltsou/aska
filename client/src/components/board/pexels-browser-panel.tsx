@@ -42,6 +42,7 @@ import {
 import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
+import { positionResizeGrip } from "@/lib/resize-grip";
 import { useSessionStore, getPexelsBrowserScope } from "@/store";
 import { getLastPexelsQuery } from "@/store/slices/pexels-browser-slice";
 import {
@@ -126,55 +127,59 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      style={{ aspectRatio: `${photo.width} / ${photo.height}` }}
       className={cn(
-        "group/tile relative mb-2 block w-full cursor-grab break-inside-avoid overflow-hidden rounded-lg border bg-muted text-left active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring",
-        isSelected ? "border-primary" : "border-transparent",
+        "group/tile relative mb-2 block w-full cursor-grab break-inside-avoid rounded-2xl text-left active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring",
+        isSelected && "bg-primary/15",
         isDragging && "cursor-grabbing",
       )}
     >
-      <ImageSkeleton
-        as="span"
-        aria-hidden
+      <div
         className={cn(
-          "absolute inset-0 rounded-none transition-opacity duration-300",
-          loaded ? "opacity-0" : "opacity-100",
+          "absolute inset-0 overflow-hidden rounded-2xl bg-muted transition-[inset,border-radius] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
+          isSelected && "inset-2.5 rounded-md",
         )}
-      />
-      <img
-        src={photo.urls.small}
-        alt={photo.alt ?? "Pexels photo"}
-        draggable={false}
-        style={{ aspectRatio: `${photo.width} / ${photo.height}` }}
-        className={cn(
-          "relative block w-full object-cover transition-all duration-300 ease-out group-hover/tile:scale-[1.025]",
-          loaded ? "opacity-100" : "opacity-0",
-        )}
-        loading="lazy"
-        onLoad={() => setLoaded(true)}
-      />
-      <AnimatePresence>
-        {hovered ? (
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ duration: 0.1, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
-          >
-            <span className="inline-flex max-w-full min-w-0 items-center rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground">
-              <span className="truncate">{credit}</span>
-            </span>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-      {isSelected ? (
-        <>
-          <span className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-primary ring-inset" />
+      >
+        <ImageSkeleton
+          as="span"
+          aria-hidden
+          className={cn(
+            "absolute inset-0 rounded-none transition-opacity duration-300",
+            loaded ? "opacity-0" : "opacity-100",
+          )}
+        />
+        <img
+          src={photo.urls.small}
+          alt={photo.alt ?? "Pexels photo"}
+          draggable={false}
+          className={cn(
+            "relative block size-full object-cover transition-[transform,opacity] duration-300 ease-out group-hover/tile:scale-[1.025] motion-reduce:transition-none",
+            loaded ? "opacity-100" : "opacity-0",
+          )}
+          loading="lazy"
+          onLoad={() => setLoaded(true)}
+        />
+        <AnimatePresence>
+          {hovered ? (
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-x-0 bottom-0 flex justify-center px-2.5 pb-2.5"
+            >
+              <span className="inline-flex max-w-full min-w-0 items-center rounded-lg bg-sidebar/70 px-3 py-1.5 text-xs font-medium text-sidebar-foreground">
+                <span className="truncate">{credit}</span>
+              </span>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+        {isSelected ? (
           <span className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
             <CheckIcon className="size-3.5" />
           </span>
-        </>
-      ) : null}
+        ) : null}
+      </div>
       <span
         aria-hidden
         className={cn(
@@ -219,6 +224,7 @@ function SelectedPhotosDock({
   onRemove: (photo: PexelsPhoto) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
   const trackRef = useRef<HTMLDivElement>(null);
   const [hoverEdge, setHoverEdge] = useState<"left" | "right" | null>(null);
 
@@ -303,29 +309,48 @@ function SelectedPhotosDock({
         className="flex max-w-full [scrollbar-width:none] overflow-x-auto py-0.5 [&::-webkit-scrollbar]:hidden"
       >
         <div className="flex">
-          <AnimatePresence initial={false}>
+          <AnimatePresence>
             {selected.map((photo, index) => (
               <motion.div
                 key={photo.id}
-                initial={{ width: 0, opacity: 0, marginRight: 0 }}
+                initial={
+                  reduceMotion
+                    ? false
+                    : {
+                        width: "auto",
+                        opacity: 0,
+                        scale: 0.95,
+                        marginRight: index === selected.length - 1 ? 0 : 6,
+                      }
+                }
                 animate={{
                   width: "auto",
                   opacity: 1,
+                  scale: 1,
                   marginRight: index === selected.length - 1 ? 0 : 6,
                 }}
                 exit={{
                   width: 0,
                   opacity: 0,
+                  scale: reduceMotion ? 1 : 0.95,
                   marginRight: 0,
                   transition: {
-                    width: { duration: 0.1, ease: [0.16, 1, 0.3, 1] },
-                    opacity: { duration: 0.08 },
-                    marginRight: { duration: 0.08 },
+                    width: {
+                      duration: reduceMotion ? 0 : 0.1,
+                      ease: [0.16, 1, 0.3, 1],
+                    },
+                    opacity: { duration: reduceMotion ? 0 : 0.08 },
+                    scale: {
+                      duration: reduceMotion ? 0 : 0.08,
+                      ease: [0.23, 1, 0.32, 1],
+                    },
+                    marginRight: { duration: reduceMotion ? 0 : 0.08 },
                   },
                 }}
                 transition={{
                   width: { duration: 0.1, ease: [0.16, 1, 0.3, 1] },
                   opacity: { duration: 0.1 },
+                  scale: { duration: 0.15, ease: [0.23, 1, 0.32, 1] },
                   marginRight: { duration: 0.1, ease: [0.16, 1, 0.3, 1] },
                 }}
                 className="group/tb relative shrink-0 overflow-hidden"
@@ -400,6 +425,7 @@ export function PexelsBrowserPanel({
   const [dockLayoutRevision, setDockLayoutRevision] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLElement>(null);
+  const resizeGripRef = useRef<HTMLSpanElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const scrollPositionRef = useRef<
     { scope: string; query: string; top: number } | undefined
@@ -509,6 +535,7 @@ export function PexelsBrowserPanel({
 
   function handleResizeStart(event: ReactPointerEvent<HTMLDivElement>) {
     event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
     setIsResizing(true);
     const startX = event.clientX;
     const startWidth = widthRef.current;
@@ -539,10 +566,14 @@ export function PexelsBrowserPanel({
       } catch {}
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+      window.removeEventListener("blur", handlePointerUp);
     };
 
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp, { once: true });
+    window.addEventListener("pointercancel", handlePointerUp, { once: true });
+    window.addEventListener("blur", handlePointerUp, { once: true });
   }
 
   const togglePhoto = useCallback(
@@ -625,14 +656,31 @@ export function PexelsBrowserPanel({
             <div
               aria-label="Resize Pexels browser"
               aria-orientation="vertical"
-              className="group/resize absolute top-1/2 left-0 z-30 hidden h-20 w-6 -translate-x-1/2 -translate-y-1/2 cursor-col-resize touch-none md:block"
+              data-resizing={isResizing ? "" : undefined}
+              className="group/resize absolute inset-y-0 left-0 z-30 hidden w-6 -translate-x-1/2 cursor-col-resize touch-none md:block"
               role="separator"
               onPointerDown={handleResizeStart}
+              onPointerEnter={(event) =>
+                positionResizeGrip(
+                  event.currentTarget,
+                  resizeGripRef.current,
+                  event.clientY,
+                  36,
+                )
+              }
+              onPointerMove={(event) =>
+                positionResizeGrip(
+                  event.currentTarget,
+                  resizeGripRef.current,
+                  event.clientY,
+                  36,
+                )
+              }
             >
               <span
+                ref={resizeGripRef}
                 aria-hidden
-                className="absolute top-1/2 left-1/2 h-16 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/35 transition-[background-color,height] duration-200 ease-out group-hover/resize:h-20 group-hover/resize:bg-foreground/50 group-active/resize:h-20 group-active/resize:bg-primary"
-                style={{ clipPath: "inset(0 50% 0 0)" }}
+                className="pointer-events-none absolute top-1/2 left-1/2 h-14 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/35 opacity-0 transition-[opacity,background-color] duration-150 group-hover/resize:bg-foreground/50 group-hover/resize:opacity-100 group-data-[resizing]/resize:!bg-primary group-data-[resizing]/resize:opacity-100 motion-reduce:transition-none"
               />
             </div>
             <div className="relative flex size-full flex-col overflow-hidden rounded-xl">
@@ -693,6 +741,8 @@ export function PexelsBrowserPanel({
               <div className="relative min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background p-[var(--app-shell-inset)]">
                 <ScrollArea
                   className="size-full rounded-xl [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
+                  viewportClassName="box-border pr-3"
+                  verticalScrollbarClassName="opacity-100"
                   viewportRef={setViewportRef}
                 >
                   <div
@@ -802,23 +852,49 @@ export function PexelsBrowserPanel({
                         key="pexels-dock-cluster"
                         layout="size"
                         layoutDependency={dockLayoutRevision}
-                        initial={{ opacity: 0, scale: 0.98, y: 4 }}
+                        initial={
+                          reduceMotion
+                            ? false
+                            : { opacity: 0, scale: 0.98, y: 4 }
+                        }
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{
-                          opacity: 0,
-                          scale: 0.98,
-                          y: 4,
-                          transition: {
-                            opacity: { duration: 0.1, ease: [0.8, 0, 1, 1] },
-                            scale: { duration: 0.1, ease: [0.8, 0, 1, 1] },
-                            y: { duration: 0.1, ease: [0.8, 0, 1, 1] },
-                          },
-                        }}
+                        exit={
+                          reduceMotion
+                            ? { opacity: 0, transition: { duration: 0 } }
+                            : {
+                                opacity: 0,
+                                scale: 0.98,
+                                y: 4,
+                                transition: {
+                                  opacity: {
+                                    duration: 0.1,
+                                    ease: [0.8, 0, 1, 1],
+                                  },
+                                  scale: {
+                                    duration: 0.1,
+                                    ease: [0.8, 0, 1, 1],
+                                  },
+                                  y: { duration: 0.1, ease: [0.8, 0, 1, 1] },
+                                },
+                              }
+                        }
                         transition={{
-                          opacity: { duration: 0.1, ease: [0, 0, 0.2, 1] },
-                          scale: { duration: 0.1, ease: [0, 0, 0.2, 1] },
-                          y: { duration: 0.1, ease: [0, 0, 0.2, 1] },
-                          layout: { duration: 0.18, ease: [0.16, 1, 0.3, 1] },
+                          opacity: {
+                            duration: reduceMotion ? 0 : 0.1,
+                            ease: [0, 0, 0.2, 1],
+                          },
+                          scale: {
+                            duration: reduceMotion ? 0 : 0.1,
+                            ease: [0, 0, 0.2, 1],
+                          },
+                          y: {
+                            duration: reduceMotion ? 0 : 0.1,
+                            ease: [0, 0, 0.2, 1],
+                          },
+                          layout: {
+                            duration: reduceMotion ? 0 : 0.18,
+                            ease: [0.16, 1, 0.3, 1],
+                          },
                         }}
                         className="pointer-events-auto relative w-max max-w-[min(588px,calc(100%_-_var(--app-shell-inset)_-_var(--app-shell-inset)))] rounded-xl bg-background/75 p-2 shadow-lg ring-1 ring-foreground/10 backdrop-blur-md"
                         style={{ minWidth: DOCK_MIN_WIDTH }}
