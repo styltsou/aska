@@ -1,3 +1,7 @@
+import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
+import { isPeekAssetPaneActive } from "@/lib/asset-pane-focus";
+import { useAssetFullscreenShortcut } from "@/components/board/use-asset-fullscreen-shortcut";
+import { AssetShortcutKeys } from "@/components/board/asset-shortcut-keys";
 import {
   useEffect,
   useMemo,
@@ -192,6 +196,27 @@ export function ColorDetailDrawer({
       .catch(() => toast.error("Unable to copy color."));
   }
 
+  useEffect(() => {
+    if (!open || isMobile || !displayedColor) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.repeat ||
+        event.defaultPrevented ||
+        isPeekAssetPaneActive() ||
+        !matchesKeybinding(event, PEEK_ASSET_SHORTCUT)
+      )
+        return;
+      event.preventDefault();
+      void peekColor(displayedColor, effectiveScope, { demoteMain: true }).then(
+        (opened) => {
+          if (opened) onClose();
+        },
+      );
+    };
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [open, isMobile, displayedColor, effectiveScope, peekColor, onClose]);
+
   if (!isMobile) {
     return (
       <ColorDetailModal
@@ -322,6 +347,7 @@ export function ColorDetailDrawer({
                 variant="ghost"
                 size="icon-sm"
                 aria-label="Close color"
+                title="Close color · Esc"
                 onClick={onDismissAll ?? onClose}
               >
                 <XIcon className="size-4" />
@@ -591,6 +617,11 @@ function ColorDetailModal({
     Boolean(assetModalId) && open && !sharedMorphing,
     expanded,
   );
+  useAssetFullscreenShortcut(open && !sharedMorphing, () => {
+    captureFullscreenPanel();
+    onExpandedChange(!expanded);
+  });
+
   return (
     <Dialog
       open={open}
@@ -670,23 +701,34 @@ function ColorDetailModal({
               ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
             )}
             aria-label="Close color"
+            title="Close color · Esc"
             onClick={onDismissAll ?? onClose}
           >
             <XIcon className="size-4" />
           </Button>
           {onPeek ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "size-8 rounded-lg",
-                ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
-              )}
-              aria-label="Peek color"
-              onClick={onPeek}
-            >
-              <PanelRightIcon className="size-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "size-8 rounded-lg",
+                      ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                    )}
+                    aria-label="Peek color"
+                    onClick={onPeek}
+                  />
+                }
+              >
+                <PanelRightIcon className="size-4" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <span>Peek color</span>
+                <AssetShortcutKeys action="peek" />
+              </TooltipContent>
+            </Tooltip>
           ) : null}
           {onShowInBoard ? (
             <Button
@@ -703,21 +745,31 @@ function ColorDetailModal({
               <LocateFixedIcon className="size-4" />
             </Button>
           ) : null}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "size-8 rounded-lg",
-              ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
-            )}
-            aria-label={expanded ? "Return to modal" : "Expand color"}
-            onClick={() => {
-              captureFullscreenPanel();
-              onExpandedChange(!expanded);
-            }}
-          >
-            <AssetViewerModeIcon expanded={expanded} />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "size-8 rounded-lg",
+                    ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
+                  )}
+                  aria-label={expanded ? "Return to modal" : "Expand color"}
+                  onClick={() => {
+                    captureFullscreenPanel();
+                    onExpandedChange(!expanded);
+                  }}
+                />
+              }
+            >
+              <AssetViewerModeIcon expanded={expanded} />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <span>{expanded ? "Exit full screen" : "Full screen"}</span>
+              <AssetShortcutKeys action="fullscreen" />
+            </TooltipContent>
+          </Tooltip>
           {color ? (
             <span
               className={cn(
@@ -1112,6 +1164,7 @@ function ColorDetailLoading({
               variant="ghost"
               size="icon-sm"
               aria-label="Close color"
+              title="Close color · Esc"
               onClick={onClose}
             >
               <XIcon className="size-4" />

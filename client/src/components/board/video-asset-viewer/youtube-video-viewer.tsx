@@ -1,3 +1,4 @@
+import { useAssetFullscreenShortcut } from "@/components/board/use-asset-fullscreen-shortcut";
 import {
   useCallback,
   useEffect,
@@ -22,7 +23,7 @@ import { ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS } from "@/components/board/asset-
 import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 import { AutoResizeTextarea } from "@/components/ui/auto-resize-textarea";
 import { Button } from "@/components/ui/button";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { AssetShortcutKeys } from "@/components/board/asset-shortcut-keys";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
@@ -51,7 +52,7 @@ import { YouTubeDescription } from "./youtube-description";
 import { ChannelAvatar } from "@/components/board/cards/link-asset-card";
 import { createYouTubePlayerSeekController } from "./youtube-player-seek";
 import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
-import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
+import { isPeekAssetPaneActive } from "@/lib/asset-pane-focus";
 import { cn } from "@/lib/utils";
 import type { LinkAsset } from "@/types/asset";
 
@@ -274,6 +275,12 @@ export function YouTubeVideoViewer({
   const layoutTransition = reduceMotion
     ? { duration: 0 }
     : VIDEO_VIEWER_LAYOUT_TRANSITION;
+  useAssetFullscreenShortcut(open && !isMobile && !split, () => {
+    captureFullscreenPanel();
+    if (onViewChange) onViewChange(expanded ? "modal" : "full");
+    else setLocalExpanded((current) => !current);
+  });
+
   const accessibleDescription = displayedAsset
     ? `Watch ${displayedAsset.title} without leaving Aska.`
     : "Loading video details.";
@@ -282,7 +289,11 @@ export function YouTubeVideoViewer({
     if (!open || !displayedAsset || !location || isMobile) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat || !matchesKeybinding(event, PEEK_ASSET_SHORTCUT)) {
+      if (
+        event.repeat ||
+        isPeekAssetPaneActive() ||
+        !matchesKeybinding(event, PEEK_ASSET_SHORTCUT)
+      ) {
         return;
       }
       event.preventDefault();
@@ -294,8 +305,8 @@ export function YouTubeVideoViewer({
       );
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [displayedAsset, isMobile, location, onClose, open, peekVideo]);
 
   if (isMobile) {
@@ -577,7 +588,7 @@ function VideoViewerToolbar({
           <XIcon className="size-4" />
           <span className="sr-only">Close video</span>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Close video</TooltipContent>
+        <TooltipContent side="bottom">Close video · Esc</TooltipContent>
       </Tooltip>
       {onPeek ? (
         <Tooltip>
@@ -601,17 +612,7 @@ function VideoViewerToolbar({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             <span>Peek video</span>
-            <KbdGroup className="gap-0.5">
-              <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
-                {getPlatformAlt()}
-              </Kbd>
-              <span>+</span>
-              <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
-                {getPlatformShift()}
-              </Kbd>
-              <span>+</span>
-              <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">P</Kbd>
-            </KbdGroup>
+            <AssetShortcutKeys action="peek" />
           </TooltipContent>
         </Tooltip>
       ) : null}
@@ -662,7 +663,8 @@ function VideoViewerToolbar({
             </span>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            {expanded ? "Return to modal" : "Expand video"}
+            <span>{expanded ? "Return to modal" : "Expand video"}</span>
+            <AssetShortcutKeys action="fullscreen" />
           </TooltipContent>
         </Tooltip>
       ) : null}

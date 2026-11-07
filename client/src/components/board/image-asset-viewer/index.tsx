@@ -1,3 +1,4 @@
+import { useAssetFullscreenShortcut } from "@/components/board/use-asset-fullscreen-shortcut";
 import { downloadAssetOriginal } from "@/lib/asset-download";
 import {
   Dialog,
@@ -70,6 +71,8 @@ import type { AssetLocation } from "@/api/collection";
 import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
+import { isPeekAssetPaneActive } from "@/lib/asset-pane-focus";
+import { AssetShortcutKeys } from "@/components/board/asset-shortcut-keys";
 import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 
 const MIN_FREE_CROP_SIZE = 80;
@@ -1018,7 +1021,10 @@ function ImageViewerModeButton({
         <AssetViewerModeIcon expanded={expanded} />
         <span className="sr-only">{label}</span>
       </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
+      <TooltipContent>
+        <span>{label}</span>
+        <AssetShortcutKeys action="fullscreen" />
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -1058,7 +1064,7 @@ function ImageViewerModalHeaderControls({
           <XIcon />
           <span className="sr-only">Close image</span>
         </TooltipTrigger>
-        <TooltipContent>Close image</TooltipContent>
+        <TooltipContent>Close image · Esc</TooltipContent>
       </Tooltip>
       {onPeek ? (
         <Tooltip>
@@ -1077,7 +1083,10 @@ function ImageViewerModalHeaderControls({
             <PanelRightIcon />
             <span className="sr-only">Peek image</span>
           </TooltipTrigger>
-          <TooltipContent>Peek image</TooltipContent>
+          <TooltipContent>
+            <span>Peek image</span>
+            <AssetShortcutKeys action="peek" />
+          </TooltipContent>
         </Tooltip>
       ) : null}
       {onShowInBoard ? (
@@ -1498,6 +1507,8 @@ export function ImageAssetViewer({
     void flushImageNote().then(onDismissAll);
   }, [flushImageNote, onDismissAll]);
 
+  useAssetFullscreenShortcut(open && !isMobile && !split, toggleExpanded);
+
   const handleClose = useCallback(() => {
     if (onDismissAll) handleDismissAll();
     else handleOpenChange(false);
@@ -1511,15 +1522,19 @@ export function ImageAssetViewer({
   useEffect(() => {
     if (!open || !asset || !location || isMobile) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat || !matchesKeybinding(event, PEEK_ASSET_SHORTCUT)) {
+      if (
+        event.repeat ||
+        isPeekAssetPaneActive() ||
+        !matchesKeybinding(event, PEEK_ASSET_SHORTCUT)
+      ) {
         return;
       }
       event.preventDefault();
       event.stopPropagation();
       handlePeek();
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [asset, handlePeek, isMobile, location, open]);
 
   useEffect(() => {
@@ -2146,7 +2161,7 @@ export function ImageAssetViewer({
                         <XIcon />
                         <span className="sr-only">Close image</span>
                       </TooltipTrigger>
-                      <TooltipContent>Close image</TooltipContent>
+                      <TooltipContent>Close image · Esc</TooltipContent>
                     </Tooltip>
                     {(location || (loading && assetModalId)) &&
                     (!asset || !asset.uploadStatus) &&
@@ -2169,7 +2184,10 @@ export function ImageAssetViewer({
                           <PanelRightIcon />
                           <span className="sr-only">Peek image</span>
                         </TooltipTrigger>
-                        <TooltipContent>Peek image</TooltipContent>
+                        <TooltipContent>
+                          <span>Peek image</span>
+                          <AssetShortcutKeys action="peek" />
+                        </TooltipContent>
                       </Tooltip>
                     ) : null}
                     {onShowInBoard ? (

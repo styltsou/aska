@@ -2478,7 +2478,10 @@ export const NoteRichText = forwardRef<
             return true;
           }
         }
-        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        if (
+          (event.metaKey || event.ctrlKey) &&
+          event.key.toLowerCase() === "s"
+        ) {
           event.preventDefault();
           onSaveShortcutRef.current?.();
           return true;

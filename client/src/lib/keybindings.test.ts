@@ -1,11 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   KEYBINDINGS,
   matchesKeybinding,
   OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT,
   PEEK_ASSET_SHORTCUT,
+  TOGGLE_ASSET_FULLSCREEN_SHORTCUT,
 } from "./keybindings";
+
+afterEach(() => vi.unstubAllGlobals());
 
 function event({
   code,
@@ -47,7 +50,8 @@ describe("matchesKeybinding", () => {
     ).toBe(false);
   });
 
-  it("PEEK_ASSET_SHORTCUT matches only Alt+Shift+P", () => {
+  it("uses Alt+Shift+P for peek and Ctrl+Enter for fullscreen on Windows", () => {
+    vi.stubGlobal("navigator", { platform: "Win32" });
     expect(
       matchesKeybinding(
         event({ code: "KeyP", key: "p", altKey: true, shiftKey: true }),
@@ -56,19 +60,13 @@ describe("matchesKeybinding", () => {
     ).toBe(true);
     expect(
       matchesKeybinding(
-        event({
-          code: "KeyP",
-          key: "p",
-          metaKey: true,
-          altKey: true,
-          shiftKey: true,
-        }),
-        PEEK_ASSET_SHORTCUT,
+        event({ code: "Enter", key: "Enter", ctrlKey: true }),
+        TOGGLE_ASSET_FULLSCREEN_SHORTCUT,
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       matchesKeybinding(
-        event({ code: "KeyP", key: "p", altKey: true }),
+        event({ code: "KeyP", key: "p", ctrlKey: true, shiftKey: true }),
         PEEK_ASSET_SHORTCUT,
       ),
     ).toBe(false);
@@ -77,19 +75,71 @@ describe("matchesKeybinding", () => {
     ).toBe(false);
   });
 
-  it("OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT matches only Alt+Shift+O", () => {
+  it("uses Alt+Shift+P for peek and Command+Enter for fullscreen on macOS", () => {
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    expect(
+      matchesKeybinding(
+        event({ code: "KeyP", key: "p", altKey: true, shiftKey: true }),
+        PEEK_ASSET_SHORTCUT,
+      ),
+    ).toBe(true);
+    expect(
+      matchesKeybinding(
+        event({ code: "Enter", key: "Enter", metaKey: true }),
+        TOGGLE_ASSET_FULLSCREEN_SHORTCUT,
+      ),
+    ).toBe(true);
+    expect(
+      matchesKeybinding(
+        event({ code: "Enter", key: "Enter", ctrlKey: true }),
+        TOGGLE_ASSET_FULLSCREEN_SHORTCUT,
+      ),
+    ).toBe(false);
+    expect(
+      matchesKeybinding(
+        event({ code: "Enter", key: "Enter", metaKey: true, shiftKey: true }),
+        TOGGLE_ASSET_FULLSCREEN_SHORTCUT,
+      ),
+    ).toBe(false);
+    expect(
+      matchesKeybinding(
+        event({ code: "KeyP", key: "p", metaKey: true, shiftKey: true }),
+        PEEK_ASSET_SHORTCUT,
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps Alt+Shift+O as a promotion alias", () => {
     expect(
       matchesKeybinding(
         event({ code: "KeyO", key: "o", altKey: true, shiftKey: true }),
         OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT,
       ),
     ).toBe(true);
+  });
+
+  it("toggles the sidebar with the platform modifier and slash", () => {
+    vi.stubGlobal("navigator", { platform: "Win32" });
+    const sidebar = KEYBINDINGS.find((kb) => kb.command === "toggle-sidebar")!;
     expect(
       matchesKeybinding(
-        event({ code: "KeyP", key: "p" }),
-        OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT,
+        event({ code: "Slash", key: "/", ctrlKey: true }),
+        sidebar,
+      ),
+    ).toBe(true);
+    expect(
+      matchesKeybinding(
+        event({ code: "KeyB", key: "b", ctrlKey: true }),
+        sidebar,
       ),
     ).toBe(false);
+    vi.stubGlobal("navigator", { platform: "MacIntel" });
+    expect(
+      matchesKeybinding(
+        event({ code: "Slash", key: "/", metaKey: true }),
+        sidebar,
+      ),
+    ).toBe(true);
   });
 
   it("accepts Ctrl or Meta for metaOrCtrl bindings without extra modifiers", () => {

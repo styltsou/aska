@@ -1,3 +1,5 @@
+import { getPlatformModifier } from "@/lib/platform";
+
 export type GlobalShortcut =
   | "toggle-command-palette"
   | "new-note"
@@ -20,6 +22,7 @@ export interface Keybinding {
   ctrlKey?: boolean;
   metaKey?: boolean;
   metaOrCtrl?: boolean;
+  platformMod?: boolean;
   altKey?: boolean;
 }
 
@@ -34,7 +37,7 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "canvas-arrow-tool", code: "KeyA", shiftKey: true },
   { command: "open-scratchpad", code: "KeyP", shiftKey: true },
   { command: "toggle-collection-view", code: "KeyV", shiftKey: true },
-  { command: "toggle-sidebar", key: "b", metaOrCtrl: true },
+  { command: "toggle-sidebar", key: "/", platformMod: true },
   { command: "open-settings", key: ",", metaOrCtrl: true },
 ];
 
@@ -44,6 +47,11 @@ export const PEEK_ASSET_SHORTCUT: Shortcut = {
   code: "KeyP",
   altKey: true,
   shiftKey: true,
+};
+
+export const TOGGLE_ASSET_FULLSCREEN_SHORTCUT: Shortcut = {
+  code: "Enter",
+  platformMod: true,
 };
 
 export const OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT: Shortcut = {
@@ -70,7 +78,10 @@ export function matchesKeybinding(
   if (kb.altKey === true && !event.altKey) return false;
   if (kb.altKey === undefined && event.altKey) return false;
 
-  if (kb.metaOrCtrl) {
+  if (kb.platformMod) {
+    const isMac = getPlatformModifier() === "⌘";
+    if (event.metaKey !== isMac || event.ctrlKey === isMac) return false;
+  } else if (kb.metaOrCtrl) {
     if (!(event.metaKey || event.ctrlKey)) return false;
   } else {
     if (kb.ctrlKey === true && !event.ctrlKey) return false;

@@ -1,3 +1,4 @@
+import { useAssetFullscreenShortcut } from "@/components/board/use-asset-fullscreen-shortcut";
 import {
   lazy,
   Suspense,
@@ -69,7 +70,7 @@ import {
   ASSET_VIEWER_HEADER_ICON_BUTTON_CLASS,
   ASSET_VIEWER_HEADER_ICON_TOGGLE_BUTTON_CLASS,
 } from "@/components/board/asset-viewer-control-styles";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { AssetShortcutKeys } from "@/components/board/asset-shortcut-keys";
 import {
   Tooltip,
   TooltipContent,
@@ -80,7 +81,7 @@ import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { collectionNodeToAsset } from "@/lib/asset-transform";
 import { matchesKeybinding, PEEK_ASSET_SHORTCUT } from "@/lib/keybindings";
-import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
+import { isPeekAssetPaneActive } from "@/lib/asset-pane-focus";
 import {
   clearCreateNoteDraft,
   getCreateNoteDraftId,
@@ -313,6 +314,10 @@ export function NoteDetailDrawer({
   const createdNoteId = createdNote?.id;
   const isPeekMirror =
     peekTarget?.type === "note" && peekTarget.asset.id === activeNote?.id;
+  useAssetFullscreenShortcut(
+    isWorkspaceOpen && !isMobile && !split && !isPeekMirror,
+    toggleExpanded,
+  );
   useEffect(() => {
     setHighlightMode(false);
     setHighlightColor(undefined);
@@ -1210,7 +1215,7 @@ export function NoteDetailDrawer({
   useEffect(() => {
     if (!isWorkspaceOpen || !activeNote || isPeekMirror) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat) return;
+      if (event.repeat || isPeekAssetPaneActive()) return;
       if (!matchesKeybinding(event, PEEK_ASSET_SHORTCUT)) return;
       event.preventDefault();
       event.stopPropagation();
@@ -1221,8 +1226,8 @@ export function NoteDetailDrawer({
           closeWorkspace();
       })();
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [
     activeNote,
     closeWorkspace,
@@ -1882,7 +1887,7 @@ export function NoteDetailDrawer({
                   </Button>
                 }
               />
-              <TooltipContent side="bottom">Close note</TooltipContent>
+              <TooltipContent side="bottom">Close note · Esc</TooltipContent>
             </Tooltip>
             {!isPeekMirror ? (
               <Tooltip>
@@ -1918,17 +1923,7 @@ export function NoteDetailDrawer({
                 />
                 <TooltipContent side="bottom">
                   <span>Peek note</span>
-                  <KbdGroup className="gap-0.5">
-                    <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
-                      {getPlatformAlt()}
-                    </Kbd>
-                    <span>+</span>
-                    <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">
-                      {getPlatformShift()}
-                    </Kbd>
-                    <span>+</span>
-                    <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">P</Kbd>
-                  </KbdGroup>
+                  <AssetShortcutKeys action="peek" />
                 </TooltipContent>
               </Tooltip>
             ) : null}
@@ -1976,7 +1971,8 @@ export function NoteDetailDrawer({
                   <AssetViewerModeIcon expanded={expanded} />
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  {expanded ? "Exit full screen" : "Full screen"}
+                  <span>{expanded ? "Exit full screen" : "Full screen"}</span>
+                  <AssetShortcutKeys action="fullscreen" />
                 </TooltipContent>
               </Tooltip>
             ) : null}

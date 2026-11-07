@@ -36,6 +36,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { AssetShortcutKeys } from "@/components/board/asset-shortcut-keys";
 import {
   Tooltip,
   TooltipContent,
@@ -63,9 +64,13 @@ import {
 import {
   matchesKeybinding,
   OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT,
+  TOGGLE_ASSET_FULLSCREEN_SHORTCUT,
 } from "@/lib/keybindings";
+import {
+  isPeekAssetPaneActive,
+  setActiveAssetPane,
+} from "@/lib/asset-pane-focus";
 import { composeCopiedNoteMarkdown } from "@/lib/note-copy";
-import { getPlatformAlt, getPlatformShift } from "@/lib/platform";
 import { useWeightedColorImageSearch } from "@/api/color-search";
 import { ProgressiveImage } from "@/components/ui/progressive-image";
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
@@ -1265,21 +1270,54 @@ function WorkspacePeekPanel({
       (target.type === "note" && activeNoteId !== target.asset.id));
 
   useEffect(() => {
+    setActiveAssetPane("peek");
+    const trackPane = (event: Event) => {
+      if (!(event.target instanceof Element)) return;
+      setActiveAssetPane(
+        event.target.closest('[aria-label="Peeked reference"]')
+          ? "peek"
+          : "main",
+      );
+    };
+    document.addEventListener("pointerdown", trackPane, true);
+    document.addEventListener("focusin", trackPane, true);
+    return () => {
+      document.removeEventListener("pointerdown", trackPane, true);
+      document.removeEventListener("focusin", trackPane, true);
+      setActiveAssetPane("main");
+    };
+  }, []);
+
+  useEffect(() => {
     if (!canPromote) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.repeat) return;
-      if (!matchesKeybinding(event, OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT)) return;
+      if (event.repeat || event.defaultPrevented) return;
+      if (!isPeekAssetPaneActive()) return;
+      const isLegacyPromotion = matchesKeybinding(
+        event,
+        OPEN_NOTE_IN_MAIN_EDITOR_SHORTCUT,
+      );
+      if (
+        !isLegacyPromotion &&
+        !matchesKeybinding(event, TOGGLE_ASSET_FULLSCREEN_SHORTCUT)
+      )
+        return;
       event.preventDefault();
       event.stopPropagation();
       void promotePeekedAsset();
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [canPromote, promotePeekedAsset]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.repeat || event.defaultPrevented) {
+      if (
+        event.key !== "Escape" ||
+        event.repeat ||
+        event.defaultPrevented ||
+        !isPeekAssetPaneActive()
+      ) {
         return;
       }
       event.preventDefault();
@@ -1556,13 +1594,7 @@ function PeekPromotionControl({
       />
       <TooltipContent side="bottom">
         <span>{label}</span>
-        <KbdGroup className="gap-0.5">
-          <Kbd className="h-4 min-w-4 px-0.5">{getPlatformAlt()}</Kbd>
-          <span>+</span>
-          <Kbd className="h-4 min-w-4 px-0.5">{getPlatformShift()}</Kbd>
-          <span>+</span>
-          <Kbd className="h-4 min-w-4 px-0.5">O</Kbd>
-        </KbdGroup>
+        <AssetShortcutKeys action="fullscreen" />
       </TooltipContent>
     </Tooltip>
   );

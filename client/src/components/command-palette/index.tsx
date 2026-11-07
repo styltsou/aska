@@ -193,7 +193,7 @@ const COMMAND_GROUPS = [
         id: "toggle-sidebar",
         label: "Toggle sidebar",
         icon: PanelLeftIcon,
-        shortcut: "⌘+B",
+        shortcut: "⌘+/",
       },
       {
         id: "toggle-collection-view",

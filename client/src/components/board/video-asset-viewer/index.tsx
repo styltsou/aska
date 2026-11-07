@@ -1,3 +1,5 @@
+import { useAssetFullscreenShortcut } from "@/components/board/use-asset-fullscreen-shortcut";
+import { AssetShortcutKeys } from "@/components/board/asset-shortcut-keys";
 import {
   useCallback,
   useEffect,
@@ -120,6 +122,12 @@ export function VideoAssetViewer({
     Boolean(assetModalId) && open && !isMobile && !sharedMorphing,
     expanded,
   );
+  useAssetFullscreenShortcut(open && !isMobile, () => {
+    captureFullscreenPanel();
+    if (onViewChange) onViewChange(expanded ? "modal" : "full");
+    else setLocalExpanded((current) => !current);
+  });
+
   const layoutTransition = reduceMotion
     ? { duration: 0 }
     : VIDEO_VIEWER_LAYOUT_TRANSITION;
@@ -508,7 +516,10 @@ function ToolbarButton({
         <span className="sr-only">{label}</span>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="flex items-center gap-2">
-        <span>{label}</span>
+        <span>{label === "Close video" ? "Close video · Esc" : label}</span>
+        {label === "Return to modal" || label === "Expand video" ? (
+          <AssetShortcutKeys action="fullscreen" />
+        ) : null}
       </TooltipContent>
     </Tooltip>
   );
