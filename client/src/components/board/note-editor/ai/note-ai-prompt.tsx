@@ -17,6 +17,11 @@ import {
 } from "@/components/board/note-editor/ai/note-ai-stream";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 /**
@@ -374,15 +379,17 @@ export function NoteAiPrompt({
           className="flex h-8 items-center justify-between gap-3 outline-none"
         >
           <span className="note-ai-shimmer text-sm">Writing…</span>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
+            className="text-muted-foreground hover:text-foreground"
             onMouseDown={keepFocus}
             onClick={stop}
-            className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             Stop
-            <Kbd className="h-4 min-w-4 px-1 text-[10px]">Esc</Kbd>
-          </button>
+            <Kbd className="h-3.5 min-w-3.5 px-1 text-[10px]">Esc</Kbd>
+          </Button>
         </div>
       ) : phase === "review" ? (
         <div
@@ -390,7 +397,9 @@ export function NoteAiPrompt({
           tabIndex={-1}
           role="toolbar"
           aria-label="AI draft"
-          className="flex h-8 items-center gap-1 outline-none"
+          // Secondary actions lead into the primary one on the far right,
+          // which also lines Keep up above the refine input's send button.
+          className="flex h-8 items-center justify-end gap-1 outline-none"
           onKeyDown={(event) => {
             if (event.target !== event.currentTarget) return;
             if (event.key === "Enter") {
@@ -404,23 +413,38 @@ export function NoteAiPrompt({
         >
           <Button
             type="button"
-            variant="default"
-            size="sm"
+            variant="ghost"
+            size="xs"
+            aria-pressed={refining}
+            className="text-muted-foreground hover:text-foreground aria-pressed:text-foreground"
             onMouseDown={keepFocus}
-            onClick={() => keep()}
+            onClick={() => (refining ? stopRefining() : startRefining())}
           >
-            <Check data-icon="inline-start" />
-            Keep
-            {refining ? null : (
-              <Kbd className="h-4 min-w-4 bg-transparent px-0.5 text-[11px] text-current opacity-60">
-                ↵
-              </Kbd>
-            )}
+            <PencilLine data-icon="inline-start" />
+            Refine
           </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label="Retry"
+                  className="text-muted-foreground hover:text-foreground"
+                  onMouseDown={keepFocus}
+                  onClick={retry}
+                />
+              }
+            >
+              <RotateCcw />
+            </TooltipTrigger>
+            <TooltipContent>Retry</TooltipContent>
+          </Tooltip>
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size="xs"
             className="text-muted-foreground hover:text-foreground"
             onMouseDown={keepFocus}
             onClick={() => discard()}
@@ -429,26 +453,18 @@ export function NoteAiPrompt({
           </Button>
           <Button
             type="button"
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground"
+            variant="default"
+            size="xs"
             onMouseDown={keepFocus}
-            onClick={retry}
+            onClick={() => keep()}
           >
-            <RotateCcw data-icon="inline-start" />
-            Retry
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-pressed={refining}
-            className="text-muted-foreground hover:text-foreground aria-pressed:text-foreground"
-            onMouseDown={keepFocus}
-            onClick={() => (refining ? stopRefining() : startRefining())}
-          >
-            <PencilLine data-icon="inline-start" />
-            Refine
+            <Check data-icon="inline-start" />
+            Keep
+            {refining ? null : (
+              <Kbd className="h-3.5 min-w-3.5 bg-transparent px-0 text-[10px] text-current opacity-60">
+                ↵
+              </Kbd>
+            )}
           </Button>
         </div>
       ) : null}
