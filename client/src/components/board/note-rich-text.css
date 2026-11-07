@@ -956,3 +956,38 @@
     transition: none;
   }
 }
+
+/* "Writing…" status while the AI streams: a soft highlight sweeping across
+   muted text, readable as activity without a spinner. */
+.note-ai-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--muted-foreground) 0%,
+    var(--muted-foreground) 35%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 65%,
+    var(--muted-foreground) 100%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: note-ai-shimmer 1.8s linear infinite;
+}
+
+@keyframes note-ai-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .note-ai-shimmer {
+    animation: none;
+    color: var(--muted-foreground);
+    background-image: none;
+  }
+}
