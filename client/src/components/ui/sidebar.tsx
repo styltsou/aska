@@ -25,8 +25,13 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { PanelLeftIcon } from "lucide-react";
 
 import { getPlatformModifier } from "@/lib/platform";
+import {
+  readSidebarWidth,
+  SIDEBAR_MIN_WIDTH,
+  SIDEBAR_MAX_WIDTH,
+} from "@/lib/sidebar-width";
+import { SidebarResizeHandle } from "./sidebar-resize-handle";
 
-const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 import { usePersistedStore, useTransientStore } from "@/store";
@@ -76,18 +81,26 @@ function SidebarProvider({
   className,
   style,
   children,
+  widthStorageKey,
   ...props
-}: React.ComponentProps<"div">) {
-  // The sidebar toggle shortcut (⌘/Ctrl+B) is handled globally in the
+}: React.ComponentProps<"div"> & { widthStorageKey?: string }) {
+  const [preferredWidth] = React.useState(() =>
+    readSidebarWidth(widthStorageKey),
+  );
+  // The sidebar toggle shortcut (⌘/Ctrl+/) is handled globally in the
   // command palette's single keybinding listener.
 
   return (
     <div
       data-slot="sidebar-wrapper"
+      data-sidebar-width-key={widthStorageKey}
       style={
         {
-          "--sidebar-width": SIDEBAR_WIDTH,
+          "--sidebar-preferred-width": `${preferredWidth}px`,
+          "--sidebar-width": `clamp(${SIDEBAR_MIN_WIDTH}px, var(--sidebar-preferred-width), min(${SIDEBAR_MAX_WIDTH}px, 40vw))`,
           "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
+          "--sidebar-duration": "250ms",
+          "--sidebar-ease": "cubic-bezier(0.22, 1, 0.36, 1)",
           ...style,
         } as React.CSSProperties
       }
@@ -112,10 +125,11 @@ function Sidebar({
   ...props
 }: React.ComponentProps<"div"> & {
   side?: "left" | "right";
-  variant?: "sidebar" | "floating" | "inset" | "canvas";
+  variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const panelId = React.useId();
 
   if (collapsible === "none") {
     return (
@@ -160,21 +174,19 @@ function Sidebar({
 
   return (
     <div
-      className="group peer hidden text-sidebar-foreground md:block"
+      className="group peer hidden shrink-0 text-sidebar-foreground md:block"
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
-      aria-hidden={variant === "canvas"}
-      inert={variant === "canvas"}
     >
       {/* This is what handles the sidebar gap on desktop */}
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative bg-transparent transition-[width] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-          variant === "canvas" ? "w-0" : "w-(--sidebar-width)",
+          "relative bg-transparent transition-[width] duration-(--sidebar-duration) ease-(--sidebar-ease) group-data-[sidebar-resizing]/sidebar-wrapper:transition-none motion-reduce:transition-none",
+          "w-(--sidebar-width)",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -183,13 +195,13 @@ function Sidebar({
         )}
       />
       <div
+        id={props.id ?? panelId}
         data-slot="sidebar-container"
         data-side={side}
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width,opacity,transform] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:-left-(--sidebar-width) data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:-right-(--sidebar-width) motion-reduce:transition-none md:flex",
-          variant === "canvas"
-            ? "pointer-events-none -translate-x-2 opacity-0"
-            : "translate-x-0 opacity-100",
+          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[width,opacity,transform,translate] duration-(--sidebar-duration) ease-(--sidebar-ease) data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:-translate-x-full data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:translate-x-full motion-reduce:transition-none md:flex",
+          "translate-x-0 opacity-100",
+          "group-data-[sidebar-resizing]/sidebar-wrapper:transition-none",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
@@ -205,6 +217,9 @@ function Sidebar({
         >
           {children}
         </div>
+        {state === "expanded" ? (
+          <SidebarResizeHandle side={side} controls={props.id ?? panelId} />
+        ) : null}
       </div>
     </div>
   );
@@ -245,7 +260,7 @@ function SidebarTrigger({
             {getPlatformModifier()}
           </Kbd>
           <span>+</span>
-          <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">B</Kbd>
+          <Kbd className="h-4 min-w-4 px-0.5 text-[10px]">/</Kbd>
         </KbdGroup>
       </TooltipContent>
     </Tooltip>
@@ -264,7 +279,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       onClick={toggleSidebar}
       title="Toggle Sidebar"
       className={cn(
-        "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:inset-s-1/2 after:w-[2px] sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
+        "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 transition-[translate,background-color] ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:inset-s-1/2 after:w-[2px] sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
         "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
         "hover:group-data-[collapsible=offcanvas]:bg-sidebar group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",

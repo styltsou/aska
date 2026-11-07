@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import "./nav-projects.css";
 import {
   SidebarGroup,
@@ -21,34 +22,36 @@ interface NavProjectsProps {
 }
 
 export function NavProjects({ collections, isLoading }: NavProjectsProps) {
-  if (isLoading) {
-    return (
-      <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-        <SidebarGroupLabel>Collections</SidebarGroupLabel>
-        <SidebarMenu className="gap-1">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <SidebarMenuItem key={i}>
-              <div className="flex h-8 items-center gap-2 px-2">
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="h-3 w-6" />
-              </div>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroup>
-    );
-  }
-
-  if (collections.length === 0) return null;
+  if (!isLoading && collections.length === 0) return null;
 
   return (
-    <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+    <SidebarGroup className="min-h-0 flex-1 group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Collections</SidebarGroupLabel>
-      <SidebarMenu className="gap-1">
-        {collections.map((item) => (
-          <CollectionItem key={item.name} item={item} />
-        ))}
-      </SidebarMenu>
+      <ScrollArea
+        className="min-h-0 flex-1 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-6 after:bg-linear-to-t after:from-sidebar after:to-transparent after:opacity-0 data-[overflow-y-end]:after:opacity-100"
+        viewportClassName="overscroll-contain"
+        contentClassName="pr-2"
+        verticalScrollbarClassName="w-2 p-0 opacity-100"
+        verticalThumbClassName="w-0.5 bg-sidebar-foreground/20 hover:bg-sidebar-foreground/35"
+        horizontalScrollbarClassName="hidden"
+        role="region"
+        aria-label="Collections"
+      >
+        <SidebarMenu className="gap-1">
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <SidebarMenuItem key={i}>
+                  <div className="flex h-8 items-center gap-2 px-2">
+                    <Skeleton className="h-4 flex-1" />
+                    <Skeleton className="h-3 w-6" />
+                  </div>
+                </SidebarMenuItem>
+              ))
+            : collections.map((item) => (
+                <CollectionItem key={item.name} item={item} />
+              ))}
+        </SidebarMenu>
+      </ScrollArea>
     </SidebarGroup>
   );
 }

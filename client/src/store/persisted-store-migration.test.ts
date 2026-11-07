@@ -7,6 +7,7 @@ describe("persisted app store migration", () => {
       migratePersistedAppStore(
         {
           workspaceBoardActionRails: { studio: false, other: true },
+          canvasFloatingSidebar: true,
           open: false,
         },
         { "studio:references": "grid" },

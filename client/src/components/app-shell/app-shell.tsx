@@ -13,20 +13,24 @@ import { PexelsBrowserPanel } from "@/components/board/pexels-browser-panel";
 import { pruneExpiredUploadImagesDrafts } from "@/lib/upload-images-draft";
 import { cn } from "@/lib/utils";
 import { getSidebarCollectionLocation } from "./sidebar-collection-navigation";
-import {
-  getCollectionViewScope,
-  getPexelsBrowserScope,
-  usePersistedStore,
-  useSessionStore,
-} from "@/store";
+import { getPexelsBrowserScope, useSessionStore } from "@/store";
 import { WorkspacePeekProvider } from "./workspace-peek";
 import { WorkspaceAssetViewProvider } from "./workspace-asset-view";
 import { workspaceSearchQueryOptions } from "@/api/workspace-search";
 import { useRecentWorkspaceAssetIds } from "@/lib/workspace-recent-assets";
 import { useCommittedPathname } from "./use-committed-pathname";
+import { useRouterState } from "@tanstack/react-router";
+import type { AuthState } from "@/lib/auth-flow";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const sidebarUserId = useRouterState({
+    select: (state) =>
+      (
+        state.matches.find((match) => match.routeId === "/$workspaceSlug")
+          ?.context as AuthState | undefined
+      )?.session?.user.id,
+  });
   const pathname = useCommittedPathname();
   const pathnameSegments = pathname.split("/").filter(Boolean);
   const isBoardView =
@@ -36,20 +40,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isScrollablePage = isWorkspaceOverview || isInbox;
   const { workspaceSlug, collectionSlug, folderPath } =
     getSidebarCollectionLocation(pathname);
-  const collectionViewScope = getCollectionViewScope(
-    workspaceSlug,
-    collectionSlug ?? "",
-  );
-  const boardView = usePersistedStore(
-    (state) => state.collectionViews[collectionViewScope] ?? "canvas",
-  );
-  const floatingSidebarEnabled = usePersistedStore(
-    (state) => state.canvasFloatingSidebar,
-  );
   const recentAssetIds = useRecentWorkspaceAssetIds(workspaceSlug);
 
-  const floatingCanvasSidebar =
-    isBoardView && boardView === "canvas" && floatingSidebarEnabled;
   const pexelsBrowserOpen = useSessionStore((state) =>
     collectionSlug
       ? (state.pexelsBrowserByScope[
@@ -74,14 +66,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <WorkspaceAssetViewProvider workspaceSlug={workspaceSlug}>
         <DragDropProvider>
           <SidebarProvider
+            key={sidebarUserId}
+            widthStorageKey={
+              sidebarUserId ? `aska:sidebar-width:${sidebarUserId}` : undefined
+            }
             data-board-view={isBoardView ? "" : undefined}
             data-workspace-overview={isWorkspaceOverview ? "" : undefined}
-            data-canvas-sidebar={floatingCanvasSidebar ? "floating" : undefined}
             className={
               isWorkspaceOverview ? "h-svh overflow-hidden" : undefined
             }
           >
-            <AppSidebar compact={floatingCanvasSidebar} />
+            <AppSidebar />
             <GlobalScratchpad />
             <SettingsDialog />
             <CommandPalette />

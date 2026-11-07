@@ -3,7 +3,11 @@ export function migratePersistedAppStore(
   legacyViews?: unknown,
 ): Record<string, unknown> {
   const persistedState = isRecord(state) ? state : {};
-  const { workspaceBoardActionRails, ...remainingState } = persistedState;
+  const {
+    workspaceBoardActionRails,
+    canvasFloatingSidebar: _canvasFloatingSidebar,
+    ...remainingState
+  } = persistedState;
 
   return {
     ...remainingState,
