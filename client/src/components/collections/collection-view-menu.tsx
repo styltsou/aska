@@ -110,6 +110,7 @@ export function CollectionViewMenu({
               variant="ghost"
               size="sm"
               aria-label="View options"
+              className="hover:data-popup-open:bg-secondary dark:hover:data-popup-open:bg-secondary"
             />
           }
         >
