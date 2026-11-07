@@ -310,12 +310,12 @@ export function NoteTableControls({ editor }: { editor: Editor }) {
           className="block space-y-1 text-center transition-none"
         >
           <div>
-            <span className="font-semibold text-foreground">Click</span>
-            <span className="text-muted-foreground"> to add {label}</span>
+            <span className="font-semibold">Click</span>
+            <span className="text-background/75"> to add {label}</span>
           </div>
           <div>
-            <span className="font-semibold text-foreground">Drag</span>
-            <span className="text-muted-foreground">
+            <span className="font-semibold">Drag</span>
+            <span className="text-background/75">
               {" "}
               to add or remove {label}s
             </span>

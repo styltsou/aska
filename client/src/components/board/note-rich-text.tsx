@@ -2949,12 +2949,12 @@ export const NoteRichText = forwardRef<
           />
           <TooltipContent className="block space-y-1 text-center">
             <div>
-              <span className="font-semibold text-foreground">Click</span>
-              <span className="text-muted-foreground"> to add below</span>
+              <span className="font-semibold">Click</span>
+              <span className="text-background/75"> to add below</span>
             </div>
             <div>
-              <span className="font-semibold text-foreground">Alt-Click</span>
-              <span className="text-muted-foreground"> to add above</span>
+              <span className="font-semibold">Alt-Click</span>
+              <span className="text-background/75"> to add above</span>
             </div>
           </TooltipContent>
         </Tooltip>,
@@ -2963,7 +2963,6 @@ export const NoteRichText = forwardRef<
       {createPortal(
         <Tooltip>
           <TooltipTrigger
-            delay={0}
             render={
               <button
                 type="button"
@@ -2992,8 +2991,8 @@ export const NoteRichText = forwardRef<
             }
           />
           <TooltipContent className="transition-none">
-            <span className="font-semibold text-foreground">Drag</span>
-            <span className="text-muted-foreground"> to move</span>
+            <span className="font-semibold">Drag</span>
+            <span className="text-background/75"> to move</span>
           </TooltipContent>
         </Tooltip>,
         blockControls.dragButtonMount,
