@@ -129,10 +129,12 @@ function initialStops(color?: ColorAsset): GradientStop[] {
   }));
 }
 
+function isValidHexColor(color: string) {
+  return /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(color);
+}
+
 function safeColorInput(color: string) {
-  return /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(color)
-    ? color
-    : "#000000";
+  return isValidHexColor(color) ? color : "#000000";
 }
 
 export function ColorEditorDialog({
@@ -167,6 +169,8 @@ export function ColorEditorDialog({
   const updateColor = useUpdateColor(workspaceSlug);
   const [internalOpen, setInternalOpen] = useState(false);
   const [draftHex, setDraftHex] = useState(color?.hex ?? DEFAULT_HEX);
+  const [hexInput, setHexInput] = useState(color?.hex ?? DEFAULT_HEX);
+  const hexInputFocusedRef = useRef(false);
   const [draftTitle, setDraftTitle] = useState(color?.title ?? "");
   const [mode, setMode] = useState<EditorMode>(
     color?.gradient ? "gradient" : "solid",
@@ -285,6 +289,7 @@ export function ColorEditorDialog({
 
     const stops = initialStops(color);
     setDraftHex(color.hex ?? DEFAULT_HEX);
+    setHexInput(color.hex ?? DEFAULT_HEX);
     setDraftTitle(color.title ?? "");
     setMode(color.gradient ? "gradient" : "solid");
     setGradientStops(stops);
@@ -315,6 +320,12 @@ export function ColorEditorDialog({
     },
     [activeStopId],
   );
+
+  const updateSolidPickerColor = useCallback((value: string) => {
+    if (hexInputFocusedRef.current) return;
+    setDraftHex(value);
+    setHexInput(value);
+  }, []);
 
   function positionFromPointer(clientX: number) {
     const rect = trackRef.current?.getBoundingClientRect();
@@ -502,20 +513,15 @@ export function ColorEditorDialog({
                           setGradientType(value as GradientType)
                         }
                         variant="segment"
-                        className="text-sm"
+                        size="sm"
+                        className="-ml-0.5 shrink-0"
                         transition={{ duration: 0.1, ease: [0.16, 1, 0.3, 1] }}
                       >
                         <TabsList aria-label="Gradient type">
-                          <TabsTrigger
-                            value="linear"
-                            className="px-2.5 py-1 capitalize"
-                          >
+                          <TabsTrigger value="linear" className="capitalize">
                             Linear
                           </TabsTrigger>
-                          <TabsTrigger
-                            value="radial"
-                            className="px-2.5 py-1 capitalize"
-                          >
+                          <TabsTrigger value="radial" className="capitalize">
                             Radial
                           </TabsTrigger>
                         </TabsList>
@@ -641,13 +647,14 @@ export function ColorEditorDialog({
                           <button
                             key={preset.name}
                             type="button"
-                            className="min-h-0 w-full rounded-md border border-border transition-transform duration-75 hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.98]"
+                            className="min-h-0 w-full overflow-hidden rounded-md bg-no-repeat ring-1 ring-border transition-transform duration-75 ring-inset hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.98]"
                             style={{
-                              background: gradientToCss(
+                              backgroundImage: gradientToCss(
                                 preset.stops,
                                 "linear",
                                 90,
                               ),
+                              backgroundSize: "100% 100%",
                             }}
                             onClick={() => applyPreset(preset)}
                             aria-label={`Use ${preset.name} gradient`}
@@ -767,6 +774,7 @@ export function ColorEditorDialog({
                               <PopoverContent
                                 side="left"
                                 align="start"
+                                positionerClassName="z-[110]"
                                 className="w-72"
                               >
                                 <SimpleColorPicker
@@ -839,7 +847,7 @@ export function ColorEditorDialog({
                 <SimpleColorPicker
                   initialHex={draftHex}
                   onPick={() => undefined}
-                  onChange={setDraftHex}
+                  onChange={updateSolidPickerColor}
                   showAction={false}
                   disabled={isPending}
                   compact
@@ -884,9 +892,20 @@ export function ColorEditorDialog({
                   </div>
                   <Input
                     className="w-full"
-                    value={draftHex}
+                    value={hexInput}
                     disabled={isPending}
-                    onChange={(event) => setDraftHex(event.target.value)}
+                    onFocus={() => {
+                      hexInputFocusedRef.current = true;
+                    }}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setHexInput(value);
+                      if (isValidHexColor(value)) setDraftHex(value);
+                    }}
+                    onBlur={() => {
+                      hexInputFocusedRef.current = false;
+                      if (!isValidHexColor(hexInput)) setHexInput(draftHex);
+                    }}
                     aria-label="Solid hex color"
                   />
                 </div>

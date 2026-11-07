@@ -18,6 +18,7 @@ function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
 
 function PopoverContent({
   className,
+  positionerClassName,
   align = "center",
   alignOffset = 0,
   anchor,
@@ -29,7 +30,7 @@ function PopoverContent({
   Pick<
     PopoverPrimitive.Positioner.Props,
     "align" | "alignOffset" | "anchor" | "side" | "sideOffset"
-  > & { surface?: FloatingPanelSurface }) {
+  > & { surface?: FloatingPanelSurface; positionerClassName?: string }) {
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
@@ -38,7 +39,7 @@ function PopoverContent({
         anchor={anchor}
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-[90]"
+        className={cn("isolate z-[90]", positionerClassName)}
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"
