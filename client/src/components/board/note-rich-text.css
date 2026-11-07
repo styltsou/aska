@@ -918,24 +918,35 @@
   user-select: none;
 }
 
-/* In-editor AI: blocks the AI is writing stay tinted until they are kept or
-   discarded. The empty line the prompt opened on is hidden behind the prompt
-   until text arrives. */
-.note-rich-text-content .note-ai-pending,
-.note-rich-text-content :is(h1, h2, h3, h4, h5, h6).note-ai-pending {
-  /* Tint the text rather than painting per-block boxes, so a multi-block
-     result reads as one continuous draft. */
-  --note-ai-tint: oklch(0.7 0.13 255);
-  color: color-mix(in oklch, currentColor 62%, var(--note-ai-tint));
-  transition: color 150ms ease-out;
+/* In-editor AI: a pending draft renders exactly as it will once kept, marked
+   by one rail in the gutter that runs from its first block down to the AI
+   controls. Marking the region instead of restyling its content works the
+   same for any block: tables, code blocks, images. The empty line the prompt
+   opened on is hidden behind the prompt until text arrives. */
+.note-rich-text-content .note-ai-rail {
+  position: absolute;
+  bottom: 0;
+  left: -0.875rem;
+  width: 2px;
+  border-radius: 9999px;
+  background: oklch(0.68 0.14 255);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
 }
 
-.note-rich-text-content .note-ai-pending :is(li, h1, h2, h3, h4, strong, em) {
-  color: inherit;
+.note-rich-text-content .note-ai-rail[data-visible="true"] {
+  opacity: 1;
 }
 
-.note-rich-text-content .note-ai-pending li::marker {
-  color: color-mix(in oklch, currentColor 70%, transparent);
+.note-rich-text-content .note-ai-rail[data-visible="true"][data-streaming] {
+  animation: note-ai-rail-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes note-ai-rail-pulse {
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .note-rich-text-content
@@ -952,8 +963,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .note-rich-text-content .note-ai-pending {
+  .note-rich-text-content .note-ai-rail {
     transition: none;
+    animation: none !important;
   }
 }
 

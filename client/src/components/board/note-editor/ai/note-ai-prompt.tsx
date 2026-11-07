@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/core";
-import { ArrowUp, Check, RotateCcw } from "lucide-react";
+import { ArrowUp, RotateCcw } from "lucide-react";
 import { motion } from "motion/react";
 
 import {
   acceptNoteAiSession,
   discardNoteAiSession,
+  getNoteAiSession,
   noteMarkdownAtAiCursor,
   NOTE_AI_CURSOR_MARKER,
   setNoteAiContent,
@@ -76,6 +77,8 @@ export function NoteAiPrompt({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLSpanElement>(null);
+  usePendingRail(editor, containerRef, railRef);
   const outputRef = useRef(restored?.draft ?? "");
   const frameRef = useRef<number | null>(null);
   const lastRequestRef = useRef<AiRequest | null>(restored?.request ?? null);
@@ -278,13 +281,12 @@ export function NoteAiPrompt({
     finish();
   };
 
-  // Escape steps back one level: stop writing, or close (a
-  // draft is kept, an empty prompt just closes). Handled in the window capture
-  // phase so the enclosing note drawer never reads it as "close the note".
+  // Escape steps back one level: stop writing, or close and drop the draft
+  // (Enter is the key that keeps it). Handled in the window capture phase so
+  // the enclosing note drawer never reads it as "close the note".
   const escapeRef = useRef(() => {});
   escapeRef.current = () => {
     if (phase === "streaming") stop();
-    else if (phase === "review") keep();
     else discard();
   };
   useEffect(() => {
@@ -312,7 +314,7 @@ export function NoteAiPrompt({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
-      className="note-ai-prompt my-1.5 font-sans text-sm"
+      className="note-ai-prompt relative my-1.5 font-sans text-sm"
       onBlur={(event) => {
         const next = event.relatedTarget;
         if (
@@ -348,6 +350,13 @@ export function NoteAiPrompt({
         }
       }}
     >
+      <span
+        ref={railRef}
+        aria-hidden
+        data-visible="false"
+        data-streaming={phase === "streaming" ? "true" : undefined}
+        className="note-ai-rail"
+      />
       {phase === "streaming" ? (
         <div
           ref={statusRef}
@@ -396,13 +405,13 @@ export function NoteAiPrompt({
           </Tooltip>
           <Button
             type="button"
-            variant="ghost"
+            variant="secondary"
             size="xs"
-            className="text-muted-foreground hover:text-foreground"
             onMouseDown={keepFocus}
             onClick={() => discard()}
           >
             Discard
+            <Kbd className={actionKbd}>Esc</Kbd>
           </Button>
           <Button
             type="button"
@@ -411,14 +420,18 @@ export function NoteAiPrompt({
             onMouseDown={keepFocus}
             onClick={() => keep()}
           >
-            <Check data-icon="inline-start" />
             Keep
-            {/* Enter keeps only while the follow-up is empty. */}
-            {prompt.trim() ? null : (
-              <Kbd className="h-3.5 min-w-3.5 bg-transparent px-0 text-[10px] text-current opacity-60">
-                ↵
-              </Kbd>
-            )}
+            {/* Enter sends a typed follow-up instead; fade rather than hide
+                the hint so the row doesn't shift. */}
+            <Kbd
+              className={cn(
+                actionKbd,
+                "transition-opacity duration-100",
+                prompt.trim() && "opacity-0",
+              )}
+            >
+              ↵
+            </Kbd>
           </Button>
         </div>
       ) : null}
@@ -447,14 +460,6 @@ export function NoteAiPrompt({
                 // An empty Enter in review accepts the draft.
                 if (prompt.trim()) submit();
                 else if (phase === "review") keep();
-              } else if (
-                phase === "review" &&
-                event.key === "Backspace" &&
-                (event.metaKey || event.ctrlKey) &&
-                !prompt
-              ) {
-                event.preventDefault();
-                discard();
               }
             }}
             className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
@@ -477,6 +482,52 @@ export function NoteAiPrompt({
       ) : null}
     </motion.div>
   );
+}
+
+const actionKbd =
+  "h-3.5 min-w-3.5 bg-transparent px-0 text-[10px] text-current opacity-60";
+
+/**
+ * Keeps the rail beside the pending draft spanning from its first block down
+ * to the bottom of these controls. It's measured rather than drawn on each
+ * block, so it stays one continuous line and isn't clipped by blocks that
+ * hide their overflow (code blocks, tables).
+ */
+function usePendingRail(
+  editor: Editor,
+  containerRef: React.RefObject<HTMLElement | null>,
+  railRef: React.RefObject<HTMLElement | null>,
+) {
+  useLayoutEffect(() => {
+    let frame: number | null = null;
+    const measure = () => {
+      frame = null;
+      const container = containerRef.current;
+      const rail = railRef.current;
+      if (!container || !rail) return;
+      const { range } = getNoteAiSession(editor.state);
+      const first = range ? editor.view.nodeDOM(range.from) : null;
+      const top =
+        first instanceof HTMLElement && first.offsetHeight > 0
+          ? first.getBoundingClientRect().top -
+            container.getBoundingClientRect().top
+          : null;
+      rail.style.top = top === null ? "0px" : `${Math.min(top, 0)}px`;
+      rail.dataset.visible = top === null ? "false" : "true";
+    };
+    const schedule = () => {
+      frame ??= requestAnimationFrame(measure);
+    };
+    measure();
+    editor.on("transaction", schedule);
+    const observer = new ResizeObserver(schedule);
+    observer.observe(editor.view.dom);
+    return () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      editor.off("transaction", schedule);
+      observer.disconnect();
+    };
+  }, [editor, containerRef, railRef]);
 }
 
 function isInViewport(element: Element) {
