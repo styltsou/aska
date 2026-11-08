@@ -34,12 +34,35 @@ type NoteAiSessionState = {
   endsDoc: boolean;
   /** Where the most recently arrived content starts, to fade it in. */
   fresh: number | null;
-  /** What a follow-up changed compared with the previous draft. */
+  /** What the draft changes compared with `original`. */
   diff: NoteAiDraftDiff | null;
+  /**
+   * The content the session replaced: null for an empty line (writing new
+   * content), or the selected blocks being rewritten.
+   */
+  original: Fragment | null;
+  /**
+   * For a rewrite, the selected blocks as Markdown, with the exact selection
+   * wrapped in markers when it doesn't cover whole blocks.
+   */
+  passage: string | null;
+  /**
+   * For a rewrite, the selected text, kept visible while the instruction is
+   * written (focus has moved to the prompt, so the editor selection doesn't
+   * show). Cleared once the AI starts writing.
+   */
+  target: NoteAiRange | null;
 };
 
 type NoteAiSessionMeta =
-  | { type: "start"; range: NoteAiRange; widget: HTMLElement }
+  | {
+      type: "start";
+      range: NoteAiRange;
+      widget: HTMLElement;
+      original?: Fragment;
+      passage?: string;
+      target?: NoteAiRange;
+    }
   | { type: "range"; range: NoteAiRange; fresh?: number | null }
   | { type: "streaming"; streaming: boolean }
   | { type: "diff"; diff: NoteAiDraftDiff | null }
@@ -52,6 +75,9 @@ const EMPTY_STATE: NoteAiSessionState = {
   endsDoc: false,
   fresh: null,
   diff: null,
+  original: null,
+  passage: null,
+  target: null,
 };
 
 export const noteAiSessionKey = new PluginKey<NoteAiSessionState>(
@@ -59,6 +85,8 @@ export const noteAiSessionKey = new PluginKey<NoteAiSessionState>(
 );
 
 export const NOTE_AI_CURSOR_MARKER = "⟦cursor⟧";
+export const NOTE_AI_SELECTION_START = "⟦selection⟧";
+export const NOTE_AI_SELECTION_END = "⟦/selection⟧";
 
 export function getNoteAiSession(state: EditorState) {
   return noteAiSessionKey.getState(state) ?? EMPTY_STATE;
@@ -121,6 +149,9 @@ export function createNoteAiSessionPlugin() {
             endsDoc: meta.range.to === tr.doc.content.size,
             fresh: null,
             diff: null,
+            original: meta.original ?? null,
+            passage: meta.passage ?? null,
+            target: meta.target ?? null,
           };
         }
         if (meta?.type === "end") return EMPTY_STATE;
@@ -134,6 +165,7 @@ export function createNoteAiSessionPlugin() {
             range: meta.range,
             fresh: meta.fresh === undefined ? value.fresh : meta.fresh,
             diff: null,
+            target: null,
           };
         }
         if (meta?.type === "streaming") {
@@ -157,6 +189,10 @@ export function createNoteAiSessionPlugin() {
           range: { from, to },
           fresh: value.fresh === null ? null : tr.mapping.map(value.fresh),
           diff: value.diff && mapDiff(value.diff, tr),
+          target: value.target && {
+            from: tr.mapping.map(value.target.from),
+            to: tr.mapping.map(value.target.to),
+          },
         };
       },
     },
@@ -186,7 +222,7 @@ export function createNoteAiSessionPlugin() {
         );
       },
       decorations(state) {
-        const { range, streaming, widget, fresh, diff } =
+        const { range, streaming, widget, fresh, diff, target } =
           getNoteAiSession(state);
         if (!range || !widget) return null;
         // The newest chunk fades in: whole blocks it added (so table and
@@ -212,6 +248,13 @@ export function createNoteAiSessionPlugin() {
           );
         }
         if (diff) decorations.push(...diffDecorations(diff));
+        if (target && target.from < target.to) {
+          decorations.push(
+            Decoration.inline(target.from, target.to, {
+              class: "note-ai-target",
+            }),
+          );
+        }
         decorations.push(
           Decoration.widget(range.to, widget, {
             key: "note-ai-prompt",
@@ -275,22 +318,17 @@ function diffDecorations(diff: NoteAiDraftDiff) {
 }
 
 /**
- * Shows what the current draft changed compared with `previousMarkdown`, or
- * clears the comparison when it is null.
+ * For a rewrite, shows what the draft changes in the original text: added
+ * text highlighted, removed text struck through in place. Clears it when
+ * `show` is false or there is nothing to compare.
  */
-export function setNoteAiDiffBase(
-  editor: Editor,
-  previousMarkdown: string | null,
-) {
-  const { range } = getNoteAiSession(editor.state);
+export function showNoteAiChanges(editor: Editor, show = true) {
+  const { range, original } = getNoteAiSession(editor.state);
   if (!range) return;
-  const previous =
-    previousMarkdown === null
-      ? null
-      : markdownToFragment(editor, previousMarkdown);
-  const diff = previous
-    ? diffNoteAiDraft(previous, editor.state.doc, range.from, range.to)
-    : null;
+  const diff =
+    show && original
+      ? diffNoteAiDraft(original, editor.state.doc, range.from, range.to)
+      : null;
   editor.view.dispatch(
     withMeta(editor.state.tr, {
       type: "diff",
@@ -301,6 +339,54 @@ export function setNoteAiDiffBase(
           : null,
     }).setMeta("addToHistory", false),
   );
+}
+
+/**
+ * Opens a rewrite session over the top-level blocks the selection touches.
+ * The model receives those blocks with the exact selection marked, and the
+ * result replaces them; discarding restores them.
+ */
+export function startNoteAiRewrite(editor: Editor, widget: HTMLElement) {
+  const { state } = editor;
+  const { selection, doc } = state;
+  if (selection.empty || !editor.markdown) return false;
+  const $from = doc.resolve(selection.from);
+  const $to = doc.resolve(selection.to);
+  const from = $from.depth ? $from.before(1) : selection.from;
+  const to = $to.depth ? $to.after(1) : selection.to;
+  if (from >= to) return false;
+  const original = doc.slice(from, to).content;
+
+  // Mark the selection when it covers only part of these blocks, so the
+  // model changes just that part.
+  const whole =
+    doc.textBetween(from, to, " ").trim() ===
+    doc.textBetween(selection.from, selection.to, " ").trim();
+  let passageDoc = doc;
+  let passageTo = to;
+  if (!whole && selection instanceof TextSelection) {
+    const marked = state.tr
+      .insertText(NOTE_AI_SELECTION_END, selection.to)
+      .insertText(NOTE_AI_SELECTION_START, selection.from);
+    passageDoc = marked.doc;
+    passageTo = marked.mapping.map(to);
+  }
+  const passage = editor.markdown.serialize({
+    type: "doc",
+    content: passageDoc.slice(from, passageTo).content.toJSON(),
+  });
+
+  editor.view.dispatch(
+    withMeta(state.tr, {
+      type: "start",
+      range: { from, to },
+      widget,
+      original,
+      passage,
+      target: { from: selection.from, to: selection.to },
+    }).setMeta("addToHistory", false),
+  );
+  return true;
 }
 
 /** Opens a session on the empty top-level paragraph holding the cursor. */
@@ -337,7 +423,14 @@ function markdownToFragment(editor: Editor, markdown: string) {
 export function setNoteAiContent(editor: Editor, markdown: string) {
   const { range } = getNoteAiSession(editor.state);
   if (!range) return false;
-  const fragment = markdownToFragment(editor, markdown);
+  // The model is told never to echo markers; drop any that slip through.
+  const fragment = markdownToFragment(
+    editor,
+    markdown
+      .replaceAll(NOTE_AI_SELECTION_START, "")
+      .replaceAll(NOTE_AI_SELECTION_END, "")
+      .replaceAll(NOTE_AI_CURSOR_MARKER, ""),
+  );
   if (!fragment) return false;
   // Where the new content first differs from what's shown: the start of the
   // chunk that just arrived (or of earlier text the new chunk reformatted).
@@ -366,9 +459,18 @@ export function setNoteAiStreaming(editor: Editor, streaming: boolean) {
   );
 }
 
-function restoreEmptyParagraph(editor: Editor, range: NoteAiRange) {
+function originalContent(editor: Editor, original: Fragment | null) {
+  return original ?? Fragment.from(editor.schema.nodes.paragraph.create());
+}
+
+/** Puts back what the session replaced, outside history. */
+function restoreOriginal(
+  editor: Editor,
+  range: NoteAiRange,
+  original: Fragment | null,
+) {
   return editor.state.tr
-    .replaceWith(range.from, range.to, editor.schema.nodes.paragraph.create())
+    .replaceWith(range.from, range.to, originalContent(editor, original))
     .setMeta("addToHistory", false);
 }
 
@@ -382,7 +484,7 @@ export function acceptNoteAiSession(
   editor: Editor,
   { select = true }: EndOptions = {},
 ) {
-  const { range } = getNoteAiSession(editor.state);
+  const { range, original } = getNoteAiSession(editor.state);
   if (!range) return;
   const content = editor.state.doc.slice(range.from, range.to).content;
   const isEmpty =
@@ -394,13 +496,14 @@ export function acceptNoteAiSession(
     return;
   }
 
-  // Swap back to the original empty line outside history, then re-insert the
-  // final content in a single history step.
-  editor.view.dispatch(restoreEmptyParagraph(editor, range));
+  // Swap back to the original (an empty line, or the rewritten text) outside
+  // history, then put the final content in a single history step, so one
+  // undo returns to the original.
+  editor.view.dispatch(restoreOriginal(editor, range, original));
   // Never merge with whatever the user edited just before opening the prompt.
   const tr = closeHistory(editor.state.tr).replaceWith(
     range.from,
-    range.from + 2,
+    range.from + originalContent(editor, original).size,
     content,
   );
   if (select) {
@@ -416,12 +519,20 @@ export function discardNoteAiSession(
   editor: Editor,
   { select = true }: EndOptions = {},
 ) {
-  const { range, endsDoc } = getNoteAiSession(editor.state);
+  const { range, endsDoc, original } = getNoteAiSession(editor.state);
   if (!range) return;
-  const tr = restoreEmptyParagraph(editor, range);
+  const tr = restoreOriginal(editor, range, original);
+  const restoredEnd = range.from + originalContent(editor, original).size;
+  if (original) {
+    // A rewrite: leave the cursor at the end of the restored text.
+    if (select) {
+      tr.setSelection(TextSelection.near(tr.doc.resolve(restoredEnd), -1));
+    }
+    editor.view.dispatch(withMeta(tr, { type: "end" }));
+    return;
+  }
   // A trailing-node plugin may have appended an empty line after AI output
   // that ended in a list or similar; it goes away with the output.
-  const restoredEnd = range.from + 2;
   if (endsDoc && restoredEnd < tr.doc.content.size) {
     const rest = tr.doc.slice(restoredEnd, tr.doc.content.size).content;
     let allEmpty = true;
@@ -456,15 +567,16 @@ export function noteMarkdownAtAiCursor(editor: Editor) {
 
 /**
  * The note as it would be saved: a pending draft is not part of the note
- * until it is kept, so it is swapped back for the empty line it opened on.
+ * until it is kept, so it is swapped back for what it replaced (the empty
+ * line it opened on, or the text being rewritten).
  */
 export function noteMarkdownWithoutAiDraft(editor: Editor) {
-  const { range } = getNoteAiSession(editor.state);
+  const { range, original } = getNoteAiSession(editor.state);
   if (!range || !editor.markdown) return editor.getMarkdown();
   const tr = editor.state.tr.replaceWith(
     range.from,
     range.to,
-    editor.schema.nodes.paragraph.create(),
+    originalContent(editor, original),
   );
   return editor.markdown.serialize(tr.doc.toJSON());
 }

@@ -38,6 +38,7 @@ import {
   PackagePlusIcon,
   PenLineIcon,
   QuoteIcon,
+  SparklesIcon,
   StrikethroughIcon,
   TableIcon,
   UnderlineIcon,
@@ -113,6 +114,7 @@ import {
   noteAiSessionBlockIndex,
   noteMarkdownWithoutAiDraft,
   selectionOverlapsNoteAiDraft,
+  startNoteAiRewrite,
   startNoteAiSession,
   startNoteAiSessionAtBlock,
 } from "@/components/board/note-editor/ai/note-ai-session";
@@ -1544,12 +1546,14 @@ function applyBlockStyle(editor: Editor, value: BlockStyleValue) {
 function InlineFormattingMenu({
   editor,
   onExtractSelection,
+  onAskAi,
   blockStyleMenuOpen,
   onBlockStyleMenuOpenChange,
   menuRef,
 }: {
   editor: Editor;
   onExtractSelection?: (content: string) => void;
+  onAskAi?: () => void;
   blockStyleMenuOpen: boolean;
   onBlockStyleMenuOpenChange: (open: boolean) => void;
   menuRef: React.RefObject<HTMLDivElement | null>;
@@ -1782,6 +1786,30 @@ function InlineFormattingMenu({
         }}
       >
         <NoteSelectionMenuSurface>
+          {onAskAi ? (
+            <div className={GLASS_ISLAND_CLASS}>
+              <ButtonGroup>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 rounded-md px-1.5 text-xs font-medium text-foreground hover:bg-foreground/5 hover:text-foreground"
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={onAskAi}
+                      >
+                        <SparklesIcon className="size-3.5" />
+                        Ask AI
+                      </Button>
+                    }
+                  />
+                  <TooltipContent>Edit the selection with AI</TooltipContent>
+                </Tooltip>
+              </ButtonGroup>
+            </div>
+          ) : null}
           <div className={GLASS_ISLAND_CLASS}>
             <ButtonGroup>
               <Tooltip>
@@ -2442,6 +2470,21 @@ export const NoteRichText = forwardRef<
   }, []);
   const persistAiDraftRef = useRef(persistAiDraft);
   persistAiDraftRef.current = persistAiDraft;
+  // Opens the AI on the current selection to rewrite it.
+  const startAiRewrite = useCallback((currentEditor: Editor) => {
+    if (isNoteAiSessionActive(currentEditor.state)) return false;
+    const widget = document.createElement("div");
+    widget.className = "note-ai-widget";
+    widget.contentEditable = "false";
+    if (!startNoteAiRewrite(currentEditor, widget)) return false;
+    aiSessionNoteIdRef.current = sourceNoteIdRef.current;
+    aiPendingDraftRef.current = null;
+    lastSessionSaveRef.current = null;
+    setAiSession({ widget });
+    return true;
+  }, []);
+  const startAiRewriteRef = useRef(startAiRewrite);
+  startAiRewriteRef.current = startAiRewrite;
   const initialMarkdownRef = useRef(markdown);
   onChangeRef.current = onChange;
   onSaveShortcutRef.current = onSaveShortcut;
@@ -2492,6 +2535,20 @@ export const NoteRichText = forwardRef<
       },
       handleKeyDown: (_view: unknown, event: KeyboardEvent) => {
         const currentEditor = editorInstanceRef.current;
+        // Ctrl/Cmd+J asks the AI to edit the selection.
+        if (
+          editableRef.current &&
+          currentEditor &&
+          (event.ctrlKey || event.metaKey) &&
+          !event.altKey &&
+          !event.shiftKey &&
+          event.key.toLowerCase() === "j" &&
+          !currentEditor.state.selection.empty
+        ) {
+          event.preventDefault();
+          startAiRewriteRef.current(currentEditor);
+          return true;
+        }
         if (
           editableRef.current &&
           !highlightModeRef.current &&
@@ -3144,6 +3201,7 @@ export const NoteRichText = forwardRef<
             <InlineFormattingMenu
               editor={editor}
               onExtractSelection={onExtractSelection}
+              onAskAi={() => startAiRewrite(editor)}
               blockStyleMenuOpen={blockStyleMenuOpen}
               onBlockStyleMenuOpenChange={handleBlockStyleOpenChange}
               menuRef={barRef}

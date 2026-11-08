@@ -11,6 +11,7 @@ import {
   NOTE_AI_CURSOR_MARKER,
   setNoteAiContent,
   setNoteAiStreaming,
+  showNoteAiChanges,
 } from "@/components/board/note-editor/ai/note-ai-session";
 import {
   streamNoteAi,
@@ -116,6 +117,10 @@ export function NoteAiPrompt({
   // against this same context.
   const noteRef = useRef<string | null>(null);
   noteRef.current ??= trimAroundCursor(noteMarkdownAtAiCursor(editor));
+  // Set when rewriting a selection: the passage, with the selection marked.
+  const passageRef = useRef<string | null | undefined>(undefined);
+  passageRef.current ??= getNoteAiSession(editor.state).passage;
+  const rewriting = Boolean(passageRef.current);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -196,7 +201,11 @@ export function NoteAiPrompt({
       setPhase(lastRequestRef.current?.draft ? "review" : "prompt");
     } else {
       setPhase("review");
-      if (lastRequestRef.current) {
+      // A rewrite shows what it changes in the original text. Rewrites
+      // aren't stored across refreshes: they belong to text that may change.
+      if (rewriting) {
+        showNoteAiChanges(editor);
+      } else if (lastRequestRef.current) {
         onDraft?.({
           draft: outputRef.current,
           request: lastRequestRef.current,
@@ -280,6 +289,7 @@ export function NoteAiPrompt({
       note: noteRef.current ?? "",
       ...(draft ? { draft } : {}),
       ...(earlierPrompts.length ? { earlierPrompts } : {}),
+      ...(passageRef.current ? { passage: passageRef.current } : {}),
     });
   };
 
@@ -458,12 +468,18 @@ export function NoteAiPrompt({
             ref={inputRef}
             value={prompt}
             aria-label={
-              phase === "review" ? "Ask AI to change the draft" : "Ask AI"
+              phase === "review"
+                ? "Ask AI to change the draft"
+                : rewriting
+                  ? "Ask AI to edit the selection"
+                  : "Ask AI"
             }
             placeholder={
               phase === "review"
                 ? "Ask a follow-up…"
-                : "Ask AI to write anything…"
+                : rewriting
+                  ? "Ask AI to edit the selection…"
+                  : "Ask AI to write anything…"
             }
             onChange={(event) => setPrompt(event.target.value)}
             onKeyDown={(event) => {

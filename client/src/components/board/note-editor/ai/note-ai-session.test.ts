@@ -16,6 +16,8 @@ import {
   noteMarkdownAtAiCursor,
   noteMarkdownWithoutAiDraft,
   setNoteAiContent,
+  showNoteAiChanges,
+  startNoteAiRewrite,
   startNoteAiSession,
   startNoteAiSessionAtBlock,
 } from "./note-ai-session";
@@ -213,5 +215,93 @@ describe("note AI session", () => {
       false,
     );
     expect(isNoteAiSessionActive(editor.state)).toBe(false);
+  });
+
+  describe("rewriting a selection", () => {
+    /**
+     * A note of "Intro", `paragraph` and "Outro"; selects `text` in it and
+     * opens a rewrite over it.
+     */
+    function rewrite(paragraph: string, text: string) {
+      const harness = createHarness(`Intro\n\n${paragraph}\n\nOutro`);
+      const { editor, dispatch } = harness;
+      let from = -1;
+      editor.state.doc.descendants((node, pos) => {
+        if (from < 0 && node.isText && node.text?.includes(text)) {
+          from = pos + node.text.indexOf(text);
+        }
+      });
+      dispatch(
+        editor.state.tr.setSelection(
+          TextSelection.create(editor.state.doc, from, from + text.length),
+        ),
+      );
+      harness.saves.length = 0;
+      expect(startNoteAiRewrite(editor, {} as HTMLElement)).toBe(true);
+      return harness;
+    }
+
+    it("marks the exact selection inside the blocks it touches", () => {
+      const { editor } = rewrite("Keep this. Fix this one.", "Fix this");
+      expect(getNoteAiSession(editor.state).passage?.trim()).toBe(
+        "Keep this. ⟦selection⟧Fix this⟦/selection⟧ one.",
+      );
+      expect(noteMarkdownAtAiCursor(editor)).toContain(NOTE_AI_CURSOR_MARKER);
+      expect(noteMarkdownAtAiCursor(editor)).not.toContain("Keep this.");
+    });
+
+    it("keeps the selected text marked until the AI writes", () => {
+      const { editor } = rewrite("Keep this. Fix this one.", "Fix this");
+      const { target } = getNoteAiSession(editor.state);
+      expect(editor.state.doc.textBetween(target!.from, target!.to)).toBe(
+        "Fix this",
+      );
+      setNoteAiContent(editor, "Keep this. Fixed one.");
+      expect(getNoteAiSession(editor.state).target).toBeNull();
+    });
+
+    it("sends whole blocks without markers", () => {
+      const { editor } = rewrite("All of it.", "All of it.");
+      expect(getNoteAiSession(editor.state).passage?.trim()).toBe("All of it.");
+    });
+
+    it("discards back to the original text", () => {
+      const { editor, saves } = rewrite("Old words here.", "Old words");
+      const before = editor.getMarkdown();
+      setNoteAiContent(editor, "New words here.");
+      expect(noteMarkdownWithoutAiDraft(editor)).toBe(before);
+      discardNoteAiSession(editor);
+      expect(isNoteAiSessionActive(editor.state)).toBe(false);
+      expect(editor.getMarkdown()).toBe(before);
+      expect(saves).toHaveLength(1);
+    });
+
+    it("keeps the rewrite as one step that undo reverts to the original", () => {
+      const { editor, dispatch, saves } = rewrite(
+        "Old words here.",
+        "Old words",
+      );
+      const before = editor.getMarkdown();
+      setNoteAiContent(editor, "New words here.");
+      acceptNoteAiSession(editor);
+      expect(editor.getMarkdown()).toContain("New words here.");
+      expect(editor.getMarkdown()).not.toContain("Old words");
+      expect(saves.at(-1)).toContain("New words here.");
+      undo(editor.state, dispatch);
+      expect(editor.getMarkdown()).toBe(before);
+    });
+
+    it("compares the draft with the original text", () => {
+      const { editor } = rewrite("Capture is fast.", "fast");
+      setNoteAiContent(editor, "Capture is quick.");
+      showNoteAiChanges(editor);
+      const { diff } = getNoteAiSession(editor.state);
+      expect(diff?.removed.map(({ text }) => text)).toEqual(["fast."]);
+      expect(
+        diff?.added.map(({ from, to }) =>
+          editor.state.doc.textBetween(from, to),
+        ),
+      ).toEqual(["quick."]);
+    });
   });
 });

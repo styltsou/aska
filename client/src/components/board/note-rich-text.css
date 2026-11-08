@@ -968,6 +968,15 @@
   outline-offset: 2px;
 }
 
+/* The text a rewrite will change, kept visible while the instruction is
+   written in the prompt (where focus is). */
+.note-rich-text-content .note-ai-target {
+  border-radius: 0.1875rem;
+  background: color-mix(in oklch, var(--foreground) 14%, transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 .note-rich-text-content .note-ai-removed-block {
   display: block;
   margin-top: 0.25em;

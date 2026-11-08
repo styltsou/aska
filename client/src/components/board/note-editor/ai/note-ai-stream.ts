@@ -7,6 +7,8 @@ export type NoteAiRequest = {
   draft?: string;
   /** Instructions that produced `draft`, oldest first. */
   earlierPrompts?: string[];
+  /** For a rewrite: the passage being rewritten, selection marked. */
+  passage?: string;
 };
 
 const streamApiUrl =
