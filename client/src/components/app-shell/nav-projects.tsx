@@ -30,7 +30,7 @@ export function NavProjects({ collections, isLoading }: NavProjectsProps) {
       <ScrollArea
         className="min-h-0 flex-1 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-6 after:bg-linear-to-t after:from-sidebar after:to-transparent after:opacity-0 data-[overflow-y-end]:after:opacity-100"
         viewportClassName="overscroll-contain"
-        contentClassName="pr-2"
+        contentClassName="pr-0"
         verticalScrollbarClassName="w-2 p-0 opacity-100"
         verticalThumbClassName="w-0.5 bg-sidebar-foreground/20 hover:bg-sidebar-foreground/35"
         horizontalScrollbarClassName="hidden"
