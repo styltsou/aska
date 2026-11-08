@@ -10,6 +10,11 @@ import {
 } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
+import {
+  diffNoteAiDraft,
+  type NoteAiDraftDiff,
+} from "@/components/board/note-editor/ai/note-ai-diff";
+
 /**
  * Tracks one in-editor AI session: a range of top-level blocks the AI owns
  * while it writes, plus the inline prompt widget rendered after that range.
@@ -29,12 +34,15 @@ type NoteAiSessionState = {
   endsDoc: boolean;
   /** Where the most recently arrived content starts, to fade it in. */
   fresh: number | null;
+  /** What a follow-up changed compared with the previous draft. */
+  diff: NoteAiDraftDiff | null;
 };
 
 type NoteAiSessionMeta =
   | { type: "start"; range: NoteAiRange; widget: HTMLElement }
   | { type: "range"; range: NoteAiRange; fresh?: number | null }
   | { type: "streaming"; streaming: boolean }
+  | { type: "diff"; diff: NoteAiDraftDiff | null }
   | { type: "end" };
 
 const EMPTY_STATE: NoteAiSessionState = {
@@ -43,6 +51,7 @@ const EMPTY_STATE: NoteAiSessionState = {
   widget: null,
   endsDoc: false,
   fresh: null,
+  diff: null,
 };
 
 export const noteAiSessionKey = new PluginKey<NoteAiSessionState>(
@@ -111,15 +120,20 @@ export function createNoteAiSessionPlugin() {
             widget: meta.widget,
             endsDoc: meta.range.to === tr.doc.content.size,
             fresh: null,
+            diff: null,
           };
         }
         if (meta?.type === "end") return EMPTY_STATE;
         if (!value.range) return value;
+        if (meta?.type === "diff") return { ...value, diff: meta.diff };
         if (meta?.type === "range") {
+          // New content invalidates the comparison; it is redone once the
+          // run finishes.
           return {
             ...value,
             range: meta.range,
             fresh: meta.fresh === undefined ? value.fresh : meta.fresh,
+            diff: null,
           };
         }
         if (meta?.type === "streaming") {
@@ -129,6 +143,7 @@ export function createNoteAiSessionPlugin() {
             ...value,
             streaming: meta.streaming,
             fresh: meta.streaming ? null : value.fresh,
+            diff: meta.streaming ? null : value.diff,
           };
         }
         if (!tr.docChanged) return value;
@@ -141,6 +156,7 @@ export function createNoteAiSessionPlugin() {
           ...value,
           range: { from, to },
           fresh: value.fresh === null ? null : tr.mapping.map(value.fresh),
+          diff: value.diff && mapDiff(value.diff, tr),
         };
       },
     },
@@ -170,7 +186,8 @@ export function createNoteAiSessionPlugin() {
         );
       },
       decorations(state) {
-        const { range, streaming, widget, fresh } = getNoteAiSession(state);
+        const { range, streaming, widget, fresh, diff } =
+          getNoteAiSession(state);
         if (!range || !widget) return null;
         // The newest chunk fades in: whole blocks it added (so table and
         // code block chrome fades too) and new text inside existing blocks.
@@ -194,6 +211,7 @@ export function createNoteAiSessionPlugin() {
             Decoration.inline(freshFrom, range.to, { class: "note-ai-fresh" }),
           );
         }
+        if (diff) decorations.push(...diffDecorations(diff));
         decorations.push(
           Decoration.widget(range.to, widget, {
             key: "note-ai-prompt",
@@ -206,6 +224,83 @@ export function createNoteAiSessionPlugin() {
       },
     },
   });
+}
+
+function mapDiff(diff: NoteAiDraftDiff, tr: Transaction): NoteAiDraftDiff {
+  const mapRange = ({ from, to }: { from: number; to: number }) => ({
+    from: tr.mapping.map(from),
+    to: tr.mapping.map(to),
+  });
+  return {
+    added: diff.added.map(mapRange),
+    addedNodes: diff.addedNodes.map(mapRange),
+    removed: diff.removed.map((removed) => ({
+      ...removed,
+      pos: tr.mapping.map(removed.pos),
+    })),
+  };
+}
+
+function diffDecorations(diff: NoteAiDraftDiff) {
+  return [
+    ...diff.added.map(({ from, to }) =>
+      Decoration.inline(from, to, { class: "note-ai-added" }),
+    ),
+    ...diff.addedNodes.map(({ from, to }) =>
+      Decoration.node(from, to, { class: "note-ai-added-block" }),
+    ),
+    // Removed text isn't in the document; it's drawn where it used to be, so
+    // keeping the draft keeps only the new text.
+    ...diff.removed.map(({ pos, text, block }, index) =>
+      Decoration.widget(
+        pos,
+        () => {
+          const element = document.createElement("del");
+          element.className = block
+            ? "note-ai-removed note-ai-removed-block"
+            : "note-ai-removed";
+          element.contentEditable = "false";
+          element.textContent = text;
+          return element;
+        },
+        {
+          key: `note-ai-removed-${index}-${text}`,
+          side: -1,
+          marks: [],
+          ignoreSelection: true,
+        },
+      ),
+    ),
+  ];
+}
+
+/**
+ * Shows what the current draft changed compared with `previousMarkdown`, or
+ * clears the comparison when it is null.
+ */
+export function setNoteAiDiffBase(
+  editor: Editor,
+  previousMarkdown: string | null,
+) {
+  const { range } = getNoteAiSession(editor.state);
+  if (!range) return;
+  const previous =
+    previousMarkdown === null
+      ? null
+      : markdownToFragment(editor, previousMarkdown);
+  const diff = previous
+    ? diffNoteAiDraft(previous, editor.state.doc, range.from, range.to)
+    : null;
+  editor.view.dispatch(
+    withMeta(editor.state.tr, {
+      type: "diff",
+      diff:
+        diff &&
+        (diff.added.length || diff.addedNodes.length || diff.removed.length)
+          ? diff
+          : null,
+    }).setMeta("addToHistory", false),
+  );
 }
 
 /** Opens a session on the empty top-level paragraph holding the cursor. */

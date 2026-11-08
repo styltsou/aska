@@ -952,6 +952,48 @@
   animation: note-ai-fresh 100ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
+/* What a follow-up changed in the draft. Added text is tinted in the draft's
+   rail color; removed text stays readable in place, struck through and
+   muted. Removed text isn't part of the note, so it can't be selected or
+   copied. */
+.note-rich-text-content .note-ai-added {
+  border-radius: 0.1875rem;
+  background: color-mix(in oklch, oklch(0.68 0.14 255) 22%, transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.note-rich-text-content .note-ai-added-block {
+  outline: 2px solid color-mix(in oklch, oklch(0.68 0.14 255) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.note-rich-text-content .note-ai-removed-block {
+  display: block;
+  margin-top: 0.25em;
+}
+
+/* ProseMirror adds a caret helper after a widget that ends a block, which
+   would leave an empty line; the draft is locked, so no caret goes there. */
+.note-rich-text-content .note-ai-removed-block ~ img.ProseMirror-separator,
+.note-rich-text-content .note-ai-removed-block ~ br.ProseMirror-trailingBreak {
+  /* ProseMirror's own stylesheet forces the separator inline. */
+  display: none !important;
+}
+
+.note-rich-text-content .note-ai-removed {
+  margin-right: 0.25em;
+  color: var(--muted-foreground);
+  text-decoration-line: line-through;
+  text-decoration-color: color-mix(
+    in oklch,
+    var(--destructive) 70%,
+    transparent
+  );
+  text-decoration-thickness: 1px;
+  user-select: none;
+}
+
 /* A block that is new as a whole already fades; don't fade its text twice. */
 .note-rich-text-content .note-ai-fresh .note-ai-fresh {
   animation: none;

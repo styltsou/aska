@@ -42,6 +42,7 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
+        "diff": "^8.0.4",
         "dompurify": "^3.4.16",
         "image-dimensions": "^2.5.1",
         "immer": "^11.1.16",

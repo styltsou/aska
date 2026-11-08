@@ -10,6 +10,7 @@ import {
   noteMarkdownAtAiCursor,
   NOTE_AI_CURSOR_MARKER,
   setNoteAiContent,
+  setNoteAiDiffBase,
   setNoteAiStreaming,
 } from "@/components/board/note-editor/ai/note-ai-session";
 import {
@@ -196,6 +197,9 @@ export function NoteAiPrompt({
       setPhase(lastRequestRef.current?.draft ? "review" : "prompt");
     } else {
       setPhase("review");
+      // A follow-up rewrote an earlier draft: show what it changed.
+      const previousDraft = lastRequestRef.current?.draft;
+      if (previousDraft) setNoteAiDiffBase(editor, previousDraft);
       if (lastRequestRef.current) {
         onDraft?.({
           draft: outputRef.current,
