@@ -12,6 +12,7 @@ import {
   setNoteAiContent,
   setNoteAiStreaming,
 } from "@/components/board/note-editor/ai/note-ai-session";
+import { nextRevealLength } from "@/components/board/note-editor/ai/note-ai-reveal";
 import {
   streamNoteAi,
   type NoteAiRequest as AiRequest,
@@ -81,6 +82,9 @@ export function NoteAiPrompt({
   usePendingRail(editor, containerRef, railRef);
   const outputRef = useRef(restored?.draft ?? "");
   const frameRef = useRef<number | null>(null);
+  // How much of `outputRef` is in the note, and whether more can still come.
+  const shownRef = useRef(0);
+  const streamDoneRef = useRef(false);
   const lastRequestRef = useRef<AiRequest | null>(restored?.request ?? null);
   // A restored draft waits quietly in the note; it only takes focus once the
   // user interacts with it.
@@ -220,8 +224,14 @@ export function NoteAiPrompt({
     abortRef.current = controller;
     const isCurrent = () => abortRef.current === controller;
 
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
     lastRequestRef.current = request;
     outputRef.current = "";
+    shownRef.current = 0;
+    streamDoneRef.current = false;
     keepWhenDoneRef.current = false;
     runningRef.current = true;
     handOff();
@@ -230,33 +240,59 @@ export function NoteAiPrompt({
     setPhase("streaming");
     setNoteAiStreaming(editor, true);
 
+    // Reveal what has arrived a little each frame; once the stream is done
+    // and everything is shown, the run finishes.
+    const reveal = () => {
+      frameRef.current = null;
+      if (!runningRef.current) return;
+      const output = outputRef.current;
+      const shown = prefersReducedMotion()
+        ? output.length
+        : nextRevealLength(output, shownRef.current);
+      if (shown !== shownRef.current) {
+        shownRef.current = shown;
+        // Follow the writing only while it's on screen, so scrolling up to
+        // read isn't yanked back down.
+        const status = statusRef.current;
+        const following = status ? isInViewport(status) : false;
+        setNoteAiContent(editor, output.slice(0, shown));
+        if (following) status?.scrollIntoView({ block: "nearest" });
+      }
+      if (shown < output.length) {
+        frameRef.current = requestAnimationFrame(reveal);
+      } else if (streamDoneRef.current) {
+        finish();
+      }
+    };
+    const scheduleReveal = () => {
+      frameRef.current ??= requestAnimationFrame(reveal);
+    };
+
     streamNoteAi(request, {
       signal: controller.signal,
       onDelta: (text) => {
         if (!isCurrent()) return;
         outputRef.current += text;
-        frameRef.current ??= requestAnimationFrame(() => {
-          frameRef.current = null;
-          // Follow the writing only while it's on screen, so scrolling up to
-          // read isn't yanked back down.
-          const status = statusRef.current;
-          const following = status ? isInViewport(status) : false;
-          setNoteAiContent(editor, outputRef.current);
-          if (following) status?.scrollIntoView({ block: "nearest" });
-        });
+        scheduleReveal();
       },
-    })
-      .catch((cause: unknown) => {
-        if (!isCurrent() || controller.signal.aborted) return;
-        setError(
-          cause instanceof Error ? cause.message : "AI generation failed.",
-        );
-      })
-      .finally(() => {
+    }).then(
+      () => {
         if (!isCurrent()) return;
         abortRef.current = null;
+        streamDoneRef.current = true;
+        scheduleReveal();
+      },
+      (cause: unknown) => {
+        if (!isCurrent()) return;
+        abortRef.current = null;
+        if (!controller.signal.aborted) {
+          setError(
+            cause instanceof Error ? cause.message : "AI generation failed.",
+          );
+        }
         finish();
-      });
+      },
+    );
   };
 
   const submit = () => {
@@ -528,6 +564,12 @@ function usePendingRail(
       observer.disconnect();
     };
   }, [editor, containerRef, railRef]);
+}
+
+function prefersReducedMotion() {
+  return (
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
+  );
 }
 
 function isInViewport(element: Element) {
