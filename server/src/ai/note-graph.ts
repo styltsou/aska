@@ -1,4 +1,4 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { END, START, StateGraph, StateSchema } from "@langchain/langgraph";
 import { z } from "zod";
 
@@ -32,16 +32,12 @@ function userMessage({
   return sections.join("\n\n");
 }
 
-export function createNoteEditGraph(apiKey: string) {
-  const model = new ChatGoogleGenerativeAI({
-    model: "gemini-2.5-flash",
-    apiKey,
-    maxOutputTokens: 8192,
-    // The default retries a usage-limit error for most of a minute while the
-    // editor shows "Writing…"; fail fast so the reason reaches the user.
-    maxRetries: 1,
-  });
-
+/**
+ * Writes or revises the draft at the cursor. Provider-agnostic: pass any chat
+ * model (see `createNoteModel`); streaming the graph in "messages" mode yields
+ * the model's output as it is generated.
+ */
+export function createNoteEditGraph(model: BaseChatModel) {
   return new StateGraph(NoteEditState)
     .addNode("write", async (state) => {
       const response = await model.invoke([

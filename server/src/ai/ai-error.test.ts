@@ -22,6 +22,9 @@ describe("describeAiError", () => {
         new Error("[503 Service Unavailable] The model is overloaded"),
       ),
     ).toBe("The AI model is overloaded right now. Try again in a moment.");
+    expect(
+      describeAiError(Object.assign(new Error("Overloaded"), { status: 529 })),
+    ).toBe("The AI model is overloaded right now. Try again in a moment.");
   });
 
   it("falls back to a generic message", () => {

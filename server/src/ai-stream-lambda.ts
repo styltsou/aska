@@ -94,8 +94,9 @@ export const handler = awslambda.streamifyResponse(
       return;
     }
 
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
+    const { createNoteModel } = await import("@/ai/note-model");
+    const model = createNoteModel();
+    if (!model) {
       respondJson(503, '{"error":"AI is unavailable"}');
       return;
     }
@@ -106,7 +107,7 @@ export const handler = awslambda.streamifyResponse(
     };
     try {
       const { createNoteEditGraph } = await import("@/ai/note-graph");
-      const graph = createNoteEditGraph(apiKey);
+      const graph = createNoteEditGraph(model);
       for await (const [chunk] of await graph.stream(input, {
         streamMode: "messages",
       })) {
