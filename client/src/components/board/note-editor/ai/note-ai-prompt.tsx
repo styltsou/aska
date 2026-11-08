@@ -551,11 +551,13 @@ export function NoteAiPrompt({
                   : "Ask AI"
             }
             placeholder={
-              phase === "review"
-                ? "Ask a follow-up…"
+              (phase === "review"
+                ? "Ask a follow-up"
                 : rewriting
-                  ? "Ask AI to edit the selection…"
-                  : "Ask AI to write anything…"
+                  ? "Ask AI to edit the selection"
+                  : "Ask AI to write anything") +
+              // Like other AI apps, the placeholder is where @ is taught.
+              (workspaceSlug ? ", @ to add notes…" : "…")
             }
             role="combobox"
             aria-expanded={mentions.open}
