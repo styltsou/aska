@@ -7,6 +7,7 @@ import {
   acceptNoteAiSession,
   discardNoteAiSession,
   getNoteAiSession,
+  noteAiPassageWith,
   noteMarkdownAtAiCursor,
   NOTE_AI_CURSOR_MARKER,
   setNoteAiContent,
@@ -121,6 +122,10 @@ export function NoteAiPrompt({
   const passageRef = useRef<string | null | undefined>(undefined);
   passageRef.current ??= getNoteAiSession(editor.state).passage;
   const rewriting = Boolean(passageRef.current);
+  // What goes in the note for the model's output: for a rewrite, the model
+  // writes only the replacement and the passage is rebuilt around it.
+  const toNote = (output: string) =>
+    passageRef.current ? noteAiPassageWith(passageRef.current, output) : output;
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -159,7 +164,7 @@ export function NoteAiPrompt({
       cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
     }
-    if (outputRef.current) setNoteAiContent(editor, outputRef.current);
+    if (outputRef.current) setNoteAiContent(editor, toNote(outputRef.current));
   };
 
   // Ending from inside the bar returns focus to the editor *before* the bar is
@@ -253,7 +258,7 @@ export function NoteAiPrompt({
           // read isn't yanked back down.
           const status = statusRef.current;
           const following = status ? isInViewport(status) : false;
-          setNoteAiContent(editor, outputRef.current);
+          setNoteAiContent(editor, toNote(outputRef.current));
           if (following) status?.scrollIntoView({ block: "nearest" });
         });
       },

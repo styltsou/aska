@@ -25,8 +25,9 @@ export function systemMessage({ passage }: { passage?: string }) {
     return (
       "You are editing a passage of a note. " +
       `The marker ${CURSOR_MARKER} in the note shows where the passage sits; the passage itself is given separately. ` +
-      `If parts of the passage are wrapped in ${SELECTION_START} and ${SELECTION_END}, change only those parts and keep everything else exactly as written. ` +
-      "Return the full passage as Markdown, with your changes applied and without any markers, and nothing else. " +
+      `The part to change is wrapped in ${SELECTION_START} and ${SELECTION_END}; when there are no markers, the whole passage is the part to change. ` +
+      "Return only the new text for that part, as Markdown, and nothing else: no markers, no surrounding text, no explanation. " +
+      "It replaces the marked part exactly, so it must read naturally with the text right before and after it; when the part is within a sentence, return inline text without line breaks or leading and trailing spaces. " +
       FORMAT_RULES
     );
   }
@@ -65,10 +66,10 @@ export function userMessage({
     }
     sections.push(
       passage
-        ? `Your previous edit of the passage:\n<draft>\n${draft}\n</draft>`
+        ? `Your previous replacement for the marked part:\n<draft>\n${draft}\n</draft>`
         : `Your previous draft at the cursor:\n<draft>\n${draft}\n</draft>`,
       passage
-        ? `Revise your edit according to this instruction and return the full edited passage:\n${prompt}`
+        ? `Revise your replacement according to this instruction and return only the new replacement for the marked part:\n${prompt}`
         : `Revise the draft according to this instruction and return the full replacement draft:\n${prompt}`,
     );
   } else {

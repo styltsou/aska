@@ -341,6 +341,8 @@ export function showNoteAiChanges(editor: Editor, show = true) {
   );
 }
 
+const WORD_CHARACTER = /[\p{L}\p{N}_]/u;
+
 /**
  * Opens a rewrite session over the top-level blocks the selection touches.
  * The model receives those blocks with the exact selection marked, and the
@@ -357,17 +359,40 @@ export function startNoteAiRewrite(editor: Editor, widget: HTMLElement) {
   if (from >= to) return false;
   const original = doc.slice(from, to).content;
 
+  // A selection that cuts a word in half is widened to whole words, so the
+  // model never has to finish half a word.
+  let selectedFrom = selection.from;
+  let selectedTo = selection.to;
+  if (selection instanceof TextSelection) {
+    const isWordAt = (pos: number) =>
+      WORD_CHARACTER.test(doc.textBetween(pos, pos + 1));
+    while (
+      selectedFrom > $from.start() &&
+      isWordAt(selectedFrom - 1) &&
+      isWordAt(selectedFrom)
+    ) {
+      selectedFrom -= 1;
+    }
+    while (
+      selectedTo < $to.end() &&
+      isWordAt(selectedTo - 1) &&
+      isWordAt(selectedTo)
+    ) {
+      selectedTo += 1;
+    }
+  }
+
   // Mark the selection when it covers only part of these blocks, so the
   // model changes just that part.
   const whole =
     doc.textBetween(from, to, " ").trim() ===
-    doc.textBetween(selection.from, selection.to, " ").trim();
+    doc.textBetween(selectedFrom, selectedTo, " ").trim();
   let passageDoc = doc;
   let passageTo = to;
   if (!whole && selection instanceof TextSelection) {
     const marked = state.tr
-      .insertText(NOTE_AI_SELECTION_END, selection.to)
-      .insertText(NOTE_AI_SELECTION_START, selection.from);
+      .insertText(NOTE_AI_SELECTION_END, selectedTo)
+      .insertText(NOTE_AI_SELECTION_START, selectedFrom);
     passageDoc = marked.doc;
     passageTo = marked.mapping.map(to);
   }
@@ -383,7 +408,7 @@ export function startNoteAiRewrite(editor: Editor, widget: HTMLElement) {
       widget,
       original,
       passage,
-      target: { from: selection.from, to: selection.to },
+      target: { from: selectedFrom, to: selectedTo },
     }).setMeta("addToHistory", false),
   );
   return true;
@@ -417,6 +442,26 @@ function markdownToFragment(editor: Editor, markdown: string) {
     // delta will usually parse again.
     return null;
   }
+}
+
+/**
+ * For a rewrite, the passage with the model's `replacement` in place of the
+ * marked selection (or the replacement alone when the whole passage was
+ * selected). The model only writes the replacement; the text around the
+ * selection is put back here, so it can't be dropped or altered.
+ */
+export function noteAiPassageWith(passage: string, replacement: string) {
+  const start = passage.indexOf(NOTE_AI_SELECTION_START);
+  const end = passage.indexOf(NOTE_AI_SELECTION_END);
+  if (start < 0 || end < start) return replacement;
+  const selected = passage.slice(start + NOTE_AI_SELECTION_START.length, end);
+  // Within a line, the replacement must stay inline.
+  const inline = !selected.includes("\n");
+  return (
+    passage.slice(0, start) +
+    (inline ? replacement.replace(/\s*\n+\s*/g, " ").trim() : replacement) +
+    passage.slice(end + NOTE_AI_SELECTION_END.length)
+  );
 }
 
 /** Replaces the session's content with `markdown` without touching history. */

@@ -49,9 +49,11 @@ describe("userMessage", () => {
 });
 
 describe("rewriting a passage", () => {
-  it("sends the marked passage and asks for the full edited passage", () => {
+  it("sends the marked passage and asks only for the replacement", () => {
     const passage = "Keep this. ⟦selection⟧Fix this⟦/selection⟧ one.";
-    expect(systemMessage({ passage })).toContain("change only those parts");
+    expect(systemMessage({ passage })).toContain(
+      "Return only the new text for that part",
+    );
     const message = userMessage({
       prompt: "Make it formal",
       note: "Intro\n\n⟦cursor⟧\n\nOutro",
@@ -69,8 +71,10 @@ describe("rewriting a passage", () => {
       draft: "Keep this. Please fix this one.",
       passage: "Keep this. ⟦selection⟧Fix this⟦/selection⟧ one.",
     });
-    expect(message).toContain("Your previous edit of the passage");
-    expect(message).toContain("return the full edited passage:\nShorter");
+    expect(message).toContain("Your previous replacement for the marked part");
+    expect(message).toContain(
+      "return only the new replacement for the marked part:\nShorter",
+    );
   });
 
   it("writes new content at the cursor without a passage", () => {

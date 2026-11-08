@@ -14,6 +14,7 @@ import {
   NOTE_AI_CURSOR_MARKER,
   noteAiSessionBlockIndex,
   noteMarkdownAtAiCursor,
+  noteAiPassageWith,
   noteMarkdownWithoutAiDraft,
   setNoteAiContent,
   showNoteAiChanges,
@@ -258,6 +259,21 @@ describe("note AI session", () => {
       );
       setNoteAiContent(editor, "Keep this. Fixed one.");
       expect(getNoteAiSession(editor.state).target).toBeNull();
+    });
+
+    it("widens a selection that cuts words in half to whole words", () => {
+      const { editor } = rewrite("Keep this. Fix this one.", "ix thi");
+      expect(getNoteAiSession(editor.state).passage?.trim()).toBe(
+        "Keep this. ⟦selection⟧Fix this⟦/selection⟧ one.",
+      );
+    });
+
+    it("puts the replacement back into the passage around it", () => {
+      const passage = "Keep this. ⟦selection⟧Fix this⟦/selection⟧ one.";
+      expect(noteAiPassageWith(passage, "Repair\nthat ")).toBe(
+        "Keep this. Repair that one.",
+      );
+      expect(noteAiPassageWith("All of it.", "Replaced.")).toBe("Replaced.");
     });
 
     it("sends whole blocks without markers", () => {
