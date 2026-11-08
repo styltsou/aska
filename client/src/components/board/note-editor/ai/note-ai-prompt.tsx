@@ -38,6 +38,48 @@ type Phase = "prompt" | "streaming" | "review";
 // Mirrors the server's limit on instructions sent with a follow-up.
 const MAX_EARLIER_PROMPTS = 10;
 
+type QuickAction = { label: string; instruction: string };
+
+// One-click instructions for the most common requests, shown under the empty
+// prompt. They run exactly like typed instructions.
+const WRITE_ACTIONS: QuickAction[] = [
+  {
+    label: "Continue writing",
+    instruction:
+      "Continue writing from the cursor, matching the note's tone and style.",
+  },
+  {
+    label: "Summarize",
+    instruction: "Summarize the note so far in a few concise sentences.",
+  },
+  {
+    label: "Outline",
+    instruction: "Write an outline for this note as a nested list.",
+  },
+  {
+    label: "Action items",
+    instruction: "List the action items from this note as a task list.",
+  },
+];
+
+const REWRITE_ACTIONS: QuickAction[] = [
+  {
+    label: "Improve",
+    instruction:
+      "Improve the writing: clearer and better flowing, same meaning and tone.",
+  },
+  {
+    label: "Fix grammar",
+    instruction:
+      "Fix spelling, grammar, and punctuation only; change nothing else.",
+  },
+  { label: "Shorter", instruction: "Make it shorter, keeping the key points." },
+  {
+    label: "Longer",
+    instruction: "Make it longer, adding useful detail in the same style.",
+  },
+];
+
 // Mirrors the server's note limit; long notes keep the text around the cursor.
 const NOTE_CONTEXT_LIMIT = 38_000;
 
@@ -276,8 +318,8 @@ export function NoteAiPrompt({
       });
   };
 
-  const submit = () => {
-    const instruction = prompt.trim();
+  const submit = (text = prompt) => {
+    const instruction = text.trim();
     if (!instruction || phase === "streaming") return;
     const previous = lastRequestRef.current;
     const draft = phase === "review" ? lastDraft(previous, outputRef) : "";
@@ -504,12 +546,33 @@ export function NoteAiPrompt({
             aria-label="Send"
             disabled={!prompt.trim()}
             onMouseDown={keepFocus}
-            onClick={submit}
+            onClick={() => submit()}
           >
             <ArrowUp />
           </Button>
         </div>
       )}
+      {phase === "prompt" && !prompt ? (
+        <div
+          role="group"
+          aria-label="Quick actions"
+          className="mt-1.5 flex flex-wrap gap-1"
+        >
+          {(rewriting ? REWRITE_ACTIONS : WRITE_ACTIONS).map((action) => (
+            <Button
+              key={action.label}
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="text-muted-foreground hover:text-foreground"
+              onMouseDown={keepFocus}
+              onClick={() => submit(action.instruction)}
+            >
+              {action.label}
+            </Button>
+          ))}
+        </div>
+      ) : null}
       {error ? (
         <p className="mt-1 px-1 text-xs text-destructive">{error}</p>
       ) : null}
