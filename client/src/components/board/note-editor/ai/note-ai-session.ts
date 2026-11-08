@@ -56,6 +56,20 @@ export function isNoteAiSessionActive(state: EditorState) {
   return getNoteAiSession(state).range !== null;
 }
 
+/** Whether `pos` lies inside the pending AI draft. */
+export function isInNoteAiDraft(state: EditorState, pos: number) {
+  const { range } = getNoteAiSession(state);
+  return range !== null && pos >= range.from && pos < range.to;
+}
+
+/** Whether the selection overlaps the pending AI draft. */
+export function selectionOverlapsNoteAiDraft(state: EditorState) {
+  const { range } = getNoteAiSession(state);
+  if (!range) return false;
+  const { from, to } = state.selection;
+  return from < range.to && to > range.from;
+}
+
 function selectionTouchesSession(state: EditorState) {
   const { range } = getNoteAiSession(state);
   if (!range) return false;
@@ -116,7 +130,15 @@ export function createNoteAiSessionPlugin() {
       // overwritten by the next update, so swallow it instead.
       handleTextInput: (view) => selectionTouchesSession(view.state),
       handlePaste: (view) => selectionTouchesSession(view.state),
-      handleDrop: (view) => selectionTouchesSession(view.state),
+      // Also refuse blocks dropped into the draft from elsewhere in the note.
+      handleDrop: (view, event) => {
+        if (selectionTouchesSession(view.state)) return true;
+        const drop = view.posAtCoords({
+          left: event.clientX,
+          top: event.clientY,
+        });
+        return drop !== null && isInNoteAiDraft(view.state, drop.pos);
+      },
       handleKeyDown(view, event) {
         if (!selectionTouchesSession(view.state)) return false;
         if (event.ctrlKey || event.metaKey || event.altKey) {

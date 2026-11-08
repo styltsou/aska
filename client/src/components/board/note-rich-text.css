@@ -765,7 +765,8 @@
   translate: -0.75rem 0;
 }
 
-.note-float-block-controls[data-scroll-suppressed="true"] {
+.note-float-block-controls[data-scroll-suppressed="true"],
+.note-float-block-controls[data-ai-pending="true"] {
   visibility: hidden !important;
   pointer-events: none !important;
 }

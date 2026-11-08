@@ -107,10 +107,12 @@ import {
   type NoteAiDraft,
 } from "@/components/board/note-editor/ai/note-ai-prompt";
 import {
+  isInNoteAiDraft,
   isNoteAiSessionActive,
   NoteAiSession,
   noteAiSessionBlockIndex,
   noteMarkdownWithoutAiDraft,
+  selectionOverlapsNoteAiDraft,
   startNoteAiSession,
   startNoteAiSessionAtBlock,
 } from "@/components/board/note-editor/ai/note-ai-session";
@@ -1407,6 +1409,12 @@ function createBlockDragHandleExtension() {
         node && typeof pos === "number" && pos >= 0
           ? { editor: targetEditor, node, pos }
           : undefined;
+      // A pending AI draft is judged as a whole (keep, discard or follow up),
+      // so its blocks can't be dragged out or have blocks added beside them.
+      controls.dataset.aiPending =
+        target && isInNoteAiDraft(targetEditor.state, target.pos)
+          ? "true"
+          : "false";
     },
   });
   return {
@@ -2944,7 +2952,10 @@ export const NoteRichText = forwardRef<
       // Otherwise the first transaction of a fresh selection is judged against
       // the empty selection it replaced and the menu never appears.
       !currentEditor.state.selection.empty &&
-      !currentEditor.isActive("codeBlock"),
+      !currentEditor.isActive("codeBlock") &&
+      // Formatting a pending AI draft would be overwritten by keep or a
+      // follow-up; it becomes editable once kept.
+      !selectionOverlapsNoteAiDraft(currentEditor.state),
     [barOwnsFocus, blockStyleMenuOpen, highlightMode],
   );
 
