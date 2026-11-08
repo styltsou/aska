@@ -100,7 +100,7 @@ export function SidebarResizeHandle({
       aria-valuenow={SIDEBAR_DEFAULT_WIDTH}
       aria-description="Use left and right arrow keys to resize, Shift for larger steps, or Home and End for minimum and maximum width."
       title="Drag or use arrow keys to resize. Double-click to reset."
-      className={`group/resize absolute top-14 bottom-2 z-20 w-6 cursor-col-resize touch-none outline-none ${side === "left" ? "-right-5" : "-left-5"}`}
+      className={`group/resize absolute top-14 bottom-2 z-20 w-6 cursor-col-resize touch-none outline-none ${side === "left" ? "-right-3" : "-left-3"}`}
       onPointerEnter={(event) => {
         positionResizeGrip(
           event.currentTarget,
