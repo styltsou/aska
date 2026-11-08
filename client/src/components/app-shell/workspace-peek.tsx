@@ -84,6 +84,7 @@ import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { getUserFacingApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { positionResizeGrip } from "@/lib/resize-grip";
+import { ResizeGrip } from "@/components/ui/resize-grip";
 import { getWorkspacePeekWidthBounds } from "@/lib/workspace-peek-width";
 import { useSessionStore } from "@/store";
 import { useBlocker, useRouterState } from "@tanstack/react-router";
@@ -1360,7 +1361,6 @@ function WorkspacePeekPanel({
             event.currentTarget,
             resizeGripRef.current,
             event.clientY,
-            36,
           );
         }}
         onPointerMove={(event) => {
@@ -1368,15 +1368,10 @@ function WorkspacePeekPanel({
             event.currentTarget,
             resizeGripRef.current,
             event.clientY,
-            36,
           );
         }}
       >
-        <span
-          ref={resizeGripRef}
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-1/2 h-14 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/35 opacity-0 transition-[opacity,background-color] duration-150 group-hover/resize:bg-foreground/50 group-hover/resize:opacity-100 group-data-[resizing]/resize:!bg-primary group-data-[resizing]/resize:opacity-100 motion-reduce:transition-none"
-        />
+        <ResizeGrip ref={resizeGripRef} />
       </div>
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-card">
         {target.type === "note" ? (

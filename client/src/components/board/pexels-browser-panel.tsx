@@ -43,6 +43,7 @@ import { toPexelsRemoteImageInput } from "@/lib/pexels-import";
 import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { positionResizeGrip } from "@/lib/resize-grip";
+import { ResizeGrip } from "@/components/ui/resize-grip";
 import { useSessionStore, getPexelsBrowserScope } from "@/store";
 import { getLastPexelsQuery } from "@/store/slices/pexels-browser-slice";
 import {
@@ -665,7 +666,6 @@ export function PexelsBrowserPanel({
                   event.currentTarget,
                   resizeGripRef.current,
                   event.clientY,
-                  36,
                 )
               }
               onPointerMove={(event) =>
@@ -673,15 +673,10 @@ export function PexelsBrowserPanel({
                   event.currentTarget,
                   resizeGripRef.current,
                   event.clientY,
-                  36,
                 )
               }
             >
-              <span
-                ref={resizeGripRef}
-                aria-hidden
-                className="pointer-events-none absolute top-1/2 left-1/2 h-14 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/35 opacity-0 transition-[opacity,background-color] duration-150 group-hover/resize:bg-foreground/50 group-hover/resize:opacity-100 group-data-[resizing]/resize:!bg-primary group-data-[resizing]/resize:opacity-100 motion-reduce:transition-none"
-              />
+              <ResizeGrip ref={resizeGripRef} />
             </div>
             <div className="relative flex size-full flex-col overflow-hidden rounded-xl">
               <div className="relative z-20 flex h-12 shrink-0 items-center gap-2 rounded-t-xl rounded-b-none bg-card p-2 ring-0">

@@ -2,7 +2,7 @@ export function positionResizeGrip(
   handle: HTMLElement,
   grip: HTMLElement | null,
   clientY: number,
-  edgeInset = 32,
+  edgeInset = 40,
 ) {
   if (!grip) return;
   const bounds = handle.getBoundingClientRect();
