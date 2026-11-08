@@ -557,7 +557,8 @@ export function NoteAiPrompt({
                   ? "Ask AI to edit the selection"
                   : "Ask AI to write anything") +
               // Like other AI apps, the placeholder is where @ is taught.
-              (workspaceSlug ? ", @ to add notes…" : "…")
+              // No object after "mention": notes today, other assets later.
+              (workspaceSlug ? ", @ to mention…" : "…")
             }
             role="combobox"
             aria-expanded={mentions.open}
