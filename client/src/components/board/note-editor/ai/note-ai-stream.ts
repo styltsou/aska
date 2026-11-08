@@ -1,6 +1,13 @@
 import { apiUrl } from "@/lib/api";
 
-export type NoteAiRequest = { prompt: string; note: string; draft?: string };
+export type NoteAiRequest = {
+  prompt: string;
+  note: string;
+  /** The draft a follow-up revises. */
+  draft?: string;
+  /** Instructions that produced `draft`, oldest first. */
+  earlierPrompts?: string[];
+};
 
 const streamApiUrl =
   import.meta.env.VITE_AI_STREAM_URL?.replace(

@@ -6,22 +6,32 @@ const NoteEditState = new StateSchema({
   prompt: z.string(),
   note: z.string(),
   draft: z.string().default(""),
+  earlierPrompts: z.array(z.string()).default([]),
   result: z.string().default(""),
 });
 
 const CURSOR_MARKER = "⟦cursor⟧";
 
-function userMessage({
+export function userMessage({
   prompt,
   note,
   draft,
+  earlierPrompts = [],
 }: {
   prompt: string;
   note: string;
   draft: string;
+  earlierPrompts?: string[];
 }) {
   const sections = [`Current note:\n<note>\n${note}\n</note>`];
   if (draft) {
+    if (earlierPrompts.length) {
+      sections.push(
+        `The draft was written for these instructions, oldest first; keep their intent unless the new instruction changes it:\n${earlierPrompts
+          .map((earlier, index) => `${index + 1}. ${earlier}`)
+          .join("\n")}`,
+      );
+    }
     sections.push(
       `Your previous draft at the cursor:\n<draft>\n${draft}\n</draft>`,
       `Revise the draft according to this instruction and return the full replacement draft:\n${prompt}`,

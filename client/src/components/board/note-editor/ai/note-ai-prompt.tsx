@@ -33,6 +33,9 @@ import { cn } from "@/lib/utils";
  */
 type Phase = "prompt" | "streaming" | "review";
 
+// Mirrors the server's limit on instructions sent with a follow-up.
+const MAX_EARLIER_PROMPTS = 10;
+
 // Mirrors the server's note limit; long notes keep the text around the cursor.
 const NOTE_CONTEXT_LIMIT = 38_000;
 
@@ -262,12 +265,21 @@ export function NoteAiPrompt({
   const submit = () => {
     const instruction = prompt.trim();
     if (!instruction || phase === "streaming") return;
-    const draft =
-      phase === "review" ? lastDraft(lastRequestRef.current, outputRef) : "";
+    const previous = lastRequestRef.current;
+    const draft = phase === "review" ? lastDraft(previous, outputRef) : "";
+    // A follow-up carries what was asked before, so "now in Spanish" still
+    // knows what the draft was meant to be.
+    const earlierPrompts =
+      draft && previous
+        ? [...(previous.earlierPrompts ?? []), previous.prompt].slice(
+            -MAX_EARLIER_PROMPTS,
+          )
+        : [];
     run({
       prompt: instruction,
       note: noteRef.current ?? "",
       ...(draft ? { draft } : {}),
+      ...(earlierPrompts.length ? { earlierPrompts } : {}),
     });
   };
 

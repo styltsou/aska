@@ -11,6 +11,7 @@ const requestSchema = z.object({
   prompt: z.string().trim().min(1).max(4000),
   note: z.string().max(40000),
   draft: z.string().max(40000).optional(),
+  earlierPrompts: z.array(z.string().max(4000)).max(10).optional(),
 });
 
 function responseHeaders(origin: string | undefined) {
