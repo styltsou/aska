@@ -87,3 +87,20 @@ describe("createNoteModel", () => {
     expect(createNoteModel({})).toBeNull();
   });
 });
+
+describe("referenced notes", () => {
+  it("adds @-mentioned notes as context after the current note", () => {
+    const message = userMessage({
+      prompt: "Summarize both",
+      note: "⟦cursor⟧",
+      draft: "",
+      referencedNotes: [{ title: "Roadmap", markdown: "Ship AI" }],
+    });
+    expect(message).toContain(
+      'Referenced note "Roadmap":\n<referenced-note>\nShip AI\n</referenced-note>',
+    );
+    expect(message.indexOf("<note>")).toBeLessThan(
+      message.indexOf("<referenced-note>"),
+    );
+  });
+});

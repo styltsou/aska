@@ -13,6 +13,15 @@ const requestSchema = z.object({
   draft: z.string().max(40000).optional(),
   earlierPrompts: z.array(z.string().max(4000)).max(10).optional(),
   passage: z.string().max(40000).optional(),
+  referencedNotes: z
+    .array(
+      z.object({
+        title: z.string().max(300),
+        markdown: z.string().max(12000),
+      }),
+    )
+    .max(3)
+    .optional(),
 });
 
 function responseHeaders(origin: string | undefined) {
