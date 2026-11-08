@@ -7,23 +7,54 @@ const NoteEditState = new StateSchema({
   note: z.string(),
   draft: z.string().default(""),
   earlierPrompts: z.array(z.string()).default([]),
+  /** For a rewrite: the passage being rewritten, selection marked. */
+  passage: z.string().default(""),
   result: z.string().default(""),
 });
 
 const CURSOR_MARKER = "⟦cursor⟧";
+const SELECTION_START = "⟦selection⟧";
+const SELECTION_END = "⟦/selection⟧";
+
+const FORMAT_RULES =
+  "Preserve headings, lists, task lists, tables, quotes, code fences, links, images, and Mermaid fences when relevant. " +
+  "Do not create mention syntax or claim to link another note. Do not wrap the whole answer in a code fence.";
+
+export function systemMessage({ passage }: { passage?: string }) {
+  if (passage) {
+    return (
+      "You are editing a passage of a note. " +
+      `The marker ${CURSOR_MARKER} in the note shows where the passage sits; the passage itself is given separately. ` +
+      `If parts of the passage are wrapped in ${SELECTION_START} and ${SELECTION_END}, change only those parts and keep everything else exactly as written. ` +
+      "Return the full passage as Markdown, with your changes applied and without any markers, and nothing else. " +
+      FORMAT_RULES
+    );
+  }
+  return (
+    "You are writing at the cursor in a note. " +
+    `The marker ${CURSOR_MARKER} in the note shows where your output will be inserted; never output the marker. ` +
+    "Return only the new content to insert as Markdown; never repeat the current note. " +
+    FORMAT_RULES
+  );
+}
 
 export function userMessage({
   prompt,
   note,
   draft,
   earlierPrompts = [],
+  passage = "",
 }: {
   prompt: string;
   note: string;
   draft: string;
   earlierPrompts?: string[];
+  passage?: string;
 }) {
   const sections = [`Current note:\n<note>\n${note}\n</note>`];
+  if (passage) {
+    sections.push(`Passage to edit:\n<passage>\n${passage}\n</passage>`);
+  }
   if (draft) {
     if (earlierPrompts.length) {
       sections.push(
@@ -33,8 +64,12 @@ export function userMessage({
       );
     }
     sections.push(
-      `Your previous draft at the cursor:\n<draft>\n${draft}\n</draft>`,
-      `Revise the draft according to this instruction and return the full replacement draft:\n${prompt}`,
+      passage
+        ? `Your previous edit of the passage:\n<draft>\n${draft}\n</draft>`
+        : `Your previous draft at the cursor:\n<draft>\n${draft}\n</draft>`,
+      passage
+        ? `Revise your edit according to this instruction and return the full edited passage:\n${prompt}`
+        : `Revise the draft according to this instruction and return the full replacement draft:\n${prompt}`,
     );
   } else {
     sections.push(`Instruction:\n${prompt}`);
@@ -53,12 +88,7 @@ export function createNoteEditGraph(model: BaseChatModel) {
       const response = await model.invoke([
         {
           role: "system",
-          content:
-            "You are writing at the cursor in a note. " +
-            `The marker ${CURSOR_MARKER} in the note shows where your output will be inserted; never output the marker. ` +
-            "Return only the new content to insert as Markdown; never repeat the current note. " +
-            "Preserve headings, lists, task lists, tables, quotes, code fences, links, images, and Mermaid fences when relevant. " +
-            "Do not create mention syntax or claim to link another note. Do not wrap the whole answer in a code fence.",
+          content: systemMessage(state),
         },
         {
           role: "user",
