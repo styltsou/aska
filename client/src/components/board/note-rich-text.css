@@ -944,6 +944,25 @@
   animation: note-ai-rail-pulse 1.6s ease-in-out infinite;
 }
 
+/* Each streamed chunk appears as it arrives, with a quick fade so it lands
+   softly instead of popping in. Opacity only: no movement, nothing to lay
+   out, and short enough to finish before the next chunk usually arrives.
+   Kept under reduced motion, since a short fade isn't motion. */
+.note-rich-text-content .note-ai-fresh {
+  animation: note-ai-fresh 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* A block that is new as a whole already fades; don't fade its text twice. */
+.note-rich-text-content .note-ai-fresh .note-ai-fresh {
+  animation: none;
+}
+
+@keyframes note-ai-fresh {
+  from {
+    opacity: 0;
+  }
+}
+
 @keyframes note-ai-rail-pulse {
   50% {
     opacity: 0.4;

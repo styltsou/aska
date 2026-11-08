@@ -27,11 +27,13 @@ type NoteAiSessionState = {
   widget: HTMLElement | null;
   /** The session opened on the note's last line. */
   endsDoc: boolean;
+  /** Where the most recently arrived content starts, to fade it in. */
+  fresh: number | null;
 };
 
 type NoteAiSessionMeta =
   | { type: "start"; range: NoteAiRange; widget: HTMLElement }
-  | { type: "range"; range: NoteAiRange }
+  | { type: "range"; range: NoteAiRange; fresh?: number | null }
   | { type: "streaming"; streaming: boolean }
   | { type: "end" };
 
@@ -40,6 +42,7 @@ const EMPTY_STATE: NoteAiSessionState = {
   streaming: false,
   widget: null,
   endsDoc: false,
+  fresh: null,
 };
 
 export const noteAiSessionKey = new PluginKey<NoteAiSessionState>(
@@ -107,13 +110,26 @@ export function createNoteAiSessionPlugin() {
             streaming: false,
             widget: meta.widget,
             endsDoc: meta.range.to === tr.doc.content.size,
+            fresh: null,
           };
         }
         if (meta?.type === "end") return EMPTY_STATE;
         if (!value.range) return value;
-        if (meta?.type === "range") return { ...value, range: meta.range };
+        if (meta?.type === "range") {
+          return {
+            ...value,
+            range: meta.range,
+            fresh: meta.fresh === undefined ? value.fresh : meta.fresh,
+          };
+        }
         if (meta?.type === "streaming") {
-          return { ...value, streaming: meta.streaming };
+          // A new run starts clean; when one ends, the last chunk (written as
+          // it ends) keeps its fade.
+          return {
+            ...value,
+            streaming: meta.streaming,
+            fresh: meta.streaming ? null : value.fresh,
+          };
         }
         if (!tr.docChanged) return value;
 
@@ -121,7 +137,11 @@ export function createNoteAiSessionPlugin() {
         const from = tr.mapping.map(value.range.from, 1);
         const to = tr.mapping.map(value.range.to, -1);
         if (from >= to) return EMPTY_STATE;
-        return { ...value, range: { from, to } };
+        return {
+          ...value,
+          range: { from, to },
+          fresh: value.fresh === null ? null : tr.mapping.map(value.fresh),
+        };
       },
     },
     props: {
@@ -150,21 +170,30 @@ export function createNoteAiSessionPlugin() {
         );
       },
       decorations(state) {
-        const { range, streaming, widget } = getNoteAiSession(state);
+        const { range, streaming, widget, fresh } = getNoteAiSession(state);
         if (!range || !widget) return null;
+        // The newest chunk fades in: whole blocks it added (so table and
+        // code block chrome fades too) and new text inside existing blocks.
+        const freshFrom = fresh !== null && fresh < range.to ? fresh : null;
 
         const decorations: Decoration[] = [];
         state.doc.forEach((node, offset) => {
           const end = offset + node.nodeSize;
           if (offset < range.from || end > range.to) return;
+          const classes = ["note-ai-pending"];
+          if (streaming) classes.push("note-ai-streaming");
+          if (freshFrom !== null && offset >= freshFrom) {
+            classes.push("note-ai-fresh");
+          }
           decorations.push(
-            Decoration.node(offset, end, {
-              class: streaming
-                ? "note-ai-pending note-ai-streaming"
-                : "note-ai-pending",
-            }),
+            Decoration.node(offset, end, { class: classes.join(" ") }),
           );
         });
+        if (freshFrom !== null) {
+          decorations.push(
+            Decoration.inline(freshFrom, range.to, { class: "note-ai-fresh" }),
+          );
+        }
         decorations.push(
           Decoration.widget(range.to, widget, {
             key: "note-ai-prompt",
@@ -215,12 +244,18 @@ export function setNoteAiContent(editor: Editor, markdown: string) {
   if (!range) return false;
   const fragment = markdownToFragment(editor, markdown);
   if (!fragment) return false;
+  // Where the new content first differs from what's shown: the start of the
+  // chunk that just arrived (or of earlier text the new chunk reformatted).
+  const diff = editor.state.doc
+    .slice(range.from, range.to)
+    .content.findDiffStart(fragment);
   const tr = editor.state.tr
     .replaceWith(range.from, range.to, fragment)
     .setMeta("addToHistory", false);
   withMeta(tr, {
     type: "range",
     range: { from: range.from, to: range.from + fragment.size },
+    ...(diff === null ? {} : { fresh: range.from + diff }),
   });
   editor.view.dispatch(tr);
   return true;
