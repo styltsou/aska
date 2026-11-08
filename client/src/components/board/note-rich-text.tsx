@@ -3257,6 +3257,8 @@ export const NoteRichText = forwardRef<
               restored={aiSession?.restored}
               onDraft={handleAiDraft}
               onResolve={handleAiResolve}
+              workspaceSlug={workspaceSlug}
+              sourceAssetId={sourceAssetId}
             />,
             aiWidget,
           )

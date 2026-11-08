@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/core";
 import { ArrowUp, RotateCcw } from "lucide-react";
 import { motion } from "motion/react";
@@ -14,6 +14,12 @@ import {
   setNoteAiStreaming,
   showNoteAiChanges,
 } from "@/components/board/note-editor/ai/note-ai-session";
+import {
+  loadReferencedNotes,
+  NoteAiMentionChips,
+  NoteAiMentionPicker,
+  useNoteAiMentions,
+} from "@/components/board/note-editor/ai/note-ai-mentions";
 import {
   streamNoteAi,
   type NoteAiRequest as AiRequest,
@@ -112,13 +118,20 @@ export function NoteAiPrompt({
   restored,
   onDraft,
   onResolve,
+  workspaceSlug,
+  sourceAssetId,
 }: {
   editor: Editor;
   restored?: NoteAiDraft;
   onDraft?: (draft: NoteAiDraft) => void;
   onResolve?: () => void;
+  /** Enables @-mentioning notes in the prompt as context. */
+  workspaceSlug?: string;
+  sourceAssetId?: number;
 }) {
   const [prompt, setPrompt] = useState("");
+  const mentions = useNoteAiMentions({ workspaceSlug, sourceAssetId });
+  const pickerId = useId();
   const [phase, setPhase] = useState<Phase>(restored ? "review" : "prompt");
   const [error, setError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -331,13 +344,24 @@ export function NoteAiPrompt({
             -MAX_EARLIER_PROMPTS,
           )
         : [];
-    run({
+    const request: AiRequest = {
       prompt: instruction,
       note: noteRef.current ?? "",
       ...(draft ? { draft } : {}),
       ...(earlierPrompts.length ? { earlierPrompts } : {}),
       ...(passageRef.current ? { passage: passageRef.current } : {}),
-    });
+    };
+    if (!mentions.notes.length || !workspaceSlug) {
+      run(request);
+      return;
+    }
+    // Mentioned notes are read fresh for each request, so follow-ups see
+    // their latest content.
+    setError("");
+    loadReferencedNotes(workspaceSlug, mentions.notes).then(
+      (referencedNotes) => run({ ...request, referencedNotes }),
+      () => setError("Couldn't read a mentioned note."),
+    );
   };
 
   const retry = () => {
@@ -355,7 +379,8 @@ export function NoteAiPrompt({
   // the enclosing note drawer never reads it as "close the note".
   const escapeRef = useRef(() => {});
   escapeRef.current = () => {
-    if (phase === "streaming") stop();
+    if (mentions.open) mentions.close();
+    else if (phase === "streaming") stop();
     else discard();
   };
   useEffect(() => {
@@ -507,10 +532,14 @@ export function NoteAiPrompt({
       {phase === "streaming" ? null : (
         <div
           className={cn(
-            "flex h-10 items-center gap-2 rounded-lg border border-input bg-transparent pr-1.5 pl-3 transition-colors duration-100 focus-within:border-foreground/20 dark:bg-input/30",
+            "relative flex h-10 items-center gap-2 rounded-lg border border-input bg-transparent pr-1.5 pl-3 transition-colors duration-100 focus-within:border-foreground/20 dark:bg-input/30",
             phase === "review" && "mt-1.5",
           )}
         >
+          <NoteAiMentionChips
+            notes={mentions.notes}
+            onRemove={mentions.remove}
+          />
           <input
             ref={inputRef}
             value={prompt}
@@ -528,8 +557,29 @@ export function NoteAiPrompt({
                   ? "Ask AI to edit the selection…"
                   : "Ask AI to write anything…"
             }
-            onChange={(event) => setPrompt(event.target.value)}
+            role="combobox"
+            aria-expanded={mentions.open}
+            aria-controls={mentions.open ? pickerId : undefined}
+            aria-autocomplete="list"
+            onChange={(event) => {
+              const { value, selectionStart } = event.target;
+              setPrompt(value);
+              mentions.update(value, selectionStart ?? value.length);
+            }}
             onKeyDown={(event) => {
+              if (mentions.open) {
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  mentions.move(event.key === "ArrowDown" ? 1 : -1);
+                  return;
+                }
+                const target = mentions.options[mentions.active];
+                if ((event.key === "Enter" || event.key === "Tab") && target) {
+                  event.preventDefault();
+                  setPrompt(mentions.pick(target, prompt));
+                  return;
+                }
+              }
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
                 // An empty Enter in review accepts the draft.
@@ -550,6 +600,18 @@ export function NoteAiPrompt({
           >
             <ArrowUp />
           </Button>
+          {mentions.open ? (
+            <NoteAiMentionPicker
+              id={pickerId}
+              options={mentions.options}
+              active={mentions.active}
+              loading={mentions.loading}
+              onPick={(target) => {
+                setPrompt(mentions.pick(target, prompt));
+                inputRef.current?.focus();
+              }}
+            />
+          ) : null}
         </div>
       )}
       {phase === "prompt" && !prompt ? (

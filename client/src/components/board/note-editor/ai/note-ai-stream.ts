@@ -9,6 +9,8 @@ export type NoteAiRequest = {
   earlierPrompts?: string[];
   /** For a rewrite: the passage being rewritten, selection marked. */
   passage?: string;
+  /** Notes @-mentioned in the prompt, as context. */
+  referencedNotes?: Array<{ title: string; markdown: string }>;
 };
 
 const streamApiUrl =
