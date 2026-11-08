@@ -242,13 +242,18 @@ export function NoteAiPrompt({
 
     // Reveal what has arrived a little each frame; once the stream is done
     // and everything is shown, the run finishes.
-    const reveal = () => {
+    // Time of the previous reveal frame; cleared while caught up, so a pause
+    // waiting for the next chunk doesn't count as reveal time.
+    let lastFrame: number | null = null;
+    const reveal = (now: number) => {
       frameRef.current = null;
       if (!runningRef.current) return;
       const output = outputRef.current;
+      const elapsed = lastFrame === null ? 16 : now - lastFrame;
+      lastFrame = now;
       const shown = prefersReducedMotion()
         ? output.length
-        : nextRevealLength(output, shownRef.current);
+        : nextRevealLength(output, shownRef.current, elapsed);
       if (shown !== shownRef.current) {
         shownRef.current = shown;
         // Follow the writing only while it's on screen, so scrolling up to
@@ -260,9 +265,10 @@ export function NoteAiPrompt({
       }
       if (shown < output.length) {
         frameRef.current = requestAnimationFrame(reveal);
-      } else if (streamDoneRef.current) {
-        finish();
+        return;
       }
+      lastFrame = null;
+      if (streamDoneRef.current) finish();
     };
     const scheduleReveal = () => {
       frameRef.current ??= requestAnimationFrame(reveal);
