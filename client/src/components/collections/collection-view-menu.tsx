@@ -114,9 +114,8 @@ export function CollectionViewMenu({
             />
           }
         >
-          <PanelsTopLeftIcon className="sm:hidden" />
-          <span className="max-sm:sr-only">View</span>
-          <ChevronDownIcon className="max-sm:hidden" />
+          <span>View</span>
+          <ChevronDownIcon />
         </DropdownMenuTrigger>
       </div>
       <DropdownMenuContent align="end" className="w-max min-w-52">
