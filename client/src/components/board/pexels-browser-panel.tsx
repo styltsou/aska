@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useDraggable } from "@dnd-kit/react";
+import { useDragDropMonitor, useDraggable } from "@dnd-kit/react";
 import {
   CheckIcon,
   ImagesIcon,
@@ -26,7 +26,8 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import { usePexelsSearch, type PexelsPhoto } from "@/api/pexels";
 import { useCreateRemoteImage } from "@/api/collection";
-import { Button } from "@/components/ui/button";
+import { Masonry } from "@/components/asset-grid/masonry-grid";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -59,6 +60,7 @@ const PEXELS_BROWSER_MIN_WIDTH = 420;
 const PEXELS_BROWSER_MAX_WIDTH = 960;
 const DEFAULT_PEXELS_BROWSER_WIDTH = 520;
 const EMPTY_PHOTOS: PexelsPhoto[] = [];
+const pexelsColumnCount = (width: number) => (width >= 608 ? 3 : 2);
 
 const DOCK_THUMBNAIL_SIZE = 44;
 const DOCK_THUMBNAIL_GAP = 6;
@@ -88,11 +90,13 @@ function getStoredBrowserWidth(): number {
 const PexelsPhotoTile = memo(function PexelsPhotoTile({
   photo,
   isSelected,
+  isDraggedGroupMember,
   selectedPhotos,
   onToggle,
 }: {
   photo: PexelsPhoto;
   isSelected: boolean;
+  isDraggedGroupMember: boolean;
   selectedPhotos: readonly PexelsPhoto[];
   onToggle: (photo: PexelsPhoto) => void;
 }) {
@@ -130,7 +134,7 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
       onMouseLeave={() => setHovered(false)}
       style={{ aspectRatio: `${photo.width} / ${photo.height}` }}
       className={cn(
-        "group/tile relative mb-2 block w-full cursor-grab break-inside-avoid rounded-lg text-left active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring",
+        "group/tile relative block w-full cursor-grab rounded-lg text-left active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring",
         isSelected && "bg-primary/15",
         isDragging && "cursor-grabbing",
       )}
@@ -176,7 +180,12 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
           ) : null}
         </AnimatePresence>
         {isSelected ? (
-          <span className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+          <span
+            className={cn(
+              buttonVariants({ variant: "default", size: "icon-xs" }),
+              "pointer-events-none absolute top-2 right-2 size-5 rounded-[5px]",
+            )}
+          >
             <CheckIcon className="size-3.5" />
           </span>
         ) : null}
@@ -185,7 +194,7 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
         aria-hidden
         className={cn(
           "pointer-events-none absolute inset-0 z-20 rounded-lg bg-sidebar/55 opacity-0 backdrop-blur-[1px] transition-opacity duration-100",
-          isDragging && "opacity-100",
+          (isDragging || isDraggedGroupMember) && "opacity-100",
         )}
       />
     </button>
@@ -423,6 +432,9 @@ export function PexelsBrowserPanel({
   );
   const [width, setWidth] = useState(getStoredBrowserWidth);
   const [isResizing, setIsResizing] = useState(false);
+  const [draggingPhotoIds, setDraggingPhotoIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const [dockLayoutRevision, setDockLayoutRevision] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -453,6 +465,17 @@ export function PexelsBrowserPanel({
   const search = usePexelsSearch(workspaceSlug, query);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = search;
   const createImage = useCreateRemoteImage(workspaceSlug, collectionSlug);
+
+  useDragDropMonitor({
+    onDragStart(event) {
+      if (event.operation.source?.type !== PEXELS_PHOTO_DRAG_TYPE) return;
+      const { photos } = event.operation.source.data as PexelsPhotoDragData;
+      setDraggingPhotoIds(new Set(photos.map((photo) => photo.id)));
+    },
+    onDragEnd() {
+      setDraggingPhotoIds(new Set());
+    },
+  });
 
   widthRef.current = width;
 
@@ -735,14 +758,14 @@ export function PexelsBrowserPanel({
               </div>
               <div className="relative min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background p-[var(--app-shell-inset)] pr-1">
                 <ScrollArea
-                  className="size-full rounded-xl [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
+                  className="group/pexels-scroll size-full rounded-xl [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
                   viewportClassName="box-border pt-1 pr-2 pl-1"
-                  verticalScrollbarClassName="opacity-100"
+                  verticalScrollbarClassName="group-hover/pexels-scroll:opacity-100"
                   viewportRef={setViewportRef}
                 >
                   <div
                     className={cn(
-                      "[container-type:inline-size] flex min-h-full flex-col",
+                      "flex min-h-full flex-col",
                       selected.length > 0 ? "pb-24" : "pb-1",
                     )}
                   >
@@ -753,33 +776,37 @@ export function PexelsBrowserPanel({
                         description="Search the Pexels library to start collecting photos for your board."
                       />
                     ) : search.isLoading ? (
-                      <div className="columns-2 gap-2 [@container(min-width:38rem)]:columns-3">
+                      <Masonry columnCount={pexelsColumnCount} gap={8}>
                         {Array.from({ length: 6 }, (_, index) => (
                           <ImageSkeleton
                             key={index}
-                            className="mb-2 aspect-[4/5] rounded-lg"
+                            className="aspect-[4/5] rounded-lg"
                           />
                         ))}
-                      </div>
+                      </Masonry>
                     ) : photos && photos.length > 0 ? (
                       <>
-                        <div
+                        <Masonry
                           className={cn(
-                            "columns-2 gap-2 [@container(min-width:38rem)]:columns-3",
                             search.isPlaceholderData &&
                               "pointer-events-none opacity-50 transition-opacity",
                           )}
+                          columnCount={pexelsColumnCount}
+                          gap={8}
                         >
                           {photos.map((photo) => (
                             <PexelsPhotoTile
                               key={photo.id}
                               photo={photo}
                               isSelected={selectedPhotoIds.has(photo.id)}
+                              isDraggedGroupMember={draggingPhotoIds.has(
+                                photo.id,
+                              )}
                               selectedPhotos={selected}
                               onToggle={togglePhoto}
                             />
                           ))}
-                        </div>
+                        </Masonry>
                         {search.isError ? (
                           <div className="flex flex-col items-center gap-2 py-4">
                             <p className="text-xs text-muted-foreground">

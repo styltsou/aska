@@ -82,6 +82,7 @@ const PexelsDragOverlayCards = React.memo(function PexelsDragOverlayCards({
         return (
           <div
             key={photo.id}
+            data-pexels-drag-primary={photo === primaryPhoto ? "" : undefined}
             className="absolute inset-x-0 top-0 rounded-lg bg-background transition-transform duration-100 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
             style={{
               zIndex: stackStyle?.stackOrder,
@@ -179,15 +180,22 @@ export function getPexelsDropTopLeft({
   initialPointer,
   currentPointer,
   sourceBounds,
+  overlayBounds,
   photo,
   zoom,
 }: {
   initialPointer: { x: number; y: number };
   currentPointer: { x: number; y: number };
   sourceBounds?: Pick<DOMRect, "left" | "top" | "width" | "height">;
+  overlayBounds?: Pick<DOMRect, "left" | "top">;
   photo?: PexelsPhoto;
   zoom: number;
 }) {
+  // The overlay's painted bounds include dnd-kit's grab offset and scale.
+  if (overlayBounds) {
+    return { x: overlayBounds.left, y: overlayBounds.top };
+  }
+
   const pointerAnchor = sourceBounds
     ? {
         x: clampRatio(

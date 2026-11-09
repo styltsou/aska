@@ -125,6 +125,9 @@ export function BoardUploadZone({
                 initialPointer: operation.position.initial,
                 currentPointer: operation.position.current,
                 sourceBounds: operation.source.element?.getBoundingClientRect(),
+                overlayBounds: dropZone
+                  ?.querySelector<HTMLElement>("[data-pexels-drag-primary]")
+                  ?.getBoundingClientRect(),
                 photo: photos[0],
                 zoom: getBoardViewportZoom(boardKey),
               }),

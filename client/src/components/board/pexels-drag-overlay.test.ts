@@ -23,6 +23,19 @@ const photo = {
 } satisfies PexelsPhoto;
 
 describe("Pexels drag overlay placement", () => {
+  it("uses the painted overlay bounds for the board handoff", () => {
+    expect(
+      getPexelsDropTopLeft({
+        initialPointer: { x: 150, y: 200 },
+        currentPointer: { x: 700, y: 500 },
+        sourceBounds: { left: 100, top: 100, width: 200, height: 400 },
+        overlayBounds: { left: 673.5, top: 452.25 },
+        photo,
+        zoom: 0.5,
+      }),
+    ).toEqual({ x: 673.5, y: 452.25 });
+  });
+
   it("preserves the pointer's relative grab point at the canvas zoom", () => {
     expect(
       getPexelsDropTopLeft({

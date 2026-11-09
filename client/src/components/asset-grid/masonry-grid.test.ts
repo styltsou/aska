@@ -36,6 +36,24 @@ describe("calculateMasonryLayout", () => {
     ]);
   });
 
+  it("keeps source order aligned with the visual reading order", () => {
+    const layout = calculateMasonryLayout(
+      [240, 100, 170, 90, 220, 130],
+      3,
+      180,
+      undefined,
+      8,
+    )!;
+    expect(layout.positions.map(({ x, y }) => [x, y])).toEqual([
+      [0, 0],
+      [188, 0],
+      [376, 0],
+      [188, 108],
+      [376, 178],
+      [188, 206],
+    ]);
+  });
+
   it("keeps existing cards in their columns after card heights change", () => {
     const initial = calculateMasonryLayout([100, 200, 80, 120], 2, 300)!;
     const columns = initial.positions.map((position) => position.x / 310);

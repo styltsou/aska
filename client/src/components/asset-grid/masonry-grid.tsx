@@ -79,7 +79,7 @@ export function Masonry({
   className?: string;
   width?: number;
   density?: GridDensity;
-  columnCount?: number;
+  columnCount?: number | ((width: number) => number);
   gap?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -114,7 +114,9 @@ export function Masonry({
   });
 
   const columns = effectiveWidth
-    ? (columnCount ?? columnsForGrid(effectiveWidth, density ?? "balanced"))
+    ? typeof columnCount === "function"
+      ? columnCount(effectiveWidth)
+      : (columnCount ?? columnsForGrid(effectiveWidth, density ?? "balanced"))
     : 0;
   const itemWidth = columns
     ? Math.max(0, (effectiveWidth - gap * (columns - 1)) / columns)
