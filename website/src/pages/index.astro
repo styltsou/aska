@@ -8,14 +8,14 @@ import SiteHeader from '../components/SiteHeader.astro';
 import StatementBand from '../components/StatementBand.astro';
 import Layout from '../layouts/Layout.astro';
 
-const appBaseUrl = (import.meta.env.PUBLIC_APP_URL ?? 'https://aska-app.styltsou.com').replace(/\/+$/, '');
+const appBaseUrl = (import.meta.env.PUBLIC_APP_URL ?? 'https://app.mnemee.space').replace(/\/+$/, '');
 const loginHref = `${appBaseUrl}/login`;
 const signupHref = `${appBaseUrl}/signup`;
 ---
 
 <Layout
-	title="Aska | A visual archive for creative work"
-	description="Aska is a quieter home for visual references, ideas, and moodboards."
+	title="Mnemee | A visual archive for creative work"
+	description="Mnemee is a quieter home for visual references, ideas, and moodboards."
 >
 	<SiteHeader loginHref={loginHref} signupHref={signupHref} />
 	<main>

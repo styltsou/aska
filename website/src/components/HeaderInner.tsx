@@ -45,8 +45,8 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 		<div className="site-header__inner" data-menu-open={isOpen || undefined}>
 			<div className="site-header__chrome" aria-hidden="true" />
 			<div className="site-header__row">
-				<a className="brand" href="/" aria-label="Aska home" onClick={scrollToTop}>
-					<img className="brand__logo" src="/aska-logo.svg" alt="" />
+				<a className="brand" href="/" aria-label="Mnemee home" onClick={scrollToTop}>
+					<img className="brand__logo" src="/mnemee-logo.svg" alt="" />
 				</a>
 				<nav className="desktop-nav" aria-label="Primary navigation">
 					<a href="#product">Product</a>
