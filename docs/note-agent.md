@@ -324,6 +324,15 @@ the model calls to read and search the note and mentioned assets, a fast path
 with no tools for simple edits, prompts built from parts per task, and an eval
 harness (`bun run agent:eval` in `server/`) to compare pipelines.
 
+**Hidden image descriptions (with workspace search).** An image's title can
+be a file name or an unrelated label, so the agent is told to trust the
+attached image over it. For search, and for images that aren't attached
+(more than 2, or a failed fetch), store a description in its own column, never
+shown to users: taken from the source when it has one (Pexels), otherwise
+generated once by a vision model in the image pipeline after variants exist.
+Backfill existing images slowly, given the token budget. Mentions keep
+attaching the image itself.
+
 **Mention videos.** Notes, links, colors and images work today. Videos need
 title and note first, then a transcript once one exists (or a poster frame as
 an image). They add a type to `AGENT_MENTION_TYPES` / `MENTIONABLE_TYPES` and
