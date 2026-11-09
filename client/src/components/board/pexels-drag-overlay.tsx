@@ -15,14 +15,16 @@ const PEXELS_DRAG_PREVIEW_WIDTH = 176;
 export function PexelsDragOverlay({
   boardKey,
   isOverCanvas,
+  dropAnimation,
 }: {
   boardKey?: string;
   isOverCanvas: boolean;
+  dropAnimation: React.ComponentProps<typeof DragOverlay>["dropAnimation"];
 }) {
   return (
     <DragOverlay
       className="pointer-events-none z-50 overflow-visible select-none"
-      dropAnimation={null}
+      dropAnimation={dropAnimation}
     >
       {(source) => {
         if (source.type !== PEXELS_PHOTO_DRAG_TYPE) return null;
@@ -80,7 +82,7 @@ const PexelsDragOverlayCards = React.memo(function PexelsDragOverlayCards({
         return (
           <div
             key={photo.id}
-            className="absolute inset-x-0 top-0 rounded-lg bg-background ring-2 ring-ring ring-offset-2 ring-offset-background transition-transform duration-100 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+            className="absolute inset-x-0 top-0 rounded-lg bg-background transition-transform duration-100 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
             style={{
               zIndex: stackStyle?.stackOrder,
               transform: stackStyle
@@ -205,6 +207,42 @@ export function getPexelsDropTopLeft({
     x: currentPointer.x - pointerAnchor.x * screenWidth,
     y: currentPointer.y - pointerAnchor.y * screenHeight,
   };
+}
+
+/** Keep dnd-kit’s actual overlay through the first painted canvas frame. */
+export function waitForPexelsCanvasDrop(
+  dropZone: HTMLElement,
+  photo: PexelsPhoto,
+  handoffId: string,
+) {
+  return new Promise<void>((resolve) => {
+    let paintedFrames = 0;
+    const deadline = performance.now() + 180;
+    const check = () => {
+      const card = Array.from(
+        dropZone.querySelectorAll<HTMLElement>("[data-pexels-drop-client-id]"),
+      ).find((element) => element.dataset.pexelsDropClientId === handoffId);
+      const hasPaintableImage = Array.from(
+        card?.querySelectorAll("img") ?? [],
+      ).some(
+        (image) =>
+          (image.getAttribute("src") === photo.urls.small ||
+            image.getAttribute("src") === photo.urls.regular) &&
+          image.complete &&
+          image.naturalWidth > 0 &&
+          image.style.opacity !== "0",
+      );
+      paintedFrames = hasPaintableImage ? paintedFrames + 1 : 0;
+      if (paintedFrames >= 2) {
+        resolve();
+      } else if (performance.now() >= deadline || !dropZone.isConnected) {
+        resolve();
+      } else {
+        requestAnimationFrame(check);
+      }
+    };
+    requestAnimationFrame(check);
+  });
 }
 
 function clampRatio(value: number) {

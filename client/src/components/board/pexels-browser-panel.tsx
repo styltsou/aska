@@ -130,14 +130,14 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
       onMouseLeave={() => setHovered(false)}
       style={{ aspectRatio: `${photo.width} / ${photo.height}` }}
       className={cn(
-        "group/tile relative mb-2 block w-full cursor-grab break-inside-avoid rounded-2xl text-left active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring",
+        "group/tile relative mb-2 block w-full cursor-grab break-inside-avoid rounded-lg text-left active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-ring",
         isSelected && "bg-primary/15",
         isDragging && "cursor-grabbing",
       )}
     >
       <div
         className={cn(
-          "absolute inset-0 overflow-hidden rounded-2xl bg-muted transition-[inset,border-radius] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
+          "absolute inset-0 overflow-hidden rounded-lg bg-muted transition-[inset,border-radius] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
           isSelected && "inset-2.5 rounded-md",
         )}
       >
@@ -145,7 +145,7 @@ const PexelsPhotoTile = memo(function PexelsPhotoTile({
           as="span"
           aria-hidden
           className={cn(
-            "absolute inset-0 rounded-none transition-opacity duration-300",
+            "absolute inset-0 rounded-[inherit] transition-opacity duration-300",
             loaded ? "opacity-0" : "opacity-100",
           )}
         />
@@ -733,19 +733,17 @@ export function PexelsBrowserPanel({
                   ) : null}
                 </div>
               </div>
-              <div className="relative min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background p-[var(--app-shell-inset)]">
+              <div className="relative min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background p-[var(--app-shell-inset)] pr-1">
                 <ScrollArea
                   className="size-full rounded-xl [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
-                  viewportClassName="box-border pr-3"
+                  viewportClassName="box-border pt-1 pr-2 pl-1"
                   verticalScrollbarClassName="opacity-100"
                   viewportRef={setViewportRef}
                 >
                   <div
                     className={cn(
                       "[container-type:inline-size] flex min-h-full flex-col",
-                      selected.length > 0
-                        ? "pb-24"
-                        : "pb-[var(--app-shell-inset)]",
+                      selected.length > 0 ? "pb-24" : "pb-1",
                     )}
                   >
                     {query.length === 0 ? (

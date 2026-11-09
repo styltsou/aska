@@ -274,6 +274,9 @@ export const CanvasCard = memo(function CanvasCard({
       }}
       style={{ transformOrigin: "bottom center" }}
       aria-busy={isPending || undefined}
+      data-pexels-drop-client-id={
+        node.type === "image" ? node.clientId : undefined
+      }
       data-canvas-asset-id={
         !isPending && node.type !== "folder" ? node.id : undefined
       }

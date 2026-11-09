@@ -24,7 +24,11 @@ import {
   useTransientStore,
 } from "@/store";
 import { cn, parseHttpUrl } from "@/lib/utils";
-import { getPexelsDropTopLeft, PexelsDragOverlay } from "./pexels-drag-overlay";
+import {
+  getPexelsDropTopLeft,
+  PexelsDragOverlay,
+  waitForPexelsCanvasDrop,
+} from "./pexels-drag-overlay";
 import { useBoardAssetActions } from "./use-board-asset-actions";
 
 const DROP_PREVIEW_BODY_WIDTH = 192;
@@ -70,6 +74,18 @@ export function BoardUploadZone({
     "top",
   );
   const dropPreviewRef = useRef<HTMLDivElement>(null);
+  const pexelsDropHandoffRef = useRef<{
+    dropZone: HTMLElement;
+    photo: PexelsPhotoDragData["photos"][number];
+    id: string;
+  } | null>(null);
+  const handlePexelsDropAnimation = useCallback(() => {
+    const handoff = pexelsDropHandoffRef.current;
+    pexelsDropHandoffRef.current = null;
+    return handoff
+      ? waitForPexelsCanvasDrop(handoff.dropZone, handoff.photo, handoff.id)
+      : undefined;
+  }, []);
   const pexelsDropTargetId = `pexels-canvas:${boardKey ?? target}`;
   const { ref: droppableRef, isDropTarget: isPexelsDropTarget } = useDroppable({
     id: pexelsDropTargetId,
@@ -79,6 +95,9 @@ export function BoardUploadZone({
   });
 
   useDragDropMonitor({
+    onDragStart() {
+      pexelsDropHandoffRef.current = null;
+    },
     onDragEnd(event) {
       const { operation } = event;
       if (
@@ -90,6 +109,14 @@ export function BoardUploadZone({
       }
 
       const { photos } = operation.source.data as PexelsPhotoDragData;
+      const dropZone = operation.target.element;
+      const handoffId = boardKey
+        ? `image-importing-${crypto.randomUUID()}`
+        : undefined;
+      pexelsDropHandoffRef.current =
+        handoffId && dropZone instanceof HTMLElement && photos[0]
+          ? { dropZone, photo: photos[0], id: handoffId }
+          : null;
       const placement = boardKey
         ? {
             ...getBoardDropPlacement(
@@ -113,11 +140,16 @@ export function BoardUploadZone({
         : {};
       const collectionSlug = collectionPath.split("/")[0];
       const scope = getPexelsBrowserScope(workspaceSlug, collectionSlug);
-      void importPexelsPhotos(photos, placement, (photo) => {
-        useSessionStore
-          .getState()
-          .removePexelsBrowserSelected(scope, [photo.id]);
-      });
+      void importPexelsPhotos(
+        photos,
+        placement,
+        (photo) => {
+          useSessionStore
+            .getState()
+            .removePexelsBrowserSelected(scope, [photo.id]);
+        },
+        handoffId,
+      );
     },
   });
 
@@ -220,6 +252,7 @@ export function BoardUploadZone({
       <PexelsDragOverlay
         boardKey={boardKey}
         isOverCanvas={isPexelsDropTarget}
+        dropAnimation={handlePexelsDropAnimation}
       />
       <div
         ref={dropPreviewRef}

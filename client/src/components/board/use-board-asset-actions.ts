@@ -439,6 +439,7 @@ export function useBoardAssetActions({
       photos: readonly PexelsPhoto[],
       actionPlacement?: BoardInsertionPlacement,
       onImported?: (photo: PexelsPhoto) => void,
+      handoffId?: string,
     ) => {
       if (photos.length === 0) return;
 
@@ -466,9 +467,16 @@ export function useBoardAssetActions({
           if (insertionPlacement?.batch?.layout === "stack") {
             indexedPhotos.reverse();
           }
-          for (const { index, photo } of indexedPhotos) {
-            await createRemoteImage.mutateAsync({
-              ...toPexelsRemoteImageInput(photo),
+          let previousImport: Promise<unknown> = Promise.resolve();
+          const imports = indexedPhotos.map(({ index, photo }) => {
+            const input = toPexelsRemoteImageInput(photo);
+            const mutation = createRemoteImage.mutateAsync({
+              ...input,
+              preview: {
+                ...input.preview,
+                handoffId: index === 0 ? handoffId : undefined,
+                beforeImport: previousImport,
+              },
               parentFolderPath,
               placement: insertionPlacement
                 ? {
@@ -482,8 +490,10 @@ export function useBoardAssetActions({
                   }
                 : undefined,
             });
-            onImported?.(photo);
-          }
+            previousImport = mutation;
+            return mutation.then(() => onImported?.(photo));
+          });
+          await Promise.all(imports);
         }
         toast.success(
           `${photos.length} Pexels photo${photos.length === 1 ? "" : "s"} imported`,

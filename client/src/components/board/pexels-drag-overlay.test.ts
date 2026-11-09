@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { PexelsPhoto } from "@/api/pexels";
 import { getCanvasDropFanOffset } from "@/components/canvas/canvas-drop-stack";
 import {
   getPexelsDropTopLeft,
   makePexelsOverlayStackStyles,
+  waitForPexelsCanvasDrop,
 } from "./pexels-drag-overlay";
 
 const photo = {
@@ -83,5 +84,46 @@ describe("Pexels drag overlay placement", () => {
       stackOrder: 1,
       delayMs: 0,
     });
+  });
+
+  it("releases the drag overlay after the matching canvas image has painted", async () => {
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frames.push(callback);
+      return frames.length;
+    });
+    try {
+      const image = {
+        getAttribute: () => photo.urls.small,
+        complete: true,
+        naturalWidth: 200,
+        style: { opacity: "1" },
+      } as unknown as HTMLImageElement;
+      const card = {
+        dataset: { pexelsDropClientId: "drop-1" },
+        querySelectorAll: () => [image],
+      } as unknown as HTMLElement;
+      const dropZone = {
+        isConnected: true,
+        querySelectorAll: () => [card],
+      } as unknown as HTMLElement;
+
+      const handoff = waitForPexelsCanvasDrop(dropZone, photo, "drop-1");
+      let released = false;
+      void handoff.then(() => {
+        released = true;
+      });
+
+      frames.shift()?.(0);
+      await Promise.resolve();
+      expect(released).toBe(false);
+
+      frames.shift()?.(16);
+      await handoff;
+      expect(released).toBe(true);
+      expect(frames).toHaveLength(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

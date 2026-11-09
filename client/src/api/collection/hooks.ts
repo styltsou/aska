@@ -193,6 +193,8 @@ type CreateRemoteImageMutationInput = CreateRemoteImageInput & {
     url: string;
     /** A browser-cached source to keep visible while `url` is decoded. */
     fallbackUrl?: string;
+    handoffId?: string;
+    beforeImport?: Promise<unknown>;
     width: number;
     height: number;
   };
@@ -2935,7 +2937,7 @@ export function useCreateRemoteImage(
   return useMutation({
     mutationFn: async ({
       placement,
-      preview,
+      preview: remotePreview,
       ...data
     }: CreateRemoteImageMutationInput) => {
       const contentsKey = collectionQueryKeys.contents(
@@ -2943,7 +2945,8 @@ export function useCreateRemoteImage(
         collectionSlug,
         data.parentFolderPath,
       );
-      await queryClient.cancelQueries({ queryKey: contentsKey });
+      // Cancel any stale fetch without delaying the optimistic canvas card.
+      void queryClient.cancelQueries({ queryKey: contentsKey });
 
       const current =
         queryClient.getQueryData<CollectionContentsResponse>(contentsKey);
@@ -2952,15 +2955,17 @@ export function useCreateRemoteImage(
           ? `folder-${current.breadcrumbs.at(-1)!.id}`
           : undefined
         : null;
-      const optimisticId = `image-importing-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimisticId =
+        remotePreview?.handoffId ??
+        `image-importing-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const optimisticImage: Extract<CollectionNode, { type: "image" }> = {
         id: optimisticId,
         type: "image",
         // Render the provider/browser URL immediately while the server imports it.
-        url: preview?.url ?? data.url,
-        localPreviewUrl: preview?.fallbackUrl ?? preview?.url,
-        width: preview?.width ?? UNKNOWN_IMAGE_DIMENSIONS.width,
-        height: preview?.height ?? UNKNOWN_IMAGE_DIMENSIONS.height,
+        url: remotePreview?.url ?? data.url,
+        localPreviewUrl: remotePreview?.fallbackUrl ?? remotePreview?.url,
+        width: remotePreview?.width ?? UNKNOWN_IMAGE_DIMENSIONS.width,
+        height: remotePreview?.height ?? UNKNOWN_IMAGE_DIMENSIONS.height,
         title: data.title ?? null,
         alt: data.alt ?? null,
         note: null,
@@ -3001,7 +3006,7 @@ export function useCreateRemoteImage(
         1,
       );
 
-      if (!preview) {
+      if (!remotePreview) {
         void readRemoteImageDimensions(data.url)
           .then((dimensions) => {
             updateOptimisticImage(
@@ -3017,6 +3022,7 @@ export function useCreateRemoteImage(
       }
 
       try {
+        await remotePreview?.beforeImport;
         const created = await createRemoteImage(workspaceSlug, collectionSlug, {
           ...data,
           position: optimisticImage.position ?? undefined,
