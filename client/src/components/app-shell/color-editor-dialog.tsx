@@ -915,9 +915,9 @@ export function ColorEditorDialog({
         </div>
 
         <DrawerFooter className="w-full bg-transparent !p-0">
-          <div className="flex w-full flex-col gap-2 p-3 sm:flex-row sm:justify-between">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 p-3">
             <DrawerClose render={<Button variant="outline">Cancel</Button>} />
-            <div className="flex items-center gap-2 self-end sm:self-auto">
+            <div className="flex items-center gap-2">
               {isEditing ? (
                 <Button
                   variant="outline"
