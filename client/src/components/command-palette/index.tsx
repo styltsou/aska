@@ -575,6 +575,10 @@ export function CommandPalette() {
         );
         return;
       case "open-settings":
+        // Settings has no trigger to return to; don't hand focus back to
+        // whatever the palette was opened from, or Esc on settings would
+        // land on that stray element.
+        skipFocusRestoreRef.current = true;
         handleOpenChange(false);
         openSettings();
         return;

@@ -266,10 +266,16 @@ export function SettingsDialog() {
   const open = (location.search as { settings?: boolean }).settings === true;
   const [section, setSection] = useState<SettingsSection>("appearance");
   const titleRef = useRef<HTMLHeadingElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     function onRequest(event: Event) {
       const requestedOpen = (event as CustomEvent<boolean>).detail;
+      if (requestedOpen) {
+        const active = document.activeElement;
+        previousFocusRef.current =
+          active instanceof HTMLElement ? active : null;
+      }
       void navigateOverlay(
         location.pathname,
         {
@@ -294,6 +300,19 @@ export function SettingsDialog() {
       <DialogContent
         className="md:max-w-[700px] lg:max-w-[800px]"
         initialFocus={titleRef}
+        finalFocus={() => {
+          // Only return focus to a real, still-mounted opener (e.g. the user
+          // menu trigger). Otherwise leave focus alone instead of jumping to
+          // an unrelated control.
+          const previous = previousFocusRef.current;
+          previousFocusRef.current = null;
+          return (
+            !!previous &&
+            previous !== document.body &&
+            previous.isConnected &&
+            previous
+          );
+        }}
         polishedMotion
         showCloseButton={false}
       >
