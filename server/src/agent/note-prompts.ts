@@ -1,5 +1,5 @@
 /**
- * Prompt parts for the note AI, combined per request: a shared base, one task
+ * Prompt parts for the note agent, combined per request: a shared base, one task
  * part chosen by where the request came from, and the context part only when
  * tools are attached. See docs/proposals/ai-agentic-context.md.
  */
@@ -9,7 +9,7 @@ export const SELECTION_START = "⟦selection⟧";
 export const SELECTION_END = "⟦/selection⟧";
 
 /** Where the request came from; the client knows, so nothing is guessed. */
-export type NoteAiTask = "write" | "rewrite" | "mechanical";
+export type NoteAgentTask = "write" | "rewrite" | "mechanical";
 
 const BASE =
   "You are the writing assistant inside a note editor. You write Markdown that goes straight into the user's note. " +
@@ -17,7 +17,7 @@ const BASE =
   "Do not create mention syntax or claim to link another note. Do not wrap the whole answer in a code fence. " +
   "Never output the markers ⟦cursor⟧, ⟦selection⟧ or ⟦/selection⟧.";
 
-const TASKS: Record<NoteAiTask, string> = {
+const TASKS: Record<NoteAgentTask, string> = {
   write:
     `Write new content for the place marked ${CURSOR_MARKER} in the note. ` +
     "Return only the content to insert, fitting what comes before and after it; never repeat the note.",
@@ -48,7 +48,7 @@ export function systemPrompt({
   tools,
   references,
 }: {
-  task: NoteAiTask;
+  task: NoteAgentTask;
   tools: boolean;
   references: boolean;
 }) {
@@ -72,7 +72,7 @@ export function userPrompt({
   earlierPrompts = [],
   instruction,
 }: {
-  task: NoteAiTask;
+  task: NoteAgentTask;
   overview: string;
   references: string[];
   passage?: string | undefined;

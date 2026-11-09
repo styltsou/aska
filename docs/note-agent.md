@@ -1,7 +1,10 @@
-# AI Editing in Notes
+# Note Agent
 
-In-editor AI for notes: writing new content at the cursor, rewriting selected
-text, quick actions, and mentioning other notes as context. This document
+The note agent writes new content at the cursor, rewrites selected text, runs
+quick actions, and uses mentioned notes as context. The UI still labels it
+"AI" (**Ask AI**); code and docs call it the agent, while deploy names
+(`aiApi`, `ai-stream-lambda`, `/api/ai/stream`, `VITE_AI_STREAM_URL`) keep
+"ai". This document
 covers how it works end to end, the invariants that keep it predictable, and
 what is planned next.
 
@@ -9,8 +12,8 @@ what is planned next.
 
 | Entry point | Result |
 | --- | --- |
-| Space on an empty line | Prompt opens on that line; the AI writes new content there. |
-| Select text, then **Ask AI** in the selection toolbar or Ctrl/Cmd+J | Prompt opens under the selection; the AI rewrites just the selected text. |
+| Space on an empty line | Prompt opens on that line; the agent writes new content there. |
+| Select text, then **Ask AI** in the selection toolbar or Ctrl/Cmd+J | Prompt opens under the selection; the agent rewrites just the selected text. |
 | Quick-action chips under an empty prompt | Preset instructions: continue writing, summarize, outline, action items; or improve, fix grammar, shorter, longer for a selection. |
 | `@` in the prompt | Picks notes whose content is sent as context. |
 
@@ -19,7 +22,7 @@ Every run goes through the same three states:
 1. **Prompt:** a one-line input in the note, at the place the result will go.
    The placeholder teaches `@` ("…, @ to mention…").
 2. **Streaming:** "Writing…" with Stop (Esc), preceded by status steps such as
-   "Searching this note…" when the AI looks something up. Output goes straight into the note
+   "Searching this note…" when the agent looks something up. Output goes straight into the note
    as it arrives; each new chunk fades in over 100ms. There is no artificial
    pacing.
 3. **Review:** the result sits in the note as a **pending draft**, marked by a
@@ -35,10 +38,10 @@ place.
 
 ```
 NoteRichText (Tiptap editor)
- ├─ NoteAiSession plugin ── pending range, original content, decorations, locks
- └─ NoteAiPrompt (portaled into a widget decoration after the range)
-      ├─ note-ai-mentions ── @ picker → mention-search API, note content fetch
-      └─ streamNoteAi ── POST /api/ai/stream (SSE)
+ ├─ NoteAgentSession plugin ── pending range, original content, decorations, locks
+ └─ NoteAgentPrompt (portaled into a widget decoration after the range)
+      ├─ note-agent-mentions ── @ picker → mention-search API, note content fetch
+      └─ streamNoteAgent ── POST /api/ai/stream (SSE)
                               │
                  ai-stream-lambda (AWS Lambda, response streaming)
                    auth (Better Auth session cookie) → zod request schema
@@ -49,14 +52,14 @@ NoteRichText (Tiptap editor)
                  SSE: custom {status | delta | done}, error {message}
 ```
 
-### Client (`client/src/components/board/note-editor/ai/`)
+### Client (`client/src/components/board/note-editor/agent/`)
 
-**`note-ai-session.ts`: the session plugin.** A ProseMirror plugin owns one
+**`note-agent-session.ts`: the session plugin.** A ProseMirror plugin owns one
 session at a time. Its state:
 
 | Field | Meaning |
 | --- | --- |
-| `range` | The top-level blocks the AI owns. Mapped through every transaction (`from` with assoc 1, `to` with assoc -1, so edits at the edges stay outside). |
+| `range` | The top-level blocks the agent owns. Mapped through every transaction (`from` with assoc 1, `to` with assoc -1, so edits at the edges stay outside). |
 | `original` | What the session replaced: `null` for an empty line, or the selected blocks for a rewrite. |
 | `passage` | For a rewrite, the selected blocks as Markdown with `⟦selection⟧…⟦/selection⟧` around the exact selection (omitted when whole blocks are selected). |
 | `target` | For a rewrite, the selected text, highlighted while the instruction is typed (focus is in the prompt, so the native selection doesn't show). |
@@ -73,27 +76,27 @@ Rules the plugin enforces:
   original and leaves no trace in the undo stack.
 - **The draft is locked.** Typing, pasting and dropping into the range are
   swallowed. The drag handle and the formatting bubble menu are hidden over
-  pending blocks (`isInNoteAiDraft`, `selectionOverlapsNoteAiDraft`). Clicking
+  pending blocks (`isInNoteAgentDraft`, `selectionOverlapsNoteAgentDraft`). Clicking
   into the draft blurs the prompt, which keeps it; after that it is normal text.
-- **Saving excludes the draft.** `noteMarkdownWithoutAiDraft` swaps the range
+- **Saving excludes the draft.** `noteMarkdownWithoutAgentDraft` swaps the range
   back to `original` for autosave, so a pending draft is never persisted as note
   content.
-- **Markdown in, nodes out.** `setNoteAiContent` re-parses the accumulated
+- **Markdown in, nodes out.** `setNoteAgentContent` re-parses the accumulated
   Markdown on every update (partial Markdown included), strips any markers the
   model echoed, and computes `fresh` with `Fragment.findDiffStart`.
 
-**`note-ai-prompt.tsx`: the prompt component.** Owns the phase
+**`note-agent-prompt.tsx`: the prompt component.** Owns the phase
 (`prompt` / `streaming` / `review`), the input, quick actions, the action row,
 focus hand-offs, and the request lifecycle:
 
 - Context is captured once when the prompt opens:
-  `noteMarkdownAtAiCursor` serializes the note with `⟦cursor⟧` in place of the
+  `noteMarkdownAtAgentCursor` serializes the note with `⟦cursor⟧` in place of the
   range. The whole note is sent (up to 200,000 characters); the server decides
   how much the model sees.
 - Follow-ups send the current draft plus `earlierPrompts` (the instructions
   that produced it, oldest first, at most 10).
 - For a rewrite, the model returns only the replacement for the selected part;
-  `noteAiPassageWith` rebuilds the passage around it, so text outside the
+  `noteAgentPassageWith` rebuilds the passage around it, so text outside the
   selection can't be dropped or altered. Selections that cut a word are widened
   to whole words at start.
 - Output is written on the next animation frame after each chunk; nothing is
@@ -104,25 +107,25 @@ focus hand-offs, and the request lifecycle:
 - Blur: during streaming the draft is kept once the stream ends; in review it
   is kept; an unused prompt is discarded. Window switches are ignored.
 
-**`note-ai-stream.ts`: transport.** A fetch-based SSE reader with an
+**`note-agent-stream.ts`: transport.** A fetch-based SSE reader with an
 `AbortController` (it replaced `@langchain/langgraph-sdk`'s `useStream`, which
 delivered events twice). Posts `{ input: request }` with credentials to
 `VITE_AI_STREAM_URL` (normalized to `/api/ai/stream`) or the API origin.
 
-**`note-ai-diff.ts`: word diff.** Tokenizes both versions into words, spaces,
+**`note-agent-diff.ts`: word diff.** Tokenizes both versions into words, spaces,
 block boundaries and atom blocks, diffs them with `diff`'s `diffArrays`, and
 groups changes into hunks (a run of changes plus the blank space between them).
 Output is positions for decorations: inline highlights for added text, widgets
 for removed text (a whole removed block renders on its own line), node
 decorations for added atoms. Formatting-only changes are not shown.
 
-**`note-ai-mentions.tsx`: `@` mentions.** Detects `@query` before the caret,
+**`note-agent-mentions.tsx`: `@` mentions.** Detects `@query` before the caret,
 searches with the editor's existing `mentionSearchQueryOptions` (notes only),
 shows picked notes as chips (at most 3), and on each request fetches their
 content with `fetchPeekableAsset` (`note-{id}`), capped at 100,000 characters
 each. Content is read fresh per request, so follow-ups see edits.
 
-**`note-ai-draft-store.ts`: persistence.** A finished draft on an empty line is
+**`note-agent-draft-store.ts`: persistence.** A finished draft on an empty line is
 stored in `localStorage` (`aska:note-ai-draft:v1:{noteId}`, 14-day expiry) and
 restored after a refresh only if the note's draft-less Markdown is unchanged.
 Restored drafts don't take focus. Rewrites are not stored.
@@ -149,7 +152,7 @@ the cookie, validates the body, then streams the agent's output as SSE:
 | Event | Payload |
 | --- | --- |
 | `custom` | `{ type: "status", text }` for each lookup, `{ type: "delta", text }` for each chunk of the answer, then `{ type: "done" }` |
-| `error` | `{ message }`, readable as-is (see `ai/ai-error.ts`) |
+| `error` | `{ message }`, readable as-is (see `agent/agent-error.ts`) |
 
 Request schema and limits:
 
@@ -163,11 +166,11 @@ Request schema and limits:
 | `passage` | 40,000 chars | Rewrite only: the blocks with the selection marked. |
 | `referencedNotes` | 3 × (300 title, 100,000 Markdown) | `@`-mentioned notes, whole. |
 
-**`ai/note-agent.ts`.** The note AI as a small agent loop
+**`agent/note-agent.ts`.** The note agent as a small loop
 (model → tools → model), following
-[Agentic Context](./proposals/ai-agentic-context.md):
+[Agent Context and Tools](./proposals/agent-context.md):
 
-- **Overview** (`ai/note-context.ts`): a note up to 6,000 characters is shown
+- **Overview** (`agent/note-context.ts`): a note up to 6,000 characters is shown
   whole; a longer one as an outline (headings, line ranges, sizes) plus the
   excerpt around the cursor. Mentioned notes are shown whole when small, else
   as a card (outline and beginning).
@@ -179,19 +182,19 @@ Request schema and limits:
 - **Answer only:** text at the start of a round is held back until it's clearly
   not a preamble to a tool call, so only the final answer reaches the note. At
   most 4 tool rounds, then the model is told to answer.
-- **Prompts** (`ai/note-prompts.ts`): a shared base, one task part (write,
+- **Prompts** (`agent/note-prompts.ts`): a shared base, one task part (write,
   rewrite, mechanical), a references part when notes are mentioned, and the
   context-and-tools part only when tools are attached.
 
-**`ai/note-graph.ts`.** The previous single-call LangGraph pipeline, kept as
+**`agent/note-graph.ts`.** The previous single-call LangGraph pipeline, kept as
 the eval baseline (`--pipeline baseline`).
 
-**`ai/note-model.ts`.** `createNoteModel()` is the only code that knows the
+**`agent/note-model.ts`.** `createNoteModel()` is the only code that knows the
 provider (Gemini `gemini-2.5-flash`, `maxRetries: 1` so usage-limit errors
 surface quickly). Everything downstream accepts any LangChain chat model, so
 switching providers means changing this function and its secret.
 
-**`ai/ai-error.ts`.** Maps provider failures to user-facing messages by status
+**`agent/agent-error.ts`.** Maps provider failures to user-facing messages by status
 and wording: 429 / quota → "AI usage limit reached", 503 / 529 / overloaded →
 "model is overloaded", otherwise "AI generation failed".
 
@@ -210,32 +213,32 @@ and wording: 429 / quota → "AI usage limit reached", 503 / 529 / overloaded �
 
 ## Testing
 
-- Client unit tests live next to the modules: `note-ai-session.test.ts` (a
+- Client unit tests live next to the modules: `note-agent-session.test.ts` (a
   ProseMirror harness with history, since headless Tiptap registers no plugins),
-  `note-ai-diff.test.ts`, `note-ai-stream.test.ts`,
-  `note-ai-draft-store.test.ts`, `note-ai-mentions.test.ts`.
-- Server: `ai/note-agent.test.ts` (overview, tools, fast path, round limit),
-  `ai/note-graph.test.ts`, `ai/ai-error.test.ts` and `ai/eval/eval.test.ts`.
+  `note-agent-diff.test.ts`, `note-agent-stream.test.ts`,
+  `note-agent-draft-store.test.ts`, `note-agent-mentions.test.ts`.
+- Server: `agent/note-agent.test.ts` (overview, tools, fast path, round limit),
+  `agent/note-graph.test.ts`, `agent/agent-error.test.ts` and `agent/eval/eval.test.ts`.
   Run them with `bun test src/ai` (vitest under the Bun runtime fails to import
-  `zod`; `bun test` runs the same files). `ai/eval/scripted-model.ts` plays
+  `zod`; `bun test` runs the same files). `agent/eval/scripted-model.ts` plays
   back scripted tool calls and answers for tests.
-- Eval: `bun run ai:eval` in `server/` (`--fake` for a free scripted run,
+- Eval: `bun run agent:eval` in `server/` (`--fake` for a free scripted run,
   `--pipeline baseline` to compare, `--delay` for rate limits).
 - In the browser, stub `window.fetch` for URLs containing `/ai/` to return a
   scripted SSE stream. This exercises the whole client without model calls.
   Back up the note first (for example in `sessionStorage`) and avoid editing
   source files mid-test: a hot reload remounts the prompt, and the blur keeps
   the draft.
-- Local clients use the deployed AI stream, so server changes only show up after
+- Local clients use the deployed agent stream, so server changes only show up after
   `main` is deployed.
 
 ## Planned and possible next steps
 
 The next step is designed in
-[Agentic Context](./proposals/ai-agentic-context.md): an overview plus tools
+[Agent Context and Tools](./proposals/agent-context.md): an overview plus tools
 the model calls to read and search the note and mentioned assets, a fast path
 with no tools for simple edits, prompts built from parts per task, and an eval
-harness (`bun run ai:eval` in `server/`) to compare pipelines.
+harness (`bun run agent:eval` in `server/`) to compare pipelines.
 
 **Mention any asset, not just notes.** The picker, chips, request field and
 prompt are note-specific today. The plan is a per-type context builder:
@@ -280,7 +283,7 @@ workspace-wide retrieval once there is a concrete need.
 
 - Per-user usage limits and visibility into cost.
 - Provider and model chosen through configuration.
-- Run the server AI tests under Node in CI.
+- Run the server agent tests under Node in CI.
 - Remove the now-unused `@langchain/langgraph-sdk` dependency from the client.
 
 **Interaction ideas.**

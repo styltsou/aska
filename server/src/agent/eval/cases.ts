@@ -1,7 +1,7 @@
-import type { ScriptedStep } from "@/ai/eval/scripted-model";
+import type { ScriptedStep } from "@/agent/eval/scripted-model";
 
 /**
- * Fixed cases for evaluating the note AI. Each case describes what the client
+ * Fixed cases for evaluating the note agent. Each case describes what the client
  * would send (note with cursor marker, instruction, passage, referenced notes)
  * at full size; pipelines apply their own trimming. Checks are deliberately
  * simple so results can be compared across pipelines and prompt changes.

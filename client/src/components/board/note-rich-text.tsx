@@ -99,25 +99,25 @@ import {
 } from "@/components/board/note-block-style";
 import { NoteCutListItemCleanup } from "@/components/board/note-cut-cleanup";
 import {
-  clearNoteAiDraft,
-  loadNoteAiDraft,
-  saveNoteAiDraft,
-} from "@/components/board/note-editor/ai/note-ai-draft-store";
+  clearNoteAgentDraft,
+  loadNoteAgentDraft,
+  saveNoteAgentDraft,
+} from "@/components/board/note-editor/agent/note-agent-draft-store";
 import {
-  NoteAiPrompt,
-  type NoteAiDraft,
-} from "@/components/board/note-editor/ai/note-ai-prompt";
+  NoteAgentPrompt,
+  type NoteAgentDraft,
+} from "@/components/board/note-editor/agent/note-agent-prompt";
 import {
-  isInNoteAiDraft,
-  isNoteAiSessionActive,
-  NoteAiSession,
-  noteAiSessionBlockIndex,
-  noteMarkdownWithoutAiDraft,
-  selectionOverlapsNoteAiDraft,
-  startNoteAiRewrite,
-  startNoteAiSession,
-  startNoteAiSessionAtBlock,
-} from "@/components/board/note-editor/ai/note-ai-session";
+  isInNoteAgentDraft,
+  isNoteAgentSessionActive,
+  NoteAgentSession,
+  noteAgentSessionBlockIndex,
+  noteMarkdownWithoutAgentDraft,
+  selectionOverlapsNoteAgentDraft,
+  startNoteAgentRewrite,
+  startNoteAgentSession,
+  startNoteAgentSessionAtBlock,
+} from "@/components/board/note-editor/agent/note-agent-session";
 import { AskaTaskItem } from "@/components/board/task-item";
 import { Button } from "@/components/ui/button";
 import {
@@ -1411,10 +1411,10 @@ function createBlockDragHandleExtension() {
         node && typeof pos === "number" && pos >= 0
           ? { editor: targetEditor, node, pos }
           : undefined;
-      // A pending AI draft is judged as a whole (keep, discard or follow up),
+      // A pending agent draft is judged as a whole (keep, discard or follow up),
       // so its blocks can't be dragged out or have blocks added beside them.
-      controls.dataset.aiPending =
-        target && isInNoteAiDraft(targetEditor.state, target.pos)
+      controls.dataset.agentPending =
+        target && isInNoteAgentDraft(targetEditor.state, target.pos)
           ? "true"
           : "false";
     },
@@ -1483,7 +1483,7 @@ function createBaseNoteExtensions(
         if (node.type.name === "heading") {
           return `Heading ${node.attrs.level}`;
         }
-        // Space opens AI only on a top-level line, so only hint it there.
+        // Space opens the agent only on a top-level line, so only hint it there.
         // '@' mentions are a convention users already expect, so the hint
         // stays short by leaving them out.
         const topLevel = editor.state.doc.resolve(pos).depth === 0;
@@ -1546,14 +1546,14 @@ function applyBlockStyle(editor: Editor, value: BlockStyleValue) {
 function InlineFormattingMenu({
   editor,
   onExtractSelection,
-  onAskAi,
+  onAskAgent,
   blockStyleMenuOpen,
   onBlockStyleMenuOpenChange,
   menuRef,
 }: {
   editor: Editor;
   onExtractSelection?: (content: string) => void;
-  onAskAi?: () => void;
+  onAskAgent?: () => void;
   blockStyleMenuOpen: boolean;
   onBlockStyleMenuOpenChange: (open: boolean) => void;
   menuRef: React.RefObject<HTMLDivElement | null>;
@@ -1786,7 +1786,7 @@ function InlineFormattingMenu({
         }}
       >
         <NoteSelectionMenuSurface>
-          {onAskAi ? (
+          {onAskAgent ? (
             <div className={GLASS_ISLAND_CLASS}>
               <ButtonGroup>
                 <Tooltip>
@@ -1798,7 +1798,7 @@ function InlineFormattingMenu({
                         className="h-7 gap-1 rounded-md px-1.5 text-xs font-medium text-foreground hover:bg-foreground/5 hover:text-foreground"
                         type="button"
                         onMouseDown={(event) => event.preventDefault()}
-                        onClick={onAskAi}
+                        onClick={onAskAgent}
                       >
                         <SparklesIcon className="size-3.5" />
                         Ask AI
@@ -2440,51 +2440,51 @@ export const NoteRichText = forwardRef<
   const onHighlightSelectionChangeRef = useRef(onHighlightSelectionChange);
   const highlightPointerDownRef = useRef(false);
   const editorInstanceRef = useRef<Editor | null>(null);
-  // The open AI session's widget (where its controls render) and, when it was
+  // The open agent session's widget (where its controls render) and, when it was
   // reopened from storage, the draft it resumes.
-  const [aiSession, setAiSession] = useState<{
+  const [agentSession, setAgentSession] = useState<{
     widget: HTMLElement;
-    restored?: NoteAiDraft;
+    restored?: NoteAgentDraft;
   } | null>(null);
-  const aiWidget = aiSession?.widget ?? null;
+  const agentWidget = agentSession?.widget ?? null;
   // Which note the session belongs to and its latest finished draft, kept so
   // the stored copy can follow edits made elsewhere in the note.
-  const aiSessionNoteIdRef = useRef<string | undefined>(undefined);
-  const aiPendingDraftRef = useRef<NoteAiDraft | null>(null);
-  const aiRestoredForRef = useRef<string | undefined>(undefined);
+  const agentSessionNoteIdRef = useRef<string | undefined>(undefined);
+  const agentPendingDraftRef = useRef<NoteAgentDraft | null>(null);
+  const agentRestoredForRef = useRef<string | undefined>(undefined);
   const lastSessionSaveRef = useRef<string | null>(null);
   const sourceNoteIdRef = useRef(sourceNoteId);
   sourceNoteIdRef.current = sourceNoteId;
-  const persistAiDraft = useCallback((currentEditor: Editor) => {
-    const noteId = aiSessionNoteIdRef.current;
-    const pending = aiPendingDraftRef.current;
-    const blockIndex = noteAiSessionBlockIndex(currentEditor.state);
+  const persistAgentDraft = useCallback((currentEditor: Editor) => {
+    const noteId = agentSessionNoteIdRef.current;
+    const pending = agentPendingDraftRef.current;
+    const blockIndex = noteAgentSessionBlockIndex(currentEditor.state);
     if (!noteId || !pending || blockIndex === null) return;
-    saveNoteAiDraft(noteId, {
-      baseMarkdown: noteMarkdownWithoutAiDraft(currentEditor),
+    saveNoteAgentDraft(noteId, {
+      baseMarkdown: noteMarkdownWithoutAgentDraft(currentEditor),
       blockIndex,
       draft: pending.draft,
       request: pending.request,
       savedAt: Date.now(),
     });
   }, []);
-  const persistAiDraftRef = useRef(persistAiDraft);
-  persistAiDraftRef.current = persistAiDraft;
-  // Opens the AI on the current selection to rewrite it.
-  const startAiRewrite = useCallback((currentEditor: Editor) => {
-    if (isNoteAiSessionActive(currentEditor.state)) return false;
+  const persistAgentDraftRef = useRef(persistAgentDraft);
+  persistAgentDraftRef.current = persistAgentDraft;
+  // Opens the agent on the current selection to rewrite it.
+  const startAgentRewrite = useCallback((currentEditor: Editor) => {
+    if (isNoteAgentSessionActive(currentEditor.state)) return false;
     const widget = document.createElement("div");
-    widget.className = "note-ai-widget";
+    widget.className = "note-agent-widget";
     widget.contentEditable = "false";
-    if (!startNoteAiRewrite(currentEditor, widget)) return false;
-    aiSessionNoteIdRef.current = sourceNoteIdRef.current;
-    aiPendingDraftRef.current = null;
+    if (!startNoteAgentRewrite(currentEditor, widget)) return false;
+    agentSessionNoteIdRef.current = sourceNoteIdRef.current;
+    agentPendingDraftRef.current = null;
     lastSessionSaveRef.current = null;
-    setAiSession({ widget });
+    setAgentSession({ widget });
     return true;
   }, []);
-  const startAiRewriteRef = useRef(startAiRewrite);
-  startAiRewriteRef.current = startAiRewrite;
+  const startAgentRewriteRef = useRef(startAgentRewrite);
+  startAgentRewriteRef.current = startAgentRewrite;
   const initialMarkdownRef = useRef(markdown);
   onChangeRef.current = onChange;
   onSaveShortcutRef.current = onSaveShortcut;
@@ -2500,7 +2500,7 @@ export const NoteRichText = forwardRef<
     () => [
       ...createBaseNoteExtensions(blockControls.extension),
       AssetMention,
-      NoteAiSession,
+      NoteAgentSession,
       ...(workspaceSlug
         ? [
             createMentionsExtension({
@@ -2535,7 +2535,7 @@ export const NoteRichText = forwardRef<
       },
       handleKeyDown: (_view: unknown, event: KeyboardEvent) => {
         const currentEditor = editorInstanceRef.current;
-        // Ctrl/Cmd+J asks the AI to edit the selection.
+        // Ctrl/Cmd+J asks the agent to edit the selection.
         if (
           editableRef.current &&
           currentEditor &&
@@ -2546,7 +2546,7 @@ export const NoteRichText = forwardRef<
           !currentEditor.state.selection.empty
         ) {
           event.preventDefault();
-          startAiRewriteRef.current(currentEditor);
+          startAgentRewriteRef.current(currentEditor);
           return true;
         }
         if (
@@ -2559,7 +2559,7 @@ export const NoteRichText = forwardRef<
           !event.metaKey &&
           !event.altKey &&
           currentEditor?.state.selection.empty &&
-          !isNoteAiSessionActive(currentEditor.state) &&
+          !isNoteAgentSessionActive(currentEditor.state) &&
           currentEditor.state.selection.$from.depth === 1 &&
           currentEditor.state.selection.$from.parent.type.name ===
             "paragraph" &&
@@ -2567,13 +2567,13 @@ export const NoteRichText = forwardRef<
         ) {
           event.preventDefault();
           const widget = document.createElement("div");
-          widget.className = "note-ai-widget";
+          widget.className = "note-agent-widget";
           widget.contentEditable = "false";
-          if (startNoteAiSession(currentEditor, widget)) {
-            aiSessionNoteIdRef.current = sourceNoteIdRef.current;
-            aiPendingDraftRef.current = null;
+          if (startNoteAgentSession(currentEditor, widget)) {
+            agentSessionNoteIdRef.current = sourceNoteIdRef.current;
+            agentPendingDraftRef.current = null;
             lastSessionSaveRef.current = null;
-            setAiSession({ widget });
+            setAgentSession({ widget });
           }
           return true;
         }
@@ -2731,14 +2731,14 @@ export const NoteRichText = forwardRef<
     // its floating extensions from reading layout too early.
     immediatelyRender: false,
     onUpdate: ({ editor: currentEditor }) => {
-      if (isNoteAiSessionActive(currentEditor.state)) {
-        // A pending AI draft is not part of the note until it is kept: save
+      if (isNoteAgentSessionActive(currentEditor.state)) {
+        // A pending agent draft is not part of the note until it is kept: save
         // the note around it, and only when that actually changed (streaming
         // updates the draft many times without touching the rest).
-        const saved = noteMarkdownWithoutAiDraft(currentEditor);
+        const saved = noteMarkdownWithoutAgentDraft(currentEditor);
         if (saved === lastSessionSaveRef.current) return;
         lastSessionSaveRef.current = saved;
-        persistAiDraftRef.current(currentEditor);
+        persistAgentDraftRef.current(currentEditor);
         onChangeRef.current?.(saved);
         return;
       }
@@ -2874,9 +2874,9 @@ export const NoteRichText = forwardRef<
   }, [editor, highlightColor, highlightMode]);
 
   useEffect(() => {
-    // Compare against the note as saved: while an AI draft is pending the
+    // Compare against the note as saved: while an agent draft is pending the
     // parent holds the note without it, which is not a change to apply.
-    if (!editor || noteMarkdownWithoutAiDraft(editor) === markdown) return;
+    if (!editor || noteMarkdownWithoutAgentDraft(editor) === markdown) return;
     editor.commands.setContent(markdown, {
       contentType: "markdown",
       emitUpdate: false,
@@ -2902,77 +2902,77 @@ export const NoteRichText = forwardRef<
   }, [editor]);
 
   useEffect(() => {
-    if (!editor || !aiWidget) return;
+    if (!editor || !agentWidget) return;
     // The session can end from inside the prompt (keep/discard) or from
     // outside it (content replaced); either way the prompt unmounts.
     const closeEndedSession = () => {
-      if (isNoteAiSessionActive(editor.state)) return;
-      aiPendingDraftRef.current = null;
+      if (isNoteAgentSessionActive(editor.state)) return;
+      agentPendingDraftRef.current = null;
       lastSessionSaveRef.current = null;
-      setAiSession(null);
+      setAgentSession(null);
     };
     editor.on("transaction", closeEndedSession);
     return () => {
       editor.off("transaction", closeEndedSession);
     };
-  }, [aiWidget, editor]);
+  }, [agentWidget, editor]);
 
   // Reopen a draft stored on an earlier visit, but only onto the exact note it
   // was written against; otherwise it stays stored until it expires.
   useEffect(() => {
-    if (!editor || !editable || !sourceNoteId || aiWidget) return;
-    if (aiRestoredForRef.current === sourceNoteId) return;
-    if (isNoteAiSessionActive(editor.state)) return;
-    const stored = loadNoteAiDraft(sourceNoteId);
+    if (!editor || !editable || !sourceNoteId || agentWidget) return;
+    if (agentRestoredForRef.current === sourceNoteId) return;
+    if (isNoteAgentSessionActive(editor.state)) return;
+    const stored = loadNoteAgentDraft(sourceNoteId);
     if (!stored) {
-      aiRestoredForRef.current = sourceNoteId;
+      agentRestoredForRef.current = sourceNoteId;
       return;
     }
     if (stored.baseMarkdown !== editor.getMarkdown()) return;
-    aiRestoredForRef.current = sourceNoteId;
+    agentRestoredForRef.current = sourceNoteId;
     const widget = document.createElement("div");
-    widget.className = "note-ai-widget";
+    widget.className = "note-agent-widget";
     widget.contentEditable = "false";
-    if (!startNoteAiSessionAtBlock(editor, stored.blockIndex, widget)) {
-      clearNoteAiDraft(sourceNoteId);
+    if (!startNoteAgentSessionAtBlock(editor, stored.blockIndex, widget)) {
+      clearNoteAgentDraft(sourceNoteId);
       return;
     }
     const restored = { draft: stored.draft, request: stored.request };
-    aiSessionNoteIdRef.current = sourceNoteId;
-    aiPendingDraftRef.current = restored;
+    agentSessionNoteIdRef.current = sourceNoteId;
+    agentPendingDraftRef.current = restored;
     lastSessionSaveRef.current = stored.baseMarkdown;
-    setAiSession({ widget, restored });
-  }, [aiWidget, editable, editor, markdown, sourceNoteId]);
+    setAgentSession({ widget, restored });
+  }, [agentWidget, editable, editor, markdown, sourceNoteId]);
 
-  const handleAiDraft = useCallback(
-    (draft: NoteAiDraft) => {
-      aiPendingDraftRef.current = draft;
-      if (editor) persistAiDraft(editor);
+  const handleAgentDraft = useCallback(
+    (draft: NoteAgentDraft) => {
+      agentPendingDraftRef.current = draft;
+      if (editor) persistAgentDraft(editor);
     },
-    [editor, persistAiDraft],
+    [editor, persistAgentDraft],
   );
-  const handleAiResolve = useCallback(() => {
-    aiPendingDraftRef.current = null;
-    if (aiSessionNoteIdRef.current) {
-      clearNoteAiDraft(aiSessionNoteIdRef.current);
+  const handleAgentResolve = useCallback(() => {
+    agentPendingDraftRef.current = null;
+    if (agentSessionNoteIdRef.current) {
+      clearNoteAgentDraft(agentSessionNoteIdRef.current);
     }
   }, []);
 
   useImperativeHandle(
     ref,
     () => ({
-      // Callers save or copy this, so a pending AI draft is left out.
+      // Callers save or copy this, so a pending agent draft is left out.
       getMarkdown: () =>
-        editor ? noteMarkdownWithoutAiDraft(editor) : markdown,
+        editor ? noteMarkdownWithoutAgentDraft(editor) : markdown,
       applyHighlight: (color) => {
         if (!editor || editor.state.selection.empty) return undefined;
         replaceHighlight(editor, color);
-        return noteMarkdownWithoutAiDraft(editor);
+        return noteMarkdownWithoutAgentDraft(editor);
       },
       removeHighlight: () => {
         if (!editor || editor.state.selection.empty) return undefined;
         editor.chain().focus().unsetHighlight().run();
-        return noteMarkdownWithoutAiDraft(editor);
+        return noteMarkdownWithoutAgentDraft(editor);
       },
       restoreMarkdown: (nextMarkdown) => {
         editor?.commands.setContent(nextMarkdown, {
@@ -3010,9 +3010,9 @@ export const NoteRichText = forwardRef<
       // the empty selection it replaced and the menu never appears.
       !currentEditor.state.selection.empty &&
       !currentEditor.isActive("codeBlock") &&
-      // Formatting a pending AI draft would be overwritten by keep or a
+      // Formatting a pending agent draft would be overwritten by keep or a
       // follow-up; it becomes editable once kept.
-      !selectionOverlapsNoteAiDraft(currentEditor.state),
+      !selectionOverlapsNoteAgentDraft(currentEditor.state),
     [barOwnsFocus, blockStyleMenuOpen, highlightMode],
   );
 
@@ -3201,7 +3201,7 @@ export const NoteRichText = forwardRef<
             <InlineFormattingMenu
               editor={editor}
               onExtractSelection={onExtractSelection}
-              onAskAi={() => startAiRewrite(editor)}
+              onAskAgent={() => startAgentRewrite(editor)}
               blockStyleMenuOpen={blockStyleMenuOpen}
               onBlockStyleMenuOpenChange={handleBlockStyleOpenChange}
               menuRef={barRef}
@@ -3248,19 +3248,19 @@ export const NoteRichText = forwardRef<
           scrollContainerRef={scrollContainerRef}
         />
       ) : null}
-      {aiWidget
+      {agentWidget
         ? // Rendered eagerly (not lazy) so the input exists before the next
           // keystroke after space; typing that lands earlier is swallowed.
           createPortal(
-            <NoteAiPrompt
+            <NoteAgentPrompt
               editor={editor}
-              restored={aiSession?.restored}
-              onDraft={handleAiDraft}
-              onResolve={handleAiResolve}
+              restored={agentSession?.restored}
+              onDraft={handleAgentDraft}
+              onResolve={handleAgentResolve}
               workspaceSlug={workspaceSlug}
               sourceAssetId={sourceAssetId}
             />,
-            aiWidget,
+            agentWidget,
           )
         : null}
     </NoteMentionProvider>

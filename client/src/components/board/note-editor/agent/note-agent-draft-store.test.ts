@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  clearNoteAiDraft,
-  loadNoteAiDraft,
-  saveNoteAiDraft,
-  type StoredNoteAiDraft,
-} from "./note-ai-draft-store";
+  clearNoteAgentDraft,
+  loadNoteAgentDraft,
+  saveNoteAgentDraft,
+  type StoredNoteAgentDraft,
+} from "./note-agent-draft-store";
 
-const draft: StoredNoteAiDraft = {
+const draft: StoredNoteAgentDraft = {
   baseMarkdown: "Intro\n\n",
   blockIndex: 1,
   draft: "A draft",
@@ -30,25 +30,25 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("note AI draft store", () => {
+describe("note agent draft store", () => {
   it("round-trips a draft per note", () => {
-    saveNoteAiDraft("note-1", draft);
-    expect(loadNoteAiDraft("note-1", 2_000)).toEqual(draft);
-    expect(loadNoteAiDraft("note-2", 2_000)).toBeNull();
-    clearNoteAiDraft("note-1");
-    expect(loadNoteAiDraft("note-1", 2_000)).toBeNull();
+    saveNoteAgentDraft("note-1", draft);
+    expect(loadNoteAgentDraft("note-1", 2_000)).toEqual(draft);
+    expect(loadNoteAgentDraft("note-2", 2_000)).toBeNull();
+    clearNoteAgentDraft("note-1");
+    expect(loadNoteAgentDraft("note-1", 2_000)).toBeNull();
   });
 
   it("drops drafts older than two weeks", () => {
-    saveNoteAiDraft("note-1", draft);
+    saveNoteAgentDraft("note-1", draft);
     const later = draft.savedAt + 15 * 24 * 60 * 60 * 1000;
-    expect(loadNoteAiDraft("note-1", later)).toBeNull();
-    expect(loadNoteAiDraft("note-1", draft.savedAt)).toBeNull();
+    expect(loadNoteAgentDraft("note-1", later)).toBeNull();
+    expect(loadNoteAgentDraft("note-1", draft.savedAt)).toBeNull();
   });
 
   it("ignores malformed entries and unavailable storage", () => {
     window.localStorage.setItem("aska:note-ai-draft:v1:note-1", "{nope");
-    expect(loadNoteAiDraft("note-1")).toBeNull();
+    expect(loadNoteAgentDraft("note-1")).toBeNull();
     vi.stubGlobal("window", {
       localStorage: {
         getItem: () => {
@@ -62,8 +62,8 @@ describe("note AI draft store", () => {
         },
       },
     });
-    expect(() => saveNoteAiDraft("note-1", draft)).not.toThrow();
-    expect(loadNoteAiDraft("note-1")).toBeNull();
-    expect(() => clearNoteAiDraft("note-1")).not.toThrow();
+    expect(() => saveNoteAgentDraft("note-1", draft)).not.toThrow();
+    expect(loadNoteAgentDraft("note-1")).toBeNull();
+    expect(() => clearNoteAgentDraft("note-1")).not.toThrow();
   });
 });

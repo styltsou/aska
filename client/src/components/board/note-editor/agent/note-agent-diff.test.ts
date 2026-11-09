@@ -3,7 +3,7 @@ import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "@tiptap/markdown";
 
-import { diffNoteAiDraft } from "./note-ai-diff";
+import { diffNoteAgentDraft } from "./note-agent-diff";
 
 let editor: Editor | undefined;
 
@@ -25,7 +25,7 @@ function compare(before: string, after: string) {
   const previous = editor.schema.nodeFromJSON(
     editor.markdown!.parse(before),
   ).content;
-  const diff = diffNoteAiDraft(previous, doc, from, to);
+  const diff = diffNoteAgentDraft(previous, doc, from, to);
   return {
     diff,
     added: diff.added.map(({ from, to }) => doc.textBetween(from, to)),
@@ -34,7 +34,7 @@ function compare(before: string, after: string) {
   };
 }
 
-describe("diffNoteAiDraft", () => {
+describe("diffNoteAgentDraft", () => {
   it("finds nothing when the draft is unchanged", () => {
     const { diff } = compare("Same words here.", "Same words here.");
     expect(diff).toEqual({ added: [], addedNodes: [], removed: [] });

@@ -15,16 +15,16 @@ import {
   referenceOverview,
   searchText,
   type ContextDocument,
-} from "@/ai/note-context";
+} from "@/agent/note-context";
 import {
   CURSOR_MARKER,
   systemPrompt,
   userPrompt,
-  type NoteAiTask,
-} from "@/ai/note-prompts";
+  type NoteAgentTask,
+} from "@/agent/note-prompts";
 
 /**
- * The note AI as a small agent: the model gets an overview of the note and of
+ * The note agent as a small agent: the model gets an overview of the note and of
  * mentioned notes, and when that isn't everything, tools to read and search
  * the rest. It loops (model → tools → model) until the model writes its
  * answer, which is the only text that reaches the note. Requests that can't
@@ -37,7 +37,7 @@ export type NoteAgentInput = {
   prompt: string;
   /** The whole note, with the cursor marker where the result goes. */
   note: string;
-  task?: NoteAiTask | undefined;
+  task?: NoteAgentTask | undefined;
   passage?: string | undefined;
   draft?: string | undefined;
   earlierPrompts?: string[] | undefined;
@@ -174,7 +174,8 @@ export async function* runNoteAgent(
   model: BaseChatModel,
   { signal }: { signal?: AbortSignal } = {},
 ): AsyncGenerator<NoteAgentEvent> {
-  const task: NoteAiTask = input.task ?? (input.passage ? "rewrite" : "write");
+  const task: NoteAgentTask =
+    input.task ?? (input.passage ? "rewrite" : "write");
   const note = noteOverview(input.note, CURSOR_MARKER);
   const references = (input.referencedNotes ?? []).map((reference, index) => {
     const document = {

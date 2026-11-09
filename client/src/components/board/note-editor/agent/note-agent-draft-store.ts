@@ -1,17 +1,17 @@
-import type { NoteAiRequest } from "@/components/board/note-editor/ai/note-ai-stream";
+import type { NoteAgentRequest } from "@/components/board/note-editor/agent/note-agent-stream";
 
 /**
- * A pending AI draft lives beside its note (not in it) until it is kept, so
+ * A pending agent draft lives beside its note (not in it) until it is kept, so
  * it survives refreshes and restarts on this device. It is only restored when
  * the note is still exactly what it was around the draft.
  */
-export type StoredNoteAiDraft = {
+export type StoredNoteAgentDraft = {
   /** The note without the draft; restoring requires an exact match. */
   baseMarkdown: string;
   /** Top-level block (an empty line) the draft was written on. */
   blockIndex: number;
   draft: string;
-  request: NoteAiRequest;
+  request: NoteAgentRequest;
   savedAt: number;
 };
 
@@ -22,9 +22,9 @@ function key(noteId: string) {
   return `${KEY_PREFIX}${noteId}`;
 }
 
-function isStoredDraft(value: unknown): value is StoredNoteAiDraft {
+function isStoredDraft(value: unknown): value is StoredNoteAgentDraft {
   if (!value || typeof value !== "object") return false;
-  const draft = value as Partial<StoredNoteAiDraft>;
+  const draft = value as Partial<StoredNoteAgentDraft>;
   return (
     typeof draft.baseMarkdown === "string" &&
     typeof draft.blockIndex === "number" &&
@@ -35,10 +35,10 @@ function isStoredDraft(value: unknown): value is StoredNoteAiDraft {
   );
 }
 
-export function loadNoteAiDraft(
+export function loadNoteAgentDraft(
   noteId: string,
   now = Date.now(),
-): StoredNoteAiDraft | null {
+): StoredNoteAgentDraft | null {
   try {
     const raw = window.localStorage.getItem(key(noteId));
     if (!raw) return null;
@@ -53,7 +53,10 @@ export function loadNoteAiDraft(
   }
 }
 
-export function saveNoteAiDraft(noteId: string, draft: StoredNoteAiDraft) {
+export function saveNoteAgentDraft(
+  noteId: string,
+  draft: StoredNoteAgentDraft,
+) {
   try {
     window.localStorage.setItem(key(noteId), JSON.stringify(draft));
   } catch {
@@ -61,7 +64,7 @@ export function saveNoteAiDraft(noteId: string, draft: StoredNoteAiDraft) {
   }
 }
 
-export function clearNoteAiDraft(noteId: string) {
+export function clearNoteAgentDraft(noteId: string) {
   try {
     window.localStorage.removeItem(key(noteId));
   } catch {

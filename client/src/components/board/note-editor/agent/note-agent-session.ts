@@ -11,23 +11,23 @@ import {
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 import {
-  diffNoteAiDraft,
-  type NoteAiDraftDiff,
-} from "@/components/board/note-editor/ai/note-ai-diff";
+  diffNoteAgentDraft,
+  type NoteAgentDraftDiff,
+} from "@/components/board/note-editor/agent/note-agent-diff";
 
 /**
- * Tracks one in-editor AI session: a range of top-level blocks the AI owns
+ * Tracks one in-editor agent session: a range of top-level blocks the agent owns
  * while it writes, plus the inline prompt widget rendered after that range.
  *
  * Every change made during a session skips history. Accepting replays the
- * final content as one history step, so a single undo removes the AI output
+ * final content as one history step, so a single undo removes the agent output
  * and discarding leaves no trace in the undo stack.
  */
 
-export type NoteAiRange = { from: number; to: number };
+export type NoteAgentRange = { from: number; to: number };
 
-type NoteAiSessionState = {
-  range: NoteAiRange | null;
+type NoteAgentSessionState = {
+  range: NoteAgentRange | null;
   streaming: boolean;
   widget: HTMLElement | null;
   /** The session opened on the note's last line. */
@@ -35,7 +35,7 @@ type NoteAiSessionState = {
   /** Where the most recently arrived content starts, to fade it in. */
   fresh: number | null;
   /** What the draft changes compared with `original`. */
-  diff: NoteAiDraftDiff | null;
+  diff: NoteAgentDraftDiff | null;
   /**
    * The content the session replaced: null for an empty line (writing new
    * content), or the selected blocks being rewritten.
@@ -49,26 +49,26 @@ type NoteAiSessionState = {
   /**
    * For a rewrite, the selected text, kept visible while the instruction is
    * written (focus has moved to the prompt, so the editor selection doesn't
-   * show). Cleared once the AI starts writing.
+   * show). Cleared once the agent starts writing.
    */
-  target: NoteAiRange | null;
+  target: NoteAgentRange | null;
 };
 
-type NoteAiSessionMeta =
+type NoteAgentSessionMeta =
   | {
       type: "start";
-      range: NoteAiRange;
+      range: NoteAgentRange;
       widget: HTMLElement;
       original?: Fragment;
       passage?: string;
-      target?: NoteAiRange;
+      target?: NoteAgentRange;
     }
-  | { type: "range"; range: NoteAiRange; fresh?: number | null }
+  | { type: "range"; range: NoteAgentRange; fresh?: number | null }
   | { type: "streaming"; streaming: boolean }
-  | { type: "diff"; diff: NoteAiDraftDiff | null }
+  | { type: "diff"; diff: NoteAgentDraftDiff | null }
   | { type: "end" };
 
-const EMPTY_STATE: NoteAiSessionState = {
+const EMPTY_STATE: NoteAgentSessionState = {
   range: null,
   streaming: false,
   widget: null,
@@ -80,40 +80,40 @@ const EMPTY_STATE: NoteAiSessionState = {
   target: null,
 };
 
-export const noteAiSessionKey = new PluginKey<NoteAiSessionState>(
-  "noteAiSession",
+export const noteAgentSessionKey = new PluginKey<NoteAgentSessionState>(
+  "noteAgentSession",
 );
 
-export const NOTE_AI_CURSOR_MARKER = "⟦cursor⟧";
-export const NOTE_AI_SELECTION_START = "⟦selection⟧";
-export const NOTE_AI_SELECTION_END = "⟦/selection⟧";
+export const NOTE_AGENT_CURSOR_MARKER = "⟦cursor⟧";
+export const NOTE_AGENT_SELECTION_START = "⟦selection⟧";
+export const NOTE_AGENT_SELECTION_END = "⟦/selection⟧";
 
-export function getNoteAiSession(state: EditorState) {
-  return noteAiSessionKey.getState(state) ?? EMPTY_STATE;
+export function getNoteAgentSession(state: EditorState) {
+  return noteAgentSessionKey.getState(state) ?? EMPTY_STATE;
 }
 
-export function isNoteAiSessionActive(state: EditorState) {
-  return getNoteAiSession(state).range !== null;
+export function isNoteAgentSessionActive(state: EditorState) {
+  return getNoteAgentSession(state).range !== null;
 }
 
-/** Whether `pos` lies inside the pending AI draft. */
-export function isInNoteAiDraft(state: EditorState, pos: number) {
-  const { range } = getNoteAiSession(state);
+/** Whether `pos` lies inside the pending agent draft. */
+export function isInNoteAgentDraft(state: EditorState, pos: number) {
+  const { range } = getNoteAgentSession(state);
   return range !== null && pos >= range.from && pos < range.to;
 }
 
-/** Whether the selection overlaps the pending AI draft. */
-export function selectionOverlapsNoteAiDraft(state: EditorState) {
-  const { range } = getNoteAiSession(state);
+/** Whether the selection overlaps the pending agent draft. */
+export function selectionOverlapsNoteAgentDraft(state: EditorState) {
+  const { range } = getNoteAgentSession(state);
   if (!range) return false;
   const { from, to } = state.selection;
   return from < range.to && to > range.from;
 }
 
 function selectionTouchesSession(state: EditorState) {
-  const { range } = getNoteAiSession(state);
+  const { range } = getNoteAgentSession(state);
   if (!range) return false;
-  // Until the AI writes anything, the prompt is about to take focus (its
+  // Until the agent writes anything, the prompt is about to take focus (its
   // empty line is hidden, so the caret may sit elsewhere); hold all typing.
   const node = state.doc.nodeAt(range.from);
   if (range.to - range.from === 2 && node?.content.size === 0) return true;
@@ -121,25 +121,25 @@ function selectionTouchesSession(state: EditorState) {
   return to >= range.from && from <= range.to;
 }
 
-function withMeta(tr: Transaction, meta: NoteAiSessionMeta) {
-  return tr.setMeta(noteAiSessionKey, meta);
+function withMeta(tr: Transaction, meta: NoteAgentSessionMeta) {
+  return tr.setMeta(noteAgentSessionKey, meta);
 }
 
-export const NoteAiSession = Extension.create({
-  name: "noteAiSession",
+export const NoteAgentSession = Extension.create({
+  name: "noteAgentSession",
   addProseMirrorPlugins() {
-    return [createNoteAiSessionPlugin()];
+    return [createNoteAgentSessionPlugin()];
   },
 });
 
-export function createNoteAiSessionPlugin() {
-  return new Plugin<NoteAiSessionState>({
-    key: noteAiSessionKey,
+export function createNoteAgentSessionPlugin() {
+  return new Plugin<NoteAgentSessionState>({
+    key: noteAgentSessionKey,
     state: {
       init: () => EMPTY_STATE,
       apply(tr, value) {
-        const meta = tr.getMeta(noteAiSessionKey) as
-          | NoteAiSessionMeta
+        const meta = tr.getMeta(noteAgentSessionKey) as
+          | NoteAgentSessionMeta
           | undefined;
         if (meta?.type === "start") {
           return {
@@ -197,7 +197,7 @@ export function createNoteAiSessionPlugin() {
       },
     },
     props: {
-      // The AI owns its range: typing there (for example in the moment
+      // The agent owns its range: typing there (for example in the moment
       // before the prompt takes focus, or while output streams) would be
       // overwritten by the next update, so swallow it instead.
       handleTextInput: (view) => selectionTouchesSession(view.state),
@@ -209,7 +209,7 @@ export function createNoteAiSessionPlugin() {
           left: event.clientX,
           top: event.clientY,
         });
-        return drop !== null && isInNoteAiDraft(view.state, drop.pos);
+        return drop !== null && isInNoteAgentDraft(view.state, drop.pos);
       },
       handleKeyDown(view, event) {
         if (!selectionTouchesSession(view.state)) return false;
@@ -223,7 +223,7 @@ export function createNoteAiSessionPlugin() {
       },
       decorations(state) {
         const { range, streaming, widget, fresh, diff, target } =
-          getNoteAiSession(state);
+          getNoteAgentSession(state);
         if (!range || !widget) return null;
         // The newest chunk fades in: whole blocks it added (so table and
         // code block chrome fades too) and new text inside existing blocks.
@@ -233,10 +233,10 @@ export function createNoteAiSessionPlugin() {
         state.doc.forEach((node, offset) => {
           const end = offset + node.nodeSize;
           if (offset < range.from || end > range.to) return;
-          const classes = ["note-ai-pending"];
-          if (streaming) classes.push("note-ai-streaming");
+          const classes = ["note-agent-pending"];
+          if (streaming) classes.push("note-agent-streaming");
           if (freshFrom !== null && offset >= freshFrom) {
-            classes.push("note-ai-fresh");
+            classes.push("note-agent-fresh");
           }
           decorations.push(
             Decoration.node(offset, end, { class: classes.join(" ") }),
@@ -244,20 +244,22 @@ export function createNoteAiSessionPlugin() {
         });
         if (freshFrom !== null) {
           decorations.push(
-            Decoration.inline(freshFrom, range.to, { class: "note-ai-fresh" }),
+            Decoration.inline(freshFrom, range.to, {
+              class: "note-agent-fresh",
+            }),
           );
         }
         if (diff) decorations.push(...diffDecorations(diff));
         if (target && target.from < target.to) {
           decorations.push(
             Decoration.inline(target.from, target.to, {
-              class: "note-ai-target",
+              class: "note-agent-target",
             }),
           );
         }
         decorations.push(
           Decoration.widget(range.to, widget, {
-            key: "note-ai-prompt",
+            key: "note-agent-prompt",
             side: -1,
             ignoreSelection: true,
             stopEvent: () => true,
@@ -269,7 +271,10 @@ export function createNoteAiSessionPlugin() {
   });
 }
 
-function mapDiff(diff: NoteAiDraftDiff, tr: Transaction): NoteAiDraftDiff {
+function mapDiff(
+  diff: NoteAgentDraftDiff,
+  tr: Transaction,
+): NoteAgentDraftDiff {
   const mapRange = ({ from, to }: { from: number; to: number }) => ({
     from: tr.mapping.map(from),
     to: tr.mapping.map(to),
@@ -284,13 +289,13 @@ function mapDiff(diff: NoteAiDraftDiff, tr: Transaction): NoteAiDraftDiff {
   };
 }
 
-function diffDecorations(diff: NoteAiDraftDiff) {
+function diffDecorations(diff: NoteAgentDraftDiff) {
   return [
     ...diff.added.map(({ from, to }) =>
-      Decoration.inline(from, to, { class: "note-ai-added" }),
+      Decoration.inline(from, to, { class: "note-agent-added" }),
     ),
     ...diff.addedNodes.map(({ from, to }) =>
-      Decoration.node(from, to, { class: "note-ai-added-block" }),
+      Decoration.node(from, to, { class: "note-agent-added-block" }),
     ),
     // Removed text isn't in the document; it's drawn where it used to be, so
     // keeping the draft keeps only the new text.
@@ -300,14 +305,14 @@ function diffDecorations(diff: NoteAiDraftDiff) {
         () => {
           const element = document.createElement("del");
           element.className = block
-            ? "note-ai-removed note-ai-removed-block"
-            : "note-ai-removed";
+            ? "note-agent-removed note-agent-removed-block"
+            : "note-agent-removed";
           element.contentEditable = "false";
           element.textContent = text;
           return element;
         },
         {
-          key: `note-ai-removed-${index}-${text}`,
+          key: `note-agent-removed-${index}-${text}`,
           side: -1,
           marks: [],
           ignoreSelection: true,
@@ -322,12 +327,12 @@ function diffDecorations(diff: NoteAiDraftDiff) {
  * text highlighted, removed text struck through in place. Clears it when
  * `show` is false or there is nothing to compare.
  */
-export function showNoteAiChanges(editor: Editor, show = true) {
-  const { range, original } = getNoteAiSession(editor.state);
+export function showNoteAgentChanges(editor: Editor, show = true) {
+  const { range, original } = getNoteAgentSession(editor.state);
   if (!range) return;
   const diff =
     show && original
-      ? diffNoteAiDraft(original, editor.state.doc, range.from, range.to)
+      ? diffNoteAgentDraft(original, editor.state.doc, range.from, range.to)
       : null;
   editor.view.dispatch(
     withMeta(editor.state.tr, {
@@ -348,7 +353,7 @@ const WORD_CHARACTER = /[\p{L}\p{N}_]/u;
  * The model receives those blocks with the exact selection marked, and the
  * result replaces them; discarding restores them.
  */
-export function startNoteAiRewrite(editor: Editor, widget: HTMLElement) {
+export function startNoteAgentRewrite(editor: Editor, widget: HTMLElement) {
   const { state } = editor;
   const { selection, doc } = state;
   if (selection.empty || !editor.markdown) return false;
@@ -391,8 +396,8 @@ export function startNoteAiRewrite(editor: Editor, widget: HTMLElement) {
   let passageTo = to;
   if (!whole && selection instanceof TextSelection) {
     const marked = state.tr
-      .insertText(NOTE_AI_SELECTION_END, selectedTo)
-      .insertText(NOTE_AI_SELECTION_START, selectedFrom);
+      .insertText(NOTE_AGENT_SELECTION_END, selectedTo)
+      .insertText(NOTE_AGENT_SELECTION_START, selectedFrom);
     passageDoc = marked.doc;
     passageTo = marked.mapping.map(to);
   }
@@ -415,7 +420,7 @@ export function startNoteAiRewrite(editor: Editor, widget: HTMLElement) {
 }
 
 /** Opens a session on the empty top-level paragraph holding the cursor. */
-export function startNoteAiSession(editor: Editor, widget: HTMLElement) {
+export function startNoteAgentSession(editor: Editor, widget: HTMLElement) {
   const { $from } = editor.state.selection;
   if ($from.depth !== 1) return false;
   const range = { from: $from.before(1), to: $from.after(1) };
@@ -450,31 +455,34 @@ function markdownToFragment(editor: Editor, markdown: string) {
  * selected). The model only writes the replacement; the text around the
  * selection is put back here, so it can't be dropped or altered.
  */
-export function noteAiPassageWith(passage: string, replacement: string) {
-  const start = passage.indexOf(NOTE_AI_SELECTION_START);
-  const end = passage.indexOf(NOTE_AI_SELECTION_END);
+export function noteAgentPassageWith(passage: string, replacement: string) {
+  const start = passage.indexOf(NOTE_AGENT_SELECTION_START);
+  const end = passage.indexOf(NOTE_AGENT_SELECTION_END);
   if (start < 0 || end < start) return replacement;
-  const selected = passage.slice(start + NOTE_AI_SELECTION_START.length, end);
+  const selected = passage.slice(
+    start + NOTE_AGENT_SELECTION_START.length,
+    end,
+  );
   // Within a line, the replacement must stay inline.
   const inline = !selected.includes("\n");
   return (
     passage.slice(0, start) +
     (inline ? replacement.replace(/\s*\n+\s*/g, " ").trim() : replacement) +
-    passage.slice(end + NOTE_AI_SELECTION_END.length)
+    passage.slice(end + NOTE_AGENT_SELECTION_END.length)
   );
 }
 
 /** Replaces the session's content with `markdown` without touching history. */
-export function setNoteAiContent(editor: Editor, markdown: string) {
-  const { range } = getNoteAiSession(editor.state);
+export function setNoteAgentContent(editor: Editor, markdown: string) {
+  const { range } = getNoteAgentSession(editor.state);
   if (!range) return false;
   // The model is told never to echo markers; drop any that slip through.
   const fragment = markdownToFragment(
     editor,
     markdown
-      .replaceAll(NOTE_AI_SELECTION_START, "")
-      .replaceAll(NOTE_AI_SELECTION_END, "")
-      .replaceAll(NOTE_AI_CURSOR_MARKER, ""),
+      .replaceAll(NOTE_AGENT_SELECTION_START, "")
+      .replaceAll(NOTE_AGENT_SELECTION_END, "")
+      .replaceAll(NOTE_AGENT_CURSOR_MARKER, ""),
   );
   if (!fragment) return false;
   // Where the new content first differs from what's shown: the start of the
@@ -494,8 +502,8 @@ export function setNoteAiContent(editor: Editor, markdown: string) {
   return true;
 }
 
-export function setNoteAiStreaming(editor: Editor, streaming: boolean) {
-  if (!isNoteAiSessionActive(editor.state)) return;
+export function setNoteAgentStreaming(editor: Editor, streaming: boolean) {
+  if (!isNoteAgentSessionActive(editor.state)) return;
   editor.view.dispatch(
     withMeta(editor.state.tr, { type: "streaming", streaming }).setMeta(
       "addToHistory",
@@ -511,7 +519,7 @@ function originalContent(editor: Editor, original: Fragment | null) {
 /** Puts back what the session replaced, outside history. */
 function restoreOriginal(
   editor: Editor,
-  range: NoteAiRange,
+  range: NoteAgentRange,
   original: Fragment | null,
 ) {
   return editor.state.tr
@@ -524,12 +532,12 @@ type EndOptions = {
   select?: boolean;
 };
 
-/** Keeps the AI content and records it as one undoable step. */
-export function acceptNoteAiSession(
+/** Keeps the agent content and records it as one undoable step. */
+export function acceptNoteAgentSession(
   editor: Editor,
   { select = true }: EndOptions = {},
 ) {
-  const { range, original } = getNoteAiSession(editor.state);
+  const { range, original } = getNoteAgentSession(editor.state);
   if (!range) return;
   const content = editor.state.doc.slice(range.from, range.to).content;
   const isEmpty =
@@ -537,7 +545,7 @@ export function acceptNoteAiSession(
     content.firstChild?.type.name === "paragraph" &&
     content.firstChild.content.size === 0;
   if (isEmpty) {
-    discardNoteAiSession(editor, { select });
+    discardNoteAgentSession(editor, { select });
     return;
   }
 
@@ -559,12 +567,12 @@ export function acceptNoteAiSession(
   editor.view.dispatch(withMeta(tr, { type: "end" }));
 }
 
-/** Removes the AI content and returns the cursor to the original empty line. */
-export function discardNoteAiSession(
+/** Removes the agent content and returns the cursor to the original empty line. */
+export function discardNoteAgentSession(
   editor: Editor,
   { select = true }: EndOptions = {},
 ) {
-  const { range, endsDoc, original } = getNoteAiSession(editor.state);
+  const { range, endsDoc, original } = getNoteAgentSession(editor.state);
   if (!range) return;
   const tr = restoreOriginal(editor, range, original);
   const restoredEnd = range.from + originalContent(editor, original).size;
@@ -576,7 +584,7 @@ export function discardNoteAiSession(
     editor.view.dispatch(withMeta(tr, { type: "end" }));
     return;
   }
-  // A trailing-node plugin may have appended an empty line after AI output
+  // A trailing-node plugin may have appended an empty line after agent output
   // that ended in a list or similar; it goes away with the output.
   if (endsDoc && restoredEnd < tr.doc.content.size) {
     const rest = tr.doc.slice(restoredEnd, tr.doc.content.size).content;
@@ -594,17 +602,17 @@ export function discardNoteAiSession(
 
 /**
  * Serializes the note with a cursor marker where the session sits, excluding
- * any draft AI content, so the model knows where its output will land.
+ * any draft agent content, so the model knows where its output will land.
  */
-export function noteMarkdownAtAiCursor(editor: Editor) {
-  const { range } = getNoteAiSession(editor.state);
+export function noteMarkdownAtAgentCursor(editor: Editor) {
+  const { range } = getNoteAgentSession(editor.state);
   if (!range || !editor.markdown) return editor.getMarkdown();
   const tr = editor.state.tr.replaceWith(
     range.from,
     range.to,
     editor.schema.nodes.paragraph.create(
       null,
-      editor.schema.text(NOTE_AI_CURSOR_MARKER),
+      editor.schema.text(NOTE_AGENT_CURSOR_MARKER),
     ),
   );
   return editor.markdown.serialize(tr.doc.toJSON());
@@ -615,8 +623,8 @@ export function noteMarkdownAtAiCursor(editor: Editor) {
  * until it is kept, so it is swapped back for what it replaced (the empty
  * line it opened on, or the text being rewritten).
  */
-export function noteMarkdownWithoutAiDraft(editor: Editor) {
-  const { range, original } = getNoteAiSession(editor.state);
+export function noteMarkdownWithoutAgentDraft(editor: Editor) {
+  const { range, original } = getNoteAgentSession(editor.state);
   if (!range || !editor.markdown) return editor.getMarkdown();
   const tr = editor.state.tr.replaceWith(
     range.from,
@@ -627,8 +635,8 @@ export function noteMarkdownWithoutAiDraft(editor: Editor) {
 }
 
 /** Index of the top-level block the session opened on. */
-export function noteAiSessionBlockIndex(state: EditorState) {
-  const { range } = getNoteAiSession(state);
+export function noteAgentSessionBlockIndex(state: EditorState) {
+  const { range } = getNoteAgentSession(state);
   if (!range) return null;
   return state.doc.resolve(range.from).index(0);
 }
@@ -637,7 +645,7 @@ export function noteAiSessionBlockIndex(state: EditorState) {
  * Reopens a session on the top-level block at `index`, which must be an empty
  * paragraph (the line a stored draft was written on).
  */
-export function startNoteAiSessionAtBlock(
+export function startNoteAgentSessionAtBlock(
   editor: Editor,
   index: number,
   widget: HTMLElement,

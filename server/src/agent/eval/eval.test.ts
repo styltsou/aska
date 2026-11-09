@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { CURSOR, EVAL_CASES } from "@/ai/eval/cases";
-import { scoreOutput } from "@/ai/eval/score";
+import { CURSOR, EVAL_CASES } from "@/agent/eval/cases";
+import { scoreOutput } from "@/agent/eval/score";
 
 const byId = (id: string) => EVAL_CASES.find((testCase) => testCase.id === id)!;
 

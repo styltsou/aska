@@ -1,13 +1,13 @@
-# AI Editing: Agentic Context — Design Note
+# Note Agent: Context and Tools — Design Note
 
-**Status:** In progress. Built: the eval harness (`server/src/ai/eval/`) and
-step 2 below (the agent loop, `server/src/ai/note-agent.ts`). Not built:
+**Status:** In progress. Built: the eval harness (`server/src/agent/eval/`) and
+step 2 below (the agent loop, `server/src/agent/note-agent.ts`). Not built:
 other asset types, server-side asset lookup, workspace search. The current pipeline is described in
-[AI Editing in Notes](../ai-editing.md).
+[Note Agent](../note-agent.md).
 
 ## Problem
 
-Today the AI sees a fixed window of context:
+Today the agent sees a fixed window of context:
 
 - the current note, trimmed to 38,000 characters around the cursor;
 - mentioned notes, each cut at 12,000 characters.
@@ -108,7 +108,7 @@ possibly a faster model for them.
 
 ## Evaluation
 
-`server/src/ai/eval/` holds fixed cases and a runner that drives a pipeline and
+`server/src/agent/eval/` holds fixed cases and a runner that drives a pipeline and
 prints, per case: pass/fail of simple checks, time to first text, total time,
 output length, and tool calls. Cases cover:
 
@@ -126,11 +126,11 @@ cases).
 Run it from `server/`:
 
 ```bash
-bun run ai:eval -- --fake
+bun run agent:eval -- --fake
 ```
 
 ```bash
-GOOGLE_GENERATIVE_AI_API_KEY=... bun run ai:eval
+GOOGLE_GENERATIVE_AI_API_KEY=... bun run agent:eval
 ```
 
 `--fake` uses a scripted model (no key, no cost) to check the harness itself.
@@ -154,6 +154,6 @@ after this.
 ## Open questions
 
 - Whether a faster model is good enough for mechanical edits, or quality drops.
-- How to show what the AI read: a "Sources" line under the draft, or only the
+- How to show what the agent read: a "Sources" line under the draft, or only the
   status steps.
 - Per-user limits on tool rounds and tokens once usage grows.

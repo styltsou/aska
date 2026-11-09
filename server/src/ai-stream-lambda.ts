@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEvent } from "aws-lambda";
 import { z } from "zod";
 
-import { describeAiError } from "@/ai/ai-error";
+import { describeAgentError } from "@/agent/agent-error";
 import { configureEnv } from "@/config/env";
 
 const allowedOrigins = new Set(
@@ -87,7 +87,7 @@ export const handler = awslambda.streamifyResponse(
         }),
       });
     } catch (error) {
-      console.error("AI note stream initialization failed", error);
+      console.error("Agent note stream initialization failed", error);
       respondJson(503, '{"error":"AI is unavailable"}');
       return;
     }
@@ -108,7 +108,7 @@ export const handler = awslambda.streamifyResponse(
       return;
     }
 
-    const { createNoteModel } = await import("@/ai/note-model");
+    const { createNoteModel } = await import("@/agent/note-model");
     const model = createNoteModel();
     if (!model) {
       respondJson(503, '{"error":"AI is unavailable"}');
@@ -120,7 +120,7 @@ export const handler = awslambda.streamifyResponse(
       stream.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
     };
     try {
-      const { runNoteAgent } = await import("@/ai/note-agent");
+      const { runNoteAgent } = await import("@/agent/note-agent");
       for await (const event of runNoteAgent(input, model)) {
         if (event.type === "text") {
           send("custom", { type: "delta", text: event.text });
@@ -130,8 +130,8 @@ export const handler = awslambda.streamifyResponse(
       }
       send("custom", { type: "done" });
     } catch (error) {
-      console.error("AI note stream failed", error);
-      send("error", { message: describeAiError(error) });
+      console.error("Agent note stream failed", error);
+      send("error", { message: describeAgentError(error) });
     } finally {
       stream.end();
     }

@@ -792,7 +792,7 @@
 }
 
 .note-float-block-controls[data-scroll-suppressed="true"],
-.note-float-block-controls[data-ai-pending="true"] {
+.note-float-block-controls[data-agent-pending="true"] {
   visibility: hidden !important;
   pointer-events: none !important;
 }
@@ -946,12 +946,12 @@
   user-select: none;
 }
 
-/* In-editor AI: a pending draft renders exactly as it will once kept, marked
-   by one rail in the gutter that runs from its first block down to the AI
+/* In-editor agent: a pending draft renders exactly as it will once kept, marked
+   by one rail in the gutter that runs from its first block down to the agent
    controls. Marking the region instead of restyling its content works the
    same for any block: tables, code blocks, images. The empty line the prompt
    opened on is hidden behind the prompt until text arrives. */
-.note-rich-text-content .note-ai-rail {
+.note-rich-text-content .note-agent-rail {
   position: absolute;
   bottom: 0;
   left: -0.875rem;
@@ -963,61 +963,63 @@
   transition: opacity 150ms ease-out;
 }
 
-.note-rich-text-content .note-ai-rail[data-visible="true"] {
+.note-rich-text-content .note-agent-rail[data-visible="true"] {
   opacity: 1;
 }
 
-.note-rich-text-content .note-ai-rail[data-visible="true"][data-streaming] {
-  animation: note-ai-rail-pulse 1.6s ease-in-out infinite;
+.note-rich-text-content .note-agent-rail[data-visible="true"][data-streaming] {
+  animation: note-agent-rail-pulse 1.6s ease-in-out infinite;
 }
 
 /* Each streamed chunk appears as it arrives, with a quick fade so it lands
    softly instead of popping in. Opacity only: no movement, nothing to lay
    out, and short enough to finish before the next chunk usually arrives.
    Kept under reduced motion, since a short fade isn't motion. */
-.note-rich-text-content .note-ai-fresh {
-  animation: note-ai-fresh 100ms cubic-bezier(0.23, 1, 0.32, 1) both;
+.note-rich-text-content .note-agent-fresh {
+  animation: note-agent-fresh 100ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 /* What a follow-up changed in the draft. Added text is tinted in the draft's
    rail color; removed text stays readable in place, struck through and
    muted. Removed text isn't part of the note, so it can't be selected or
    copied. */
-.note-rich-text-content .note-ai-added {
+.note-rich-text-content .note-agent-added {
   border-radius: 0.1875rem;
   background: color-mix(in oklch, oklch(0.68 0.14 255) 22%, transparent);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
 
-.note-rich-text-content .note-ai-added-block {
+.note-rich-text-content .note-agent-added-block {
   outline: 2px solid color-mix(in oklch, oklch(0.68 0.14 255) 45%, transparent);
   outline-offset: 2px;
 }
 
 /* The text a rewrite will change, kept visible while the instruction is
    written in the prompt (where focus is). */
-.note-rich-text-content .note-ai-target {
+.note-rich-text-content .note-agent-target {
   border-radius: 0.1875rem;
   background: color-mix(in oklch, var(--foreground) 14%, transparent);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
 
-.note-rich-text-content .note-ai-removed-block {
+.note-rich-text-content .note-agent-removed-block {
   display: block;
   margin-top: 0.25em;
 }
 
 /* ProseMirror adds a caret helper after a widget that ends a block, which
    would leave an empty line; the draft is locked, so no caret goes there. */
-.note-rich-text-content .note-ai-removed-block ~ img.ProseMirror-separator,
-.note-rich-text-content .note-ai-removed-block ~ br.ProseMirror-trailingBreak {
+.note-rich-text-content .note-agent-removed-block ~ img.ProseMirror-separator,
+.note-rich-text-content
+  .note-agent-removed-block
+  ~ br.ProseMirror-trailingBreak {
   /* ProseMirror's own stylesheet forces the separator inline. */
   display: none !important;
 }
 
-.note-rich-text-content .note-ai-removed {
+.note-rich-text-content .note-agent-removed {
   margin-right: 0.25em;
   color: var(--muted-foreground);
   text-decoration-line: line-through;
@@ -1031,45 +1033,45 @@
 }
 
 /* A block that is new as a whole already fades; don't fade its text twice. */
-.note-rich-text-content .note-ai-fresh .note-ai-fresh {
+.note-rich-text-content .note-agent-fresh .note-agent-fresh {
   animation: none;
 }
 
-@keyframes note-ai-fresh {
+@keyframes note-agent-fresh {
   from {
     opacity: 0;
   }
 }
 
-@keyframes note-ai-rail-pulse {
+@keyframes note-agent-rail-pulse {
   50% {
     opacity: 0.4;
   }
 }
 
 .note-rich-text-content
-  p.note-ai-pending:has(> br.ProseMirror-trailingBreak:only-child) {
+  p.note-agent-pending:has(> br.ProseMirror-trailingBreak:only-child) {
   display: none;
 }
 
-.note-rich-text-content .note-ai-widget {
+.note-rich-text-content .note-agent-widget {
   user-select: none;
 }
 
-.note-rich-text-content .note-ai-widget input {
+.note-rich-text-content .note-agent-widget input {
   user-select: text;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .note-rich-text-content .note-ai-rail {
+  .note-rich-text-content .note-agent-rail {
     transition: none;
     animation: none !important;
   }
 }
 
-/* "Writing…" status while the AI streams: a soft highlight sweeping across
+/* "Writing…" status while the agent streams: a soft highlight sweeping across
    muted text, readable as activity without a spinner. */
-.note-ai-shimmer {
+.note-agent-shimmer {
   background-image: linear-gradient(
     90deg,
     var(--muted-foreground) 0%,
@@ -1082,10 +1084,10 @@
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
-  animation: note-ai-shimmer 1.8s linear infinite;
+  animation: note-agent-shimmer 1.8s linear infinite;
 }
 
-@keyframes note-ai-shimmer {
+@keyframes note-agent-shimmer {
   from {
     background-position: 100% 0;
   }
@@ -1095,7 +1097,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .note-ai-shimmer {
+  .note-agent-shimmer {
     animation: none;
     color: var(--muted-foreground);
     background-image: none;

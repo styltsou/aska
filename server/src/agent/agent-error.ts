@@ -4,7 +4,7 @@
  * and common wording rather than one provider's error types, so it holds when
  * `createNoteModel` switches providers.
  */
-export function describeAiError(error: unknown): string {
+export function describeAgentError(error: unknown): string {
   const status =
     typeof error === "object" && error !== null && "status" in error
       ? Number((error as { status: unknown }).status)

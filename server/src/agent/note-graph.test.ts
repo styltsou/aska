@@ -5,8 +5,8 @@ import {
   createNoteEditGraph,
   systemMessage,
   userMessage,
-} from "@/ai/note-graph";
-import { createNoteModel } from "@/ai/note-model";
+} from "@/agent/note-graph";
+import { createNoteModel } from "@/agent/note-model";
 
 describe("createNoteEditGraph", () => {
   it("streams any chat model's output in pieces, without repeating it", async () => {

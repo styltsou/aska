@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { mentionQueryBefore } from "./note-ai-mentions";
+import { mentionQueryBefore } from "./note-agent-mentions";
 
 describe("mentionQueryBefore", () => {
   it("finds the @query being typed before the caret", () => {

@@ -1,4 +1,4 @@
-import type { EvalCase } from "@/ai/eval/cases";
+import type { EvalCase } from "@/agent/eval/cases";
 
 /** The text a rewrite's length is compared against. */
 function selectedText(passage: string) {

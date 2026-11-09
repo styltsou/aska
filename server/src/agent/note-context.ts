@@ -1,5 +1,5 @@
 /**
- * Context for the note AI: the overview the model always gets (the whole
+ * Context for the note agent: the overview the model always gets (the whole
  * text when it's short, otherwise an outline and an excerpt), and the read and
  * search helpers its tools use to look closer. Everything works on plain
  * Markdown lines, numbered from 1.

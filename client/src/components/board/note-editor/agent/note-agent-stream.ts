@@ -1,6 +1,6 @@
 import { apiUrl } from "@/lib/api";
 
-export type NoteAiRequest = {
+export type NoteAgentRequest = {
   prompt: string;
   note: string;
   /** The draft a follow-up revises. */
@@ -49,11 +49,11 @@ export function takeServerSentEvents(buffer: string): {
 }
 
 /**
- * Streams note AI output, calling `onDelta` for each text chunk. Resolves when
+ * Streams note agent output, calling `onDelta` for each text chunk. Resolves when
  * the server reports completion and rejects on HTTP or stream errors.
  */
-export async function streamNoteAi(
-  request: NoteAiRequest,
+export async function streamNoteAgent(
+  request: NoteAgentRequest,
   {
     signal,
     onDelta,
@@ -61,7 +61,7 @@ export async function streamNoteAi(
   }: {
     signal: AbortSignal;
     onDelta: (text: string) => void;
-    /** What the AI is doing before it writes, e.g. "Searching this note…". */
+    /** What the agent is doing before it writes, e.g. "Searching this note…". */
     onStatus?: (text: string) => void;
   },
 ) {

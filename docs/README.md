@@ -26,7 +26,7 @@ it safely. Start here rather than reconstructing architecture from file names.
   placement contexts, collision handling, and batch rules.
 - [Color Image Search](./color-image-search.md) — shipped retrieval behavior
   and ranking boundaries.
-- [AI Editing in Notes](./ai-editing.md) — in-editor AI writing, rewriting,
+- [Note Agent](./note-agent.md) — the in-editor agent: writing, rewriting,
   mentions, the streaming pipeline, invariants, and planned work.
 - [Ambient Interface Spec](./ambient-interface-spec.md) — the implemented
   auth canvas treatment and remaining ambient-surface direction.

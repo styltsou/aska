@@ -1,8 +1,8 @@
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
-import { CURSOR, type EvalCase } from "@/ai/eval/cases";
-import { runNoteAgent } from "@/ai/note-agent";
-import { createNoteEditGraph } from "@/ai/note-graph";
+import { CURSOR, type EvalCase } from "@/agent/eval/cases";
+import { runNoteAgent } from "@/agent/note-agent";
+import { createNoteEditGraph } from "@/agent/note-graph";
 
 export type EvalEvent =
   | { type: "text"; text: string }
@@ -14,7 +14,7 @@ export type EvalPipeline = (
   model: BaseChatModel,
 ) => AsyncIterable<EvalEvent>;
 
-// Mirror the client's limits (note-ai-prompt.tsx, note-ai-mentions.tsx), so the
+// Mirror the client's limits (note-agent-prompt.tsx, note-agent-mentions.tsx), so the
 // baseline sees exactly what production sends.
 const NOTE_CONTEXT_LIMIT = 38_000;
 const REFERENCED_NOTE_LIMIT = 12_000;

@@ -4,26 +4,26 @@ import { ArrowUp, RotateCcw } from "lucide-react";
 import { motion } from "motion/react";
 
 import {
-  acceptNoteAiSession,
-  discardNoteAiSession,
-  getNoteAiSession,
-  noteAiPassageWith,
-  noteMarkdownAtAiCursor,
-  NOTE_AI_CURSOR_MARKER,
-  setNoteAiContent,
-  setNoteAiStreaming,
-  showNoteAiChanges,
-} from "@/components/board/note-editor/ai/note-ai-session";
+  acceptNoteAgentSession,
+  discardNoteAgentSession,
+  getNoteAgentSession,
+  noteAgentPassageWith,
+  noteMarkdownAtAgentCursor,
+  NOTE_AGENT_CURSOR_MARKER,
+  setNoteAgentContent,
+  setNoteAgentStreaming,
+  showNoteAgentChanges,
+} from "@/components/board/note-editor/agent/note-agent-session";
 import {
   loadReferencedNotes,
-  NoteAiMentionChips,
-  NoteAiMentionPicker,
-  useNoteAiMentions,
-} from "@/components/board/note-editor/ai/note-ai-mentions";
+  NoteAgentMentionChips,
+  NoteAgentMentionPicker,
+  useNoteAgentMentions,
+} from "@/components/board/note-editor/agent/note-agent-mentions";
 import {
-  streamNoteAi,
-  type NoteAiRequest as AiRequest,
-} from "@/components/board/note-editor/ai/note-ai-stream";
+  streamNoteAgent,
+  type NoteAgentRequest as AgentRequest,
+} from "@/components/board/note-editor/agent/note-agent-stream";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import {
@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * - `prompt`: asking for the first draft.
- * - `streaming`: the AI is writing into the note; a status line, no input.
+ * - `streaming`: the agent is writing into the note; a status line, no input.
  * - `review`: a draft is in the note; an action row to retry, discard or keep
  *   it, with a follow-up input below that rewrites the same draft.
  */
@@ -104,7 +104,7 @@ const NOTE_CONTEXT_LIMIT = 200_000;
 
 function trimAroundCursor(note: string) {
   if (note.length <= NOTE_CONTEXT_LIMIT) return note;
-  const cursor = Math.max(0, note.indexOf(NOTE_AI_CURSOR_MARKER));
+  const cursor = Math.max(0, note.indexOf(NOTE_AGENT_CURSOR_MARKER));
   const start = Math.max(
     0,
     Math.min(
@@ -115,18 +115,18 @@ function trimAroundCursor(note: string) {
   return note.slice(Math.floor(start), Math.floor(start) + NOTE_CONTEXT_LIMIT);
 }
 
-export type NoteAiDraft = { draft: string; request: AiRequest };
+export type NoteAgentDraft = { draft: string; request: AgentRequest };
 
 /**
- * Inline AI controls rendered inside the note, directly below the content the
- * AI is writing. Output streams straight into the note as a pending draft;
+ * Inline agent controls rendered inside the note, directly below the content the
+ * agent is writing. Output streams straight into the note as a pending draft;
  * leaving keeps it, and Discard (or undo afterwards) removes it.
  *
  * `restored` reopens a draft saved on an earlier visit, in review and without
  * taking focus. `onDraft` reports each finished draft so it can be stored, and
  * `onResolve` reports that the user kept or discarded it.
  */
-export function NoteAiPrompt({
+export function NoteAgentPrompt({
   editor,
   restored,
   onDraft,
@@ -135,19 +135,19 @@ export function NoteAiPrompt({
   sourceAssetId,
 }: {
   editor: Editor;
-  restored?: NoteAiDraft;
-  onDraft?: (draft: NoteAiDraft) => void;
+  restored?: NoteAgentDraft;
+  onDraft?: (draft: NoteAgentDraft) => void;
   onResolve?: () => void;
   /** Enables @-mentioning notes in the prompt as context. */
   workspaceSlug?: string;
   sourceAssetId?: number;
 }) {
   const [prompt, setPrompt] = useState("");
-  const mentions = useNoteAiMentions({ workspaceSlug, sourceAssetId });
+  const mentions = useNoteAgentMentions({ workspaceSlug, sourceAssetId });
   const pickerId = useId();
   const [phase, setPhase] = useState<Phase>(restored ? "review" : "prompt");
   const [error, setError] = useState("");
-  // What the AI is doing before it writes (searching, reading); replaced by
+  // What the agent is doing before it writes (searching, reading); replaced by
   // "Writing…" once text arrives.
   const [status, setStatus] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -157,7 +157,7 @@ export function NoteAiPrompt({
   usePendingRail(editor, containerRef, railRef);
   const outputRef = useRef(restored?.draft ?? "");
   const frameRef = useRef<number | null>(null);
-  const lastRequestRef = useRef<AiRequest | null>(restored?.request ?? null);
+  const lastRequestRef = useRef<AgentRequest | null>(restored?.request ?? null);
   // A restored draft waits quietly in the note; it only takes focus once the
   // user interacts with it.
   const skipInitialFocusRef = useRef(Boolean(restored));
@@ -188,20 +188,22 @@ export function NoteAiPrompt({
   // The note as it was when the bar opened; follow-ups revise the draft
   // against this same context.
   const noteRef = useRef<string | null>(null);
-  noteRef.current ??= trimAroundCursor(noteMarkdownAtAiCursor(editor));
+  noteRef.current ??= trimAroundCursor(noteMarkdownAtAgentCursor(editor));
   // Set when rewriting a selection: the passage, with the selection marked.
   const passageRef = useRef<string | null | undefined>(undefined);
-  passageRef.current ??= getNoteAiSession(editor.state).passage;
+  passageRef.current ??= getNoteAgentSession(editor.state).passage;
   const rewriting = Boolean(passageRef.current);
   // What goes in the note for the model's output: for a rewrite, the model
   // writes only the replacement and the passage is rebuilt around it.
   const toNote = (output: string) =>
-    passageRef.current ? noteAiPassageWith(passageRef.current, output) : output;
+    passageRef.current
+      ? noteAgentPassageWith(passageRef.current, output)
+      : output;
 
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (restored) setNoteAiContent(editor, restored.draft);
+    if (restored) setNoteAgentContent(editor, restored.draft);
     // Only on mount: `restored` describes where this session started.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -235,14 +237,15 @@ export function NoteAiPrompt({
       cancelAnimationFrame(frameRef.current);
       frameRef.current = null;
     }
-    if (outputRef.current) setNoteAiContent(editor, toNote(outputRef.current));
+    if (outputRef.current)
+      setNoteAgentContent(editor, toNote(outputRef.current));
   };
 
   // Ending from inside the bar returns focus to the editor *before* the bar is
   // removed; otherwise the removed element drops focus to the surrounding
   // drawer. Ending because focus already left keeps the user's new selection.
   const end = (
-    action: typeof acceptNoteAiSession,
+    action: typeof acceptNoteAgentSession,
     { fromBlur = false } = {},
   ) => {
     if (!fromBlur) {
@@ -254,18 +257,18 @@ export function NoteAiPrompt({
   const keep = (options?: { fromBlur?: boolean }) => {
     flush();
     onResolve?.();
-    end(acceptNoteAiSession, options);
+    end(acceptNoteAgentSession, options);
   };
   const discard = (options?: { fromBlur?: boolean }) => {
     onResolve?.();
-    end(discardNoteAiSession, options);
+    end(discardNoteAgentSession, options);
   };
 
   const finish = () => {
     if (!runningRef.current) return;
     runningRef.current = false;
     flush();
-    setNoteAiStreaming(editor, false);
+    setNoteAgentStreaming(editor, false);
     if (keepWhenDoneRef.current) {
       keepWhenDoneRef.current = false;
       if (outputRef.current) keep({ fromBlur: true });
@@ -280,7 +283,7 @@ export function NoteAiPrompt({
       // A rewrite shows what it changes in the original text. Rewrites
       // aren't stored across refreshes: they belong to text that may change.
       if (rewriting) {
-        showNoteAiChanges(editor);
+        showNoteAgentChanges(editor);
       } else if (lastRequestRef.current) {
         onDraft?.({
           draft: outputRef.current,
@@ -302,7 +305,7 @@ export function NoteAiPrompt({
     [],
   );
 
-  const run = (request: AiRequest) => {
+  const run = (request: AgentRequest) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -317,9 +320,9 @@ export function NoteAiPrompt({
     setStatus(null);
     setPrompt("");
     setPhase("streaming");
-    setNoteAiStreaming(editor, true);
+    setNoteAgentStreaming(editor, true);
 
-    streamNoteAi(request, {
+    streamNoteAgent(request, {
       signal: controller.signal,
       onStatus: (text) => {
         if (isCurrent()) setStatus(text);
@@ -334,7 +337,7 @@ export function NoteAiPrompt({
           // read isn't yanked back down.
           const status = statusRef.current;
           const following = status ? isInViewport(status) : false;
-          setNoteAiContent(editor, toNote(outputRef.current));
+          setNoteAgentContent(editor, toNote(outputRef.current));
           if (following) status?.scrollIntoView({ block: "nearest" });
         });
       },
@@ -365,7 +368,7 @@ export function NoteAiPrompt({
             -MAX_EARLIER_PROMPTS,
           )
         : [];
-    const request: AiRequest = {
+    const request: AgentRequest = {
       prompt: instruction,
       note: noteRef.current ?? "",
       ...(draft ? { draft } : {}),
@@ -430,7 +433,7 @@ export function NoteAiPrompt({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
-      className="note-ai-prompt relative my-1.5 font-sans text-sm"
+      className="note-agent-prompt relative my-1.5 font-sans text-sm"
       onBlur={(event) => {
         const next = event.relatedTarget;
         if (
@@ -471,7 +474,7 @@ export function NoteAiPrompt({
         aria-hidden
         data-visible="false"
         data-streaming={phase === "streaming" ? "true" : undefined}
-        className="note-ai-rail"
+        className="note-agent-rail"
       />
       {phase === "streaming" ? (
         <div
@@ -480,7 +483,7 @@ export function NoteAiPrompt({
           role="status"
           className="flex h-8 items-center justify-between gap-3 outline-none"
         >
-          <span className="note-ai-shimmer text-sm">
+          <span className="note-agent-shimmer text-sm">
             {status ?? "Writing…"}
           </span>
           <Button
@@ -560,7 +563,7 @@ export function NoteAiPrompt({
             phase === "review" && "mt-1.5",
           )}
         >
-          <NoteAiMentionChips
+          <NoteAgentMentionChips
             notes={mentions.notes}
             onRemove={mentions.remove}
           />
@@ -628,7 +631,7 @@ export function NoteAiPrompt({
             <ArrowUp />
           </Button>
           {mentions.open ? (
-            <NoteAiMentionPicker
+            <NoteAgentMentionPicker
               id={pickerId}
               options={mentions.options}
               active={mentions.active}
@@ -690,7 +693,7 @@ function usePendingRail(
       const container = containerRef.current;
       const rail = railRef.current;
       if (!container || !rail) return;
-      const { range } = getNoteAiSession(editor.state);
+      const { range } = getNoteAgentSession(editor.state);
       const first = range ? editor.view.nodeDOM(range.from) : null;
       const top =
         first instanceof HTMLElement && first.offsetHeight > 0
@@ -721,7 +724,7 @@ function isInViewport(element: Element) {
 }
 
 function lastDraft(
-  request: AiRequest | null,
+  request: AgentRequest | null,
   output: { current: string },
 ): string {
   return output.current || request?.draft || "";

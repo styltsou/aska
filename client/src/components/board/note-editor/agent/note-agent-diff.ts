@@ -2,7 +2,7 @@ import { diffArrays } from "diff";
 import type { Fragment, Node as ProseMirrorNode } from "@tiptap/pm/model";
 
 /**
- * Word-level comparison between a previous AI draft and the draft now in the
+ * Word-level comparison between a previous agent draft and the draft now in the
  * note, expressed as positions in the note so it can be drawn as decorations
  * without touching the document: added text is highlighted in place, removed
  * text is shown (struck through) where it used to be. Keeping the draft keeps
@@ -13,7 +13,7 @@ import type { Fragment, Node as ProseMirrorNode } from "@tiptap/pm/model";
  * Formatting-only changes (bold, a heading level) aren't shown.
  */
 
-export type NoteAiDraftDiff = {
+export type NoteAgentDraftDiff = {
   /** Ranges of new text. */
   added: Array<{ from: number; to: number }>;
   /** Whole new non-text blocks (images, dividers). */
@@ -89,15 +89,15 @@ const isBlank = (token: Token) => token.boundary || !token.text.trim();
  * Compares `previous` (the earlier draft) with the content of `doc` between
  * `from` and `to` (the draft now in the note).
  */
-export function diffNoteAiDraft(
+export function diffNoteAgentDraft(
   previous: Fragment,
   doc: ProseMirrorNode,
   from: number,
   to: number,
-): NoteAiDraftDiff {
+): NoteAgentDraftDiff {
   const before = tokenize(previous, 0);
   const after = tokenize(doc.slice(from, to).content, from);
-  const diff: NoteAiDraftDiff = { added: [], addedNodes: [], removed: [] };
+  const diff: NoteAgentDraftDiff = { added: [], addedNodes: [], removed: [] };
 
   // A hunk is a run of changes plus the blank space between them; its removed
   // text is shown once, where the hunk starts in the new draft.

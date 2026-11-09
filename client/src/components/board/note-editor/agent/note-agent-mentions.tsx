@@ -11,13 +11,13 @@ import { NOTE_MENTION_CHIP_CLASS } from "@/components/board/note-editor/mentions
 import { cn } from "@/lib/utils";
 
 /**
- * @-mentioning notes in the AI prompt: typing `@` opens a note picker, picked
+ * @-mentioning notes in the agent prompt: typing `@` opens a note picker, picked
  * notes show as chips in the prompt, and their content is sent to the model as
  * context with the next request (and its follow-ups).
  */
 
-export type NoteAiMentionedNote = { assetId: number; title: string };
-export type NoteAiReferencedNote = { title: string; markdown: string };
+export type NoteAgentMentionedNote = { assetId: number; title: string };
+export type NoteAgentReferencedNote = { title: string; markdown: string };
 
 // Mirrors the server's limits.
 const MAX_MENTIONED_NOTES = 3;
@@ -40,8 +40,8 @@ export function mentionQueryBefore(text: string, caret: number) {
 /** Fetches the mentioned notes' content to send as context. */
 export async function loadReferencedNotes(
   workspaceSlug: string,
-  notes: NoteAiMentionedNote[],
-): Promise<NoteAiReferencedNote[]> {
+  notes: NoteAgentMentionedNote[],
+): Promise<NoteAgentReferencedNote[]> {
   const assets = await Promise.all(
     notes.map((note) =>
       fetchPeekableAsset(workspaceSlug, `note-${note.assetId}`),
@@ -59,14 +59,14 @@ export async function loadReferencedNotes(
   );
 }
 
-export function useNoteAiMentions({
+export function useNoteAgentMentions({
   workspaceSlug,
   sourceAssetId,
 }: {
   workspaceSlug?: string;
   sourceAssetId?: number;
 }) {
-  const [notes, setNotes] = useState<NoteAiMentionedNote[]>([]);
+  const [notes, setNotes] = useState<NoteAgentMentionedNote[]>([]);
   const [query, setQuery] = useState<ReturnType<
     typeof mentionQueryBefore
   > | null>(null);
@@ -130,11 +130,11 @@ export function useNoteAiMentions({
   };
 }
 
-export function NoteAiMentionChips({
+export function NoteAgentMentionChips({
   notes,
   onRemove,
 }: {
-  notes: NoteAiMentionedNote[];
+  notes: NoteAgentMentionedNote[];
   onRemove: (assetId: number) => void;
 }) {
   return notes.map((note) => (
@@ -157,7 +157,7 @@ export function NoteAiMentionChips({
   ));
 }
 
-export function NoteAiMentionPicker({
+export function NoteAgentMentionPicker({
   id,
   options,
   active,

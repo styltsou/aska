@@ -1,19 +1,19 @@
 /**
- * Runs the note AI eval cases through a pipeline and prints a comparison.
+ * Runs the note agent eval cases through a pipeline and prints a comparison.
  *
- *   bun run ai:eval -- --fake                 # scripted model, no key, no cost
- *   GOOGLE_GENERATIVE_AI_API_KEY=… bun run ai:eval
- *   bun run ai:eval -- --case far-in-note --verbose
- *   bun run ai:eval -- --pipeline baseline   # today's single-call pipeline
- *   bun run ai:eval -- --delay 5000          # pause between cases (rate limits)
+ *   bun run agent:eval -- --fake                 # scripted model, no key, no cost
+ *   GOOGLE_GENERATIVE_AI_API_KEY=… bun run agent:eval
+ *   bun run agent:eval -- --case far-in-note --verbose
+ *   bun run agent:eval -- --pipeline baseline   # today's single-call pipeline
+ *   bun run agent:eval -- --delay 5000          # pause between cases (rate limits)
  *
  * See docs/proposals/ai-agentic-context.md for what the cases measure.
  */
-import { EVAL_CASES, type EvalCase } from "@/ai/eval/cases";
-import { PIPELINES, TOOL_PIPELINES } from "@/ai/eval/pipeline";
-import { ScriptedChatModel } from "@/ai/eval/scripted-model";
-import { scoreOutput } from "@/ai/eval/score";
-import { createNoteModel } from "@/ai/note-model";
+import { EVAL_CASES, type EvalCase } from "@/agent/eval/cases";
+import { PIPELINES, TOOL_PIPELINES } from "@/agent/eval/pipeline";
+import { ScriptedChatModel } from "@/agent/eval/scripted-model";
+import { scoreOutput } from "@/agent/eval/score";
+import { createNoteModel } from "@/agent/note-model";
 
 function option(name: string) {
   const index = process.argv.indexOf(`--${name}`);

@@ -13,7 +13,7 @@
     "test:integration": "RUN_INTEGRATION_TESTS=true vitest run --config vitest.integration.config.ts",
     "backfill:resolver-version": "bun run src/scripts/backfill-resolver-version.ts",
     "backfill:video-storyboards": "bun run src/scripts/backfill-video-storyboards.ts",
-    "ai:eval": "bun run src/scripts/ai-eval.ts",
+    "agent:eval": "bun run src/scripts/agent-eval.ts",
     "test:watch": "vitest",
     "lambda:typecheck": "node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.lambda.json"
   },

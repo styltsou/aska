@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { streamNoteAi, takeServerSentEvents } from "./note-ai-stream";
+import { streamNoteAgent, takeServerSentEvents } from "./note-agent-stream";
 
 describe("takeServerSentEvents", () => {
   it("parses complete events and keeps the partial tail", () => {
@@ -23,7 +23,7 @@ describe("takeServerSentEvents", () => {
   });
 });
 
-describe("streamNoteAi", () => {
+describe("streamNoteAgent", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
@@ -42,7 +42,7 @@ describe("streamNoteAi", () => {
       vi.fn(async () => new Response(events, { status: 200 })),
     );
     const seen: string[] = [];
-    await streamNoteAi(
+    await streamNoteAgent(
       { prompt: "When?", note: "⟦cursor⟧" },
       {
         signal: new AbortController().signal,

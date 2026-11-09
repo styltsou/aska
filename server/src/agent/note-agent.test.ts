@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { EVAL_CASES } from "@/ai/eval/cases";
-import { ScriptedChatModel, type ScriptedStep } from "@/ai/eval/scripted-model";
-import { runNoteAgent, type NoteAgentInput } from "@/ai/note-agent";
-import { noteOverview, readSection, searchText } from "@/ai/note-context";
+import { EVAL_CASES } from "@/agent/eval/cases";
+import {
+  ScriptedChatModel,
+  type ScriptedStep,
+} from "@/agent/eval/scripted-model";
+import { runNoteAgent, type NoteAgentInput } from "@/agent/note-agent";
+import { noteOverview, readSection, searchText } from "@/agent/note-context";
 
 const longNote = EVAL_CASES.find(
   (testCase) => testCase.id === "far-in-note",
