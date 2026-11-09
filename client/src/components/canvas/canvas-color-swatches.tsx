@@ -102,7 +102,7 @@ export function CanvasColorSwatches({
           side="bottom"
           align="end"
           sideOffset={8}
-          className="w-auto min-w-0 gap-0 p-2 duration-75"
+          className="w-auto min-w-0 gap-0 p-2"
         >
           <div
             className="grid grid-cols-4 gap-1.5"

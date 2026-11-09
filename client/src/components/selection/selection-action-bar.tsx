@@ -14,7 +14,7 @@ import {
   Trash2Icon,
   XIcon,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import {
   AlertDialog,
@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
+import { ShortcutKey } from "@/components/ui/shortcut-key";
 import {
   ButtonGroup,
   ButtonGroupSeparator,
@@ -73,6 +73,7 @@ const BUTTON_GROUP_SURFACE_CLASS = cn(
   "relative z-10 rounded-md",
   GLASS_SURFACE_CLASS,
 );
+const BAR_EASE = [0.22, 1, 0.36, 1] as const;
 
 export function SelectionActionBar({
   count,
@@ -89,8 +90,11 @@ export function SelectionActionBar({
   className,
 }: SelectionActionBarProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const restingState = { opacity: 1, scale: 1, y: 0 };
-  const hiddenState = { opacity: 0, scale: 0.9, y: -8 };
+  const reduceMotion = useReducedMotion();
+  const restingState = { transform: "translateY(0px)" };
+  const hiddenState = {
+    transform: reduceMotion ? "translateY(0px)" : "translateY(-4px)",
+  };
 
   return (
     <>
@@ -100,13 +104,12 @@ export function SelectionActionBar({
             key="selection-bar"
             initial={hiddenState}
             animate={restingState}
-            exit={hiddenState}
             role="toolbar"
             aria-label="Selection actions"
             className="flex w-fit flex-col items-center gap-1"
             transition={{
-              duration: 0.1,
-              ease: [0, 0, 0.2, 1],
+              duration: reduceMotion ? 0 : 0.15,
+              ease: BAR_EASE,
             }}
           >
             <div
@@ -189,10 +192,20 @@ export function SelectionActionBar({
                     {surface === "canvas" && (layoutCount ?? count) >= 2 ? (
                       <motion.div
                         key="layout-actions"
-                        initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-                        animate={{ opacity: 1, width: "auto", marginLeft: 0 }}
-                        exit={{ opacity: 0, width: 0, marginLeft: 0 }}
-                        transition={{ duration: 0.08, ease: [0, 0, 0.2, 1] }}
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: "auto" }}
+                        exit={{
+                          opacity: 0,
+                          width: 0,
+                          transition: {
+                            duration: reduceMotion ? 0 : 0.1,
+                            ease: BAR_EASE,
+                          },
+                        }}
+                        transition={{
+                          duration: reduceMotion ? 0 : 0.15,
+                          ease: BAR_EASE,
+                        }}
                         className="-m-1 overflow-hidden p-1"
                       >
                         <div className={BUTTON_GROUP_SURFACE_CLASS}>
@@ -263,12 +276,7 @@ export function SelectionActionBar({
                 </div>
                 <div className="flex items-center justify-between px-0 pt-1.5 pr-[3px] pb-0.5 text-[10px] leading-4 text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
-                    <Kbd
-                      variant="solid"
-                      className="h-4 min-w-4 px-0.5 text-[10px]"
-                    >
-                      Esc
-                    </Kbd>
+                    <ShortcutKey>Esc</ShortcutKey>
                     <span>to close</span>
                   </span>
                   <span>{count} selected</span>

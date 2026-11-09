@@ -80,7 +80,7 @@ export function CreateFolderDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {children ? <DialogTrigger render={children} /> : null}
-      <DialogContent>
+      <DialogContent polishedMotion>
         <form className="contents" onSubmit={handleSubmit}>
           <DialogBody className="flex flex-col gap-4">
             <DialogHeader>

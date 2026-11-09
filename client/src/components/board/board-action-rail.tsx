@@ -22,8 +22,6 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { getPlatformShift } from "@/lib/platform";
 import {
   FLOATING_GLASS_BACKDROP_CLASS,
-  FLOATING_TOOLBAR_ENTER_TRANSITION,
-  FLOATING_TOOLBAR_EXIT_TRANSITION,
   GLASS_FRAME_CLASS,
   GLASS_ISLAND_CLASS,
 } from "@/lib/glass";
@@ -42,6 +40,7 @@ import { UploadMediaDialog } from "@/components/app-shell/upload-media-dialog";
 
 const RAIL_BUTTON_CLASS =
   "rounded-[calc(var(--radius-md)-1px)] text-foreground transition-[background,color,box-shadow] duration-150 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-muted/80 max-md:size-8";
+const DOCK_EASE = [0.22, 1, 0.36, 1] as const;
 
 function RailShortcut({ keys }: { keys: string }) {
   return (
@@ -93,13 +92,13 @@ export function BoardActionRail({
   const reduceMotion = useReducedMotion();
   const enterTransition = reduceMotion
     ? { duration: 0 }
-    : FLOATING_TOOLBAR_ENTER_TRANSITION;
+    : { duration: 0.2, ease: DOCK_EASE };
   const exitTransition = reduceMotion
     ? { duration: 0 }
-    : FLOATING_TOOLBAR_EXIT_TRANSITION;
+    : { duration: 0.15, ease: DOCK_EASE };
   const layoutTransition = reduceMotion
     ? { duration: 0 }
-    : { duration: 0.25, ease: [0.22, 1, 0.36, 1] as const };
+    : { duration: 0.2, ease: DOCK_EASE };
 
   return (
     <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-20 flex items-end justify-center px-2">
@@ -107,18 +106,17 @@ export function BoardActionRail({
         {isRailVisible ? (
           <motion.div
             key="actions-dock"
-            initial={reduceMotion ? false : { opacity: 0, y: 8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={
+            initial={
               reduceMotion
-                ? undefined
-                : {
-                    opacity: 0,
-                    y: 8,
-                    scale: 0.98,
-                    transition: exitTransition,
-                  }
+                ? false
+                : { opacity: 0, transform: "translateY(8px)" }
             }
+            animate={{ opacity: 1, transform: "translateY(0px)" }}
+            exit={{
+              opacity: 0,
+              transform: reduceMotion ? "translateY(0px)" : "translateY(8px)",
+              transition: exitTransition,
+            }}
             transition={enterTransition}
             style={{ transformOrigin: "bottom center" }}
             className="pointer-events-auto relative w-fit max-w-full"
@@ -252,8 +250,8 @@ export function BoardActionRail({
                     opacity: reduceMotion
                       ? { duration: 0 }
                       : view === "canvas"
-                        ? { duration: 0.16, delay: 0.07, ease: "easeOut" }
-                        : { duration: 0.12, ease: "easeOut" },
+                        ? { duration: 0.15, ease: DOCK_EASE }
+                        : { duration: 0.1, ease: DOCK_EASE },
                   }}
                   className="shrink-0 overflow-hidden"
                   aria-hidden={view !== "canvas"}

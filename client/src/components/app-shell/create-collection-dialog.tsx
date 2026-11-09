@@ -66,7 +66,7 @@ export function CreateCollectionDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={children} />
-      <DialogContent>
+      <DialogContent polishedMotion>
         <form className="contents" onSubmit={handleSubmit}>
           <DialogBody className="flex flex-col gap-4">
             <DialogHeader>

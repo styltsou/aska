@@ -87,7 +87,7 @@ function DrawerOverlay({
       className={cn(
         "fixed inset-0 z-[100] min-h-dvh bg-black/10 opacity-[max(var(--drawer-overlay-min-opacity,0),calc(1-var(--drawer-swipe-progress)))] transition-opacity duration-450 ease-[cubic-bezier(0.32,0.72,0,1)] select-none data-ending-style:pointer-events-none data-ending-style:opacity-0 data-ending-style:duration-[calc(var(--drawer-swipe-strength)*400ms)] data-snap-points:[--drawer-overlay-min-opacity:0.5] data-starting-style:opacity-0 data-swiping:duration-0 supports-backdrop-filter:backdrop-blur-xs supports-[-webkit-touch-callout:none]:absolute",
         fast &&
-          "duration-[200ms] data-ending-style:duration-[200ms] data-starting-style:duration-[200ms]",
+          "duration-250 data-ending-style:duration-150 motion-reduce:duration-0 motion-reduce:data-ending-style:duration-0",
         className,
       )}
       {...props}
@@ -167,7 +167,7 @@ function DrawerContent({
             "data-[swipe-direction=right]:right-0 data-[swipe-direction=right]:origin-right data-[swipe-direction=right]:[--closed-transform:translate3d(calc(100%+var(--drawer-inset,0px)+2px),0,0)] data-[swipe-direction=right]:[--translate-x:calc(var(--drawer-swipe-movement-x)-var(--stack-peek-offset)-(var(--stack-shrink)*100%))]",
             className,
             fast &&
-              "duration-[200ms] data-ending-style:duration-[200ms] data-starting-style:duration-[200ms]",
+              "duration-250 data-ending-style:duration-150 motion-reduce:transition-opacity motion-reduce:duration-0 motion-reduce:data-ending-style:duration-0",
           )}
           {...props}
         >

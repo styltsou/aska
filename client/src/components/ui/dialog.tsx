@@ -62,18 +62,28 @@ function DialogContent({
   children,
   showCloseButton = true,
   overlayClassName,
+  polishedMotion = false,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
   overlayClassName?: string;
+  polishedMotion?: boolean;
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay className={overlayClassName} />
+      <DialogOverlay
+        className={cn(
+          polishedMotion &&
+            "duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-ending-style:duration-150 motion-reduce:duration-0 motion-reduce:data-ending-style:duration-0",
+          overlayClassName,
+        )}
+      />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
           "fixed top-[18vh] left-1/2 z-[100] w-full max-w-sm -translate-x-1/2 translate-y-0 overflow-hidden rounded-lg transition duration-100 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
+          polishedMotion &&
+            "transition-[scale,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-ending-style:scale-[0.96] data-ending-style:duration-150 data-starting-style:scale-[0.96] motion-reduce:transition-opacity motion-reduce:duration-100 motion-reduce:data-ending-style:scale-100 motion-reduce:data-starting-style:scale-100",
           GLASS_FRAME_CLASS,
           className,
         )}

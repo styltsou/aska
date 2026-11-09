@@ -207,7 +207,11 @@ export function DestinationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl" onKeyDown={handleKeyDown}>
+      <DialogContent
+        polishedMotion
+        className="max-w-2xl"
+        onKeyDown={handleKeyDown}
+      >
         <DialogBody className="flex flex-col gap-4 pb-3">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>

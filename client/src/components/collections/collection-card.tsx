@@ -277,11 +277,7 @@ export function CollectionCard({
                 >
                   <MoreHorizontalIcon aria-hidden="true" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  side="bottom"
-                  className="w-40 duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-ending-style:scale-[0.99] data-ending-style:duration-150 data-starting-style:scale-[0.97] motion-reduce:transition-none"
-                >
+                <DropdownMenuContent align="end" side="bottom" className="w-40">
                   {collectionActions.map((action, index) => (
                     <Fragment key={action.label}>
                       {index === 2 ? <DropdownMenuSeparator /> : null}
