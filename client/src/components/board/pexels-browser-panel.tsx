@@ -758,7 +758,7 @@ export function PexelsBrowserPanel({
               </div>
               <div className="relative min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background p-[var(--app-shell-inset)] pr-1">
                 <ScrollArea
-                  className="group/pexels-scroll size-full rounded-xl [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
+                  className="group/pexels-scroll size-full rounded-xl [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm"
                   viewportClassName="box-border pt-1 pr-2 pl-1"
                   verticalScrollbarClassName="group-hover/pexels-scroll:opacity-100"
                   viewportRef={setViewportRef}

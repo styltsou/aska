@@ -788,7 +788,7 @@ function NativeVideoContent({
         transition={{ layout: layoutTransition }}
         className="relative flex h-full min-h-0 flex-1 overflow-hidden"
       >
-        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-3 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-1.5 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35">
+        <ScrollArea className="h-full min-h-0 min-w-0 flex-1 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-3 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-1.5">
           <div className="min-h-full bg-background">
             <div className="mx-auto w-full max-w-[76rem] px-5">
               <div className="flex items-center justify-center pt-4 pb-8">

@@ -32,7 +32,7 @@ export function NavProjects({ collections, isLoading }: NavProjectsProps) {
         viewportClassName="overscroll-contain"
         contentClassName="pr-0"
         verticalScrollbarClassName="w-2 p-0 opacity-100"
-        verticalThumbClassName="w-0.5 bg-sidebar-foreground/20 hover:bg-sidebar-foreground/35"
+        verticalThumbClassName="w-0.5"
         horizontalScrollbarClassName="hidden"
         role="region"
         aria-label="Collections"

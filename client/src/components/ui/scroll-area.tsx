@@ -58,7 +58,7 @@ function ScrollArea({
         data-slot="scroll-area-scrollbar"
         orientation="vertical"
         className={cn(
-          "absolute inset-y-0 right-0 z-10 flex w-2.5 touch-none justify-center p-0.5 opacity-0 transition-opacity duration-150 select-none data-hovering:opacity-100 data-scrolling:opacity-100",
+          "group/scrollbar absolute inset-y-0 right-0 z-10 flex w-2.5 touch-none justify-center p-0.5 opacity-0 transition-opacity duration-150 select-none hover:opacity-100 active:opacity-100 data-hovering:opacity-100 data-scrolling:opacity-100 motion-reduce:transition-none",
           verticalScrollbarClassName,
         )}
         style={verticalScrollbarStyle}
@@ -66,7 +66,7 @@ function ScrollArea({
         <ScrollAreaPrimitive.Thumb
           data-slot="scroll-area-thumb"
           className={cn(
-            "relative w-1 rounded-full bg-sidebar-foreground/20 before:absolute before:inset-0 before:-inset-x-0.5",
+            "relative w-1 rounded-full bg-sidebar-foreground/16 transition-colors duration-100 before:absolute before:inset-0 before:-inset-x-0.5 group-hover/scrollbar:bg-sidebar-foreground/28 group-active/scrollbar:bg-sidebar-foreground/40 motion-reduce:transition-none",
             verticalThumbClassName,
           )}
         />
@@ -76,14 +76,14 @@ function ScrollArea({
         orientation="horizontal"
         style={horizontalScrollbarStyle}
         className={cn(
-          "flex touch-none p-0.5 opacity-0 transition-opacity duration-150 select-none data-hovering:opacity-100 data-scrolling:opacity-100",
+          "group/scrollbar flex touch-none p-0.5 opacity-0 transition-opacity duration-150 select-none hover:opacity-100 active:opacity-100 data-hovering:opacity-100 data-scrolling:opacity-100 motion-reduce:transition-none",
           horizontalScrollbarClassName,
         )}
       >
         <ScrollAreaPrimitive.Thumb
           data-slot="scroll-area-thumb"
           className={cn(
-            "relative h-1 rounded-full bg-sidebar-foreground/20 before:absolute before:inset-0 before:-inset-y-0.5",
+            "relative h-1 rounded-full bg-sidebar-foreground/16 transition-colors duration-100 before:absolute before:inset-0 before:-inset-y-0.5 group-hover/scrollbar:bg-sidebar-foreground/28 group-active/scrollbar:bg-sidebar-foreground/40 motion-reduce:transition-none",
             horizontalThumbClassName,
           )}
         />

@@ -433,7 +433,7 @@ export function ColorDetailDrawer({
               </div>
 
               <div className="relative min-h-0 flex-1">
-                <ScrollArea className="size-full [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-4 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-2 [&_[data-slot=scroll-area-thumb]]:bg-sidebar-foreground/55 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm">
+                <ScrollArea className="size-full [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-4 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-1 [&_[data-slot=scroll-area-thumb]]:w-2 [&_[data-slot=scroll-area-thumb]]:backdrop-blur-sm">
                   <div className="min-h-full px-4 pt-0 pb-4">
                     {search.isLoading || search.isSearching ? (
                       <ColorResultsSkeleton twoColumns />

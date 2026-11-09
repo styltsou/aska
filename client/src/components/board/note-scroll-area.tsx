@@ -14,7 +14,7 @@ export function NoteScrollArea({
 }: NoteScrollAreaProps) {
   return (
     <ScrollArea
-      className={cn("group/note-scroll-area", className)}
+      className={className}
       viewportClassName={cn(
         "note-workspace-scroll-container",
         viewportClassName,
@@ -29,7 +29,7 @@ export function NoteScrollArea({
         insetInlineEnd: "3px",
       }}
       verticalThumbClassName={cn(
-        "w-[5px] rounded-full bg-sidebar-foreground/16 transition-colors duration-150 group-hover/note-scroll-area:bg-sidebar-foreground/24",
+        "w-[5px] rounded-full",
         verticalThumbClassName,
       )}
       {...props}
