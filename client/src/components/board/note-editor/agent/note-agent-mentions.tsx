@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileTextIcon, XIcon } from "lucide-react";
 
-import { fetchPeekableAsset } from "@/api/collection/fetchers";
 import {
   mentionSearchQueryOptions,
   type NoteMentionTarget,
@@ -12,18 +11,14 @@ import { cn } from "@/lib/utils";
 
 /**
  * @-mentioning notes in the agent prompt: typing `@` opens a note picker, picked
- * notes show as chips in the prompt, and their content is sent to the model as
- * context with the next request (and its follow-ups).
+ * notes show as chips in the prompt, and their IDs go with the next request
+ * (and its follow-ups); the server loads their content as context.
  */
 
 export type NoteAgentMentionedNote = { assetId: number; title: string };
-export type NoteAgentReferencedNote = { title: string; markdown: string };
 
 // Mirrors the server's limits.
 const MAX_MENTIONED_NOTES = 3;
-// Whole notes are sent; the server shows the model an overview of long ones
-// and lets it read the rest.
-const MAX_REFERENCED_NOTE_LENGTH = 100_000;
 const PICKER_LIMIT = 6;
 
 /** The `@query` being typed right before the caret, if any. */
@@ -35,28 +30,6 @@ export function mentionQueryBefore(text: string, caret: number) {
     start: caret - match[1]!.length - 1,
     end: caret,
   };
-}
-
-/** Fetches the mentioned notes' content to send as context. */
-export async function loadReferencedNotes(
-  workspaceSlug: string,
-  notes: NoteAgentMentionedNote[],
-): Promise<NoteAgentReferencedNote[]> {
-  const assets = await Promise.all(
-    notes.map((note) =>
-      fetchPeekableAsset(workspaceSlug, `note-${note.assetId}`),
-    ),
-  );
-  return assets.flatMap(({ asset }, index) =>
-    asset.type === "note"
-      ? [
-          {
-            title: asset.title || notes[index]!.title,
-            markdown: asset.content.slice(0, MAX_REFERENCED_NOTE_LENGTH),
-          },
-        ]
-      : [],
-  );
 }
 
 export function useNoteAgentMentions({

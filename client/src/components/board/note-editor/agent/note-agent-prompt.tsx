@@ -15,7 +15,6 @@ import {
   showNoteAgentChanges,
 } from "@/components/board/note-editor/agent/note-agent-session";
 import {
-  loadReferencedNotes,
   NoteAgentMentionChips,
   NoteAgentMentionPicker,
   useNoteAgentMentions,
@@ -375,18 +374,16 @@ export function NoteAgentPrompt({
       ...(earlierPrompts.length ? { earlierPrompts } : {}),
       ...(passageRef.current ? { passage: passageRef.current } : {}),
       ...(task ? { task } : {}),
+      // Mentions go as IDs; the server loads them fresh for each request, so
+      // follow-ups see their latest content.
+      ...(mentions.notes.length && workspaceSlug
+        ? {
+            workspaceSlug,
+            mentions: mentions.notes.map(({ assetId }) => ({ assetId })),
+          }
+        : {}),
     };
-    if (!mentions.notes.length || !workspaceSlug) {
-      run(request);
-      return;
-    }
-    // Mentioned notes are read fresh for each request, so follow-ups see
-    // their latest content.
-    setError("");
-    loadReferencedNotes(workspaceSlug, mentions.notes).then(
-      (referencedNotes) => run({ ...request, referencedNotes }),
-      () => setError("Couldn't read a mentioned note."),
-    );
+    run(request);
   };
 
   const retry = () => {

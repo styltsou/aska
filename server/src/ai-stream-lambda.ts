@@ -7,8 +7,9 @@ import { configureEnv } from "@/config/env";
 const allowedOrigins = new Set(
   (process.env.CORS_ORIGINS ?? "").split(",").filter(Boolean),
 );
-// The whole note and whole mentioned notes are sent: the model only sees an
-// overview of anything long, and reads the rest through tools as needed.
+// The whole note is sent; mentioned notes are sent as IDs and loaded here,
+// from the workspace the user is a member of. The model only sees an overview
+// of anything long, and reads the rest through tools as needed.
 const requestSchema = z.object({
   prompt: z.string().trim().min(1).max(4000),
   note: z.string().max(200_000),
@@ -16,13 +17,9 @@ const requestSchema = z.object({
   draft: z.string().max(40000).optional(),
   earlierPrompts: z.array(z.string().max(4000)).max(10).optional(),
   passage: z.string().max(40000).optional(),
-  referencedNotes: z
-    .array(
-      z.object({
-        title: z.string().max(300),
-        markdown: z.string().max(100_000),
-      }),
-    )
+  workspaceSlug: z.string().trim().min(1).max(200).optional(),
+  mentions: z
+    .array(z.object({ assetId: z.number().int().positive() }))
     .max(3)
     .optional(),
 });
@@ -96,13 +93,13 @@ export const handler = awslambda.streamifyResponse(
       return;
     }
 
-    let input: z.infer<typeof requestSchema>;
+    let request: z.infer<typeof requestSchema>;
     try {
       const body = event.isBase64Encoded
         ? Buffer.from(event.body ?? "", "base64").toString("utf8")
         : event.body;
-      const request = JSON.parse(body ?? "");
-      input = requestSchema.parse(request.input ?? request);
+      const parsed = JSON.parse(body ?? "");
+      request = requestSchema.parse(parsed.input ?? parsed);
     } catch {
       respondJson(400, '{"error":"Invalid prompt or note"}');
       return;
@@ -115,13 +112,37 @@ export const handler = awslambda.streamifyResponse(
       return;
     }
 
+    const { mentions, workspaceSlug, ...input } = request;
+    let referencedNotes: Array<{ title: string; markdown: string }> | undefined;
+    if (mentions?.length) {
+      if (!workspaceSlug) {
+        respondJson(400, '{"error":"Mentions need a workspace"}');
+        return;
+      }
+      try {
+        const { loadMentionedNotes } = await import("@/agent/mentioned-notes");
+        referencedNotes = await loadMentionedNotes(
+          workspaceSlug,
+          session.user.id,
+          mentions.map((mention) => mention.assetId),
+        );
+      } catch (error) {
+        console.error("Loading mentioned notes failed", error);
+        respondJson(503, '{"error":"Could not load the mentioned notes"}');
+        return;
+      }
+    }
+
     const stream = respond(200, "text/event-stream; charset=utf-8");
     const send = (name: string, data: unknown) => {
       stream.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
     };
     try {
       const { runNoteAgent } = await import("@/agent/note-agent");
-      for await (const event of runNoteAgent(input, model)) {
+      for await (const event of runNoteAgent(
+        referencedNotes?.length ? { ...input, referencedNotes } : input,
+        model,
+      )) {
         if (event.type === "text") {
           send("custom", { type: "delta", text: event.text });
         } else if (event.type === "status") {

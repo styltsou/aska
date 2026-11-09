@@ -40,7 +40,7 @@ place.
 NoteRichText (Tiptap editor)
  ├─ NoteAgentSession plugin ── pending range, original content, decorations, locks
  └─ NoteAgentPrompt (portaled into a widget decoration after the range)
-      ├─ note-agent-mentions ── @ picker → mention-search API, note content fetch
+      ├─ note-agent-mentions ── @ picker → mention-search API; mentions sent as IDs
       └─ streamNoteAgent ── POST /api/ai/stream (SSE)
                               │
                  ai-stream-lambda (AWS Lambda, response streaming)
@@ -121,9 +121,9 @@ decorations for added atoms. Formatting-only changes are not shown.
 
 **`note-agent-mentions.tsx`: `@` mentions.** Detects `@query` before the caret,
 searches with the editor's existing `mentionSearchQueryOptions` (notes only),
-shows picked notes as chips (at most 3), and on each request fetches their
-content with `fetchPeekableAsset` (`note-{id}`), capped at 100,000 characters
-each. Content is read fresh per request, so follow-ups see edits.
+shows picked notes as chips (at most 3), and sends their IDs with each request
+(`workspaceSlug` plus `mentions: [{ assetId }]`). The server loads the content,
+fresh per request, so follow-ups see edits.
 
 **`note-agent-draft-store.ts`: persistence.** A finished draft on an empty line is
 stored in `localStorage` (`aska:note-ai-draft:v1:{noteId}`, 14-day expiry) and
@@ -164,7 +164,8 @@ Request schema and limits:
 | `draft` | 40,000 chars | The draft (or replacement) a follow-up revises. |
 | `earlierPrompts` | 10 × 4,000 | Instructions behind `draft`. |
 | `passage` | 40,000 chars | Rewrite only: the blocks with the selection marked. |
-| `referencedNotes` | 3 × (300 title, 100,000 Markdown) | `@`-mentioned notes, whole. |
+| `workspaceSlug` | 200 chars | Required with `mentions`: the workspace they belong to. |
+| `mentions` | 3 × `{ assetId }` | `@`-mentioned notes, loaded on the server by `agent/mentioned-notes.ts`. |
 
 **`agent/note-agent.ts`.** The note agent as a small loop
 (model → tools → model), following
@@ -219,8 +220,10 @@ and wording: 429 / quota → "AI usage limit reached", 503 / 529 / overloaded �
   `note-agent-draft-store.test.ts`, `note-agent-mentions.test.ts`.
 - Server: `agent/note-agent.test.ts` (overview, tools, fast path, round limit),
   `agent/note-graph.test.ts`, `agent/agent-error.test.ts` and `agent/eval/eval.test.ts`.
-  Run them with `bun test src/ai` (vitest under the Bun runtime fails to import
-  `zod`; `bun test` runs the same files). `agent/eval/scripted-model.ts` plays
+  Run them with `bun run test:agent` (vitest under the Bun runtime fails to
+  import `zod`; `bun test` runs the same files).
+  `agent/mentioned-notes.integration.test.ts` checks mention loading and
+  workspace access against a database (`bun run test:integration`). `agent/eval/scripted-model.ts` plays
   back scripted tool calls and answers for tests.
 - Eval: `bun run agent:eval` in `server/` (`--fake` for a free scripted run,
   `--pipeline baseline` to compare, `--delay` for rate limits).
@@ -251,11 +254,6 @@ prompt are note-specific today. The plan is a per-type context builder:
 
 The request would carry typed references (`{ type, title, … }`) and the
 placeholder already reads "@ to mention" with no object.
-
-**Resolve mentioned assets on the server.** The client currently fetches and
-sends mentioned content. Resolving IDs server-side would cut payload size, let
-the server enforce access and size limits in one place, and is needed anyway for
-binary assets like images.
 
 **Edit-based output for long drafts.** Follow-ups and rewrites return full text.
 For long drafts, search-and-replace edits would save tokens and latency; they

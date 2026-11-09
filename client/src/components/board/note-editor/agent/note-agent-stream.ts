@@ -9,8 +9,10 @@ export type NoteAgentRequest = {
   earlierPrompts?: string[];
   /** For a rewrite: the passage being rewritten, selection marked. */
   passage?: string;
-  /** Notes @-mentioned in the prompt, as context. */
-  referencedNotes?: Array<{ title: string; markdown: string }>;
+  /** The workspace that mentioned notes belong to. */
+  workspaceSlug?: string;
+  /** Notes @-mentioned in the prompt; the server loads them by ID. */
+  mentions?: Array<{ assetId: number }>;
   /** A mechanical edit (fix grammar, shorter, longer): never looks anything up. */
   task?: "mechanical";
 };

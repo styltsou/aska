@@ -1,8 +1,9 @@
 # Note Agent: Context and Tools — Design Note
 
 **Status:** In progress. Built: the eval harness (`server/src/agent/eval/`) and
-step 2 below (the agent loop, `server/src/agent/note-agent.ts`). Not built:
-other asset types, server-side asset lookup, workspace search. The current pipeline is described in
+step 2 below (the agent loop, `server/src/agent/note-agent.ts`), and
+mentioned notes loaded on the server by ID. Not built: other asset types,
+workspace search. The current pipeline is described in
 [Note Agent](../note-agent.md).
 
 ## Problem
@@ -65,7 +66,7 @@ missing obvious matches.
 
 Current-note tools run on the note text the client already sends, so they need
 no database. Asset tools resolve IDs on the server, which also enforces access
-and size limits in one place (replacing today's client-side fetch).
+and size limits in one place (this replaced the earlier client-side fetch).
 
 ## Deciding whether to look anything up
 
@@ -143,7 +144,9 @@ GOOGLE_GENERATIVE_AI_API_KEY=... bun run agent:eval
 2. Agent loop with current-note and mentioned-note tools, status events, the
    fast path, and prompt parts. *(done; passes all cases with a scripted
    model, real run pending)*
-3. Other asset types through `read_asset`: links (unfurled text), images
+3. Mentions resolved on the server by ID, with the workspace access check.
+   *(done for notes: `server/src/agent/mentioned-notes.ts`)* Then other
+   asset types through `read_asset`: links (unfurled text), images
    (vision), colors, then videos once transcripts exist.
 4. `search_workspace` on Postgres full-text search.
 5. Embeddings, only if the evals ask for them.
