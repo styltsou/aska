@@ -1,8 +1,8 @@
 import {
   queryOptions,
   type QueryClient,
-  type QueryKey,
   useQuery,
+  useQueryClient,
 } from "@tanstack/react-query";
 
 import {
@@ -35,6 +35,18 @@ export const noteMentionQueryKeys = {
       "resolve",
       sourceAssetId ?? null,
       signature,
+    ] as const,
+  resolvedTarget: (
+    workspaceSlug: string,
+    sourceAssetId: number | undefined,
+    target: { assetId: number; assetType: NoteMentionType },
+  ) =>
+    [
+      ...noteMentionQueryKeys.all(workspaceSlug),
+      "resolved-target",
+      sourceAssetId ?? null,
+      target.assetType,
+      target.assetId,
     ] as const,
   backlinkSummary: (workspaceSlug: string, assetId: string) =>
     [
@@ -74,18 +86,6 @@ export function mentionSearchQueryOptions(
     staleTime: MENTION_SEARCH_STALE_TIME,
     gcTime: MENTION_SEARCH_GC_TIME,
   });
-}
-
-export function isMentionSearchCacheFresh(
-  queryClient: QueryClient,
-  queryKey: QueryKey,
-) {
-  const state = queryClient.getQueryState(queryKey);
-  return Boolean(
-    state?.dataUpdatedAt &&
-    !state.isInvalidated &&
-    Date.now() - state.dataUpdatedAt < MENTION_SEARCH_STALE_TIME,
-  );
 }
 
 export function invalidateMentionSuggestionQueries(
@@ -130,11 +130,67 @@ export function useNoteBacklinks(
   });
 }
 
+type MentionIdentity = { assetId: number; assetType: NoteMentionType };
+
+export async function resolveCachedNoteMentions(
+  queryClient: QueryClient,
+  workspaceSlug: string,
+  sourceAssetId: number | undefined,
+  targets: readonly MentionIdentity[],
+  signal: AbortSignal,
+) {
+  const resolved: NoteMentionTarget[] = [];
+  const missing: MentionIdentity[] = [];
+  for (const target of targets) {
+    const state = queryClient.getQueryState<NoteMentionTarget | null>(
+      noteMentionQueryKeys.resolvedTarget(workspaceSlug, sourceAssetId, target),
+    );
+    if (
+      state?.dataUpdatedAt &&
+      !state.isInvalidated &&
+      Date.now() - state.dataUpdatedAt < 30_000
+    ) {
+      if (state.data) resolved.push(state.data);
+    } else {
+      missing.push(target);
+    }
+  }
+
+  const batches: Promise<{ targets: NoteMentionTarget[] }>[] = [];
+  for (let index = 0; index < missing.length; index += RESOLVE_BATCH_SIZE) {
+    batches.push(
+      resolveNoteMentions(
+        workspaceSlug,
+        {
+          sourceAssetId,
+          targets: missing.slice(index, index + RESOLVE_BATCH_SIZE),
+        },
+        signal,
+      ),
+    );
+  }
+  const fetched = (await Promise.all(batches)).flatMap(
+    (result) => result.targets,
+  );
+  signal.throwIfAborted();
+  const byKey = new Map(
+    fetched.map((target) => [`${target.assetType}:${target.assetId}`, target]),
+  );
+  for (const target of missing) {
+    queryClient.setQueryData(
+      noteMentionQueryKeys.resolvedTarget(workspaceSlug, sourceAssetId, target),
+      byKey.get(`${target.assetType}:${target.assetId}`) ?? null,
+    );
+  }
+  return [...resolved, ...fetched];
+}
+
 export function useResolvedNoteMentions(
   workspaceSlug: string | undefined,
   sourceAssetId: number | undefined,
   targets: ReadonlyArray<{ assetId: number; assetType: NoteMentionType }>,
 ) {
+  const queryClient = useQueryClient();
   const uniqueTargets = [
     ...new Map(
       targets.map((target) => [
@@ -156,26 +212,41 @@ export function useResolvedNoteMentions(
       sourceAssetId,
       signature,
     ),
-    queryFn: async ({ signal }) => {
-      const batches: Promise<{ targets: NoteMentionTarget[] }>[] = [];
-      for (
-        let index = 0;
-        index < uniqueTargets.length;
-        index += RESOLVE_BATCH_SIZE
-      ) {
-        batches.push(
-          resolveNoteMentions(
-            workspaceSlug!,
-            {
-              sourceAssetId,
-              targets: uniqueTargets.slice(index, index + RESOLVE_BATCH_SIZE),
-            },
-            signal,
+    queryFn: ({ signal }) =>
+      resolveCachedNoteMentions(
+        queryClient,
+        workspaceSlug!,
+        sourceAssetId,
+        uniqueTargets,
+        signal,
+      ),
+    placeholderData: (previousData, previousQuery) => {
+      const sameSource =
+        previousQuery?.queryKey[1] === workspaceSlug &&
+        previousQuery?.queryKey[3] === (sourceAssetId ?? null);
+      const available = new Map(
+        (sameSource ? (previousData ?? []) : []).map((target) => [
+          `${target.assetType}:${target.assetId}`,
+          target,
+        ]),
+      );
+      for (const target of uniqueTargets) {
+        const cached = queryClient.getQueryState<NoteMentionTarget | null>(
+          noteMentionQueryKeys.resolvedTarget(
+            workspaceSlug ?? "",
+            sourceAssetId,
+            target,
           ),
         );
+        if (
+          cached?.data &&
+          !cached.isInvalidated &&
+          Date.now() - cached.dataUpdatedAt < 30_000
+        ) {
+          available.set(`${target.assetType}:${target.assetId}`, cached.data);
+        }
       }
-      const results = await Promise.all(batches);
-      return results.flatMap((result) => result.targets);
+      return available.size ? [...available.values()] : undefined;
     },
     enabled: Boolean(workspaceSlug && uniqueTargets.length > 0),
     staleTime: 30_000,

@@ -16,7 +16,8 @@ import {
   createMentionScopeQuery,
   createMentionsExtension,
   filterRecentMentionTargets,
-  getMentionMenuDisplayItems,
+  getMentionSearchFallback,
+  getMentionSelectionIndex,
   getMentionTargetSignature,
   nextMentionScope,
   parseMentionQuery,
@@ -25,7 +26,6 @@ import {
 } from "./note-mentions";
 import {
   invalidateMentionSuggestionQueries,
-  isMentionSearchCacheFresh,
   mentionSearchQueryOptions,
   RECENT_MENTION_LIMIT,
 } from "@/api/note-mentions/hooks";
@@ -51,29 +51,57 @@ describe("mention query parsing", () => {
     expect(NOTE_MENTION_CHIP_HOVER_CLASS).toContain("hover:");
   });
 
-  it("uses exact cached matches or retained results while a search is loading", () => {
+  it("retains scoped cached images across invalidation and isolates sources", async () => {
+    const client = new QueryClient();
+    const image = {
+      ...target,
+      assetId: 2,
+      assetType: "image" as const,
+      title: null,
+      label: "Landscape",
+    };
+    const options = mentionSearchQueryOptions("personal", {
+      q: "",
+      sourceAssetId: 10,
+      types: ["image"],
+    });
+    client.setQueryData(options.queryKey, { targets: [image] });
+    await invalidateMentionSuggestionQueries(client, "personal");
     expect(
-      getMentionMenuDisplayItems({
-        items: [],
-        cachedItems: [target],
-        lastResolvedItems: [],
-        loading: true,
+      getMentionSearchFallback(client, "personal", 10, {
+        scope: "image",
+        search: "",
       }),
-    ).toEqual([target]);
+    ).toEqual({ targets: [image] });
     expect(
-      getMentionMenuDisplayItems({
-        items: [],
-        lastResolvedItems: [target],
-        loading: true,
+      getMentionSearchFallback(client, "personal", 10, {
+        scope: "image",
+        search: "land",
       }),
-    ).toEqual([target]);
+    ).toEqual({ targets: [image] });
     expect(
-      getMentionMenuDisplayItems({
-        items: [target],
-        lastResolvedItems: [],
-        loading: false,
+      getMentionSearchFallback(client, "personal", 10, {
+        scope: "note",
+        search: "",
       }),
-    ).toEqual([target]);
+    ).toBeUndefined();
+    expect(
+      getMentionSearchFallback(client, "other", 10, { search: "" }),
+    ).toBeUndefined();
+    expect(
+      getMentionSearchFallback(client, "personal", 11, { search: "" }),
+    ).toBeUndefined();
+    expect(
+      getMentionSearchFallback(client, "personal", 10, { search: "unrelated" }),
+    ).toBeUndefined();
+    client.clear();
+  });
+
+  it("keeps selection on the same target when results reorder", () => {
+    const other = { ...target, assetId: 2 };
+    expect(getMentionSelectionIndex([target, other], "note:2")).toBe(1);
+    expect(getMentionSelectionIndex([other, target], "note:2")).toBe(0);
+    expect(getMentionSelectionIndex([target], "note:2")).toBe(0);
   });
 
   it("keeps mention-search cache entries isolated by source, scope, and query", () => {
@@ -151,15 +179,17 @@ describe("mention query parsing", () => {
     queryClient.setQueryData(personal.queryKey, { targets: [target] });
     queryClient.setQueryData(shared.queryKey, { targets: [target] });
 
-    expect(isMentionSearchCacheFresh(queryClient, personal.queryKey)).toBe(
-      true,
+    expect(queryClient.getQueryState(personal.queryKey)?.isInvalidated).toBe(
+      false,
     );
     await invalidateMentionSuggestionQueries(queryClient, "personal");
 
-    expect(isMentionSearchCacheFresh(queryClient, personal.queryKey)).toBe(
+    expect(queryClient.getQueryState(personal.queryKey)?.isInvalidated).toBe(
+      true,
+    );
+    expect(queryClient.getQueryState(shared.queryKey)?.isInvalidated).toBe(
       false,
     );
-    expect(isMentionSearchCacheFresh(queryClient, shared.queryKey)).toBe(true);
   });
 
   it("recognizes explicit note, color, and image scopes", () => {
@@ -214,6 +244,18 @@ describe("mention query parsing", () => {
         "note: design system",
       ),
     ).toBe("@color:design system");
+  });
+
+  it("reserves a color swatch and renders the note icon before resolution", () => {
+    const color = renderToStaticMarkup(
+      createElement(MentionPillBody, { assetType: "color", label: "A color" }),
+    );
+    const note = renderToStaticMarkup(
+      createElement(MentionPillBody, { assetType: "note", label: "A note" }),
+    );
+    expect(color).toContain("bg-muted");
+    expect(color).toContain("size-3.5");
+    expect(note).toContain("lucide-file-text");
   });
 
   it("renders an image mention with its preview or image fallback", () => {

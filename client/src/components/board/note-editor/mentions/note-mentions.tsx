@@ -11,8 +11,11 @@ import {
   type CSSProperties,
 } from "react";
 import "./note-mentions.css";
-import type { QueryClient } from "@tanstack/react-query";
+import { QueryClient, useQuery } from "@tanstack/react-query";
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CornerDownLeftIcon,
   FileTextIcon,
   ImageIcon,
   LinkIcon,
@@ -33,16 +36,16 @@ import Suggestion, {
   type SuggestionKeyDownProps,
   type SuggestionProps,
 } from "@tiptap/suggestion";
-
 import { searchNoteMentions } from "@/api/note-mentions/fetchers";
+
 import {
-  isMentionSearchCacheFresh,
   mentionSearchQueryOptions,
+  noteMentionQueryKeys,
   RECENT_MENTION_LIMIT,
   useResolvedNoteMentions,
 } from "@/api/note-mentions/hooks";
 import type {
-  MentionSearchInput,
+  NoteMentionTargetsResponse,
   NoteMentionTarget,
   NoteMentionType,
 } from "@/api/note-mentions/types";
@@ -53,12 +56,8 @@ import {
   HoverCardTrigger,
   HoverCardViewport,
 } from "@/components/ui/hover-card";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  SuggestionMenuTransition,
-  SUGGESTION_MENU_EXIT_FALLBACK_MS,
-  type SuggestionMenuTransitionProps,
-} from "@/components/board/suggestion-menu-transition";
+import { KbdGroup } from "@/components/ui/kbd";
+import { ShortcutKey } from "@/components/ui/shortcut-key";
 import {
   gradientRepresentativeColor,
   resolveGradientCss,
@@ -163,11 +162,14 @@ export function MentionGlyph({
       />
     );
   }
-  if (!swatchBackground) return null;
   return (
     <span
       aria-hidden="true"
-      className={cn(NOTE_MENTION_SWATCH_CLASS, glyphClass)}
+      className={cn(
+        NOTE_MENTION_SWATCH_CLASS,
+        glyphClass,
+        !swatchBackground && "bg-muted",
+      )}
       style={{ background: swatchBackground }}
     />
   );
@@ -222,13 +224,13 @@ function LinkMentionThumbnail({
   className: string;
   iconClassName: string;
 }) {
-  const [failedPreview, setFailedPreview] = useState(false);
-  const [failedFavicon, setFailedFavicon] = useState(false);
+  const [failedPreview, setFailedPreview] = useState<string>();
+  const [failedFavicon, setFailedFavicon] = useState<string>();
   const Icon = isVideo ? VideoIcon : LinkIcon;
   const imageUrl =
-    previewUrl && !failedPreview
+    previewUrl && failedPreview !== previewUrl
       ? previewUrl
-      : faviconUrl && !failedFavicon
+      : faviconUrl && failedFavicon !== faviconUrl
         ? faviconUrl
         : undefined;
   return (
@@ -249,8 +251,8 @@ function LinkMentionThumbnail({
             imageUrl === faviconUrl ? "object-contain p-px" : "object-cover",
           )}
           onError={() => {
-            if (imageUrl === previewUrl) setFailedPreview(true);
-            else setFailedFavicon(true);
+            if (imageUrl === previewUrl) setFailedPreview(imageUrl);
+            else setFailedFavicon(imageUrl);
           }}
         />
       ) : null}
@@ -284,7 +286,7 @@ function ImageMentionThumbnail({
   className: string;
   iconClassName: string;
 }) {
-  const [failedPreview, setFailedPreview] = useState(false);
+  const [failedPreview, setFailedPreview] = useState<string>();
   return (
     <span
       aria-hidden="true"
@@ -293,14 +295,14 @@ function ImageMentionThumbnail({
         className,
       )}
     >
-      {!previewUrl || failedPreview ? (
+      {!previewUrl || failedPreview === previewUrl ? (
         <ImageIcon className={cn("absolute", iconClassName)} />
       ) : (
         <img
           src={previewUrl}
           alt=""
           className="absolute inset-0 size-full object-cover"
-          onError={() => setFailedPreview(true)}
+          onError={() => setFailedPreview(previewUrl)}
         />
       )}
     </span>
@@ -479,10 +481,10 @@ export function NoteMentionProvider({
   const value = useMemo<MentionContextValue>(
     () => ({
       targets,
-      resolutionComplete: resolution.isSuccess,
+      resolutionComplete: resolution.isSuccess && !resolution.isPlaceholderData,
       onOpen,
     }),
-    [onOpen, resolution.isSuccess, targets],
+    [onOpen, resolution.isSuccess, resolution.isPlaceholderData, targets],
   );
 
   return (
@@ -729,22 +731,41 @@ type MentionMenuProps = SuggestionProps<
   NoteMentionTarget,
   NoteMentionTarget
 > & {
-  cachedItems?: NoteMentionTarget[];
-  isSearchPending?: boolean;
-} & Pick<SuggestionMenuTransitionProps, "exiting" | "onExitComplete">;
+  workspaceSlug: string;
+  sourceAssetId?: number;
+  queryClient: QueryClient;
+};
 
-export function getMentionMenuDisplayItems({
-  items,
-  cachedItems,
-  lastResolvedItems,
-  loading,
-}: {
-  items: NoteMentionTarget[];
-  cachedItems?: NoteMentionTarget[];
-  lastResolvedItems: NoteMentionTarget[];
-  loading: boolean;
-}): NoteMentionTarget[] {
-  return loading ? (cachedItems ?? lastResolvedItems) : items;
+export function getMentionSearchFallback(
+  queryClient: QueryClient,
+  workspaceSlug: string,
+  sourceAssetId: number | undefined,
+  parsed: { scope?: NoteMentionType; search: string },
+): NoteMentionTargetsResponse | undefined {
+  const available = new Map<string, NoteMentionTarget>();
+  const searches = queryClient
+    .getQueryCache()
+    .findAll({
+      queryKey: [
+        ...noteMentionQueryKeys.all(workspaceSlug),
+        "search",
+        sourceAssetId ?? null,
+      ],
+    })
+    .sort((a, b) => b.state.dataUpdatedAt - a.state.dataUpdatedAt);
+  for (const search of searches) {
+    const data = search.state.data as NoteMentionTargetsResponse | undefined;
+    for (const target of filterRecentMentionTargets(
+      data?.targets ?? [],
+      parsed,
+    )) {
+      const key = `${target.assetType}:${target.assetId}`;
+      if (!available.has(key)) available.set(key, target);
+    }
+  }
+  return available.size
+    ? { targets: [...available.values()].slice(0, RECENT_MENTION_LIMIT) }
+    : undefined;
 }
 
 export function filterRecentMentionTargets(
@@ -756,49 +777,86 @@ export function filterRecentMentionTargets(
     if (parsed.scope && target.assetType !== parsed.scope) return false;
     if (!search) return true;
 
-    return [target.title, target.hex, target.hostname, target.url].some(
-      (value) => value?.toLowerCase().includes(search),
-    );
+    return [
+      target.label,
+      target.title,
+      target.hex,
+      target.hostname,
+      target.url,
+    ].some((value) => value?.toLowerCase().includes(search));
   });
+}
+
+export function getMentionSelectionIndex(
+  items: NoteMentionTarget[],
+  selectedKey: string | undefined,
+) {
+  return Math.max(
+    0,
+    items.findIndex(
+      (item) => `${item.assetType}:${item.assetId}` === selectedKey,
+    ),
+  );
 }
 
 const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
   function MentionMenu(
     {
-      items,
-      cachedItems,
-      isSearchPending,
-      loading,
+      workspaceSlug,
+      sourceAssetId,
+      queryClient,
       query,
       command,
       editor,
       range,
-      exiting,
-      onExitComplete,
     },
     ref,
   ) {
     const parsed = parseMentionQuery(query);
-    const [selectedIndex, setSelectedIndex] = useState(0);
-    const [lastResolvedItems, setLastResolvedItems] = useState<
-      NoteMentionTarget[]
-    >([]);
+    const [selectedKey, setSelectedKey] = useState<string>();
     const itemRefs = useRef(new Map<number, HTMLButtonElement>());
-    const displayItems = getMentionMenuDisplayItems({
-      items,
-      cachedItems,
-      lastResolvedItems,
-      loading,
-    });
+    const listRef = useRef<HTMLDivElement>(null);
+    const fallback = useMemo(
+      () =>
+        getMentionSearchFallback(queryClient, workspaceSlug, sourceAssetId, {
+          search: parsed.search,
+          scope: parsed.scope,
+        }),
+      [queryClient, workspaceSlug, sourceAssetId, parsed.search, parsed.scope],
+    );
+    const input = {
+      q: parsed.search,
+      types: parsed.scope ? [parsed.scope] : undefined,
+      limit: parsed.search ? undefined : RECENT_MENTION_LIMIT,
+      sourceAssetId,
+    };
+    const options = mentionSearchQueryOptions(workspaceSlug, input);
+    const search = useQuery(
+      {
+        ...options,
+        queryFn: async (context) => {
+          if (parsed.search) await waitForMentionSearch(context.signal);
+          return searchNoteMentions(workspaceSlug, input, context.signal);
+        },
+        placeholderData: fallback,
+        retry: false,
+      },
+      queryClient,
+    );
+    // Query data survives invalidation and failed refreshes. An empty successful
+    // response is authoritative; a failed request is never treated as no matches.
+    const displayItems =
+      search.data?.targets ?? (search.isError ? fallback?.targets : undefined);
+    const loading = search.isFetching;
     const scopedDisplayItems = useMemo(
       () =>
         parsed.scope
-          ? displayItems.filter((item) =>
+          ? (displayItems ?? []).filter((item) =>
               parsed.scope === "link"
                 ? item.assetType === "link"
                 : item.assetType === parsed.scope,
             )
-          : displayItems,
+          : (displayItems ?? []),
       [displayItems, parsed.scope],
     );
     const { notes, colors, images, videos, youtube, links, flatItems } =
@@ -838,12 +896,16 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
           ],
         };
       }, [scopedDisplayItems]);
+    const selectedIndex = getMentionSelectionIndex(flatItems, selectedKey);
+    function setSelectedIndex(index: number) {
+      const item = flatItems[index];
+      setSelectedKey(item ? `${item.assetType}:${item.assetId}` : undefined);
+    }
     const showGroupLabels =
       [notes, colors, images, videos, youtube, links].filter(
         (group) => group.length > 0,
       ).length > 1;
     const showInitialLoading = loading && flatItems.length === 0;
-    const showSearching = Boolean(isSearchPending);
     const emptyLabel = query
       ? parsed.scope === "note"
         ? "No notes match"
@@ -856,13 +918,31 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
               : "No mentions match"
       : "No notes, colors, images, videos, or links to mention yet";
 
-    useEffect(() => setSelectedIndex(0), [flatItems]);
     useEffect(() => {
-      if (!loading) setLastResolvedItems(items);
-    }, [items, loading]);
+      if (
+        !loading &&
+        selectedKey &&
+        !flatItems.some(
+          (item) => `${item.assetType}:${item.assetId}` === selectedKey,
+        )
+      ) {
+        setSelectedKey(undefined);
+      }
+    }, [flatItems, loading, selectedKey]);
     useEffect(() => {
-      itemRefs.current.get(selectedIndex)?.scrollIntoView({ block: "nearest" });
-    }, [selectedIndex]);
+      if (listRef.current) listRef.current.scrollTop = 0;
+    }, [parsed.search, parsed.scope]);
+    useEffect(() => {
+      const list = listRef.current;
+      const row = itemRefs.current.get(selectedIndex);
+      if (!list || !row) return;
+      const listRect = list.getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
+      if (rowRect.top < listRect.top)
+        list.scrollTop += rowRect.top - listRect.top;
+      else if (rowRect.bottom > listRect.bottom)
+        list.scrollTop += rowRect.bottom - listRect.bottom;
+    }, [selectedIndex, flatItems]);
 
     function select(index: number) {
       const item = flatItems[index];
@@ -885,11 +965,12 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
         }
         if (event.key === "ArrowUp" || event.key === "ArrowDown") {
           event.preventDefault();
-          setSelectedIndex((index) => {
-            if (flatItems.length === 0) return 0;
+          if (flatItems.length > 0) {
             const direction = event.key === "ArrowUp" ? -1 : 1;
-            return (index + direction + flatItems.length) % flatItems.length;
-          });
+            setSelectedIndex(
+              (selectedIndex + direction + flatItems.length) % flatItems.length,
+            );
+          }
           return true;
         }
         if (
@@ -911,11 +992,7 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
     }));
 
     return (
-      <SuggestionMenuTransition
-        className={cn("relative w-[26rem]", FLOATING_GLASS_BACKDROP_CLASS)}
-        exiting={exiting}
-        onExitComplete={onExitComplete}
-      >
+      <div className={cn("relative w-[26rem]", FLOATING_GLASS_BACKDROP_CLASS)}>
         <div
           className={cn(
             "relative z-10 overflow-hidden rounded-lg text-popover-foreground shadow-2xl",
@@ -948,17 +1025,10 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
                             : "All"}
                 </button>
               ))}
-              {showSearching ? (
-                <span
-                  className="ml-auto pr-1 text-[10px] text-muted-foreground/75"
-                  aria-live="polite"
-                >
-                  Searching…
-                </span>
-              ) : null}
             </div>
             <div
-              className="max-h-80 [scrollbar-width:none] overflow-y-auto p-1.5 [&::-webkit-scrollbar]:hidden"
+              ref={listRef}
+              className="h-80 [scrollbar-width:none] overflow-y-auto overscroll-contain p-1.5 [&::-webkit-scrollbar]:hidden"
               role="listbox"
               aria-label="Mention an asset"
               aria-busy={loading}
@@ -1052,13 +1122,60 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
               ) : null}
               {flatItems.length === 0 && !showInitialLoading ? (
                 <p className="px-2 py-4 text-center text-xs text-muted-foreground/75">
-                  {emptyLabel}
+                  {search.isError ? "Couldn’t load mentions" : emptyLabel}
                 </p>
               ) : null}
             </div>
           </div>
+          <div className="relative z-0 flex h-9 items-center gap-3 px-3 text-[11px] leading-4 text-muted-foreground">
+            <span className="inline-flex shrink-0 items-center gap-1">
+              <ShortcutKey>Tab</ShortcutKey>
+              <span>to switch filters</span>
+            </span>
+            <div
+              className="ml-auto flex min-w-0 items-center gap-3"
+              role="status"
+              aria-live="polite"
+            >
+              {search.isError ? (
+                <>
+                  <span>Couldn’t refresh mentions.</span>
+                  <button
+                    type="button"
+                    className="shrink-0 font-medium text-foreground"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => void search.refetch()}
+                  >
+                    Retry
+                  </button>
+                </>
+              ) : loading ? (
+                "Searching…"
+              ) : (
+                <>
+                  <span className="inline-flex items-center gap-1">
+                    <KbdGroup className="gap-0.5">
+                      <ShortcutKey aria-label="Up arrow">
+                        <ArrowUpIcon aria-hidden="true" />
+                      </ShortcutKey>
+                      <ShortcutKey aria-label="Down arrow">
+                        <ArrowDownIcon aria-hidden="true" />
+                      </ShortcutKey>
+                    </KbdGroup>
+                    <span>to navigate</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <ShortcutKey aria-label="Enter">
+                      <CornerDownLeftIcon aria-hidden="true" />
+                    </ShortcutKey>
+                    <span>to insert</span>
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
-      </SuggestionMenuTransition>
+      </div>
     );
   },
 );
@@ -1068,12 +1185,24 @@ function MentionMenuSkeleton() {
     <div className="space-y-1 p-0.5" aria-label="Loading mentions">
       {Array.from({ length: 3 }, (_, index) => (
         <div key={index} className="flex items-center gap-3 px-2 py-2">
-          <Skeleton className="size-7 shrink-0 rounded-md bg-muted" />
+          <span
+            aria-hidden="true"
+            className="block size-7 shrink-0 rounded-md bg-muted"
+          />
           <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <Skeleton className="h-3 w-2/5 rounded bg-muted" />
-            <Skeleton className="h-2.5 w-3/5 rounded bg-muted" />
+            <span
+              aria-hidden="true"
+              className="block h-3 w-2/5 rounded bg-muted"
+            />
+            <span
+              aria-hidden="true"
+              className="block h-2.5 w-3/5 rounded bg-muted"
+            />
           </div>
-          <Skeleton className="h-2.5 w-14 rounded bg-muted" />
+          <span
+            aria-hidden="true"
+            className="block h-2.5 w-14 rounded bg-muted"
+          />
         </div>
       ))}
     </div>
@@ -1189,20 +1318,7 @@ export function createMentionsExtension({
   sourceAssetId?: number;
   queryClient?: QueryClient;
 }) {
-  const recentInput: MentionSearchInput = {
-    q: "",
-    limit: RECENT_MENTION_LIMIT,
-    sourceAssetId,
-  };
-  const searchInput = (query: string): MentionSearchInput => {
-    const parsed = parseMentionQuery(query);
-    return {
-      q: parsed.search,
-      types: parsed.scope ? [parsed.scope] : undefined,
-      limit: parsed.search ? undefined : RECENT_MENTION_LIMIT,
-      sourceAssetId,
-    };
-  };
+  const mentionQueryClient = queryClient ?? new QueryClient();
 
   return Extension.create({
     name: "mentions",
@@ -1219,95 +1335,53 @@ export function createMentionsExtension({
             return !$from.parent.type.spec.code;
           },
           shouldShow: ({ query }) => shouldShowMentionSuggestion(query),
-          items: async ({ query, signal }) => {
-            const parsed = parseMentionQuery(query);
-            const input = searchInput(query);
-            const options = mentionSearchQueryOptions(workspaceSlug, input);
-            const cached = queryClient?.getQueryData(options.queryKey);
-            const isFresh = queryClient
-              ? isMentionSearchCacheFresh(queryClient, options.queryKey)
-              : false;
-            if (cached && isFresh) return cached.targets;
-
-            if (parsed.search) await waitForMentionSearch(signal);
-            const result = queryClient
-              ? await queryClient.fetchQuery(options)
-              : await searchNoteMentions(workspaceSlug, input, signal);
-            return result.targets;
+          items: () => [],
+          command: ({ editor, range, props }) => {
+            mentionQueryClient.setQueryData(
+              noteMentionQueryKeys.resolvedTarget(
+                workspaceSlug,
+                sourceAssetId,
+                props,
+              ),
+              props,
+            );
+            insertMention(editor, range, props);
           },
-          command: ({ editor, range, props }) =>
-            insertMention(editor, range, props),
           render: () => {
             let renderer:
               | ReactRenderer<MentionMenuHandle, MentionMenuProps>
               | undefined;
             let unmount: (() => void) | undefined;
-            let latestProps: MentionMenuProps | undefined;
-            let exitTimer: number | undefined;
             const cleanup = () => {
-              if (exitTimer !== undefined) window.clearTimeout(exitTimer);
-              exitTimer = undefined;
               unmount?.();
               renderer?.destroy();
               renderer = undefined;
               unmount = undefined;
-              latestProps = undefined;
             };
-            const withCachedItems = (
+            const menuProps = (
               props: SuggestionProps<NoteMentionTarget, NoteMentionTarget>,
-            ): MentionMenuProps => {
-              const parsed = parseMentionQuery(props.query);
-              const options = mentionSearchQueryOptions(
-                workspaceSlug,
-                searchInput(props.query),
-              );
-              const exactCached = queryClient?.getQueryData(options.queryKey);
-              const exactCacheIsFresh = queryClient
-                ? isMentionSearchCacheFresh(queryClient, options.queryKey)
-                : false;
-              const recentCached = queryClient?.getQueryData(
-                mentionSearchQueryOptions(workspaceSlug, recentInput).queryKey,
-              );
-              const cachedItems =
-                exactCached?.targets ??
-                (recentCached
-                  ? filterRecentMentionTargets(recentCached.targets, parsed)
-                  : undefined);
-              return {
-                ...props,
-                cachedItems,
-                isSearchPending:
-                  Boolean(parsed.search) && props.loading && !exactCacheIsFresh,
-                exiting: false,
-                onExitComplete: cleanup,
-              };
-            };
+            ): MentionMenuProps => ({
+              ...props,
+              workspaceSlug,
+              sourceAssetId,
+              queryClient: mentionQueryClient,
+            });
             return {
               onStart: (props) => {
                 cleanup();
-                latestProps = withCachedItems(props);
                 renderer = new ReactRenderer(MentionMenu, {
                   editor: props.editor,
-                  props: latestProps,
+                  props: menuProps(props),
                 });
                 renderer.element.style.zIndex = "80";
                 unmount = props.mount(renderer.element);
               },
               onUpdate: (props) => {
                 if (!renderer) return;
-                latestProps = withCachedItems(props);
-                renderer.updateProps(latestProps);
+                renderer.updateProps(menuProps(props));
               },
               onKeyDown: (props) => renderer?.ref?.onKeyDown(props) ?? false,
-              onExit: () => {
-                if (!renderer || !latestProps || latestProps.exiting) return;
-                latestProps = { ...latestProps, exiting: true };
-                renderer.updateProps(latestProps);
-                exitTimer = window.setTimeout(
-                  cleanup,
-                  SUGGESTION_MENU_EXIT_FALLBACK_MS,
-                );
-              },
+              onExit: cleanup,
             };
           },
         }),
@@ -1379,15 +1453,16 @@ function escapeMentionLabel(label: string) {
 }
 
 function waitForMentionSearch(signal: AbortSignal): Promise<void> {
+  signal.throwIfAborted();
   return new Promise((resolve, reject) => {
-    const timeout = window.setTimeout(resolve, 140);
-    signal.addEventListener(
-      "abort",
-      () => {
-        window.clearTimeout(timeout);
-        reject(new DOMException("Mention search aborted", "AbortError"));
-      },
-      { once: true },
-    );
+    const onAbort = () => {
+      window.clearTimeout(timeout);
+      reject(new DOMException("Mention search aborted", "AbortError"));
+    };
+    const timeout = window.setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, 140);
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }

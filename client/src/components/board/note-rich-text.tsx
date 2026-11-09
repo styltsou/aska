@@ -162,11 +162,7 @@ import {
   getSlashMenuScrollTop,
   type SlashMenuNavigationDirection,
 } from "@/components/board/slash-menu-scroll";
-import {
-  SuggestionMenuTransition,
-  SUGGESTION_MENU_EXIT_FALLBACK_MS,
-  type SuggestionMenuTransitionProps,
-} from "@/components/board/suggestion-menu-transition";
+
 import {
   mentionSearchQueryOptions,
   RECENT_MENTION_LIMIT,
@@ -587,11 +583,10 @@ type SlashMenuHandle = {
   onKeyDown: (props: SuggestionKeyDownProps) => boolean;
 };
 
-type SlashMenuProps = SuggestionProps<SlashCommandGroup, SlashCommandItem> &
-  Pick<SuggestionMenuTransitionProps, "exiting" | "onExitComplete">;
+type SlashMenuProps = SuggestionProps<SlashCommandGroup, SlashCommandItem>;
 
 const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
-  function SlashMenu({ items, query, command, exiting, onExitComplete }, ref) {
+  function SlashMenu({ items, query, command }, ref) {
     const flatItems = useMemo(
       () => items.flatMap((group) => group.items),
       [items],
@@ -780,26 +775,18 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
 
     if (flatItems.length === 0) {
       return (
-        <SuggestionMenuTransition
-          className="w-64"
-          exiting={exiting}
-          onExitComplete={onExitComplete}
-        >
+        <div className="w-64">
           <div className="overflow-hidden rounded-lg border bg-popover text-popover-foreground shadow-lg">
             <p className="px-3 py-2.5 text-xs text-muted-foreground">
               No blocks match “{query}”
             </p>
           </div>
-        </SuggestionMenuTransition>
+        </div>
       );
     }
 
     return (
-      <SuggestionMenuTransition
-        className={cn("relative w-64", FLOATING_GLASS_BACKDROP_CLASS)}
-        exiting={exiting}
-        onExitComplete={onExitComplete}
-      >
+      <div className={cn("relative w-64", FLOATING_GLASS_BACKDROP_CLASS)}>
         <div
           ref={surfaceRef}
           className={cn(
@@ -879,7 +866,7 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
             />
           </div>
         </div>
-        {!exiting && previewPosition && typeof document !== "undefined"
+        {previewPosition && typeof document !== "undefined"
           ? createPortal(
               <div
                 className={cn(
@@ -909,7 +896,7 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
               document.body,
             )
           : null}
-      </SuggestionMenuTransition>
+      </div>
     );
   },
 );
@@ -932,30 +919,20 @@ const SlashCommands = Extension.create({
             | ReactRenderer<SlashMenuHandle, SlashMenuProps>
             | undefined;
           let unmount: (() => void) | undefined;
-          let latestProps: SlashMenuProps | undefined;
-          let exitTimer: number | undefined;
 
           const cleanup = () => {
-            if (exitTimer !== undefined) window.clearTimeout(exitTimer);
-            exitTimer = undefined;
             unmount?.();
             renderer?.destroy();
             renderer = undefined;
             unmount = undefined;
-            latestProps = undefined;
           };
 
           return {
             onStart: (props) => {
               cleanup();
-              latestProps = {
-                ...props,
-                exiting: false,
-                onExitComplete: cleanup,
-              };
               renderer = new ReactRenderer(SlashMenu, {
                 editor: props.editor,
-                props: latestProps,
+                props,
               });
               // Suggestions mount under document.body. Keep the menu above the
               // full-screen note workspace instead of behind its dialog layer.
@@ -964,23 +941,10 @@ const SlashCommands = Extension.create({
             },
             onUpdate: (props) => {
               if (!renderer) return;
-              latestProps = {
-                ...props,
-                exiting: false,
-                onExitComplete: cleanup,
-              };
-              renderer.updateProps(latestProps);
+              renderer.updateProps(props);
             },
             onKeyDown: (props) => renderer?.ref?.onKeyDown(props) ?? false,
-            onExit: () => {
-              if (!renderer || !latestProps || latestProps.exiting) return;
-              latestProps = { ...latestProps, exiting: true };
-              renderer.updateProps(latestProps);
-              exitTimer = window.setTimeout(
-                cleanup,
-                SUGGESTION_MENU_EXIT_FALLBACK_MS,
-              );
-            },
+            onExit: cleanup,
           };
         },
       }),
