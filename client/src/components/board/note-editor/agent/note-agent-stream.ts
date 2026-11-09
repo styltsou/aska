@@ -12,7 +12,10 @@ export type NoteAgentRequest = {
   /** The workspace that mentioned items belong to. */
   workspaceSlug?: string;
   /** Items @-mentioned in the prompt; the server loads them by ID. */
-  mentions?: Array<{ assetId: number; type: "note" | "link" | "color" }>;
+  mentions?: Array<{
+    assetId: number;
+    type: "note" | "link" | "color" | "image";
+  }>;
   /** A mechanical edit (fix grammar, shorter, longer): never looks anything up. */
   task?: "mechanical";
 };

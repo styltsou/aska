@@ -335,7 +335,14 @@ export default $config({
       streaming: true,
       memory: "1024 MB",
       timeout: "2 minutes",
-      link: [databaseUrl, betterAuthSecret, resendApiKey, googleAiApiKey],
+      // The assets bucket: the agent reads mentioned images to show the model.
+      link: [
+        databaseUrl,
+        betterAuthSecret,
+        resendApiKey,
+        googleAiApiKey,
+        assets,
+      ],
       environment: {
         NODE_ENV: stableCloudDomains ? "production" : "development",
         DATABASE_URL: databaseUrl.value,
@@ -343,6 +350,8 @@ export default $config({
         BETTER_AUTH_URL: api.url,
         RESEND_API_KEY: resendApiKey.value,
         GOOGLE_GENERATIVE_AI_API_KEY: googleAiApiKey.value,
+        S3_BUCKET: assets.name,
+        S3_REGION: "eu-central-1",
         CORS_ORIGINS: allowedClientOrigins.join(","),
         CROSS_SITE_AUTH_COOKIES: stableCloudDomains ? "true" : "false",
         ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".styltsou.com" } : {}),

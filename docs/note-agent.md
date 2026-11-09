@@ -1,7 +1,7 @@
 # Note Agent
 
 The note agent writes new content at the cursor, rewrites selected text, runs
-quick actions, and uses mentioned notes, links and colors as context. The UI still labels it
+quick actions, and uses mentioned notes, links, colors and images as context. The UI still labels it
 "AI" (**Ask AI**); code and docs call it the agent, while deploy names
 (`aiApi`, `ai-stream-lambda`, `/api/ai/stream`, `VITE_AI_STREAM_URL`) keep
 "ai". This document
@@ -120,8 +120,8 @@ for removed text (a whole removed block renders on its own line), node
 decorations for added atoms. Formatting-only changes are not shown.
 
 **`note-agent-mentions.tsx`: `@` mentions.** Detects `@query` before the caret,
-searches with the editor's existing `mentionSearchQueryOptions` (notes, links
-and colors: `AGENT_MENTION_TYPES`), shows picked items as chips with the
+searches with the editor's existing `mentionSearchQueryOptions` (notes, links,
+colors and images: `AGENT_MENTION_TYPES`), shows picked items as chips with the
 editor's mention glyphs (at most 3), and sends their IDs with each request
 (`workspaceSlug` plus `mentions: [{ assetId, type }]`). The server loads the
 content, fresh per request, so follow-ups see edits.
@@ -166,7 +166,7 @@ Request schema and limits:
 | `earlierPrompts` | 10 × 4,000 | Instructions behind `draft`. |
 | `passage` | 40,000 chars | Rewrite only: the blocks with the selection marked. |
 | `workspaceSlug` | 200 chars | Required with `mentions`: the workspace they belong to. |
-| `mentions` | 3 × `{ assetId, type }` | `@`-mentioned notes, links and colors, loaded on the server by `agent/mentioned-assets.ts`. `type` defaults to `note` (requests saved before types existed). |
+| `mentions` | 3 × `{ assetId, type }` | `@`-mentioned notes, links, colors and images, loaded on the server by `agent/mentioned-assets.ts`. `type` defaults to `note` (requests saved before types existed). |
 
 **`agent/note-agent.ts`.** The note agent as a small loop
 (model → tools → model), following
@@ -175,8 +175,10 @@ Request schema and limits:
 - **Overview** (`agent/note-context.ts`): a note up to 6,000 characters is shown
   whole; a longer one as an outline (headings, line ranges, sizes) plus the
   excerpt around the cursor. Mentioned items arrive as text (`<referenced-note>`,
-  `<referenced-link>`, `<referenced-color>`): whole when small, else as a card
-  (outline and beginning); in practice only long notes become cards.
+  `<referenced-link>`, `<referenced-color>`, `<referenced-image>`): whole when
+  small, else as a card (outline and beginning); in practice only long notes
+  become cards. Attached images follow the text in the same user message, each
+  labeled with its reference id (`userMessage`).
 - **Tools**, attached only for what isn't fully shown: `read_note_section`,
   `search_note`, `read_reference`, `search_reference`. They read the request's
   own text, so no database is involved; results are numbered lines, capped.
@@ -275,6 +277,16 @@ extracted text at unfurl time and reading it like a note.
 **Colors are labeled values.** Name, hex, gradient stops and the user's note;
 the agent is told to use them as given.
 
+**Images are described, and attached when possible.** Every mentioned image
+becomes text (title, alt text, size, source, dominant colors, the user's note).
+Up to 2 per request also attach their pixels: the stored display variant
+(about 960px wide), else the preview, else the original, only in formats the
+model reads (PNG, JPEG, WebP, HEIC) and up to 4 MB, read from S3 by the stream
+Lambda. A failed fetch leaves the text description, never fails the request,
+and the agent is told not to invent what an image shows from details alone.
+Cost is a few hundred tokens per attached image at that size; *revisit* the
+limit of 2, or a smaller variant, if usage grows.
+
 **The rest of a request still comes from the client:** the prompt, the passage
 for rewrites, and for follow-ups the previous draft and earlier prompts. Drafts
 live only in the client (and `localStorage`) until persistence stores them on
@@ -312,15 +324,10 @@ the model calls to read and search the note and mentioned assets, a fast path
 with no tools for simple edits, prompts built from parts per task, and an eval
 harness (`bun run agent:eval` in `server/`) to compare pipelines.
 
-**Mention images and videos.** Notes, links and colors work today. Next:
-
-- images: the image itself for a vision-capable model (one or two per
-  request, size-capped), falling back to its alt text, note and colors;
-- videos: title and note, plus a transcript once available.
-
-Both add a type to `AGENT_MENTION_TYPES` / `MENTIONABLE_TYPES` and a case in
-`referenceFromRow`; images also need the reference to carry the image, not
-just text.
+**Mention videos.** Notes, links, colors and images work today. Videos need
+title and note first, then a transcript once one exists (or a poster frame as
+an image). They add a type to `AGENT_MENTION_TYPES` / `MENTIONABLE_TYPES` and
+a case in `referenceFromRow`.
 
 **Edit-based output for long drafts.** Follow-ups and rewrites return full text.
 For long drafts, search-and-replace edits would save tokens and latency; they

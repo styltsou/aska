@@ -26,7 +26,7 @@ const requestSchema = z.object({
         // Mirrors MENTIONABLE_TYPES (agent/mentioned-assets.ts), which can't be
         // imported here before the env is configured. Requests saved before
         // types existed only mentioned notes.
-        type: z.enum(["note", "link", "color"]).default("note"),
+        type: z.enum(["note", "link", "color", "image"]).default("note"),
       }),
     )
     .max(3)
@@ -129,11 +129,17 @@ export const handler = awslambda.streamifyResponse(
         return;
       }
       try {
-        const { loadMentions } = await import("@/agent/mentioned-assets");
+        const [{ loadMentions }, { ObjectStorageService }] = await Promise.all([
+          import("@/agent/mentioned-assets"),
+          import("@/services/object-storage.service"),
+        ]);
+        const storage = new ObjectStorageService();
         references = await loadMentions(
           workspaceSlug,
           session.user.id,
           mentions,
+          // Images are attached when storage is reachable, else described.
+          { fetchObject: (key) => storage.getObjectBytes(key) },
         );
       } catch (error) {
         console.error("Loading mentions failed", error);

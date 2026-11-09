@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * @-mentioning items in the agent prompt: typing `@` opens a picker of notes,
- * links and colors, picked items show as chips in the prompt, and their IDs go
+ * links, colors and images, picked items show as chips in the prompt, and their IDs go
  * with the next request (and its follow-ups); the server loads them as context.
  */
 
@@ -25,6 +25,7 @@ export const AGENT_MENTION_TYPES = [
   "note",
   "link",
   "color",
+  "image",
 ] as const satisfies readonly NoteMentionType[];
 
 export type NoteAgentMention = NoteMentionTarget;

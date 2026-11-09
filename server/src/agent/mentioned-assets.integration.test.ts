@@ -8,6 +8,7 @@ import {
   assets,
   colorAssets,
   externalResources,
+  imageAssets,
   linkAssets,
   member,
   noteAssets,
@@ -33,7 +34,7 @@ let fixture: {
 
 async function createAsset(
   organizationId: string,
-  type: "note" | "link" | "color",
+  type: "note" | "link" | "color" | "image",
   title: string,
 ) {
   const [asset] = await db
@@ -80,6 +81,27 @@ async function createLink(organizationId: string) {
 async function createColor(organizationId: string) {
   const id = await createAsset(organizationId, "color", "Deep teal");
   await db.insert(colorAssets).values({ assetId: id, hex: "#0f766e" });
+  return id;
+}
+
+async function createImage(organizationId: string) {
+  const id = await createAsset(organizationId, "image", "Lobby chairs");
+  await db.insert(imageAssets).values({
+    assetId: id,
+    width: 3000,
+    height: 2000,
+    alt: "Three teal lounge chairs",
+    dominantColors: ["#0f766e"],
+    variants: {
+      display: {
+        objectKey: `images/${id}/display.webp`,
+        width: 960,
+        height: 640,
+        contentType: "image/webp",
+        sizeBytes: 120_000,
+      },
+    },
+  });
   return id;
 }
 
@@ -163,6 +185,31 @@ describe("loadMentions", () => {
     expect(references[2]!.text).toContain(
       "User's note: Read before the review",
     );
+  });
+
+  it("describes a mentioned image and attaches its display variant", async () => {
+    const image = await createImage(fixture.organizationIds[0]);
+    const fetched: string[] = [];
+
+    const [reference] = await loadMentions(
+      fixture.slug,
+      fixture.userId,
+      [{ assetId: image, type: "image" }],
+      {
+        fetchObject: async (key) => {
+          fetched.push(key);
+          return new Uint8Array([1, 2, 3]);
+        },
+      },
+    );
+
+    expect(fetched).toEqual([`images/${image}/display.webp`]);
+    expect(reference).toMatchObject({
+      kind: "image",
+      title: "Lobby chairs",
+      image: { mimeType: "image/webp", data: "AQID" },
+    });
+    expect(reference!.text).toContain("Alt text: Three teal lounge chairs");
   });
 
   it("skips a mention whose type doesn't match the asset", async () => {

@@ -31,7 +31,7 @@ import {
  * answer, which is the only text that reaches the note. Requests that can't
  * need a lookup take a fast path: no tools, one streaming call.
  *
- * See docs/proposals/ai-agentic-context.md.
+ * See docs/proposals/agent-context.md.
  */
 
 export type NoteAgentInput = {
@@ -50,6 +50,8 @@ export type AgentReference = {
   kind: ReferenceKind;
   title: string;
   text: string;
+  /** A mentioned image's pixels, when attached; otherwise only `text`. */
+  image?: { mimeType: string; data: string } | undefined;
 };
 
 export type NoteAgentEvent =
@@ -177,6 +179,37 @@ function buildTools(
   return { tools, statuses };
 }
 
+/**
+ * The user message: the prompt text, then any attached images, each labeled
+ * with the reference it belongs to.
+ */
+export function userMessage(
+  text: string,
+  references: Array<{
+    id: string;
+    title: string;
+    image?: AgentReference["image"];
+  }>,
+) {
+  const images = references.filter((reference) => reference.image);
+  if (!images.length) return new HumanMessage(text);
+  return new HumanMessage({
+    content: [
+      { type: "text", text },
+      ...images.flatMap((reference) => [
+        {
+          type: "text" as const,
+          text: `Image ${reference.id} ("${reference.title}"):`,
+        },
+        {
+          type: "image_url" as const,
+          image_url: `data:${reference.image!.mimeType};base64,${reference.image!.data}`,
+        },
+      ]),
+    ],
+  });
+}
+
 export async function* runNoteAgent(
   input: NoteAgentInput,
   model: BaseChatModel,
@@ -190,7 +223,15 @@ export async function* runNoteAgent(
       id: `R${index + 1}`,
       kind: reference.kind,
       title: reference.title,
-      text: reference.text,
+      text:
+        reference.kind === "image"
+          ? `${reference.text}\n${
+              reference.image
+                ? "The image itself is attached after the instruction."
+                : "Only these details are available, not the image itself."
+            }`
+          : reference.text,
+      image: reference.image,
     };
     // Keep the full text for the tools; the overview is what the model sees.
     const { complete, text: overview } = referenceOverview(document);
@@ -212,7 +253,7 @@ export async function* runNoteAgent(
         references: references.length > 0,
       }),
     ),
-    new HumanMessage(
+    userMessage(
       userPrompt({
         task,
         overview: note.text,
@@ -222,6 +263,7 @@ export async function* runNoteAgent(
         earlierPrompts: input.earlierPrompts,
         instruction: input.prompt,
       }),
+      references,
     ),
   ];
   const withTools =

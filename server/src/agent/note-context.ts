@@ -18,7 +18,7 @@ const LINE_PREVIEW_LIMIT = 300;
 const CARD_PREVIEW = 600;
 
 /** What a mentioned item is; notes are read like the current note. */
-export type ReferenceKind = "note" | "link" | "color";
+export type ReferenceKind = "note" | "link" | "color" | "image";
 
 export type ContextDocument = {
   id: string;

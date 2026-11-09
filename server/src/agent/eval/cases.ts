@@ -23,7 +23,7 @@ export type EvalCase = {
   /** Mentioned notes at full size. */
   /** Mentioned items as the server loads them; `kind` defaults to note. */
   references?: Array<{
-    kind?: "note" | "link" | "color";
+    kind?: "note" | "link" | "color" | "image";
     title: string;
     markdown: string;
   }>;
@@ -203,5 +203,27 @@ export const EVAL_CASES: EvalCase[] = [
     ],
     expect: { includes: ["#0f766e"], tools: "none" },
     fakeOutput: "Our accent color is Deep teal (#0f766e).",
+  },
+  {
+    id: "image-details-only",
+    description:
+      "A mentioned image whose pixels are unavailable: work from its details, invent nothing.",
+    task: "write",
+    note: `# Moodboard\n\n${CURSOR}`,
+    instruction: "Write a one-line caption for the mentioned image.",
+    references: [
+      {
+        kind: "image",
+        title: "Lobby chairs",
+        markdown: [
+          "Title: Lobby chairs",
+          "Alt text: Three teal lounge chairs by a window",
+          "Size: 3000×2000",
+          "Dominant colors: #0f766e, #f5f5f4",
+        ].join("\n"),
+      },
+    ],
+    expect: { includes: ["chair"], tools: "none" },
+    fakeOutput: "Three teal lounge chairs by a window.",
   },
 ];

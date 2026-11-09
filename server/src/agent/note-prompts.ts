@@ -34,9 +34,10 @@ const TASKS: Record<NoteAgentTask, string> = {
 };
 
 const REFERENCES =
-  "Referenced items (notes, links, colors) are context the user attached: draw on them as the instruction asks, but don't copy them wholesale unless asked. " +
+  "Referenced items (notes, links, colors, images) are context the user attached: draw on them as the instruction asks, but don't copy them wholesale unless asked. " +
   "A referenced link gives only the page's details (title, description, site), not its full text: don't claim more about the page than they say. " +
-  "A referenced color gives its name and value: use them as given.";
+  "A referenced color gives its name and value: use them as given. " +
+  "A referenced image comes with its details and usually the image itself: describe what you actually see; when only details are given, don't invent what it shows.";
 
 const CONTEXT_AND_TOOLS =
   "You see an overview, not everything: a long note shows its outline and the part around the cursor, and a large referenced item shows a card. " +
