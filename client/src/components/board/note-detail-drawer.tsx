@@ -2080,7 +2080,7 @@ export function NoteDetailDrawer({
                 : "rounded-t-xl border-foreground/10",
             )}
           >
-            <div className="mx-auto min-h-full w-full max-w-5xl px-5 sm:px-10 lg:px-24 [&_.ProseMirror]:!pt-2">
+            <div className="note-workspace-page mx-auto min-h-full w-full max-w-5xl min-w-0 px-[var(--note-editor-gutter)] [&_.ProseMirror]:!pt-2">
               {(!isCreateMode && hydratedNoteId !== noteId) ||
               (loading && !activeNote) ? (
                 <NoteEditorLoading />

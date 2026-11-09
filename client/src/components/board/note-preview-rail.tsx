@@ -19,8 +19,8 @@ type NoteSectionBoundary = Pick<NoteSection, "id"> & {
 
 const SECTION_SCROLL_OFFSET = 72;
 const ACTIVE_SECTION_LINE = 0.28;
-const MIN_SCROLLBAR_WIDTH = 2;
-const PREVIEW_RAIL_GAP = 6;
+const PREVIEW_RAIL_INSET = 6;
+const OUTLINE_CLOSE_DELAY = 250;
 const MIN_PREVIEW_RAIL_SECTIONS = 1;
 const MIN_PREVIEW_RAIL_OVERFLOW_RATIO = 0.25;
 
@@ -35,18 +35,6 @@ export function shouldShowNotePreviewRail(
     scrollHeight - clientHeight >=
       clientHeight * MIN_PREVIEW_RAIL_OVERFLOW_RATIO
   );
-}
-
-function getLayoutLeft(element: HTMLElement) {
-  let left = element.offsetLeft;
-  let parent = element.offsetParent;
-
-  while (parent instanceof HTMLElement) {
-    left += parent.offsetLeft;
-    parent = parent.offsetParent;
-  }
-
-  return left;
 }
 
 function readSections(editor: Editor): NoteSection[] {
@@ -113,14 +101,17 @@ export function NotePreviewRail({
   const [visibleSectionIds, setVisibleSectionIds] = useState<string[]>([]);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
+  const [isPointerInteraction, setIsPointerInteraction] = useState(false);
   const [workspaceContent, setWorkspaceContent] = useState<HTMLElement | null>(
     null,
   );
-  const [leftOffset, setLeftOffset] = useState(
-    MIN_SCROLLBAR_WIDTH + PREVIEW_RAIL_GAP,
-  );
+  const [leftOffset, setLeftOffset] = useState(PREVIEW_RAIL_INSET);
   const activeIdRef = useRef(activeId);
   const visibleSectionIdsRef = useRef(visibleSectionIds);
+  const railRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
 
   activeIdRef.current = activeId;
   visibleSectionIdsRef.current = visibleSectionIds;
@@ -128,6 +119,36 @@ export function NotePreviewRail({
   const visibleSectionIdSet = useMemo(
     () => new Set(visibleSectionIds),
     [visibleSectionIds],
+  );
+
+  function cancelOutlineClose() {
+    if (closeTimerRef.current === undefined) return;
+    window.clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = undefined;
+  }
+
+  function closeOutline() {
+    cancelOutlineClose();
+    setIsOutlineOpen(false);
+    setHoveredIndex(null);
+  }
+
+  function scheduleOutlineClose() {
+    cancelOutlineClose();
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = undefined;
+      if (railRef.current?.contains(document.activeElement)) return;
+      setIsOutlineOpen(false);
+      setHoveredIndex(null);
+    }, OUTLINE_CLOSE_DELAY);
+  }
+
+  useEffect(
+    () => () => {
+      if (closeTimerRef.current !== undefined)
+        window.clearTimeout(closeTimerRef.current);
+    },
+    [],
   );
 
   useEffect(() => {
@@ -199,20 +220,13 @@ export function NotePreviewRail({
 
     let frame = 0;
     const updateRailPosition = () => {
-      const scrollbarWidth = Math.max(
-        MIN_SCROLLBAR_WIDTH,
-        container.offsetWidth - container.clientWidth,
-      );
       const containerLeft = container.getBoundingClientRect().left;
       const nextOffset = Math.max(
-        scrollbarWidth + PREVIEW_RAIL_GAP,
+        PREVIEW_RAIL_INSET,
         Math.round(
-          workspaceContent
-            ? containerLeft -
-                workspaceContent.getBoundingClientRect().left +
-                scrollbarWidth +
-                PREVIEW_RAIL_GAP
-            : getLayoutLeft(container) + scrollbarWidth + PREVIEW_RAIL_GAP,
+          containerLeft -
+            (workspaceContent?.getBoundingClientRect().left ?? 0) +
+            PREVIEW_RAIL_INSET,
         ),
       );
       setLeftOffset((current) =>
@@ -301,27 +315,34 @@ export function NotePreviewRail({
   // Interaction adapted to Aska's note outline from beUI Preview Rail (MIT).
   const rail = (
     <div
+      ref={railRef}
       className={cn(
-        "top-1/2 z-[60] hidden -translate-y-1/2 items-center lg:flex",
+        "note-preview-rail top-1/2 z-[60] flex -translate-y-1/2 items-center",
         workspaceContent ? "absolute" : "fixed",
       )}
       style={{ left: leftOffset }}
-      onPointerEnter={() => setIsOutlineOpen(true)}
-      onPointerLeave={() => {
-        setIsOutlineOpen(false);
-        setHoveredIndex(null);
+      onPointerEnter={cancelOutlineClose}
+      onPointerLeave={scheduleOutlineClose}
+      onFocusCapture={(event) => {
+        cancelOutlineClose();
+        if (event.target.matches(":focus-visible"))
+          setIsPointerInteraction(false);
+        setIsOutlineOpen(true);
       }}
-      onFocusCapture={() => setIsOutlineOpen(true)}
       onBlurCapture={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
-          setIsOutlineOpen(false);
-          setHoveredIndex(null);
+          closeOutline();
         }
       }}
     >
       <nav
         aria-label="Note sections"
-        className="flex max-h-[72dvh] w-9 [scrollbar-width:none] flex-col items-start overflow-y-auto py-1 [&::-webkit-scrollbar]:hidden"
+        className="flex max-h-[72dvh] w-6 [scrollbar-width:none] flex-col items-start overflow-y-auto py-1 lg:w-9 [&::-webkit-scrollbar]:hidden"
+        onPointerEnter={(event) => {
+          cancelOutlineClose();
+          setIsPointerInteraction(event.pointerType === "mouse");
+          setIsOutlineOpen(true);
+        }}
       >
         {sections.map((section, index) => {
           const distance =
@@ -350,7 +371,7 @@ export function NotePreviewRail({
               type="button"
               aria-label={`Go to ${section.label}`}
               aria-current={isActive ? "location" : undefined}
-              className="group flex h-3 w-7 shrink-0 items-center justify-start rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+              className="group flex h-3 w-6 shrink-0 items-center justify-start rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar lg:w-7"
               onPointerEnter={() => setHoveredIndex(index)}
               onFocus={() => setHoveredIndex(index)}
               onBlur={() => setHoveredIndex(null)}
@@ -358,24 +379,25 @@ export function NotePreviewRail({
             >
               <motion.span
                 aria-hidden="true"
+                initial={false}
                 animate={{
-                  scaleX: hoveredIndex === null ? 0.5 : hoverScale,
+                  transform: `scaleX(${hoveredIndex === null ? 0.5 : hoverScale})`,
                 }}
                 transition={
-                  shouldReduceMotion
+                  shouldReduceMotion || !isPointerInteraction
                     ? { duration: 0 }
                     : {
-                        duration: 0.12,
-                        ease: "easeOut",
+                        duration: 0.1,
+                        ease: [0.23, 1, 0.32, 1],
                       }
                 }
                 className={cn(
                   "block h-0.5 origin-left",
                   section.level === 1
-                    ? "w-7"
+                    ? "w-5 lg:w-7"
                     : section.level === 2
-                      ? "w-6"
-                      : "w-5",
+                      ? "w-4 lg:w-6"
+                      : "w-3.5 lg:w-5",
                   isHighlighted ? "bg-primary" : "bg-muted-foreground/70",
                 )}
               />
@@ -384,48 +406,60 @@ export function NotePreviewRail({
         })}
       </nav>
       {isOutlineOpen ? (
-        <motion.div
-          initial={shouldReduceMotion ? false : { opacity: 0, x: -4 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={
-            shouldReduceMotion
-              ? { duration: 0 }
-              : { duration: 0.15, ease: "easeOut" }
-          }
-          className="absolute top-1/2 left-8 max-h-[40dvh] w-72 -translate-y-1/2 rounded-lg border-border/60 bg-background/95 p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10 backdrop-blur-xl"
-        >
-          <ScrollArea
-            viewportClassName="h-auto max-h-[calc(40dvh-0.75rem)]"
-            contentClassName="w-full"
-            className="min-h-0 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:right-[-0.25rem] [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-0.5 [&_[data-slot=scroll-area-thumb]]:w-1 [&_[data-slot=scroll-area-thumb]]:bg-foreground/35"
+        <>
+          <div
+            aria-hidden="true"
+            className="absolute inset-y-0 left-full w-2"
+          />
+          <motion.div
+            initial={
+              shouldReduceMotion || !isPointerInteraction
+                ? false
+                : { opacity: 0, transform: "scale(0.98)" }
+            }
+            animate={{ opacity: 1, transform: "scale(1)" }}
+            transition={
+              shouldReduceMotion || !isPointerInteraction
+                ? { duration: 0 }
+                : { duration: 0.12, ease: [0.23, 1, 0.32, 1] }
+            }
+            className="absolute top-1/2 left-[calc(100%+0.5rem)] max-h-[40dvh] w-[min(18rem,calc(100dvw-5.5rem))] origin-left -translate-y-1/2 rounded-lg border-border/60 bg-background/95 p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10 backdrop-blur-xl"
           >
-            <nav aria-label="Note outline" className="py-0.5">
-              {sections.map((section, index) => {
-                const isActive = section.id === activeId;
+            <ScrollArea
+              viewportClassName="h-auto max-h-[calc(40dvh-0.75rem)]"
+              contentClassName="w-full pr-3"
+              className="-mr-1 min-h-0 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:w-2 [&_[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:p-0.5 [&_[data-slot=scroll-area-thumb]]:w-1"
+            >
+              <nav aria-label="Note outline" className="py-0.5">
+                {sections.map((section, index) => {
+                  const isActive = section.id === activeId;
 
-                return (
-                  <button
-                    key={section.id}
-                    type="button"
-                    aria-current={isActive ? "location" : undefined}
-                    className={cn(
-                      "flex w-full rounded-md py-2 pr-2 text-left text-sm leading-5 outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring",
-                      section.level === 1 && "pl-2",
-                      section.level === 2 && "pl-5",
-                      section.level >= 3 && "pl-8",
-                      isActive ? "text-foreground" : "text-muted-foreground",
-                    )}
-                    onPointerEnter={() => setHoveredIndex(index)}
-                    onFocus={() => setHoveredIndex(index)}
-                    onClick={() => goToSection(section)}
-                  >
-                    <span className="min-w-0 break-words">{section.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </ScrollArea>
-        </motion.div>
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      aria-current={isActive ? "location" : undefined}
+                      className={cn(
+                        "flex w-full rounded-md py-2 pr-2 text-left text-sm leading-5 outline-none hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring",
+                        section.level === 1 && "pl-2",
+                        section.level === 2 && "pl-5",
+                        section.level >= 3 && "pl-8",
+                        isActive ? "text-foreground" : "text-muted-foreground",
+                      )}
+                      onPointerEnter={() => setHoveredIndex(index)}
+                      onFocus={() => setHoveredIndex(index)}
+                      onClick={() => goToSection(section)}
+                    >
+                      <span className="min-w-0 break-words">
+                        {section.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </ScrollArea>
+          </motion.div>
+        </>
       ) : null}
     </div>
   );

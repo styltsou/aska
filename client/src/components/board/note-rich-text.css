@@ -571,24 +571,6 @@
 
   .note-rich-text-editable .note-table-scrollbar-thumb {
     height: 10px !important;
-    background: color-mix(
-      in oklab,
-      var(--sidebar-foreground) 20%,
-      transparent
-    ) !important;
-  }
-
-  .note-rich-text-editable
-    .note-table-scrollbar:hover
-    .note-table-scrollbar-thumb,
-  .note-rich-text-editable
-    .note-table-scrollbar:active
-    .note-table-scrollbar-thumb {
-    background: color-mix(
-      in oklab,
-      var(--sidebar-foreground) 40%,
-      transparent
-    ) !important;
   }
 
   .note-rich-text-editable .tableWrapper table {
@@ -734,11 +716,10 @@
     @apply cursor-text pt-20 pb-10 text-base leading-7 sm:pb-14;
   }
 
-  @media (min-width: 64rem) {
-    .note-rich-text-editable .ProseMirror {
-      margin-left: -5rem;
-      padding-left: 5rem;
-    }
+  .note-rich-text-editable .ProseMirror {
+    margin-left: calc(-1 * var(--note-editor-gutter));
+    padding-left: var(--note-editor-gutter);
+    overflow-wrap: anywhere;
   }
 
   .note-rich-text-editable .ProseMirror-focused p.is-empty::before,
@@ -764,10 +745,21 @@
   color: var(--sidebar-foreground);
 }
 
-/* Floating block-gutter controls: "+" to insert a block and the drag handle.
-   The cluster lives in the drawer's left padding, which only fits from lg up. */
+/* At narrow widths: 6px inset + 24px rail + 4px gap + 50px controls
+   + 12px before text. Use the same inset on the right for balanced text. */
+.note-workspace-page {
+  --note-editor-gutter: 6rem;
+}
+
+@media (min-width: 64rem) {
+  .note-workspace-page {
+    --note-editor-gutter: 8rem;
+  }
+}
+
+/* Floating block-gutter controls: "+" to insert a block and the drag handle. */
 .note-float-block-controls {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 0.125rem;
   translate: -0.75rem 0;
@@ -779,14 +771,8 @@
   pointer-events: none !important;
 }
 
-@media (min-width: 64rem) {
-  .note-float-block-controls {
-    display: flex;
-  }
-}
-
 .note-block-add-button {
-  @apply flex size-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground active:bg-sidebar-foreground/15;
+  @apply flex size-6 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-foreground/8 hover:text-sidebar-foreground active:bg-sidebar-foreground/15;
 }
 
 .note-float-block-controls [data-drag-handle] {
@@ -803,6 +789,13 @@
 
 .note-float-block-controls [data-drag-handle] svg {
   @apply size-4;
+}
+
+@media (min-width: 64rem) {
+  .note-block-add-button {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
 }
 
 /* Keep the editable document's block hierarchy above Tailwind's heading
