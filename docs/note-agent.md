@@ -235,6 +235,61 @@ and wording: 429 / quota → "AI usage limit reached", 503 / 529 / overloaded �
 - Local clients use the deployed agent stream, so server changes only show up after
   `main` is deployed.
 
+## Design decisions
+
+Each entry records what was decided, why, and what would make us revisit it.
+The aim is the simplest design that stays correct; add machinery only when a
+concrete need shows up.
+
+**The client sends the whole current note; the server decides what the model
+sees.** The request carries the note with `⟦cursor⟧` (up to 200,000
+characters), but the model gets the whole note only when it is short (6,000
+characters or less); otherwise an outline plus the text around the cursor, and
+tools for the rest. Upload size is the only cost; tokens are controlled on the
+server. The client sends the note because the server's copy can be behind what
+the user sees: autosave runs on a delay, a pending draft is never saved, and
+the cursor is a position in the editor's text, which is wrong against an older
+saved version. *Revisit with persistence:* the client sends `noteId`, the
+saved version it is based on, and the cursor; the server loads the note when
+the version matches, and the client sends the note (or its unsaved changes)
+only when it doesn't. Don't build a separate version check before that.
+
+**Mentions travel as IDs and are loaded on the server.** The request carries
+`workspaceSlug` and `mentions: [{ assetId }]`; one query loads the notes and
+checks workspace membership, so the agent can only read what the user could
+open, and the client can't pass off arbitrary text as a mentioned note.
+Missing or inaccessible notes are dropped without an error. New asset types
+plug in here as per-type loaders.
+
+**The rest of a request still comes from the client:** the prompt, the passage
+for rewrites, and for follow-ups the previous draft and earlier prompts. Drafts
+live only in the client (and `localStorage`) until persistence stores them on
+the server.
+
+**The agent is a plain loop, not a graph.** Model → tools → model, at most 4
+tool rounds. It needs exact control over which text reaches the note (a
+preamble before a tool call is held back and dropped), which a plain loop gives
+directly. The LangGraph single-call pipeline remains only as the eval baseline.
+
+**No router call before the model.** Rules decide when to attach tools
+(mechanical edits and fully visible content get none); otherwise the model
+decides in the same call. A separate classification call would slow every
+request, including the ones that need nothing.
+
+**Exact search before embeddings.** Tools read and grep text. Workspace search
+starts with Postgres full-text search; embeddings come only if evals show
+keyword search missing obvious matches.
+
+**Real evals run in batches.** The free-tier token budget is small, so real
+runs wait until several features are in and run once over a larger case set.
+Each feature adds fake-mode cases (scripted lookups that run the real tools) as
+it lands, so the harness and tools stay tested in the meantime.
+
+**Naming.** Code and docs call it the agent; the UI still says "AI" (**Ask
+AI**). Deploy names (`aiApi`, `ai-stream-lambda`, `/api/ai/stream`,
+`VITE_AI_STREAM_URL`) and the saved-draft `localStorage` key keep "ai", since
+renaming them would change URLs or drop saved drafts.
+
 ## Planned and possible next steps
 
 The next step is designed in
@@ -266,6 +321,8 @@ engine already supports it.
 **Persistence.**
 
 - Store drafts server-side so they follow the user across devices.
+- Send `noteId` + saved version + cursor instead of the whole note (see
+  Design decisions).
 - Restore pending rewrites after a refresh, which needs the original and the
   selection stored alongside.
 
@@ -273,9 +330,9 @@ engine already supports it.
 until the delimiter row arrives; a trailing incomplete table line could be held
 back until the next chunk.
 
-**Context quality.** Smarter handling of very long notes than a fixed window
-around the cursor (for example a summary of the rest), and optionally
-workspace-wide retrieval once there is a concrete need.
+**Context quality.** Workspace-wide search (`search_workspace`) once there is
+a concrete need, and a "Sources" line under the draft showing what the agent
+read.
 
 **Operations.**
 
