@@ -25,9 +25,10 @@ import {
   SearchIcon,
   VideoIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { defaultFilter } from "cmdk";
 
 import {
   Command,
@@ -232,8 +233,10 @@ const COMMAND_ID_BY_LABEL: ReadonlyMap<string, CommandId> = new Map(
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
+  const skipFocusRestoreRef = useRef(false);
   const [mode, setMode] = useState<PaletteMode>("search");
   const [query, setQuery] = useState("");
+  const [selectedCommandValue, setSelectedCommandValue] = useState("");
   const [activeCommandId, setActiveCommandId] = useState<CommandId>();
   const [createNoteOpen, setCreateNoteOpen] = useState(false);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
@@ -328,9 +331,42 @@ export function CommandPalette() {
       ? workspaceSearch.data.results
       : [];
 
+  const availableCommandGroups = COMMAND_GROUPS.map((group) => ({
+    heading: group.heading,
+    items: group.items.filter(
+      (item) =>
+        (item.id !== "toggle-filter-bar" || Boolean(filterScope)) &&
+        (item.id !== "new-note" || canCreateNote) &&
+        (item.id !== "new-color" || canCreateColor) &&
+        (item.id !== "new-folder" || canCreateFolder) &&
+        (item.id !== "upload-media" || canUploadMedia) &&
+        (item.id !== "toggle-collection-view" || canToggleCollectionView) &&
+        (item.id !== "toggle-alignment-guides" || canToggleAlignmentGuides) &&
+        (item.id !== "toggle-board-action-rail" || canToggleBoardActionRail) &&
+        (item.id !== "open-pexels-browser" || canCreateFolder),
+    ),
+  })).filter((group) => group.items.length > 0);
+  const availableCommands = availableCommandGroups.flatMap(
+    (group) => group.items,
+  );
+
+  function firstMatchingCommand(search: string) {
+    return (
+      availableCommands
+        .map((item) => ({
+          label: item.label,
+          score: search.trim() ? defaultFilter(item.label, search.trim()) : 1,
+        }))
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score)[0]?.label ?? ""
+    );
+  }
+
   function changeMode(nextMode: PaletteMode) {
+    const selected = nextMode === "commands" ? firstMatchingCommand(query) : "";
+    setSelectedCommandValue(selected);
     setMode(nextMode);
-    setActiveCommandId(undefined);
+    setActiveCommandId(COMMAND_ID_BY_LABEL.get(selected));
   }
 
   function handleOpenChange(nextOpen: boolean) {
@@ -338,6 +374,7 @@ export function CommandPalette() {
     if (!nextOpen) {
       setMode("search");
       setQuery("");
+      setSelectedCommandValue("");
       setActiveCommandId(undefined);
     }
   }
@@ -380,6 +417,7 @@ export function CommandPalette() {
       runSearchResult(result);
       return;
     }
+    skipFocusRestoreRef.current = true;
     handleOpenChange(false);
     try {
       const response = await fetchPeekableAsset(workspaceSlug, result.id);
@@ -571,6 +609,11 @@ export function CommandPalette() {
       <CommandDialog
         open={open}
         onOpenChange={handleOpenChange}
+        finalFocus={() => {
+          const restoreFocus = !skipFocusRestoreRef.current;
+          skipFocusRestoreRef.current = false;
+          return restoreFocus;
+        }}
         title={mode === "search" ? "Search workspace" : "Command Palette"}
         description={
           mode === "search"
@@ -583,6 +626,8 @@ export function CommandPalette() {
         <DialogBody className="overflow-hidden bg-background/50 p-0">
           <div className="p-1.5">
             <Command
+              key={mode}
+              value={mode === "commands" ? selectedCommandValue : undefined}
               shouldFilter={mode === "commands"}
               onKeyDown={(event) => {
                 if (event.key === "Tab") {
@@ -602,13 +647,24 @@ export function CommandPalette() {
               }}
               onValueChange={(value) => {
                 if (mode === "commands") {
+                  if (query.trim() && defaultFilter(value, query.trim()) <= 0)
+                    return;
+                  setSelectedCommandValue(value);
                   setActiveCommandId(COMMAND_ID_BY_LABEL.get(value));
                 }
               }}
             >
               <CommandInput
+                autoFocus
                 value={query}
-                onValueChange={setQuery}
+                onValueChange={(value) => {
+                  setQuery(value);
+                  if (mode === "commands") {
+                    const selected = firstMatchingCommand(value);
+                    setSelectedCommandValue(selected);
+                    setActiveCommandId(COMMAND_ID_BY_LABEL.get(selected));
+                  }
+                }}
                 maxLength={120}
                 startAddon={
                   <CommandInputLeadingContent
@@ -635,12 +691,9 @@ export function CommandPalette() {
                     return;
                   }
 
-                  const selectedItemId = event.currentTarget.getAttribute(
-                    "aria-activedescendant",
-                  );
-                  const selectedItem = selectedItemId
-                    ? document.getElementById(selectedItemId)
-                    : null;
+                  const selectedItem = event.currentTarget
+                    .closest("[cmdk-root]")
+                    ?.querySelector('[cmdk-item][aria-selected="true"]');
                   const selectedResultId =
                     selectedItem?.getAttribute("data-result-id");
                   const result = searchResults.find(
@@ -673,84 +726,63 @@ export function CommandPalette() {
                   ) : (
                     <>
                       <CommandEmpty>No commands found.</CommandEmpty>
-                      {COMMAND_GROUPS.map((group) => ({
-                        heading: group.heading,
-                        items: group.items.filter(
-                          (item) =>
-                            (item.id !== "toggle-filter-bar" ||
-                              Boolean(filterScope)) &&
-                            (item.id !== "new-note" || canCreateNote) &&
-                            (item.id !== "new-color" || canCreateColor) &&
-                            (item.id !== "new-folder" || canCreateFolder) &&
-                            (item.id !== "upload-media" || canUploadMedia) &&
-                            (item.id !== "toggle-collection-view" ||
-                              canToggleCollectionView) &&
-                            (item.id !== "toggle-alignment-guides" ||
-                              canToggleAlignmentGuides) &&
-                            (item.id !== "toggle-board-action-rail" ||
-                              canToggleBoardActionRail) &&
-                            (item.id !== "open-pexels-browser" ||
-                              canCreateFolder),
-                        ),
-                      }))
-                        .filter((group) => group.items.length > 0)
-                        .map((group, index) => (
-                          <div key={group.heading}>
-                            {index > 0 ? <CommandSeparator /> : null}
-                            <CommandGroup heading={group.heading}>
-                              {group.items.map((item) => {
-                                const Icon =
-                                  item.id === "toggle-collection-view"
+                      {availableCommandGroups.map((group, index) => (
+                        <div key={group.heading}>
+                          {index > 0 ? <CommandSeparator /> : null}
+                          <CommandGroup heading={group.heading}>
+                            {group.items.map((item) => {
+                              const Icon =
+                                item.id === "toggle-collection-view"
+                                  ? collectionView === "canvas"
+                                    ? LayoutGridIcon
+                                    : PanelsTopLeftIcon
+                                  : item.icon;
+                              const label =
+                                item.id === "change-theme"
+                                  ? theme === "dark"
+                                    ? "Switch to light mode"
+                                    : "Switch to dark mode"
+                                  : item.id === "toggle-collection-view"
                                     ? collectionView === "canvas"
-                                      ? LayoutGridIcon
-                                      : PanelsTopLeftIcon
-                                    : item.icon;
-                                const label =
-                                  item.id === "change-theme"
-                                    ? theme === "dark"
-                                      ? "Switch to light mode"
-                                      : "Switch to dark mode"
-                                    : item.id === "toggle-collection-view"
-                                      ? collectionView === "canvas"
-                                        ? "Switch to grid view"
-                                        : "Switch to canvas view"
-                                      : item.id === "toggle-board-action-rail"
-                                        ? isBoardActionRailVisible
-                                          ? "Hide actions dock"
-                                          : "Show actions dock"
-                                        : item.id === "toggle-alignment-guides"
-                                          ? areAlignmentGuidesEnabled
-                                            ? "Hide alignment guides"
-                                            : "Show alignment guides"
-                                          : item.id === "toggle-filter-bar"
-                                            ? isFilterBarOpen
-                                              ? "Hide filter bar"
-                                              : "Show filter bar"
-                                            : item.id === "toggle-sidebar"
-                                              ? isSidebarOpen
-                                                ? "Hide sidebar"
-                                                : "Show sidebar"
-                                              : item.label;
+                                      ? "Switch to grid view"
+                                      : "Switch to canvas view"
+                                    : item.id === "toggle-board-action-rail"
+                                      ? isBoardActionRailVisible
+                                        ? "Hide actions dock"
+                                        : "Show actions dock"
+                                      : item.id === "toggle-alignment-guides"
+                                        ? areAlignmentGuidesEnabled
+                                          ? "Hide alignment guides"
+                                          : "Show alignment guides"
+                                        : item.id === "toggle-filter-bar"
+                                          ? isFilterBarOpen
+                                            ? "Hide filter bar"
+                                            : "Show filter bar"
+                                          : item.id === "toggle-sidebar"
+                                            ? isSidebarOpen
+                                              ? "Hide sidebar"
+                                              : "Show sidebar"
+                                            : item.label;
 
-                                return (
-                                  <CommandItem
-                                    key={item.id}
-                                    value={item.label}
-                                    onSelect={() => runCommand(item.id)}
-                                  >
-                                    <Icon className="size-4" />
-                                    <span>{label}</span>
-                                    {item.shortcut ? (
-                                      <CommandShortcut>
-                                        {formatPlatformShortcut(item.shortcut)}
-                                      </CommandShortcut>
-                                    ) : null}
-                                  </CommandItem>
-                                );
-                              })}
-                            </CommandGroup>
-                          </div>
-                        ))}
+                              return (
+                                <CommandItem
+                                  key={item.id}
+                                  value={item.label}
+                                  onSelect={() => runCommand(item.id)}
+                                >
+                                  <Icon className="size-4" />
+                                  <span>{label}</span>
+                                  {item.shortcut ? (
+                                    <CommandShortcut>
+                                      {formatPlatformShortcut(item.shortcut)}
+                                    </CommandShortcut>
+                                  ) : null}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </div>
+                      ))}
                     </>
                   )}
                 </div>

@@ -36,6 +36,7 @@ function CommandDialog({
   className,
   contentStyle,
   overlayClassName,
+  finalFocus,
   showCloseButton = false,
   ...props
 }: Omit<React.ComponentProps<typeof Dialog>, "children"> & {
@@ -44,6 +45,7 @@ function CommandDialog({
   className?: string;
   contentStyle?: React.CSSProperties;
   overlayClassName?: string;
+  finalFocus?: React.ComponentProps<typeof DialogContent>["finalFocus"];
   showCloseButton?: boolean;
   children: React.ReactNode;
 }) {
@@ -56,6 +58,7 @@ function CommandDialog({
       <DialogContent
         className={cn("top-[18vh] translate-y-0", className)}
         overlayClassName={overlayClassName}
+        finalFocus={finalFocus}
         showCloseButton={showCloseButton}
         style={contentStyle}
       >
