@@ -64,7 +64,8 @@ import {
 import { usePersistedStore, useTransientStore } from "@/store";
 import { toast } from "sonner";
 
-import { formatPlatformShortcut, getPlatformModifier } from "@/lib/platform";
+import { getPlatformModifier } from "@/lib/platform";
+import { EmptyStateShortcuts } from "@/components/asset-grid/empty-state-shortcuts";
 import { cn } from "@/lib/utils";
 import { makeBoardKey } from "./canvas-key";
 import { onBatchPlacementCompleted } from "./batch-placement-completed";
@@ -2950,22 +2951,11 @@ function CanvasSurface({
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center">
           <div className="max-w-sm space-y-1.5">
             <h2 className="text-sm font-medium">{emptyTitle}</h2>
-            <p className="text-sm text-muted-foreground">{emptyDescription}</p>
-            <div className="flex items-center justify-center gap-3 pt-3 text-sm text-muted-foreground/50">
-              <span>
-                <kbd className="font-sans">{formatPlatformShortcut("⌘+K")}</kbd>{" "}
-                Commands
-              </span>
-              <span className="text-muted-foreground/30">·</span>
-              <span>
-                <kbd className="font-sans">{formatPlatformShortcut("⇧+P")}</kbd>{" "}
-                Scratchpad
-              </span>
-              <span className="text-muted-foreground/30">·</span>
-              <span>
-                <kbd className="font-sans">{formatPlatformShortcut("⇧+F")}</kbd>{" "}
-                Filter
-              </span>
+            <p className="text-sm text-balance text-muted-foreground">
+              {emptyDescription}
+            </p>
+            <div className="pt-9">
+              <EmptyStateShortcuts />
             </div>
           </div>
         </div>

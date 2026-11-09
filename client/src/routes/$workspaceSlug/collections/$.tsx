@@ -456,9 +456,7 @@ function CollectionPage() {
                       emptyDescription={
                         isTypeFilterActive
                           ? "Try a different asset type."
-                          : folderPath
-                            ? "Add images, notes, links, or folders to start arranging this board."
-                            : "Add images, notes, links, or folders to start arranging this collection."
+                          : "Add notes, images, links, and more to get started."
                       }
                       onOpenNote={handleOpenCanvasNode}
                       onOpenImage={handleOpenCanvasNode}
@@ -517,9 +515,7 @@ function CollectionPage() {
                       emptyDescription={
                         isTypeFilterActive
                           ? "Try a different asset type."
-                          : folderPath
-                            ? "Add images, notes, links, or folders to this folder."
-                            : "Add images, notes, links, or folders to this collection."
+                          : "Add notes, images, links, and more to get started."
                       }
                       onOpenNote={handleOpenNode}
                       onOpenImage={handleOpenNode}

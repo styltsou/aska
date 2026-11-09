@@ -454,7 +454,7 @@ const CollectionGridContent = memo(function CollectionGridContent({
             <div className="flex min-h-96 items-center justify-center px-6 text-center">
               <div className="max-w-sm space-y-1.5">
                 <h2 className="text-sm font-medium">{emptyTitle}</h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-balance text-muted-foreground">
                   {emptyDescription}
                 </p>
               </div>
