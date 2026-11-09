@@ -4,14 +4,14 @@
  *   bun run ai:eval -- --fake                 # scripted model, no key, no cost
  *   GOOGLE_GENERATIVE_AI_API_KEY=… bun run ai:eval
  *   bun run ai:eval -- --case far-in-note --verbose
- *   bun run ai:eval -- --pipeline baseline
+ *   bun run ai:eval -- --pipeline baseline   # today's single-call pipeline
+ *   bun run ai:eval -- --delay 5000          # pause between cases (rate limits)
  *
  * See docs/proposals/ai-agentic-context.md for what the cases measure.
  */
-import { FakeListChatModel } from "@langchain/core/utils/testing";
-
 import { EVAL_CASES, type EvalCase } from "@/ai/eval/cases";
-import { PIPELINES } from "@/ai/eval/pipeline";
+import { PIPELINES, TOOL_PIPELINES } from "@/ai/eval/pipeline";
+import { ScriptedChatModel } from "@/ai/eval/scripted-model";
 import { scoreOutput } from "@/ai/eval/score";
 import { createNoteModel } from "@/ai/note-model";
 
@@ -21,7 +21,8 @@ function option(name: string) {
 }
 const fake = process.argv.includes("--fake");
 const verbose = process.argv.includes("--verbose");
-const pipelineName = option("pipeline") ?? "baseline";
+const pipelineName = option("pipeline") ?? "agent";
+const delayMs = Number(option("delay") ?? 0);
 const onlyCase = option("case");
 
 const pipeline = PIPELINES[pipelineName];
@@ -44,7 +45,10 @@ if (!cases.length) {
 
 function modelFor(testCase: EvalCase) {
   if (fake) {
-    return new FakeListChatModel({ responses: [testCase.fakeOutput] });
+    const lookups = TOOL_PIPELINES.has(pipelineName)
+      ? (testCase.fakeLookups ?? [])
+      : [];
+    return new ScriptedChatModel([...lookups, { text: testCase.fakeOutput }]);
   }
   const model = createNoteModel(process.env);
   if (!model) {
@@ -67,7 +71,10 @@ type Result = {
 };
 
 const results: Result[] = [];
-for (const testCase of cases) {
+for (const [index, testCase] of cases.entries()) {
+  if (index > 0 && delayMs > 0 && !fake) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
   const started = performance.now();
   let firstTextMs: number | null = null;
   let output = "";

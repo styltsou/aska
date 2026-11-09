@@ -7,9 +7,12 @@ import { configureEnv } from "@/config/env";
 const allowedOrigins = new Set(
   (process.env.CORS_ORIGINS ?? "").split(",").filter(Boolean),
 );
+// The whole note and whole mentioned notes are sent: the model only sees an
+// overview of anything long, and reads the rest through tools as needed.
 const requestSchema = z.object({
   prompt: z.string().trim().min(1).max(4000),
-  note: z.string().max(40000),
+  note: z.string().max(200_000),
+  task: z.enum(["write", "rewrite", "mechanical"]).optional(),
   draft: z.string().max(40000).optional(),
   earlierPrompts: z.array(z.string().max(4000)).max(10).optional(),
   passage: z.string().max(40000).optional(),
@@ -17,7 +20,7 @@ const requestSchema = z.object({
     .array(
       z.object({
         title: z.string().max(300),
-        markdown: z.string().max(12000),
+        markdown: z.string().max(100_000),
       }),
     )
     .max(3)
@@ -117,19 +120,13 @@ export const handler = awslambda.streamifyResponse(
       stream.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
     };
     try {
-      const { createNoteEditGraph } = await import("@/ai/note-graph");
-      const graph = createNoteEditGraph(model);
-      for await (const [chunk] of await graph.stream(input, {
-        streamMode: "messages",
-      })) {
-        const text =
-          typeof chunk.content === "string"
-            ? chunk.content
-            : chunk.content
-                .filter((part) => part.type === "text")
-                .map((part) => part.text)
-                .join("");
-        if (text) send("custom", { type: "delta", text });
+      const { runNoteAgent } = await import("@/ai/note-agent");
+      for await (const event of runNoteAgent(input, model)) {
+        if (event.type === "text") {
+          send("custom", { type: "delta", text: event.text });
+        } else if (event.type === "status") {
+          send("custom", { type: "status", text: event.text });
+        }
       }
       send("custom", { type: "done" });
     } catch (error) {

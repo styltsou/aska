@@ -18,7 +18,8 @@ Every run goes through the same three states:
 
 1. **Prompt:** a one-line input in the note, at the place the result will go.
    The placeholder teaches `@` ("…, @ to mention…").
-2. **Streaming:** "Writing…" with Stop (Esc). Output goes straight into the note
+2. **Streaming:** "Writing…" with Stop (Esc), preceded by status steps such as
+   "Searching this note…" when the AI looks something up. Output goes straight into the note
    as it arrives; each new chunk fades in over 100ms. There is no artificial
    pacing.
 3. **Review:** the result sits in the note as a **pending draft**, marked by a
@@ -42,10 +43,10 @@ NoteRichText (Tiptap editor)
                  ai-stream-lambda (AWS Lambda, response streaming)
                    auth (Better Auth session cookie) → zod request schema
                               │
-                 note-graph (LangGraph, one "write" node)
-                   systemMessage + userMessage → createNoteModel() → Gemini
+                 note-agent (overview + read/search tools, ≤4 rounds)
+                   prompt parts → createNoteModel() → Gemini ⇄ tools
                               │
-                 SSE: custom {delta | done}, error {message}
+                 SSE: custom {status | delta | done}, error {message}
 ```
 
 ### Client (`client/src/components/board/note-editor/ai/`)
@@ -87,7 +88,8 @@ focus hand-offs, and the request lifecycle:
 
 - Context is captured once when the prompt opens:
   `noteMarkdownAtAiCursor` serializes the note with `⟦cursor⟧` in place of the
-  range, trimmed to 38,000 characters around the cursor.
+  range. The whole note is sent (up to 200,000 characters); the server decides
+  how much the model sees.
 - Follow-ups send the current draft plus `earlierPrompts` (the instructions
   that produced it, oldest first, at most 10).
 - For a rewrite, the model returns only the replacement for the selected part;
@@ -117,7 +119,7 @@ decorations for added atoms. Formatting-only changes are not shown.
 **`note-ai-mentions.tsx`: `@` mentions.** Detects `@query` before the caret,
 searches with the editor's existing `mentionSearchQueryOptions` (notes only),
 shows picked notes as chips (at most 3), and on each request fetches their
-content with `fetchPeekableAsset` (`note-{id}`), capped at 12,000 characters
+content with `fetchPeekableAsset` (`note-{id}`), capped at 100,000 characters
 each. Content is read fresh per request, so follow-ups see edits.
 
 **`note-ai-draft-store.ts`: persistence.** A finished draft on an empty line is
@@ -142,11 +144,11 @@ removals.
 **`ai-stream-lambda.ts`.** A streaming Lambda behind its own API Gateway REST
 API (`aiApi`, route `ANY /stream`, 2-minute timeout, see `sst.config.ts`). It
 checks the origin against `CORS_ORIGINS`, resolves the Better Auth session from
-the cookie, validates the body, then streams the graph's output as SSE:
+the cookie, validates the body, then streams the agent's output as SSE:
 
 | Event | Payload |
 | --- | --- |
-| `custom` | `{ type: "delta", text }` for each chunk, then `{ type: "done" }` |
+| `custom` | `{ type: "status", text }` for each lookup, `{ type: "delta", text }` for each chunk of the answer, then `{ type: "done" }` |
 | `error` | `{ message }`, readable as-is (see `ai/ai-error.ts`) |
 
 Request schema and limits:
@@ -154,24 +156,35 @@ Request schema and limits:
 | Field | Limit | Purpose |
 | --- | --- | --- |
 | `prompt` | 1–4,000 chars | The instruction. |
-| `note` | 40,000 chars | The note with `⟦cursor⟧`. |
+| `note` | 200,000 chars | The whole note with `⟦cursor⟧`. |
+| `task` | `write`, `rewrite`, `mechanical` | Optional; mechanical edits (fix grammar, shorter, longer) never look anything up. Defaults from `passage`. |
 | `draft` | 40,000 chars | The draft (or replacement) a follow-up revises. |
 | `earlierPrompts` | 10 × 4,000 | Instructions behind `draft`. |
 | `passage` | 40,000 chars | Rewrite only: the blocks with the selection marked. |
-| `referencedNotes` | 3 × (300 title, 12,000 Markdown) | `@`-mentioned notes. |
+| `referencedNotes` | 3 × (300 title, 100,000 Markdown) | `@`-mentioned notes, whole. |
 
-**`ai/note-graph.ts`.** A one-node LangGraph graph. `systemMessage` picks one of
-two modes:
+**`ai/note-agent.ts`.** The note AI as a small agent loop
+(model → tools → model), following
+[Agentic Context](./proposals/ai-agentic-context.md):
 
-- **Writing:** return only new Markdown for the cursor; never repeat the note.
-- **Rewriting:** return only the replacement for the marked part, inline when
-  it sits within a sentence; no markers, no surrounding text.
+- **Overview** (`ai/note-context.ts`): a note up to 6,000 characters is shown
+  whole; a longer one as an outline (headings, line ranges, sizes) plus the
+  excerpt around the cursor. Mentioned notes are shown whole when small, else
+  as a card (outline and beginning).
+- **Tools**, attached only for what isn't fully shown: `read_note_section`,
+  `search_note`, `read_reference`, `search_reference`. They read the request's
+  own text, so no database is involved; results are numbered lines, capped.
+- **Fast path:** mechanical edits, and requests where everything is already in
+  view, get no tools and a single streaming call.
+- **Answer only:** text at the start of a round is held back until it's clearly
+  not a preamble to a tool call, so only the final answer reaches the note. At
+  most 4 tool rounds, then the model is told to answer.
+- **Prompts** (`ai/note-prompts.ts`): a shared base, one task part (write,
+  rewrite, mechanical), a references part when notes are mentioned, and the
+  context-and-tools part only when tools are attached.
 
-`userMessage` assembles the note, referenced notes, the passage, and either the
-instruction or, for a follow-up, the earlier instructions, the previous draft,
-and "revise". The graph is streamed in `messages` mode, which streams tokens
-even though the node calls `model.invoke`; LangGraph drops the duplicate final
-message.
+**`ai/note-graph.ts`.** The previous single-call LangGraph pipeline, kept as
+the eval baseline (`--pipeline baseline`).
 
 **`ai/note-model.ts`.** `createNoteModel()` is the only code that knows the
 provider (Gemini `gemini-2.5-flash`, `maxRetries: 1` so usage-limit errors
@@ -201,9 +214,13 @@ and wording: 429 / quota → "AI usage limit reached", 503 / 529 / overloaded �
   ProseMirror harness with history, since headless Tiptap registers no plugins),
   `note-ai-diff.test.ts`, `note-ai-stream.test.ts`,
   `note-ai-draft-store.test.ts`, `note-ai-mentions.test.ts`.
-- Server: `ai/note-graph.test.ts` (prompt assembly, streaming with
-  `FakeListChatModel`) and `ai/ai-error.test.ts`. Run under Node; vitest under
-  the Bun runtime fails to import `zod`.
+- Server: `ai/note-agent.test.ts` (overview, tools, fast path, round limit),
+  `ai/note-graph.test.ts`, `ai/ai-error.test.ts` and `ai/eval/eval.test.ts`.
+  Run them with `bun test src/ai` (vitest under the Bun runtime fails to import
+  `zod`; `bun test` runs the same files). `ai/eval/scripted-model.ts` plays
+  back scripted tool calls and answers for tests.
+- Eval: `bun run ai:eval` in `server/` (`--fake` for a free scripted run,
+  `--pipeline baseline` to compare, `--delay` for rate limits).
 - In the browser, stub `window.fetch` for URLs containing `/ai/` to return a
   scripted SSE stream. This exercises the whole client without model calls.
   Back up the note first (for example in `sessionStorage`) and avoid editing

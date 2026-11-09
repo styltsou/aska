@@ -1,6 +1,7 @@
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
 import { CURSOR, type EvalCase } from "@/ai/eval/cases";
+import { runNoteAgent } from "@/ai/note-agent";
 import { createNoteEditGraph } from "@/ai/note-graph";
 
 export type EvalEvent =
@@ -70,6 +71,27 @@ export const baselinePipeline: EvalPipeline = async function* (
   }
 };
 
+/** The agent: overview plus tools, whole note and references available. */
+export const agentPipeline: EvalPipeline = async function* (testCase, model) {
+  for await (const event of runNoteAgent(
+    {
+      prompt: testCase.instruction,
+      note: testCase.note,
+      task: testCase.task,
+      ...(testCase.passage ? { passage: testCase.passage } : {}),
+      ...(testCase.references ? { referencedNotes: testCase.references } : {}),
+    },
+    model,
+  )) {
+    if (event.type === "text") yield { type: "text", text: event.text };
+    else if (event.type === "tool") yield { type: "tool", name: event.name };
+  }
+};
+
 export const PIPELINES: Record<string, EvalPipeline> = {
+  agent: agentPipeline,
   baseline: baselinePipeline,
 };
+
+/** Pipelines that can call tools, so fake runs script lookups for them. */
+export const TOOL_PIPELINES = new Set(["agent"]);

@@ -1,3 +1,5 @@
+import type { ScriptedStep } from "@/ai/eval/scripted-model";
+
 /**
  * Fixed cases for evaluating the note AI. Each case describes what the client
  * would send (note with cursor marker, instruction, passage, referenced notes)
@@ -32,6 +34,8 @@ export type EvalCase = {
   };
   /** What the scripted model answers in --fake mode (should pass the checks). */
   fakeOutput: string;
+  /** Lookups the scripted model makes before answering, for tool pipelines. */
+  fakeLookups?: ScriptedStep[];
 };
 
 /** Deterministic filler: `count` weekly log sections of plain prose. */
@@ -117,6 +121,7 @@ export const EVAL_CASES: EvalCase[] = [
       "Remind me of the public launch date we decided on, in one sentence.",
     expect: { includes: ["March 3"], tools: "required" },
     fakeOutput: "The public launch is on March 3.",
+    fakeLookups: [{ tool: "search_note", args: { pattern: "launch date" } }],
   },
   {
     id: "deep-in-reference",
@@ -128,6 +133,12 @@ export const EVAL_CASES: EvalCase[] = [
     references: [{ title: "Design review", markdown: LARGE_REFERENCE }],
     expect: { includes: ["teal"], tools: "required" },
     fakeOutput: "The design review settled on teal (#0f766e).",
+    fakeLookups: [
+      {
+        tool: "search_reference",
+        args: { reference: "R1", pattern: "accent color" },
+      },
+    ],
   },
   {
     id: "two-references",

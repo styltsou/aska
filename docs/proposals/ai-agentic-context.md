@@ -1,7 +1,8 @@
 # AI Editing: Agentic Context — Design Note
 
-**Status:** Proposed. Nothing here is built yet except the eval harness
-(`server/src/ai/eval/`). The current pipeline is described in
+**Status:** In progress. Built: the eval harness (`server/src/ai/eval/`) and
+step 2 below (the agent loop, `server/src/ai/note-agent.ts`). Not built:
+other asset types, server-side asset lookup, workspace search. The current pipeline is described in
 [AI Editing in Notes](../ai-editing.md).
 
 ## Problem
@@ -137,9 +138,11 @@ GOOGLE_GENERATIVE_AI_API_KEY=... bun run ai:eval
 
 ## Rollout
 
-1. Spec and eval harness, with the baseline recorded. *(this change)*
+1. Spec and eval harness. *(done; the real baseline run was skipped to save
+   tokens, since its far-away cases fail by construction)*
 2. Agent loop with current-note and mentioned-note tools, status events, the
-   fast path, and prompt parts. Compare against the baseline.
+   fast path, and prompt parts. *(done; passes all cases with a scripted
+   model, real run pending)*
 3. Other asset types through `read_asset`: links (unfurled text), images
    (vision), colors, then videos once transcripts exist.
 4. `search_workspace` on Postgres full-text search.
