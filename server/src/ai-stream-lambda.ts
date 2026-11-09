@@ -2,12 +2,13 @@ import type { APIGatewayProxyEvent } from "aws-lambda";
 import { z } from "zod";
 
 import { describeAgentError } from "@/agent/agent-error";
+import type { AgentReference } from "@/agent/note-agent";
 import { configureEnv } from "@/config/env";
 
 const allowedOrigins = new Set(
   (process.env.CORS_ORIGINS ?? "").split(",").filter(Boolean),
 );
-// The whole note is sent; mentioned notes are sent as IDs and loaded here,
+// The whole note is sent; mentioned items are sent as IDs and loaded here,
 // from the workspace the user is a member of. The model only sees an overview
 // of anything long, and reads the rest through tools as needed.
 const requestSchema = z.object({
@@ -19,7 +20,15 @@ const requestSchema = z.object({
   passage: z.string().max(40000).optional(),
   workspaceSlug: z.string().trim().min(1).max(200).optional(),
   mentions: z
-    .array(z.object({ assetId: z.number().int().positive() }))
+    .array(
+      z.object({
+        assetId: z.number().int().positive(),
+        // Mirrors MENTIONABLE_TYPES (agent/mentioned-assets.ts), which can't be
+        // imported here before the env is configured. Requests saved before
+        // types existed only mentioned notes.
+        type: z.enum(["note", "link", "color"]).default("note"),
+      }),
+    )
     .max(3)
     .optional(),
 });
@@ -113,22 +122,22 @@ export const handler = awslambda.streamifyResponse(
     }
 
     const { mentions, workspaceSlug, ...input } = request;
-    let referencedNotes: Array<{ title: string; markdown: string }> | undefined;
+    let references: AgentReference[] | undefined;
     if (mentions?.length) {
       if (!workspaceSlug) {
         respondJson(400, '{"error":"Mentions need a workspace"}');
         return;
       }
       try {
-        const { loadMentionedNotes } = await import("@/agent/mentioned-notes");
-        referencedNotes = await loadMentionedNotes(
+        const { loadMentions } = await import("@/agent/mentioned-assets");
+        references = await loadMentions(
           workspaceSlug,
           session.user.id,
-          mentions.map((mention) => mention.assetId),
+          mentions,
         );
       } catch (error) {
-        console.error("Loading mentioned notes failed", error);
-        respondJson(503, '{"error":"Could not load the mentioned notes"}');
+        console.error("Loading mentions failed", error);
+        respondJson(503, '{"error":"Could not load the mentioned items"}');
         return;
       }
     }
@@ -140,7 +149,7 @@ export const handler = awslambda.streamifyResponse(
     try {
       const { runNoteAgent } = await import("@/agent/note-agent");
       for await (const event of runNoteAgent(
-        referencedNotes?.length ? { ...input, referencedNotes } : input,
+        references?.length ? { ...input, references } : input,
         model,
       )) {
         if (event.type === "text") {

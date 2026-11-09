@@ -79,7 +79,15 @@ export const agentPipeline: EvalPipeline = async function* (testCase, model) {
       note: testCase.note,
       task: testCase.task,
       ...(testCase.passage ? { passage: testCase.passage } : {}),
-      ...(testCase.references ? { referencedNotes: testCase.references } : {}),
+      ...(testCase.references
+        ? {
+            references: testCase.references.map((reference) => ({
+              kind: reference.kind ?? "note",
+              title: reference.title,
+              text: reference.markdown,
+            })),
+          }
+        : {}),
     },
     model,
   )) {

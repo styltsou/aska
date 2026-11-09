@@ -2,8 +2,8 @@
 
 **Status:** In progress. Built: the eval harness (`server/src/agent/eval/`) and
 step 2 below (the agent loop, `server/src/agent/note-agent.ts`), and
-mentioned notes loaded on the server by ID. Not built: other asset types,
-workspace search. The current pipeline is described in
+mentioned notes, links and colors loaded on the server by ID. Not built:
+images, videos, workspace search. The current pipeline is described in
 [Note Agent](../note-agent.md).
 
 ## Problem
@@ -117,7 +117,8 @@ output length, and tool calls. Cases cover:
 - a mechanical rewrite (must stay close to the original);
 - a fact far up a long note, outside the current window;
 - a detail at the end of a large mentioned note, past the current cap;
-- a question that needs two mentioned notes.
+- a question that needs two mentioned notes;
+- a mentioned link and a mentioned color (use the given details, invent nothing).
 
 The current pipeline is the baseline, run with the same trimming and caps the
 client applies, so the far-away cases are expected to fail today. Routing is
@@ -145,9 +146,9 @@ GOOGLE_GENERATIVE_AI_API_KEY=... bun run agent:eval
    fast path, and prompt parts. *(done; passes all cases with a scripted
    model, real run pending)*
 3. Mentions resolved on the server by ID, with the workspace access check.
-   *(done for notes: `server/src/agent/mentioned-notes.ts`)* Then other
-   asset types through `read_asset`: links (unfurled text), images
-   (vision), colors, then videos once transcripts exist.
+   *(done for notes, links and colors: `server/src/agent/mentioned-assets.ts`;
+   long notes use the reference tools, links and colors are short enough to
+   show whole)* Then images (vision), then videos once transcripts exist.
 4. `search_workspace` on Postgres full-text search.
 5. Embeddings, only if the evals ask for them.
 

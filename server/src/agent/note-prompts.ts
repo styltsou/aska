@@ -34,10 +34,12 @@ const TASKS: Record<NoteAgentTask, string> = {
 };
 
 const REFERENCES =
-  "Referenced notes are context the user attached: draw on them as the instruction asks, but don't copy them wholesale unless asked.";
+  "Referenced items (notes, links, colors) are context the user attached: draw on them as the instruction asks, but don't copy them wholesale unless asked. " +
+  "A referenced link gives only the page's details (title, description, site), not its full text: don't claim more about the page than they say. " +
+  "A referenced color gives its name and value: use them as given.";
 
 const CONTEXT_AND_TOOLS =
-  "You see an overview, not everything: a long note shows its outline and the part around the cursor, and a large referenced note shows a card. " +
+  "You see an overview, not everything: a long note shows its outline and the part around the cursor, and a large referenced item shows a card. " +
   "If the answer depends on content you can't see, look it up with the tools: search when you don't know where something is, then read the relevant section. " +
   "Don't look anything up when what you can see is enough. " +
   "Call tools without writing any text first; once you start the answer, write only the answer. " +

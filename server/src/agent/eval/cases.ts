@@ -21,7 +21,12 @@ export type EvalCase = {
   /** Rewrites: the passage with the selection marked. */
   passage?: string;
   /** Mentioned notes at full size. */
-  references?: Array<{ title: string; markdown: string }>;
+  /** Mentioned items as the server loads them; `kind` defaults to note. */
+  references?: Array<{
+    kind?: "note" | "link" | "color";
+    title: string;
+    markdown: string;
+  }>;
   expect: {
     /** Case-insensitive substrings the output must contain. */
     includes?: string[];
@@ -159,5 +164,44 @@ export const EVAL_CASES: EvalCase[] = [
     ],
     expect: { includes: ["Sam"], tools: "any" },
     fakeOutput: "Sam owns the Q2 project, the mobile app launch.",
+  },
+  {
+    id: "link-mention",
+    description:
+      "A mentioned link: use its details, and don't invent page content.",
+    task: "write",
+    note: `# Reading list\n\n${CURSOR}`,
+    instruction: "Add a one-line entry for the mentioned link.",
+    references: [
+      {
+        kind: "link",
+        title: "Launch plan",
+        markdown: [
+          "Title: Launch plan",
+          "URL: https://example.test/launch",
+          "Site: Example",
+          "Description: How the public launch rolls out, week by week.",
+        ].join("\n"),
+      },
+    ],
+    expect: { includes: ["Launch plan"], tools: "none" },
+    fakeOutput:
+      "- [Launch plan](https://example.test/launch): how the public launch rolls out, week by week.",
+  },
+  {
+    id: "color-mention",
+    description: "A mentioned color: use its exact value.",
+    task: "write",
+    note: `# Brand\n\n${CURSOR}`,
+    instruction: "Write a sentence saying which accent color we use.",
+    references: [
+      {
+        kind: "color",
+        title: "Deep teal",
+        markdown: "Name: Deep teal\nValue: #0f766e",
+      },
+    ],
+    expect: { includes: ["#0f766e"], tools: "none" },
+    fakeOutput: "Our accent color is Deep teal (#0f766e).",
   },
 ];

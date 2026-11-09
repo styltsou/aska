@@ -17,7 +17,15 @@ const LINE_PREVIEW_LIMIT = 300;
 /** First lines shown on a reference card. */
 const CARD_PREVIEW = 600;
 
-export type ContextDocument = { id: string; title: string; text: string };
+/** What a mentioned item is; notes are read like the current note. */
+export type ReferenceKind = "note" | "link" | "color";
+
+export type ContextDocument = {
+  id: string;
+  title: string;
+  text: string;
+  kind?: ReferenceKind | undefined;
+};
 
 type Heading = { line: number; level: number; title: string };
 
@@ -81,20 +89,21 @@ export function noteOverview(note: string, marker: string) {
   };
 }
 
-/** A mentioned document: whole when short, otherwise a card. */
+/** A mentioned item: whole when short, otherwise a card. */
 export function referenceOverview(document: ContextDocument) {
+  const kind = document.kind ?? "note";
   const attributes = `id="${document.id}" title="${document.title.replaceAll('"', "'")}"`;
   if (document.text.length <= FULL_TEXT_LIMIT) {
     return {
       complete: true,
-      text: `<referenced-note ${attributes}>\n${document.text}\n</referenced-note>`,
+      text: `<referenced-${kind} ${attributes}>\n${document.text}\n</referenced-${kind}>`,
     };
   }
   const lines = document.text.split("\n");
   return {
     complete: false,
     text:
-      `<reference-card ${attributes} lines="${lines.length}" chars="${document.text.length}">\n` +
+      `<reference-card kind="${kind}" ${attributes} lines="${lines.length}" chars="${document.text.length}">\n` +
       `Outline:\n${outline(document.text)}\n\n` +
       `Beginning:\n${capped(document.text.slice(0, CARD_PREVIEW), CARD_PREVIEW)}\n` +
       `</reference-card>`,

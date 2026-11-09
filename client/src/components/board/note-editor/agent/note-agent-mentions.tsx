@@ -1,24 +1,36 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileTextIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
 
 import {
   mentionSearchQueryOptions,
   type NoteMentionTarget,
+  type NoteMentionType,
 } from "@/api/note-mentions";
-import { NOTE_MENTION_CHIP_CLASS } from "@/components/board/note-editor/mentions/note-mentions";
+import {
+  MentionGlyph,
+  mentionSwatchBackground,
+  NOTE_MENTION_CHIP_CLASS,
+} from "@/components/board/note-editor/mentions/note-mentions";
 import { cn } from "@/lib/utils";
 
 /**
- * @-mentioning notes in the agent prompt: typing `@` opens a note picker, picked
- * notes show as chips in the prompt, and their IDs go with the next request
- * (and its follow-ups); the server loads their content as context.
+ * @-mentioning items in the agent prompt: typing `@` opens a picker of notes,
+ * links and colors, picked items show as chips in the prompt, and their IDs go
+ * with the next request (and its follow-ups); the server loads them as context.
  */
 
-export type NoteAgentMentionedNote = { assetId: number; title: string };
+/** Types the agent can read; mirrors MENTIONABLE_TYPES on the server. */
+export const AGENT_MENTION_TYPES = [
+  "note",
+  "link",
+  "color",
+] as const satisfies readonly NoteMentionType[];
+
+export type NoteAgentMention = NoteMentionTarget;
 
 // Mirrors the server's limits.
-const MAX_MENTIONED_NOTES = 3;
+const MAX_MENTIONS = 3;
 const PICKER_LIMIT = 6;
 
 /** The `@query` being typed right before the caret, if any. */
@@ -32,6 +44,30 @@ export function mentionQueryBefore(text: string, caret: number) {
   };
 }
 
+/** What a request carries for each mention. */
+export function mentionsForRequest(items: NoteAgentMention[]) {
+  return items.map(({ assetId, assetType }) => ({
+    assetId,
+    type: assetType as (typeof AGENT_MENTION_TYPES)[number],
+  }));
+}
+
+function mentionLabel(target: NoteMentionTarget) {
+  return target.title || target.label || "Untitled";
+}
+
+function Glyph({ target }: { target: NoteMentionTarget }) {
+  return (
+    <MentionGlyph
+      assetType={target.assetType}
+      swatchBackground={mentionSwatchBackground(target)}
+      previewUrl={target.previewUrl}
+      faviconUrl={target.faviconUrl}
+      isVideo={target.isVideo}
+    />
+  );
+}
+
 export function useNoteAgentMentions({
   workspaceSlug,
   sourceAssetId,
@@ -39,20 +75,18 @@ export function useNoteAgentMentions({
   workspaceSlug?: string;
   sourceAssetId?: number;
 }) {
-  const [notes, setNotes] = useState<NoteAgentMentionedNote[]>([]);
+  const [items, setItems] = useState<NoteAgentMention[]>([]);
   const [query, setQuery] = useState<ReturnType<
     typeof mentionQueryBefore
   > | null>(null);
   const [active, setActive] = useState(0);
 
   const enabled =
-    Boolean(workspaceSlug) &&
-    query !== null &&
-    notes.length < MAX_MENTIONED_NOTES;
+    Boolean(workspaceSlug) && query !== null && items.length < MAX_MENTIONS;
   const search = useQuery({
     ...mentionSearchQueryOptions(workspaceSlug ?? "", {
       q: query?.text ?? "",
-      types: ["note"],
+      types: AGENT_MENTION_TYPES,
       limit: PICKER_LIMIT,
       sourceAssetId,
     }),
@@ -60,7 +94,7 @@ export function useNoteAgentMentions({
   });
   const options = enabled
     ? (search.data?.targets ?? []).filter(
-        (target) => !notes.some((note) => note.assetId === target.assetId),
+        (target) => !items.some((item) => item.assetId === target.assetId),
       )
     : [];
 
@@ -73,20 +107,17 @@ export function useNoteAgentMentions({
   /** Adds `target` and returns the prompt text without the `@query`. */
   const pick = (target: NoteMentionTarget, value: string) => {
     if (!query) return value;
-    setNotes((current) =>
-      current.some((note) => note.assetId === target.assetId)
+    setItems((current) =>
+      current.some((item) => item.assetId === target.assetId)
         ? current
-        : [
-            ...current,
-            { assetId: target.assetId, title: target.title || target.label },
-          ],
+        : [...current, target],
     );
     setQuery(null);
     return value.slice(0, query.start) + value.slice(query.end);
   };
 
   return {
-    notes,
+    items,
     open: enabled,
     options,
     active,
@@ -99,30 +130,30 @@ export function useNoteAgentMentions({
         options.length ? (index + delta + options.length) % options.length : 0,
       ),
     remove: (assetId: number) =>
-      setNotes((current) => current.filter((note) => note.assetId !== assetId)),
+      setItems((current) => current.filter((item) => item.assetId !== assetId)),
   };
 }
 
 export function NoteAgentMentionChips({
-  notes,
+  items,
   onRemove,
 }: {
-  notes: NoteAgentMentionedNote[];
+  items: NoteAgentMention[];
   onRemove: (assetId: number) => void;
 }) {
-  return notes.map((note) => (
+  return items.map((item) => (
     <span
-      key={note.assetId}
-      className={cn(NOTE_MENTION_CHIP_CLASS, "shrink-0 gap-0.5")}
+      key={item.assetId}
+      className={cn(NOTE_MENTION_CHIP_CLASS, "shrink-0 gap-1")}
     >
-      <FileTextIcon className="size-3 shrink-0 text-muted-foreground" />
-      <span className="max-w-28 truncate">{note.title || "Untitled"}</span>
+      <Glyph target={item} />
+      <span className="max-w-28 truncate">{mentionLabel(item)}</span>
       <button
         type="button"
-        aria-label={`Remove ${note.title || "Untitled"}`}
+        aria-label={`Remove ${mentionLabel(item)}`}
         className="-mr-0.5 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
         onMouseDown={(event) => event.preventDefault()}
-        onClick={() => onRemove(note.assetId)}
+        onClick={() => onRemove(item.assetId)}
       >
         <XIcon className="size-3" />
       </button>
@@ -147,7 +178,7 @@ export function NoteAgentMentionPicker({
     <div
       id={id}
       role="listbox"
-      aria-label="Notes"
+      aria-label="Mentions"
       className="absolute top-full left-0 z-50 mt-1 w-72 max-w-full rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
     >
       {options.length ? (
@@ -161,15 +192,20 @@ export function NoteAgentMentionPicker({
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onPick(target)}
           >
-            <FileTextIcon className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="truncate">
-              {target.title || target.label || "Untitled"}
+            <Glyph target={target} />
+            <span className="min-w-0 flex-1 truncate">
+              {mentionLabel(target)}
             </span>
+            {target.assetType === "link" && target.hostname ? (
+              <span className="max-w-24 shrink-0 truncate text-xs text-muted-foreground">
+                {target.hostname}
+              </span>
+            ) : null}
           </button>
         ))
       ) : (
         <p className="px-2 py-1.5 text-sm text-muted-foreground">
-          {loading ? "Searching…" : "No matching notes"}
+          {loading ? "Searching…" : "No matches"}
         </p>
       )}
     </div>

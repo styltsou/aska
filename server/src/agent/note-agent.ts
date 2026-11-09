@@ -15,6 +15,7 @@ import {
   referenceOverview,
   searchText,
   type ContextDocument,
+  type ReferenceKind,
 } from "@/agent/note-context";
 import {
   CURSOR_MARKER,
@@ -41,7 +42,14 @@ export type NoteAgentInput = {
   passage?: string | undefined;
   draft?: string | undefined;
   earlierPrompts?: string[] | undefined;
-  referencedNotes?: Array<{ title: string; markdown: string }> | undefined;
+  /** Items the user @-mentioned, as text (see `agent/mentioned-assets.ts`). */
+  references?: AgentReference[] | undefined;
+};
+
+export type AgentReference = {
+  kind: ReferenceKind;
+  title: string;
+  text: string;
 };
 
 export type NoteAgentEvent =
@@ -135,7 +143,7 @@ function buildTools(
         {
           name: "read_reference",
           description:
-            "Read part of a referenced note shown as a card: a section by heading, or a line range. Lines come numbered.",
+            "Read part of a referenced item shown as a card: a section by heading, or a line range. Lines come numbered.",
           schema: z.object({ reference: referenceId, ...sectionArgs }),
         },
       ),
@@ -149,7 +157,7 @@ function buildTools(
         {
           name: "search_reference",
           description:
-            "Find lines in a referenced note shown as a card matching a pattern (case-insensitive; plain text or a regular expression).",
+            "Find lines in a referenced item shown as a card matching a pattern (case-insensitive; plain text or a regular expression).",
           schema: z.object({
             reference: referenceId,
             pattern: z.string().describe("What to look for."),
@@ -177,11 +185,12 @@ export async function* runNoteAgent(
   const task: NoteAgentTask =
     input.task ?? (input.passage ? "rewrite" : "write");
   const note = noteOverview(input.note, CURSOR_MARKER);
-  const references = (input.referencedNotes ?? []).map((reference, index) => {
+  const references = (input.references ?? []).map((reference, index) => {
     const document = {
       id: `R${index + 1}`,
+      kind: reference.kind,
       title: reference.title,
-      text: reference.markdown,
+      text: reference.text,
     };
     // Keep the full text for the tools; the overview is what the model sees.
     const { complete, text: overview } = referenceOverview(document);

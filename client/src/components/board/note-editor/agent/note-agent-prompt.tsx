@@ -15,6 +15,7 @@ import {
   showNoteAgentChanges,
 } from "@/components/board/note-editor/agent/note-agent-session";
 import {
+  mentionsForRequest,
   NoteAgentMentionChips,
   NoteAgentMentionPicker,
   useNoteAgentMentions,
@@ -376,10 +377,10 @@ export function NoteAgentPrompt({
       ...(task ? { task } : {}),
       // Mentions go as IDs; the server loads them fresh for each request, so
       // follow-ups see their latest content.
-      ...(mentions.notes.length && workspaceSlug
+      ...(mentions.items.length && workspaceSlug
         ? {
             workspaceSlug,
-            mentions: mentions.notes.map(({ assetId }) => ({ assetId })),
+            mentions: mentionsForRequest(mentions.items),
           }
         : {}),
     };
@@ -561,7 +562,7 @@ export function NoteAgentPrompt({
           )}
         >
           <NoteAgentMentionChips
-            notes={mentions.notes}
+            items={mentions.items}
             onRemove={mentions.remove}
           />
           <input

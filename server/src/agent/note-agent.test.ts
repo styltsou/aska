@@ -114,7 +114,11 @@ describe("runNoteAgent", () => {
       {
         prompt: big.instruction,
         note: big.note,
-        referencedNotes: big.references!,
+        references: big.references!.map((reference) => ({
+          kind: "note" as const,
+          title: reference.title,
+          text: reference.markdown,
+        })),
       },
       [
         {
@@ -125,7 +129,7 @@ describe("runNoteAgent", () => {
       ],
     );
     expect(String(model.calls[0]![1]!.content)).toContain(
-      '<reference-card id="R1" title="Design review"',
+      '<reference-card kind="note" id="R1" title="Design review"',
     );
     expect(events[0]).toEqual({
       type: "status",

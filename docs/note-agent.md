@@ -1,7 +1,7 @@
 # Note Agent
 
 The note agent writes new content at the cursor, rewrites selected text, runs
-quick actions, and uses mentioned notes as context. The UI still labels it
+quick actions, and uses mentioned notes, links and colors as context. The UI still labels it
 "AI" (**Ask AI**); code and docs call it the agent, while deploy names
 (`aiApi`, `ai-stream-lambda`, `/api/ai/stream`, `VITE_AI_STREAM_URL`) keep
 "ai". This document
@@ -120,10 +120,11 @@ for removed text (a whole removed block renders on its own line), node
 decorations for added atoms. Formatting-only changes are not shown.
 
 **`note-agent-mentions.tsx`: `@` mentions.** Detects `@query` before the caret,
-searches with the editor's existing `mentionSearchQueryOptions` (notes only),
-shows picked notes as chips (at most 3), and sends their IDs with each request
-(`workspaceSlug` plus `mentions: [{ assetId }]`). The server loads the content,
-fresh per request, so follow-ups see edits.
+searches with the editor's existing `mentionSearchQueryOptions` (notes, links
+and colors: `AGENT_MENTION_TYPES`), shows picked items as chips with the
+editor's mention glyphs (at most 3), and sends their IDs with each request
+(`workspaceSlug` plus `mentions: [{ assetId, type }]`). The server loads the
+content, fresh per request, so follow-ups see edits.
 
 **`note-agent-draft-store.ts`: persistence.** A finished draft on an empty line is
 stored in `localStorage` (`aska:note-ai-draft:v1:{noteId}`, 14-day expiry) and
@@ -165,7 +166,7 @@ Request schema and limits:
 | `earlierPrompts` | 10 × 4,000 | Instructions behind `draft`. |
 | `passage` | 40,000 chars | Rewrite only: the blocks with the selection marked. |
 | `workspaceSlug` | 200 chars | Required with `mentions`: the workspace they belong to. |
-| `mentions` | 3 × `{ assetId }` | `@`-mentioned notes, loaded on the server by `agent/mentioned-notes.ts`. |
+| `mentions` | 3 × `{ assetId, type }` | `@`-mentioned notes, links and colors, loaded on the server by `agent/mentioned-assets.ts`. `type` defaults to `note` (requests saved before types existed). |
 
 **`agent/note-agent.ts`.** The note agent as a small loop
 (model → tools → model), following
@@ -173,8 +174,9 @@ Request schema and limits:
 
 - **Overview** (`agent/note-context.ts`): a note up to 6,000 characters is shown
   whole; a longer one as an outline (headings, line ranges, sizes) plus the
-  excerpt around the cursor. Mentioned notes are shown whole when small, else
-  as a card (outline and beginning).
+  excerpt around the cursor. Mentioned items arrive as text (`<referenced-note>`,
+  `<referenced-link>`, `<referenced-color>`): whole when small, else as a card
+  (outline and beginning); in practice only long notes become cards.
 - **Tools**, attached only for what isn't fully shown: `read_note_section`,
   `search_note`, `read_reference`, `search_reference`. They read the request's
   own text, so no database is involved; results are numbered lines, capped.
@@ -184,7 +186,7 @@ Request schema and limits:
   not a preamble to a tool call, so only the final answer reaches the note. At
   most 4 tool rounds, then the model is told to answer.
 - **Prompts** (`agent/note-prompts.ts`): a shared base, one task part (write,
-  rewrite, mechanical), a references part when notes are mentioned, and the
+  rewrite, mechanical), a references part when items are mentioned, and the
   context-and-tools part only when tools are attached.
 
 **`agent/note-graph.ts`.** The previous single-call LangGraph pipeline, kept as
@@ -222,8 +224,9 @@ and wording: 429 / quota → "AI usage limit reached", 503 / 529 / overloaded �
   `agent/note-graph.test.ts`, `agent/agent-error.test.ts` and `agent/eval/eval.test.ts`.
   Run them with `bun run test:agent` (vitest under the Bun runtime fails to
   import `zod`; `bun test` runs the same files).
-  `agent/mentioned-notes.integration.test.ts` checks mention loading and
-  workspace access against a database (`bun run test:integration`). `agent/eval/scripted-model.ts` plays
+  `agent/mentioned-assets.test.ts` covers the text links and colors become;
+  `agent/mentioned-assets.integration.test.ts` checks mention loading, type
+  matching and workspace access against a database (`bun run test:integration`). `agent/eval/scripted-model.ts` plays
   back scripted tool calls and answers for tests.
 - Eval: `bun run agent:eval` in `server/` (`--fake` for a free scripted run,
   `--pipeline baseline` to compare, `--delay` for rate limits).
@@ -255,11 +258,22 @@ the version matches, and the client sends the note (or its unsaved changes)
 only when it doesn't. Don't build a separate version check before that.
 
 **Mentions travel as IDs and are loaded on the server.** The request carries
-`workspaceSlug` and `mentions: [{ assetId }]`; one query loads the notes and
+`workspaceSlug` and `mentions: [{ assetId, type }]`; one query loads them and
 checks workspace membership, so the agent can only read what the user could
-open, and the client can't pass off arbitrary text as a mentioned note.
-Missing or inaccessible notes are dropped without an error. New asset types
-plug in here as per-type loaders.
+open, and the client can't pass off arbitrary text as a mentioned item.
+Missing or inaccessible items, and a `type` that doesn't match the asset, are
+dropped without an error. Each type becomes text in `referenceFromRow`
+(`agent/mentioned-assets.ts`); a new type adds a join and a case there.
+
+**A mentioned link is its stored details, not its page.** Only the unfurled
+title, URL, site, kind and description (plus the user's note on it) are
+stored, so that is what the agent gets, and the prompt tells it not to claim
+more about the page. *Revisit* if users ask about page contents: fetching the
+page at request time adds latency and failure modes, so prefer storing
+extracted text at unfurl time and reading it like a note.
+
+**Colors are labeled values.** Name, hex, gradient stops and the user's note;
+the agent is told to use them as given.
 
 **The rest of a request still comes from the client:** the prompt, the passage
 for rewrites, and for follow-ups the previous draft and earlier prompts. Drafts
@@ -298,17 +312,15 @@ the model calls to read and search the note and mentioned assets, a fast path
 with no tools for simple edits, prompts built from parts per task, and an eval
 harness (`bun run agent:eval` in `server/`) to compare pipelines.
 
-**Mention any asset, not just notes.** The picker, chips, request field and
-prompt are note-specific today. The plan is a per-type context builder:
+**Mention images and videos.** Notes, links and colors work today. Next:
 
-- links: title, URL and unfurled description or page text;
-- images: the image itself for a vision-capable model, or its caption and
-  colors;
-- colors: name and value;
-- videos: title, plus a transcript once available.
+- images: the image itself for a vision-capable model (one or two per
+  request, size-capped), falling back to its alt text, note and colors;
+- videos: title and note, plus a transcript once available.
 
-The request would carry typed references (`{ type, title, … }`) and the
-placeholder already reads "@ to mention" with no object.
+Both add a type to `AGENT_MENTION_TYPES` / `MENTIONABLE_TYPES` and a case in
+`referenceFromRow`; images also need the reference to carry the image, not
+just text.
 
 **Edit-based output for long drafts.** Follow-ups and rewrites return full text.
 For long drafts, search-and-replace edits would save tokens and latency; they
