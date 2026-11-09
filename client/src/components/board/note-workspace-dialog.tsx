@@ -44,7 +44,7 @@ export function NoteWorkspaceContent({
       <DialogPrimitive.Backdrop
         data-slot="note-workspace-backdrop"
         className={cn(
-          "fixed inset-0 z-[49] bg-black/10 transition-opacity duration-100 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
+          "fixed inset-0 z-[49] bg-black/10 transition-opacity duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none data-ending-style:duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
           backdropClassName,
         )}
       />

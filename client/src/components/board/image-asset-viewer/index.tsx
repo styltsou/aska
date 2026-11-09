@@ -1333,13 +1333,13 @@ export function ImageAssetViewer({
   );
   const fullscreenTransitionDuration = assetModalId
     ? expanded
-      ? "duration-[400ms]"
-      : "duration-[350ms]"
+      ? "duration-[250ms]"
+      : "duration-[200ms]"
     : "duration-[180ms]";
   const fullscreenLayoutTransition: Transition = shouldReduceMotion
     ? { duration: 0 }
     : {
-        duration: expanded ? 0.4 : 0.35,
+        duration: expanded ? 0.25 : 0.2,
         ease: [0.22, 1, 0.36, 1],
       };
   const presentation = split ? "split" : expanded ? "fullscreen" : "modal";
@@ -2118,7 +2118,7 @@ export function ImageAssetViewer({
           fullscreenTransitionDuration,
           workspace
             ? "h-[100svh] w-screen max-w-none rounded-none bg-transparent shadow-none ring-0 data-ending-style:scale-100 data-ending-style:opacity-0 data-ending-style:duration-150 data-starting-style:scale-100 data-starting-style:opacity-100"
-            : "h-[min(52rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[88rem] rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
+            : "h-[min(52rem,calc(100dvh-2rem))] w-[calc(100vw-2rem)] max-w-[88rem] rounded-xl bg-popover/80 shadow-2xl ring-1 ring-foreground/10 data-ending-style:duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
           split &&
             "left-0 z-50 w-[calc(100dvw-var(--workspace-peek-rail-width)-var(--workspace-peek-stage-gap)-var(--workspace-peek-stage-gap))] translate-x-0",
         )}

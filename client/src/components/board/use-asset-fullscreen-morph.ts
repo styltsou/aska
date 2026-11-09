@@ -131,7 +131,7 @@ export function useAssetFullscreenMorph(enabled: boolean, expanded: boolean) {
           },
         ],
         {
-          duration: expanded ? 400 : 350,
+          duration: expanded ? 250 : 200,
           easing: FULLSCREEN_EASING,
           fill: "both",
         },

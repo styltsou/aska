@@ -1842,8 +1842,7 @@ export function NoteDetailDrawer({
           GLASS_FRAME_CLASS,
           split
             ? "data-starting-style:translate-x-full data-ending-style:translate-x-full"
-            : !sharedEntry &&
-                "data-starting-style:scale-[0.96] data-starting-style:opacity-0 data-ending-style:scale-[0.96] data-ending-style:opacity-0",
+            : "data-starting-style:scale-[0.96] data-starting-style:opacity-0 data-ending-style:scale-[0.96] data-ending-style:opacity-0",
           expanded
             ? split
               ? "inset-0 h-dvh w-dvw max-w-none translate-x-0 translate-y-0 rounded-none bg-background shadow-none ring-1 ring-transparent"
@@ -1861,8 +1860,8 @@ export function NoteDetailDrawer({
             "relative z-20 flex shrink-0 items-center justify-between gap-3 p-2 text-xs font-medium text-muted-foreground transition-[margin,padding,background-color,border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
             assetModalId
               ? expanded
-                ? "duration-[400ms]"
-                : "duration-[350ms]"
+                ? "duration-[250ms]"
+                : "duration-[200ms]"
               : "duration-[180ms]",
             expanded ? "bg-background" : "bg-transparent",
           )}
@@ -2072,8 +2071,8 @@ export function NoteDetailDrawer({
               "min-h-0 flex-1 border-t bg-background transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
               assetModalId
                 ? expanded
-                  ? "duration-[400ms]"
-                  : "duration-[350ms]"
+                  ? "duration-[250ms]"
+                  : "duration-[200ms]"
                 : "duration-[180ms]",
               expanded
                 ? "border-transparent"

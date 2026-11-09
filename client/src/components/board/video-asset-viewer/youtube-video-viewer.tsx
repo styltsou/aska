@@ -485,8 +485,8 @@ export function YouTubeVideoViewer({
             "min-h-0 flex-1 overflow-hidden border-t border-b-0 bg-background p-0 transition-[border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
             assetModalId
               ? expanded
-                ? "duration-[400ms]"
-                : "duration-[350ms]"
+                ? "duration-[250ms]"
+                : "duration-[200ms]"
               : "duration-[180ms]",
             workspace
               ? "rounded-none border-transparent"
@@ -558,9 +558,9 @@ function VideoViewerToolbar({
       className={cn(
         "relative z-20 flex shrink-0 items-center gap-0.5 p-2 transition-[margin,padding,background-color,border-color,border-radius] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
         fullscreenMorphDuration === "400ms"
-          ? "duration-[400ms]"
+          ? "duration-[250ms]"
           : fullscreenMorphDuration === "350ms"
-            ? "duration-[350ms]"
+            ? "duration-[200ms]"
             : "duration-[180ms]",
         presentation === "modal" &&
           "rounded-t-xl rounded-b-none bg-transparent",

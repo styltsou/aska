@@ -607,8 +607,8 @@ function ColorDetailModal({
     : COLOR_VIEWER_LAYOUT_TRANSITION;
   const fullscreenTransitionDuration = assetModalId
     ? expanded
-      ? "duration-[400ms]"
-      : "duration-[350ms]"
+      ? "duration-[250ms]"
+      : "duration-[200ms]"
     : "duration-[180ms]";
   const {
     panelRef: fullscreenPanelRef,

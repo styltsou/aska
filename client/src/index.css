@@ -127,6 +127,21 @@
   }
 }
 
+.workspace-asset-view-backdrop {
+  transition-duration: 250ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.workspace-asset-view-backdrop[data-ending-style] {
+  transition-duration: 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-asset-view-backdrop {
+    transition: none;
+  }
+}
+
 [data-workspace-asset-modal][data-canvas-shared-entry][data-open],
 .workspace-asset-view-backdrop.canvas-shared-entry[data-open] {
   animation: none !important;

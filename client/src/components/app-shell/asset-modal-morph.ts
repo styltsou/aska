@@ -1,7 +1,7 @@
 import { restoreStyleWithoutTransition } from "@/lib/restore-style-without-transition";
 
-const OPEN_DURATION = 400;
-const CLOSE_DURATION = 350;
+const OPEN_DURATION = 250;
+const CLOSE_DURATION = 150;
 const MORPH_EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 type AssetOrigin = "canvas" | "grid";
