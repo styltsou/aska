@@ -1,9 +1,8 @@
 # YouTube Video Link Detail — Product & Implementation Spec
 
-## Status
-
-Proposed follow-up to the shipped `youtube-oembed` resolver. This is a
-separate feature from reliable URL unfurling and should ship in its own change.
+**Status:** Proposed. A follow-up to the shipped `youtube-oembed` resolver.
+This is a separate feature from reliable URL unfurling and should ship in its
+own change.
 
 ## Purpose
 

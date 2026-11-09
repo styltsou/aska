@@ -1,5 +1,9 @@
 # Node Delete API — Design Note
 
+**Status:** In progress. Whole-collection deletion
+(`DELETE .../collections/:collectionSlug`) now exists. The node-delete endpoint
+still accepts only folders.
+
 ## Summary
 
 The delete surface for collection content is inconsistent with how the domain

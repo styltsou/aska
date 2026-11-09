@@ -8,5 +8,6 @@ dist/
 package-lock.json
 # Local article drafts are useful codebase context but are not repository content.
 blog-drafts/
-# Early-stage specs and plans that may or may not be built. Not repository content.
-specs/
+
+# Local test caches
+client/.tmp-test/

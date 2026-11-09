@@ -31,11 +31,8 @@ it safely. Start here rather than reconstructing architecture from file names.
 - [Ambient Interface Spec](./ambient-interface-spec.md) — the implemented
   auth canvas treatment and remaining ambient-surface direction.
 
-Unbuilt or partially built specs and plans (previously here: spring-loaded
-folder navigation, premium interaction ideas, color-based image search plan)
-live in `../specs/` — a git-ignored directory for near-future work. Linking is
-one-directional: specs may reference these docs, but the maintained docs never
-link back out to `specs/`.
+Unbuilt or partially built specs and plans live in
+[Proposals](./proposals/README.md).
 
 ## Server, data, and operations
 
@@ -66,6 +63,22 @@ link back out to `specs/`.
 - [Observability](./server/observability.md) — Sentry errors, traces, logs,
   metrics, replay, source maps, and privacy policy.
 - [Scaffold Recipes](./server/scaffold-recipes.md) — repeatable backend work.
+
+## Proposals (not implemented)
+
+[Proposals](./proposals/README.md) holds architecture directions that are not
+built yet, each with an explicit status. Everything outside that folder
+describes the current system.
+
+- [Unified Media and Note Images](./proposals/unified-media-and-note-images.md)
+  — one media record for stored images, note image uploads under autosave, and
+  semantic indexing.
+- [YouTube Video Link Detail](./proposals/youtube-video-link-detail.md) — an
+  in-app viewer for resolved YouTube links.
+- [Node Delete API](./proposals/collection-node-delete-api.md) — uniform
+  deletion for every collection node kind.
+- [Collection-Node Move Follow-up](./proposals/collection-node-move-in-place.md)
+  — in-place asset placement updates on move.
 
 ## Documentation standard
 

@@ -1,5 +1,10 @@
 # Collection-node move follow-up
 
+**Status:** In progress. Some moves now update the placement row in place, and
+moves that still delete and re-insert the row carry over the original
+`created_at`. Check `collection-asset-move.service.ts` before acting on the
+finding below.
+
 ## Current finding
 
 Asset moves currently delete the existing `collection_nodes` row and insert a
