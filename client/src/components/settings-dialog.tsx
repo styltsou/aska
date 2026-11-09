@@ -18,6 +18,12 @@ import {
 import { cn } from "@/lib/utils";
 import { SETTINGS_REQUEST_EVENT, closeSettings } from "@/lib/settings-dialog";
 import { useWorkspaceOverlayNavigation } from "@/components/app-shell/use-workspace-overlay-navigation";
+import {
+  CANVAS_PATTERNS,
+  CANVAS_PATTERN_PREVIEWS,
+  useCanvasPattern,
+  type CanvasPattern,
+} from "@/components/canvas/canvas-pattern";
 
 const THEMES = [
   { value: "system", label: "System" },
@@ -188,8 +194,70 @@ function ThemePreview({ theme }: { theme: ThemeValue }) {
   );
 }
 
+function CanvasPatternPreview({ pattern }: { pattern: CanvasPattern }) {
+  const style = pattern === "none" ? null : CANVAS_PATTERN_PREVIEWS[pattern];
+  const patternId = `settings-canvas-${pattern}`;
+  const gap = style?.gap ?? 1;
+  const radius = style?.radius ?? 1;
+  const size = style?.size ?? 1;
+  const lineWidth = style?.lineWidth ?? 1;
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="block size-full rounded-[3px] text-foreground"
+      viewBox="0 0 64 48"
+      preserveAspectRatio="xMidYMid slice"
+    >
+      <rect width="64" height="48" fill="var(--background)" />
+      {style && (
+        <>
+          <defs>
+            <pattern
+              id={patternId}
+              width={gap}
+              height={gap}
+              patternUnits="userSpaceOnUse"
+            >
+              {pattern === "dots" ? (
+                <circle
+                  cx={gap / 2}
+                  cy={gap / 2}
+                  r={radius}
+                  fill="currentColor"
+                  opacity={style.opacity}
+                />
+              ) : pattern === "lines" ? (
+                <path
+                  d={`M${gap / 2} 0V${gap}M0 ${gap / 2}H${gap}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={lineWidth}
+                  opacity={style.opacity}
+                />
+              ) : (
+                <path
+                  d={`M${gap / 2} ${(gap - size) / 2}v${size}M${
+                    (gap - size) / 2
+                  } ${gap / 2}h${size}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={lineWidth}
+                  opacity={style.opacity}
+                />
+              )}
+            </pattern>
+          </defs>
+          <rect width="64" height="48" fill={`url(#${patternId})`} />
+        </>
+      )}
+    </svg>
+  );
+}
+
 function AppearanceSection() {
   const { theme, setTheme } = useTheme();
+  const { pattern, setPattern } = useCanvasPattern();
   const activeTheme: ThemeValue = theme === "system" ? "system" : theme;
 
   return (
@@ -249,6 +317,62 @@ function AppearanceSection() {
                   }
                 >
                   <ThemePreview theme={value} />
+                </TooltipTrigger>
+                <TooltipContent side="top">{label}</TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="mt-9">
+        <h3 className="text-[13px] font-medium text-muted-foreground">
+          Canvas
+        </h3>
+        <div className="mt-4 flex min-h-20 items-center justify-between gap-3 rounded-lg border border-border/70 bg-card px-4 py-2.5 sm:px-5">
+          <span className="shrink-0 text-sm font-medium">Pattern</span>
+          <div
+            aria-label="Canvas pattern"
+            className="flex flex-wrap items-center justify-end gap-2"
+            role="radiogroup"
+          >
+            {CANVAS_PATTERNS.map(({ value, label }, index) => (
+              <Tooltip key={value}>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      aria-label={label}
+                      aria-checked={pattern === value}
+                      role="radio"
+                      tabIndex={pattern === value ? 0 : -1}
+                      className={cn(
+                        "size-12 shrink-0 overflow-hidden rounded-md border bg-background p-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:h-12 md:w-16",
+                        pattern === value
+                          ? "border-foreground ring-1 ring-foreground"
+                          : "border-border hover:border-foreground/50",
+                      )}
+                      onClick={() => setPattern(value)}
+                      onKeyDown={(event) => {
+                        const next = nextOptionIndex(
+                          event.key,
+                          index,
+                          CANVAS_PATTERNS.length,
+                          "horizontal",
+                        );
+                        if (next === null) return;
+                        event.preventDefault();
+                        setPattern(CANVAS_PATTERNS[next].value);
+                        event.currentTarget
+                          .closest('[role="radiogroup"]')
+                          ?.querySelectorAll<HTMLButtonElement>(
+                            '[role="radio"]',
+                          )
+                          [next]?.focus();
+                      }}
+                    />
+                  }
+                >
+                  <CanvasPatternPreview pattern={value} />
                 </TooltipTrigger>
                 <TooltipContent side="top">{label}</TooltipContent>
               </Tooltip>

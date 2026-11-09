@@ -1,7 +1,5 @@
 import {
   applyNodeChanges,
-  Background,
-  BackgroundVariant,
   Panel,
   ReactFlow,
   ReactFlowProvider,
@@ -68,6 +66,7 @@ import { getPlatformModifier } from "@/lib/platform";
 import { EmptyStateShortcuts } from "@/components/asset-grid/empty-state-shortcuts";
 import { cn } from "@/lib/utils";
 import { makeBoardKey } from "./canvas-key";
+import { CanvasBackground } from "./canvas-pattern";
 import { onBatchPlacementCompleted } from "./batch-placement-completed";
 import {
   consumeCanvasCardEntranceSuppression,
@@ -2862,12 +2861,7 @@ function CanvasSurface({
           });
         }}
       >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={24}
-          size={1}
-          color="color-mix(in oklch, var(--foreground) 14%, transparent)"
-        />
+        <CanvasBackground />
         {editingTextNode ? (
           <ViewportPortal>
             <CanvasTextEditor

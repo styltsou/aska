@@ -1,10 +1,4 @@
-import {
-  Background,
-  BackgroundVariant,
-  ReactFlow,
-  ReactFlowProvider,
-  type Viewport,
-} from "@xyflow/react";
+import { ReactFlow, ReactFlowProvider, type Viewport } from "@xyflow/react";
 import { useRef, useState } from "react";
 
 import { NoteCardSkeleton } from "@/components/asset-grid/asset-card-skeleton";
@@ -13,6 +7,7 @@ import { ImageSkeleton } from "@/components/ui/image-skeleton";
 import { usePersistedStore } from "@/store";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { makeBoardKey } from "./canvas-key";
+import { CanvasBackground } from "./canvas-pattern";
 
 const CARD_WIDTH = 280;
 const CARD_GAP = 32;
@@ -100,12 +95,7 @@ export function CanvasLoading({
           zoomOnDoubleClick={false}
           proOptions={{ hideAttribution: true }}
         >
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={24}
-            size={1}
-            color="color-mix(in oklch, var(--foreground) 14%, transparent)"
-          />
+          <CanvasBackground />
         </ReactFlow>
         <div
           className="pointer-events-none absolute top-0 left-0"
