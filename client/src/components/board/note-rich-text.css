@@ -694,6 +694,14 @@
     border-top-right-radius: calc(var(--radius-lg) - 1px);
   }
 
+  .note-rich-text-content tbody tr:last-child :is(th, td):first-child {
+    border-bottom-left-radius: calc(var(--radius-lg) - 1px);
+  }
+
+  .note-rich-text-content tbody tr:last-child :is(th, td):last-child {
+    border-bottom-right-radius: calc(var(--radius-lg) - 1px);
+  }
+
   .note-rich-text-content th > p,
   .note-rich-text-content td > p {
     @apply my-0;
