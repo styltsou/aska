@@ -747,14 +747,40 @@
 
 /* At narrow widths: 6px inset + 24px rail + 4px gap + 50px controls
    + 12px before text. Use the same inset on the right for balanced text. */
+.note-scroll-area {
+  container: note-editor / inline-size;
+}
+
 .note-workspace-page {
   --note-editor-gutter: 6rem;
 }
 
-@media (min-width: 64rem) {
+@container note-editor (min-width: 48rem) {
   .note-workspace-page {
     --note-editor-gutter: 8rem;
   }
+
+  .note-preview-rail-sections {
+    width: 2.25rem;
+  }
+
+  .note-preview-rail-section,
+  .note-preview-rail-mark[data-level="1"] {
+    width: 1.75rem;
+  }
+
+  .note-preview-rail-mark[data-level="2"] {
+    width: 1.5rem;
+  }
+
+  .note-preview-rail-mark[data-level="3"] {
+    width: 1.25rem;
+  }
+}
+
+/* Anchor the floating controls to the document, including during panel resize. */
+.note-rich-text-editable {
+  position: relative;
 }
 
 /* Floating block-gutter controls: "+" to insert a block and the drag handle. */
@@ -791,7 +817,7 @@
   @apply size-4;
 }
 
-@media (min-width: 64rem) {
+@container note-editor (min-width: 48rem) {
   .note-block-add-button {
     width: 1.75rem;
     height: 1.75rem;

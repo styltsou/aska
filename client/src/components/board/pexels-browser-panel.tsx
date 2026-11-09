@@ -561,6 +561,7 @@ export function PexelsBrowserPanel({
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     setIsResizing(true);
+    panelRef.current?.setAttribute("data-resizing", "");
     const startX = event.clientX;
     const startWidth = widthRef.current;
 
@@ -582,6 +583,7 @@ export function PexelsBrowserPanel({
     const handlePointerUp = () => {
       setIsResizing(false);
       setWidth(widthRef.current);
+      panelRef.current?.removeAttribute("data-resizing");
       try {
         localStorage.setItem(
           PEXELS_BROWSER_WIDTH_KEY,
@@ -651,12 +653,13 @@ export function PexelsBrowserPanel({
       aria-hidden={!open}
       className="group/panel text-sidebar-foreground"
       data-state={open ? "expanded" : "collapsed"}
+      data-resizing={isResizing ? "" : undefined}
       inert={!open || undefined}
       style={{ "--pexels-browser-width": `${width}px` } as CSSProperties}
     >
       <div
         className={cn(
-          "relative hidden w-[calc(var(--pexels-browser-width)+var(--app-shell-inset))] transition-[width] ease-[cubic-bezier(0.16,1,0.3,1)] group-data-[state=collapsed]/panel:w-0 md:block",
+          "relative hidden w-[calc(var(--pexels-browser-width)+var(--app-shell-inset))] transition-[width] ease-[cubic-bezier(0.16,1,0.3,1)] group-data-[state=collapsed]/panel:w-0 group-data-[resizing]/panel:transition-none motion-reduce:transition-none md:block",
           isResizing ? "duration-0" : "duration-[160ms]",
         )}
       />

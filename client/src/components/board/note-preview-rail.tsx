@@ -19,7 +19,6 @@ type NoteSectionBoundary = Pick<NoteSection, "id"> & {
 
 const SECTION_SCROLL_OFFSET = 72;
 const ACTIVE_SECTION_LINE = 0.28;
-const PREVIEW_RAIL_INSET = 6;
 const OUTLINE_CLOSE_DELAY = 250;
 const MIN_PREVIEW_RAIL_SECTIONS = 1;
 const MIN_PREVIEW_RAIL_OVERFLOW_RATIO = 0.25;
@@ -102,10 +101,7 @@ export function NotePreviewRail({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [isPointerInteraction, setIsPointerInteraction] = useState(false);
-  const [workspaceContent, setWorkspaceContent] = useState<HTMLElement | null>(
-    null,
-  );
-  const [leftOffset, setLeftOffset] = useState(PREVIEW_RAIL_INSET);
+  const [railHost, setRailHost] = useState<HTMLElement | null>(null);
   const activeIdRef = useRef(activeId);
   const visibleSectionIdsRef = useRef(visibleSectionIds);
   const railRef = useRef<HTMLDivElement>(null);
@@ -170,11 +166,9 @@ export function NotePreviewRail({
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    setWorkspaceContent(
-      container.closest<HTMLElement>("[data-slot='note-workspace-content']"),
-    );
+    setRailHost(container.closest<HTMLElement>("[data-slot='scroll-area']"));
 
-    return () => setWorkspaceContent(null);
+    return () => setRailHost(null);
   }, [scrollContainerRef]);
 
   useEffect(() => {
@@ -219,20 +213,6 @@ export function NotePreviewRail({
     if (!container || !isRailVisible) return;
 
     let frame = 0;
-    const updateRailPosition = () => {
-      const containerLeft = container.getBoundingClientRect().left;
-      const nextOffset = Math.max(
-        PREVIEW_RAIL_INSET,
-        Math.round(
-          containerLeft -
-            (workspaceContent?.getBoundingClientRect().left ?? 0) +
-            PREVIEW_RAIL_INSET,
-        ),
-      );
-      setLeftOffset((current) =>
-        current === nextOffset ? current : nextOffset,
-      );
-    };
     const updateActiveSection = () => {
       frame = 0;
       const containerRect = container.getBoundingClientRect();
@@ -274,25 +254,20 @@ export function NotePreviewRail({
       if (!frame) frame = window.requestAnimationFrame(updateActiveSection);
     };
 
-    updateRailPosition();
     updateActiveSection();
     container.addEventListener("scroll", scheduleUpdate, { passive: true });
-    window.addEventListener("resize", updateRailPosition);
-    const resizeObserver = new ResizeObserver(() => {
-      updateRailPosition();
-      scheduleUpdate();
-    });
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
     resizeObserver.observe(container);
+    resizeObserver.observe(editor.view.dom);
 
     return () => {
       container.removeEventListener("scroll", scheduleUpdate);
-      window.removeEventListener("resize", updateRailPosition);
       resizeObserver.disconnect();
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [editor, isRailVisible, scrollContainerRef, sections, workspaceContent]);
+  }, [editor, isRailVisible, scrollContainerRef, sections]);
 
-  if (!isRailVisible) return null;
+  if (!isRailVisible || !railHost) return null;
 
   function goToSection(section: NoteSection) {
     const container = scrollContainerRef.current;
@@ -316,11 +291,7 @@ export function NotePreviewRail({
   const rail = (
     <div
       ref={railRef}
-      className={cn(
-        "note-preview-rail top-1/2 z-[60] flex -translate-y-1/2 items-center",
-        workspaceContent ? "absolute" : "fixed",
-      )}
-      style={{ left: leftOffset }}
+      className="note-preview-rail absolute top-1/2 left-[6px] z-[60] flex -translate-y-1/2 items-center"
       onPointerEnter={cancelOutlineClose}
       onPointerLeave={scheduleOutlineClose}
       onFocusCapture={(event) => {
@@ -337,7 +308,7 @@ export function NotePreviewRail({
     >
       <nav
         aria-label="Note sections"
-        className="flex max-h-[72dvh] w-6 [scrollbar-width:none] flex-col items-start overflow-y-auto py-1 lg:w-9 [&::-webkit-scrollbar]:hidden"
+        className="note-preview-rail-sections flex max-h-[72dvh] w-6 [scrollbar-width:none] flex-col items-start overflow-y-auto py-1 [&::-webkit-scrollbar]:hidden"
         onPointerEnter={(event) => {
           cancelOutlineClose();
           setIsPointerInteraction(event.pointerType === "mouse");
@@ -371,7 +342,7 @@ export function NotePreviewRail({
               type="button"
               aria-label={`Go to ${section.label}`}
               aria-current={isActive ? "location" : undefined}
-              className="group flex h-3 w-6 shrink-0 items-center justify-start rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar lg:w-7"
+              className="note-preview-rail-section group flex h-3 w-6 shrink-0 items-center justify-start rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
               onPointerEnter={() => setHoveredIndex(index)}
               onFocus={() => setHoveredIndex(index)}
               onBlur={() => setHoveredIndex(null)}
@@ -379,6 +350,7 @@ export function NotePreviewRail({
             >
               <motion.span
                 aria-hidden="true"
+                data-level={Math.min(section.level, 3)}
                 initial={false}
                 animate={{
                   transform: `scaleX(${hoveredIndex === null ? 0.5 : hoverScale})`,
@@ -392,12 +364,12 @@ export function NotePreviewRail({
                       }
                 }
                 className={cn(
-                  "block h-0.5 origin-left",
+                  "note-preview-rail-mark block h-0.5 origin-left",
                   section.level === 1
-                    ? "w-5 lg:w-7"
+                    ? "w-5"
                     : section.level === 2
-                      ? "w-4 lg:w-6"
-                      : "w-3.5 lg:w-5",
+                      ? "w-4"
+                      : "w-3.5",
                   isHighlighted ? "bg-primary" : "bg-muted-foreground/70",
                 )}
               />
@@ -423,7 +395,7 @@ export function NotePreviewRail({
                 ? { duration: 0 }
                 : { duration: 0.12, ease: [0.23, 1, 0.32, 1] }
             }
-            className="absolute top-1/2 left-[calc(100%+0.5rem)] max-h-[40dvh] w-[min(18rem,calc(100dvw-5.5rem))] origin-left -translate-y-1/2 rounded-lg border-border/60 bg-background/95 p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10 backdrop-blur-xl"
+            className="absolute top-1/2 left-[calc(100%+0.5rem)] max-h-[40dvh] w-[min(18rem,calc(100cqw-3.5rem))] origin-left -translate-y-1/2 rounded-lg border-border/60 bg-background/95 p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10 backdrop-blur-xl"
           >
             <ScrollArea
               viewportClassName="h-auto max-h-[calc(40dvh-0.75rem)]"
@@ -464,7 +436,5 @@ export function NotePreviewRail({
     </div>
   );
 
-  if (typeof document === "undefined") return rail;
-
-  return createPortal(rail, workspaceContent ?? document.body);
+  return createPortal(rail, railHost);
 }

@@ -14,7 +14,7 @@ export function NoteScrollArea({
 }: NoteScrollAreaProps) {
   return (
     <ScrollArea
-      className={className}
+      className={cn("note-scroll-area", className)}
       viewportClassName={cn(
         "note-workspace-scroll-container",
         viewportClassName,

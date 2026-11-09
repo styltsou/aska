@@ -607,6 +607,7 @@ export function WorkspacePeekProvider({
 
   useEffect(
     () => () => {
+      document.documentElement.removeAttribute("data-workspace-peek-resizing");
       if (resizeEndTimeoutRef.current !== undefined) {
         window.clearTimeout(resizeEndTimeoutRef.current);
       }
@@ -623,6 +624,8 @@ export function WorkspacePeekProvider({
         resizeEndTimeoutRef.current = undefined;
       }
       setIsResizing(true);
+      // The stage must follow the same width immediately, even before React renders.
+      document.documentElement.setAttribute("data-workspace-peek-resizing", "");
       const startX = event.clientX;
       const startWidth = widthRef.current;
       const handlePointerMove = (moveEvent: PointerEvent) => {
@@ -644,6 +647,9 @@ export function WorkspacePeekProvider({
       const finishResize = (deferDismissalRestore: boolean) => {
         const nextWidth = widthRef.current;
         setWidth(nextWidth);
+        document.documentElement.removeAttribute(
+          "data-workspace-peek-resizing",
+        );
         persistPeekWidth(workspaceSlug, nextWidth);
         window.removeEventListener("pointermove", handlePointerMove);
         window.removeEventListener("pointerup", handlePointerUp);
@@ -2113,7 +2119,7 @@ function PeekNote({
         viewportRef={contentRef}
         className="relative z-10 min-h-0 flex-1 rounded-t-xl border-t border-foreground/10 bg-background"
       >
-        <div className="mx-auto w-full max-w-3xl px-10 pt-0 pb-10 [&_.ProseMirror]:!pt-8">
+        <div className="note-workspace-page mx-auto w-full max-w-3xl min-w-0 px-[var(--note-editor-gutter)] pt-0 pb-10 [&_.ProseMirror]:!pt-8">
           <NoteTitleField
             value={title}
             onChange={(value) => {
