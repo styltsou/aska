@@ -104,7 +104,7 @@ function getImageDeliveryAttributes({
 function getDeliveryHost(src: string): "media" | "same-origin" | "external" {
   try {
     const url = new URL(src, window.location.href);
-    if (url.hostname === "images.styltsou.com") return "media";
+    if (url.hostname === "images.mnemee.space") return "media";
     return url.origin === window.location.origin ? "same-origin" : "external";
   } catch {
     return "external";

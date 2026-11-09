@@ -432,7 +432,7 @@ async function requestPinned(
         headers: {
           accept: options.accept,
           "accept-encoding": "identity",
-          "user-agent": options.userAgent ?? "Aska-Link-Resolver/1.0",
+          "user-agent": options.userAgent ?? "Mnemee-Link-Resolver/1.0",
           referer: options.referrerOrigin ?? "",
         },
         servername: url.hostname,

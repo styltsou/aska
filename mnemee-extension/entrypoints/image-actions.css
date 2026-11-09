@@ -2,7 +2,7 @@
   all: initial;
 }
 
-.aska-image-action {
+.mnemee-image-action {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -13,7 +13,7 @@
   color: #171717;
 }
 
-.aska-image-action__button {
+.mnemee-image-action__button {
   display: inline-flex;
   min-height: 34px;
   align-items: center;
@@ -28,20 +28,20 @@
   font: 550 12px/1 Inter, ui-sans-serif, system-ui, sans-serif;
   white-space: nowrap;
   cursor: pointer;
-  animation: aska-image-action-in 140ms ease-out both;
+  animation: mnemee-image-action-in 140ms ease-out both;
   backdrop-filter: blur(8px);
 }
 
-.aska-image-action__button:hover {
+.mnemee-image-action__button:hover {
   background: #303030;
 }
 
-.aska-image-action__button:focus-visible {
+.mnemee-image-action__button:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
 
-.aska-image-action__button svg {
+.mnemee-image-action__button svg {
   width: 15px;
   height: 15px;
   stroke: currentColor;
@@ -50,7 +50,7 @@
   stroke-width: 1.7;
 }
 
-.aska-image-action__message {
+.mnemee-image-action__message {
   max-width: 220px;
   margin: 0;
   border: 1px solid rgb(255 255 255 / 10%);
@@ -62,11 +62,11 @@
   font-size: 11px;
   line-height: 1.4;
   white-space: normal;
-  animation: aska-image-action-in 140ms ease-out both;
+  animation: mnemee-image-action-in 140ms ease-out both;
   backdrop-filter: blur(8px);
 }
 
-@keyframes aska-image-action-in {
+@keyframes mnemee-image-action-in {
   from {
     opacity: 0;
     transform: translateY(-3px) scale(0.98);
@@ -78,8 +78,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .aska-image-action__button,
-  .aska-image-action__message {
+  .mnemee-image-action__button,
+  .mnemee-image-action__message {
     animation: none;
   }
 }

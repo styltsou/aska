@@ -6,7 +6,7 @@ security, caching, retries, and future resolver extensions.
 
 ## Responsibility boundaries
 
-The feature extends Aska's existing asset and collection-node architecture. It
+The feature extends Mnemee's existing asset and collection-node architecture. It
 does not introduce a second card system.
 
 | Concept            | Owner                                       | Responsibility                                                                              |
@@ -91,7 +91,7 @@ components retain their decoded state when a refreshed signed URL arrives.
 `client/src/components/board/cards/link-asset-card.tsx` always renders a usable
 anchor from the user-supplied URL. It progressively adds text, favicon, and
 preview imagery. Remote discovered images are never rendered directly; the API
-only projects signed or stable URLs for validated objects in Aska storage.
+only projects signed or stable URLs for validated objects in Mnemee storage.
 There are no user title or description overrides in this release.
 
 ## URL identity, reuse, and freshness

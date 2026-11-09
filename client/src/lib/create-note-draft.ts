@@ -1,4 +1,4 @@
-const STORAGE_KEY_PREFIX = "aska.create-note-draft:";
+const STORAGE_KEY_PREFIX = "mnemee.create-note-draft:";
 const MAX_DRAFT_AGE_MS = 30 * 60 * 1_000;
 
 export type CreateNoteDraft = {

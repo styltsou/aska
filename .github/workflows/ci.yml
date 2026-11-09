@@ -164,7 +164,7 @@ jobs:
     # application-only update.
     timeout-minutes: 35
     concurrency:
-      group: aska-dev-deploy
+      group: mnemee-dev-deploy
       cancel-in-progress: false
     permissions:
       contents: read
@@ -212,10 +212,10 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          SENTRY_RELEASE: aska@${{ github.sha }}
+          SENTRY_RELEASE: mnemee@${{ github.sha }}
       - name: Smoke test AI streaming API
         run: |
-          ai_url="https://aska-api.styltsou.com/api/ai"
+          ai_url="https://api.mnemee.space/api/ai"
           status="$(curl --silent --show-error --output /tmp/ai-health.txt --write-out '%{http_code}' "$ai_url/health")"
           test "$status" = "200"
           test "$(cat /tmp/ai-health.txt)" = "ok"

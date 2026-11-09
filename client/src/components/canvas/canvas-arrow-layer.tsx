@@ -976,7 +976,7 @@ export function CanvasArrowLayer({
                   strokeLinejoin="round"
                   strokeDasharray={arrowDashArray(arrow.pattern)}
                   vectorEffect="non-scaling-stroke"
-                  markerEnd={`url(#aska-arrowhead-${arrow.color}-${arrow.head}-${arrow.style}${arrow.style === "sketch" ? `-${arrow.id}` : ""})`}
+                  markerEnd={`url(#mnemee-arrowhead-${arrow.color}-${arrow.head}-${arrow.style}${arrow.style === "sketch" ? `-${arrow.id}` : ""})`}
                 />
                 {arrow.id !== "arrow-draft" ? (
                   <path
@@ -1443,7 +1443,7 @@ function ArrowMarker({
   const secondaryPath = markerPath("secondary");
   return (
     <marker
-      id={`aska-arrowhead-${color}-${head}-${style}${style === "sketch" && seed ? `-${seed}` : ""}`}
+      id={`mnemee-arrowhead-${color}-${head}-${style}${style === "sketch" && seed ? `-${seed}` : ""}`}
       markerWidth="9"
       markerHeight="9"
       refX={arrowMarkerRefX(style, head)}

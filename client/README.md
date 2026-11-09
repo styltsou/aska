@@ -1,4 +1,4 @@
-# Aska Client
+# Mnemee Client
 
 The client is a React, TypeScript, Vite, Tailwind CSS, and shadcn/ui
 application. It uses TanStack Router and React Query for navigation and server

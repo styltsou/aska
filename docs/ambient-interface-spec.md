@@ -12,7 +12,7 @@ WebGL, image asset, or per-frame JavaScript.
 
 ## Design thesis
 
-Aska is a visual workspace: things are gathered, placed, and arranged. Its
+Mnemee is a visual workspace: things are gathered, placed, and arranged. Its
 ambient visual language should therefore resemble a **quiet canvas**—a thin
 construction grid with a small number of oversized, translucent material
 blocks. It is architectural, not atmospheric: no aurora, liquid blob, neon
@@ -43,7 +43,7 @@ above the matrix, sharp and unblurred.
 
 Use a two-part desktop composition. The left side is an uncontained sign-in
 column on the normal application background. The right side is a cropped,
-rounded window into a static Aska canvas: the real 24px dot-grid language with
+rounded window into a static Mnemee canvas: the real 24px dot-grid language with
 a denser set of recognizable image, note, and folder cards placed on an even
 four-column masonry rhythm across a single perspective-skewed plane. The
 entire board carries the rotation; individual cards are not independently
@@ -74,7 +74,7 @@ Suggested structure:
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│ Aska       · · · construction grid · · ·                  │
+│ Mnemee       · · · construction grid · · ·                  │
 │   ┌──────────── block ───────────┐                        │
 │   │                               │        ┌───────────┐  │
 │   │                     ┌───────┐ │        │ tile mark │  │

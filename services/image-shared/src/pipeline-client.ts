@@ -22,8 +22,8 @@ export async function callPipeline<T>(
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-aska-timestamp": timestamp,
-        "x-aska-signature": signature,
+        "x-mnemee-timestamp": timestamp,
+        "x-mnemee-signature": signature,
       },
       body,
       signal: AbortSignal.timeout(10_000),

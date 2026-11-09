@@ -21,7 +21,7 @@ export function AuthPageLayout({
     <main className="grid min-h-[100svh] grid-cols-2 bg-background max-[62rem]:grid-cols-1">
       <section
         className="relative col-start-2 row-start-1 m-[1rem_1rem_1rem_0] min-h-[calc(100svh-2rem)] overflow-hidden rounded-[1.25rem] border border-border bg-[color-mix(in_oklch,var(--muted)_58%,var(--background))] max-[62rem]:hidden"
-        aria-label="A preview of an Aska canvas"
+        aria-label="A preview of an Mnemee canvas"
       >
         <div
           aria-hidden="true"

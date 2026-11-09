@@ -7,7 +7,7 @@ const sourceEvent = {
   Records: [
     {
       s3: {
-        bucket: { name: "aska-dev" },
+        bucket: { name: "mnemee-dev" },
         object: {
           key: "workspace-1%2Fupload-1%2Foriginal.jpg",
           eTag: "etag-1",

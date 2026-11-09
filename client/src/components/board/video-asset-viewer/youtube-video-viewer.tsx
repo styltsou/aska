@@ -125,7 +125,7 @@ function loadYouTubeIframeApi(): Promise<YouTubeIframeApi> {
 }
 
 const LINK_NOTE_AUTOSAVE_DELAY_MS = 350;
-const LINK_NOTE_STORAGE_KEY = "aska:link-note:v1:";
+const LINK_NOTE_STORAGE_KEY = "mnemee:link-note:v1:";
 const VIDEO_VIEWER_LAYOUT_TRANSITION = {
   duration: 0.18,
   ease: [0.22, 1, 0.36, 1] as const,
@@ -282,7 +282,7 @@ export function YouTubeVideoViewer({
   });
 
   const accessibleDescription = displayedAsset
-    ? `Watch ${displayedAsset.title} without leaving Aska.`
+    ? `Watch ${displayedAsset.title} without leaving Mnemee.`
     : "Loading video details.";
 
   useEffect(() => {

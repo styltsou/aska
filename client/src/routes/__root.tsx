@@ -19,7 +19,7 @@ import { shouldRenderWithoutAppShell } from "@/lib/root-shell";
 
 export const Route = createRootRoute({
   head: () => ({
-    meta: [{ title: "Aska" }],
+    meta: [{ title: "Mnemee" }],
   }),
   component: RootLayout,
   pendingComponent: RootPending,

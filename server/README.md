@@ -1,4 +1,4 @@
-# Aska Server
+# Mnemee Server
 
 The server is a Bun + Hono API using Drizzle, Postgres, Better Auth, and Zod.
 

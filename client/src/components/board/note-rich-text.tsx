@@ -118,7 +118,7 @@ import {
   startNoteAgentSession,
   startNoteAgentSessionAtBlock,
 } from "@/components/board/note-editor/agent/note-agent-session";
-import { AskaTaskItem } from "@/components/board/task-item";
+import { MnemeeTaskItem } from "@/components/board/task-item";
 import { Button } from "@/components/ui/button";
 import {
   CodeBlockDownloadButton,
@@ -1430,7 +1430,7 @@ function createBaseNoteExtensions(
     TableKit.configure({ table: { resizable: true, View: NoteTableView } }),
     NoteTableActiveCell,
     TaskList,
-    AskaTaskItem.configure({ nested: true }),
+    MnemeeTaskItem.configure({ nested: true }),
     NoteCutListItemCleanup,
     NoteHighlight,
     Image.configure({

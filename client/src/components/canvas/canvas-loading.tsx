@@ -80,7 +80,7 @@ export function CanvasLoading({
       >
         <span className="sr-only">Loading collection canvas</span>
         <ReactFlow
-          className="aska-flow"
+          className="mnemee-flow"
           nodes={[]}
           minZoom={1}
           maxZoom={1}

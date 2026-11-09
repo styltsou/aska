@@ -1,7 +1,7 @@
-const DATABASE_NAME = "aska-upload-image-drafts";
+const DATABASE_NAME = "mnemee-upload-image-drafts";
 const DATABASE_VERSION = 1;
 const STORE_NAME = "drafts";
-const SESSION_ID_STORAGE_KEY = "aska.upload-image-draft-session";
+const SESSION_ID_STORAGE_KEY = "mnemee.upload-image-draft-session";
 const MAX_DRAFT_AGE_MS = 30 * 60 * 1_000;
 
 export type UploadImagesDraft = {

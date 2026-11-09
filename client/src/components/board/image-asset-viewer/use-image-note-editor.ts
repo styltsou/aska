@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { useUpdateImage } from "@/api/collection";
 import type { ImageAsset } from "@/types/asset";
 
-const IMAGE_NOTE_STORAGE_KEY = "aska:image-note:v2:";
-const LEGACY_IMAGE_NOTE_STORAGE_KEY = "aska:image-note:";
+const IMAGE_NOTE_STORAGE_KEY = "mnemee:image-note:v2:";
+const LEGACY_IMAGE_NOTE_STORAGE_KEY = "mnemee:image-note:";
 const IMAGE_NOTE_AUTOSAVE_DELAY_MS = 350;
 
 function imageNoteStorageKey(workspaceSlug: string, assetId: string) {

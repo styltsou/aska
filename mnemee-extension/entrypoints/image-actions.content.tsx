@@ -14,15 +14,15 @@ function ImageAction({
   const [message, setMessage] = useState("");
 
   return (
-    <div className="aska-image-action">
+    <div className="mnemee-image-action">
       <button
-        aria-label="Save image to Aska"
-        className="aska-image-action__button"
+        aria-label="Save image to Mnemee"
+        className="mnemee-image-action__button"
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
           setMessage(
-            "Image saving will be available after you connect your Aska account.",
+            "Image saving will be available after you connect your Mnemee account.",
           );
         }}
         onPointerEnter={onEnter}
@@ -33,10 +33,10 @@ function ImageAction({
           <path d="M6.75 4.75h10.5a1.5 1.5 0 0 1 1.5 1.5v13l-6.75-3.5-6.75 3.5v-13a1.5 1.5 0 0 1 1.5-1.5Z" />
           <path d="M12 7.5v5m-2.5-2.5h5" />
         </svg>
-        <span>Save to Aska</span>
+        <span>Save to Mnemee</span>
       </button>
       {message ? (
-        <p aria-live="polite" className="aska-image-action__message">
+        <p aria-live="polite" className="mnemee-image-action__message">
           {message}
         </p>
       ) : null}
@@ -55,7 +55,7 @@ export default defineContentScript({
     let generation = 0;
     let pickerActive = false;
 
-    window.addEventListener("aska:color-picker-start", () => {
+    window.addEventListener("mnemee:color-picker-start", () => {
       pickerActive = true;
       generation += 1;
       if (closeTimer) clearTimeout(closeTimer);
@@ -63,7 +63,7 @@ export default defineContentScript({
       activeUi = undefined;
       activeImage = undefined;
     });
-    window.addEventListener("aska:color-picker-stop", () => {
+    window.addEventListener("mnemee:color-picker-stop", () => {
       pickerActive = false;
     });
 
@@ -88,7 +88,7 @@ export default defineContentScript({
       activeImage = image;
 
       const ui = await createShadowRootUi(ctx, {
-        name: "aska-image-action",
+        name: "mnemee-image-action",
         position: "overlay",
         alignment: "top-right",
         anchor: image,

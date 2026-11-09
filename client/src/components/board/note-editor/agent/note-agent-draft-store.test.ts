@@ -47,7 +47,7 @@ describe("note agent draft store", () => {
   });
 
   it("ignores malformed entries and unavailable storage", () => {
-    window.localStorage.setItem("aska:note-ai-draft:v1:note-1", "{nope");
+    window.localStorage.setItem("mnemee:note-ai-draft:v1:note-1", "{nope");
     expect(loadNoteAgentDraft("note-1")).toBeNull();
     vi.stubGlobal("window", {
       localStorage: {

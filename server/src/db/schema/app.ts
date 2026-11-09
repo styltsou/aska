@@ -404,7 +404,7 @@ export const externalResources = pgTable(
   ],
 );
 
-/** The existing Aska asset/card subtype that points at a normalized resource. */
+/** The existing Mnemee asset/card subtype that points at a normalized resource. */
 export const linkAssets = pgTable(
   "link_assets",
   {

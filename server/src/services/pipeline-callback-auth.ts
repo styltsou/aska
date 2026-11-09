@@ -12,8 +12,8 @@ export async function readSignedPipelineJson(
   c: Pick<Context, "req">,
 ): Promise<unknown> {
   const secret = env.PIPELINE_CALLBACK_SECRET;
-  const timestamp = c.req.header("x-aska-timestamp");
-  const signature = c.req.header("x-aska-signature");
+  const timestamp = c.req.header("x-mnemee-timestamp");
+  const signature = c.req.header("x-mnemee-signature");
   const rawBody = await c.req.raw.text();
   if (
     !secret ||

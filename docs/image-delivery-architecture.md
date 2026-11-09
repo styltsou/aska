@@ -2,11 +2,11 @@
 
 Image originals and generated renditions are private S3 objects delivered
 through a dedicated CloudFront distribution. The delivery hostname is
-`images.styltsou.com` in the stable `dev` stage.
+`images.mnemee.space` in the stable `dev` stage.
 
 ```text
 Canvas query
-  -> API returns https://images.styltsou.com/{workspaceId}/{storageId}/display.webp
+  -> API returns https://images.mnemee.space/{workspaceId}/{storageId}/display.webp
   -> browser sends CloudFront signed cookies
   -> CloudFront validates the cookies and checks its cache
       -> cache hit: return rendition
@@ -75,7 +75,7 @@ media history.
 (OAC), a CloudFront public key and trusted key group, plus a cache policy that
 excludes cookies, headers, and query strings from the cache key. The bucket is
 not public and CloudFront can read private workspace media through OAC.
-The stable distribution also sends `Timing-Allow-Origin: https://aska-app.styltsou.com`
+The stable distribution also sends `Timing-Allow-Origin: https://app.mnemee.space`
 so the deployed client can observe cross-origin media resource timing for
 delivery telemetry. This header does not grant media access; signed cookies and
 the private origin policy remain the authorization boundary.
@@ -83,7 +83,7 @@ the private origin policy remain the authorization boundary.
 Before an image-backed workspace route renders, the client calls the dedicated
 authenticated `POST /api/v1/media/session/{workspaceSlug}` endpoint. It
 verifies workspace membership and issues a CloudFront custom-policy cookie for
-only `https://images.styltsou.com/{workspaceId}/*`. CloudFront custom policies
+only `https://images.mnemee.space/{workspaceId}/*`. CloudFront custom policies
 have one resource scope, so the application mints one policy per authorized
 workspace rather than a broad media-wide policy. Cookies are short-lived,
 HTTP-only, `Secure`, `SameSite=None`, and use the parent domain with a

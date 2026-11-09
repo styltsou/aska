@@ -43,7 +43,7 @@ const StableAssetBoard = memo(AssetBoard);
 
 export const Route = createFileRoute("/$workspaceSlug/inbox")({
   head: () => ({
-    meta: [{ title: "Inbox | Aska" }],
+    meta: [{ title: "Inbox | Mnemee" }],
   }),
   component: InboxLayout,
   pendingComponent: MasonryGridSkeleton,

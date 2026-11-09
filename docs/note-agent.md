@@ -127,7 +127,7 @@ editor's mention glyphs (at most 3), and sends their IDs with each request
 content, fresh per request, so follow-ups see edits.
 
 **`note-agent-draft-store.ts`: persistence.** A finished draft on an empty line is
-stored in `localStorage` (`aska:note-ai-draft:v1:{noteId}`, 14-day expiry) and
+stored in `localStorage` (`mnemee:note-ai-draft:v1:{noteId}`, 14-day expiry) and
 restored after a refresh only if the note's draft-less Markdown is unchanged.
 Restored drafts don't take focus. Rewrites are not stored.
 

@@ -7,7 +7,7 @@ own change.
 ## Purpose
 
 A YouTube link should be usable as a compact board card and enjoyable to view
-without leaving Aska. Opening the card presents a focused video detail view:
+without leaving Mnemee. Opening the card presents a focused video detail view:
 the embedded video, its title, source, and a direct channel link. The compact
 card remains a visual reference, not a miniature player.
 
@@ -18,7 +18,7 @@ resources: a centered non-fullscreen modal on desktop/tablet and an edge-to-edge
 bottom sheet below 768px.
 
 - Activating a resolved YouTube card opens the dialog instead of immediately
-  navigating away from Aska.
+  navigating away from Mnemee.
 - The dialog mounts a paused, privacy-enhanced YouTube embed after that explicit
   user action. It never autoplays.
 - The dialog exposes the video and channel-link metadata without extra provider
@@ -76,7 +76,7 @@ while playing. On phones, use the app's downward-swiping bottom drawer.
 - Narrow screens: the viewer becomes an edge-to-edge bottom sheet with the same
   hierarchy; video remains 16:9 with a smaller gutter and details scroll below
   it.
-- Player chrome: no in-player controls are added by Aska. Provider-specific
+- Player chrome: no in-player controls are added by Mnemee. Provider-specific
   actions stay outside the viewer in the card and context menu.
 - Content: player, a gutter-sized gap, title, then a compactly spaced clickable
   channel row when channel data is available. Use the existing resolved

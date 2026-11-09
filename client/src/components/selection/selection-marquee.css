@@ -1,9 +1,9 @@
 /* The selection region is a gesture, while selected cards provide the lasting state. */
-.aska-flow .react-flow__nodesselection {
+.mnemee-flow .react-flow__nodesselection {
   display: none;
 }
 
-.aska-flow .react-flow__selection {
+.mnemee-flow .react-flow__selection {
   --marquee-dash-color: color-mix(in oklch, var(--primary) 78%, transparent);
   background-color: color-mix(in oklch, var(--primary) 9%, transparent);
   background-image:

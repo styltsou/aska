@@ -29,7 +29,7 @@ they are not requirements for this application today.
   partial-batch failure is intentional retry behavior, not an uncaught throw.
 
 All three runtimes use the same release value when one is supplied. Events are
-tagged with `service=aska-client`, `aska-api`, `image-variants`,
+tagged with `service=mnemee-client`, `mnemee-api`, `image-variants`,
 `image-palette`, or `url-resolution`, so one Sentry project remains practical
 for this application.
 
@@ -40,9 +40,9 @@ work without it.
 
 ```dotenv
 SENTRY_DSN=https://public-key@o0.ingest.sentry.io/project-id
-SENTRY_SERVICE=aska-api
+SENTRY_SERVICE=mnemee-api
 SENTRY_ENVIRONMENT=development
-SENTRY_RELEASE=aska@<git-sha>
+SENTRY_RELEASE=mnemee@<git-sha>
 SENTRY_TRACES_SAMPLE_RATE=0.2
 ```
 
@@ -54,7 +54,7 @@ to appear in the browser bundle; the source-map auth token is not.
 For a release deployment, export one release identifier for all runtimes:
 
 ```sh
-SENTRY_RELEASE="aska@$(git rev-parse HEAD)" bun run deploy
+SENTRY_RELEASE="mnemee@$(git rev-parse HEAD)" bun run deploy
 ```
 
 The Vite build uploads hidden source maps only when all three build-only values
@@ -63,7 +63,7 @@ are present:
 ```dotenv
 SENTRY_AUTH_TOKEN=sntrys_xxxxxxxxxxxx
 SENTRY_ORG=your-org
-SENTRY_PROJECT=aska
+SENTRY_PROJECT=mnemee
 ```
 
 Never prefix the auth token with `VITE_` or store it in a checked-in file. After

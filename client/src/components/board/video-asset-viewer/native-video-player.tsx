@@ -43,8 +43,9 @@ const CENTER_PLAY_BUTTON_EXIT_TRANSITION = {
   ease: [0.22, 1, 0.36, 1] as const,
 };
 const VIDEO_PLAYER_RAIL_CLASS = "bg-white/20";
-const VIDEO_PLAYER_PREFERENCES_KEY = "aska.video-player-preferences:v2";
-const LEGACY_VIDEO_PLAYER_PREFERENCES_KEY = "aska.video-player-preferences:v1";
+const VIDEO_PLAYER_PREFERENCES_KEY = "mnemee.video-player-preferences:v2";
+const LEGACY_VIDEO_PLAYER_PREFERENCES_KEY =
+  "mnemee.video-player-preferences:v1";
 
 type VideoPlayerPreferences = {
   volume: number;

@@ -25,15 +25,15 @@ describe("sidebar width", () => {
         setItem: (key: string, value: string) => values.set(key, value),
       },
     });
-    saveSidebarWidth("aska:sidebar-width:alice", 384);
-    saveSidebarWidth("aska:sidebar-width:bob", 240);
-    expect(readSidebarWidth("aska:sidebar-width:alice")).toBe(384);
+    saveSidebarWidth("mnemee:sidebar-width:alice", 384);
+    saveSidebarWidth("mnemee:sidebar-width:bob", 240);
+    expect(readSidebarWidth("mnemee:sidebar-width:alice")).toBe(384);
     expect(
-      clampSidebarWidth(readSidebarWidth("aska:sidebar-width:alice"), 800),
+      clampSidebarWidth(readSidebarWidth("mnemee:sidebar-width:alice"), 800),
     ).toBe(320);
-    expect(readSidebarWidth("aska:sidebar-width:alice")).toBe(384);
-    expect(readSidebarWidth("aska:sidebar-width:bob")).toBe(240);
-    expect(readSidebarWidth("aska:sidebar-width:charlie")).toBe(240);
+    expect(readSidebarWidth("mnemee:sidebar-width:alice")).toBe(384);
+    expect(readSidebarWidth("mnemee:sidebar-width:bob")).toBe(240);
+    expect(readSidebarWidth("mnemee:sidebar-width:charlie")).toBe(240);
     values.set("invalid", "bad data");
     expect(readSidebarWidth("invalid")).toBe(240);
   });

@@ -12,7 +12,7 @@ let _auth: ReturnType<typeof createAuth> | undefined;
 
 function createAuth() {
   return betterAuth({
-    appName: "Aska",
+    appName: "Mnemee",
     baseURL: env.BETTER_AUTH_URL,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,

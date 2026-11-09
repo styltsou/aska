@@ -9,7 +9,7 @@ type SpanAttributes = Record<
   string | number | boolean | string[] | number[] | boolean[]
 >;
 
-let serviceName = "aska.image-workers";
+let serviceName = "mnemee.image-workers";
 
 export function initializeSentry(name: string): void {
   serviceName = name;

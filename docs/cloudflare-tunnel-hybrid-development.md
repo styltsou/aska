@@ -5,11 +5,11 @@ This is the intended next step for browser-facing work in the personal
 from the stable `dev` environment.
 
 ```text
-aska-hybrid-app.styltsou.com  -> Cloudflare Tunnel -> local Vite :5173
-aska-hybrid-api.styltsou.com  -> API Gateway -> personal hybrid Lambda/API
+hybrid-app.mnemee.space  -> Cloudflare Tunnel -> local Vite :5173
+hybrid-api.mnemee.space  -> API Gateway -> personal hybrid Lambda/API
 ```
 
-Both hostnames are under `styltsou.com`, so browsers treat them as same-site.
+Both hostnames are under `mnemee.space`, so browsers treat them as same-site.
 This keeps Better Auth cookies and credentialed API calls reliable
 without allowing `localhost` to call the shared `dev` API. It also gives image
 uploads a real HTTPS client origin for S3 CORS and presigned PUT testing.
@@ -30,14 +30,14 @@ never target `dev`.
 
 When this environment is needed, make these stage-specific changes together:
 
-1. Add `aska-hybrid-app.styltsou.com` as a Cloudflare Tunnel public hostname
+1. Add `hybrid-app.mnemee.space` as a Cloudflare Tunnel public hostname
    that forwards to `http://localhost:5173`. Run Vite normally on the laptop.
 2. Give the `hybrid` API an API Gateway custom domain named
-   `aska-hybrid-api.styltsou.com`, backed by the same Cloudflare zone. Its
+   `hybrid-api.mnemee.space`, backed by the same Cloudflare zone. Its
    API origin, API Gateway CORS, S3 CORS, Hono CORS, and Better Auth trusted
-   origins must all allow only `https://aska-hybrid-app.styltsou.com`.
+   origins must all allow only `https://hybrid-app.mnemee.space`.
 3. Build local Vite with
-   `VITE_SERVER_URL=https://aska-hybrid-api.styltsou.com`; do not use a raw
+   `VITE_SERVER_URL=https://hybrid-api.mnemee.space`; do not use a raw
    `execute-api` URL for browser authentication work.
 4. Keep both hostnames public at Cloudflare. Better Auth and the API's normal
    authorization middleware protect user data, while the image-worker callback
@@ -45,7 +45,7 @@ When this environment is needed, make these stage-specific changes together:
 5. Keep the tunnel credential outside the repository and stop the tunnel when
    the laptop should no longer expose the preview.
 
-The names intentionally use one label below `styltsou.com`, which Cloudflare
+The names intentionally use one label below `mnemee.space`, which Cloudflare
 Universal SSL covers without an Advanced Certificate Manager add-on.
 
 ## Operational rule

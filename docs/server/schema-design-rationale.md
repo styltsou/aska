@@ -1,6 +1,6 @@
 # Schema Design Rationale
 
-This document explains the database design choices behind Aska's collection,
+This document explains the database design choices behind Mnemee's collection,
 folder, and asset model.
 
 ## Goals

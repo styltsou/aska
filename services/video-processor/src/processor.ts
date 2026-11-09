@@ -328,7 +328,7 @@ export async function processStoredVideo(input: {
 }): Promise<void> {
   if (input.sizeBytes && input.sizeBytes > MAX_BYTES)
     throw new InvalidVideoError("Video exceeds the 250 MB limit");
-  const folder = await mkdtemp(path.join(tmpdir(), "aska-video-"));
+  const folder = await mkdtemp(path.join(tmpdir(), "mnemee-video-"));
   try {
     const source = await s3.send(
       new GetObjectCommand({ Bucket: input.bucket, Key: input.objectKey }),
@@ -420,7 +420,7 @@ export async function processExistingVideoStoryboard(input: {
   bucket: string;
   objectKey: string;
 }): Promise<void> {
-  const folder = await mkdtemp(path.join(tmpdir(), "aska-storyboard-"));
+  const folder = await mkdtemp(path.join(tmpdir(), "mnemee-storyboard-"));
   try {
     const source = await s3.send(
       new GetObjectCommand({ Bucket: input.bucket, Key: input.objectKey }),
@@ -501,7 +501,7 @@ export async function processRemoteVideo(uploadId: number): Promise<void> {
       // The registration may have succeeded before the object was uploaded.
     }
   }
-  const folder = await mkdtemp(path.join(tmpdir(), "aska-video-import-"));
+  const folder = await mkdtemp(path.join(tmpdir(), "mnemee-video-import-"));
   try {
     const inputPath = path.join(folder, "source");
     const fetched = await safeFetchToFile(claim.url, inputPath, {
@@ -510,7 +510,7 @@ export async function processRemoteVideo(uploadId: number): Promise<void> {
       maxBytes: MAX_BYTES,
       totalTimeoutMs: 7 * 60_000,
       requestTimeoutMs: 30_000,
-      userAgent: "Aska-Video-Importer/1.0",
+      userAgent: "Mnemee-Video-Importer/1.0",
     });
     const contentType = videoType(fetched.contentType);
     await probeVideo(inputPath, contentType);

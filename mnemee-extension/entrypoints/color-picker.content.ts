@@ -31,13 +31,13 @@ export default defineContentScript({
     const stop = () => {
       activeUi?.remove();
       activeUi = null;
-      window.dispatchEvent(new Event("aska:color-picker-stop"));
+      window.dispatchEvent(new Event("mnemee:color-picker-stop"));
     };
 
     const start = async () => {
       if (starting || activeUi) return;
       starting = true;
-      window.dispatchEvent(new Event("aska:color-picker-start"));
+      window.dispatchEvent(new Event("mnemee:color-picker-start"));
 
       try {
         // Let other extension overlays disappear before taking the snapshot.
@@ -62,62 +62,62 @@ export default defineContentScript({
         context.drawImage(image, 0, 0);
 
         const ui = await createShadowRootUi(ctx, {
-          name: "aska-color-picker",
+          name: "mnemee-color-picker",
           position: "modal",
           zIndex: 2147483647,
           onMount(container) {
             const root = document.createElement("div");
-            root.className = "aska-picker";
+            root.className = "mnemee-picker";
             root.innerHTML = [
-              '<canvas aria-hidden="true" class="aska-picker__snapshot"></canvas>',
-              '<div class="aska-picker__surface"></div>',
-              '<div class="aska-picker__hint">Pick a color <span>·</span> Click to select <kbd>Esc</kbd> to cancel</div>',
-              '<button class="aska-picker__cancel" type="button">Cancel</button>',
-              '<div class="aska-picker__preview is-hidden">',
-              '  <span class="aska-picker__swatch"></span>',
-              '  <span class="aska-picker__values"><strong></strong><small></small><small></small></span>',
+              '<canvas aria-hidden="true" class="mnemee-picker__snapshot"></canvas>',
+              '<div class="mnemee-picker__surface"></div>',
+              '<div class="mnemee-picker__hint">Pick a color <span>·</span> Click to select <kbd>Esc</kbd> to cancel</div>',
+              '<button class="mnemee-picker__cancel" type="button">Cancel</button>',
+              '<div class="mnemee-picker__preview is-hidden">',
+              '  <span class="mnemee-picker__swatch"></span>',
+              '  <span class="mnemee-picker__values"><strong></strong><small></small><small></small></span>',
               '</div>',
-              '<div class="aska-picker__result-backdrop is-hidden">',
-              '  <div class="aska-picker__result" role="dialog" aria-modal="true" aria-label="Selected color">',
-              '    <span class="aska-picker__result-swatch"></span>',
-              '    <span class="aska-picker__result-kicker">COLOR READY</span>',
-              '    <strong class="aska-picker__result-hex"></strong>',
-              '    <span class="aska-picker__result-formats"></span>',
-              '    <p>Ready in the Aska extension for saving when your account is connected.</p>',
-              '    <div class="aska-picker__result-actions">',
-              '      <button class="aska-picker__copy" type="button">Copy HEX</button>',
-              '      <button class="aska-picker__done" type="button">Done</button>',
+              '<div class="mnemee-picker__result-backdrop is-hidden">',
+              '  <div class="mnemee-picker__result" role="dialog" aria-modal="true" aria-label="Selected color">',
+              '    <span class="mnemee-picker__result-swatch"></span>',
+              '    <span class="mnemee-picker__result-kicker">COLOR READY</span>',
+              '    <strong class="mnemee-picker__result-hex"></strong>',
+              '    <span class="mnemee-picker__result-formats"></span>',
+              '    <p>Ready in the Mnemee extension for saving when your account is connected.</p>',
+              '    <div class="mnemee-picker__result-actions">',
+              '      <button class="mnemee-picker__copy" type="button">Copy HEX</button>',
+              '      <button class="mnemee-picker__done" type="button">Done</button>',
               '    </div>',
               '  </div>',
               '</div>',
-              '<div class="aska-picker__error is-hidden" role="alert"></div>',
+              '<div class="mnemee-picker__error is-hidden" role="alert"></div>',
             ].join("");
             container.append(root);
 
             const visual = root.querySelector<HTMLCanvasElement>(
-              ".aska-picker__snapshot",
+              ".mnemee-picker__snapshot",
             )!;
             visual.width = buffer.width;
             visual.height = buffer.height;
             visual.getContext("2d")?.drawImage(buffer, 0, 0);
 
             const surface = root.querySelector<HTMLElement>(
-              ".aska-picker__surface",
+              ".mnemee-picker__surface",
             )!;
             const preview = root.querySelector<HTMLElement>(
-              ".aska-picker__preview",
+              ".mnemee-picker__preview",
             )!;
             const swatch = root.querySelector<HTMLElement>(
-              ".aska-picker__swatch",
+              ".mnemee-picker__swatch",
             )!;
             const values = preview.querySelectorAll<HTMLElement>(
-              ".aska-picker__values > *",
+              ".mnemee-picker__values > *",
             );
             const result = root.querySelector<HTMLElement>(
-              ".aska-picker__result-backdrop",
+              ".mnemee-picker__result-backdrop",
             )!;
             const errorBox = root.querySelector<HTMLElement>(
-              ".aska-picker__error",
+              ".mnemee-picker__error",
             )!;
             let selected: PendingColor | null = null;
             let latestPointer: { x: number; y: number } | null = null;
@@ -211,13 +211,13 @@ export default defineContentScript({
                 preview.classList.add("is-hidden");
                 result.classList.remove("is-hidden");
                 root.querySelector<HTMLElement>(
-                  ".aska-picker__result-swatch",
+                  ".mnemee-picker__result-swatch",
                 )!.style.backgroundColor = color.hex;
                 root.querySelector<HTMLElement>(
-                  ".aska-picker__result-hex",
+                  ".mnemee-picker__result-hex",
                 )!.textContent = color.hex.toUpperCase();
                 root.querySelector<HTMLElement>(
-                  ".aska-picker__result-formats",
+                  ".mnemee-picker__result-formats",
                 )!.textContent = color.rgb + " · " + color.hsl;
               } catch {
                 selected = null;
@@ -232,7 +232,7 @@ export default defineContentScript({
               try {
                 await navigator.clipboard.writeText(selected.hex.toUpperCase());
                 root.querySelector<HTMLElement>(
-                  ".aska-picker__copy",
+                  ".mnemee-picker__copy",
                 )!.textContent = "Copied";
               } catch {
                 showError("Could not copy the color.");
@@ -256,15 +256,15 @@ export default defineContentScript({
 
             surface.addEventListener("pointermove", onPointerMove);
             surface.addEventListener("click", onSelect);
-            root.querySelector(".aska-picker__cancel")!.addEventListener(
+            root.querySelector(".mnemee-picker__cancel")!.addEventListener(
               "click",
               stop,
             );
-            root.querySelector(".aska-picker__done")!.addEventListener(
+            root.querySelector(".mnemee-picker__done")!.addEventListener(
               "click",
               stop,
             );
-            root.querySelector(".aska-picker__copy")!.addEventListener(
+            root.querySelector(".mnemee-picker__copy")!.addEventListener(
               "click",
               onCopy,
             );

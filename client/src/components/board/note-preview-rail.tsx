@@ -287,7 +287,7 @@ export function NotePreviewRail({
     setActiveId(section.id);
   }
 
-  // Interaction adapted to Aska's note outline from beUI Preview Rail (MIT).
+  // Interaction adapted to Mnemee's note outline from beUI Preview Rail (MIT).
   const rail = (
     <div
       ref={railRef}

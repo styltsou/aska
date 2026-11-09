@@ -139,7 +139,10 @@ export async function renderDiagram(
       themeCSS: getThemeCSS(dark),
     });
     await mermaid.parse(source);
-    const { svg } = await mermaid.render(`aska-diagram-${++sequence}`, source);
+    const { svg } = await mermaid.render(
+      `mnemee-diagram-${++sequence}`,
+      source,
+    );
     const clean = DOMPurify.sanitize(svg, {
       USE_PROFILES: { svg: true, svgFilters: true },
     });

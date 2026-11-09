@@ -491,7 +491,7 @@ export function NoteDetailDrawer({
       createdCardRef.current = { card, visibility: card.style.visibility };
       card.style.visibility = "hidden";
       const board = card.closest<HTMLElement>(
-        '.aska-flow, [data-slot="scroll-area-viewport"]',
+        '.mnemee-flow, [data-slot="scroll-area-viewport"]',
       );
       if (board) {
         observer.disconnect();

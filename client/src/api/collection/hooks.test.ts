@@ -32,9 +32,9 @@ describe("pending link refetches", () => {
   const pending: CollectionLinkNode = {
     id: "link-9",
     type: "link",
-    originalUrl: "https://github.com/styltsou/aska",
+    originalUrl: "https://github.com/styltsou/mnemee",
     hostname: "github.com",
-    title: "aska",
+    title: "mnemee",
     canonicalUrl: null,
     description: null,
     note: null,

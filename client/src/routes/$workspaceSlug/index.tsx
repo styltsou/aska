@@ -16,7 +16,7 @@ import type { WorkspaceRouteSearch } from "./route";
 
 export const Route = createFileRoute("/$workspaceSlug/")({
   head: () => ({
-    meta: [{ title: "Collections | Aska" }],
+    meta: [{ title: "Collections | Mnemee" }],
   }),
   component: () => null,
   pendingComponent: CollectionGridSkeleton,

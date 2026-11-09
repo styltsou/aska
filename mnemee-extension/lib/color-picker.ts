@@ -1,6 +1,6 @@
-export const START_COLOR_PICKER = "aska:start-color-picker";
-export const CAPTURE_COLOR_PICKER = "aska:capture-color-picker";
-export const PENDING_COLOR_KEY = "askaPendingColor";
+export const START_COLOR_PICKER = "mnemee:start-color-picker";
+export const CAPTURE_COLOR_PICKER = "mnemee:capture-color-picker";
+export const PENDING_COLOR_KEY = "mnemeePendingColor";
 
 export interface PendingColor {
   hex: string;

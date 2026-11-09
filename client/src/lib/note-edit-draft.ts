@@ -7,8 +7,8 @@ export type EditNoteDraft = {
   baseTitle: string | null;
 };
 
-const EDIT_DRAFT_PREFIX = "aska.edit-note-draft:";
-const LEGACY_DRAFT_PREFIX = "aska.edit-note-draft-legacy:";
+const EDIT_DRAFT_PREFIX = "mnemee.edit-note-draft:";
+const LEGACY_DRAFT_PREFIX = "mnemee.edit-note-draft-legacy:";
 const editDraftKey = (noteId: string) => `${EDIT_DRAFT_PREFIX}${noteId}`;
 const legacyDraftKey = (noteId: string) => `${LEGACY_DRAFT_PREFIX}${noteId}`;
 let prunedRedundantDrafts = false;

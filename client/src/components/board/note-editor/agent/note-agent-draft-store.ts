@@ -15,7 +15,7 @@ export type StoredNoteAgentDraft = {
   savedAt: number;
 };
 
-const KEY_PREFIX = "aska:note-ai-draft:v1:";
+const KEY_PREFIX = "mnemee:note-ai-draft:v1:";
 const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
 function key(noteId: string) {

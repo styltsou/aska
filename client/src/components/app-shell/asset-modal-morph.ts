@@ -26,7 +26,7 @@ function inertClone(source: HTMLElement) {
 function visibleArea(element: HTMLElement) {
   const rect = element.getBoundingClientRect();
   const viewport =
-    element.closest<HTMLElement>(".aska-flow") ??
+    element.closest<HTMLElement>(".mnemee-flow") ??
     element.closest<HTMLElement>('[data-slot="scroll-area-viewport"]');
   const clip = viewport?.getBoundingClientRect();
   const left = Math.max(0, rect.left, clip?.left ?? 0);
@@ -55,7 +55,7 @@ export function findVisibleAssetCard(assetId: string, origin?: AssetOrigin) {
   )) {
     const cardAssetId = card.dataset.canvasAssetId ?? card.dataset.assetCardId;
     if (cardAssetId !== assetId || !card.isConnected) continue;
-    const inCanvas = Boolean(card.closest(".aska-flow"));
+    const inCanvas = Boolean(card.closest(".mnemee-flow"));
     if (origin && inCanvas !== (origin === "canvas")) continue;
     const area = visibleArea(card);
     if (area.width >= 16 && area.height >= 16) return card;

@@ -59,7 +59,7 @@ describe("LoggerService", () => {
       request_id: "req_123",
       trace_id: "1234567890abcdef1234567890abcdef",
       span_id: "1234567890abcdef",
-      service_name: "aska-api",
+      service_name: "mnemee-api",
       deployment_environment: "test",
     });
     expect(record.attributes).toMatchObject({

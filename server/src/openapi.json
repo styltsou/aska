@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Aska API",
-    "summary": "Backend API for Aska's visual workspace and archive.",
-    "description": "Aska is a multi-tenant visual workspace. Workspaces contain collections, folders, and assets such as images, videos, notes, and links. Assets can be organised within collection folder trees or live in the inbox (unplaced).\n\nPublic endpoints under `/api/v1` require authentication via `authMiddleware`; internal pipeline endpoints use signed callbacks. The authenticated session must belong to the workspace's organisation.",
+    "title": "Mnemee API",
+    "summary": "Backend API for Mnemee's visual workspace and archive.",
+    "description": "Mnemee is a multi-tenant visual workspace. Workspaces contain collections, folders, and assets such as images, videos, notes, and links. Assets can be organised within collection folder trees or live in the inbox (unplaced).\n\nPublic endpoints under `/api/v1` require authentication via `authMiddleware`; internal pipeline endpoints use signed callbacks. The authenticated session must belong to the workspace's organisation.",
     "version": "0.1.0"
   },
   "servers": [
@@ -2442,7 +2442,7 @@
             "nullable": true
           }
         },
-        "description": "A workspace (organisation) within the Aska system."
+        "description": "A workspace (organisation) within the Mnemee system."
       },
       "LightCollection": {
         "type": "object",

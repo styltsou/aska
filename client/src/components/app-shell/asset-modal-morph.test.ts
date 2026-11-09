@@ -29,7 +29,7 @@ describe("asset modal morph source", () => {
       dataset: { canvasAssetId: "note-1" },
       isConnected: true,
       closest: (selector: string) =>
-        selector === ".aska-flow" ? canvasViewport : null,
+        selector === ".mnemee-flow" ? canvasViewport : null,
       getBoundingClientRect: () => ({
         left: 100,
         top: 100,

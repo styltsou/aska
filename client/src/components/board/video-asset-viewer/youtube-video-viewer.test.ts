@@ -17,8 +17,8 @@ describe("youtubeEmbedUrl", () => {
       "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1&playsinline=1&enablejsapi=1",
     );
     expect(youtubeEmbedUrl("dQw4w9WgXcQ")).not.toContain("autoplay");
-    expect(youtubeEmbedUrl("dQw4w9WgXcQ", "https://aska.test")).toContain(
-      "origin=https%3A%2F%2Faska.test",
+    expect(youtubeEmbedUrl("dQw4w9WgXcQ", "https://mnemee.test")).toContain(
+      "origin=https%3A%2F%2Fmnemee.test",
     );
   });
 });

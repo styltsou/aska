@@ -1,4 +1,4 @@
-# Contributing to Aska
+# Contributing to Mnemee
 
 This guide is for both humans and coding agents. It describes how to orient,
 make a focused change, verify it, and leave the repository more understandable

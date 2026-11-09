@@ -1,4 +1,4 @@
-export const SETTINGS_REQUEST_EVENT = "aska-settings-request";
+export const SETTINGS_REQUEST_EVENT = "mnemee-settings-request";
 
 export function openSettings() {
   window.dispatchEvent(

@@ -8,7 +8,7 @@ function checkboxLabel(node: ProseMirrorNode) {
   return `Task item checkbox for ${node.textContent || "empty task"}`;
 }
 
-export const AskaTaskItem = TaskItem.extend({
+export const MnemeeTaskItem = TaskItem.extend({
   addNodeView() {
     return ({ node, HTMLAttributes, getPos, editor }) => {
       const listItem = document.createElement("li");

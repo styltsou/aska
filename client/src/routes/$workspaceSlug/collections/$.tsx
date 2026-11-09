@@ -60,7 +60,7 @@ const StableCollectionGridView = memo(CollectionGridView);
 
 export const Route = createFileRoute("/$workspaceSlug/collections/$")({
   head: () => ({
-    meta: [{ title: "Collection | Aska" }],
+    meta: [{ title: "Collection | Mnemee" }],
   }),
   component: CollectionPage,
   pendingComponent: CanvasLoading,
@@ -188,7 +188,7 @@ function CollectionPage() {
       parts.push(cachedCollectionName);
     }
     if (parts.length > 0) {
-      document.title = `${parts.join(" · ")} | Aska`;
+      document.title = `${parts.join(" · ")} | Mnemee`;
     }
   }, [data, cachedCollectionName]);
 

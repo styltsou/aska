@@ -25,7 +25,7 @@ export const Route = createFileRoute("/onboarding")({
     }
   },
   head: () => ({
-    meta: [{ title: "Create workspace | Aska" }],
+    meta: [{ title: "Create workspace | Mnemee" }],
   }),
   component: OnboardingPage,
 });

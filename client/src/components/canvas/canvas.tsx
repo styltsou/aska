@@ -2463,7 +2463,7 @@ function CanvasSurface({
       }}
     >
       <ReactFlow<CanvasFlowNode>
-        className="aska-flow"
+        className="mnemee-flow"
         data-canvas-tool={activeTool}
         nodes={renderedFlowNodes}
         nodeTypes={nodeTypes}

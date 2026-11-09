@@ -30,7 +30,7 @@ export function initializeSentry(router: unknown): void {
       stackFrameVariables: false,
     },
     initialScope: {
-      tags: { service: "aska-client" },
+      tags: { service: "mnemee-client" },
     },
   });
 

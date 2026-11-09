@@ -1,13 +1,13 @@
 # System Architecture
 
-This is the map of the implemented Aska system. Read it before making a
+This is the map of the implemented Mnemee system. Read it before making a
 cross-cutting change. Product direction is described in the root
 [README](../README.md); a capability mentioned there is not necessarily built
 yet. This document describes the code and AWS resources that exist today.
 
 ## Purpose and implemented surface
 
-Aska is a multi-tenant visual workspace. A workspace owns collections, assets,
+Mnemee is a multi-tenant visual workspace. A workspace owns collections, assets,
 and members. The Inbox is an archive rendered as a masonry board. A collection
 is an authored infinite canvas that can contain image, note, and link assets,
 plus folders. Folders are canvas nodes that open nested canvases; they are not
@@ -48,8 +48,8 @@ Link API transaction -> URL-resolution SQS -> SSRF-safe resolver Lambda
 private asset bucket, event notification, topic, queues, DLQs, worker Lambdas,
 and static client site. One SST stage is a complete isolated AWS environment.
 The shared `dev` stage is a stable cloud deployment that only accepts its
-deployed CloudFront client at `aska-app.styltsou.com`; its API is
-`aska-api.styltsou.com`. `hybrid` is the personal stage for Live-Lambda
+deployed CloudFront client at `app.mnemee.space`; its API is
+`api.mnemee.space`. `hybrid` is the personal stage for Live-Lambda
 hybrid work. The planned HTTPS tunnel variant for browser/image-upload work is
 documented in [Cloudflare Tunnel Hybrid Development](./cloudflare-tunnel-hybrid-development.md).
 Deployment details, stage policy, and secret handling are in

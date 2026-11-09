@@ -286,9 +286,9 @@ function getPeekWidthBounds() {
   );
 }
 const storageKey = (workspaceSlug: string) =>
-  `aska.workspace-peek:v1:${workspaceSlug}`;
+  `mnemee.workspace-peek:v1:${workspaceSlug}`;
 const widthStorageKey = (workspaceSlug: string) =>
-  `aska.workspace-peek-width:v1:${workspaceSlug}`;
+  `mnemee.workspace-peek-width:v1:${workspaceSlug}`;
 
 function clampPeekWidth(width: number) {
   const { min, max } = getPeekWidthBounds();

@@ -84,7 +84,7 @@ function ThemePreviewScene({ dark }: { dark: boolean }) {
         fontWeight="600"
         fontFamily="Inter, sans-serif"
       >
-        aska
+        mnemee
       </text>
       <rect
         x="8"

@@ -22,7 +22,7 @@ import { signUp } from "@/lib/auth-client";
 export const Route = createFileRoute("/signup")({
   beforeLoad: redirectIfSignedIn,
   head: () => ({
-    meta: [{ title: "Create account | Aska" }],
+    meta: [{ title: "Create account | Mnemee" }],
   }),
   component: SignupPage,
 });

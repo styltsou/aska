@@ -1,6 +1,6 @@
 # Background Tasks and Events
 
-Aska uses AWS-native asynchronous work with a small number of stable workload
+Mnemee uses AWS-native asynchronous work with a small number of stable workload
 lanes. A queue is a concurrency, retry, and failure-isolation boundary; it is
 not created for every function, provider, or product feature.
 

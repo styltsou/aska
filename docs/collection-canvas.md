@@ -1,6 +1,6 @@
 # Collection Canvas Architecture
 
-Aska deliberately uses different interaction models for its two visual
+Mnemee deliberately uses different interaction models for its two visual
 surfaces:
 
 - The Inbox is an archive and retrieval surface rendered as a masonry grid.
@@ -13,8 +13,8 @@ the implementation boundaries that keep the canvas behavior maintainable.
 
 ## Ownership Boundaries
 
-Aska owns the collection data model. Node identity, hierarchy, asset metadata,
-and positions are persisted through Aska APIs. `@xyflow/react` is the client
+Mnemee owns the collection data model. Node identity, hierarchy, asset metadata,
+and positions are persisted through Mnemee APIs. `@xyflow/react` is the client
 renderer and interaction adapter; its graph data model is not persisted as a
 second source of truth.
 
@@ -36,7 +36,7 @@ each canvas and temporarily snap a dragged card or selection to the nearest
 matching card edges and centres currently visible in the viewport; off-screen
 cards do not participate. People can turn guides off from the canvas context
 menu or command palette. Positions are rounded only to whole pixels before persistence.
-When an insertion coordinate is already occupied, Aska
+When an insertion coordinate is already occupied, Mnemee
 finds a nearby available position using card footprints and spacing; a free
 requested coordinate is never adjusted.
 
@@ -164,7 +164,7 @@ workspace; folder states link back to their collection when that destination is
 known.
 
 XYFlow handles and its graph connection behavior remain disabled. Canvas text
-and arrows are first-class annotations owned by Aska: text renders as an
+and arrows are first-class annotations owned by Mnemee: text renders as an
 unframed custom node, while arrows render in a viewport-aware SVG layer and may
 optionally bind either endpoint to a visible card or text object. These visual
 bindings do not turn the canvas into a diagram editor. Delete-key node removal

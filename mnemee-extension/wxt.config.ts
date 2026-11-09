@@ -6,7 +6,7 @@ export default defineConfig({
   manifest: {
     permissions: ["activeTab", "storage"],
     host_permissions: [
-      "https://aska-api.styltsou.com/*",
+      "https://api.mnemee.space/*",
       "http://*/*",
       "https://*/*",
     ],

@@ -1,4 +1,4 @@
-# Aska AWS workflow
+# Mnemee AWS workflow
 
 SST defines and deploys the application in [`sst.config.ts`](../sst.config.ts).
 One stage creates one isolated AWS copy:
@@ -106,9 +106,9 @@ load Cloudflare to manage the custom domains.
 The stable `dev` deployment uses exactly these public hostnames:
 
 ```text
-aska-app.styltsou.com  -> Cloudflare DNS-only -> CloudFront client
-aska-api.styltsou.com  -> Cloudflare (proxied) -> API Gateway HTTP API
-images.styltsou.com    -> Cloudflare DNS-only -> private CloudFront media
+app.mnemee.space  -> Cloudflare DNS-only -> CloudFront client
+api.mnemee.space  -> Cloudflare (proxied) -> API Gateway HTTP API
+images.mnemee.space    -> Cloudflare DNS-only -> private CloudFront media
 ```
 
 ### 3. CloudFront media signing keys
@@ -127,7 +127,7 @@ openssl rsa -in cloudfront-media-private.pem -pubout | openssl base64 -A
 The second command's output is `CloudFrontMediaPrivateKeyBase64`; the third is
 `CloudFrontMediaPublicKey`. Set both before the first deployment. SST then
 creates the CloudFront trusted key group, origin access control, and
-`images.styltsou.com` distribution. The API receives the private key secret and
+`images.mnemee.space` distribution. The API receives the private key secret and
 issues HTTP-only signed cookies for one authorized workspace path through the
 dedicated media-session endpoint. Media keys begin with the immutable workspace
 ID (`{workspaceId}/{storageId}/...`), so each cookie policy can grant only that
@@ -136,7 +136,7 @@ retain stable canonical URLs. Rotate by updating **both** SST secrets, then
 merging a deployment-triggering change.
 
 Before the first CI deployment, create a Cloudflare API token scoped only to
-the `styltsou.com` zone with **Zone / DNS / Edit** and **Zone / Zone / Read**.
+the `mnemee.space` zone with **Zone / DNS / Edit** and **Zone / Zone / Read**.
 Add the token, account ID, and zone ID as GitHub Actions repository secrets:
 
 ```text
@@ -230,8 +230,8 @@ build receives `VITE_SERVER_URL` automatically from the API Gateway URL; there
 is no client production `.env` file to create or maintain.
 
 The GitHub Actions deployment deploys **both** the backend and this client.
-The client is served as `https://aska-app.styltsou.com` and is built with
-`https://aska-api.styltsou.com` as `VITE_SERVER_URL`. CloudFront remains the
+The client is served as `https://app.mnemee.space` and is built with
+`https://api.mnemee.space` as `VITE_SERVER_URL`. CloudFront remains the
 client's origin and its S3 bucket remains private. CloudFront is the client's
 public edge; Cloudflare manages its DNS record without proxying requests.
 
@@ -251,7 +251,7 @@ defined once in `sst.config.ts`:
 ```ts
 const clientOrigins = {
   hybrid: ["http://localhost:5173"],
-  dev: ["https://aska-app.styltsou.com", "http://localhost:5173"],
+  dev: ["https://app.mnemee.space", "http://localhost:5173"],
 };
 ```
 
@@ -274,10 +274,10 @@ API Gateway URL automatically.
 
 ### Authentication domain note
 
-The stable client and API share the `styltsou.com` parent domain. Browser
-requests to `aska-api.styltsou.com` are therefore same-site, which avoids the
+The stable client and API share the `mnemee.space` parent domain. Browser
+requests to `api.mnemee.space` are therefore same-site, which avoids the
 third-party-cookie behavior that breaks cross-domain authentication in Safari.
-The stable stage shares Better Auth cookies only across the `styltsou.com`
+The stable stage shares Better Auth cookies only across the `mnemee.space`
 parent domain and limits their path to `/api/`, keeping them off static app and
 media requests. To support local Vite against the cloud API, that stage uses
 `Secure`, `SameSite=None`, and `Partitioned` session cookies; the `hybrid`
@@ -335,11 +335,11 @@ laptop:
 
 1. Merge the change to `main` and wait for the `Deploy AWS dev` GitHub Actions
    job to succeed.
-2. Open `https://aska-app.styltsou.com`. SST embedded the custom API URL into
+2. Open `https://app.mnemee.space`. SST embedded the custom API URL into
    the Vite build, so no client environment variable is needed.
 
 The shared `dev` API intentionally rejects local Vite requests. Use
-`https://aska-app.styltsou.com` for fully deployed testing, or use `hybrid`
+`https://app.mnemee.space` for fully deployed testing, or use `hybrid`
 for hybrid development.
 
 ## Continuous deployment
@@ -387,7 +387,7 @@ The deployment job exchanges a GitHub OIDC token for short-lived AWS
 credentials and does not use AWS access keys. Runtime secrets, including the
 CloudFront private key and Sentry DSN, are stage-scoped SST secrets set
 separately from CI. The AWS role trusts only the
-`styltsou/aska` repository's `main` branch.
+`styltsou/mnemee` repository's `main` branch.
 
 The job also requires these GitHub Actions repository secrets:
 

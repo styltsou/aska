@@ -8,7 +8,7 @@ export type NameInput = {
   stops: Array<{ name: string; descriptor?: string; position: number }>;
 };
 
-/** The provider boundary for Aska's one-shot gradient naming task. */
+/** The provider boundary for Mnemee's one-shot gradient naming task. */
 export async function generateGradientName(input: NameInput): Promise<string> {
   const provider = process.env.GRADIENT_NAMING_PROVIDER;
   const model =

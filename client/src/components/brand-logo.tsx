@@ -7,16 +7,16 @@ export function BrandLogo({ className, ...props }: BrandLogoProps) {
   return (
     <>
       <img
-        alt="Aska"
+        alt="Mnemee"
         className={cn("h-8 w-auto dark:hidden", className)}
-        src="/aska-logo.svg"
+        src="/mnemee-logo.svg"
         {...props}
       />
       <img
         alt=""
         aria-hidden="true"
         className={cn("hidden h-8 w-auto dark:block", className)}
-        src="/aska-logo-dark.svg"
+        src="/mnemee-logo-dark.svg"
         {...props}
       />
     </>

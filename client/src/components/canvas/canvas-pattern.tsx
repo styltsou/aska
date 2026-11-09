@@ -19,8 +19,8 @@ export type CanvasPatternStyle = {
 };
 
 const DEFAULT_CANVAS_PATTERN: CanvasPattern = "dots";
-const STORAGE_KEY = "aska:canvas-pattern";
-const CHANGE_EVENT = "aska:canvas-pattern-change";
+const STORAGE_KEY = "mnemee:canvas-pattern";
+const CHANGE_EVENT = "mnemee:canvas-pattern-change";
 
 export const CANVAS_PATTERN_STYLES: Record<
   Exclude<CanvasPattern, "none">,

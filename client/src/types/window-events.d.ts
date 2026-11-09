@@ -1,6 +1,6 @@
 declare global {
   interface WindowEventMap {
-    "aska:scratchpad-open": CustomEvent;
+    "mnemee:scratchpad-open": CustomEvent;
   }
 }
 

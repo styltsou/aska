@@ -21,7 +21,7 @@ export async function sendEmail({
   text: string;
 }) {
   const { error } = await getResend().emails.send({
-    from: "Aska <noreply@aska.app>",
+    from: "Mnemee <noreply@mnemee.space>",
     to,
     subject,
     text,

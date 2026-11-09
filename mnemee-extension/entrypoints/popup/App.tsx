@@ -76,15 +76,15 @@ export default function App() {
       <header className="popup-header flex items-center justify-between">
         <span className="brand-logo">
           <img
-            alt="Aska"
+            alt="Mnemee"
             className="brand-mark brand-mark-light"
-            src="/aska-logo.svg"
+            src="/mnemee-logo.svg"
           />
           <img
             alt=""
             aria-hidden="true"
             className="brand-mark brand-mark-dark"
-            src="/aska-logo-dark.svg"
+            src="/mnemee-logo-dark.svg"
           />
         </span>
         <span className="extension-badge inline-flex items-center gap-1.5">
@@ -98,7 +98,7 @@ export default function App() {
           <BookmarkPlus size={18} strokeWidth={1.7} />
         </div>
         <h1 id="popup-title">Save this page</h1>
-        <p>Add the page you’re viewing to your Aska Inbox and keep it close.</p>
+        <p>Add the page you’re viewing to your Mnemee Inbox and keep it close.</p>
       </section>
 
       <button
@@ -113,7 +113,7 @@ export default function App() {
       {!isConnected ? (
         <p className="connection-note">
           <LockKeyhole aria-hidden="true" />
-          Connect your Aska account to start saving.
+          Connect your Mnemee account to start saving.
         </p>
       ) : null}
 
@@ -174,11 +174,11 @@ export default function App() {
         <span>Made for your visual workspace</span>
         <a
           className="inline-flex items-center gap-1"
-          href="https://aska-app.styltsou.com"
+          href="https://app.mnemee.space"
           rel="noreferrer"
           target="_blank"
         >
-          Open Aska
+          Open Mnemee
           <ArrowUpRight aria-hidden="true" size={12} />
         </a>
       </footer>

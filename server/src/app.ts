@@ -90,7 +90,7 @@ export const app = baseApp
   .get(
     "/docs",
     Scalar({
-      pageTitle: "Aska API Docs",
+      pageTitle: "Mnemee API Docs",
       url: "/openapi.json",
     }),
   )

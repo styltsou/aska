@@ -1,4 +1,4 @@
-# Aska
+# Mnemee
 
 A design-forward visual workspace and cloud archive for digital creatives.
 
@@ -12,7 +12,7 @@ Creative tools are optimized for text. Designers save references via browser boo
 
 ## What it does
 
-Aska ingests image and video uploads, direct video URLs, notes, and generic web links as durable visual
+Mnemee ingests image and video uploads, direct video URLs, notes, and generic web links as durable visual
 assets. Provider-specific social capture and article extraction are future
 extensions of the implemented URL-resource pipeline.
 The Inbox renders the archive as a masonry grid, while collections provide an
@@ -36,7 +36,7 @@ infinite spatial canvas for composing moodboards.
   canvas position. Stored in cloud storage, full resolution preserved.
 - **Video upload/import** — Add a local MP4/WebM or a direct file URL. A poster
   anchors the board card; the original remains available to play and download.
-- **Link bookmark** — Paste or drop an HTTP(S) URL. Aska creates a card
+- **Link bookmark** — Paste or drop an HTTP(S) URL. Mnemee creates a card
   immediately, resolves generic metadata in the background, and stores safe
   responsive preview variants. The original link remains usable if resolution
   fails.
@@ -55,7 +55,7 @@ infinite spatial canvas for composing moodboards.
 
 ## Architecture
 
-Aska is multi-tenant from day one. Every asset, collection, and folder belongs
+Mnemee is multi-tenant from day one. Every asset, collection, and folder belongs
 to a workspace and has creator metadata. Collections contain a spatial tree of
 nodes: image, video, note, and link assets are leaf nodes, while folders organize nested
 content. Each placement has an authored position on its collection or folder
@@ -66,7 +66,7 @@ Postgres and Drizzle, plus AWS Lambda workers that process S3 uploads and
 external URL resources asynchronously through independent SQS queues. Collection
 and folder badges show descendant asset counts: images, notes, and links count;
 folders do not. The client uses XYFlow for collection
-canvas rendering and interaction while Aska's API remains the source of truth
+canvas rendering and interaction while Mnemee's API remains the source of truth
 for node identity, hierarchy, and position.
 
 See [the engineering docs](./docs/README.md) for a codebase map, architecture,

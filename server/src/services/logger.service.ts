@@ -65,7 +65,7 @@ export class LoggerService implements ILoggerService {
         timestamp: new Date().toISOString(),
         severity_text: level.toUpperCase(),
         body: message,
-        service_name: process.env.SENTRY_SERVICE ?? "aska-api",
+        service_name: process.env.SENTRY_SERVICE ?? "mnemee-api",
         deployment_environment:
           process.env.SENTRY_ENVIRONMENT ??
           process.env.NODE_ENV ??

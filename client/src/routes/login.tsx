@@ -28,7 +28,7 @@ export const Route = createFileRoute("/login")({
   }),
   beforeLoad: redirectIfSignedIn,
   head: () => ({
-    meta: [{ title: "Sign in | Aska" }],
+    meta: [{ title: "Sign in | Mnemee" }],
   }),
   component: LoginPage,
 });

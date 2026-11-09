@@ -100,8 +100,8 @@ POST /api/v1/internal/image-pipeline/callback
 Every callback has these headers:
 
 ```txt
-x-aska-timestamp: Unix epoch milliseconds
-x-aska-signature: HMAC-SHA256(timestamp + "." + raw JSON body)
+x-mnemee-timestamp: Unix epoch milliseconds
+x-mnemee-signature: HMAC-SHA256(timestamp + "." + raw JSON body)
 ```
 
 Hono rejects missing, malformed, stale, or invalid signatures. Both functions

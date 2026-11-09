@@ -5,6 +5,8 @@ import type {
   CanvasArrowStyle,
 } from "@/api/collection";
 
+// Kept from the app's former name: a new salt would reshape every sketch
+// arrow.
 const SKETCH_SEED_SALT = "aska-canvas-arrow-v1";
 
 export type ArrowPaths = {

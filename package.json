@@ -1,5 +1,5 @@
 {
-  "name": "aska",
+  "name": "mnemee",
   "private": true,
   "scripts": {
     "prepare": "git config core.hooksPath .githooks",

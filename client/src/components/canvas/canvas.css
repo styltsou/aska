@@ -1,7 +1,7 @@
 @import "@xyflow/react/dist/style.css";
 
 :root,
-.aska-flow {
+.mnemee-flow {
   --xy-background-color: transparent;
   --xy-controls-button-background-color-default: var(--popover);
   --xy-controls-button-background-color-hover-default: var(--muted);
@@ -26,7 +26,7 @@
 }
 
 .dark,
-.dark .aska-flow {
+.dark .mnemee-flow {
   --canvas-object-ink: var(--foreground);
   --canvas-object-cobalt: oklch(0.73 0.14 260);
   --canvas-object-coral: oklch(0.72 0.16 32);
@@ -45,31 +45,31 @@
   --canvas-object-fuchsia-marker: #000;
 }
 
-.aska-flow[data-canvas-tool="arrow"] {
+.mnemee-flow[data-canvas-tool="arrow"] {
   --canvas-tool-cursor: crosshair;
 }
 
-.aska-flow[data-canvas-tool="text"] {
+.mnemee-flow[data-canvas-tool="text"] {
   --canvas-tool-cursor: text;
 }
 
-.aska-flow[data-canvas-tool] .react-flow__pane,
-.aska-flow[data-canvas-tool] .react-flow__pane.draggable,
-.aska-flow[data-canvas-tool] .react-flow__pane.selection,
-.aska-flow[data-canvas-tool] .react-flow__node,
-.aska-flow[data-canvas-tool] .react-flow__node.selectable,
-.aska-flow[data-canvas-tool] .react-flow__node.draggable,
-.aska-flow[data-canvas-tool] .react-flow__node-asset,
-.aska-flow[data-canvas-tool] .react-flow__node-asset.dragging {
+.mnemee-flow[data-canvas-tool] .react-flow__pane,
+.mnemee-flow[data-canvas-tool] .react-flow__pane.draggable,
+.mnemee-flow[data-canvas-tool] .react-flow__pane.selection,
+.mnemee-flow[data-canvas-tool] .react-flow__node,
+.mnemee-flow[data-canvas-tool] .react-flow__node.selectable,
+.mnemee-flow[data-canvas-tool] .react-flow__node.draggable,
+.mnemee-flow[data-canvas-tool] .react-flow__node-asset,
+.mnemee-flow[data-canvas-tool] .react-flow__node-asset.dragging {
   cursor: var(--canvas-tool-cursor);
 }
 
-.aska-flow[data-canvas-tool="select"]
+.mnemee-flow[data-canvas-tool="select"]
   .react-flow__node-text:not([data-editing]) {
   cursor: pointer;
 }
 
-.aska-flow[data-canvas-tool="select"] .react-flow__node-text.dragging,
-.aska-flow[data-canvas-tool="select"] .react-flow__node-text.dragging * {
+.mnemee-flow[data-canvas-tool="select"] .react-flow__node-text.dragging,
+.mnemee-flow[data-canvas-tool="select"] .react-flow__node-text.dragging * {
   cursor: grabbing;
 }

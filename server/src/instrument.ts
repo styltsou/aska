@@ -20,7 +20,7 @@ Sentry.init({
   },
   initialScope: {
     tags: {
-      service: process.env.SENTRY_SERVICE ?? "aska-api",
+      service: process.env.SENTRY_SERVICE ?? "mnemee-api",
     },
   },
 });

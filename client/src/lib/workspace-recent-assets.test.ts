@@ -27,7 +27,7 @@ describe("workspace recent assets", () => {
   });
 
   it("ignores malformed stored values and asset identifiers", () => {
-    storage.set("aska.workspace-recent-assets:design", '["folder-1", 3]');
+    storage.set("mnemee.workspace-recent-assets:design", '["folder-1", 3]');
 
     expect(getRecentWorkspaceAssetIds("design")).toEqual([]);
     recordRecentWorkspaceAsset("design", "folder-1");

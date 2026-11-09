@@ -15,7 +15,7 @@ export const GRID_GAP = 10;
 
 export function getSavedGridDensity(): GridDensity {
   if (typeof window === "undefined") return "balanced";
-  const saved = window.localStorage.getItem("aska:grid-density");
+  const saved = window.localStorage.getItem("mnemee:grid-density");
   return saved === "spacious" || saved === "compact" ? saved : "balanced";
 }
 
@@ -26,17 +26,17 @@ export function useGridDensity() {
     () => "balanced",
   );
   const setDensity = useCallback((next: GridDensity) => {
-    window.localStorage.setItem("aska:grid-density", next);
-    window.dispatchEvent(new Event("aska:grid-density-change"));
+    window.localStorage.setItem("mnemee:grid-density", next);
+    window.dispatchEvent(new Event("mnemee:grid-density-change"));
   }, []);
   return { density, setDensity };
 }
 
 function subscribeDensity(onChange: () => void) {
-  window.addEventListener("aska:grid-density-change", onChange);
+  window.addEventListener("mnemee:grid-density-change", onChange);
   window.addEventListener("storage", onChange);
   return () => {
-    window.removeEventListener("aska:grid-density-change", onChange);
+    window.removeEventListener("mnemee:grid-density-change", onChange);
     window.removeEventListener("storage", onChange);
   };
 }

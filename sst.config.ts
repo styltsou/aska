@@ -6,6 +6,8 @@ const isSecretUpdate = process.env.SST_SECRET_UPDATE === "1";
 export default $config({
   app(input) {
     return {
+      // Kept from the app's former name (now Mnemee): SST derives every AWS
+      // resource name from it, so changing it would recreate the whole stack.
       name: "aska",
       home: "aws",
       providers: {
@@ -40,7 +42,7 @@ export default $config({
       // Shared, fully deployed cloud environment. Local Vite is intentionally
       // allowed for client work against the deployed API; keep this to the
       // exact local development origin.
-      dev: ["https://aska-app.styltsou.com", "http://localhost:5173"],
+      dev: ["https://app.mnemee.space", "http://localhost:5173"],
     };
     const allowedClientOrigins =
       clientOrigins[$app.stage as keyof typeof clientOrigins];
@@ -52,11 +54,11 @@ export default $config({
     const stableCloudDomains =
       $app.stage === "dev"
         ? {
-            app: "aska-app.styltsou.com",
-            api: "aska-api.styltsou.com",
+            app: "app.mnemee.space",
+            api: "api.mnemee.space",
             apiDns: sst.cloudflare.dns({
               // Supplying the zone explicitly keeps the DNS token narrowly
-              // scoped to styltsou.com and avoids account-wide zone discovery.
+              // scoped to mnemee.space and avoids account-wide zone discovery.
               zone: requireEnvironment("CLOUDFLARE_ZONE_ID"),
               // Keep the API on Cloudflare's edge.
               proxy: true,
@@ -92,7 +94,10 @@ export default $config({
     const cloudFrontPublicKey = stableCloudDomains
       ? new sst.Secret("CloudFrontMediaPublicKey")
       : undefined;
-    const sentryEnvironment = getSentryEnvironment("aska-api", sentryDsn.value);
+    const sentryEnvironment = getSentryEnvironment(
+      "mnemee-api",
+      sentryDsn.value,
+    );
     const createWorkerQueue = (name: string, deadLetterQueueName: string) => {
       const deadLetterQueue = new sst.aws.Queue(deadLetterQueueName, {
         transform: {
@@ -180,7 +185,7 @@ export default $config({
     const media = stableCloudDomains
       ? createMediaDistribution({
           assets,
-          domain: "images.styltsou.com",
+          domain: "images.mnemee.space",
           dns: stableCloudDomains.cdnDns,
           publicKey: cloudFrontPublicKey!.value,
         })
@@ -306,7 +311,7 @@ export default $config({
         // Only the stable cloud API needs to serve a localhost client across
         // sites. Hybrid retains its existing Better Auth cookie behavior.
         CROSS_SITE_AUTH_COOKIES: stableCloudDomains ? "true" : "false",
-        ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".styltsou.com" } : {}),
+        ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".mnemee.space" } : {}),
         RESEND_API_KEY: resendApiKey.value,
         PEXELS_API_KEY: pexelsApiKey.value,
         PIPELINE_CALLBACK_SECRET: imagePipelineCallbackSecret.value,
@@ -317,7 +322,7 @@ export default $config({
               MEDIA_BASE_URL: media.domainUrl,
               CLOUDFRONT_KEY_PAIR_ID: media.publicKeyId,
               CLOUDFRONT_PRIVATE_KEY_BASE64: cloudFrontPrivateKey!.value,
-              CLOUDFRONT_COOKIE_DOMAIN: ".styltsou.com",
+              CLOUDFRONT_COOKIE_DOMAIN: ".mnemee.space",
             }
           : {}),
         ...sentryEnvironment,
@@ -354,7 +359,7 @@ export default $config({
         S3_REGION: "eu-central-1",
         CORS_ORIGINS: allowedClientOrigins.join(","),
         CROSS_SITE_AUTH_COOKIES: stableCloudDomains ? "true" : "false",
-        ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".styltsou.com" } : {}),
+        ...(stableCloudDomains ? { AUTH_COOKIE_DOMAIN: ".mnemee.space" } : {}),
       },
     });
     aiApi.route("GET /health", {
@@ -404,7 +409,7 @@ export default $config({
                 MEDIA_BASE_URL: media.domainUrl,
                 CLOUDFRONT_KEY_PAIR_ID: media.publicKeyId,
                 CLOUDFRONT_PRIVATE_KEY_BASE64: cloudFrontPrivateKey!.value,
-                CLOUDFRONT_COOKIE_DOMAIN: ".styltsou.com",
+                CLOUDFRONT_COOKIE_DOMAIN: ".mnemee.space",
                 CLOUDFRONT_SIGNED_COOKIE_EXPIRES_SECONDS: "3600",
               }
             : {}),
@@ -637,7 +642,7 @@ function createMediaDistribution(input: {
     "MediaOriginAccessControl",
     {
       name: `${$app.name}-${$app.stage}-media-s3`,
-      description: "Signs CloudFront requests to Aska's private media bucket",
+      description: "Signs CloudFront requests to Mnemee's private media bucket",
       originAccessControlOriginType: "s3",
       signingBehavior: "always",
       signingProtocol: "sigv4",
@@ -645,7 +650,7 @@ function createMediaDistribution(input: {
   );
   const publicKey = new aws.cloudfront.PublicKey("MediaViewerPublicKey", {
     namePrefix: `${$app.name}-${$app.stage}-media-`,
-    comment: "Verifies signed cookies for private Aska media",
+    comment: "Verifies signed cookies for private Mnemee media",
     // The secret holds the SPKI public key base64-encoded (same convention as
     // the private key). CloudFront's PublicKey resource expects the PEM form,
     // so decode before registering it.
@@ -655,7 +660,7 @@ function createMediaDistribution(input: {
   });
   const keyGroup = new aws.cloudfront.KeyGroup("MediaViewerKeyGroup", {
     name: `${$app.name}-${$app.stage}-media-viewers`,
-    comment: "Trusted viewer signer for private Aska media",
+    comment: "Trusted viewer signer for private Mnemee media",
     items: [publicKey.id],
   });
   const cachePolicy = new aws.cloudfront.CachePolicy("MediaCachePolicy", {
@@ -676,12 +681,12 @@ function createMediaDistribution(input: {
     "MediaPerformanceHeaders",
     {
       name: `${$app.name}-${$app.stage}-media-performance`,
-      comment: "Exposes private media timing to the deployed Aska client",
+      comment: "Exposes private media timing to the deployed Mnemee client",
       customHeadersConfig: {
         items: [
           {
             header: "Timing-Allow-Origin",
-            value: "https://aska-app.styltsou.com",
+            value: "https://app.mnemee.space",
             override: true,
           },
         ],
@@ -689,7 +694,7 @@ function createMediaDistribution(input: {
     },
   );
   const cdn = new sst.aws.Cdn("Media", {
-    comment: "Private immutable workspace images for Aska",
+    comment: "Private immutable workspace images for Mnemee",
     domain: {
       name: input.domain,
       dns: input.dns,

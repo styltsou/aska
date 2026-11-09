@@ -137,7 +137,7 @@ export function VideoAssetViewer({
       ? displayedAsset.width / displayedAsset.height
       : 16 / 9;
   const accessibleDescription = displayedAsset
-    ? `Watch ${accessibleTitle} without leaving Aska.`
+    ? `Watch ${accessibleTitle} without leaving Mnemee.`
     : "Loading video details.";
   const handleDownload = useCallback(() => {
     if (!displayedAsset) return;

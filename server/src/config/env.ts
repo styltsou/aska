@@ -35,7 +35,7 @@ const envSchema = z
     LOG_SLOW_REQUEST_MS: z.coerce.number().int().min(0).default(1000),
     LOG_SUCCESS_SAMPLE_RATIO: z.coerce.number().min(0).max(1).default(1),
     SENTRY_DSN: z.url().optional(),
-    SENTRY_SERVICE: z.string().min(1).default("aska-api"),
+    SENTRY_SERVICE: z.string().min(1).default("mnemee-api"),
     SENTRY_ENVIRONMENT: z.string().min(1).optional(),
     SENTRY_RELEASE: z.string().min(1).optional(),
     SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.2),

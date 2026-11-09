@@ -68,7 +68,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarProvider
             key={sidebarUserId}
             widthStorageKey={
-              sidebarUserId ? `aska:sidebar-width:${sidebarUserId}` : undefined
+              sidebarUserId
+                ? `mnemee:sidebar-width:${sidebarUserId}`
+                : undefined
             }
             data-board-view={isBoardView ? "" : undefined}
             data-workspace-overview={isWorkspaceOverview ? "" : undefined}

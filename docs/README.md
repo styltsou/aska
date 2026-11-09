@@ -1,4 +1,4 @@
-# Aska Documentation
+# Mnemee Documentation
 
 This directory is the maintained context for both contributors and coding
 agents. It explains the implemented system, its invariants, and how to change
@@ -8,7 +8,7 @@ it safely. Start here rather than reconstructing architecture from file names.
 
 1. [System Architecture](./architecture.md) — implemented topology, package
    ownership, request/data flows, and hard boundaries.
-2. [Contributing to Aska](./contributing.md) — setup, feature recipes,
+2. [Contributing to Mnemee](./contributing.md) — setup, feature recipes,
    verification, and documentation expectations.
 3. [AWS workflow](./sst-deployment.md) — real AWS `dev` workflow, stages,
    secrets, hosting, and deployment.

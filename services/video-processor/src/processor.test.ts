@@ -21,7 +21,7 @@ let folder: string;
 
 describe.skipIf(!canProbe)("actual video stream validation", () => {
   beforeAll(async () => {
-    folder = await mkdtemp(path.join(tmpdir(), "aska-video-test-"));
+    folder = await mkdtemp(path.join(tmpdir(), "mnemee-video-test-"));
   });
   afterAll(async () => {
     if (folder) await rm(folder, { recursive: true, force: true });
