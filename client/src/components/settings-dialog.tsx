@@ -1,100 +1,262 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import {
   Dialog,
-  DialogBody,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
-import { MonitorIcon, MoonIcon, SettingsIcon, SunIcon } from "lucide-react";
-import { motion } from "motion/react";
+import { BellIcon, PaletteIcon, UserRoundIcon, XIcon } from "lucide-react";
 import {
-  Item,
-  ItemContent,
-  ItemTitle,
-  ItemDescription,
-  ItemActions,
-} from "@/components/ui/item";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { SETTINGS_REQUEST_EVENT, closeSettings } from "@/lib/settings-dialog";
 import { useWorkspaceOverlayNavigation } from "@/components/app-shell/use-workspace-overlay-navigation";
 
 const THEMES = [
-  { value: "system", icon: MonitorIcon },
-  { value: "light", icon: SunIcon },
-  { value: "dark", icon: MoonIcon },
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
 ] as const;
 
 type ThemeValue = (typeof THEMES)[number]["value"];
 
-function themeTabClassName(isActive: boolean) {
-  return cn(
-    "relative isolate px-1.5",
-    isActive
-      ? "text-foreground hover:bg-transparent hover:text-foreground"
-      : "text-muted-foreground transition-colors duration-[50ms] hover:bg-foreground/[0.05] hover:text-foreground active:bg-foreground/[0.08] dark:hover:bg-foreground/[0.1] dark:active:bg-foreground/[0.14]",
+const SETTINGS_SECTIONS = [
+  { value: "appearance", label: "Appearance", icon: PaletteIcon },
+  { value: "account", label: "Account", icon: UserRoundIcon },
+  { value: "notifications", label: "Notifications", icon: BellIcon },
+] as const;
+
+type SettingsSection = (typeof SETTINGS_SECTIONS)[number]["value"];
+
+function nextOptionIndex(
+  key: string,
+  current: number,
+  count: number,
+  orientation: "horizontal" | "vertical",
+) {
+  if (key === "Home") return 0;
+  if (key === "End") return count - 1;
+  if (key === (orientation === "horizontal" ? "ArrowRight" : "ArrowDown")) {
+    return (current + 1) % count;
+  }
+  if (key === (orientation === "horizontal" ? "ArrowLeft" : "ArrowUp")) {
+    return (current - 1 + count) % count;
+  }
+  return null;
+}
+
+function ThemePreviewScene({ dark }: { dark: boolean }) {
+  const background = dark ? "#171717" : "#ffffff";
+  const sidebar = dark ? "#242424" : "#f9f9f9";
+  const card = dark ? "#292929" : "#ffffff";
+  const border = dark ? "#3d3d3d" : "#e7e7e7";
+  const foreground = dark ? "#f4f4f4" : "#252525";
+  const muted = dark ? "#858585" : "#a3a3a3";
+
+  return (
+    <>
+      <rect width="240" height="140" fill={background} />
+      <rect width="240" height="20" fill={sidebar} />
+      <path d="M0 20H240M58 20V140" stroke={border} />
+      <rect x="0" y="20" width="58" height="120" fill={sidebar} />
+      <path d="M58 20V140" stroke={border} />
+      <circle cx="12" cy="10" r="2" fill={muted} />
+      <circle cx="19" cy="10" r="2" fill={muted} opacity=".6" />
+      <circle cx="26" cy="10" r="2" fill={muted} opacity=".35" />
+      <text
+        x="68"
+        y="13"
+        fill={foreground}
+        fontSize="7"
+        fontWeight="600"
+        fontFamily="Inter, sans-serif"
+      >
+        aska
+      </text>
+      <rect
+        x="8"
+        y="33"
+        width="42"
+        height="10"
+        rx="2"
+        fill={dark ? "#383838" : "#eaeaea"}
+      />
+      <rect
+        x="13"
+        y="37"
+        width="22"
+        height="2"
+        rx="1"
+        fill={foreground}
+        opacity=".7"
+      />
+      <rect x="13" y="53" width="27" height="2" rx="1" fill={muted} />
+      <rect x="13" y="65" width="19" height="2" rx="1" fill={muted} />
+      <rect x="13" y="77" width="24" height="2" rx="1" fill={muted} />
+      <text
+        x="76"
+        y="45"
+        fill={foreground}
+        fontSize="13"
+        fontWeight="600"
+        fontFamily="Inter, sans-serif"
+      >
+        Ideas
+      </text>
+      <rect
+        x="76"
+        y="58"
+        width="69"
+        height="62"
+        rx="4"
+        fill={card}
+        stroke={border}
+      />
+      <rect
+        x="85"
+        y="68"
+        width="35"
+        height="3"
+        rx="1.5"
+        fill={foreground}
+        opacity=".8"
+      />
+      <rect x="85" y="78" width="48" height="2" rx="1" fill={muted} />
+      <rect x="85" y="85" width="39" height="2" rx="1" fill={muted} />
+      <rect
+        x="85"
+        y="101"
+        width="22"
+        height="10"
+        rx="2"
+        fill={dark ? "#454545" : "#eeeeee"}
+      />
+      <rect
+        x="153"
+        y="70"
+        width="68"
+        height="51"
+        rx="4"
+        fill={card}
+        stroke={border}
+      />
+      <rect
+        x="162"
+        y="79"
+        width="26"
+        height="3"
+        rx="1.5"
+        fill={foreground}
+        opacity=".8"
+      />
+      <rect x="162" y="90" width="47" height="2" rx="1" fill={muted} />
+      <rect x="162" y="97" width="35" height="2" rx="1" fill={muted} />
+    </>
   );
 }
 
-function GeneralSection() {
+function ThemePreview({ theme }: { theme: ThemeValue }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="block size-full rounded-[3px]"
+      viewBox="0 0 240 140"
+      preserveAspectRatio="xMidYMid slice"
+    >
+      <ThemePreviewScene dark={theme === "dark"} />
+      {theme === "system" && (
+        <>
+          <defs>
+            <clipPath id="settings-system-preview-dark">
+              <rect x="120" width="120" height="140" />
+            </clipPath>
+          </defs>
+          <g clipPath="url(#settings-system-preview-dark)">
+            <ThemePreviewScene dark />
+          </g>
+          <path d="M120 0V140" stroke="#a3a3a3" strokeOpacity=".55" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function AppearanceSection() {
   const { theme, setTheme } = useTheme();
   const activeTheme: ThemeValue = theme === "system" ? "system" : theme;
 
   return (
-    <Item className="px-0">
-      <ItemContent>
-        <ItemTitle>Theme</ItemTitle>
-        <ItemDescription>
-          Switch between light, dark, and system theme
-        </ItemDescription>
-      </ItemContent>
-      <ItemActions>
-        <div
-          aria-label="Theme"
-          className="relative grid w-fit grid-cols-3 gap-0.5 rounded-md border border-border/60 bg-muted p-0.5 shadow-[0_1px_1px_rgb(0_0_0_/_0.02)] ring-1 ring-foreground/[0.025] backdrop-blur-sm"
-          role="tablist"
-        >
-          <motion.span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0.5 left-0.5 z-0 w-[calc((100%_-_0.5rem)/3)] rounded-[calc(var(--radius-md)-2px)] bg-gradient-to-b from-background to-background/85 shadow-[0_1px_2px_rgb(0_0_0_/_0.12),inset_0_1px_0_rgb(255_255_255_/_0.12)] ring-1 ring-foreground/[0.05]"
-            initial={false}
-            animate={{
-              x: `calc(${THEMES.findIndex((t) => t.value === activeTheme)} * (100% + 0.125rem))`,
-            }}
-            transition={{
-              duration: 0.12,
-              ease: [0.16, 1, 0.3, 1],
-            }}
-          />
-          {THEMES.map(({ value, icon: Icon }) => (
-            <Button
-              key={value}
-              aria-selected={activeTheme === value}
-              className={themeTabClassName(activeTheme === value)}
-              role="tab"
-              size="xs"
-              type="button"
-              variant="ghost"
-              onClick={() => setTheme(value)}
-            >
-              <span className="relative z-10 flex items-center">
-                <Icon />
-              </span>
-            </Button>
-          ))}
+    <section aria-labelledby="appearance-heading">
+      <h2
+        id="appearance-heading"
+        className="text-xl font-semibold tracking-tight text-foreground"
+      >
+        Appearance
+      </h2>
+      <div className="mt-9">
+        <h3 className="text-[13px] font-medium text-muted-foreground">
+          Visual style
+        </h3>
+        <div className="mt-4 flex min-h-20 items-center justify-between gap-3 rounded-lg border border-border/70 bg-card px-4 py-2.5 sm:px-5">
+          <span className="shrink-0 text-sm font-medium">Mode</span>
+          <div
+            aria-label="Mode"
+            className="flex items-center gap-2"
+            role="radiogroup"
+          >
+            {THEMES.map(({ value, label }, index) => (
+              <Tooltip key={value}>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      aria-label={label}
+                      aria-checked={activeTheme === value}
+                      role="radio"
+                      tabIndex={activeTheme === value ? 0 : -1}
+                      className={cn(
+                        "size-12 shrink-0 overflow-hidden rounded-md border bg-background p-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:h-12 md:w-16",
+                        activeTheme === value
+                          ? "border-foreground ring-1 ring-foreground"
+                          : "border-border hover:border-foreground/50",
+                      )}
+                      onClick={() => setTheme(value)}
+                      onKeyDown={(event) => {
+                        const next = nextOptionIndex(
+                          event.key,
+                          index,
+                          THEMES.length,
+                          "horizontal",
+                        );
+                        if (next === null) return;
+                        event.preventDefault();
+                        setTheme(THEMES[next].value);
+                        event.currentTarget
+                          .closest('[role="radiogroup"]')
+                          ?.querySelectorAll<HTMLButtonElement>(
+                            '[role="radio"]',
+                          )
+                          [next]?.focus();
+                      }}
+                    />
+                  }
+                >
+                  <ThemePreview theme={value} />
+                </TooltipTrigger>
+                <TooltipContent side="top">{label}</TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
         </div>
-      </ItemActions>
-    </Item>
+      </div>
+    </section>
   );
 }
 
@@ -102,6 +264,8 @@ export function SettingsDialog() {
   const navigateOverlay = useWorkspaceOverlayNavigation();
   const location = useRouterState({ select: (state) => state.location });
   const open = (location.search as { settings?: boolean }).settings === true;
+  const [section, setSection] = useState<SettingsSection>("appearance");
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     function onRequest(event: Event) {
@@ -129,43 +293,100 @@ export function SettingsDialog() {
     >
       <DialogContent
         className="md:max-w-[700px] lg:max-w-[800px]"
-        showCloseButton
+        initialFocus={titleRef}
+        polishedMotion
+        showCloseButton={false}
       >
-        <DialogTitle className="sr-only">Settings</DialogTitle>
         <DialogDescription className="sr-only">
-          Customize your settings here.
+          Change the appearance of your workspace.
         </DialogDescription>
-        <DialogBody className="overflow-hidden p-0">
-          <div className="flex max-h-[560px]">
-            <nav className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-border/50 bg-card p-3">
-              <button
-                type="button"
-                className="flex items-center gap-2 rounded-md bg-foreground/10 px-2.5 py-1.5 text-left text-sm font-medium text-foreground transition-colors"
+        <div className="flex max-h-[min(560px,80dvh)] flex-col overflow-hidden rounded-lg bg-background/50 text-foreground md:min-h-96 md:flex-row">
+          <aside className="w-full shrink-0 md:w-48">
+            <div className="flex h-full flex-col p-3 md:p-4">
+              <DialogTitle
+                ref={titleRef}
+                tabIndex={-1}
+                className="px-2 py-1.5 text-sm font-semibold tracking-tight outline-none"
               >
-                <SettingsIcon className="size-4 shrink-0" />
-                General
-              </button>
-            </nav>
-            <div className="flex min-w-0 flex-1 flex-col">
-              <header className="flex h-12 shrink-0 items-center px-4">
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>Settings</BreadcrumbPage>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>General</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
-              </header>
-              <div className="flex-1 overflow-y-auto px-4 py-4">
-                <GeneralSection />
-              </div>
+                Settings
+              </DialogTitle>
+              <DialogClose
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="absolute top-[1.125rem] right-[1.125rem] z-20"
+                  />
+                }
+              >
+                <XIcon />
+                <span className="sr-only">Close settings</span>
+              </DialogClose>
+              <nav
+                aria-label="Settings sections"
+                aria-orientation="vertical"
+                className="mt-2 space-y-0.5"
+                role="tablist"
+              >
+                {SETTINGS_SECTIONS.map(
+                  ({ value, label, icon: Icon }, index) => (
+                    <button
+                      key={value}
+                      type="button"
+                      id={`settings-tab-${value}`}
+                      aria-controls="settings-panel"
+                      aria-selected={section === value}
+                      role="tab"
+                      tabIndex={section === value ? 0 : -1}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                        section === value
+                          ? "bg-foreground/[0.07] text-foreground hover:bg-foreground/[0.07]"
+                          : "text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",
+                      )}
+                      onClick={() => setSection(value)}
+                      onKeyDown={(event) => {
+                        const next = nextOptionIndex(
+                          event.key,
+                          index,
+                          SETTINGS_SECTIONS.length,
+                          "vertical",
+                        );
+                        if (next === null) return;
+                        event.preventDefault();
+                        setSection(SETTINGS_SECTIONS[next].value);
+                        event.currentTarget.parentElement
+                          ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+                          [next]?.focus();
+                      }}
+                    >
+                      <Icon className="size-4 shrink-0" aria-hidden="true" />
+                      {label}
+                    </button>
+                  ),
+                )}
+              </nav>
             </div>
-          </div>
-        </DialogBody>
+          </aside>
+          <main
+            id="settings-panel"
+            aria-labelledby={`settings-tab-${section}`}
+            role="tabpanel"
+            tabIndex={section === "appearance" ? -1 : 0}
+            className="min-w-0 flex-1 overflow-y-auto rounded-t-lg border-t border-foreground/10 bg-background px-4 py-5 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-ring md:rounded-l-xl md:rounded-tr-none md:border-t-0 md:border-l md:px-7"
+          >
+            {section === "appearance" ? (
+              <AppearanceSection />
+            ) : (
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                {
+                  SETTINGS_SECTIONS.find((item) => item.value === section)
+                    ?.label
+                }
+              </h2>
+            )}
+          </main>
+        </div>
       </DialogContent>
     </Dialog>
   );
