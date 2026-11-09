@@ -44,7 +44,12 @@ type Phase = "prompt" | "streaming" | "review";
 // Mirrors the server's limit on instructions sent with a follow-up.
 const MAX_EARLIER_PROMPTS = 10;
 
-type QuickAction = { label: string; instruction: string };
+type QuickAction = {
+  label: string;
+  instruction: string;
+  /** Mechanical edits skip lookups and keep everything else unchanged. */
+  task?: "mechanical";
+};
 
 // One-click instructions for the most common requests, shown under the empty
 // prompt. They run exactly like typed instructions.
@@ -76,18 +81,26 @@ const REWRITE_ACTIONS: QuickAction[] = [
   },
   {
     label: "Fix grammar",
+    task: "mechanical",
     instruction:
       "Fix spelling, grammar, and punctuation only; change nothing else.",
   },
-  { label: "Shorter", instruction: "Make it shorter, keeping the key points." },
+  {
+    label: "Shorter",
+    task: "mechanical",
+    instruction: "Make it shorter, keeping the key points.",
+  },
   {
     label: "Longer",
+    task: "mechanical",
     instruction: "Make it longer, adding useful detail in the same style.",
   },
 ];
 
 // Mirrors the server's note limit; long notes keep the text around the cursor.
-const NOTE_CONTEXT_LIMIT = 38_000;
+// The whole note is sent up to this size; the server shows the model an
+// outline and the part around the cursor, and lets it read the rest.
+const NOTE_CONTEXT_LIMIT = 200_000;
 
 function trimAroundCursor(note: string) {
   if (note.length <= NOTE_CONTEXT_LIMIT) return note;
@@ -134,6 +147,9 @@ export function NoteAiPrompt({
   const pickerId = useId();
   const [phase, setPhase] = useState<Phase>(restored ? "review" : "prompt");
   const [error, setError] = useState("");
+  // What the AI is doing before it writes (searching, reading); replaced by
+  // "Writing…" once text arrives.
+  const [status, setStatus] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
@@ -298,13 +314,18 @@ export function NoteAiPrompt({
     runningRef.current = true;
     handOff();
     setError("");
+    setStatus(null);
     setPrompt("");
     setPhase("streaming");
     setNoteAiStreaming(editor, true);
 
     streamNoteAi(request, {
       signal: controller.signal,
+      onStatus: (text) => {
+        if (isCurrent()) setStatus(text);
+      },
       onDelta: (text) => {
+        if (isCurrent()) setStatus(null);
         if (!isCurrent()) return;
         outputRef.current += text;
         frameRef.current ??= requestAnimationFrame(() => {
@@ -331,7 +352,7 @@ export function NoteAiPrompt({
       });
   };
 
-  const submit = (text = prompt) => {
+  const submit = (text = prompt, task?: "mechanical") => {
     const instruction = text.trim();
     if (!instruction || phase === "streaming") return;
     const previous = lastRequestRef.current;
@@ -350,6 +371,7 @@ export function NoteAiPrompt({
       ...(draft ? { draft } : {}),
       ...(earlierPrompts.length ? { earlierPrompts } : {}),
       ...(passageRef.current ? { passage: passageRef.current } : {}),
+      ...(task ? { task } : {}),
     };
     if (!mentions.notes.length || !workspaceSlug) {
       run(request);
@@ -458,7 +480,9 @@ export function NoteAiPrompt({
           role="status"
           className="flex h-8 items-center justify-between gap-3 outline-none"
         >
-          <span className="note-ai-shimmer text-sm">Writing…</span>
+          <span className="note-ai-shimmer text-sm">
+            {status ?? "Writing…"}
+          </span>
           <Button
             type="button"
             variant="ghost"
@@ -631,7 +655,7 @@ export function NoteAiPrompt({
               size="xs"
               className="text-muted-foreground hover:text-foreground"
               onMouseDown={keepFocus}
-              onClick={() => submit(action.instruction)}
+              onClick={() => submit(action.instruction, action.task)}
             >
               {action.label}
             </Button>

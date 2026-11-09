@@ -21,7 +21,9 @@ export type NoteAiReferencedNote = { title: string; markdown: string };
 
 // Mirrors the server's limits.
 const MAX_MENTIONED_NOTES = 3;
-const MAX_REFERENCED_NOTE_LENGTH = 12_000;
+// Whole notes are sent; the server shows the model an overview of long ones
+// and lets it read the rest.
+const MAX_REFERENCED_NOTE_LENGTH = 100_000;
 const PICKER_LIMIT = 6;
 
 /** The `@query` being typed right before the caret, if any. */

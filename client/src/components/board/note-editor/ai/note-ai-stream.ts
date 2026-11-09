@@ -11,6 +11,8 @@ export type NoteAiRequest = {
   passage?: string;
   /** Notes @-mentioned in the prompt, as context. */
   referencedNotes?: Array<{ title: string; markdown: string }>;
+  /** A mechanical edit (fix grammar, shorter, longer): never looks anything up. */
+  task?: "mechanical";
 };
 
 const streamApiUrl =
@@ -52,7 +54,16 @@ export function takeServerSentEvents(buffer: string): {
  */
 export async function streamNoteAi(
   request: NoteAiRequest,
-  { signal, onDelta }: { signal: AbortSignal; onDelta: (text: string) => void },
+  {
+    signal,
+    onDelta,
+    onStatus,
+  }: {
+    signal: AbortSignal;
+    onDelta: (text: string) => void;
+    /** What the AI is doing before it writes, e.g. "Searching this note…". */
+    onStatus?: (text: string) => void;
+  },
 ) {
   const response = await fetch(streamApiUrl, {
     method: "POST",
@@ -86,6 +97,11 @@ export async function streamNoteAi(
       }
       if (payload.type === "delta" && typeof payload.text === "string") {
         onDelta(payload.text);
+      } else if (
+        payload.type === "status" &&
+        typeof payload.text === "string"
+      ) {
+        onStatus?.(payload.text);
       } else if (payload.type === "done") {
         await reader.cancel();
         return;
