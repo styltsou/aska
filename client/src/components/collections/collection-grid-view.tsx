@@ -34,6 +34,7 @@ import {
 import { SelectionActionBar } from "@/components/selection/selection-action-bar";
 import { MoveToDialog } from "@/components/move-to-dialog";
 import { VirtualMasonry } from "@/components/asset-grid/virtual-masonry";
+import { EmptyStateShortcuts } from "@/components/asset-grid/empty-state-shortcuts";
 import { GridDensityControl } from "@/components/asset-grid/grid-density-control";
 import {
   columnsForGrid,
@@ -451,12 +452,15 @@ const CollectionGridContent = memo(function CollectionGridContent({
           </div>
 
           {isEmpty ? (
-            <div className="flex min-h-96 items-center justify-center px-6 text-center">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center">
               <div className="max-w-sm space-y-1.5">
                 <h2 className="text-sm font-medium">{emptyTitle}</h2>
                 <p className="text-sm text-balance text-muted-foreground">
                   {emptyDescription}
                 </p>
+                <div className="pt-9">
+                  <EmptyStateShortcuts />
+                </div>
               </div>
             </div>
           ) : (
