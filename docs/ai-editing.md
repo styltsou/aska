@@ -214,6 +214,12 @@ and wording: 429 / quota â†’ "AI usage limit reached", 503 / 529 / overloaded â†
 
 ## Planned and possible next steps
 
+The next step is designed in
+[Agentic Context](./proposals/ai-agentic-context.md): an overview plus tools
+the model calls to read and search the note and mentioned assets, a fast path
+with no tools for simple edits, prompts built from parts per task, and an eval
+harness (`bun run ai:eval` in `server/`) to compare pipelines.
+
 **Mention any asset, not just notes.** The picker, chips, request field and
 prompt are note-specific today. The plan is a per-type context builder:
 
