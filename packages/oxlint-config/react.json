@@ -1,0 +1,40 @@
+{
+  "extends": ["./node.json"],
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "vitest",
+    "react",
+    "jsx-a11y"
+  ],
+  "rules": {
+    // The apps use the automatic JSX runtime, so React needn't be in scope.
+    "react/react-in-jsx-scope": "off",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-effect-dependencies": "warn",
+    "react/memo-dependencies": "warn",
+    // React Compiler-era rules. They flag real problems, but existing code has
+    // many findings; warn until those are fixed, then make them errors.
+    "react/refs": "warn",
+    "react/set-state-in-effect": "warn",
+    "react/immutability": "warn",
+    "react/preserve-manual-memoization": "warn",
+    "react/use-memo": "warn",
+    "react/incompatible-library": "warn",
+    // Accessibility: warn until the existing findings are fixed.
+    "jsx-a11y/prefer-tag-over-role": "warn",
+    "jsx-a11y/no-autofocus": "warn",
+    "jsx-a11y/no-static-element-interactions": "warn",
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "jsx-a11y/heading-has-content": "warn",
+    "jsx-a11y/control-has-associated-label": "warn",
+    "jsx-a11y/no-noninteractive-tabindex": "warn",
+    "jsx-a11y/no-noninteractive-element-interactions": "warn",
+    "jsx-a11y/role-supports-aria-props": "warn",
+    "jsx-a11y/no-noninteractive-element-to-interactive-role": "warn",
+    "jsx-a11y/media-has-caption": "warn",
+    "jsx-a11y/label-has-associated-control": "warn"
+  }
+}

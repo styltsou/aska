@@ -19,7 +19,9 @@
     "transit": {
       "dependsOn": ["^transit"]
     },
-    "lint": {},
+    "lint": {
+      "dependsOn": ["transit"]
+    },
     "format": {},
     "typecheck": {
       "dependsOn": ["transit"]

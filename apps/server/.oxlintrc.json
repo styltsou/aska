@@ -1,5 +1,4 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc", "import", "node"],
-  "ignorePatterns": ["node_modules/**", "drizzle/**", "src/openapi.json"]
+  "extends": ["../../packages/oxlint-config/node.json"],
+  "ignorePatterns": ["drizzle/**", "src/openapi.json"]
 }

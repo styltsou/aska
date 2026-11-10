@@ -83,6 +83,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@mnemee/oxlint-config": "workspace:*",
     "@sentry/vite-plugin": "^5.4.0",
     "@types/hast": "^3.0.4",
     "@types/node": "catalog:",

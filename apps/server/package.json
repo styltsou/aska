@@ -48,6 +48,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@mnemee/oxlint-config": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
     "dotenv": "^17.4.2",

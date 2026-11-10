@@ -1,10 +1,4 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc", "import", "react"],
-  "ignorePatterns": [
-    "node_modules/**",
-    "coverage/**",
-    "dist/**",
-    "src/routeTree.gen.ts"
-  ]
+  "extends": ["../../packages/oxlint-config/react.json"],
+  "ignorePatterns": ["src/routeTree.gen.ts"]
 }
