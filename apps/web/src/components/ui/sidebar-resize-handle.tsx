@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { positionResizeGrip } from "@/lib/resize-grip";
 import { ResizeGrip } from "@/components/ui/resize-grip";
 import {
@@ -18,6 +18,7 @@ export function SidebarResizeHandle({
   controls: string;
 }) {
   const handleRef = useRef<HTMLDivElement>(null);
+  const descriptionId = useId();
   const gripRef = useRef<HTMLSpanElement>(null);
   const dragRef = useRef<{
     pointerId: number;
@@ -99,7 +100,7 @@ export function SidebarResizeHandle({
       aria-valuemin={SIDEBAR_MIN_WIDTH}
       aria-valuemax={SIDEBAR_MAX_WIDTH}
       aria-valuenow={SIDEBAR_DEFAULT_WIDTH}
-      aria-description="Use left and right arrow keys to resize, Shift for larger steps, or Home and End for minimum and maximum width."
+      aria-describedby={descriptionId}
       title="Drag or use arrow keys to resize. Double-click to reset."
       className={`group/resize absolute top-14 bottom-2 z-20 w-6 cursor-col-resize touch-none outline-none ${side === "left" ? "-right-3" : "-left-3"}`}
       onPointerEnter={(event) => {
@@ -204,6 +205,10 @@ export function SidebarResizeHandle({
       }}
     >
       <ResizeGrip ref={gripRef} sidebar />
+      <span id={descriptionId} className="sr-only">
+        Use left and right arrow keys to resize, Shift for larger steps, or Home
+        and End for minimum and maximum width.
+      </span>
     </div>
   );
 }

@@ -24,17 +24,21 @@
     "react/use-memo": "warn",
     "react/incompatible-library": "warn",
     // Accessibility: warn until the existing findings are fixed.
-    "jsx-a11y/prefer-tag-over-role": "warn",
+    // role="status"/"list" on a div or ul is deliberate (e.g. list-style: none
+    // loses list semantics in Safari); swapping tags would restyle components.
+    "jsx-a11y/prefer-tag-over-role": "off",
     "jsx-a11y/no-autofocus": "warn",
     "jsx-a11y/no-static-element-interactions": "warn",
     "jsx-a11y/click-events-have-key-events": "warn",
-    "jsx-a11y/heading-has-content": "warn",
+    // These two cannot see children passed through spread props, which is how
+    // the shadcn-style wrappers (FieldLabel, markdown heading renderers) work.
+    "jsx-a11y/heading-has-content": "off",
     "jsx-a11y/control-has-associated-label": "warn",
     "jsx-a11y/no-noninteractive-tabindex": "warn",
     "jsx-a11y/no-noninteractive-element-interactions": "warn",
     "jsx-a11y/role-supports-aria-props": "warn",
     "jsx-a11y/no-noninteractive-element-to-interactive-role": "warn",
     "jsx-a11y/media-has-caption": "warn",
-    "jsx-a11y/label-has-associated-control": "warn"
+    "jsx-a11y/label-has-associated-control": "off"
   }
 }
