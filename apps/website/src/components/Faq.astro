@@ -193,6 +193,10 @@ const faqs = [
 		row(-2*radius, t, outer);
 		row(t, mid, outer);
 		row(mid, b, divided);
+		// Where the two top corners at the divider meet, the header's straight bottom edge would run between them. Wound the
+		// opposite way, this thin rectangle cancels exactly that stretch (between the corners' tangent points), so each
+		// corner just ends in the line instead of closing into a small triangle.
+		if (split > l) drawing.push(`M${split-radius} ${mid-half}V${mid+half}H${split+radius}V${mid-half}Z`);
 		row(b, bounds.height + 2*radius, divided);
 		for (const item of items.slice(1))
 			drawing.push(separator(split, y(item.getBoundingClientRect().top), r, radius, half));
