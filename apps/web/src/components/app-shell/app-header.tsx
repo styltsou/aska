@@ -275,31 +275,33 @@ export function AppHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-20 flex h-12 min-w-0 shrink-0 items-center gap-2 bg-sidebar px-2 md:h-14 md:px-0">
-      <SidebarTrigger />
-      <AppBreadcrumbs />
-      <div className="ml-auto flex shrink-0 items-center gap-2">
-        {collectionsSegment === "inbox" ? <GridDensityControl /> : null}
-        {isCollectionsView ? (
-          <CreateCollectionDialog workspaceSlug={workspaceSlug}>
-            <Button type="button" size="sm">
-              <PlusIcon />
-              <span>New collection</span>
-            </Button>
-          </CreateCollectionDialog>
-        ) : null}
-        {isBoardView ? (
-          <CollectionViewMenu
-            boardKey={makeBoardKey(
-              workspaceSlug,
-              collectionSlug,
-              folderPath || undefined,
-            )}
-            value={boardView}
-            workspaceSlug={workspaceSlug}
-            onChange={(view) => setCollectionView(collectionViewScope, view)}
-          />
-        ) : null}
+    <header className="sticky top-0 z-20 flex h-12 min-w-0 shrink-0 items-center bg-sidebar transition-[height] duration-(--sidebar-duration) ease-(--sidebar-ease) group-has-[[data-slot=sidebar][data-state=collapsed]]/sidebar-wrapper:h-12 motion-reduce:transition-none md:h-14">
+      <div className="flex h-12 w-full min-w-0 items-center gap-2 px-2 md:px-0">
+        <SidebarTrigger />
+        <AppBreadcrumbs />
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {collectionsSegment === "inbox" ? <GridDensityControl /> : null}
+          {isCollectionsView ? (
+            <CreateCollectionDialog workspaceSlug={workspaceSlug}>
+              <Button type="button" size="sm">
+                <PlusIcon />
+                <span>New collection</span>
+              </Button>
+            </CreateCollectionDialog>
+          ) : null}
+          {isBoardView ? (
+            <CollectionViewMenu
+              boardKey={makeBoardKey(
+                workspaceSlug,
+                collectionSlug,
+                folderPath || undefined,
+              )}
+              value={boardView}
+              workspaceSlug={workspaceSlug}
+              onChange={(view) => setCollectionView(collectionViewScope, view)}
+            />
+          ) : null}
+        </div>
       </div>
     </header>
   );

@@ -1,7 +1,6 @@
 import { NavMain } from "@/components/app-shell/nav-main";
 import { SidebarSearchTrigger } from "@/components/app-shell/sidebar-search-trigger";
 import { NavProjects } from "@/components/app-shell/nav-projects";
-import { NavSecondary } from "@/components/app-shell/nav-secondary";
 import { NavUser } from "@/components/app-shell/nav-user";
 import { WorkspaceSwitcher } from "@/components/app-shell/workspace-switcher";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +13,7 @@ import {
   useSidebarPeek,
 } from "@/components/ui/sidebar";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { FolderOpenIcon, InboxIcon, SendIcon, StarIcon } from "lucide-react";
+import { FolderOpenIcon, InboxIcon, StarIcon } from "lucide-react";
 import type { AuthState } from "@/lib/auth-flow";
 import { useWorkspace } from "@/api/workspace";
 import { useMarkInboxSeen } from "@/api/collection";
@@ -59,9 +58,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     [workspaceSearch],
   );
 
-  const navSecondary = [
-    { title: "Feedback", icon: <SendIcon />, disabled: true },
-  ];
   const { workspaceSlug, collectionSlug: activeCollectionSlug } =
     getSidebarCollectionLocation(pathname);
   const { data: workspaceData, isLoading: isWorkspaceLoading } =
@@ -134,7 +130,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   }));
 
   const navigation = (includeExtras: boolean) => (
-    <SidebarContent className="overflow-hidden">
+    <SidebarContent className="overflow-visible">
       <div className="shrink-0">
         {includeExtras ? <SidebarSearchTrigger /> : null}
         <NavMain items={navMain} />
@@ -143,9 +139,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         collections={navCollections}
         isLoading={isWorkspaceLoading}
       />
-      {includeExtras ? (
-        <NavSecondary items={navSecondary} className="mt-auto shrink-0" />
-      ) : null}
     </SidebarContent>
   );
 

@@ -235,7 +235,7 @@ function Sidebar({
           state === "collapsed" &&
           (variant === "sidebar"
             ? "w-(--sidebar-width-icon)"
-            : "w-[calc(var(--sidebar-width-icon)+1rem)]"),
+            : "w-[calc(var(--sidebar-width-icon)+var(--app-shell-inset)+var(--app-shell-inset))]"),
         state === "collapsed" &&
           collapsible === "offcanvas" &&
           (variant === "sidebar" ? "w-0" : "w-(--app-shell-inset)"),
@@ -252,27 +252,25 @@ function Sidebar({
         data-side={side}
         aria-hidden={state === "collapsed" && collapsible === "offcanvas"}
         inert={state === "collapsed" && collapsible === "offcanvas"}
-        className={cn(
-          "absolute inset-0 hidden w-full overflow-hidden md:flex",
-          // Adjust the padding for floating and inset variants.
-          variant === "floating" || variant === "inset"
-            ? "p-2"
-            : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
-          className,
-        )}
+        className="absolute inset-0 hidden w-full overflow-hidden md:flex"
         {...props}
       >
         <div
-          data-sidebar="sidebar"
-          data-slot="sidebar-inner"
           className={cn(
-            "flex h-full shrink-0 flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border group-data-[collapsible=icon]:w-full",
+            "relative flex h-full w-(--sidebar-width) shrink-0 flex-col group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
             variant === "floating" || variant === "inset"
-              ? "w-[calc(var(--sidebar-width)-1rem)]"
-              : "w-(--sidebar-width)",
+              ? "p-[var(--app-shell-inset)] group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+var(--app-shell-inset)+var(--app-shell-inset))]"
+              : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            className,
           )}
         >
-          {children}
+          <div
+            data-sidebar="sidebar"
+            data-slot="sidebar-inner"
+            className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          >
+            {children}
+          </div>
         </div>
       </div>
       {state === "expanded" ? (

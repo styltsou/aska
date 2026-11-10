@@ -85,11 +85,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <SidebarInset
               className={cn(
                 "min-h-0 md:mb-[var(--app-shell-inset)]",
-                isBoardView && "h-[calc(100svh-0.5rem)] overflow-hidden",
+                isBoardView &&
+                  "h-[calc(100svh-var(--app-shell-inset))] overflow-hidden",
                 isScrollablePage &&
                   "h-svh overflow-hidden md:h-[calc(100svh-var(--app-shell-inset))]",
-                isBoardView && pexelsBrowserOpen ? "md:mr-0" : "md:mr-2",
-                "md:mr-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--app-shell-inset))] md:transition-[margin-right] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none [[data-workspace-peek-resizing]_&]:transition-none",
+                isBoardView && pexelsBrowserOpen
+                  ? "md:mr-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap))]"
+                  : "md:mr-[calc(var(--workspace-peek-rail-width)+var(--workspace-peek-stage-gap)+var(--app-shell-inset))]",
+                "md:transition-[margin-right] md:duration-[160ms] md:ease-[cubic-bezier(0.16,1,0.3,1)] md:motion-reduce:transition-none [[data-workspace-peek-resizing]_&]:transition-none",
               )}
             >
               <CanvasActionsProvider>

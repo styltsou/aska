@@ -28,9 +28,9 @@ export function NavProjects({ collections, isLoading }: NavProjectsProps) {
     <SidebarGroup className="min-h-0 flex-1 group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Collections</SidebarGroupLabel>
       <ScrollArea
-        className="min-h-0 flex-1 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-6 after:bg-linear-to-t after:from-sidebar after:to-transparent after:opacity-0 data-[overflow-y-end]:after:opacity-100"
+        className="collections-scroll -mr-[calc(var(--app-shell-inset)+var(--app-shell-inset))] min-h-0 flex-1"
         viewportClassName="overscroll-contain"
-        contentClassName="pr-0"
+        contentClassName="pr-[calc(var(--app-shell-inset)+var(--app-shell-inset))]"
         verticalScrollbarClassName="w-2 p-0 opacity-100"
         verticalThumbClassName="w-0.5"
         horizontalScrollbarClassName="hidden"
