@@ -85,14 +85,14 @@
   "devDependencies": {
     "@sentry/vite-plugin": "^5.4.0",
     "@types/hast": "^3.0.4",
-    "@types/node": "^24",
+    "@types/node": "catalog:",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6",
-    "oxfmt": "^0.58.0",
-    "oxlint": "^1.73.0",
-    "typescript": "~6",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
     "vite": "^8",
-    "vitest": "^4.1.10"
+    "vitest": "catalog:"
   }
 }
