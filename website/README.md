@@ -1,11 +1,13 @@
 # Mnemee Website
 
-The standalone marketing site for Mnemee, built with Astro.
+The marketing site for Mnemee, built with Astro. It is a package in the Mnemee
+monorepo, so dependencies are installed from the repository root.
 
 ## Development
 
 ```sh
-bun install
+bun install            # from the repository root
+cd website
 cp .env.example .env
 bun run dev
 ```
