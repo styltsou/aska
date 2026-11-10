@@ -52,7 +52,7 @@ NoteRichText (Tiptap editor)
                  SSE: custom {status | delta | done}, error {message}
 ```
 
-### Client (`client/src/components/board/note-editor/agent/`)
+### Client (`apps/web/src/components/board/note-editor/agent/`)
 
 **`note-agent-session.ts`: the session plugin.** A ProseMirror plugin owns one
 session at a time. Its state:
@@ -143,7 +143,7 @@ opacity-only, 100ms, `cubic-bezier(0.23, 1, 0.32, 1)`. Diff colors use the rail
 blue for additions and a muted strike with a destructive-tinted line for
 removals.
 
-### Server (`server/src/`)
+### Server (`apps/server/src/`)
 
 **`ai-stream-lambda.ts`.** A streaming Lambda behind its own API Gateway REST
 API (`aiApi`, route `ANY /stream`, 2-minute timeout, see `sst.config.ts`). It
@@ -230,7 +230,7 @@ and wording: 429 / quota â†’ "AI usage limit reached", 503 / 529 / overloaded â†
   `agent/mentioned-assets.integration.test.ts` checks mention loading, type
   matching and workspace access against a database (`bun run test:integration`). `agent/eval/scripted-model.ts` plays
   back scripted tool calls and answers for tests.
-- Eval: `bun run agent:eval` in `server/` (`--fake` for a free scripted run,
+- Eval: `bun run agent:eval` in `apps/server/` (`--fake` for a free scripted run,
   `--pipeline baseline` to compare, `--delay` for rate limits).
 - In the browser, stub `window.fetch` for URLs containing `/ai/` to return a
   scripted SSE stream. This exercises the whole client without model calls.
@@ -322,7 +322,7 @@ The next step is designed in
 [Agent Context and Tools](./proposals/agent-context.md): an overview plus tools
 the model calls to read and search the note and mentioned assets, a fast path
 with no tools for simple edits, prompts built from parts per task, and an eval
-harness (`bun run agent:eval` in `server/`) to compare pipelines.
+harness (`bun run agent:eval` in `apps/server/`) to compare pipelines.
 
 **Hidden image descriptions (with workspace search).** An image's title can
 be a file name or an unrelated label, so the agent is told to trust the

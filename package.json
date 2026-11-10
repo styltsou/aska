@@ -7,22 +7,20 @@
     "deploy": "bun run sst -- deploy",
     "backfill:resolver-version": "bun run scripts/backfill-resolver-version.ts",
     "dev:aws": "if [ \"$SST_STAGE\" != \"hybrid\" ]; then echo \"Run Live forwarding only as: SST_STAGE=hybrid bun run dev:aws\"; exit 1; fi; bun run sst -- dev --stage \"$SST_STAGE\"",
-    "dev": "concurrently --kill-others-on-fail --names sst,vite --prefix-colors blue,magenta \"SST_STAGE=hybrid bun run dev:aws\" \"bun run --cwd client dev\"",
-    "dev:cloud": "bun run --cwd client dev:cloud"
+    "dev": "concurrently --kill-others-on-fail --names sst,vite --prefix-colors blue,magenta \"SST_STAGE=hybrid bun run dev:aws\" \"bun run --cwd apps/web dev\"",
+    "dev:cloud": "bun run --cwd apps/web dev:cloud"
   },
   "workspaces": [
-    "client",
-    "server",
+    "apps/*",
     "services/*",
-    "extension",
-    "website"
+    "packages/*"
   ],
   "devDependencies": {
     "concurrently": "^10.0.4",
     "sst": "^4.17.1"
   },
   "patchedDependencies": {
-    "@tiptap/extension-drag-handle@3.32.2": "client/patches/@tiptap%2Fextension-drag-handle@3.32.2.patch"
+    "@tiptap/extension-drag-handle@3.32.2": "apps/web/patches/@tiptap%2Fextension-drag-handle@3.32.2.patch"
   },
   "overrides": {
     "@tiptap/core": "3.30.2",

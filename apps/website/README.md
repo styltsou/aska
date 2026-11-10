@@ -7,7 +7,7 @@ monorepo, so dependencies are installed from the repository root.
 
 ```sh
 bun install            # from the repository root
-cd website
+cd apps/website
 cp .env.example .env
 bun run dev
 ```

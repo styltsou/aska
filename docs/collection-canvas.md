@@ -20,7 +20,7 @@ second source of truth.
 
 The Inbox continues to render through the existing `AssetBoard` masonry path.
 Collections and folder contents render as XYFlow custom nodes through
-`client/src/components/canvas`.
+`apps/web/src/components/canvas`.
 
 Folders are first-class canvas nodes. Opening one navigates to its own canvas;
 moving the folder on its parent canvas never changes the positions of its

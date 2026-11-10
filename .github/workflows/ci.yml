@@ -37,17 +37,17 @@ jobs:
           list-files: "none"
           filters: |
             client:
-              - 'client/**'
+              - 'apps/web/**'
             server:
-              - 'server/**'
+              - 'apps/server/**'
             image-variants:
               - 'services/image-variants/**'
             image-palette:
               - 'services/image-palette/**'
             image-shared:
-              - 'services/image-shared/**'
+              - 'packages/image-shared/**'
             url-unfurl-shared:
-              - 'services/url-unfurl-shared/**'
+              - 'packages/url-unfurl-shared/**'
             url-resolution:
               - 'services/url-resolution/**'
             video-processor:
@@ -55,9 +55,9 @@ jobs:
             gradient-naming:
               - 'services/gradient-naming/**'
             extension:
-              - 'extension/**'
+              - 'apps/extension/**'
             website:
-              - 'website/**'
+              - 'apps/website/**'
             infra:
               - 'sst.config.ts'
               - 'sst-env.d.ts'
@@ -72,9 +72,10 @@ jobs:
             # app changed. Docs/MD-only, extension-only and website-only changes
             # are skipped; the website deploys to Cloudflare on its own.
             deploy:
-              - 'client/**'
-              - 'server/**'
+              - 'apps/web/**'
+              - 'apps/server/**'
               - 'services/**'
+              - 'packages/**'
               - 'scripts/**'
               - 'sst.config.ts'
               - 'sst-env.d.ts'
@@ -99,16 +100,16 @@ jobs:
         # is truthy in expressions, so compare each one explicitly.
         include:
           - name: Client
-            directory: client
+            directory: apps/web
             command: bun run lint && bun run typecheck && bun run format && bun run test && bun run build
             changed: ${{ needs.changes.outputs.client == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Server
-            directory: server
+            directory: apps/server
             command: ""
             # Server depends on both shared packages and reads the SST config.
             changed: ${{ needs.changes.outputs.server == 'true' || needs.changes.outputs.infra == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Image shared
-            directory: services/image-shared
+            directory: packages/image-shared
             command: bun run lint && bun run typecheck && bun run format
             changed: ${{ needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Image variants
@@ -120,7 +121,7 @@ jobs:
             command: bun run lint && bun run typecheck && bun run format && bun run test
             changed: ${{ needs.changes.outputs.image-palette == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: URL unfurl shared
-            directory: services/url-unfurl-shared
+            directory: packages/url-unfurl-shared
             command: bun run lint && bun run typecheck && bun run format && bun run test
             changed: ${{ needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: URL resolution
@@ -136,11 +137,11 @@ jobs:
             command: bun run lint && bun run typecheck && bun run format && bun run test
             changed: ${{ needs.changes.outputs.gradient-naming == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Extension
-            directory: extension
+            directory: apps/extension
             command: bun run build
             changed: ${{ needs.changes.outputs.extension == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Website
-            directory: website
+            directory: apps/website
             command: bun run build
             changed: ${{ needs.changes.outputs.website == 'true' || needs.changes.outputs.workspace == 'true' }}
     defaults:
@@ -247,7 +248,7 @@ jobs:
           status="$(curl --silent --show-error --output /tmp/ai-unauthorized.txt --write-out '%{http_code}' --request POST --header 'Origin: http://localhost:5173' --header 'Content-Type: application/json' --data '{"prompt":"test","note":""}' "$ai_url/stream")"
           test "$status" = "401"
       - name: Queue missing video storyboards
-        run: bunx sst shell --stage dev -- bun run --cwd server backfill:video-storyboards --enqueue --wait
+        run: bunx sst shell --stage dev -- bun run --cwd apps/server backfill:video-storyboards --enqueue --wait
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_DEFAULT_ACCOUNT_ID }}

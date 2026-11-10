@@ -10,4 +10,4 @@ package-lock.json
 blog-drafts/
 
 # Local test caches
-client/.tmp-test/
+apps/web/.tmp-test/

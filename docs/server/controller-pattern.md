@@ -46,7 +46,7 @@ const collectionService = container.collectionService;
 ```
 
 Do not create service instances manually in controllers. Shared instances are
-explicitly constructed in `server/src/container.ts`; see the
+explicitly constructed in `apps/server/src/container.ts`; see the
 [Service Composition](./index.md#service-composition) convention.
 
 ## Authenticated Internal Callbacks

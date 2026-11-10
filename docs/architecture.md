@@ -59,12 +59,12 @@ Deployment details, stage policy, and secret handling are in
 
 | Path                          | Owns                                                     | Start here when changing it                                      |
 | ----------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------- |
-| `client/`                     | React 19/Vite browser application                        | `src/routes/`, `src/api/`, `src/components/`, `src/store/`       |
-| `server/`                     | Hono API Lambda, auth, persistence, OpenAPI              | `src/app.ts`, `src/routes/`, `src/controllers/`, `src/services/` |
-| `services/image-shared/`      | Shared SQS runtime, job contracts, and signed API client | `src/task-handler.ts`, `src/pipeline-client.ts`                  |
+| `apps/web/`                     | React 19/Vite browser application                        | `src/routes/`, `src/api/`, `src/components/`, `src/store/`       |
+| `apps/server/`                     | Hono API Lambda, auth, persistence, OpenAPI              | `src/app.ts`, `src/routes/`, `src/controllers/`, `src/services/` |
+| `packages/image-shared/`      | Shared SQS runtime, job contracts, and signed API client | `src/task-handler.ts`, `src/pipeline-client.ts`                  |
 | `services/image-variants/`    | Shared upload/resource-media rendition worker            | `src/lambda.ts`, `src/processor.ts`                              |
 | `services/image-palette/`     | Sharp/OKLab palette worker                               | `src/lambda.ts`, `src/processor.ts`                              |
-| `services/url-unfurl-shared/` | SSRF-safe external fetch and URL-resolution job contract | `src/safe-fetch.ts`, `src/resolution-job.ts`                     |
+| `packages/url-unfurl-shared/` | SSRF-safe external fetch and URL-resolution job contract | `src/safe-fetch.ts`, `src/resolution-job.ts`                     |
 | `services/url-resolution/`    | Ordered URL resolvers and generic HTML metadata          | `src/types.ts`, `src/generic-resolver.ts`                        |
 | `sst.config.ts`               | AWS topology and runtime environment                     | resource definitions and Lambda environments                     |
 | `docs/`                       | Durable architecture and contribution context            | [Documentation home](./README.md)                                |
@@ -93,7 +93,7 @@ interaction state that is not server state, split by lifetime:
 
 Do not put a server response into Zustand just to make it easier to access.
 
-The API client in `client/src/lib/api.ts` sends cookie-authenticated requests
+The API client in `apps/web/src/lib/api.ts` sends cookie-authenticated requests
 to `VITE_SERVER_URL` and unwraps the server's `{ data }` envelope. New API
 features should add a feature-local module under `src/api/<feature>/` rather
 than placing requests directly in a component.
@@ -117,7 +117,7 @@ route -> validation/auth middleware -> controller -> service -> Drizzle/Postgres
 
 Read [Server Guide](./server/index.md), [Controller Pattern](./server/controller-pattern.md),
 and [Service Method Pattern](./server/service-method-pattern.md) before adding
-an endpoint. Every public API change must update `server/src/openapi.json`.
+an endpoint. Every public API change must update `apps/server/src/openapi.json`.
 
 ## Data and ownership model
 

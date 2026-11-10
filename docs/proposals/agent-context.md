@@ -1,7 +1,7 @@
 # Note Agent: Context and Tools — Design Note
 
-**Status:** In progress. Built: the eval harness (`server/src/agent/eval/`) and
-step 2 below (the agent loop, `server/src/agent/note-agent.ts`), and
+**Status:** In progress. Built: the eval harness (`apps/server/src/agent/eval/`) and
+step 2 below (the agent loop, `apps/server/src/agent/note-agent.ts`), and
 mentioned notes, links, colors and images loaded on the server by ID. Not
 built: videos, workspace search. The current pipeline is described in
 [Note Agent](../note-agent.md).
@@ -109,7 +109,7 @@ possibly a faster model for them.
 
 ## Evaluation
 
-`server/src/agent/eval/` holds fixed cases and a runner that drives a pipeline and
+`apps/server/src/agent/eval/` holds fixed cases and a runner that drives a pipeline and
 prints, per case: pass/fail of simple checks, time to first text, total time,
 output length, and tool calls. Cases cover:
 
@@ -126,7 +126,7 @@ client applies, so the far-away cases are expected to fail today. Routing is
 measured as unneeded tool calls (plain cases) and missed lookups (context
 cases).
 
-Run it from `server/`:
+Run it from `apps/server/`:
 
 ```bash
 bun run agent:eval -- --fake
@@ -147,7 +147,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=... bun run agent:eval
    fast path, and prompt parts. *(done; passes all cases with a scripted
    model, real run pending)*
 3. Mentions resolved on the server by ID, with the workspace access check.
-   *(done for notes, links, colors and images: `server/src/agent/mentioned-assets.ts`;
+   *(done for notes, links, colors and images: `apps/server/src/agent/mentioned-assets.ts`;
    long notes use the reference tools, the rest are short enough to show
    whole; up to 2 images are attached for the model to see)* Videos wait for
    transcripts.

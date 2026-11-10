@@ -22,8 +22,11 @@ format_package() {
   (cd "$root" && git add $files)
 }
 
-format_package client 'css|js|jsx|json|ts|tsx'
-format_package server 'json|ts'
-for service in image-variants image-palette image-shared url-unfurl-shared url-resolution video-processor; do
+format_package apps/web 'css|js|jsx|json|ts|tsx'
+format_package apps/server 'json|ts'
+for service in gradient-naming image-variants image-palette url-resolution video-processor; do
   format_package "services/$service" 'json|ts'
+done
+for package in image-shared url-unfurl-shared; do
+  format_package "packages/$package" 'json|ts'
 done

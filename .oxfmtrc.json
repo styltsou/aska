@@ -6,7 +6,7 @@
   "singleQuote": false,
   "trailingComma": "all",
   "sortTailwindcss": {
-    "stylesheet": "./client/src/index.css"
+    "stylesheet": "./apps/web/src/index.css"
   },
   "ignorePatterns": [
     "node_modules/**",

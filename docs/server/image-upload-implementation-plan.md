@@ -23,7 +23,7 @@ Browser or remote URL
 
 The main server does not process normal uploads: variant generation and palette
 extraction live in `services/image-variants` and `services/image-palette`, with
-delivery code in `services/image-shared`. The one intentional exception is an
+delivery code in `packages/image-shared`. The one intentional exception is an
 interactive crop: the API decodes the current original only to produce a new
 cropped original, then hands that source back to these same workers for all
 derived processing.
@@ -241,8 +241,8 @@ origin for this authenticated application flow.
 ## Validation Checklist
 
 ```sh
-cd server && bun run lint && bun run typecheck && bun run format && bun run test
-cd client && bun run lint && bun run typecheck && bun run format && bun run test
+cd apps/server && bun run lint && bun run typecheck && bun run format && bun run test
+cd apps/web && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/image-variants && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
 ```

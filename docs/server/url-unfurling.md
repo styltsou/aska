@@ -19,8 +19,8 @@ does not introduce a second card system.
 | Media variants     | `services/image-variants/`                  | Safely acquire upload or resource-media sources and generate role/profile-specific variants |
 | Optional ingestion | future service/table                        | Document extraction, chunks, embeddings, and indexing; not part of this release             |
 
-`server/src/services/url-unfurl/url-unfurl.service.ts` coordinates persistence
-and state transitions. `server/src/services/url-unfurl/projection.ts` is the
+`apps/server/src/services/url-unfurl/url-unfurl.service.ts` coordinates persistence
+and state transitions. `apps/server/src/services/url-unfurl/projection.ts` is the
 only place that projects resources and stored media into `CollectionLinkNode`.
 Provider-specific fields stay in `external_resources.provider_extensions` and
 must not leak into the generic card contract. Rich provider UI receives only
@@ -70,13 +70,13 @@ the attempt failed but leaves the link asset readable and clickable.
 
 ## Client creation and rendering
 
-`client/src/lib/clipboard.ts` accepts a single HTTP(S) URL from clipboard text
+`apps/web/src/lib/clipboard.ts` accepts a single HTTP(S) URL from clipboard text
 and standard browser drag data (`text/uri-list`, then `text/plain`). Image-file
 drops retain precedence. `use-board-asset-actions.ts` sends URLs through the
 link endpoint; explicit Pexels and remote-image imports keep using the primary
 image pipeline.
 
-`client/src/api/url-unfurl/hooks.ts` inserts a local `CollectionLinkNode` into
+`apps/web/src/api/url-unfurl/hooks.ts` inserts a local `CollectionLinkNode` into
 the appropriate React Query cache, reserves its canvas position, and reconciles
 the temporary ID with the persisted node. Active links created, refreshed, or
 loaded in the current tab poll their small status endpoint; each response
@@ -88,7 +88,7 @@ resumes polling. A new refresh discards the previous terminal status query.
 Existing preview images remain visible while a refresh is pending, and image
 components retain their decoded state when a refreshed signed URL arrives.
 
-`client/src/components/board/cards/link-asset-card.tsx` always renders a usable
+`apps/web/src/components/board/cards/link-asset-card.tsx` always renders a usable
 anchor from the user-supplied URL. It progressively adds text, favicon, and
 preview imagery. Remote discovered images are never rendered directly; the API
 only projects signed or stable URLs for validated objects in Mnemee storage.
@@ -96,7 +96,7 @@ There are no user title or description overrides in this release.
 
 ## URL identity, reuse, and freshness
 
-`server/src/services/url-unfurl/url-normalization.ts` owns URL identity:
+`apps/server/src/services/url-unfurl/url-normalization.ts` owns URL identity:
 
 - only `http:` and `https:` are accepted;
 - surrounding whitespace and fragments are removed;
@@ -180,7 +180,7 @@ the existing `media_cleanup_jobs` outbox rather than inline S3 deletion.
 ## Retrieval security and privacy
 
 All external HTML and media retrieval uses
-`services/url-unfurl-shared/src/safe-fetch.ts`:
+`packages/url-unfurl-shared/src/safe-fetch.ts`:
 
 - credential-free HTTP(S) URLs only;
 - DNS resolution rejects private, loopback, link-local, multicast, reserved,
@@ -246,7 +246,7 @@ own original URL and placement.
 
 ## API and authorization
 
-Public endpoints are documented in `server/src/openapi.json`:
+Public endpoints are documented in `apps/server/src/openapi.json`:
 
 - `POST /api/v1/workspace/:workspaceSlug/collections/:collectionSlug/links`;
 - `POST /api/v1/workspace/:workspaceSlug/inbox/links`;

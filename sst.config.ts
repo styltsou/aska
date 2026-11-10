@@ -35,7 +35,7 @@ export default $config({
     if (isSecretUpdate) return;
 
     const { TASK_DLQ_RECEIVE_LIMIT, TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS } =
-      await import("./services/image-shared/src/task-timing");
+      await import("./packages/image-shared/src/task-timing");
     const { existsSync, realpathSync } = await import("node:fs");
     const path = await import("node:path");
     const repoRoot = process.cwd();
@@ -314,7 +314,7 @@ export default $config({
       },
     });
     api.route("$default", {
-      handler: "server/src/lambda.handler",
+      handler: "apps/server/src/lambda.handler",
       runtime: "nodejs22.x",
       memory: "1024 MB",
       timeout: "29 seconds",
@@ -331,7 +331,7 @@ export default $config({
         // Linux package rather than an esbuild bundle.
         esbuild: { external: ["sharp"] },
       },
-      copyFiles: sharpRuntimeFiles("server"),
+      copyFiles: sharpRuntimeFiles("apps/server"),
       environment: {
         NODE_OPTIONS: "--enable-source-maps",
         NODE_ENV: stableCloudDomains ? "production" : "development",
@@ -369,7 +369,7 @@ export default $config({
       cors: false,
     });
     aiApi.route("ANY /stream", {
-      handler: "server/src/ai-stream-lambda.handler",
+      handler: "apps/server/src/ai-stream-lambda.handler",
       runtime: "nodejs22.x",
       streaming: true,
       memory: "1024 MB",
@@ -397,7 +397,7 @@ export default $config({
       },
     });
     aiApi.route("GET /health", {
-      handler: "server/src/ai-stream-health-lambda.handler",
+      handler: "apps/server/src/ai-stream-health-lambda.handler",
       runtime: "nodejs22.x",
       streaming: true,
     });
@@ -419,7 +419,7 @@ export default $config({
     new sst.aws.CronV2("MediaCleanup", {
       schedule: "rate(5 minutes)",
       function: {
-        handler: "server/src/media-cleanup-lambda.handler",
+        handler: "apps/server/src/media-cleanup-lambda.handler",
         runtime: "nodejs22.x",
         memory: "512 MB",
         timeout: "30 seconds",
@@ -572,7 +572,7 @@ export default $config({
       { batch: { size: 1, partialResponses: true } },
     );
     const client = new sst.aws.StaticSite("Client", {
-      path: "client",
+      path: "apps/web",
       build: {
         command: "bun run build",
         output: "dist",

@@ -8,7 +8,7 @@ if (!databaseUrl || !queueUrl) {
   throw new Error("The dev database or URL-resolution queue is not linked");
 }
 
-const serverDirectory = fileURLToPath(new URL("../server/", import.meta.url));
+const serverDirectory = fileURLToPath(new URL("../apps/server/", import.meta.url));
 const backfill = Bun.spawn(["bun", "run", "backfill:resolver-version"], {
   cwd: serverDirectory,
   env: {

@@ -30,7 +30,7 @@ generation times out or fails.
 
 Existing completed videos can be queued for storyboard generation or a current
 storyboard upgrade with
-`sst shell -- bun run --cwd server backfill:video-storyboards --enqueue --wait`
+`sst shell -- bun run --cwd apps/server backfill:video-storyboards --enqueue --wait`
 after the migration and worker deployment. Omit `--enqueue --wait` to inspect
 the count. The deployment pipeline runs this command and waits for the
 remaining count to reach zero.

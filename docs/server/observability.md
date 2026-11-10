@@ -47,7 +47,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.2
 ```
 
 The browser uses the corresponding `VITE_SENTRY_*` variables documented in
-`client/.env.example`. SST injects the stage-scoped `SentryDsn` secret into the
+`apps/web/.env.example`. SST injects the stage-scoped `SentryDsn` secret into the
 API, workers, and client build. The DSN is a routing identifier and is expected
 to appear in the browser bundle; the source-map auth token is not.
 
@@ -67,7 +67,7 @@ SENTRY_PROJECT=mnemee
 ```
 
 Never prefix the auth token with `VITE_` or store it in a checked-in file. After
-upload, the plugin removes source maps from `client/dist`. Lambda bundles include
+upload, the plugin removes source maps from `apps/web/dist`. Lambda bundles include
 source maps and run Node with `--enable-source-maps` so server stack traces refer
 to TypeScript sources.
 
