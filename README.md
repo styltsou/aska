@@ -105,6 +105,11 @@ change touches and the packages that depend on them. Running
 `bun install` at the repository root installs every workspace package and the tracked
 pre-commit hook, which formats staged source files with Oxfmt.
 
+Shared dev tools (TypeScript, Oxlint, Oxfmt, Vitest, `@types/node`,
+`@types/aws-lambda`) have one version, set in the `catalog` of the root
+`package.json`. Packages list them as `"catalog:"`, so a version bump happens in
+one place.
+
 The marketing site at mnemee.space lives in [`apps/website/`](./apps/website) (Astro,
 deployed to Cloudflare Workers). Run it with `bun run --cwd apps/website dev` and
 deploy it with `bun run --cwd apps/website deploy`.

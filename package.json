@@ -13,11 +13,21 @@
     "dev": "concurrently --kill-others-on-fail --names sst,vite --prefix-colors blue,magenta \"SST_STAGE=hybrid bun run dev:aws\" \"bun run --cwd apps/web dev\"",
     "dev:cloud": "bun run --cwd apps/web dev:cloud"
   },
-  "workspaces": [
-    "apps/*",
-    "services/*",
-    "packages/*"
-  ],
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "services/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "typescript": "^6.0.3",
+      "oxlint": "^1.86.0",
+      "oxfmt": "^0.58.0",
+      "vitest": "^4.1.12",
+      "@types/node": "^22",
+      "@types/aws-lambda": "^8.10.164"
+    }
+  },
   "devDependencies": {
     "concurrently": "^10.0.4",
     "sst": "^4.17.1",
