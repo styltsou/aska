@@ -4,7 +4,7 @@
     {
       "name": "client-cloud",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "--cwd", "apps/web", "dev:cloud"],
+      "runtimeArgs": ["run", "--cwd", "apps/web", "dev:client"],
       "port": 5173
     }
   ]
