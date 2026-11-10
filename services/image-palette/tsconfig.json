@@ -1,11 +1,6 @@
 {
+  "extends": "@mnemee/tsconfig/node.json",
   "compilerOptions": {
-    "target": "es2024",
-    "module": "es2022",
-    "moduleResolution": "Bundler",
-    "strict": true,
-    "noEmit": true,
-    "skipLibCheck": true,
     "types": ["node"]
   },
   "include": ["src"]

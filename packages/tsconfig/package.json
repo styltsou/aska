@@ -1,0 +1,7 @@
+{
+  "name": "@mnemee/tsconfig",
+  "private": true,
+  "exports": {
+    "./node.json": "./node.json"
+  }
+}

@@ -15,6 +15,7 @@
     "sharp": "^0.35.3"
   },
   "devDependencies": {
+    "@mnemee/tsconfig": "workspace:*",
     "@types/aws-lambda": "^8.10.152",
     "@types/node": "^26.1.1",
     "oxfmt": "^0.58.0",
