@@ -439,3 +439,7 @@ main development workflow.
 For local Live development, use `SST_STAGE=hybrid bun run dev:aws`. Never run
 SST Live or a manual deployment against the CI-owned `dev` stage. Keep a small
 AWS Budget and a CloudWatch billing alarm enabled.
+
+### Google sign-in
+
+Create a Google OAuth web client and register `https://api.mnemee.space/api/auth/callback/google` for the stable stage (use the stage API URL for other stages). For a local API, register `http://localhost:3000/api/auth/callback/google`. Configure both `GoogleClientId` and `GoogleClientSecret` with `SST_SECRET_UPDATE=1 bun run sst -- secret set <name> <value> --stage <stage>`, then deploy. For a directly run server use `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. A verified Google email matching an existing verified account is linked automatically; different emails are not merged.

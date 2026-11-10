@@ -21,6 +21,16 @@ function createAuth() {
       provider: "pg",
       schema,
     }),
+    socialProviders:
+      env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+        ? {
+            google: {
+              clientId: env.GOOGLE_CLIENT_ID,
+              clientSecret: env.GOOGLE_CLIENT_SECRET,
+            },
+          }
+        : {},
+    account: { accountLinking: { enabled: true } },
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,

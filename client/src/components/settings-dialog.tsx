@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useTheme } from "@/components/theme-provider";
+import { AccountSettings } from "@/components/auth/account-settings";
 import { Button } from "@/components/ui/button";
 import { BellIcon, PaletteIcon, UserRoundIcon, XIcon } from "lucide-react";
 import {
@@ -388,7 +389,11 @@ export function SettingsDialog() {
   const navigateOverlay = useWorkspaceOverlayNavigation();
   const location = useRouterState({ select: (state) => state.location });
   const open = (location.search as { settings?: boolean }).settings === true;
-  const [section, setSection] = useState<SettingsSection>("appearance");
+  const [section, setSection] = useState<SettingsSection>(() =>
+    new URLSearchParams(window.location.search).has("googleLinkError")
+      ? "account"
+      : "appearance",
+  );
   const titleRef = useRef<HTMLHeadingElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -520,6 +525,8 @@ export function SettingsDialog() {
           >
             {section === "appearance" ? (
               <AppearanceSection />
+            ) : section === "account" ? (
+              <AccountSettings />
             ) : (
               <h2 className="text-xl font-semibold tracking-tight text-foreground">
                 {

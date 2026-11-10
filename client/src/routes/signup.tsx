@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { Eye, EyeOff, LoaderCircleIcon, UserPlusIcon } from "lucide-react";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { Button } from "@/components/ui/button";
 import { StateIcon } from "@/components/ui/state-icon";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -81,7 +82,8 @@ function SignupPage() {
             Set up your first workspace next.
           </p>
         </div>
-        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+        <GoogleSignIn />
+        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="email">
               Email

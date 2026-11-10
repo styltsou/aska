@@ -45,6 +45,8 @@ const envSchema = z
       .string()
       .min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
     BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL"),
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
     CROSS_SITE_AUTH_COOKIES: z
       .enum(["true", "false"])
       .default("false")
@@ -132,6 +134,14 @@ const envSchema = z
         message: "CORS_ORIGINS must include at least one origin",
       }),
   })
+  .refine(
+    (value) =>
+      Boolean(value.GOOGLE_CLIENT_ID) === Boolean(value.GOOGLE_CLIENT_SECRET),
+    {
+      message: "Both Google OAuth credentials must be configured together",
+      path: ["GOOGLE_CLIENT_ID"],
+    },
+  )
   .refine(
     (value) =>
       !value.CROSS_SITE_AUTH_COOKIES || Boolean(value.AUTH_COOKIE_DOMAIN),

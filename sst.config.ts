@@ -122,6 +122,8 @@ export default $config({
         : undefined;
     const databaseUrl = new sst.Secret("DatabaseUrl");
     const betterAuthSecret = new sst.Secret("BetterAuthSecret");
+    const googleClientId = new sst.Secret("GoogleClientId", "");
+    const googleClientSecret = new sst.Secret("GoogleClientSecret", "");
     const resendApiKey = new sst.Secret("ResendApiKey");
     const pexelsApiKey = new sst.Secret("PexelsApiKey");
     const youtubeDataApiKey = new sst.Secret("YouTubeDataApiKey");
@@ -337,6 +339,8 @@ export default $config({
         DATABASE_URL: databaseUrl.value,
         BETTER_AUTH_SECRET: betterAuthSecret.value,
         BETTER_AUTH_URL: api.url,
+        GOOGLE_CLIENT_ID: googleClientId.value,
+        GOOGLE_CLIENT_SECRET: googleClientSecret.value,
         CORS_ORIGINS: allowedClientOrigins.join(","),
         // Only the stable cloud API needs to serve a localhost client across
         // sites. Hybrid retains its existing Better Auth cookie behavior.
