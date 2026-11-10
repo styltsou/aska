@@ -5,18 +5,12 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { Eye, EyeOff, LoaderCircleIcon, LogInIcon } from "lucide-react";
+import { LoaderCircleIcon, LogInIcon } from "lucide-react";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { Button } from "@/components/ui/button";
-import { StateIcon } from "@/components/ui/state-icon";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { PasswordField } from "@/components/auth/password-field";
 import { Input } from "@/components/ui/input";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
 import { clearAuthStateCache, getSignedInDestination } from "@/lib/auth-flow";
 import { signIn } from "@/lib/auth-client";
 import {
@@ -63,7 +57,6 @@ function LoginPage() {
   const search = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -138,36 +131,14 @@ function LoginPage() {
               onChange={(event) => setEmail(event.target.value)}
             />
           </div>
-          <Field className="flex flex-col gap-2 space-y-0">
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <InputGroup className="h-10">
-              <InputGroupInput
-                className="h-10 px-3"
-                autoComplete="current-password"
-                id="password"
-                required
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <InputGroupAddon
-                align="end"
-                className="relative z-10 rounded-md bg-background"
-              >
-                <button
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  <StateIcon
-                    icon={showPassword ? EyeOff : Eye}
-                    className="size-4"
-                  />
-                </button>
-              </InputGroupAddon>
-            </InputGroup>
-          </Field>
+          <PasswordField
+            label="Password"
+            id="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
           {error ? (
             <p className="text-sm text-destructive" role="alert">
               {error}

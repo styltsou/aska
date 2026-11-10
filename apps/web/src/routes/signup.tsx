@@ -5,18 +5,12 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { Eye, EyeOff, LoaderCircleIcon, UserPlusIcon } from "lucide-react";
+import { LoaderCircleIcon, UserPlusIcon } from "lucide-react";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { Button } from "@/components/ui/button";
-import { StateIcon } from "@/components/ui/state-icon";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { PasswordField } from "@/components/auth/password-field";
 import { Input } from "@/components/ui/input";
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group";
 import { clearAuthStateCache, redirectIfSignedIn } from "@/lib/auth-flow";
 import { signUp } from "@/lib/auth-client";
 import { clearLastLoginMethod } from "@/lib/last-login-method";
@@ -36,8 +30,6 @@ function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -101,70 +93,24 @@ function SignupPage() {
               onChange={(event) => setEmail(event.target.value)}
             />
           </div>
-          <Field className="flex flex-col gap-2 space-y-0">
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <InputGroup className="h-10">
-              <InputGroupInput
-                className="h-10 px-3"
-                autoComplete="new-password"
-                id="password"
-                minLength={8}
-                required
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <InputGroupAddon
-                align="end"
-                className="relative z-10 rounded-md bg-background"
-              >
-                <button
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  <StateIcon
-                    icon={showPassword ? EyeOff : Eye}
-                    className="size-4"
-                  />
-                </button>
-              </InputGroupAddon>
-            </InputGroup>
-          </Field>
-          <Field className="flex flex-col gap-2 space-y-0">
-            <FieldLabel htmlFor="confirm-password">Confirm password</FieldLabel>
-            <InputGroup className="h-10">
-              <InputGroupInput
-                className="h-10 px-3"
-                autoComplete="new-password"
-                id="confirm-password"
-                minLength={8}
-                required
-                type={showConfirmPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-              />
-              <InputGroupAddon
-                align="end"
-                className="relative z-10 rounded-md bg-background"
-              >
-                <button
-                  aria-label={
-                    showConfirmPassword ? "Hide password" : "Show password"
-                  }
-                  className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <StateIcon
-                    icon={showConfirmPassword ? EyeOff : Eye}
-                    className="size-4"
-                  />
-                </button>
-              </InputGroupAddon>
-            </InputGroup>
-          </Field>
+          <PasswordField
+            label="Password"
+            id="password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <PasswordField
+            label="Confirm password"
+            id="confirm-password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+          />
           {error ? (
             <p className="text-sm text-destructive" role="alert">
               {error}
