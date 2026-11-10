@@ -120,7 +120,7 @@ function AlertDialogFooter({
     <div
       data-slot="alert-dialog-footer"
       className={cn(
-        "relative z-0 flex flex-wrap items-center justify-between gap-2 px-4 py-2.5",
+        "relative z-0 flex flex-wrap gap-2 px-4 py-2.5 *:min-w-max *:flex-1",
         className,
       )}
       {...props}
@@ -178,12 +178,14 @@ function AlertDialogDescription({
 
 function AlertDialogAction({
   className,
+  variant = "destructive-primary",
   ...props
 }: React.ComponentProps<typeof Button>) {
   return (
     <Button
       data-slot="alert-dialog-action"
       className={cn(className)}
+      variant={variant}
       {...props}
     />
   );

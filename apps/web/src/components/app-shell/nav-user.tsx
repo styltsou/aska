@@ -33,6 +33,7 @@ import {
   LifeBuoyIcon,
   LoaderCircleIcon,
   LogOutIcon,
+  SendIcon,
   SettingsIcon,
 } from "lucide-react";
 import { signOut, type AuthUser } from "@/lib/auth-client";
@@ -112,6 +113,10 @@ export function NavUser({
                   <LifeBuoyIcon />
                   Support
                 </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <SendIcon />
+                  Feedback
+                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -142,7 +147,6 @@ export function NavUser({
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              variant="destructive"
               disabled={isSigningOut}
               onClick={async () => {
                 if (isSigningOut) return;

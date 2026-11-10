@@ -686,7 +686,6 @@ export function AssetContextMenu({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              variant="destructive-primary"
               onClick={(event) => {
                 event.preventDefault();
                 handleDelete();

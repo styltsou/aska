@@ -334,7 +334,6 @@ export function CollectionCard({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              variant="destructive-primary"
               disabled={deleteCollection.isPending}
               onClick={() => {
                 setDeleteDialogOpen(false);
