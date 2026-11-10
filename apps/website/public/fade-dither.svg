@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <!--
+    Dither for dark gradients. Plain grey grain lightens a dark background, so where it stops the brightness steps.
+    Here a black and a white noise (different seeds) cancel out on average over the dark greys: black at up to ~14%
+    darkens the site's dark greys (about 4–9% in sRGB) by about as much as white at up to ~1.4% lightens them (within about a third of a colour level). Each pixel still moves by a level or two,
+    which is what breaks up the banding.
+  -->
+  <filter id="dark" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" stitchTiles="stitch" />
+    <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.6 0 0 0 -0.2" />
+    <feComponentTransfer><feFuncA type="linear" slope="0.5" /></feComponentTransfer>
+  </filter>
+  <filter id="light" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="11" stitchTiles="stitch" />
+    <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0.6 0 0 0 -0.2" />
+    <feComponentTransfer><feFuncA type="linear" slope="0.049" /></feComponentTransfer>
+  </filter>
+  <rect width="100%" height="100%" filter="url(#dark)" />
+  <rect width="100%" height="100%" filter="url(#light)" />
+</svg>

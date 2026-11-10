@@ -1,28 +1,177 @@
 ---
+import { Image } from 'astro:assets';
+import leaf from '../assets/images/hero-green-03.webp';
+import concrete from '../assets/images/concrete-sculptures.jpg';
+import bauhausRoom from '../assets/images/bauhaus-room-02.jpg';
+import blueRedWall from '../assets/images/blue-red-wall.jpg';
+import curvedArchitecture from '../assets/images/curved-architecture.jpg';
+import greenAbstract from '../assets/images/green-abstract-05.webp';
+import towers from '../assets/images/hero-orange-01.webp';
+
 interface Props {
 	signupHref: string;
 }
 
 const { signupHref } = Astro.props;
+const cardImage = { widths: [240, 480], sizes: '240px', quality: 78, alt: '' };
+const folderImage = { widths: [120, 240], sizes: '120px', quality: 74, alt: '' };
 ---
 
 <section class="closing" data-header-surface="canvas">
 	<div class="closing__frame page-width">
-		<div><h2>Make room for what inspires you.</h2>
-		<p>Start collecting. The shape of the project can come later.</p></div>
-		<a class="button button--primary" href={signupHref}>Create your workspace</a>
+		<div class="closing__board" aria-hidden="true">
+			<!-- Each card mirrors its counterpart on the app's board (apps/web/src/components/board/cards). -->
+			<div class="card card--image card--leaf"><div class="card__media"><Image src={leaf} {...cardImage} /></div></div>
+
+			<div class="card card--color card--clay">
+				<div class="card__swatch"></div>
+				<div class="card__footer"><span class="card__label">Clay</span><span class="card__hex">#C8643B</span></div>
+			</div>
+
+			<div class="card card--link">
+				<div class="card__hero"><Image src={bauhausRoom} {...cardImage} /></div>
+				<div class="card__body">
+					<div class="card__meta">
+						<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg>
+						<span>en.wikipedia.org</span>
+					</div>
+					<div class="card__title">Bauhaus interiors and the rooms they shaped</div>
+				</div>
+			</div>
+
+			<div class="card card--folder">
+				<div class="card__stack">
+					<div class="card__stack-item card__stack-item--back-left"><Image src={curvedArchitecture} {...folderImage} /></div>
+					<div class="card__stack-item card__stack-item--back-right"><Image src={greenAbstract} {...folderImage} /></div>
+					<div class="card__stack-item card__stack-item--front"><Image src={blueRedWall} {...folderImage} /></div>
+				</div>
+				<div class="card__folder-bar"><span>Soft systems</span><span class="card__count">24</span></div>
+			</div>
+
+			<div class="card card--note">
+				<div class="card__note-title">Studio notes</div>
+				<p>Pull in the fragments before the direction is obvious. Keep the ones that still feel right a week later.</p>
+				<div class="card__note-heading">Palette</div>
+				<ul><li>Warm clay against raw concrete</li><li>One saturated accent, never two</li><li>Rooms that feel lived in</li></ul>
+				<p class="card__note-aside">Revisit with the team on Thursday.</p>
+			</div>
+
+			<div class="card card--image card--concrete"><div class="card__media"><Image src={concrete} {...cardImage} /></div></div>
+
+			<div class="card card--color card--ink">
+				<div class="card__swatch"></div>
+				<div class="card__footer"><span class="card__label">Ink blue</span><span class="card__hex">#2F4A8A</span></div>
+			</div>
+
+			<div class="card card--image card--towers"><div class="card__media"><Image src={towers} {...cardImage} /></div></div>
+		</div>
+
+		<div class="closing__content">
+			<h2>Make room for what inspires you.</h2>
+			<div class="closing__actions">
+				<a class="app-button app-button--primary" href={signupHref}>
+					Try it now
+					<span class="closing__arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" /></svg></span>
+				</a>
+			</div>
+		</div>
 	</div>
 </section>
 
 <style>
-	.closing { padding-bottom: clamp(100px, 12vw, 170px); }
-	.closing__frame { display: flex; align-items: end; justify-content: space-between; gap: 30px; padding: 58px 0 0; border-top: 1px solid var(--line); }
-	h2 { max-width: 620px; margin-bottom: 13px; font-size: clamp(34px, 4vw, 54px); letter-spacing: -.04em; line-height: 1.1; }
-	p { max-width: 460px; margin: 0; color: var(--ink-muted); font-size: 15px; line-height: 1.55; }
-	.closing .button { flex: 0 0 auto; min-height: 44px; padding-inline: 18px; font-size: 13px; }
+	.closing { --app-radius: .45rem; --app-border: oklch(0.922 0 0); --app-fg-muted: color-mix(in oklch, var(--ink) 60%, transparent); padding-bottom: clamp(64px, 8vw, 110px); }
+	.closing__frame { position: relative; display: grid; min-height: clamp(580px, 50vw, 680px); overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); isolation: isolate; place-items: center; }
+	/* A uniform canvas of dots, edge to edge; even spacing keeps every dot 8px clear of the frame. */
+	.closing__frame::before { content: ''; position: absolute; inset: 0; z-index: -2; background-image: radial-gradient(circle, color-mix(in oklch, var(--line-strong) 70%, transparent) 1.1px, transparent 1.5px); background-size: 16px 16px; background-repeat: space; }
+	.closing__board { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 
-	@media (max-width: 640px) {
-		.closing__frame { align-items: flex-start; flex-direction: column; }
+	/* Shared card shell: rounded-lg, 1px border, sidebar surface, like the app's canvas cards. */
+	.card { --r: 0deg; position: absolute; overflow: hidden; border: 1px solid var(--app-border); border-radius: var(--app-radius); background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(21 21 21 / 4%), 0 12px 28px -14px rgb(21 21 21 / 16%); rotate: var(--r); }
+	.card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+	.card--image { border-color: transparent; }
+	.card__media { position: absolute; inset: 0; overflow: hidden; border-radius: 6px; }
+	.card--leaf { --r: -4deg; top: -28px; left: 4%; width: clamp(130px, 13vw, 168px); aspect-ratio: 4 / 5; }
+	.card--concrete { --r: -3deg; right: 11%; bottom: -50px; width: clamp(130px, 13vw, 168px); aspect-ratio: 1; }
+	.card--color.card--ink { --r: -2deg; --swatch: #2f4a8a; top: -66px; left: 41%; width: clamp(120px, 11vw, 144px); }
+	.card--towers { --r: 3deg; bottom: -96px; left: 43.5%; width: clamp(120px, 11vw, 148px); aspect-ratio: 4 / 5; }
+
+	.card--color { --r: 4deg; top: 39%; left: 7.5%; display: flex; flex-direction: column; width: clamp(128px, 12.5vw, 160px); aspect-ratio: 280 / 329; }
+	.card__swatch { flex: 1; border-bottom: 1px solid var(--app-border); border-radius: 0 0 var(--app-radius) var(--app-radius); background: var(--swatch, #c8643b); }
+	.card__footer { display: flex; align-items: baseline; gap: 8px; padding: 9px 10px; line-height: 1.25; }
+	.card__label { font-size: 14px; font-weight: 500; }
+	.card__hex { margin-left: auto; color: var(--app-fg-muted); font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace; font-size: 11.5px; letter-spacing: .025em; }
+
+	.card--link { --r: -2deg; bottom: -36px; left: 3.5%; width: clamp(180px, 17vw, 220px); }
+	.card__hero { aspect-ratio: 16 / 9; overflow: hidden; border-bottom: 1px solid var(--app-border); border-radius: 0 0 var(--app-radius) var(--app-radius); }
+	.card__body { display: grid; gap: 4px; padding: 12px; }
+	.card__meta { display: flex; align-items: center; gap: 6px; color: color-mix(in oklch, var(--ink) 65%, transparent); font-size: 13px; line-height: 20px; }
+	.card__meta svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+	.card__title { font-size: 15px; font-weight: 500; line-height: 1.375; }
+
+	.card--folder { --r: 5deg; top: -12px; right: 4.5%; width: clamp(150px, 14vw, 184px); aspect-ratio: 1; }
+	.card__stack { position: absolute; inset: 0; }
+	.card__stack-item { position: absolute; top: 46%; left: 50%; width: 52%; aspect-ratio: 4 / 5; overflow: hidden; border-radius: var(--app-radius); translate: -50% -50%; }
+	.card__stack-item--back-left { rotate: -7deg; translate: calc(-50% - 16%) calc(-50% + 3%); }
+	.card__stack-item--back-right { rotate: 6deg; translate: calc(-50% + 16%) calc(-50% + 2%); }
+	.card__folder-bar { position: absolute; inset: auto 0 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 28px 12px 10px; background: linear-gradient(to bottom, transparent, color-mix(in oklch, var(--surface) 85%, transparent) 50%, var(--surface)); font-size: 14px; font-weight: 500; }
+	.card__count { margin-left: auto; color: color-mix(in oklch, var(--ink) 55%, transparent); font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
+
+	.card--note { --r: 3deg; top: 31%; right: 5.5%; width: clamp(170px, 16vw, 208px); padding: 16px; }
+	.card__note-title { margin-bottom: 4px; font-size: 19px; font-weight: 600; letter-spacing: -.025em; line-height: 1.25; }
+	.card--note p, .card--note li { color: var(--ink); font-size: 11px; line-height: 16px; }
+	.card--note p { margin: 0 0 6px; }
+	.card__note-heading { margin: 8px 0 3px; font-size: 13px; font-weight: 600; letter-spacing: -.01em; line-height: 18px; }
+	.card--note .card__note-aside { margin: 8px 0 0; color: color-mix(in oklch, var(--ink) 60%, transparent); }
+	.card--note ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+	.card--note li { display: flex; gap: 6px; }
+	.card--note li::before { content: ''; flex: 0 0 auto; width: 4px; height: 4px; margin-top: 6px; border-radius: 50%; background: currentColor; }
+
+	.closing__content { display: flex; flex-direction: column; align-items: center; max-width: 640px; padding: 96px 24px; text-align: center; }
+	h2 { max-width: 15ch; margin-bottom: 32px; font-size: clamp(40px, 5.2vw, 72px); letter-spacing: -.05em; line-height: 1; text-wrap: balance; }
+	.closing__actions { display: flex; justify-content: center; }
+	/*
+	 * The CTA's arrow waits in a zero-width slot after the label. On hover (and keyboard focus) the slot opens — the
+	 * button expands and the arrow is unveiled left to right, as if sliding out from behind the label. The slot holds
+	 * the label's spacing inside itself, so the button stays perfectly centred while the arrow is hidden.
+	 */
+	.closing__actions .app-button { gap: 0; }
+	.closing__arrow { display: inline-flex; align-items: center; width: 0; overflow: hidden; transition: width 240ms cubic-bezier(.23, 1, .32, 1); }
+	.closing__arrow svg { flex: 0 0 auto; width: 16px; height: 16px; margin-left: 6px; fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+	.closing__actions .app-button:hover .closing__arrow, .closing__actions .app-button:focus-visible .closing__arrow { width: 22px; }
+
+	@media (prefers-reduced-motion: reduce) {
+		.closing__arrow { transition: none; }
 	}
 
+	:global(html[data-theme='dark']) .closing { --app-border: oklch(1 0 0 / 10%); }
+	:global(html[data-theme='dark']) .card { box-shadow: 0 12px 28px -14px rgb(0 0 0 / 60%); }
+	:global(html[data-theme='dark']) .card--image { border-color: transparent; }
+
+	@media (prefers-reduced-motion: no-preference) {
+		@supports (animation-timeline: view()) {
+			.closing__frame { view-timeline: --closing-entry block; }
+			.card { --enter-x: 0px; --enter-y: 0px; animation: card-enter linear both; animation-timeline: --closing-entry; animation-range: entry 0% entry 100%; }
+			.card--leaf, .card--ink, .card--folder { --enter-y: calc(-100% - 12vw); }
+			.card--clay, .card--link { --enter-x: calc(-100% - 12vw); }
+			.card--note { --enter-x: calc(100% + 12vw); }
+			.card--concrete, .card--towers { --enter-y: calc(100% + 12vw); }
+			@keyframes card-enter {
+				from { translate: var(--enter-x) var(--enter-y); }
+				to { translate: 0 0; }
+			}
+		}
+	}
+
+	@media (max-width: 1000px) {
+		.card--color, .card--note { display: none; }
+		.card--concrete { right: 3%; }
+	}
+	@media (max-width: 640px) {
+		.closing__frame { min-height: 0; }
+		.card--link, .card--concrete, .card--ink, .card--towers { display: none; }
+		.card--leaf { top: -36px; left: -14px; width: 124px; }
+		.card--folder { top: -36px; right: -12px; width: 136px; }
+		.closing__content { padding: 156px 20px 48px; }
+	}
 </style>

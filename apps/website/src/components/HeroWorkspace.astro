@@ -1,122 +1,416 @@
 ---
 import { Image } from 'astro:assets';
 import blueRedWall from '../assets/images/blue-red-wall.jpg';
+import bauhausRoom from '../assets/images/bauhaus-room-02.jpg';
+import concrete from '../assets/images/concrete-sculptures.jpg';
 import curvedArchitecture from '../assets/images/curved-architecture.jpg';
-import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
-import bauhausRoom from '../assets/images/bauhaus-room-01.jpg';
 import greenAbstract from '../assets/images/green-abstract-05.webp';
+import towers from '../assets/images/hero-orange-01.webp';
+import leaf from '../assets/images/hero-green-03.webp';
+
+const cardImage = { alt: '', widths: [320, 560], sizes: '240px', quality: 78 } as const;
+const folderImage = { alt: '', widths: [200], sizes: '120px', quality: 74 } as const;
+
+const collections = [
+	{ name: 'Spring campaign', count: 48, active: true },
+	{ name: 'Studio archive', count: 208 },
+	{ name: 'Type specimens', count: 64 },
+	{ name: 'Material library', count: 31 },
+	{ name: 'Colour studies', count: 86 },
+	{ name: 'Field notes', count: 19 },
+];
 ---
 
-<div
-	class="hero-workspace"
-	role="img"
-	aria-label="An example Mnemee inbox with saved images and a note"
->
-	<div class="hero-workspace__browser">
-		<div class="browser-bar">
-			<div class="browser-bar__dots" aria-hidden="true"><i></i><i></i><i></i></div>
-			<span>mnemee / studio archive</span>
-			<span class="browser-bar__profile" aria-hidden="true">M</span>
-		</div>
-		<div class="workspace-body">
-			<aside class="workspace-sidebar" aria-hidden="true">
-				<span class="workspace-sidebar__brand">mnemee</span>
-				<span class="workspace-nav-item workspace-nav-item--active">Inbox</span>
-				<span class="workspace-nav-item">Collections</span>
-				<span class="workspace-nav-item">Favorites</span>
-				<span class="workspace-sidebar__label">RECENT</span>
-				<span class="workspace-nav-item">Soft systems</span>
-				<span class="workspace-nav-item">Field notes</span>
-			</aside>
-			<div class="workspace-content">
-				<div class="workspace-heading">
-					<div><strong>Inbox</strong><span>208 references</span></div>
-					<span class="workspace-heading__add">Add</span>
+<!--
+	A static copy of the app's collection canvas (apps/web: app-shell, ui/sidebar, app-header, board/board-action-rail,
+	board/cards). It is laid out at a fixed 1280 × 800 like a real window and scaled to fit, so every size, radius and
+	font matches the app. The hero's scroll drives a short demo through `demo:progress` events (see the script).
+-->
+<div class="hero-workspace" role="img" aria-label="A Mnemee collection open on the canvas, with images, a link, a note, a colour and a folder">
+	<div class="app" aria-hidden="true">
+		<aside class="sidebar">
+			<div class="sidebar__header">
+				<div class="switcher">
+					<span class="avatar avatar--sm">S</span>
+					<span class="switcher__name">Studio</span>
+					<svg class="icon chevrons" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" /></svg>
 				</div>
-				<div class="reference-grid" aria-hidden="true">
-					<article class="reference reference--blue reference--tall"><Image src={blueRedWall} alt="" width={280} quality={78} /></article>
-					<article class="reference reference--paper"><Image src={concreteSculptures} alt="" width={280} quality={78} /></article>
-					<article class="reference reference--ink reference--wide"><Image src={curvedArchitecture} alt="" width={420} quality={78} /></article>
-					<article class="reference reference--coral"><Image src={bauhausRoom} alt="" width={280} quality={78} /></article>
-					<article class="reference reference--green"><Image src={greenAbstract} alt="" width={280} quality={78} /></article>
-					<article class="reference reference--note"><span>Hold on to the things you return to.</span></article>
+			</div>
+			<div class="sidebar__content">
+				<div class="group">
+					<div class="search">
+						<svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+						<span>Search</span>
+						<span class="kbd-group"><kbd>Ctrl</kbd><kbd>K</kbd></span>
+					</div>
 				</div>
+				<div class="group">
+					<div class="group__label">Library</div>
+					<ul class="menu">
+						<li class="menu__button">
+							<svg class="icon" viewBox="0 0 24 24"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" /></svg>
+							<span>Collections</span>
+						</li>
+						<li class="menu__button menu__button--disabled">
+							<svg class="icon" viewBox="0 0 24 24"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z" /></svg>
+							<span>Favorites</span>
+						</li>
+						<li class="menu__button">
+							<svg class="icon" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg>
+							<span>Inbox</span>
+							<span class="badge">3</span>
+						</li>
+					</ul>
+				</div>
+				<div class="group group--fill">
+					<div class="group__label">Collections</div>
+					<ul class="menu">
+						{collections.map((c) => (
+							<li class:list={['menu__button', c.active && 'menu__button--active']}>
+								<span class="menu__name">{c.name}</span>
+								<span class="menu__count">{c.count}</span>
+							</li>
+						))}
+					</ul>
+				</div>
+			</div>
+			<div class="sidebar__footer">
+				<div class="user">
+					<span class="avatar avatar--user">AM</span>
+					<span class="user__text"><span class="user__name">Alex Moreau</span><span class="user__email">alex@studio.co</span></span>
+					<svg class="icon chevrons" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5" /><path d="m7 9 5-5 5 5" /></svg>
+				</div>
+			</div>
+		</aside>
+
+		<div class="main">
+			<header class="topbar">
+				<span class="ghost-icon"><svg class="icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /></svg></span>
+				<ol class="crumbs">
+					<li>Collections</li>
+					<li class="crumbs__sep" aria-hidden="true"></li>
+					<li class="crumbs__current">Spring campaign</li>
+				</ol>
+				<span class="view-button">View <svg class="icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg></span>
+			</header>
+			<div class="board" data-demo-board>
+				<!-- Canvas units, as on the app's board: cards are 280 wide, shown here at 80% zoom. -->
+				<div class="canvas">
+					<div class="card card--image" style="left: 64px; top: 48px; width: 280px; height: 350px;"><Image src={blueRedWall} {...cardImage} /></div>
+					<div class="card card--note" style="left: 64px; top: 422px; width: 280px;">
+						<div class="note__title">Studio notes</div>
+						<p>Pull in the fragments before the direction is obvious. Keep what still feels right a week later.</p>
+						<div class="note__heading">Palette</div>
+						<ul><li>Warm clay against raw concrete</li><li>One saturated accent</li></ul>
+					</div>
+					<div class="card card--link" style="left: 368px; top: 48px; width: 280px;">
+						<div class="link__hero"><Image src={bauhausRoom} {...cardImage} /></div>
+						<div class="link__body">
+							<div class="link__meta"><span class="link__icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></svg></span><span>en.wikipedia.org</span></div>
+							<div class="link__title">Bauhaus interiors and the rooms they shaped</div>
+						</div>
+					</div>
+					<div class="card card--color" style="left: 368px; top: 316px; width: 280px; --swatch: #c8643b;">
+						<div class="color__swatch"></div>
+						<div class="color__footer"><span>Clay</span><span class="color__hex">#C8643B</span></div>
+					</div>
+					<div class="card card--folder" style="left: 672px; top: 48px; width: 280px; height: 280px;">
+						<!-- The app's resting preview stack (preview-stack-motion.ts): front card up top, two behind fanned below it. -->
+						<div class="folder__item folder__item--3"><Image src={curvedArchitecture} {...folderImage} /></div>
+						<div class="folder__item folder__item--2"><Image src={greenAbstract} {...folderImage} /></div>
+						<div class="folder__item folder__item--1"><Image src={leaf} {...folderImage} /></div>
+						<div class="folder__bar"><span>Soft systems</span><span class="folder__count">24</span></div>
+					</div>
+					<div class="card card--image" style="left: 672px; top: 352px; width: 280px; height: 210px;"><Image src={concrete} {...cardImage} /></div>
+
+					<!-- Demo 1: dragged into the empty top-right slot. -->
+					<div class="card card--image" data-demo-drag style="left: 1010px; top: 474px; width: 280px; height: 350px;"><Image src={towers} {...cardImage} /></div>
+					<!-- Demo 2: added from the rail's Colour button. -->
+					<div class="card card--color" data-demo-new style="left: 976px; top: 428px; width: 280px; --swatch: #2f4a8a;">
+						<div class="color__swatch"></div>
+						<div class="color__footer"><span>Ink blue</span><span class="color__hex">#2F4A8A</span></div>
+					</div>
+					<!-- Demo 3: a text label typed with the Text tool (canvas-text-node.tsx: Sans, medium). -->
+					<div class="text-node" data-demo-text style="left: 368px; top: 684px;"><span data-demo-text-content></span><i class="text-node__caret"></i></div>
+					<!-- Demo 4: a note added from the rail's Note button, then written into. -->
+					<div class="card card--note card--new-note" data-demo-note style="left: 672px; top: 588px; width: 280px;">
+						<div class="note__title"><span data-demo-note-title></span><i class="note__caret" data-demo-caret-title></i></div>
+						<p><span data-demo-note-body></span><i class="note__caret" data-demo-caret-body></i></p>
+					</div>
+				</div>
+
+				<div class="rail">
+					<div class="rail__frame">
+						<div class="island">
+							<span class="rail__button"><svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m17 8-5-5-5 5" /><path d="M12 3v12" /></svg></span>
+							<span class="rail__button" data-demo-note-tool><svg class="icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg></span>
+							<span class="rail__button" data-demo-color><svg class="icon" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" /></svg></span>
+							<span class="rail__button"><svg class="icon" viewBox="0 0 24 24"><path d="M12 10v6" /><path d="M9 13h6" /><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg></span>
+						</div>
+						<div class="island">
+							<span class="rail__button" data-demo-text-tool><svg class="icon icon--sm" viewBox="0 0 24 24"><path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" /></svg></span>
+							<span class="island__sep"></span>
+							<span class="rail__button"><svg class="icon icon--lg" viewBox="0 0 24 24"><path d="M7 7h10v10" /><path d="M7 17 17 7" /></svg></span>
+						</div>
+						<div class="island">
+							<span class="rail__button"><svg class="icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg></span>
+						</div>
+					</div>
+				</div>
+
+				<svg class="cursor" data-demo-cursor viewBox="0 0 24 24"><path d="M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z" /></svg>
 			</div>
 		</div>
 	</div>
 </div>
 
+<script>
+	/*
+	 * Fits the fixed 1280 × 800 app into whatever width the mock-up has, and plays the demo from the scroll position the
+	 * hero sends (0 → 1 across its hold). Every frame is a pure function of that progress, so scrolling back rewinds it.
+	 *   1. Drag the loose orange card into the empty top-right slot.
+	 *   2. Click Colour in the rail: a new colour card appears in the freed space.
+	 *   3. Pick the Text tool, click the canvas and type a label.
+	 *   4. Click Note in the rail: a new note appears and gets written into.
+	 */
+	const APP_W = 1280;
+	const ZOOM = .8; // canvas zoom, matching `.canvas` in the CSS
+	const ORIGIN = { x: -12, y: 4 }; // canvas offset inside the board, matching `.canvas`
+	const LABEL = 'Spring direction';
+	const NOTE_TITLE = 'Direction';
+	const NOTE_BODY = 'Ink blue for headlines, clay for the accents.';
+
+	type Point = { x: number; y: number };
+	const clamp = (v: number) => Math.min(Math.max(v, 0), 1);
+	const span = (t: number, from: number, to: number) => clamp((t - from) / (to - from));
+	const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+	const mix = (a: Point, b: Point, t: number): Point => ({ x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) });
+	const ease = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
+	const between = (p: number, from: number, to: number) => p >= from && p < to;
+	const typed = (text: string, p: number, from: number, to: number) => text.slice(0, Math.round(text.length * span(p, from, to)));
+
+	for (const root of document.querySelectorAll<HTMLElement>('.hero-workspace')) {
+		const q = <T extends Element = HTMLElement>(selector: string) => root.querySelector<T>(selector);
+		const app = q('.app');
+		const board = q('[data-demo-board]');
+		const drag = q('[data-demo-drag]');
+		const added = q('[data-demo-new]');
+		const colorButton = q('[data-demo-color]');
+		const textTool = q('[data-demo-text-tool]');
+		const text = q('[data-demo-text]');
+		const textContent = q('[data-demo-text-content]');
+		const noteButton = q('[data-demo-note-tool]');
+		const note = q('[data-demo-note]');
+		const noteTitle = q('[data-demo-note-title]');
+		const noteBody = q('[data-demo-note-body]');
+		const caretTitle = q('[data-demo-caret-title]');
+		const caretBody = q('[data-demo-caret-body]');
+		const cursor = q<SVGElement>('[data-demo-cursor]');
+		if (!app || !board || !drag || !added || !colorButton || !textTool || !text || !textContent || !noteButton || !note || !noteTitle || !noteBody || !caretTitle || !caretBody || !cursor) continue;
+
+		new ResizeObserver(() => app.style.setProperty('--app-scale', String(root.clientWidth / APP_W))).observe(root);
+
+		// Canvas units → board pixels.
+		const toBoard = (p: Point): Point => ({ x: ORIGIN.x + p.x * ZOOM, y: ORIGIN.y + p.y * ZOOM });
+		// An element's centre in board px, measured through any outer transforms (the hero scales the whole mock-up).
+		const centreOf = (el: Element): Point => {
+			const b = board.getBoundingClientRect();
+			const r = el.getBoundingClientRect();
+			const k = b.width / board.offsetWidth || 1;
+			return { x: (r.left + r.width / 2 - b.left) / k, y: (r.top + r.height / 2 - b.top) / k };
+		};
+
+		const dragFrom = { x: 1010, y: 474 };
+		const dragTo = { x: 976, y: 48 };
+		const grip = { x: 150, y: 120 }; // where the cursor holds the card
+		const textAt = { x: 376, y: 704 }; // where the label is clicked in (canvas units)
+		const enter = { x: 930, y: 700 };
+		const exit = { x: 1000, y: 560 };
+
+		const render = (p: number) => {
+			// 1. Drag
+			const move = ease(span(p, .15, .3));
+			const card = mix(dragFrom, dragTo, move);
+			drag.style.transform = `translate3d(${(card.x - dragFrom.x).toFixed(2)}px, ${(card.y - dragFrom.y).toFixed(2)}px, 0)`;
+			drag.toggleAttribute('data-lifted', between(p, .13, .31));
+			drag.toggleAttribute('data-selected', between(p, .13, .45));
+
+			// 2. Colour
+			const appear = ease(span(p, .45, .52));
+			added.style.opacity = p >= .45 ? appear.toFixed(3) : '0';
+			added.style.transform = `scale(${lerp(.96, 1, appear).toFixed(4)})`;
+			added.toggleAttribute('data-selected', between(p, .46, .6));
+			colorButton.toggleAttribute('data-hover', between(p, .41, .48));
+			colorButton.toggleAttribute('data-pressed', between(p, .43, .45));
+
+			// 3. Text
+			textTool.toggleAttribute('data-hover', between(p, .57, .61));
+			textTool.toggleAttribute('data-active', between(p, .59, .66));
+			text.style.opacity = p >= .66 ? '1' : '0';
+			textContent.textContent = typed(LABEL, p, .67, .77);
+			text.toggleAttribute('data-editing', between(p, .66, .8));
+
+			// 4. Note
+			noteButton.toggleAttribute('data-hover', between(p, .8, .86));
+			noteButton.toggleAttribute('data-pressed', between(p, .83, .85));
+			const noteIn = ease(span(p, .85, .89));
+			note.style.opacity = p >= .85 ? noteIn.toFixed(3) : '0';
+			note.style.transform = `scale(${lerp(.96, 1, noteIn).toFixed(4)})`;
+			note.toggleAttribute('data-selected', p >= .86);
+			noteTitle.textContent = typed(NOTE_TITLE, p, .88, .91);
+			noteBody.textContent = typed(NOTE_BODY, p, .92, .98);
+			caretTitle.toggleAttribute('data-on', between(p, .86, .92));
+			caretBody.toggleAttribute('data-on', p >= .92);
+
+			// Cursor path, segment by segment.
+			const start = toBoard({ x: dragFrom.x + grip.x, y: dragFrom.y + grip.y });
+			const held = toBoard({ x: card.x + grip.x, y: card.y + grip.y });
+			const textPoint = toBoard(textAt);
+			let at: Point;
+			if (p < .13) at = mix(enter, start, ease(span(p, .03, .12)));
+			else if (p < .33) at = held;
+			else if (p < .45) at = mix(held, centreOf(colorButton), ease(span(p, .33, .42)));
+			else if (p < .6) at = mix(centreOf(colorButton), centreOf(textTool), ease(span(p, .52, .59)));
+			else if (p < .79) at = mix(centreOf(textTool), textPoint, ease(span(p, .6, .66)));
+			else if (p < .85) at = mix(textPoint, centreOf(noteButton), ease(span(p, .79, .83)));
+			else at = mix(centreOf(noteButton), exit, ease(span(p, .86, .93)));
+			const press = (from: number, to: number) => Math.min(ease(span(p, from, from + .005)), 1 - ease(span(p, to - .005, to)));
+			const pressed = Math.max(press(.12, .31), press(.43, .45), press(.59, .61), press(.65, .67), press(.83, .85));
+			cursor.style.opacity = (span(p, 0, .03) * (1 - span(p, .95, .99))).toFixed(3);
+			cursor.style.transform = `translate(${at.x.toFixed(1)}px, ${at.y.toFixed(1)}px) scale(${lerp(1, .94, pressed).toFixed(4)})`;
+		};
+
+		render(0);
+		root.addEventListener('demo:progress', (event) => render((event as CustomEvent<number>).detail));
+	}
+</script>
+
 <style>
-	.hero-workspace { position: relative; display: flex; width: 100%; min-width: 0; padding: 14px 12px 12px; border: 1px solid var(--glass-line); border-radius: 9px; background: transparent; box-shadow: 0 10px 25px rgb(21 21 21 / 6%); aspect-ratio: 16 / 10; }
-	.hero-workspace__browser { display: flex; flex: 1; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
-	.browser-bar { display: flex; align-items: center; height: 33px; gap: 9px; padding: 0 10px; border-bottom: 1px solid #deded9; color: #888883; font-size: 8px; }
-	.browser-bar__dots { display: flex; gap: 3px; }
-	.browser-bar__dots i { display: block; width: 5px; height: 5px; border-radius: 50%; background: #c6c7c2; }
-	.browser-bar__profile { display: grid; width: 16px; height: 16px; margin-left: auto; color: #fff; border-radius: 50%; background: #30302e; font-size: 7px; place-items: center; }
-	.workspace-body { display: grid; flex: 1; grid-template-columns: 104px minmax(0, 1fr); min-height: 0; }
-	.workspace-sidebar { display: flex; flex-direction: column; gap: 5px; padding: 15px 8px; background: var(--surface); color: var(--ink-muted); font-size: 8px; }
-	.workspace-sidebar__brand { margin: 0 4px 15px; color: #20201e; font-size: 11px; font-weight: 700; }
-	.workspace-nav-item { padding: 6px 7px; border-radius: 4px; }
-	.workspace-nav-item--active { color: #22221f; background: #e1e3e5; font-weight: 600; }
-	.workspace-sidebar__label { margin: 15px 5px 2px; color: #a3a39c; font-size: 7px; letter-spacing: .08em; }
-	.workspace-content { display: flex; flex-direction: column; min-width: 0; padding: 18px; background: var(--canvas); }
-	.workspace-heading { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 15px; }
-	.workspace-heading div { display: grid; gap: 3px; }
-	.workspace-heading strong { font-size: 14px; font-weight: 650; }
-	.workspace-heading span { color: #8b8b84; font-size: 8px; }
-	.workspace-heading__add { padding: 5px 9px; color: #fff; border-radius: 4px; background: #252523; font-size: 8px; }
-	.reference-grid { display: grid; flex: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 7px; min-height: 0; }
-	.reference { position: relative; display: block; overflow: hidden; padding: 8px; border: 1px solid rgb(0 0 0 / 5%); border-radius: 5px; color: #fff; font-size: 7px; }
-	.reference span { position: relative; z-index: 1; }
-	.reference img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
-	.reference--tall { grid-row: span 2; }
-	.reference--wide { grid-column: span 1; }
-	.reference--blue { background: #6d8499; }
-	.reference--paper { color: #45423d; background: #d7d2c8; }
-	.reference--ink { background: #373d44; }
-	.reference--coral { background: #d8796d; }
-	.reference--green { background: #889584; }
-	.reference--note { display: flex; align-items: end; color: #5a5a54; background: #e9e9e5; line-height: 1.25; }
-	.reference i, .reference b, .reference em { position: absolute; display: block; border: 1px solid rgb(255 255 255 / 38%); }
-	.reference--blue i:nth-of-type(1) { right: 12%; bottom: -20%; width: 55%; height: 84%; border-radius: 50% 50% 0 0; }
-	.reference--blue i:nth-of-type(2) { right: -11%; bottom: 17%; width: 74%; height: 42%; border-radius: 50%; }
-	.reference--paper b { left: 16%; width: 68%; height: 1px; border: 0; background: #9d988f; }
-	.reference--paper b:nth-of-type(1) { top: 35%; }
-	.reference--paper b:nth-of-type(2) { top: 48%; }
-	.reference--paper b:nth-of-type(3) { top: 61%; }
-	.reference--ink em { top: -28%; right: 17%; width: 64%; height: 170%; border-radius: 50%; transform: rotate(31deg); }
-	.reference--coral i { top: 23%; width: 1px; height: 70%; border: 0; background: rgb(255 255 255 / 65%); }
-	.reference--coral i:nth-of-type(1) { left: 25%; }
-	.reference--coral i:nth-of-type(2) { left: 49%; }
-	.reference--coral i:nth-of-type(3) { left: 73%; }
-	.reference--green b { top: 23%; width: 44%; height: 62%; border-radius: 50%; }
-	.reference--green b:nth-of-type(1) { left: 15%; }
-	.reference--green b:nth-of-type(2) { right: 15%; }
+	/* App tokens (apps/web/src/index.css), light and dark. */
+	.hero-workspace {
+		--a-bg: oklch(1 0 0); --a-fg: oklch(.145 0 0); --a-card: oklch(.985 0 0); --a-muted: oklch(.97 0 0); --a-muted-fg: oklch(.556 0 0);
+		--a-border: oklch(.922 0 0); --a-primary: oklch(.205 0 0); --a-popover: oklch(1 0 0);
+		--a-sidebar: oklch(1 0 0); --a-sidebar-hover: oklch(.985 0 0); --a-sidebar-active: oklch(.955 0 0); --a-sidebar-border: oklch(.922 0 0);
+		--a-radius: .45rem;
+		position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 10px; background: var(--a-sidebar); container-type: inline-size;
+	}
+	:global(html[data-theme='dark']) .hero-workspace {
+		--a-bg: oklch(.145 0 0); --a-fg: oklch(.985 0 0); --a-card: oklch(.205 0 0); --a-muted: oklch(.269 0 0); --a-muted-fg: oklch(.708 0 0);
+		--a-border: oklch(1 0 0 / 10%); --a-primary: oklch(.922 0 0); --a-popover: oklch(.205 0 0);
+		--a-sidebar: oklch(.145 0 0); --a-sidebar-hover: oklch(.205 0 0); --a-sidebar-active: oklch(.269 0 0); --a-sidebar-border: oklch(1 0 0 / 10%);
+	}
 
+	.app { position: absolute; top: 0; left: 0; display: flex; width: 1280px; height: 800px; color: var(--a-fg); background: var(--a-sidebar); font-family: 'Inter Variable', sans-serif; font-size: 14px; line-height: 1.43; letter-spacing: normal; transform: scale(var(--app-scale, .9)); transform-origin: 0 0; -webkit-font-smoothing: antialiased; }
+	.icon { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+	.icon--sm { width: 14px; height: 14px; }
+	.icon--lg { width: 18px; height: 18px; }
 
-	:global(html[data-theme='dark']) .hero-workspace { box-shadow: 0 10px 28px rgb(0 0 0 / 28%); }
-	:global(html[data-theme='dark']) .hero-workspace__browser { border-color: var(--line); background: var(--surface); }
-	:global(html[data-theme='dark']) .browser-bar { border-color: var(--line); color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .browser-bar__dots i { background: #5e645d; }
-	:global(html[data-theme='dark']) .browser-bar__profile,
-	:global(html[data-theme='dark']) .workspace-heading__add { color: #151715; background: var(--ink); }
-	:global(html[data-theme='dark']) .workspace-sidebar { border-color: var(--line); color: var(--ink-muted); background: var(--surface); }
-	:global(html[data-theme='dark']) .workspace-content { background: var(--canvas); }
-	:global(html[data-theme='dark']) .workspace-sidebar__brand { color: var(--ink); }
-	:global(html[data-theme='dark']) .workspace-nav-item--active { color: var(--ink); background: #303530; }
-	:global(html[data-theme='dark']) .workspace-sidebar__label,
-	:global(html[data-theme='dark']) .workspace-heading span { color: #858b83; }
-	:global(html[data-theme='dark']) .reference { border-color: rgb(255 255 255 / 8%); }
-	:global(html[data-theme='dark']) .reference--paper { color: #f3f1ec; background: #77746c; }
-	:global(html[data-theme='dark']) .reference--note { color: var(--ink-muted); background: #2b2f2b; }
+	/* Sidebar: inset variant, 240px with the 8px shell inset. */
+	.sidebar { display: flex; flex-direction: column; width: 240px; flex-shrink: 0; padding: 8px; }
+	.sidebar__header { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+	.switcher { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px; border-radius: calc(var(--a-radius) * .8); }
+	.switcher__name { flex: 1; font-weight: 500; }
+	.avatar { display: grid; flex-shrink: 0; place-items: center; font-weight: 600; }
+	.avatar--sm { width: 24px; height: 24px; border-radius: calc(var(--a-radius) * .8); background: var(--a-fg); color: var(--a-bg); font-size: 12px; }
+	.avatar--user { width: 32px; height: 32px; border-radius: var(--a-radius); background: var(--a-muted); color: var(--a-muted-fg); font-size: 12px; }
+	.chevrons { margin-left: auto; }
+	.sidebar__content { display: flex; min-height: 0; flex: 1; flex-direction: column; }
+	.group { position: relative; display: flex; flex-direction: column; padding: 8px; }
+	.group--fill { flex: 1; min-height: 0; }
+	.group__label { display: flex; align-items: center; height: 32px; padding: 0 8px; color: color-mix(in oklch, var(--a-fg) 70%, transparent); font-size: 12px; font-weight: 500; }
+	.search { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border-radius: calc(var(--a-radius) * .8); background: var(--a-bg); color: var(--a-muted-fg); box-shadow: 0 0 0 1px var(--a-sidebar-border); }
+	.search > span:first-of-type { flex: 1; }
+	.kbd-group { display: inline-flex; gap: 4px; }
+	kbd { display: inline-flex; align-items: center; justify-content: center; height: 20px; min-width: 20px; padding: 0 4px; border-radius: calc(var(--a-radius) * .6); background: var(--a-muted); color: var(--a-muted-fg); font: 500 12px/1 'Inter Variable', sans-serif; }
+	.menu { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+	.menu__button { display: flex; align-items: center; gap: 8px; height: 32px; padding: 8px; overflow: hidden; border-radius: calc(var(--a-radius) * .8); white-space: nowrap; }
+	.menu__button--disabled { opacity: .5; }
+	.menu__button--active { background: var(--a-sidebar-active); font-weight: 500; }
+	.menu__name { flex: 1; min-width: 0; overflow: hidden; }
+	.menu__count { flex-shrink: 0; translate: 0 1px; color: color-mix(in oklch, var(--a-fg) 40%, transparent); font-size: 12px; font-weight: 400; }
+	.badge { display: inline-flex; min-width: 20px; align-items: center; justify-content: center; margin-left: auto; padding: 2px 6px; border: 1px solid #0e0e0e; border-radius: calc(var(--a-radius) * .8); background: linear-gradient(to bottom, #373737, #171717); color: #fafafa; font-size: 11px; font-weight: 600; line-height: 1; box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 1px 2px rgb(0 0 0 / 12%); }
+	:global(html[data-theme='dark']) .badge { border-color: #c9c9c9; background: linear-gradient(to bottom, #fff, #e5e5e5); color: #171717; }
+	.sidebar__footer { padding: 8px; }
+	.user { display: flex; align-items: center; gap: 8px; height: 48px; padding: 8px; border-radius: calc(var(--a-radius) * .8); }
+	.user__text { display: grid; flex: 1; line-height: 1.25; }
+	.user__name { font-weight: 500; }
+	.user__email { font-size: 12px; }
 
-	@media (max-width: 640px) {
-		.hero-workspace { padding: 8px; }
-		.workspace-body { grid-template-columns: 76px minmax(0, 1fr); }
-		.workspace-sidebar { padding: 10px 5px; font-size: 7px; }
-		.workspace-sidebar__brand { margin-bottom: 9px; }
-		.workspace-sidebar__label { margin-top: 8px; }
-		.workspace-content { padding: 12px; }
-		.reference-grid { gap: 5px; }
+	/* Main column: header, then the board in a rounded card surface. */
+	.main { display: flex; min-width: 0; flex: 1; flex-direction: column; margin: 0 8px 8px 0; }
+	.topbar { display: flex; align-items: center; gap: 8px; height: 56px; flex-shrink: 0; }
+	.ghost-icon { display: grid; width: 28px; height: 28px; place-items: center; border-radius: calc(var(--a-radius) * .8); }
+	.crumbs { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; color: var(--a-muted-fg); list-style: none; }
+	.crumbs__current { color: var(--a-fg); }
+	.crumbs__sep { position: relative; width: 14px; height: 14px; }
+	.crumbs__sep::before { content: ''; position: absolute; top: 1px; left: 6.5px; width: 1px; height: 12px; background: currentColor; rotate: 20deg; }
+	.view-button { display: inline-flex; align-items: center; gap: 4px; height: 28px; margin-left: auto; padding: 0 10px; border-radius: calc(var(--a-radius) * .8 + 0px); font-size: 12.8px; font-weight: 500; }
+	.view-button .icon { width: 14px; height: 14px; }
+
+	.board { position: relative; flex: 1; min-height: 0; overflow: hidden; border-radius: calc(var(--a-radius) * 1.4); background-color: var(--a-card); background-image: radial-gradient(circle, color-mix(in oklch, var(--a-fg) 26%, transparent) .8px, transparent 1.1px); background-size: 19.2px 19.2px; background-position: -2.4px -5.6px; }
+	.canvas { position: absolute; top: 0; left: 0; width: 1400px; height: 1000px; transform: translate(-12px, 4px) scale(.8); transform-origin: 0 0; }
+
+	/* Cards (apps/web/src/components/board/cards), at the app's real sizes: 280 wide, rounded-lg, 1px border, sidebar surface. */
+	.card { position: absolute; overflow: hidden; border: 1px solid var(--a-border); border-radius: var(--a-radius); background: var(--a-sidebar); color: var(--a-fg); transition: box-shadow 160ms ease-out; }
+	/* Selection: ring-2 ring-primary ring-offset-2 ring-offset-card. */
+	.card::after { content: ''; position: absolute; inset: -1px; border-radius: inherit; box-shadow: 0 0 0 2px var(--a-card), 0 0 0 4px var(--a-primary); opacity: 0; pointer-events: none; }
+	.card[data-selected]::after { opacity: 1; }
+	.card[data-selected] { overflow: visible; }
+	.card[data-lifted] { z-index: 2; box-shadow: 0 2px 4px rgb(0 0 0 / 6%), 0 18px 36px -12px rgb(0 0 0 / 28%); }
+	.card :global(img) { display: block; width: 100%; height: 100%; object-fit: cover; }
+	.card--image { border-color: transparent; background: none; }
+	.card--image :global(img) { border-radius: 6px; }
+	/* Note: px-4 py-4 text-sm; compact markdown: 19px title, paragraphs at 80% ink, 13px h2. */
+	.card--note { padding: 16px; max-height: 320px; }
+	.note__title { margin-bottom: 4px; font-size: 19px; font-weight: 600; letter-spacing: -.025em; line-height: 1.25; }
+	.card--note p, .card--note ul { margin: 2px 0; color: color-mix(in oklch, var(--a-fg) 80%, transparent); line-height: 1.35; }
+	.note__heading { margin: 6px 0 2px; font-size: 13px; font-weight: 600; line-height: 1.375; }
+	.card--note ul { padding-left: 20px; list-style: disc; }
+	/* Link: 16:9 hero, then px-3 py-3 with a 13px meta row and a 16px title. */
+	.link__hero { aspect-ratio: 16 / 9; overflow: hidden; border-bottom: 1px solid var(--a-border); border-radius: 0 0 var(--a-radius) var(--a-radius); }
+	.link__body { display: grid; gap: 4px; padding: 12px; }
+	.link__meta { display: flex; align-items: center; gap: 6px; color: color-mix(in oklch, var(--a-fg) 65%, transparent); font-size: 13px; line-height: 20px; }
+	.link__icon { display: grid; width: 18px; height: 18px; place-items: center; }
+	.link__title { display: -webkit-box; overflow: hidden; font-size: 16px; font-weight: 500; line-height: 1.375; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+	/* Colour: square swatch, then p-3 leading-6 with a 16px name and a 13px mono hex. */
+	.color__swatch { aspect-ratio: 1; border-bottom: 1px solid var(--a-border); border-radius: 0 0 var(--a-radius) var(--a-radius); background: var(--swatch); }
+	.color__footer { display: flex; align-items: center; gap: 12px; padding: 12px; font-size: 16px; font-weight: 500; line-height: 24px; }
+	.color__hex { margin-left: auto; color: color-mix(in oklch, var(--a-fg) 60%, transparent); font: 400 13px/24px 'IBM Plex Mono', ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace; letter-spacing: .025em; }
+	/* Folder: square; previews at most 52% tall / 65% wide, front one raised, two behind fanned below it. */
+	.folder__item { position: absolute; top: 50%; left: 50%; overflow: hidden; border-radius: var(--a-radius); }
+	.folder__item :global(img) { width: auto; max-width: 182px; height: 146px; }
+	.folder__item--1 { translate: -50% calc(-50% - 22px); }
+	.folder__item--2 { translate: calc(-50% - 8px) calc(-50% + 3px); rotate: -1.9deg; }
+	.folder__item--3 { translate: calc(-50% + 13px) calc(-50% + 23px); rotate: 2.75deg; }
+	.folder__bar { position: absolute; inset: auto 0 0; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 28px 12px 10px; background: linear-gradient(to bottom, color-mix(in oklch, var(--a-sidebar) 0%, transparent), color-mix(in oklch, var(--a-sidebar) 85%, transparent) 50%, var(--a-sidebar)); font-weight: 500; }
+	.folder__count { margin-left: auto; color: color-mix(in oklch, var(--a-fg) 55%, transparent); font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
+	[data-demo-new] { opacity: 0; transform-origin: 50% 60%; }
+
+	/* Text node (canvas-text-node.tsx): Sans at the medium size, 24px / 1.2, px-2 py-1.5, ring-2 while editing. */
+	.text-node { position: absolute; display: inline-flex; align-items: center; min-height: 28px; padding: 6px 8px; border-radius: calc(var(--a-radius) * .6); color: var(--a-fg); font-size: 24px; line-height: 1.2; white-space: pre; opacity: 0; }
+	.text-node[data-editing] { box-shadow: 0 0 0 2px var(--a-primary); }
+	.text-node__caret { display: none; width: 1.5px; height: 1.1em; margin-left: 1px; background: currentColor; }
+	.text-node[data-editing] .text-node__caret { display: block; }
+	/* The new note: empty until it's written into; the caret shows only while editing. */
+	.card--new-note { min-height: 92px; opacity: 0; transform-origin: 50% 40%; }
+	.note__caret { display: none; width: 1.5px; height: 1.05em; margin-left: 1px; vertical-align: -.15em; background: currentColor; }
+	.note__caret[data-on] { display: inline-block; }
+
+	/* Action rail (board-action-rail.tsx + lib/glass.ts). */
+	.rail { position: absolute; right: 0; bottom: 12px; left: 0; z-index: 3; display: flex; justify-content: center; }
+	.rail__frame { display: flex; align-items: center; padding: 4px; border-radius: var(--a-radius); background: color-mix(in oklch, var(--a-popover) 80%, transparent); box-shadow: 0 0 0 1px color-mix(in oklch, var(--a-fg) 10%, transparent); backdrop-filter: blur(40px) saturate(1.5); }
+	.island { display: flex; align-items: center; border: 1px solid var(--a-border); border-radius: calc(var(--a-radius) * .8); background: var(--a-bg); box-shadow: 0 1px 3px color-mix(in oklch, var(--a-fg) 5%, transparent); }
+	.island + .island { margin-left: 4px; }
+	.island__sep { align-self: stretch; width: 1px; background: var(--a-border); }
+	.rail__button { display: grid; width: 36px; height: 36px; place-items: center; border-radius: calc(var(--a-radius) * .8 - 1px); transition: background 150ms cubic-bezier(.16, 1, .3, 1); }
+	.rail__button[data-hover] { background: color-mix(in oklch, var(--a-muted) 80%, transparent); }
+	/* Pressed, and the active tool: bg-sidebar-active. */
+	.rail__button[data-pressed], .rail__button[data-active] { background: var(--a-sidebar-active); }
+
+	/* Demo pointer. */
+	.cursor { position: absolute; top: 0; left: 0; z-index: 4; width: 22px; height: 22px; margin: -3px 0 0 -5px; fill: #111; stroke: #fff; stroke-width: 1.4; stroke-linejoin: round; opacity: 0; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 30%)); transform-origin: 5px 3px; pointer-events: none; }
+
+	@media (prefers-reduced-motion: reduce) {
+		.card, .rail__button { transition: none; }
 	}
 </style>

@@ -1,260 +1,437 @@
 ---
-import { Image, getImage } from 'astro:assets';
-import bauhausArchitecture01 from '../assets/images/bauhaus-architecture-01.jpg';
-import bauhausFurniture01 from '../assets/images/bauhaus-furniture-01.jpg';
-import bauhausFurniture02 from '../assets/images/bauhaus-furniture-02.jpg';
-import bauhausFurniture03 from '../assets/images/bauhaus-furniture-03.jpg';
-import bauhausRoom01 from '../assets/images/bauhaus-room-01.jpg';
-import bauhausRoom02 from '../assets/images/bauhaus-room-02.jpg';
+import { Image } from 'astro:assets';
+import '../styles/feature-showcase.css';
 import blueRedWall from '../assets/images/blue-red-wall.jpg';
+import curvedArchitecture from '../assets/images/curved-architecture.jpg';
 import brutalistShadows from '../assets/images/brutalist-shadows.jpg';
 import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
-import curvedArchitecture from '../assets/images/curved-architecture.jpg';
 import greenAbstract02 from '../assets/images/green-abstract-02.webp';
 import greenAbstract03 from '../assets/images/green-abstract-03.webp';
 import greenAbstract05 from '../assets/images/green-abstract-05.webp';
 import greenAbstract07 from '../assets/images/green-abstract-07.webp';
-const mockImageProps = { width: 280, densities: [1, 2], quality: 78 };
-const mockImages = [
-	blueRedWall,
-	curvedArchitecture,
-	brutalistShadows,
-	concreteSculptures,
-	greenAbstract05,
-	greenAbstract02,
-	greenAbstract03,
-	greenAbstract07,
-	bauhausRoom01,
-	bauhausFurniture01,
-	bauhausFurniture02,
-	bauhausFurniture03,
-	bauhausArchitecture01,
-	bauhausRoom02,
+import heroGreen01 from '../assets/images/hero-green-01.webp';
+import heroGreen03 from '../assets/images/hero-green-03.webp';
+import heroGreen04 from '../assets/images/hero-green-04.webp';
+import heroBlue01 from '../assets/images/hero-blue-01.webp';
+import heroBlue02 from '../assets/images/hero-blue-02.webp';
+import heroBlue03 from '../assets/images/hero-blue-03.webp';
+import heroBlue04 from '../assets/images/hero-blue-04.webp';
+import heroBlue05 from '../assets/images/hero-blue-05.webp';
+import heroRed01 from '../assets/images/hero-red-01.webp';
+import heroRed02 from '../assets/images/hero-red-02.webp';
+import heroRed03 from '../assets/images/hero-red-03.webp';
+import heroRed04 from '../assets/images/hero-red-04.webp';
+import heroRed05 from '../assets/images/hero-red-05.webp';
+
+const thumb = { width: 64, densities: [1, 2], quality: 74, alt: '' } as const;
+const tile = { width: 200, densities: [1, 2], quality: 76, alt: '' } as const;
+
+// The palette's results: an image, a note, then more images, as the app lists them.
+const searchResults = [
+	{ image: curvedArchitecture, label: 'Curved concrete stair', detail: 'Studio archive', kind: 'Image' },
+	{ image: brutalistShadows, label: 'Brutalist shadows at noon', detail: 'Material library', kind: 'Image' },
+	{ note: true, label: 'Light studies', detail: 'Soft light reads flat on raw concrete, so…', kind: 'Note' },
+	{ image: blueRedWall, label: 'Painted wall, late light', detail: 'Spring campaign', kind: 'Image' },
+	{ image: concreteSculptures, label: 'Concrete sculptures', detail: 'Studio archive', kind: 'Image' },
 ];
-const getBlurStyle = async (image) => {
-	const placeholder = await getImage({ src: image, width: 28, format: 'webp', quality: 30 });
-	return `--blur-image: url("${placeholder.src}");`;
-};
-const mockBlurStyles = Object.fromEntries(
-	await Promise.all(mockImages.map(async (image) => [image.src, await getBlurStyle(image)])),
-);
-const withMockBlur = (image) => ({ ...mockImageProps, src: image, class: 'blur-image', style: mockBlurStyles[image.src] });
+// The filter bar's eight preset colours (apps/web/src/components/filter-bar).
+const filterColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#64748b'];
+// What each colour the demo picks finds: three masonry columns and a match count.
+const colorResults = [
+	{ color: '#22c55e', count: 12, columns: [[greenAbstract05, heroGreen03], [heroGreen01, greenAbstract02], [greenAbstract07, greenAbstract03, heroGreen04]] },
+	{ color: '#3b82f6', count: 9, columns: [[heroBlue01, heroBlue04], [heroBlue02, heroBlue05], [heroBlue03, blueRedWall]] },
+	{ color: '#ef4444', count: 7, columns: [[heroRed01, heroRed04], [heroRed02, heroRed05], [heroRed03]] },
+];
+const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 ---
 
-<section id="workflow" class="feature-showcase page-width scroll-anchor" aria-label="Mnemee features" data-header-surface="canvas">
-	<article class="feature-panel feature-panel--capture">
-		<div class="feature-panel__copy">
-			<h2>Everything lands in one place first.</h2>
-			<p>Images, videos, links, and quick notes land in the Inbox until you are ready to give them a place.</p>
+<section id="workflow" class="features page-width scroll-anchor" aria-label="Mnemee features" data-header-surface="canvas">
+	<article class="feature feature--semantic">
+		<div class="feature__copy">
+			<div class="feature__eyebrow"><span>Semantic search</span><span class="feature__planned">Planned</span></div>
+			<h2>Find the idea, even when you can't name the file.</h2>
+			<p>Search across a collection using the meaning and visual qualities of what you've saved.</p>
 		</div>
-		<div class="capture-preview" role="img" aria-label="An Mnemee inbox containing different kinds of saved references">
-			<div class="capture-topbar" aria-hidden="true">
-				<button aria-label="Toggle sidebar">
-					<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path></svg>
-				</button>
-				<span>Inbox</span>
+		<!-- The app's command palette (components/command-palette) in search mode. -->
+		<div class="feature-visual semantic-visual" role="img" aria-label="Concept preview of a semantic search for architectural references" data-demo="search">
+			<!-- The app's top bar on a collection board: sidebar toggle, breadcrumb, and the View menu. -->
+			<div class="mock app-topbar app-topbar--board" aria-hidden="true">
+				<span class="app-topbar__toggle"><svg class="mock-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /></svg></span>
+				<span class="app-topbar__crumb app-topbar__crumb--parent">Collections</span>
+				<span class="app-topbar__sep"></span>
+				<span class="app-topbar__crumb">Material library</span>
+				<span class="app-topbar__view">View <svg class="mock-icon mock-icon--xs" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg></span>
 			</div>
-			<div class="capture-board" aria-hidden="true">
-				<div class="inbox-asset inbox-asset--image inbox-asset--tall"><Image {...withMockBlur(blueRedWall)} alt="" /></div>
-				<div class="inbox-asset inbox-asset--note">
-					<p><strong>Keep the useful friction.</strong></p>
-					<p>Pull in the fragments before the direction is obvious.</p>
+			<!-- The board (rounded-xl bg-card) behind the palette, under the dialog's dim-and-blur backdrop. -->
+			<div class="board-frame" aria-hidden="true">
+			<div class="mock search-board">
+				<!-- Canvas units, as on the app's board (cards 280 wide), shown zoomed out. -->
+				<div class="board-card board-card--image" style="left: 40px; top: 56px; width: 280px; height: 350px;"><Image src={curvedArchitecture} {...tile} /></div>
+				<div class="board-card board-card--image" style="left: 40px; top: 430px; width: 280px; height: 210px;"><Image src={heroGreen03} {...tile} /></div>
+				<div class="board-card board-card--note" style="left: 344px; top: 24px; width: 280px;"><strong>Light studies</strong><span>Soft light reads flat on raw concrete, so keep one hard shadow in every frame.</span><span>Pair it with one saturated accent, never two.</span></div>
+				<div class="board-card board-card--image" style="left: 344px; top: 236px; width: 280px; height: 210px;"><Image src={brutalistShadows} {...tile} /></div>
+				<div class="board-card board-card--color" style="left: 648px; top: 88px; width: 280px;"><i style="background: #c8643b;"></i><span>Clay <em>#C8643B</em></span></div>
+				<div class="board-card board-card--image" style="left: 648px; top: 444px; width: 280px; height: 210px;"><Image src={blueRedWall} {...tile} /></div>
+				<div class="board-card board-card--image" style="left: 952px; top: 40px; width: 280px; height: 350px;"><Image src={greenAbstract05} {...tile} /></div>
+				<div class="board-text" style="left: 952px; top: 430px;">Material board</div>
+				<div class="board-card board-card--image" style="left: 1256px; top: 120px; width: 280px; height: 350px;"><Image src={heroGreen01} {...tile} /></div>
+			</div>
+			<!-- The canvas's action rail stays at screen size, bottom centre of the board. -->
+			<div class="board-rail"><span></span><span></span><span></span><span></span><i></i><span></span><span></span><i></i><span></span></div>
+			</div>
+			<div class="palette-backdrop" aria-hidden="true"></div>
+			<div class="mock palette" aria-hidden="true">
+				<div class="palette__body">
+				<div class="palette__input">
+					<svg class="mock-icon mock-icon--sm palette__search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+					<span data-query>soft light on concrete</span><i class="mock-caret"></i><span class="palette__placeholder" data-placeholder hidden>Search notes, images, links, colors…</span>
 				</div>
-				<div class="inbox-asset inbox-asset--image inbox-asset--wide"><Image {...withMockBlur(curvedArchitecture)} alt="" /></div>
-				<div class="inbox-asset inbox-asset--image"><Image {...withMockBlur(brutalistShadows)} alt="" /></div>
-				<div class="inbox-asset inbox-asset--image"><Image {...withMockBlur(concreteSculptures)} alt="" /></div>
-				<div class="inbox-asset inbox-asset--note inbox-asset--small-note">
-					<p>Ask whether the palette is doing work or just decorating.</p>
+				<div class="palette__list" data-results>
+					<div class="palette__heading">Results</div>
+					{searchResults.map((result, index) => (
+						<div class:list={['palette__item', index === 0 && 'palette__item--selected']} data-result>
+							{result.note ? (
+								<span class="palette__tile palette__tile--note"><svg class="mock-icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg></span>
+							) : (
+								<span class="palette__tile"><Image src={result.image!} {...thumb} /></span>
+							)}
+							<span class="palette__text"><span class="palette__label">{result.label}</span><span class="palette__detail">{result.detail}</span></span>
+							<span class="palette__kind">{result.kind}</span>
+						</div>
+					))}
+				</div>
+				</div>
+				<div class="palette__footer">
+					<span><kbd>Tab</kbd> for actions</span>
+					<span class="palette__footer-end"><kbd>↑</kbd><kbd data-key-down>↓</kbd> to navigate</span>
+					<span><kbd data-key-enter>↵</kbd> to select</span>
 				</div>
 			</div>
 		</div>
 	</article>
 
-	<article id="color-search" class="feature-panel feature-panel--search scroll-anchor">
-		<div class="feature-panel__copy">
-			<h2>Search beyond file names.</h2>
-			<p>Use color-based search and text search to find the references you saved in a collection.</p>
+	<article id="color-search" class="feature feature--color scroll-anchor">
+		<div class="feature__copy">
+			<div class="feature__eyebrow"><span>Color search</span></div>
+			<h2>Follow a color back to the image.</h2>
+			<p>Pick a color to find matching images in your Inbox or collection.</p>
 		</div>
-		<div class="search-preview" role="img" aria-label="An Mnemee colour search showing forest-green abstract references">
-			<div class="search-topbar" aria-hidden="true">
-				<button aria-label="Toggle sidebar">
-					<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path></svg>
-				</button>
-				<nav class="search-breadcrumbs" aria-label="Collection path"><span>Collections</span><i>/</i><strong>Colour studies</strong></nav>
-			</div>
-			<div class="search-board" aria-hidden="true">
-				<div class="colour-filter"><i></i><i></i><i></i><i></i><i></i><span>Forest green</span></div>
-				<div class="search-results">
-					<div class="search-result search-result--one"><Image {...withMockBlur(greenAbstract05)} alt="" /></div>
-					<div class="search-result search-result--two"><Image {...withMockBlur(greenAbstract02)} alt="" /></div>
-					<div class="search-result search-result--three"><Image {...withMockBlur(greenAbstract03)} alt="" /></div>
-					<div class="search-result search-result--four"><Image {...withMockBlur(greenAbstract07)} alt="" /></div>
+		<!-- The Inbox board with the app's colour filter bar floating over the masonry grid. -->
+		<div class="feature-visual color-visual" role="img" aria-label="Color search in the Inbox, picking green, blue and red in turn" data-demo="color">
+			<div class="mock inbox" aria-hidden="true" data-mock>
+				<!-- The app's top bar (app-header): sidebar toggle, breadcrumb, and the Inbox's grid density switch. -->
+				<div class="app-topbar">
+					<span class="app-topbar__toggle"><svg class="mock-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /></svg></span>
+					<span class="app-topbar__crumb">Inbox</span>
+					<span class="density"><span>Spacious</span><span class="is-active">Balanced</span><span>Compact</span></span>
 				</div>
+				<div class="inbox__board">
+				<div class="filter-bar">
+					<div class="island filter-bar__type">Color <svg class="mock-icon mock-icon--xs" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg></div>
+					<div class="island filter-bar__colors">
+						<span class="filter-bar__add"><svg class="mock-icon mock-icon--xs" viewBox="0 0 24 24"><path d="M5 12h14" /><path d="M12 5v14" /></svg></span>
+						<span class="filter-bar__sep"></span>
+						<span class="filter-bar__swatches">
+							{filterColors.map((color) => <i class:list={[color === '#22c55e' && 'is-active']} data-swatch={color} style={`background-color: ${color}`}></i>)}
+						</span>
+					</div>
+					<div class="island filter-bar__status"><span data-count>12</span>&nbsp;matches</div>
+					<div class="island filter-bar__clear"><svg class="mock-icon mock-icon--xs" viewBox="0 0 24 24"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg></div>
+				</div>
+				<div class="masonry-stack">
+					{colorResults.map((result, index) => (
+						<div class:list={['masonry', index === 0 && 'is-shown']} data-results-for={result.color} data-count-for={result.count}>
+							{result.columns.map((column) => (
+								<div class="masonry__column">{column.map((image) => <div class="masonry__card"><Image src={image} {...tile} /></div>)}</div>
+							))}
+						</div>
+					))}
+				</div>
+				</div>
+				<svg class="mock-cursor" data-cursor viewBox="0 0 24 24"><path d={pointer} /></svg>
 			</div>
 		</div>
 	</article>
 
-	<article id="canvas" class="feature-panel feature-panel--canvas scroll-anchor">
-		<div class="feature-panel__copy">
-			<h2>Arrange ideas as they start to take shape.</h2>
-			<p>Move references, notes and folders on a canvas as the project continues to evolve.</p>
+	<article class="feature feature--notes">
+		<div class="feature__copy">
+			<div class="feature__eyebrow"><span>AI in notes</span></div>
+			<h2>Make more of the thoughts you save.</h2>
+			<p>Ask AI to help write or refine a passage, right where your ideas live.</p>
 		</div>
-		<div class="canvas-preview" role="img" aria-label="An Mnemee collection canvas with references positioned in a moodboard">
-			<div class="canvas-preview__top">
-				<button aria-label="Toggle sidebar">
-					<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path></svg>
-				</button>
-				<nav class="canvas-breadcrumbs" aria-label="Collection path"><span>Collections</span><i>/</i><strong>Bauhaus</strong></nav>
-				<span class="canvas-preview__count">48 items</span>
-			</div>
-			<div class="canvas-grid" aria-hidden="true">
-				<div class="canvas-object canvas-object--image-one"><Image {...withMockBlur(bauhausRoom01)} alt="" /></div>
-				<div class="canvas-object canvas-object--folder">
-					<div class="canvas-folder__previews"><Image {...withMockBlur(bauhausFurniture01)} alt="" /><Image {...withMockBlur(bauhausFurniture02)} alt="" /><Image {...withMockBlur(bauhausFurniture03)} alt="" /><span></span></div>
-					<div class="canvas-folder__label"><strong>Furniture</strong><small>24</small></div>
+		<!-- The note view and the agent's prompt (board/note-editor/agent). -->
+		<div class="feature-visual note-visual" role="img" aria-label="Opening AI on an empty line with the space bar and generating formatted text" data-demo="note">
+			<div class="mock note-window" aria-hidden="true" data-mock>
+				<div class="note-window__header">
+					<div class="note-window__group">
+						<span class="note-window__button"><svg class="mock-icon" viewBox="0 0 24 24"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg></span>
+						<span class="note-window__button"><svg class="mock-icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M15 3v18" /></svg></span>
+						<span class="note-window__button"><svg class="mock-icon mock-icon--sm" viewBox="0 0 24 24"><path d="M4 14h6v6" /><path d="M20 10h-6V4" /><path d="m14 10 7-7" /><path d="m3 21 7-7" /></svg></span>
+					</div>
+					<div class="note-window__group">
+						<span class="note-window__status" data-save-status>Edited 2m ago</span>
+						<span class="note-window__button"><svg class="mock-icon" viewBox="0 0 24 24"><path d="m9 11-6 6v3h9l3-3" /><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" /></svg></span>
+						<span class="note-window__button"><svg class="mock-icon" viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg></span>
+						<span class="note-window__button"><svg class="mock-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg></span>
+					</div>
 				</div>
-				<div class="canvas-object canvas-object--note"><p><strong>Keep the useful friction.</strong></p><p>Every reference needs room around it.</p></div>
-				<div class="canvas-object canvas-object--image-two"><Image {...withMockBlur(bauhausArchitecture01)} alt="" /></div>
-				<div class="canvas-object canvas-object--image-three"><Image {...withMockBlur(bauhausRoom02)} alt="" /></div>
+				<div class="note-window__page">
+					<div class="note-editor__title">Entrance study</div>
+					<div class="note-editor__body">
+						<p>The curve softens the space, and the light does most of the work in the morning.</p>
+						<div class="note-editor__passage">
+							<span class="agent-rail" data-rail></span>
+							<p class="note-editor__empty" data-empty><span data-hint>Press space for AI or '/' for blocks…</span><kbd class="note-editor__space" data-space>space</kbd></p>
+							<p class="note-editor__draft" data-draft-row hidden><span data-draft></span></p>
+							<div class="agent-prompt" data-prompt data-phase="prompt" hidden>
+								<div class="agent-prompt__status"><span class="agent-shimmer">Writing…</span><span class="agent-prompt__ghost">Stop <kbd>Esc</kbd></span></div>
+								<div class="agent-prompt__review">
+									<span class="agent-prompt__icon-button"><svg class="mock-icon mock-icon--sm" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></svg></span>
+									<span class="agent-button agent-button--secondary">Discard</span>
+									<span class="agent-button agent-button--primary" data-keep>Keep</span>
+								</div>
+								<div class="agent-prompt__input">
+									<span data-instruction>Develop the entrance concept</span><i class="mock-caret"></i>
+									<span class="agent-prompt__send" data-send><svg class="mock-icon" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></svg></span>
+								</div>
+								<div class="agent-prompt__actions"><span>Continue writing</span><span>Summarize</span><span>Outline</span><span>Action items</span></div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<svg class="mock-cursor" data-cursor viewBox="0 0 24 24"><path d={pointer} /></svg>
 			</div>
 		</div>
 	</article>
 </section>
 
-<style>
-	.feature-showcase { --mock-asset-border: rgb(21 21 21 / 10%); --mock-muted-card-border: rgb(222 222 217 / 72%); display: grid; max-width: 980px; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
-	.feature-panel, .feature-detail { min-width: 0; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); box-shadow: 0 2px 8px rgb(21 21 21 / 3%); }
-	.feature-panel { display: flex; flex-direction: column; overflow: hidden; padding: 30px; }
-	.feature-panel--capture { grid-column: span 7; }
-	.feature-panel--search { grid-column: span 5; }
-	.feature-panel--canvas { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(220px, .46fr) minmax(0, 1.54fr); align-items: center; gap: 44px; padding: 38px; }
-	.feature-panel__copy { max-width: 420px; margin-bottom: 24px; }
-	.feature-panel__copy h2 { margin-bottom: 10px; font-size: clamp(23px, 2.4vw, 32px); line-height: 1.12; }
-	.feature-panel__copy p { margin: 0; color: var(--ink-muted); font-size: 13px; line-height: 1.55; }
-	.feature-panel--capture .capture-preview { --preview-x: 18px; --preview-y: 74px; width: calc(100% + 58px); transform: translate(var(--preview-x), var(--preview-y)); }
-	.feature-panel--search .search-preview { --preview-x: 18px; --preview-y: 66px; width: calc(100% + 54px); margin-top: auto; transform: translate(var(--preview-x), var(--preview-y)); }
-	.feature-panel--canvas .canvas-preview { --preview-x: 70px; --preview-y: 76px; width: calc(100% + 92px); transform: translate(var(--preview-x), var(--preview-y)); }
+<script>
+	/*
+	 * Each bento mock-up plays a short loop of the app in use while it's on screen. Time only runs while the panel is
+	 * visible (and the tab is shown), so the loops pause off screen. With reduced motion the panels stay as static
+	 * screenshots (the markup's default state).
+	 */
+	const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+	const easeInOut = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
 
-	.capture-preview, .search-preview, .canvas-preview { border: 1px solid var(--feature-frame-border-mid); border-radius: 8px; background: rgb(255 255 255 / 64%); box-shadow: var(--feature-frame-shadow-mid); }
-	.capture-preview { position: relative; min-height: 350px; overflow: hidden; padding: 0 8px 8px; background: #fff; }
-	.capture-topbar, .search-topbar { display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 8px 0 0; border-radius: 8px 8px 0 0; background: transparent; color: #252522; }
-	.capture-topbar button, .search-topbar button, .canvas-preview__top button { display: grid; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #252522; place-items: center; }
-	.capture-topbar svg, .search-topbar svg, .canvas-preview__top svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
-	.capture-topbar > span { display: flex; align-items: center; height: 28px; font-size: 13px; font-weight: 500; line-height: 1; }
-	.capture-board { columns: 3 96px; column-gap: 12px; padding: 12px; border-radius: 10px; background: var(--canvas); box-shadow: 0 1px 2px rgb(21 21 21 / 4%); }
-	.inbox-asset { position: relative; display: block; min-width: 0; margin-bottom: 12px; overflow: hidden; break-inside: avoid; border-radius: 8px; }
-	.inbox-asset--image { aspect-ratio: 1 / 1.2; border: 1px solid var(--mock-asset-border); background: #e8e8e3; }
-	.inbox-asset--image img { display: block; width: 100%; height: 100%; border-radius: 6px; object-fit: cover; }
-	.inbox-asset--tall { aspect-ratio: 1 / 1.5; }
-	.inbox-asset--wide { aspect-ratio: 1 / .86; }
-	.inbox-asset--wide img { object-position: center 54%; }
-	.inbox-asset--note { max-height: 162px; padding: 14px; border: 1px solid var(--mock-asset-border); background: #fff; color: #252522; font-size: 12px; line-height: 1.45; }
-	.inbox-asset--note p { margin: 0; }
-	.inbox-asset--note p + p { margin-top: 9px; color: #5f5f59; }
-	.inbox-asset--note strong { font-weight: 600; }
-	.inbox-asset--small-note { max-height: none; padding: 12px; font-size: 11px; }
-	.search-preview { position: relative; min-height: 320px; overflow: hidden; padding: 0 8px 8px; background: #fff; }
-	.search-board { padding: 12px; border-radius: 10px; background: var(--canvas); box-shadow: 0 1px 2px rgb(21 21 21 / 4%); }
-	.search-breadcrumbs, .canvas-breadcrumbs { display: flex; align-items: center; min-width: 0; gap: 8px; height: 28px; font-size: 13px; font-weight: 500; line-height: 1; }
-	.search-breadcrumbs span, .search-breadcrumbs strong, .canvas-breadcrumbs span, .canvas-breadcrumbs strong, .canvas-preview__count { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-	.search-breadcrumbs span, .search-breadcrumbs i, .canvas-breadcrumbs span, .canvas-breadcrumbs i, .canvas-preview__count { color: #6d6d67; }
-	.search-breadcrumbs i, .canvas-breadcrumbs i { font-style: normal; }
-	.search-breadcrumbs strong, .canvas-breadcrumbs strong { color: #252522; font-weight: 500; }
-	.colour-filter { display: flex; align-items: center; gap: 6px; padding: 4px 2px 13px; color: #777771; font-size: 9px; }
-	.colour-filter i { width: 18px; height: 18px; border: 1px solid rgb(0 0 0 / 8%); border-radius: 5px; }
-	.colour-filter i:nth-child(1) { background: #173a2a; }
-	.colour-filter i:nth-child(2) { background: #2f5a3f; }
-	.colour-filter i:nth-child(3) { background: #527258; }
-	.colour-filter i:nth-child(4) { background: #7e9476; }
-	.colour-filter i:nth-child(5) { background: #aebba0; }
-	.colour-filter span { margin-left: 4px; }
-	.search-results { display: grid; grid-template-columns: 1.14fr .86fr 1fr; grid-template-rows: 104px 130px; gap: 8px; }
-	.search-result { position: relative; overflow: hidden; border: 1px solid var(--mock-muted-card-border); border-radius: 8px; background: #d9dedc; }
-	.search-result img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-	.search-result--one { grid-row: span 2; }
-	.search-result--four { grid-column: span 2; }
+	type Point = { x: number; y: number };
 
-	.canvas-preview { position: relative; min-height: 378px; overflow: hidden; padding: 0 8px 8px; background: #fff; }
-	.canvas-preview__top { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 8px 0 0; border: 0; background: transparent; color: #6d6d67; }
-	.canvas-preview__count { margin-left: auto; font-size: 10px; line-height: 1; }
-	.canvas-grid { position: relative; height: 385px; overflow: hidden; border-radius: 10px; background-color: var(--canvas); background-image: radial-gradient(circle, rgb(21 21 21 / 22%) .65px, transparent .8px); background-position: 0 0; background-size: 24px 24px; box-shadow: 0 1px 2px rgb(21 21 21 / 4%); }
-	.canvas-object { position: absolute; overflow: hidden; border: 1px solid var(--mock-asset-border); border-radius: 6px; background: #fff; box-shadow: 0 3px 8px rgb(21 21 21 / 5%); }
-	.canvas-object img { display: block; width: 100%; height: 100%; object-fit: cover; }
-	.canvas-object--image-one { top: 40px; left: 13%; width: 148px; height: 182px; }
-	.canvas-object--image-one img { object-position: 44% center; }
-	.canvas-object--image-two { top: 76px; left: 52%; width: 154px; height: 112px; }
-	.canvas-object--image-two img { object-position: center 43%; }
-	.canvas-object--image-three { right: 8%; bottom: 31px; width: 145px; height: 102px; }
-	.canvas-object--image-three img { object-position: center 53%; }
-	.canvas-object--folder { top: 193px; left: 29%; width: 174px; height: 184px; }
-	.canvas-folder__previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; padding: 6px; aspect-ratio: 1; }
-	.canvas-folder__previews img, .canvas-folder__previews span { min-width: 0; min-height: 0; border-radius: 2px; background: #eef0ed; object-fit: cover; aspect-ratio: 1; }
-	.canvas-folder__label { position: absolute; right: 1px; bottom: 1px; left: 1px; display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 0 0 5px 5px; background: rgb(255 255 255 / 86%); color: #3d3d39; backdrop-filter: blur(10px); }
-	.canvas-folder__label strong { overflow: hidden; font-size: 9px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-	.canvas-folder__label small { margin-left: auto; color: #8a8a84; font-size: 8px; }
-	.canvas-object--note { right: 6%; bottom: 152px; width: 166px; padding: 13px; color: #454540; text-align: left; }
-	.canvas-object--note p { margin: 0; font-size: 10px; line-height: 1.35; }
-	.canvas-object--note p + p { margin-top: 7px; color: #777771; }
-	.canvas-object--note strong { font-weight: 600; }
-	:global(html[data-theme='dark']) .feature-showcase { --mock-asset-border: oklch(1 0 0 / 10%); --mock-muted-card-border: oklch(1 0 0 / 10%); }
-	:global(html[data-theme='dark']) .feature-panel { box-shadow: 0 2px 10px rgb(0 0 0 / 18%); }
-	:global(html[data-theme='dark']) .capture-preview,
-	:global(html[data-theme='dark']) .search-preview,
-	:global(html[data-theme='dark']) .canvas-preview { background: rgb(14 16 14 / 76%); }
-	:global(html[data-theme='dark']) .capture-preview,
-	:global(html[data-theme='dark']) .search-preview { background: #000; }
-	:global(html[data-theme='dark']) .capture-topbar,
-	:global(html[data-theme='dark']) .search-topbar { color: var(--ink); }
-	:global(html[data-theme='dark']) .capture-board,
-	:global(html[data-theme='dark']) .search-board { background: var(--canvas); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 28%); }
-	:global(html[data-theme='dark']) .capture-topbar button,
-	:global(html[data-theme='dark']) .search-topbar button,
-	:global(html[data-theme='dark']) .canvas-preview__top button { color: var(--ink); }
-	:global(html[data-theme='dark']) .inbox-asset--image { background: var(--surface-muted); }
-	:global(html[data-theme='dark']) .inbox-asset--note { background: var(--surface); color: var(--ink); }
-	:global(html[data-theme='dark']) .inbox-asset--note p + p { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .canvas-preview { background: #000; }
-	:global(html[data-theme='dark']) .canvas-preview__top { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .search-breadcrumbs span,
-	:global(html[data-theme='dark']) .search-breadcrumbs i,
-	:global(html[data-theme='dark']) .canvas-breadcrumbs span,
-	:global(html[data-theme='dark']) .canvas-breadcrumbs i,
-	:global(html[data-theme='dark']) .canvas-preview__count { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .search-breadcrumbs strong,
-	:global(html[data-theme='dark']) .canvas-breadcrumbs strong { color: var(--ink); }
-	:global(html[data-theme='dark']) .canvas-grid { background-color: var(--canvas); background-image: radial-gradient(circle, rgb(241 243 238 / 25%) .62px, transparent .78px); background-size: 24px 24px; box-shadow: 0 1px 2px rgb(0 0 0 / 28%); }
-	:global(html[data-theme='dark']) .canvas-object { background: var(--surface); box-shadow: 0 3px 10px rgb(0 0 0 / 24%); }
-	:global(html[data-theme='dark']) .canvas-folder__previews img,
-	:global(html[data-theme='dark']) .canvas-folder__previews span { background: var(--surface-muted); }
-	:global(html[data-theme='dark']) .canvas-folder__label { color: var(--ink); background: rgb(0 0 0 / 94%); }
-	:global(html[data-theme='dark']) .canvas-folder__label small { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .canvas-object--note { color: var(--ink); }
-	:global(html[data-theme='dark']) .canvas-object--note p + p { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .colour-filter { color: var(--ink-muted); }
-
-	@media (max-width: 820px) {
-		.feature-panel--capture, .feature-panel--search, .feature-panel--canvas { grid-column: 1 / -1; }
-		.feature-panel--canvas { grid-template-columns: 1fr; gap: 30px; }
-		.feature-panel--capture .capture-preview, .feature-panel--search .search-preview { --preview-x: 12px; --preview-y: 58px; width: calc(100% + 38px); transform: translate(var(--preview-x), var(--preview-y)); }
-		.feature-panel--canvas .canvas-preview { --preview-x: 28px; --preview-y: 62px; width: calc(100% + 58px); transform: translate(var(--preview-x), var(--preview-y)); }
+	function startDemo(root: HTMLElement, run: (wait: (ms: number) => Promise<void>) => Promise<void>) {
+		let visible = false;
+		new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }, { threshold: .35 }).observe(root);
+		// Waits `ms` of on-screen time.
+		const wait = async (ms: number) => {
+			let left = ms;
+			while (left > 0) {
+				await sleep(50);
+				if (visible && !document.hidden) left -= 50;
+			}
+		};
+		void (async () => {
+			for (;;) await run(wait);
+		})();
 	}
 
-	@media (max-width: 640px) {
-		.feature-showcase { gap: 8px; }
-		.feature-panel { padding: 22px; }
-		.feature-panel--capture .capture-preview, .feature-panel--search .search-preview { --preview-x: 12px; --preview-y: 48px; width: calc(100% + 34px); transform: translate(var(--preview-x), var(--preview-y)); }
-		.feature-panel--canvas .canvas-preview { --preview-x: 18px; --preview-y: 48px; width: calc(100% + 54px); transform: translate(var(--preview-x), var(--preview-y)); }
-		.capture-preview { min-height: 314px; }
-		.search-preview { min-height: 296px; }
-		.canvas-preview { min-height: 316px; }
-		.canvas-grid { width: auto; height: 316px; }
-		.canvas-object--image-one { left: 8%; width: 104px; height: 138px; }
-		.canvas-object--image-two { left: 47%; width: 112px; height: 84px; }
-		.canvas-object--folder { top: 154px; left: 23%; width: 130px; height: 132px; }
-		.canvas-object--image-three, .canvas-object--note { display: none; }
+	// Moves a demo cursor (inside a scaled mock) to an element's centre, in the mock's own coordinates.
+	function cursorMover(mock: HTMLElement, cursor: SVGElement) {
+		let at: Point = { x: mock.offsetWidth + 40, y: mock.offsetHeight * .7 };
+		const centreOf = (el: Element): Point => {
+			const m = mock.getBoundingClientRect();
+			const r = el.getBoundingClientRect();
+			const k = m.width / mock.offsetWidth || 1;
+			return { x: (r.left + r.width / 2 - m.left) / k, y: (r.top + r.height / 2 - m.top) / k };
+		};
+		const place = (p: Point, pressed = false) => {
+			cursor.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) scale(${pressed ? .86 : 1})`;
+		};
+		place(at);
+		return {
+			async moveTo(target: Element | Point, wait: (ms: number) => Promise<void>, duration = 520) {
+				const to = target instanceof Element ? centreOf(target) : target;
+				const from = at;
+				const steps = Math.max(1, Math.round(duration / 50));
+				for (let i = 1; i <= steps; i++) {
+					await wait(50);
+					const t = easeInOut(i / steps);
+					place({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t });
+				}
+				at = to;
+			},
+			async click(wait: (ms: number) => Promise<void>) {
+				place(at, true);
+				await wait(120);
+				place(at);
+			},
+			show(on: boolean) { cursor.style.opacity = on ? '1' : '0'; },
+			park() { at = { x: mock.offsetWidth + 40, y: mock.offsetHeight * .7 }; place(at); },
+		};
 	}
 
-	@media (prefers-reduced-transparency: reduce) {
-		.capture-preview, .search-preview, .canvas-preview { background: var(--surface); backdrop-filter: none; }
+	async function type(el: HTMLElement, text: string, wait: (ms: number) => Promise<void>, perChar = 55) {
+		for (let i = 1; i <= text.length; i++) {
+			el.textContent = text.slice(0, i);
+			await wait(perChar);
+		}
 	}
-</style>
+
+	if (!reduced) {
+		// 1. Search: type the query, results come in, the selection steps down with the arrow key, then Enter.
+		const search = document.querySelector<HTMLElement>('[data-demo="search"]');
+		const query = search?.querySelector<HTMLElement>('[data-query]');
+		const placeholder = search?.querySelector<HTMLElement>('[data-placeholder]');
+		const resultsList = search?.querySelector<HTMLElement>('[data-results]');
+		const results = Array.from(search?.querySelectorAll<HTMLElement>('[data-result]') ?? []);
+		const keyDown = search?.querySelector<HTMLElement>('[data-key-down]');
+		const keyEnter = search?.querySelector<HTMLElement>('[data-key-enter]');
+		if (search && query && placeholder && resultsList && results.length && keyDown && keyEnter) {
+			const QUERY = query.textContent ?? '';
+			const select = (index: number) => results.forEach((el, i) => el.classList.toggle('palette__item--selected', i === index));
+			const press = async (key: HTMLElement, wait: (ms: number) => Promise<void>) => {
+				key.classList.add('is-pressed');
+				await wait(140);
+				key.classList.remove('is-pressed');
+			};
+			startDemo(search, async (wait) => {
+				query.textContent = '';
+				placeholder.hidden = false;
+				resultsList.classList.add('is-empty');
+				select(-1);
+				await wait(700);
+				placeholder.hidden = true;
+				await type(query, QUERY, wait, 60);
+				await wait(250);
+				resultsList.classList.remove('is-empty');
+				select(0);
+				await wait(1100);
+				for (const index of [1, 2]) {
+					await press(keyDown, wait);
+					select(index);
+					await wait(900);
+				}
+				await press(keyEnter, wait);
+				await wait(1600);
+			});
+		}
+
+		// 2. Colour: the cursor picks green, blue, then red; the count and the grid follow each pick.
+		const color = document.querySelector<HTMLElement>('[data-demo="color"]');
+		const colorMock = color?.querySelector<HTMLElement>('[data-mock]');
+		const colorCursor = color?.querySelector<SVGElement>('[data-cursor]');
+		const count = color?.querySelector<HTMLElement>('[data-count]');
+		const grids = Array.from(color?.querySelectorAll<HTMLElement>('[data-results-for]') ?? []);
+		if (color && colorMock && colorCursor && count && grids.length) {
+			const cursor = cursorMover(colorMock, colorCursor);
+			const swatch = (hex: string) => color.querySelector<HTMLElement>(`[data-swatch="${hex}"]`);
+			const pick = (hex: string) => {
+				color.querySelectorAll('[data-swatch]').forEach((el) => el.classList.toggle('is-active', el.getAttribute('data-swatch') === hex));
+				const grid = grids.find((g) => g.dataset.resultsFor === hex);
+				grids.forEach((g) => g.classList.toggle('is-shown', g === grid));
+				count.textContent = grid?.dataset.countFor ?? '0';
+			};
+			startDemo(color, async (wait) => {
+				cursor.show(false);
+				await wait(200);
+				cursor.park();
+				await wait(100);
+				cursor.show(true);
+				await wait(500);
+				for (const grid of grids.slice(1).concat(grids[0])) {
+					const target = swatch(grid.dataset.resultsFor ?? '');
+					if (!target) continue;
+					await cursor.moveTo(target, wait, 620);
+					await wait(150);
+					await cursor.click(wait);
+					pick(grid.dataset.resultsFor ?? '');
+					await wait(1800);
+				}
+				await cursor.moveTo({ x: colorMock.offsetWidth + 40, y: colorMock.offsetHeight * .6 }, wait, 600);
+				await wait(600);
+			});
+		}
+
+		// 3. Note: press Space on an empty paragraph, generate formatted text, then keep it.
+		const note = document.querySelector<HTMLElement>('[data-demo="note"]');
+		const noteMock = note?.querySelector<HTMLElement>('[data-mock]');
+		const noteCursor = note?.querySelector<SVGElement>('[data-cursor]');
+		const prompt = note?.querySelector<HTMLElement>('[data-prompt]');
+		const instruction = note?.querySelector<HTMLElement>('[data-instruction]');
+		const send = note?.querySelector<HTMLElement>('[data-send]');
+		const keep = note?.querySelector<HTMLElement>('[data-keep]');
+		const empty = note?.querySelector<HTMLElement>('[data-empty]');
+		const hint = note?.querySelector<HTMLElement>('[data-hint]');
+		const space = note?.querySelector<HTMLElement>('[data-space]');
+		const draftRow = note?.querySelector<HTMLElement>('[data-draft-row]');
+		const draft = note?.querySelector<HTMLElement>('[data-draft]');
+		const rail = note?.querySelector<HTMLElement>('[data-rail]');
+		const saveStatus = note?.querySelector<HTMLElement>('[data-save-status]');
+		if (note && noteMock && noteCursor && prompt && instruction && send && keep && empty && hint && space && draftRow && draft && rail && saveStatus) {
+			const cursor = cursorMover(noteMock, noteCursor);
+			const INSTRUCTION = instruction.textContent ?? '';
+			const REWRITE = [
+				{ text: 'Let the ' },
+				{ text: 'rough concrete', tag: 'strong' },
+				{ text: ' and polished floor create a ' },
+				{ text: 'deliberate contrast', tag: 'em' },
+				{ text: '. Keep the surfaces honest: let the light reveal their textures, while a quieter palette gives the entrance room to breathe. Use the changing daylight to bring warmth and depth to the space.' },
+			] as const;
+			startDemo(note, async (wait) => {
+				empty.hidden = false;
+				hint.hidden = false;
+				space.classList.remove('is-visible', 'is-pressed');
+				draftRow.hidden = true;
+				draft.textContent = '';
+				prompt.hidden = true;
+				prompt.dataset.phase = 'prompt';
+				instruction.textContent = '';
+				rail.classList.remove('is-on', 'is-streaming');
+				saveStatus.textContent = 'Edited 2m ago';
+				cursor.park();
+				cursor.show(false);
+				await wait(500);
+				space.classList.add('is-visible');
+				await wait(450);
+				space.classList.add('is-pressed');
+				await wait(150);
+				empty.hidden = true;
+				prompt.hidden = false;
+				cursor.show(true);
+				await cursor.moveTo({ x: noteMock.offsetWidth * .9, y: noteMock.offsetHeight * .62 }, wait, 500);
+				await wait(400);
+				await type(instruction, INSTRUCTION, wait, 50);
+				await wait(200);
+				await cursor.moveTo(send, wait, 480);
+				await wait(120);
+				await cursor.click(wait);
+				// Stream the generated draft into the empty paragraph.
+				prompt.dataset.phase = 'streaming';
+				rail.classList.add('is-on', 'is-streaming');
+				await cursor.moveTo({ x: noteMock.offsetWidth * .92, y: noteMock.offsetHeight * .5 }, wait, 500);
+				draftRow.hidden = false;
+				for (const part of REWRITE) {
+					const container = 'tag' in part ? document.createElement(part.tag) : draft;
+					if (container !== draft) draft.append(container);
+					for (const chunk of part.text.match(/\S+\s*|\s+/g) ?? []) {
+						container.append(document.createTextNode(chunk));
+						await wait(50);
+					}
+				}
+				// Review: Retry / Discard / Keep, with the rail still marking the draft.
+				rail.classList.remove('is-streaming');
+				prompt.dataset.phase = 'review';
+				instruction.textContent = '';
+				await wait(800);
+				await cursor.moveTo(keep, wait, 520);
+				await wait(150);
+				await cursor.click(wait);
+				prompt.hidden = true;
+				rail.classList.remove('is-on');
+				saveStatus.textContent = 'Saving…';
+				await cursor.moveTo({ x: noteMock.offsetWidth + 40, y: noteMock.offsetHeight * .8 }, wait, 600);
+				await wait(500);
+				saveStatus.textContent = 'Edited just now';
+				await wait(800);
+			});
+		}
+	}
+</script>

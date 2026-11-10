@@ -8,53 +8,128 @@ interface Props {
 const { loginHref, signupHref } = Astro.props;
 ---
 
-<header class="site-header">
+<header class="site-header" data-surface="hero">
 	<HeaderInner client:load loginHref={loginHref} signupHref={signupHref} />
 </header>
 
 <script>
+	/*
+	 * The header mirrors the page beneath it. Every frame it builds a hard-stop gradient from each section that overlaps
+	 * the bar, in that section's own colour, so a section boundary crossing the bar shows in the bar at exactly the same
+	 * height instead of the whole bar snapping. Where a fade wash lies under the bar (`data-fade`, which may reach past
+	 * its own element into the neighbouring sections), the bar repaints that stretch of the same ramp in 4px bands.
+	 */
 	const header = document.querySelector<HTMLElement>('.site-header');
 	const sections = Array.from(document.querySelectorAll<HTMLElement>('[data-header-surface]'));
-	const heroTransition = document.querySelector<HTMLElement>('.hero-transition');
+	const fades = Array.from(document.querySelectorAll<HTMLElement>('[data-fade]'));
+	const hero = document.querySelector<HTMLElement>('.hero');
+	const heroMedia = document.querySelector<HTMLElement>('.hero__media');
+	const desktop = window.matchMedia('(min-width: 1024px)');
+	const surfaceColor: Record<string, string> = {
+		surface: 'var(--surface)',
+		canvas: 'var(--canvas)',
+		footer: 'var(--footer-surface)',
+	};
+	const colorFor = (section: HTMLElement) => surfaceColor[section.dataset.headerSurface ?? 'surface'] ?? 'var(--surface)';
+	// The same smootherstep ramp as the fades' CSS (index.astro): percentage of the end colour at 0, 5%, … 100%.
+	const RAMP = [0, .12, .86, 2.66, 5.79, 10.35, 16.31, 23.52, 31.74, 40.69, 50, 59.31, 68.26, 76.48, 83.69, 89.65, 94.21, 97.34, 99.14, 99.88, 100];
+	const rampAt = (t: number) => {
+		const x = Math.min(Math.max(t, 0), 1) * 20;
+		const i = Math.min(19, Math.floor(x));
+		return RAMP[i] + (RAMP[i + 1] - RAMP[i]) * (x - i);
+	};
+	// A fade's painted extent: its ::before when it has one (the long washes), otherwise the element itself.
+	const fadeZone = (el: HTMLElement, barTop: number) => {
+		const box = el.getBoundingClientRect();
+		const before = getComputedStyle(el, '::before');
+		const washed = before.content !== 'none' && before.position === 'absolute';
+		const [from, to] = (el.dataset.fade ?? 'surface canvas').split(' ').map((name) => surfaceColor[name] ?? 'var(--canvas)');
+		return {
+			top: box.top + (washed ? parseFloat(before.top) || 0 : 0) - barTop,
+			bottom: box.bottom - (washed ? parseFloat(before.bottom) || 0 : 0) - barTop,
+			from,
+			to,
+		};
+	};
+
 	if (header && sections.length) {
-		const syncSurface = () => {
-			const headerBounds = header.getBoundingClientRect();
-			const transitionBounds = heroTransition?.getBoundingClientRect();
-			if (transitionBounds && transitionBounds.top < headerBounds.bottom && transitionBounds.bottom > headerBounds.top) {
-				header.dataset.surface = 'transition';
+		let frame = 0;
+		const sync = () => {
+			frame = 0;
+			const bar = header.getBoundingClientRect();
+
+			// On desktop, while the hero image is still under the header, only the left half is solid (see the CSS),
+			// so the image passes behind the account buttons. The pinned hero reports this itself: the layout ends once
+			// its panel has started expanding and dropped below the bar.
+			const overHero = hero?.dataset.state
+				? hero.dataset.state === 'split'
+				: !!heroMedia && heroMedia.getBoundingClientRect().bottom > bar.top + 8;
+			if (desktop.matches && overHero) {
+				header.dataset.surface = 'hero';
+				header.style.removeProperty('background-image');
 				return;
 			}
-			const sampleY = headerBounds.bottom + 2;
-			const current = sections.find((section) => {
+
+			const height = bar.height;
+			const zones = fades.map((el) => fadeZone(el, bar.top)).filter((zone) => zone.bottom > 0 && zone.top < height);
+			const stops: string[] = [];
+			const band = (color: string, start: number, end: number) => stops.push(`${color} ${start.toFixed(2)}px`, `${color} ${end.toFixed(2)}px`);
+			// Paints [start, end) in a section's colour, except where a fade wash lies, which gets the ramp instead.
+			const paint = (color: string, start: number, end: number) => {
+				let y = start;
+				while (y < end) {
+					const zone = zones.find((z) => y >= z.top && y < z.bottom);
+					if (!zone) {
+						const next = Math.min(end, ...zones.map((z) => z.top).filter((top) => top > y));
+						band(color, y, next);
+						y = next;
+						continue;
+					}
+					const next = Math.min(end, zone.bottom, y + 4);
+					const t = ((y + next) / 2 - zone.top) / (zone.bottom - zone.top);
+					band(`color-mix(in oklab, ${zone.to} ${rampAt(t).toFixed(1)}%, ${zone.from})`, y, next);
+					y = next;
+				}
+			};
+
+			// Sections are in page order; any gap between them is plain page canvas.
+			let cursor = 0;
+			for (const section of sections) {
 				const bounds = section.getBoundingClientRect();
-				return bounds.top <= sampleY && bounds.bottom > sampleY;
-			});
-			header.dataset.surface = current?.dataset.headerSurface ?? 'surface';
+				const start = Math.max(bounds.top - bar.top, 0);
+				const end = Math.min(bounds.bottom - bar.top, height);
+				if (end <= start || end <= cursor) continue;
+				if (start > cursor) paint('var(--canvas)', cursor, start);
+				paint(colorFor(section), Math.max(start, cursor), end);
+				cursor = end;
+			}
+			if (cursor < height) paint('var(--canvas)', cursor, height);
+			header.dataset.surface = 'mirror';
+			header.style.backgroundImage = stops.length ? `linear-gradient(to bottom, ${stops.join(', ')})` : '';
 		};
-		let observer: IntersectionObserver | undefined;
-		const observeSections = () => {
-			observer?.disconnect();
-			const bandHeight = header.getBoundingClientRect().height + 2;
-			observer = new IntersectionObserver(syncSurface, {
-				rootMargin: `0px 0px -${Math.max(0, window.innerHeight - bandHeight)}px 0px`,
-			});
-			sections.forEach((section) => observer?.observe(section));
-			syncSurface();
+		const schedule = () => {
+			if (!frame) frame = requestAnimationFrame(sync);
 		};
-		observeSections();
-		window.addEventListener('scroll', syncSurface, { passive: true });
-		window.addEventListener('resize', observeSections);
+		sync();
+		window.addEventListener('scroll', schedule, { passive: true });
+		window.addEventListener('resize', schedule);
+		window.addEventListener('hero:state', schedule);
+		desktop.addEventListener('change', schedule);
 		document.addEventListener('astro:before-swap', () => {
-			observer?.disconnect();
-			window.removeEventListener('scroll', syncSurface);
-			window.removeEventListener('resize', observeSections);
+			window.removeEventListener('scroll', schedule);
+			window.removeEventListener('hero:state', schedule);
+			window.removeEventListener('resize', schedule);
+			desktop.removeEventListener('change', schedule);
 		}, { once: true });
 	}
 </script>
 
 <style is:global>
 	.site-header { --header-surface: var(--surface); position: sticky; top: 0; z-index: 100; background-color: var(--header-surface); }
-	.site-header[data-surface='transition'] { --header-surface: transparent; }
+	.site-header[data-surface='mirror'], .site-header[data-surface='hero'] { --header-surface: transparent; }
+	/* Solid left half used in the hero state; it reaches below the bar so the dropped row stays covered. */
+	.site-header::before { content: ''; position: absolute; top: 0; left: 0; z-index: -1; width: 50%; height: 76px; background: var(--surface); opacity: 0; pointer-events: none; }
+	.site-header__inner { transition: translate 240ms cubic-bezier(.23, 1, .32, 1); }
 	.site-header[data-surface='canvas'] { --header-surface: var(--canvas); }
 	.site-header[data-surface='footer'] { --header-surface: var(--footer-surface); }
 	.site-header__inner { position: relative; width: min(calc(100% - 48px), 1200px); min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-inline: auto; padding: 4px 0; }
@@ -62,9 +137,28 @@ const { loginHref, signupHref } = Astro.props;
 	.brand { display: inline-flex; align-items: center; }
 	.brand__logo { width: 96px; height: 25px; display: block; }
 	.desktop-nav, .desktop-actions { display: flex; align-items: center; gap: 20px; }
-	.desktop-nav { margin-right: 4px; margin-left: auto; }
+	/* Links sit beside the logo; the account buttons sit at the far right, over the hero image at the top of the page. */
+	.desktop-nav { margin-right: auto; margin-left: 28px; }
+	.desktop-actions { gap: 8px; }
+	/*
+	 * Over the hero on desktop the navbar spans the full width with equal 28px gutters, so the account buttons sit in the image
+	 * panel's top-right corner with 12px padding on both sides (panel inset 16px + 12px). The row also drops 20px (bar centre
+	 * 26px + 20px = 46px, 36px button top 28px = 16px inset + 12px). Once the hero has passed it eases back up and contracts to the
+	 * page width.
+	 */
+	@media (min-width: 1024px) {
+		.site-header__inner { transition: translate 320ms cubic-bezier(.23, 1, .32, 1), width 320ms cubic-bezier(.23, 1, .32, 1); }
+		/* Only without the pinned hero (reduced motion, short windows), where the copy scrolls under the bar. */
+		.site-header[data-surface='hero']:not([data-morph])::before { opacity: 1; }
+		.site-header[data-surface='hero'] .site-header__inner { width: calc(100% - 56px); translate: 0 20px; }
+		/*
+		 * With the pinned hero the morph follows the scroll. --hero-drop (1 → 0) lifts the row as the image drops below the bar;
+		 * --hero-w (0 → 1) contracts it to the page width only as the hero ends, so it stays aligned with the full-width image until then.
+		 */
+		.site-header[data-morph] .site-header__inner { width: calc(100% - 56px + (min(100% - 48px, 1200px) - (100% - 56px)) * var(--hero-w, 1)); translate: 0 calc(20px * var(--hero-drop, 0)); transition: none; }
+	}
 	.desktop-nav a, .text-link { color: var(--ink-muted); font-size: 13px; font-weight: 500; transition: color 140ms ease; }
-	.desktop-actions .button { min-height: 30px; padding-inline: 11px; font-size: 12px; }
+
 	.mobile-menu-toggle, .mobile-menu-content { display: none; }
 
 	@media (hover: hover) {
@@ -83,7 +177,7 @@ const { loginHref, signupHref } = Astro.props;
 		html.has-mobile-menu { overflow: hidden; }
 		.site-header { top: 0; z-index: 100; }
 		.site-header__inner { position: relative; z-index: 1; width: calc(100% - 32px); height: 52px; min-height: 0; margin-inline: auto; padding: 4px 0; overflow: visible; display: flex; flex-direction: column; align-items: stretch; }
-		.site-header:has([data-menu-open]) { --header-surface: var(--surface); }
+		.site-header:has([data-menu-open]) { --header-surface: var(--surface); background-image: none !important; }
 		.site-header__row { flex-shrink: 0; gap: 0; pointer-events: auto; }
 		.mobile-menu-toggle, .mobile-menu-content { display: flex; }
 		.desktop-nav, .desktop-actions { display: none; }
@@ -101,8 +195,8 @@ const { loginHref, signupHref } = Astro.props;
 		.mobile-menu-nav { display: grid; width: 100%; align-content: center; justify-items: stretch; flex: 1; gap: 14px; }
 		.mobile-menu-nav a { display: flex; width: 100%; min-height: 50px; align-items: center; justify-content: flex-start; padding: 0 2px; text-align: left; font-size: clamp(30px, 10vw, 44px); font-weight: 560; line-height: 1; color: var(--ink); transition: color 140ms ease, padding 140ms ease; }
 		.mobile-menu-footer { display: grid; width: 100%; grid-template-columns: 1fr; gap: 10px; padding-top: 20px; opacity: 0; transform: translateY(18px); transition: opacity 220ms ease, transform 320ms cubic-bezier(.22, .8, .24, 1); }
-		.site-header__inner[data-menu-open] .mobile-menu-footer { opacity: 1; transform: translateY(0); transition-delay: 400ms; }
-		.mobile-menu-footer .button { width: 100%; min-height: 48px; font-size: 14px; }
+		.site-header__inner[data-menu-open] .mobile-menu-footer { opacity: 1; transform: translateY(0); transition-delay: 90ms; }
+		.mobile-menu-footer .app-button { width: 100%; height: 44px; font-size: 14px; }
 	}
 
 	@media (hover: hover) and (max-width: 640px) {
@@ -111,6 +205,7 @@ const { loginHref, signupHref } = Astro.props;
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.site-header__inner { transition: none; }
 		.site-header, .mobile-menu-content, .mobile-menu-footer, .desktop-nav a, .text-link, .mobile-menu-nav a, .mobile-menu-toggle, .mobile-menu-toggle__icon span { transition: none; }
 	}
 

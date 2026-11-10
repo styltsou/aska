@@ -1,0 +1,216 @@
+	.features {
+		/* App tokens (apps/web/src/index.css) so the mock-ups match the product in both themes. */
+		--a-bg: oklch(1 0 0); --a-fg: oklch(.145 0 0); --a-card: oklch(.985 0 0); --a-muted: oklch(.97 0 0); --a-muted-fg: oklch(.556 0 0);
+		--a-border: oklch(.922 0 0); --a-input: oklch(.922 0 0); --a-popover: oklch(1 0 0); --a-radius: .45rem;
+		display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px;
+	}
+	html[data-theme='dark'] .features {
+		--a-bg: oklch(.145 0 0); --a-fg: oklch(.985 0 0); --a-card: oklch(.205 0 0); --a-muted: oklch(.269 0 0); --a-muted-fg: oklch(.708 0 0);
+		--a-border: oklch(1 0 0 / 10%); --a-input: oklch(1 0 0 / 15%); --a-popover: oklch(.205 0 0);
+	}
+	.feature { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+	.feature--semantic { grid-column: span 7; }
+	.feature--color { display: flex; grid-column: span 5; flex-direction: column; }
+	.feature--notes { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr); align-items: center; }
+	.feature__copy { padding: clamp(28px, 3vw, 42px); }
+	.feature__eyebrow { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; color: var(--ink-muted); font-size: 11px; font-weight: 600; letter-spacing: .035em; text-transform: uppercase; }
+	.feature__planned { padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 10px; letter-spacing: 0; text-transform: none; }
+	.feature h2 { max-width: 20ch; margin: 0; color: var(--ink); font-size: clamp(24px, 2.3vw, 32px); font-weight: 550; letter-spacing: -.04em; line-height: 1.12; text-wrap: balance; }
+	.feature p { max-width: 36ch; margin: 12px 0 0; color: var(--ink-muted); font-size: 14px; line-height: 1.55; text-wrap: pretty; }
+
+	/*
+	 * Each visual is a window into the app, cropped by the panel's right and bottom edges. The mock-ups inside use the
+	 * app's real sizes, scaled slightly with `--mock-scale` so they fit the panels.
+	 */
+	.feature-visual { position: relative; min-width: 0; height: 330px; margin: 10px 0 0 clamp(28px, 3vw, 42px); overflow: hidden; border: 1px solid var(--line); border-right: 0; border-bottom: 0; border-radius: 9px 0 0 0; background: var(--a-card); isolation: isolate; }
+	.mock { --mock-scale: .86; position: absolute; top: 0; left: 0; color: var(--a-fg); font-family: 'Inter Variable', sans-serif; font-size: 14px; line-height: 1.43; letter-spacing: normal; transform: scale(var(--mock-scale)); transform-origin: 0 0; -webkit-font-smoothing: antialiased; }
+	.mock p { max-width: none; margin: 0; color: inherit; font-size: inherit; line-height: inherit; }
+	.mock-icon { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+	.mock-icon--sm { width: 14px; height: 14px; }
+	.mock-icon--xs { width: 14px; height: 14px; }
+	.mock-caret { display: inline-block; width: 1.5px; height: 1.15em; margin-left: 1px; vertical-align: -.2em; background: currentColor; animation: mock-caret 1.1s steps(1) infinite; }
+	@keyframes mock-caret { 50% { opacity: 0; } }
+	.mock kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: calc(var(--a-radius) * .6); background: var(--a-muted); color: var(--a-muted-fg); font: 500 10px/1 'Inter Variable', sans-serif; }
+
+	/* Command palette: a 44rem dialog, input row, a "Results" group, then the shortcut footer. */
+	/* The board view: the app's top bar on the sidebar surface, then the board (rounded-xl bg-card) filling the rest. */
+	.semantic-visual { --bar-scale: .86; background: var(--a-bg); }
+	/* The bar spans the visual's full width at its own scale, so the View menu sits at the visible right edge. */
+	.app-topbar--board { --mock-scale: var(--bar-scale); width: calc(100% / var(--bar-scale)); padding-left: 4px; }
+	.app-topbar__crumb--parent { color: var(--a-muted-fg); }
+	/* The breadcrumb separator: a 12px hairline tilted 20deg. */
+	.app-topbar__sep { width: 1px; height: 12px; margin: 0 1px; background: var(--a-muted-fg); rotate: 20deg; }
+	.app-topbar__view { display: inline-flex; align-items: center; gap: 4px; height: 28px; margin-left: auto; padding: 0 10px; border-radius: calc(var(--a-radius) * .8); font-size: 13px; font-weight: 500; }
+	.board-frame { position: absolute; top: calc(52px * var(--bar-scale)); right: 0; bottom: 0; left: calc(4px * var(--bar-scale)); overflow: hidden; border-radius: calc(var(--a-radius) * 1.4) 0 0 0; background: var(--a-card); }
+	/* Board behind: cards on the canvas, under the dialog backdrop (bg-black/10 + backdrop-blur-xs). */
+	.search-board { --mock-scale: .46; width: 1600px; height: 760px; background-image: radial-gradient(circle, color-mix(in oklch, var(--a-fg) 30%, transparent) 1.6px, transparent 2.2px); background-size: 52px 52px; }
+	.board-text { position: absolute; padding: 6px 8px; color: var(--a-fg); font-size: 36px; line-height: 1.12; white-space: nowrap; }
+	/* The rail: a glass frame holding islands of 36px buttons, drawn as blank buttons since it sits under the backdrop. */
+	.board-rail { position: absolute; bottom: 10px; left: 50%; display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: var(--a-radius); background: color-mix(in oklch, var(--a-popover) 80%, transparent); box-shadow: 0 0 0 1px color-mix(in oklch, var(--a-fg) 10%, transparent); translate: -50% 0; }
+	.board-rail span { width: 26px; height: 26px; border: 1px solid var(--a-border); border-radius: calc(var(--a-radius) * .8); background: var(--a-bg); }
+	.board-rail i { width: 4px; }
+	.board-card { position: absolute; overflow: hidden; border: 1px solid var(--a-border); border-radius: var(--a-radius); background: var(--a-bg); }
+	.board-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+	.board-card--image { border-color: transparent; }
+	.board-card--image img { border-radius: 6px; }
+	.board-card--note { display: grid; gap: 4px; padding: 16px; font-size: 14px; line-height: 1.35; }
+	.board-card--note strong { margin-bottom: 4px; font-size: 19px; font-weight: 600; letter-spacing: -.025em; }
+	.board-card--note span { color: color-mix(in oklch, var(--a-fg) 80%, transparent); }
+	.board-card--color i { display: block; aspect-ratio: 1; border-bottom: 1px solid var(--a-border); border-radius: 0 0 var(--a-radius) var(--a-radius); }
+	.board-card--color span { display: flex; align-items: center; padding: 12px; font-size: 16px; font-weight: 500; line-height: 24px; }
+	.board-card--color em { margin-left: auto; color: var(--a-muted-fg); font: 400 13px/24px 'IBM Plex Mono', ui-monospace, monospace; }
+	/* Backdrop filters escape an ancestor's rounded overflow clip, so the backdrop repeats the visual's corner itself. */
+	.palette-backdrop { position: absolute; inset: 0; z-index: 1; border-radius: inherit; background: rgb(0 0 0 / 10%); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+	/* The palette (CommandDialog): glass frame (bg-popover/80, ring-foreground/10, backdrop-blur-2xl, saturate-150), rounded-lg,
+	 * centred near the top; the search body is bg-background/50 with a foreground/10 bottom edge, the shortcuts sit on the glass. */
+	.palette { top: 22px; left: 50%; z-index: 2; width: 560px; overflow: hidden; border-radius: var(--a-radius); background: color-mix(in oklch, var(--a-popover) 80%, transparent); box-shadow: 0 0 0 1px color-mix(in oklch, var(--a-fg) 10%, transparent), 0 20px 40px -12px rgb(0 0 0 / 22%); -webkit-backdrop-filter: blur(40px) saturate(1.5); backdrop-filter: blur(40px) saturate(1.5); transform: translateX(-50%) scale(var(--mock-scale)); transform-origin: 50% 0; }
+	.palette__body { padding: 6px; border-bottom: 1px solid color-mix(in oklch, var(--a-fg) 10%, transparent); border-radius: 0 0 var(--a-radius) var(--a-radius); background: color-mix(in oklch, var(--a-bg) 50%, transparent); }
+	.palette__input { display: flex; align-items: center; height: 40px; margin: 0 -6px; padding: 0 12px 6px 16px; border-bottom: 1px solid color-mix(in oklch, var(--a-border) 40%, transparent); }
+	.palette__search { margin-right: 10px; color: var(--a-muted-fg); }
+	.palette__list { padding: 4px; }
+	.palette__heading { padding: 6px 8px; color: var(--a-muted-fg); font-size: 12px; font-weight: 500; }
+	.palette__item { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: calc(var(--a-radius) * 1.4); }
+	.palette__item--selected { background: color-mix(in oklch, var(--a-fg) 10%, transparent); }
+	.palette__tile { display: grid; width: 32px; height: 32px; flex-shrink: 0; overflow: hidden; border-radius: calc(var(--a-radius) * .8); place-items: center; }
+	.palette__tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+	.palette__tile--note { background: var(--a-muted); }
+	.palette__text { display: grid; min-width: 0; flex: 1; margin-right: 6px; }
+	.palette__label { overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+	.palette__detail { overflow: hidden; color: var(--a-muted-fg); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+	.palette__kind { flex-shrink: 0; color: color-mix(in oklch, var(--a-muted-fg) 75%, transparent); font-size: 11px; }
+	.palette__footer { display: flex; align-items: center; gap: 12px; padding: 8px 12px; color: var(--a-muted-fg); font-size: 11px; line-height: 16px; }
+	.palette__footer span { display: inline-flex; align-items: center; gap: 4px; }
+	.palette__footer-end { margin-left: auto; }
+
+	/* Inbox: the floating filter bar (glass frame, islands) over a 3-column masonry grid with 10px gaps. */
+	/* The Inbox view: the app's top bar on the sidebar surface, then the board (rounded-xl bg-card) with the filter bar
+	 * floating at top-3 left-3 and the grid starting under it. */
+	.color-visual { height: auto; flex: 1 0 330px; background: var(--a-bg); }
+	.inbox { width: 640px; padding: 0 8px 8px 4px; background: var(--a-bg); }
+	.app-topbar { display: flex; align-items: center; gap: 8px; height: 52px; padding-right: 4px; }
+	.app-topbar__toggle { display: grid; width: 28px; height: 28px; place-items: center; border-radius: calc(var(--a-radius) * .8); }
+	.app-topbar__crumb { color: var(--a-fg); font-size: 14px; }
+	.density { display: inline-flex; gap: 2px; margin-left: auto; padding: 2px; border-radius: var(--a-radius); background: color-mix(in oklch, var(--a-bg) 50%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--a-fg) 8%, transparent); font-size: 12px; font-weight: 500; }
+	.density span { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: calc(var(--a-radius) * .8); color: var(--a-muted-fg); }
+	.density .is-active { background: var(--a-fg); color: var(--a-bg); }
+	.inbox__board { position: relative; min-height: 420px; padding: 60px 12px 12px; border-radius: calc(var(--a-radius) * 1.4); background: var(--a-card); }
+	.filter-bar { position: absolute; top: 12px; left: 12px; z-index: 1; display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: var(--a-radius); background: color-mix(in oklch, var(--a-popover) 80%, transparent); box-shadow: 0 0 0 1px color-mix(in oklch, var(--a-fg) 10%, transparent); -webkit-backdrop-filter: blur(40px) saturate(1.5); backdrop-filter: blur(40px) saturate(1.5); }
+	.island { display: flex; align-items: center; height: 34px; border: 1px solid var(--a-border); border-radius: calc(var(--a-radius) * .8); background: var(--a-bg); box-shadow: 0 1px 2px color-mix(in oklch, var(--a-fg) 5%, transparent); font-size: 12px; font-weight: 500; }
+	.filter-bar__type { gap: 6px; padding: 0 10px; }
+	.filter-bar__add { display: grid; width: 32px; height: 32px; place-items: center; color: var(--a-muted-fg); }
+	.filter-bar__sep { align-self: stretch; width: 1px; background: var(--a-border); }
+	.filter-bar__swatches { display: flex; align-items: center; gap: 8px; padding: 0 8px; }
+	.filter-bar__swatches i { width: 24px; height: 24px; border-radius: calc(var(--a-radius) * .8); box-shadow: inset 0 0 0 1.5px rgb(0 0 0 / 25%); }
+	.filter-bar__swatches i.is-active { box-shadow: inset 0 0 0 1.5px rgb(0 0 0 / 45%), 0 0 0 2px var(--a-bg), 0 0 0 4px rgb(255 255 255 / 60%); scale: .9; }
+	.filter-bar__status { padding: 0 10px; color: var(--a-muted-fg); font-weight: 400; font-variant-numeric: tabular-nums; }
+	.filter-bar__clear { justify-content: center; width: 34px; color: var(--a-muted-fg); }
+	.masonry { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start; }
+	.masonry__column { display: grid; gap: 10px; }
+	.masonry__card { overflow: hidden; border-radius: var(--a-radius); }
+	.masonry__card img { display: block; width: 100%; height: auto; border-radius: 6px; }
+
+	/* Note editor: 30px title, 16px/28px body at 80% ink; the agent's prompt sits under the selected passage. */
+	.feature--notes .feature__copy { max-width: 390px; }
+	/* The note view in full view: it fills the panel edge to edge (no board behind), and header and page share
+	 * bg-background with no divider, so the top bar is seamless. */
+	.note-visual { height: 400px; margin: 40px 0 0; background: var(--a-bg); }
+	.note-window { --mock-scale: .86; top: 0; left: 0; width: calc(100% / var(--mock-scale)); min-height: calc(100% / var(--mock-scale)); background: var(--a-bg); }
+	.note-window__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px; color: var(--a-muted-fg); font-size: 12px; font-weight: 500; }
+	.note-window__group { display: flex; align-items: center; gap: 2px; }
+	.note-window__button { display: grid; width: 32px; height: 32px; place-items: center; border-radius: var(--a-radius); color: var(--a-fg); }
+	.note-window__status { padding: 0 8px; font-weight: 400; white-space: nowrap; }
+	/* The page: bg-background with the editor's 6rem gutter; in full view its top border is transparent. */
+	.note-window__page { min-height: 440px; padding: 32px 96px 64px; background: var(--a-bg); }
+	.note-editor__title { margin-bottom: 16px; font-size: 30px; font-weight: 600; letter-spacing: -.025em; line-height: 1.25; }
+	.note-editor__body { color: color-mix(in oklch, var(--a-fg) 80%, transparent); font-size: 16px; line-height: 28px; }
+	.note-editor__body p { margin: 10px 0; }
+	.note-editor__body .note-editor__empty { display: flex; align-items: center; gap: 10px; color: var(--a-muted-fg); }
+	.note-editor__body .note-editor__draft { font-size: 18px; line-height: 30px; }
+	.note-editor__empty[hidden], .note-editor__draft[hidden] { display: none; }
+	.note-editor__space { opacity: 0; font-size: 10px; }
+	.note-editor__space.is-visible { opacity: 1; }
+	.agent-prompt { margin: 6px 0; font-size: 14px; line-height: 20px; }
+	.agent-prompt__input { display: flex; align-items: center; height: 40px; padding: 0 6px 0 12px; border: 1px solid color-mix(in oklch, var(--a-fg) 20%, transparent); border-radius: var(--a-radius); color: var(--a-fg); }
+	html[data-theme='dark'] .agent-prompt__input { background: color-mix(in oklch, var(--a-input) 30%, transparent); }
+	.agent-prompt__send { display: grid; width: 28px; height: 28px; margin-left: auto; place-items: center; border: 1px solid #0e0e0e; border-radius: calc(var(--a-radius) * .8); background: linear-gradient(to bottom, #373737, #171717); color: #fafafa; box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 1px 2px rgb(0 0 0 / 12%); }
+	.agent-prompt__send .mock-icon { width: 14px; height: 14px; }
+	html[data-theme='dark'] .agent-prompt__send { border-color: #c9c9c9; background: linear-gradient(to bottom, #fff, #e5e5e5); color: #171717; }
+
+	@media (prefers-reduced-motion: reduce) { .mock-caret { animation: none; } }
+
+	@media (max-width: 820px) {
+		.feature--semantic, .feature--color, .feature--notes { grid-column: 1 / -1; }
+		.feature--notes { grid-template-columns: 1fr; }
+		.note-visual { margin: 0 0 0 28px; }
+	}
+	@media (max-width: 640px) {
+		.features { gap: 12px; }
+		.feature__copy { padding: 26px 24px; }
+		.feature__eyebrow { margin-bottom: 18px; }
+		.feature-visual { height: 280px; margin-left: 24px; }
+		.color-visual { height: auto; flex-basis: 280px; }
+		.mock { --mock-scale: .72; }
+		.semantic-visual { --bar-scale: .72; }
+		.palette { left: max(12px, calc((100% - 403.2px) / 2)); transform: scale(var(--mock-scale)); transform-origin: 0 0; }
+		.app-topbar--board { --mock-scale: var(--bar-scale); }
+		.note-window { --mock-scale: .7; }
+		.note-visual { height: 380px; }
+		.note-window__page { padding-inline: 48px; }
+	}
+
+	/* ---- Demo states (driven by the script in FeatureShowcase.astro) ---- */
+	.mock-cursor { position: absolute; top: 0; left: 0; z-index: 5; width: 20px; height: 20px; margin: -3px 0 0 -5px; fill: #111; stroke: #fff; stroke-width: 1.4; stroke-linejoin: round; opacity: 0; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 30%)); transform-origin: 5px 3px; transition: opacity 200ms ease, transform 60ms linear; pointer-events: none; }
+
+	/* Search: placeholder while empty, results arriving one after another, keys flashing as they're pressed. */
+	.palette__placeholder { color: var(--a-muted-fg); }
+	.palette__heading, .palette__item { transition: opacity 200ms ease-out, translate 260ms cubic-bezier(.23, 1, .32, 1), background-color 120ms ease-out; }
+	.palette__list.is-empty .palette__heading, .palette__list.is-empty .palette__item { opacity: 0; translate: 0 4px; transition: none; }
+	.palette__item:nth-child(3) { transition-delay: 40ms; }
+	.palette__item:nth-child(4) { transition-delay: 80ms; }
+	.palette__item:nth-child(5) { transition-delay: 120ms; }
+	.palette__item:nth-child(6) { transition-delay: 160ms; }
+	.palette__item--selected { transition-delay: 0ms !important; }
+	.mock kbd { transition: background-color 100ms ease-out, scale 100ms ease-out; }
+	.mock kbd.is-pressed { background: color-mix(in oklch, var(--a-fg) 18%, transparent); color: var(--a-fg); scale: .9; }
+
+	/* Colour: grids for each colour stacked in one cell, crossfading on a pick. */
+	.masonry-stack { display: grid; }
+	.masonry-stack .masonry { grid-area: 1 / 1; opacity: 0; transition: opacity 280ms ease-out; }
+	.masonry-stack .masonry.is-shown { opacity: 1; }
+	.filter-bar__swatches i { transition: scale 100ms ease-out, box-shadow 100ms ease-out; }
+
+	/* Note: the agent's rail beside the passage, its status, review and input rows by phase. */
+	.note-editor__passage { position: relative; }
+	/* The rail runs from the draft down to the agent controls (note-agent-rail: 2px, oklch(.68 .14 255), 0.875rem into the gutter). */
+	.agent-rail { position: absolute; top: 12px; bottom: 0; left: -14px; width: 2px; border-radius: 999px; background: oklch(.68 .14 255); opacity: 0; transition: opacity 150ms ease-out; }
+	.agent-rail.is-on { opacity: 1; }
+	.agent-rail.is-streaming { animation: agent-rail-pulse 1.6s ease-in-out infinite; }
+	@keyframes agent-rail-pulse { 50% { opacity: .45; } }
+	[data-draft] { animation: none; }
+	.agent-prompt__status, .agent-prompt__review { display: none; align-items: center; height: 32px; }
+	.agent-prompt[data-phase='streaming'] .agent-prompt__status { display: flex; justify-content: space-between; }
+	.agent-prompt[data-phase='streaming'] .agent-prompt__input { display: none; }
+	.agent-prompt[data-phase='review'] .agent-prompt__review { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 6px; }
+	.agent-prompt[data-phase='review'] .mock-caret { display: none; }
+	.agent-shimmer { background: linear-gradient(90deg, var(--a-muted-fg) 0%, var(--a-muted-fg) 40%, var(--a-fg) 50%, var(--a-muted-fg) 60%, var(--a-muted-fg) 100%) 0 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: agent-shimmer 1.8s linear infinite; }
+	@keyframes agent-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+	.agent-prompt__ghost { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; color: var(--a-muted-fg); font-size: 12px; font-weight: 500; }
+	.agent-prompt__icon-button { display: grid; width: 24px; height: 24px; place-items: center; color: var(--a-muted-fg); }
+	.agent-button { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: 1px solid; border-radius: calc(var(--a-radius) * .8); font-size: 12px; font-weight: 500; }
+	.agent-button kbd { height: 14px; min-width: 14px; font-size: 9.5px; }
+	.agent-button--secondary { border-color: oklch(.88 0 0); background: oklch(.97 0 0); color: var(--a-fg); box-shadow: 0 1px 1px rgb(0 0 0 / 4%); }
+	.agent-button--primary { border-color: #0e0e0e; background: linear-gradient(to bottom, #373737, #171717); color: #fafafa; font-weight: 600; box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 1px 2px rgb(0 0 0 / 12%); }
+	.agent-button--primary kbd { background: rgb(255 255 255 / 14%); color: rgb(255 255 255 / 80%); }
+	html[data-theme='dark'] .agent-button--secondary { border-color: oklch(1 0 0 / 14%); background: oklch(.255 0 0); }
+	html[data-theme='dark'] .agent-button--primary { border-color: #c9c9c9; background: linear-gradient(to bottom, #fff, #e5e5e5); color: #171717; }
+	html[data-theme='dark'] .agent-button--primary kbd { background: rgb(0 0 0 / 8%); color: rgb(0 0 0 / 60%); }
+	/* Placeholders by phase, as in the app; the send button dims while the input is empty. */
+	.agent-prompt [data-instruction]:empty::before { color: var(--a-muted-fg); }
+	.agent-prompt[data-phase='prompt'] [data-instruction]:empty::before { content: 'Ask AI to write anything, @ to mention…'; }
+	.agent-prompt[data-phase='review'] [data-instruction]:empty::before { content: 'Ask a follow-up, @ to mention…'; }
+	.agent-prompt__input:has([data-instruction]:empty) .agent-prompt__send { opacity: .5; }
+
+	/* The prompt's quick actions show while it's empty, as in the app. */
+	.agent-prompt__actions { display: none; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+	.agent-prompt[data-phase='prompt']:has([data-instruction]:empty) .agent-prompt__actions { display: flex; }
+	.agent-prompt__actions span { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: calc(var(--a-radius) * .8); color: var(--a-muted-fg); font-size: 12px; font-weight: 500; }

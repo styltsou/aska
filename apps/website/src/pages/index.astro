@@ -1,6 +1,7 @@
 ---
 import Closing from '../components/Closing.astro';
 import ArchivePrinciples from '../components/ArchivePrinciples.astro';
+import Faq from '../components/Faq.astro';
 import FeatureShowcase from '../components/FeatureShowcase.astro';
 import Hero from '../components/Hero.astro';
 import SiteFooter from '../components/SiteFooter.astro';
@@ -20,10 +21,13 @@ const signupHref = `${appBaseUrl}/signup`;
 	<SiteHeader loginHref={loginHref} signupHref={signupHref} />
 	<main>
 		<div class="intro-surface" data-header-surface="surface"><Hero signupHref={signupHref} /></div>
-		<div class="hero-transition" data-header-surface="surface" aria-hidden="true"></div>
+		<div class="hero-transition" data-header-surface="surface" data-fade="surface canvas" aria-hidden="true"></div>
 		<StatementBand />
 		<FeatureShowcase />
 		<ArchivePrinciples />
+		<div class="surface-fade surface-fade--in" data-header-surface="surface" data-fade="canvas surface" aria-hidden="true"></div>
+		<Faq />
+		<div class="surface-fade surface-fade--out" data-header-surface="surface" data-fade="surface canvas" aria-hidden="true"></div>
 		<Closing signupHref={signupHref} />
 	</main>
 	<SiteFooter loginHref={loginHref} signupHref={signupHref} />
@@ -39,7 +43,62 @@ const signupHref = `${appBaseUrl}/signup`;
 		border-radius: 0 0 var(--sheet-radius) var(--sheet-radius);
 		box-shadow: var(--sheet-shadow);
 	}
-	.intro-surface { display: grid; min-height: calc(100svh - 52px + 48px); background: var(--surface); }
-	.hero-transition { height: clamp(160px, 18vw, 220px); background: linear-gradient(to bottom, var(--surface), var(--canvas)); }
-	@media (max-width: 640px) { .hero-transition { height: 160px; } }
+	.intro-surface { display: grid; min-height: calc(100svh - 52px); background: var(--surface); }
+	/*
+	 * Section fades. A plain linear ramp shows a hard start and end, and across these close greys it bands. The ramp
+	 * follows smootherstep (6t⁵ − 15t⁴ + 10t³) in 21 stops, which leaves both ends flat, so there's no visible line where
+	 * the fade meets the solid colour. In dark mode a balanced black/white dither breaks up the remaining steps without
+	 * shifting the average brightness (a plain grey grain lightens dark greys, which itself shows as an edge where it stops).
+	 * Light mode needs none: its two whites are only a few levels apart.
+	 */
+	.hero-transition, .surface-fade {
+		--ramp:
+			var(--from),
+			color-mix(in oklab, var(--to) .12%, var(--from)) 5%,
+			color-mix(in oklab, var(--to) .86%, var(--from)) 10%,
+			color-mix(in oklab, var(--to) 2.66%, var(--from)) 15%,
+			color-mix(in oklab, var(--to) 5.79%, var(--from)) 20%,
+			color-mix(in oklab, var(--to) 10.35%, var(--from)) 25%,
+			color-mix(in oklab, var(--to) 16.31%, var(--from)) 30%,
+			color-mix(in oklab, var(--to) 23.52%, var(--from)) 35%,
+			color-mix(in oklab, var(--to) 31.74%, var(--from)) 40%,
+			color-mix(in oklab, var(--to) 40.69%, var(--from)) 45%,
+			color-mix(in oklab, var(--to) 50%, var(--from)) 50%,
+			color-mix(in oklab, var(--to) 59.31%, var(--from)) 55%,
+			color-mix(in oklab, var(--to) 68.26%, var(--from)) 60%,
+			color-mix(in oklab, var(--to) 76.48%, var(--from)) 65%,
+			color-mix(in oklab, var(--to) 83.69%, var(--from)) 70%,
+			color-mix(in oklab, var(--to) 89.65%, var(--from)) 75%,
+			color-mix(in oklab, var(--to) 94.21%, var(--from)) 80%,
+			color-mix(in oklab, var(--to) 97.34%, var(--from)) 85%,
+			color-mix(in oklab, var(--to) 99.14%, var(--from)) 90%,
+			color-mix(in oklab, var(--to) 99.88%, var(--from)) 95%,
+			var(--to);
+		position: relative;
+	}
+	.hero-transition { --from: var(--surface); --to: var(--canvas); height: clamp(150px, 13vw, 200px); background: linear-gradient(to bottom, var(--ramp)); }
+
+	/*
+	 * The fades around the FAQ are long washes rather than blocks: each one is a background layer (z-index -1, so under
+	 * every section's content but over the page canvas) that reaches well into the section above and below. The spacer
+	 * itself only sets the gap. The FAQ paints its own surface inside its content box only (see Faq.astro), so the wash
+	 * reaches its full colour exactly where the FAQ frame starts and leaves from exactly where it ends.
+	 * `--fade-pad` matches the FAQ's padding-block; `--reach` is how far the wash runs into the neighbouring section.
+	 */
+	.surface-fade { --fade-pad: clamp(56px, 7vw, 96px); --reach: clamp(140px, 24vh, 280px); height: clamp(160px, 18vw, 240px); }
+	.surface-fade--in { --from: var(--canvas); --to: var(--surface); height: clamp(48px, 6vw, 80px); }
+	.surface-fade--out { --from: var(--surface); --to: var(--canvas); }
+	.surface-fade::before { content: ''; position: absolute; right: 0; left: 0; z-index: -1; background: linear-gradient(to bottom, var(--ramp)); pointer-events: none; }
+	.surface-fade--in::before { top: calc(-1 * var(--reach)); bottom: calc(-1 * var(--fade-pad)); }
+	.surface-fade--out::before { top: calc(-1 * var(--fade-pad)); bottom: calc(-1 * var(--reach)); }
+
+	/* Dark-mode dither, over the same extent as each fade. Being brightness-neutral, it needs no taper at the ends. */
+	:global(html[data-theme='dark']) .hero-transition::after,
+	:global(html[data-theme='dark']) .surface-fade::after { content: ''; position: absolute; right: 0; left: 0; background: url('/fade-dither.svg'); pointer-events: none; }
+	:global(html[data-theme='dark']) .hero-transition::after { top: 0; bottom: 0; }
+	:global(html[data-theme='dark']) .surface-fade::after { z-index: -1; }
+	:global(html[data-theme='dark']) .surface-fade--in::after { top: calc(-1 * var(--reach)); bottom: calc(-1 * var(--fade-pad)); }
+	:global(html[data-theme='dark']) .surface-fade--out::after { top: calc(-1 * var(--fade-pad)); bottom: calc(-1 * var(--reach)); }
+
+	@media (max-width: 640px) { .hero-transition { height: 128px; } .surface-fade { --reach: 120px; height: 140px; } .surface-fade--in { height: 48px; } }
 </style>

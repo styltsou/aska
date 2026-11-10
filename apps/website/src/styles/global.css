@@ -27,7 +27,8 @@
 	--feature-frame-shadow-mid: 0 0 0 5px rgb(255 255 255 / 55%), 0 0 0 6px rgb(184 188 180 / 32%), 0 8px 20px rgb(21 21 21 / 5%);
 	--feature-frame-shadow-end: 0 0 0 4px rgb(255 255 255 / 48%), 0 0 0 5px rgb(184 188 180 / 28%), 0 7px 18px rgb(21 21 21 / 4%);
 	--radius: 8px;
-	--sheet-radius: 28px;
+	/* The app's --radius-4xl (its base --radius of .45rem × 2.6), the largest corner in its scale. */
+	--sheet-radius: calc(.45rem * 2.6);
 	--sheet-shadow: 0 22px 44px rgb(21 21 21 / 14%), 0 6px 14px rgb(21 21 21 / 6%);
 	--page-width: 1200px;
 	--anchor-offset: 70px;
@@ -41,7 +42,7 @@
 
 * { box-sizing: border-box; }
 
-html { background: var(--footer-surface); scroll-behavior: smooth; scroll-padding-top: var(--anchor-offset); scrollbar-color: #777772 var(--canvas); scrollbar-width: thin; }
+html { background: var(--footer-surface); scroll-padding-top: var(--anchor-offset); scrollbar-color: #777772 var(--canvas); scrollbar-width: thin; }
 body { margin: 0; background: var(--footer-surface); }
 a { color: inherit; text-decoration: none; }
 button, summary { font: inherit; }
@@ -75,6 +76,58 @@ h1, h2 { font-weight: 560; letter-spacing: 0; }
 .button--quiet { background: rgb(255 255 255 / 52%); border-color: var(--line); }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* Same as the app's Button (apps/web/src/components/ui/button.tsx), size "lg": default, secondary, and outline variants.
+   .app-button--compact is the app's size "default" (h-8), for the navbar's account buttons. */
+.app-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	height: 36px;
+	padding: 0 10px;
+	border: 1px solid transparent;
+	border-radius: .45rem;
+	font-size: 14px;
+	font-weight: 500;
+	line-height: 1;
+	white-space: nowrap;
+	user-select: none;
+	transition: background 100ms ease-out, color 100ms ease-out, border-color 100ms ease-out, box-shadow 100ms ease-out;
+}
+.app-button--compact { height: 32px; }
+.app-button--primary {
+	--top: #373737; --bottom: #171717; --hover-top: #4a4a4a; --hover-bottom: #202020;
+	color: #fafafa;
+	border-color: #0e0e0e;
+	background: linear-gradient(to bottom, var(--top), var(--bottom));
+	box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 1px 2px rgb(0 0 0 / 12%);
+	font-weight: 600;
+}
+.app-button--secondary {
+	color: oklch(0.145 0 0);
+	border-color: oklch(0.88 0 0);
+	background: oklch(0.97 0 0);
+	box-shadow: 0 1px 1px rgb(0 0 0 / 4%);
+}
+.app-button--primary:active { box-shadow: inset 0 1px 1px rgb(0 0 0 / 12%); }
+.app-button--secondary:active { background: oklch(0.95 0 0); box-shadow: inset 0 1px 1px rgb(0 0 0 / 6%); }
+.app-button--outline { color: oklch(0.145 0 0); border-color: oklch(0.9 0 0); background: oklch(1 0 0); box-shadow: 0 1px 2px rgb(0 0 0 / 6%); }
+.app-button--outline:active { background: oklch(0.975 0 0); box-shadow: inset 0 1px 1px rgb(0 0 0 / 6%); }
+html[data-theme='dark'] .app-button--primary { --top: #ffffff; --bottom: #e5e5e5; --hover-top: #ffffff; --hover-bottom: #eeeeee; color: #171717; border-color: #c9c9c9; box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%), 0 1px 2px rgb(0 0 0 / 20%); }
+html[data-theme='dark'] .app-button--primary:active { box-shadow: inset 0 1px 1px rgb(0 0 0 / 20%); }
+html[data-theme='dark'] .app-button--secondary { color: oklch(0.985 0 0); border-color: oklch(1 0 0 / 14%); background: oklch(0.255 0 0); box-shadow: 0 1px 1px rgb(0 0 0 / 10%); }
+html[data-theme='dark'] .app-button--secondary:active { background: oklch(0.275 0 0); box-shadow: inset 0 1px 1px rgb(0 0 0 / 12%); }
+html[data-theme='dark'] .app-button--outline { color: oklch(0.985 0 0); border-color: oklch(1 0 0 / 12%); background: oklch(0.19 0 0); box-shadow: 0 1px 2px rgb(0 0 0 / 14%); }
+html[data-theme='dark'] .app-button--outline:active { background: oklch(0.225 0 0); box-shadow: inset 0 1px 1px rgb(0 0 0 / 12%); }
+@media (hover: hover) {
+	.app-button--primary:hover { background: linear-gradient(to bottom, var(--hover-top), var(--hover-bottom)); }
+	.app-button--secondary:hover { background: oklch(0.95 0 0); }
+	.app-button--outline:hover { background: oklch(0.975 0 0); }
+	html[data-theme='dark'] .app-button--secondary:hover { background: oklch(0.275 0 0); }
+	html[data-theme='dark'] .app-button--outline:hover { background: oklch(0.225 0 0); }
+}
+@media (prefers-reduced-motion: reduce) { .app-button { transition: none; } }
 
 
 :root[data-theme='dark'] {

@@ -20,7 +20,7 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 	const scrollToTop = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
 		event.preventDefault();
 		close();
-		window.scrollTo({ top: 0, behavior: "smooth" });
+		window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
 		if (window.location.hash) {
 			window.history.replaceState(null, "", window.location.pathname + window.location.search);
 		}
@@ -48,13 +48,13 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 					<img className="brand__logo" src="/mnemee-logo.svg" alt="" />
 				</a>
 				<nav className="desktop-nav" aria-label="Primary navigation">
-					<a href="#workflow">How it works</a>
-					<a href="#canvas">Canvas</a>
-					<a href="#color-search">Color search</a>
+					<a href="#workflow">Features</a>
+					<a href="#canvas">Use cases</a>
+					<a href="#faq">FAQ</a>
 				</nav>
 				<div className="desktop-actions">
-					<a className="text-link" href={loginHref}>Log in</a>
-					<a className="button button--primary" href={signupHref}>Create account</a>
+					<a className="app-button app-button--compact app-button--secondary" href={loginHref}>Log in</a>
+					<a className="app-button app-button--compact app-button--primary" href={signupHref}>Create account</a>
 				</div>
 				<button
 					className="mobile-menu-toggle"
@@ -73,13 +73,13 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 
 			<div className="mobile-menu-content" id="mobile-menu" aria-hidden={!isOpen}>
 				<nav className="mobile-menu-nav" aria-label="Mobile navigation">
-					<a onClick={close} href="#workflow">How it works</a>
-					<a onClick={close} href="#canvas">Canvas</a>
-					<a onClick={close} href="#color-search">Color search</a>
+					<a onClick={close} href="#workflow">Features</a>
+					<a onClick={close} href="#canvas">Use cases</a>
+					<a onClick={close} href="#faq">FAQ</a>
 				</nav>
 				<div className="mobile-menu-footer">
-					<a onClick={close} className="button button--primary" href={signupHref}>Create account</a>
-					<a onClick={close} className="button button--quiet" href={loginHref}>Log in</a>
+					<a onClick={close} className="app-button app-button--primary" href={signupHref}>Create account</a>
+					<a onClick={close} className="app-button app-button--secondary" href={loginHref}>Log in</a>
 				</div>
 			</div>
 		</div>

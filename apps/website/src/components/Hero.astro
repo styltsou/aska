@@ -1,5 +1,7 @@
 ---
+import { Image } from 'astro:assets';
 import HeroWorkspace from './HeroWorkspace.astro';
+import watercolor from '../assets/images/hero.webp';
 
 interface Props {
 	signupHref: string;
@@ -9,34 +11,244 @@ const { signupHref } = Astro.props;
 ---
 
 <section class="hero">
-	<div class="hero__copy">
-		<p class="hero__eyebrow">A home for the things you notice</p>
-		<h1>Keep the reference.<br /><span>Find the direction.</span></h1>
-		<p class="hero__lede">
-			Mnemee brings images, videos, links, and notes into one visual workspace. Collect what catches your eye, arrange it on a canvas, and find it again when it matters.
-		</p>
-		<div class="hero__actions">
-			<a class="button button--primary" href={signupHref}>Create your workspace</a>
-			<a class="hero__text-link" href="#workflow">Explore how it works <span aria-hidden="true">↗</span></a>
+	<div class="hero__stage">
+		<div class="hero__media">
+			<Image class="hero__backdrop" src={watercolor} alt="" widths={[640, 960, 1280, 1600, 2000]} sizes="100vw" quality={80} loading="eager" />
+			<div class="hero__window"><div class="hero__window-frame"><HeroWorkspace /></div></div>
+		</div>
+		<div class="hero__inner">
+			<div class="hero__copy">
+				<h1>Keep the reference.<br /><span>Find the direction.</span></h1>
+				<p class="hero__lede">
+					Mnemee brings images, videos, links, and notes into one visual workspace. Collect what catches your eye, arrange it on a canvas, and find it again when it matters.
+				</p>
+				<div class="hero__actions">
+					<a class="app-button app-button--outline" href="#workflow">Learn more</a>
+					<a class="app-button app-button--primary" href={signupHref}>Create your workspace</a>
+				</div>
+			</div>
 		</div>
 	</div>
-	<div class="hero-workspace-stage"><HeroWorkspace /><p>References in a space made to think with.</p></div>
 </section>
 
+<script>
+	/*
+	 * Scroll-pinned hero (desktop only, see the CSS). The stage stays pinned while the page scrolls through the hero's
+	 * extra height:
+	 *   1. Expand: the image panel grows from the right half to cover the whole hero, its top settling under the navbar,
+	 *      sliding over the copy, while the mock-up glides from its cropped spot to the centre at full size.
+	 *   2. Hold: everything rests with the mock-up centred (room for the interactive demo later).
+	 *   3. Release: the pin ends and the hero scrolls off like any other section.
+	 * The panel keeps its final box the whole time and is revealed with clip-path, so nothing reflows while scrolling.
+	 * `data-state` on the hero tells the navbar when to leave its over-the-image layout.
+	 */
+	const hero = document.querySelector<HTMLElement>('.hero');
+	const media = hero?.querySelector<HTMLElement>('.hero__media');
+	const win = hero?.querySelector<HTMLElement>('.hero__window');
+	const backdrop = hero?.querySelector<HTMLElement>('.hero__backdrop');
+	const copy = hero?.querySelector<HTMLElement>('.hero__copy');
+	const header = document.querySelector<HTMLElement>('.site-header');
+	const pinned = window.matchMedia('(min-width: 1024px) and (min-height: 620px) and (prefers-reduced-motion: no-preference)');
+
+	// How far the panel's top edge drops: from 16px (under the transparent navbar) to the navbar's bottom edge at 52px,
+	// so the band above the panel is exactly the bar and its content sits centred in it.
+	const DROP = 52 - 16;
+	const RADIUS = 12;
+	const EXPAND_SHARE = .3; // share of the pinned scroll spent expanding; the rest is the hold, where the demo plays
+	const RATIO = .625; // the mock-up is 16:10
+
+	const clamp = (value: number) => Math.min(Math.max(value, 0), 1);
+	const lerp = (from: number, to: number, t: number) => from + (to - from) * t;
+	// Sine curves keep the motion even: no sudden rush in the middle of the scroll.
+	const easeInOut = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
+	const easeOut = (t: number) => 1 - (1 - t) ** 3;
+
+	if (hero && media && win && backdrop) {
+		let geo: { boxW: number; startX: number; startY: number; startW: number; endX: number; endY: number; endW: number; expand: number; travel: number } | null = null;
+		let lastDemo = -1;
+		const workspace = win.querySelector<HTMLElement>('.hero-workspace');
+		let frame = 0;
+
+		// The navbar may already have synced this frame, so tell it when the state flips.
+		const setState = (state?: 'split' | 'open') => {
+			if (hero.dataset.state === state) return;
+			if (state) hero.dataset.state = state;
+			else delete hero.dataset.state;
+			window.dispatchEvent(new Event('hero:state'));
+		};
+
+		const reset = () => {
+			geo = null;
+			setState();
+			for (const el of [media, win, backdrop, copy]) el?.removeAttribute('style');
+			lastDemo = -1;
+			workspace?.dispatchEvent(new CustomEvent('demo:progress', { detail: 0 }));
+			if (header) {
+				delete header.dataset.morph;
+				header.style.removeProperty('--hero-drop');
+				header.style.removeProperty('--hero-w');
+			}
+		};
+
+		const measure = () => {
+			const boxW = media.clientWidth;
+			const boxH = media.clientHeight;
+			// Start: the same spot the CSS gives the mock-up (9% into the visible right half, overflowing to the right).
+			const startW = Math.max(boxW * .64, 780);
+			// End: as large as fits under the navbar with some air around it.
+			const endW = Math.min(boxW - 144, (boxH - DROP - 88) / RATIO, 1280);
+			geo = {
+				boxW,
+				startX: boxW * .545,
+				startY: Math.max(96, boxH * .14),
+				startW,
+				endX: (boxW - endW) / 2,
+				endY: DROP + (boxH - DROP - endW * RATIO) / 2,
+				endW,
+				expand: (hero.offsetHeight - window.innerHeight) * EXPAND_SHARE,
+				travel: hero.offsetHeight - window.innerHeight,
+			};
+			// The mock-up is laid out at its final size and scaled down at the start, so it rests sharp at the end.
+			win.style.left = '0px';
+			win.style.top = '0px';
+			win.style.width = `${endW}px`;
+		};
+
+		const render = () => {
+			frame = 0;
+			if (!pinned.matches) {
+				if (geo) reset();
+				return;
+			}
+			if (!geo) measure();
+			if (!geo) return;
+
+			const scrolled = -hero.getBoundingClientRect().top;
+			const progress = clamp(scrolled / geo.expand);
+			const t = easeInOut(progress);
+			// The top edge drops below the navbar early, before the panel reaches the logo and links.
+			const top = easeOut(clamp(progress / .3)) * DROP;
+			const left = (geo.boxW / 2) * (1 - t);
+			media.style.clipPath = `inset(${top.toFixed(2)}px 0 0 ${left.toFixed(2)}px round ${RADIUS}px)`;
+
+			const scale = lerp(geo.startW / geo.endW, 1, t);
+			win.style.transform = `translate3d(${lerp(geo.startX, geo.endX, t).toFixed(2)}px, ${lerp(geo.startY, geo.endY, t).toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
+			backdrop.style.transform = `scale(${lerp(1.1, 1.03, t).toFixed(4)})`;
+			// The copy fades out slowly over the whole expansion, so it's mostly gone by the time the panel covers it.
+			if (copy) copy.style.opacity = (1 - easeInOut(clamp(progress / .9))).toFixed(3);
+
+			// The navbar morphs with the scroll too (full width and dropped → page width and centred), not on a timer.
+			if (header) {
+				header.dataset.morph = '';
+				header.style.setProperty('--hero-drop', (1 - easeInOut(clamp(progress / .3))).toFixed(4));
+				// It contracts to the page width only once the pin has ended and the hero is scrolling away, so it stays aligned
+				// with the full-width image all through the hero and lines up with the next section by the time that arrives.
+				const leaving = clamp((scrolled - geo.travel) / window.innerHeight);
+				header.style.setProperty('--hero-w', easeInOut(clamp((leaving - .1) / .55)).toFixed(4));
+			}
+
+			// The mock-up's demo plays across the hold, with a little rest at each end.
+			const hold = clamp((scrolled - geo.expand) / (geo.travel - geo.expand));
+			const demo = clamp((hold - .05) / .88);
+			if (demo !== lastDemo) {
+				lastDemo = demo;
+				workspace?.dispatchEvent(new CustomEvent('demo:progress', { detail: demo }));
+			}
+
+			setState(progress < .3 ? 'split' : 'open');
+		};
+
+		const schedule = () => {
+			if (!frame) frame = requestAnimationFrame(render);
+		};
+		const remeasure = () => {
+			geo = null;
+			schedule();
+		};
+
+		render();
+		window.addEventListener('scroll', schedule, { passive: true });
+		window.addEventListener('resize', remeasure);
+		pinned.addEventListener('change', remeasure);
+		document.addEventListener('astro:before-swap', () => {
+			window.removeEventListener('scroll', schedule);
+			window.removeEventListener('resize', remeasure);
+			pinned.removeEventListener('change', remeasure);
+		}, { once: true });
+	}
+</script>
+
 <style>
-	.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; gap: clamp(36px, 5vw, 84px); width: min(calc(100% - 64px), 1200px); min-height: min(740px, calc(100dvh - 74px)); margin-inline: auto; padding-block: clamp(80px, 9vw, 130px); }
-	.hero__copy { position: relative; z-index: 20; max-width: 670px; margin-inline: auto; }
-	.hero__eyebrow { margin-bottom: 24px; color: var(--ink-muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
-	h1 { max-width: 660px; margin-bottom: 24px; font-size: clamp(44px, 4.2vw, 64px); font-weight: 560; letter-spacing: -.052em; line-height: 1.02; }
+	/*
+	 * Split hero: copy sits bottom-left inside the page width, and the image panel fills the right side of the viewport,
+	 * inset on three sides and tucked up under the (transparent at the top) navbar, whose account buttons float over it.
+	 */
+	.hero {
+		--inset: 16px;
+		/* Same 28px gutter as the full-width navbar over the hero, so the text lines up with the logo. */
+		--gutter: 28px;
+		--page-w: min(calc(100% - 48px), var(--page-width));
+		position: relative;
+		height: clamp(660px, 100svh, 1000px);
+		margin-top: -52px;
+	}
+	.hero__stage { position: relative; height: 100%; }
+	.hero__inner { display: flex; align-items: flex-end; width: calc(100% - 2 * var(--gutter)); height: 100%; margin-inline: auto; padding-bottom: clamp(48px, 7vh, 88px); }
+	.hero__copy { position: relative; z-index: 1; display: flex; flex-direction: column; width: calc(50% - 56px); max-width: 600px; }
+
+	h1 { margin-bottom: 22px; font-size: clamp(40px, 4.2vw, 64px); font-weight: 560; letter-spacing: -.045em; line-height: 1.03; text-wrap: balance; }
 	h1 span { color: var(--ink-muted); }
-	.hero__lede { max-width: 460px; margin-bottom: 26px; color: var(--ink-muted); font-size: 16px; line-height: 1.6; }
-	.hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; }
-	.hero__actions .button { min-height: 42px; padding-inline: 16px; font-size: 13px; }
-	.hero__text-link { font-size: 13px; font-weight: 550; }
-	.hero__text-link span { margin-left: 4px; }
-	.hero-workspace-stage { min-width: 0; }
-	.hero-workspace-stage p { margin: 10px 0 0; color: var(--ink-muted); font-size: 11px; text-align: right; }
-	@media (max-width: 1180px) { .hero { grid-template-columns: 1fr; gap: 48px; min-height: 0; padding-top: 92px; }.hero__copy { max-width: 720px; margin: 0; }.hero-workspace-stage { width: min(100%, 760px); } }
-	@media (max-width: 640px) { .hero { width: min(calc(100% - 32px), 1200px); gap: 42px; padding-block: 70px 86px; }.hero__eyebrow { font-size: 10px; } h1 { font-size: clamp(39px, 10vw, 58px); } .hero__lede { font-size: 15px; } .hero-workspace-stage p { font-size: 10px; } }
-	@media (max-width: 370px) { h1 { font-size: 36px; } }
+	.hero__lede { max-width: 470px; margin-bottom: 32px; color: var(--ink-muted); font-size: 16px; line-height: 1.6; }
+	.hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+	/* The page-width split always lands on the hero's centre line. */
+	.hero__media { position: absolute; top: var(--inset); right: var(--inset); bottom: var(--inset); left: 50%; overflow: hidden; border-radius: 12px; background: #6f9fc4; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 6%); isolation: isolate; }
+	/* Light mode: a cobalt-to-navy wash multiplied over the watercolour deepens it without greying it the way brightness() does. */
+	.hero__media::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(165deg, rgb(52 98 168 / 30%), rgb(16 38 84 / 50%)); mix-blend-mode: multiply; pointer-events: none; }
+	.hero__backdrop { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; filter: saturate(1.4) contrast(1.12) brightness(.9); transform: scale(1.04); }
+	.hero__window { position: absolute; top: max(96px, 14%); left: 9%; width: max(128%, 780px); transform-origin: 0 0; }
+	.hero__window-frame { filter: drop-shadow(0 30px 40px rgb(8 24 48 / 30%)) drop-shadow(0 6px 12px rgb(8 24 48 / 16%)); }
+	.hero__window :global(.hero-workspace) { box-shadow: 0 0 0 1px rgb(255 255 255 / 55%); }
+
+	/* The watercolour is deepened in light mode so the white mock-up stands out, and shown as-is (light) in dark mode for the dark mock-up. */
+	:global(html[data-theme='dark']) .hero__media { background: #cfe3f2; }
+	:global(html[data-theme='dark']) .hero__backdrop { filter: saturate(1.15) contrast(1.06); }
+	:global(html[data-theme='dark']) .hero__media::after { mix-blend-mode: normal; background: linear-gradient(160deg, rgb(255 255 255 / 12%), rgb(255 255 255 / 0%) 55%, rgb(8 24 48 / 10%)); }
+	:global(html[data-theme='dark']) .hero__window-frame { filter: drop-shadow(0 30px 40px rgb(8 24 48 / 34%)) drop-shadow(0 6px 12px rgb(8 24 48 / 20%)); }
+	:global(html[data-theme='dark']) .hero__window :global(.hero-workspace) { box-shadow: 0 0 0 1px rgb(255 255 255 / 14%); }
+
+	/*
+	 * Pinned version (the script drives it). The hero gets extra height to scroll through while the stage sticks to the
+	 * viewport. The panel takes its final, full box from the start and is clipped to the right half, so the first frame
+	 * looks exactly like the static layout above.
+	 */
+	@media (min-width: 1024px) and (min-height: 620px) and (prefers-reduced-motion: no-preference) {
+		.hero { --travel: 290svh; height: calc(100svh + var(--travel)); }
+		.hero__stage { position: sticky; top: 0; height: 100svh; }
+		.hero__media { z-index: 2; left: var(--inset); box-shadow: none; clip-path: inset(0 0 0 50% round 12px); }
+		.hero__backdrop { transform: scale(1.1); will-change: transform; }
+		.hero__window { top: max(96px, 14%); left: 54.5%; width: max(64%, 780px); will-change: transform; }
+	}
+
+	/* Below desktop the panel drops under the copy and the navbar sits above the hero as usual. */
+	@media (max-width: 1023px) {
+		.hero { height: auto; margin-top: 0; padding: 56px 0 24px; }
+		.hero__stage { display: flex; flex-direction: column; gap: 40px; height: auto; }
+		.hero__inner { order: 1; width: var(--page-w); height: auto; padding-bottom: 0; }
+		.hero__copy { width: auto; max-width: 640px; }
+		.hero__media { position: relative; inset: auto; order: 2; width: calc(100% - 2 * var(--inset)); margin-inline: auto; aspect-ratio: 4 / 3; }
+		.hero__window { top: 14%; width: 118%; }
+	}
+	@media (max-width: 640px) {
+		.hero { padding-top: 40px; }
+		.hero__stage { gap: 36px; }
+		.hero__inner { width: calc(100% - 32px); }
+
+		h1 { font-size: clamp(38px, 10.5vw, 56px); }
+		.hero__lede { font-size: 15px; }
+		.hero__actions .app-button { flex: 1 1 auto; }
+		.hero__media { width: calc(100% - 16px); aspect-ratio: 1 / 1.05; border-radius: 12px; }
+		.hero__window { top: 12%; left: 8%; width: 165%; }
+	}
+	@media (max-width: 370px) { h1 { font-size: 34px; } }
 </style>

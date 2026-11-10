@@ -1,0 +1,207 @@
+---
+const faqs = [
+	{
+		question: 'What can I save in Mnemee?',
+		answer: 'Images, videos, links, and written notes. Everything you add lands in your Inbox first, so you can capture a reference in the moment and decide where it belongs later.',
+	},
+	{
+		question: 'How is it different from bookmarks or a folder of screenshots?',
+		answer: 'A bookmark list keeps a pointer; Mnemee keeps the material itself, next to the source link and the thought it sparked. References can live on a collection canvas, where you arrange them like you would on a wall.',
+	},
+	{
+		question: 'How does color search work?',
+		answer: 'Pick one or more colors and Mnemee finds the saved images that match, in your Inbox or inside a collection, and takes you back to where each one sits. Text search works alongside it, so you can follow whichever clue you remember.',
+	},
+	{
+		question: 'Do I need to organize everything right away?',
+		answer: 'No. Save first and give things shape when you are ready. Move references into collections, arrange them on the canvas, and use folders when an idea needs a place of its own.',
+	},
+	{
+		question: 'Can I keep my own notes next to the references?',
+		answer: 'Yes. Write a note in the Inbox or place it on a collection canvas, right beside the images and links it belongs to, so the reasoning stays with the reference.',
+	},
+];
+---
+
+<section id="faq" class="faq scroll-anchor" aria-labelledby="faq-title" data-header-surface="surface">
+	<svg class="faq__linework" aria-hidden="true"><path /></svg>
+	<div class="faq__frame page-width">
+		<div class="faq__head">
+			<div class="faq__label"><span class="faq__chip">FAQ</span></div>
+			<div class="faq__intro">
+				<h2 id="faq-title">Questions, before you start collecting.</h2>
+				<p>What Mnemee keeps, how you find things again, and how much structure you need up front. (Very little.)</p>
+			</div>
+		</div>
+		<div class="faq__body">
+			<div class="faq__aside">
+				<p>Something else on your mind?</p>
+				<a href="https://github.com/styltsou/mnemee/issues" target="_blank" rel="noreferrer">Ask on GitHub <span aria-hidden="true">↗</span></a>
+			</div>
+			<div class="faq__list">
+				{faqs.map(({ question, answer }, index) => (
+					<details class="faq__item" name="faq" open={index === 0}>
+						<summary>
+							<span>{question}</span>
+							<span class="faq__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg></span>
+						</summary>
+						<div class="faq__answer"><p>{answer}</p></div>
+					</details>
+				))}
+			</div>
+		</div>
+	</div>
+</section>
+
+<style>
+	.faq { --faq-bg: var(--surface); --r: 12px; --l: var(--line-strong); position: relative; overflow-x: clip; padding-block: clamp(56px, 7vw, 96px); background: var(--faq-bg) content-box; interpolate-size: allow-keywords; }
+	.faq__frame { position: relative; isolation: isolate; width: round(down, min(calc(100% - 48px), var(--page-width)), 1px); margin-left: max(24px, round(down, calc((100% - var(--page-width)) / 2), 1px)); margin-right: 0; }
+	/* Fade the finished drawing, including the rails outside the content frame. */
+	.faq__linework {
+		position: absolute; inset: 0; z-index: 5; width: 100%; height: 100%; pointer-events: none;
+		fill: var(--l); fill-rule: nonzero;
+		mask-image: linear-gradient(to right, transparent, #000 var(--west), #000 var(--east), transparent),
+			linear-gradient(to bottom, transparent, #000 var(--north), #000 var(--south), transparent);
+		mask-composite: intersect;
+	}
+	.faq__head, .faq__body { position: relative; display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+	.faq__head { z-index: 3; padding-block: clamp(48px, 5vw, 72px); isolation: isolate; }
+	.faq__head > div { position: relative; z-index: 4; }
+	/* Same uniform dot canvas as the closing CTA, edge to edge, evenly spaced so no dot sits on a line. */
+	.faq__head::after { content: ''; position: absolute; inset: 1px 1px 0; z-index: 3; background-image: radial-gradient(circle, color-mix(in oklch, var(--line-strong) 70%, transparent) 1.1px, transparent 1.5px); background-size: 16px 16px; background-repeat: space; pointer-events: none; }
+	.faq__label { padding-inline: clamp(24px, 3vw, 40px); }
+	/* The section label is a plain typographic eyebrow sitting directly on the dot grid — no box, no marks. */
+	.faq__chip { color: var(--ink-muted); font-size: 13px; font-weight: 600; letter-spacing: .14em; }
+	.faq__intro { padding-right: clamp(24px, 3vw, 40px); }
+	h2 { max-width: 560px; margin-bottom: 16px; font-size: clamp(34px, 3.7vw, 52px); letter-spacing: -.045em; line-height: 1.04; text-wrap: balance; }
+	.faq__intro p { max-width: 470px; margin: 0; color: var(--ink-muted); font-size: 15px; line-height: 1.6; }
+
+	.faq__aside { align-self: end; padding: 0 clamp(24px, 3vw, 40px) 30px; color: var(--ink-muted); font-size: 13.5px; line-height: 1.5; }
+	.faq__aside p { margin-bottom: 4px; }
+	.faq__aside a { color: var(--ink); font-weight: 550; }
+	.faq__list { position: relative; }
+
+	/*
+	 * Items are rounded tiles that echo the 12px crossings. Motion follows Emil Kowalski's rules:
+	 * a strong ease-out, under 300ms, a quicker close than open, and only transform/opacity on the content.
+	 */
+	.faq__list { --ease-out: cubic-bezier(.23, 1, .32, 1); --tile: color-mix(in oklch, var(--ink) 3.5%, var(--faq-bg)); display: grid; }
+	/*
+	 * Cards sit flush against the grid lines and stack: each one is opaque with rounded top corners and square bottom
+	 * corners, and paints over the one above it. An open or hovered card's tint runs one corner-radius down behind the next
+	 * card, so it fills that card's rounded corners right up to the side line and the open card reads as lying underneath.
+	 */
+	.faq__item { --card: var(--faq-bg); position: relative; border-radius: var(--r) var(--r) 0 0; background: var(--card); transition: background-color 160ms ease; }
+	/* The last card rounds its bottom only to follow the frame's bottom crossings. */
+	.faq__item:last-child { border-bottom-left-radius: var(--r); border-bottom-right-radius: var(--r); }
+	.faq__item:not(:last-child)::after { content: ''; position: absolute; top: 100%; right: 0; left: 0; height: var(--r); background: var(--card); transition: background-color 160ms ease; pointer-events: none; }
+	.faq__item[open] { --card: var(--tile); }
+	summary { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px clamp(16px, 2vw, 24px); border-radius: var(--r); font-size: clamp(16px, 1.4vw, 18px); font-weight: 520; letter-spacing: -.012em; line-height: 1.35; list-style: none; cursor: pointer; }
+	summary::-webkit-details-marker { display: none; }
+	.faq__icon { display: grid; flex: 0 0 auto; width: 20px; height: 20px; color: var(--ink-muted); place-items: center; transition: transform 160ms var(--ease-out), color 160ms ease; }
+	.faq__icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; transition: rotate 240ms var(--ease-out); }
+	.faq__item[open] .faq__icon { color: var(--ink); }
+	.faq__item[open] .faq__icon svg { rotate: -180deg; }
+	summary:active .faq__icon { transform: scale(.92); }
+
+	.faq__item::details-content { block-size: 0; overflow: clip; transition: block-size 180ms var(--ease-out), content-visibility 180ms allow-discrete; }
+	.faq__item[open]::details-content { block-size: auto; transition-duration: 260ms; }
+	.faq__answer { padding: 0 clamp(16px, 2vw, 24px) 24px; opacity: 0; translate: 0 -6px; transition: opacity 120ms ease, translate 180ms var(--ease-out); }
+	.faq__item[open] .faq__answer { opacity: 1; translate: 0 0; transition: opacity 220ms ease 40ms, translate 260ms var(--ease-out) 40ms; }
+	.faq__answer p { max-width: 560px; margin: 0; color: var(--ink-muted); font-size: 15px; line-height: 1.65; }
+
+	:global(html[data-theme='dark']) .faq__list { --tile: color-mix(in oklch, var(--ink) 5%, var(--faq-bg)); }
+
+	@media (hover: hover) and (pointer: fine) {
+		.faq__item:not([open]):hover { --card: var(--tile); }
+		.faq__item:hover .faq__icon { color: var(--ink); }
+		.faq__aside a:hover { color: var(--ink-muted); }
+	}
+
+	@media (max-width: 860px) {
+		.faq__head, .faq__body { grid-template-columns: 1fr; }
+		.faq__head { gap: 24px; }
+		.faq__intro, .faq__label { padding-inline: 24px; }
+		.faq__aside { position: relative; order: 2; align-self: start; padding: 24px; }
+		.faq__aside::before { content: ''; position: absolute; top: 0; right: 24px; left: 24px; height: 1px; background: var(--line); }
+	}
+	@media (max-width: 640px) {
+		.faq { --r: 10px; }
+		.faq__frame { width: round(down, calc(100% - 32px), 1px); margin-left: 16px; }
+		.faq__aside::before { right: 18px; left: 18px; }
+		.faq__intro, .faq__label, .faq__aside { padding-inline: 18px; }
+		summary { padding: 20px 14px; }
+		.faq__answer { padding-inline: 14px; }
+	}
+	/* Reduced motion keeps the fades and colour changes, drops height, lift and rotation. */
+	@media (prefers-reduced-motion: reduce) {
+		.faq__item::details-content, .faq__item[open]::details-content { transition: none; }
+		.faq__answer, .faq__item[open] .faq__answer { translate: none; transition: opacity 160ms ease; }
+		.faq__icon, .faq__icon svg { transition: color 160ms ease; }
+		summary:active .faq__icon { transform: none; }
+	}
+</style>
+
+<script>
+	const section = document.querySelector<HTMLElement>('#faq')!;
+	const frame = section.querySelector<HTMLElement>('.faq__frame')!;
+	const body = section.querySelector<HTMLElement>('.faq__body')!;
+	const list = section.querySelector<HTMLElement>('.faq__list')!;
+	const svg = section.querySelector<SVGSVGElement>('.faq__linework')!;
+	const ink = svg.querySelector('path')!;
+	const items = [...list.querySelectorAll('details')];
+
+	// The outer contour winds clockwise and the inset winds counterclockwise.
+	// A panel therefore contributes ink only inside its narrow rim. Two panels
+	// sharing a rim still produce a single opaque silhouette in the nonzero fill.
+	function panel(left: number, top: number, right: number, bottom: number, radius: number, half: number) {
+		function contour(offset: number, outer: boolean) {
+			const l = left - offset, t = top - offset, r = right + offset, b = bottom + offset;
+			const k = radius + offset;
+			const arc = 'a' + k + ' ' + k + ' 0 0 ' + (outer ? '1 ' : '0 ');
+			return outer
+				? `M${l+k} ${t}H${r-k}${arc}${k} ${k}V${b-k}${arc}${-k} ${k}H${l+k}${arc}${-k} ${-k}V${t+k}${arc}${k} ${-k}Z`
+				: `M${l+k} ${t}${arc}${-k} ${k}V${b-k}${arc}${k} ${k}H${r-k}${arc}${k} ${-k}V${t+k}${arc}${-k} ${-k}Z`;
+		}
+		return contour(half, true) + contour(-half, false);
+	}
+
+	// Only the rounded top of each subsequent accordion row is visible.
+	function separator(l: number, y: number, r: number, k: number, h: number) {
+		const a = k+h, b = k-h;
+		return `M${l-h} ${y+k}a${a} ${a} 0 0 1 ${a} ${-a}H${r-k}a${a} ${a} 0 0 1 ${a} ${a}h${-2*h}a${b} ${b} 0 0 0 ${-b} ${-b}H${l+k}a${b} ${b} 0 0 0 ${-b} ${b}Z`;
+	}
+
+	function draw() {
+		const bounds = svg.getBoundingClientRect();
+		const box = frame.getBoundingClientRect();
+		const scale = devicePixelRatio, half = 0.5 / scale;
+		const snap = (v: number) => (Math.round(v * scale - .5) + .5) / scale;
+		const x = (v: number) => snap(v) - bounds.left;
+		const y = (v: number) => snap(v + scrollY) - (bounds.top + scrollY);
+		const l = x(box.left), r = x(box.right), t = y(box.top), b = y(box.bottom);
+		const split = x(list.getBoundingClientRect().left), mid = y(body.getBoundingClientRect().top);
+		const radius = parseFloat(getComputedStyle(section).getPropertyValue('--r'));
+		const outer = [ -2*radius, l, r, bounds.width + 2*radius ];
+		const divided = split > l ? [outer[0], l, split, r, outer[3]] : outer;
+		const drawing: string[] = [];
+		function row(top: number, bottom: number, edges: number[]) {
+			for (let i = 1; i < edges.length; i++)
+				drawing.push(panel(edges[i-1], top, edges[i], bottom, radius, half));
+		}
+		row(-2*radius, t, outer);
+		row(t, mid, outer);
+		row(mid, b, divided);
+		row(b, bounds.height + 2*radius, divided);
+		for (const item of items.slice(1))
+			drawing.push(separator(split, y(item.getBoundingClientRect().top), r, radius, half));
+		ink.setAttribute('d', drawing.join(' '));
+		for (const [side, value] of Object.entries({west: l-radius, east: r+radius, north: t-radius, south: b+radius}))
+			svg.style.setProperty('--' + side, value + 'px');
+	}
+
+	const observer = new ResizeObserver(draw);
+	for (const element of [section, frame, body, ...items]) observer.observe(element);
+	window.addEventListener('resize', draw);
+	draw();
+</script>
