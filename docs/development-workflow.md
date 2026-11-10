@@ -30,13 +30,10 @@ cd apps/server && TEST_DATABASE_URL=postgresql://... bun run test:integration
 The client and workers use Vitest with `--passWithNoTests` so package checks
 remain valid even before a worker gains its first focused test.
 
-Run the package-local checks before pushing:
+Run the checks before pushing. The whole suite, with cached results for
+unchanged packages, or one package:
 
 ```sh
-cd apps/web && bun run lint && bun run typecheck && bun run format && bun run test && bun run build
-cd apps/server && bun run lint && bun run typecheck && bun run lambda:typecheck && bun run format && bun run test
-cd services/image-variants && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/url-resolution && bun run lint && bun run typecheck && bun run format && bun run test
+bun run check
+bunx turbo run lint typecheck format test --filter server
 ```

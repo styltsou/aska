@@ -114,17 +114,13 @@ the router/Vite tooling regenerate it when routes change.
 
 ## Verification
 
-Run checks only for packages affected by the change, plus every dependent
-package whose contract changed. Before merging a cross-cutting feature, run
-the full package matrix:
+Turbo runs the checks for the packages a change affects, plus every package
+that depends on them. CI does the same. Before pushing, run the whole suite,
+or one package's checks with a filter:
 
 ```sh
-cd apps/web && bun run lint && bun run typecheck && bun run format && bun run test && bun run build
-cd apps/server && bun run lint && bun run typecheck && bun run lambda:typecheck && bun run format && bun run test
-cd services/image-variants && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/url-resolution && bun run lint && bun run typecheck && bun run format && bun run test
+bun run check
+bunx turbo run lint typecheck format test --filter server
 ```
 
 For persistence changes, also run integration tests against a disposable

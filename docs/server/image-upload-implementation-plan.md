@@ -241,10 +241,8 @@ origin for this authenticated application flow.
 ## Validation Checklist
 
 ```sh
-cd apps/server && bun run lint && bun run typecheck && bun run format && bun run test
-cd apps/web && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/image-variants && bun run lint && bun run typecheck && bun run format && bun run test
-cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
+bun run check
+bunx turbo run lint typecheck format test --filter server
 ```
 
 For palette changes, include a synthetic test with a large neutral background,
