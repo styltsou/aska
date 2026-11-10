@@ -10,8 +10,25 @@
     "dev": "concurrently --kill-others-on-fail --names sst,vite --prefix-colors blue,magenta \"SST_STAGE=hybrid bun run dev:aws\" \"bun run --cwd client dev\"",
     "dev:cloud": "bun run --cwd client dev:cloud"
   },
+  "workspaces": [
+    "client",
+    "server",
+    "services/*",
+    "extension"
+  ],
   "devDependencies": {
     "concurrently": "^10.0.4",
     "sst": "^4.17.1"
-  }
+  },
+  "patchedDependencies": {
+    "@tiptap/extension-drag-handle@3.32.2": "client/patches/@tiptap%2Fextension-drag-handle@3.32.2.patch"
+  },
+  "overrides": {
+    "@tiptap/core": "3.30.2",
+    "@tiptap/pm": "3.30.2"
+  },
+  "trustedDependencies": [
+    "ffmpeg-static",
+    "@derhuerst/ffprobe-static"
+  ]
 }

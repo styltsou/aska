@@ -7,7 +7,7 @@ state.
 ## Run Locally
 
 ```sh
-bun install
+bun install   # from the repository root
 bun run dev
 ```
 

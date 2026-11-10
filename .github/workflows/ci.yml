@@ -21,7 +21,9 @@ jobs:
       url-unfurl-shared: ${{ steps.filter.outputs.url-unfurl-shared }}
       url-resolution: ${{ steps.filter.outputs.url-resolution }}
       video-processor: ${{ steps.filter.outputs.video-processor }}
+      extension: ${{ steps.filter.outputs.extension }}
       infra: ${{ steps.filter.outputs.infra }}
+      workspace: ${{ steps.filter.outputs.workspace }}
       deploy: ${{ steps.filter.outputs.deploy }}
     steps:
       - uses: actions/checkout@v4
@@ -34,37 +36,34 @@ jobs:
           filters: |
             client:
               - 'client/**'
-              - '.github/workflows/ci.yml'
             server:
               - 'server/**'
-              - '.github/workflows/ci.yml'
             image-variants:
               - 'services/image-variants/**'
-              - '.github/workflows/ci.yml'
             image-palette:
               - 'services/image-palette/**'
-              - '.github/workflows/ci.yml'
             image-shared:
               - 'services/image-shared/**'
             url-unfurl-shared:
               - 'services/url-unfurl-shared/**'
-              - '.github/workflows/ci.yml'
             url-resolution:
               - 'services/url-resolution/**'
-              - '.github/workflows/ci.yml'
             video-processor:
               - 'services/video-processor/**'
-              - 'services/image-shared/**'
-              - 'services/url-unfurl-shared/**'
-              - '.github/workflows/ci.yml'
+            extension:
+              - 'extension/**'
             infra:
               - 'sst.config.ts'
               - 'sst-env.d.ts'
+            # The single workspace install (and this workflow) affects every
+            # package, so changes here run every quality job.
+            workspace:
               - 'package.json'
               - 'bun.lock'
-              - '.github/workflows/**'
+              - 'bunfig.toml'
+              - '.github/workflows/ci.yml'
             # Deploy on a push to main iff something that can affect the running
-            # app changed. Docs/MD-only PRs are skipped.
+            # app changed. Docs/MD-only and extension-only changes are skipped.
             deploy:
               - 'client/**'
               - 'server/**'
@@ -74,6 +73,7 @@ jobs:
               - 'sst-env.d.ts'
               - 'package.json'
               - 'bun.lock'
+              - 'bunfig.toml'
               - '.github/workflows/**'
 
   quality:
@@ -88,36 +88,43 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Filter outputs are the strings 'true'/'false', and a non-empty string
+        # is truthy in expressions, so compare each one explicitly.
         include:
           - name: Client
             directory: client
             command: bun run lint && bun run typecheck && bun run format && bun run test && bun run build
-            changed: ${{ needs.changes.outputs.client }}
+            changed: ${{ needs.changes.outputs.client == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Server
             directory: server
-            command: bun run lint && bun run typecheck && bun run format && bun run test
-            # Server also runs when the SST/infra config or shared deps change.
-            changed: ${{ needs.changes.outputs.server || needs.changes.outputs.infra || needs.changes.outputs.image-shared || needs.changes.outputs.url-unfurl-shared }}
+            command: ""
+            # Server also typechecks the Lambda code in the shared service
+            # packages and reads the SST config.
+            changed: ${{ needs.changes.outputs.server == 'true' || needs.changes.outputs.infra == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Image variants
             directory: services/image-variants
-            command: bun install --frozen-lockfile --cwd ../image-shared && bun install --frozen-lockfile --cwd ../url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.image-variants || needs.changes.outputs.image-shared || needs.changes.outputs.url-unfurl-shared }}
+            command: bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.image-variants == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Image palette
             directory: services/image-palette
-            command: bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.image-palette || needs.changes.outputs.image-shared }}
+            command: bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.image-palette == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: URL unfurl shared
             directory: services/url-unfurl-shared
             command: bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.url-unfurl-shared }}
+            changed: ${{ needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: URL resolution
             directory: services/url-resolution
-            command: bun install --frozen-lockfile --cwd ../url-unfurl-shared && bun install --frozen-lockfile --cwd ../image-shared && bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.url-resolution || needs.changes.outputs.url-unfurl-shared || needs.changes.outputs.image-shared }}
+            command: bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.url-resolution == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Video processor
             directory: services/video-processor
-            command: bun install --frozen-lockfile --cwd ../image-shared && bun install --frozen-lockfile --cwd ../url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.video-processor || needs.changes.outputs.image-shared || needs.changes.outputs.url-unfurl-shared }}
+            command: bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.video-processor == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
+          - name: Extension
+            directory: extension
+            command: bun run build
+            changed: ${{ needs.changes.outputs.extension == 'true' || needs.changes.outputs.workspace == 'true' }}
     defaults:
       run:
         working-directory: ${{ matrix.directory }}
@@ -129,15 +136,17 @@ jobs:
       - if: fromJSON(matrix.changed)
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.14"
+          bun-version: "1.4.4"
       - if: fromJSON(matrix.changed)
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      # One install at the repo root covers every workspace package.
+      - if: fromJSON(matrix.changed)
+        working-directory: ${{ github.workspace }}
         run: bun install --frozen-lockfile
-      # Server's typecheck follows imports into the shared service packages
-      # (image-shared, url-unfurl-shared), so their deps must be installed too.
-      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
-        run: bun install --frozen-lockfile --cwd ../services/image-shared
-      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
-        run: bun install --frozen-lockfile --cwd ../services/url-unfurl-shared
       - if: fromJSON(matrix.changed) && matrix.name == 'Server'
         run: bun run lint
       - if: fromJSON(matrix.changed) && matrix.name == 'Server'
@@ -173,20 +182,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.14"
-      - name: Install SST
+          bun-version: "1.4.4"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      # One install at the repo root covers SST and every workspace package.
+      - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Install application dependencies
-        run: |
-          bun install --frozen-lockfile --cwd client
-          bun install --frozen-lockfile --cwd server
-          bun install --frozen-lockfile --cwd services/image-shared
-          bun install --frozen-lockfile --cwd services/image-variants
-          bun install --frozen-lockfile --cwd services/image-palette
-          bun install --frozen-lockfile --cwd services/gradient-naming
-          bun install --frozen-lockfile --cwd services/url-unfurl-shared
-          bun install --frozen-lockfile --cwd services/url-resolution
-          bun install --frozen-lockfile --cwd services/video-processor
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:

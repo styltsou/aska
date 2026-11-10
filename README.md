@@ -88,12 +88,9 @@ bun run dev:cloud  # local Vite + stable deployed cloud backend
 also available for isolated work:
 
 ```sh
-cd client && bun install && bun run dev
-cd server && bun install && bun run dev
-cd services/image-variants && bun install
-cd services/image-palette && bun install
-cd services/url-unfurl-shared && bun install
-cd services/url-resolution && bun install
+bun install              # once, at the repository root: installs every package
+cd client && bun run dev
+cd server && bun run dev
 ```
 
 For normal end-to-end development, use real AWS S3 and SQS through SST instead
@@ -101,5 +98,6 @@ of the isolated package commands; see [SST deployment](./docs/sst-deployment.md)
 
 Run the full package-local quality suite with `bun run lint`,
 `bun run typecheck`, `bun run format`, and `bun run test`. The same commands run
-in CI. Running `bun install` at the repository root installs the tracked
+in CI, which only runs the checks for packages a change touches. Running
+`bun install` at the repository root installs every workspace package and the tracked
 pre-commit hook, which formats staged source files with Oxfmt.

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root";
 
-import "./image-actions.css";
+import "../assets/image-actions.css";
 
 function ImageAction({
   onLeave,

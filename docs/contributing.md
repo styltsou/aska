@@ -19,18 +19,25 @@ documentation in the same change, and call out the decision in review.
 
 ## Local setup
 
-Use Bun. Dependencies are package-local:
+Use Bun. The repository is a Bun workspace (`client`, `server`, `services/*`,
+`extension`) with one lockfile, so a single install from the root covers every
+package:
 
 ```sh
 bun install
-cd client && bun install
-cd ../server && bun install
-cd ../services/image-shared && bun install
-cd ../image-variants && bun install
-cd ../image-palette && bun install
-cd ../url-unfurl-shared && bun install
-cd ../url-resolution && bun install
 ```
+
+Installs are isolated (see `bunfig.toml`): each package can only import the
+dependencies it declares, so add a dependency to the package that uses it with
+`bun add <name> --cwd <package>`. Run package scripts from that package's
+directory as before.
+
+The root `package.json` pins `@tiptap/core` and `@tiptap/pm` with
+`overrides`. A few Tiptap extensions (drag handle, image) are published with
+an exact peer requirement on a newer core than the rest of the editor; without
+the pin they would bring a second copy of Tiptap and ProseMirror into the
+client bundle. Move the pin and every `@tiptap/*` dependency together when
+upgrading Tiptap.
 
 Copy `server/.env.example` to `server/.env` for direct server development and
 set the required values. The normal end-to-end path uses real AWS development

@@ -1,0 +1,10 @@
+[install]
+# Each workspace package gets exactly the dependencies it declares (linked from
+# a shared store in node_modules/.bun), as when every package was installed on
+# its own. Hoisting everything into one node_modules caused version clashes
+# between packages. The Lambda deploys resolve Sharp and ffmpeg through these
+# links; see findPackageDir in sst.config.ts.
+#
+# To regenerate bun.lock without silently upgrading every transitive
+# dependency, pin versions first rather than deleting the lockfile.
+linker = "isolated"

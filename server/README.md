@@ -3,7 +3,7 @@
 The server is a Bun + Hono API using Drizzle, Postgres, Better Auth, and Zod.
 
 ```sh
-bun install
+bun install   # from the repository root
 bun run dev
 ```
 

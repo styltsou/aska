@@ -22,7 +22,7 @@
     "typescript-language-server": {
       "initialization_options": {
         "tsserver": {
-          "path": "./client/node_modules/typescript/lib/tsserver.js"
+          "path": "./node_modules/typescript/lib/tsserver.js"
         }
       }
     }

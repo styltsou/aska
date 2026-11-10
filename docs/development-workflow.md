@@ -1,8 +1,11 @@
 # Development Workflow
 
-Each package uses Bun for dependency installation and scripts. CI runs the
-quality commands for the client, server, image pipeline, and URL-resource workers on pull requests and
-pushes to `main`. It also verifies the client production build and checks that
+The repository is a Bun workspace: one `bun install` at the root installs every
+package. CI runs the quality commands for the client, server, image pipeline,
+URL-resource workers, and extension on pull requests and pushes to `main`, but
+only for packages whose files changed (plus packages that depend on a changed
+shared service). Changes to the root `package.json`, `bun.lock`, `bunfig.toml`,
+or the workflow itself run every job. It also verifies the client production build and checks that
 the server schema does not generate an uncommitted migration.
 
 ## Pre-commit Formatting

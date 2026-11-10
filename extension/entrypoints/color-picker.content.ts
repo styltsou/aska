@@ -12,7 +12,7 @@ import {
   type PendingColor,
 } from "../lib/color-picker";
 
-import "./color-picker.css";
+import "../assets/color-picker.css";
 
 interface CaptureReply {
   ok: boolean;

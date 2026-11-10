@@ -36,6 +36,55 @@ export default $config({
 
     const { TASK_DLQ_RECEIVE_LIMIT, TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS } =
       await import("./services/image-shared/src/task-timing");
+    const { existsSync, realpathSync } = await import("node:fs");
+    const path = await import("node:path");
+    const repoRoot = process.cwd();
+    // The repo is a Bun workspace with isolated installs: each package's
+    // node_modules links into a shared store (node_modules/.bun), and a
+    // package's own dependencies sit next to it in that store. Find a
+    // dependency the way Node does at runtime (walk up from `fromDir`, skipping
+    // node_modules directories, then follow the link to the real directory).
+    // Falls back to a root path when it is not installed, e.g. Sharp's Linux
+    // binaries on a Windows machine.
+    const findPackageDir = (name: string, fromDir: string) => {
+      for (
+        let dir = path.resolve(repoRoot, fromDir);
+        ;
+        dir = path.dirname(dir)
+      ) {
+        const candidate = path.join(dir, "node_modules", name);
+        if (
+          path.basename(dir) !== "node_modules" &&
+          existsSync(path.join(candidate, "package.json"))
+        ) {
+          return path
+            .relative(repoRoot, realpathSync(candidate))
+            .replaceAll("\\", "/");
+        }
+        if (dir === repoRoot || path.dirname(dir) === dir) {
+          return `node_modules/${name}`;
+        }
+      }
+    };
+    // Sharp is native code: it stays external to esbuild, and its Linux
+    // runtime packages are copied into the Lambda as Node would find them
+    // from the package that depends on it.
+    const sharpRuntimeFiles = (packageDir: string) => {
+      const sharpDir = findPackageDir("sharp", packageDir);
+      return [
+        { from: sharpDir, to: "node_modules/sharp" },
+        ...[
+          "@img/colour",
+          "detect-libc",
+          "semver",
+          "@img/sharp-linux-x64",
+          "@img/sharp-libvips-linux-x64",
+        ].map((name) => ({
+          from: findPackageDir(name, sharpDir),
+          to: `node_modules/${name}`,
+        })),
+      ];
+    };
     const clientOrigins = {
       // Personal hybrid development: local Vite -> Live API Lambda -> AWS.
       hybrid: ["http://localhost:5173"],
@@ -280,26 +329,7 @@ export default $config({
         // Linux package rather than an esbuild bundle.
         esbuild: { external: ["sharp"] },
       },
-      copyFiles: [
-        { from: "server/node_modules/sharp", to: "node_modules/sharp" },
-        {
-          from: "server/node_modules/@img/colour",
-          to: "node_modules/@img/colour",
-        },
-        {
-          from: "server/node_modules/detect-libc",
-          to: "node_modules/detect-libc",
-        },
-        { from: "server/node_modules/semver", to: "node_modules/semver" },
-        {
-          from: "server/node_modules/@img/sharp-linux-x64",
-          to: "node_modules/@img/sharp-linux-x64",
-        },
-        {
-          from: "server/node_modules/@img/sharp-libvips-linux-x64",
-          to: "node_modules/@img/sharp-libvips-linux-x64",
-        },
-      ],
+      copyFiles: sharpRuntimeFiles("server"),
       environment: {
         NODE_OPTIONS: "--enable-source-maps",
         NODE_ENV: stableCloudDomains ? "production" : "development",
@@ -417,32 +447,8 @@ export default $config({
         },
       },
     });
-    const imageWorkerFiles = (service: "image-variants" | "image-palette") => [
-      {
-        from: `services/${service}/node_modules/sharp`,
-        to: "node_modules/sharp",
-      },
-      {
-        from: `services/${service}/node_modules/@img/colour`,
-        to: "node_modules/@img/colour",
-      },
-      {
-        from: `services/${service}/node_modules/detect-libc`,
-        to: "node_modules/detect-libc",
-      },
-      {
-        from: `services/${service}/node_modules/semver`,
-        to: "node_modules/semver",
-      },
-      {
-        from: `services/${service}/node_modules/@img/sharp-linux-x64`,
-        to: "node_modules/@img/sharp-linux-x64",
-      },
-      {
-        from: `services/${service}/node_modules/@img/sharp-libvips-linux-x64`,
-        to: "node_modules/@img/sharp-libvips-linux-x64",
-      },
-    ];
+    const imageWorkerFiles = (service: "image-variants" | "image-palette") =>
+      sharpRuntimeFiles(`services/${service}`);
     const imageWorkerEnvironment = {
       NODE_OPTIONS: "--enable-source-maps",
       NODE_ENV: stableCloudDomains ? "production" : "development",
@@ -543,15 +549,9 @@ export default $config({
         link: [assets],
         nodejs: { sourcemap: true, esbuild: { external: ["sharp"] } },
         copyFiles: [
-          ...imageWorkerFiles("image-variants").map((item) => ({
-            ...item,
-            from: item.from.replace(
-              "services/image-variants",
-              "services/video-processor",
-            ),
-          })),
+          ...sharpRuntimeFiles("services/video-processor"),
           {
-            from: "services/video-processor/node_modules/ffmpeg-static/ffmpeg",
+            from: `${findPackageDir("ffmpeg-static", "services/video-processor")}/ffmpeg`,
             to: "bin/ffmpeg",
           },
         ],

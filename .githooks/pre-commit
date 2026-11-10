@@ -2,57 +2,28 @@
 
 set -eu
 
+# Format staged source files with each package's own oxfmt install. Each
+# package is formatted from its own directory because the ignore patterns in
+# .oxfmtrc.json (e.g. src/routeTree.gen.ts) are package-relative.
+root="$(git rev-parse --show-toplevel)"
+
 staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
 
-client_files="$(printf '%s\n' "$staged_files" | grep -E '^client/.*\.(css|js|jsx|json|ts|tsx)$' || true)"
-server_files="$(printf '%s\n' "$staged_files" | grep -E '^server/.*\.(json|ts)$' || true)"
-variant_files="$(printf '%s\n' "$staged_files" | grep -E '^services/image-variants/.*\.(json|ts)$' || true)"
-palette_files="$(printf '%s\n' "$staged_files" | grep -E '^services/image-palette/.*\.(json|ts)$' || true)"
-shared_files="$(printf '%s\n' "$staged_files" | grep -E '^services/image-shared/.*\.(json|ts)$' || true)"
-url_shared_files="$(printf '%s\n' "$staged_files" | grep -E '^services/url-unfurl-shared/.*\.(json|ts)$' || true)"
-url_resolution_files="$(printf '%s\n' "$staged_files" | grep -E '^services/url-resolution/.*\.(json|ts)$' || true)"
-resource_media_files="$(printf '%s\n' "$staged_files" | grep -E '^services/resource-media/.*\.(json|ts)$' || true)"
-client_relative_files="$(printf '%s\n' "$client_files" | sed 's#^client/##')"
-server_relative_files="$(printf '%s\n' "$server_files" | sed 's#^server/##')"
-variant_relative_files="$(printf '%s\n' "$variant_files" | sed 's#^services/image-variants/##')"
-palette_relative_files="$(printf '%s\n' "$palette_files" | sed 's#^services/image-palette/##')"
-shared_relative_files="$(printf '%s\n' "$shared_files" | sed 's#^services/image-shared/##')"
-url_shared_relative_files="$(printf '%s\n' "$url_shared_files" | sed 's#^services/url-unfurl-shared/##')"
-url_resolution_relative_files="$(printf '%s\n' "$url_resolution_files" | sed 's#^services/url-resolution/##')"
-resource_media_relative_files="$(printf '%s\n' "$resource_media_files" | sed 's#^services/resource-media/##')"
+format_package() {
+  package="$1"
+  pattern="$2"
+  files="$(printf '%s\n' "$staged_files" | grep -E "^$package/.*\.($pattern)$" || true)"
+  [ -n "$files" ] || return 0
 
-if [ -n "$client_files" ]; then
-  (cd client && bun ./node_modules/oxfmt/bin/oxfmt --write $client_relative_files)
-fi
+  relative_files="$(printf '%s\n' "$files" | sed "s#^$package/##")"
+  # shellcheck disable=SC2086 # Word splitting is intended: one path per word.
+  (cd "$root/$package" && bun ./node_modules/oxfmt/bin/oxfmt --write $relative_files)
+  # shellcheck disable=SC2086
+  (cd "$root" && git add $files)
+}
 
-if [ -n "$server_files" ]; then
-  (cd server && bun ./node_modules/oxfmt/bin/oxfmt --write $server_relative_files)
-fi
-
-if [ -n "$variant_files" ]; then
-  (cd services/image-variants && bun ./node_modules/oxfmt/bin/oxfmt --write $variant_relative_files)
-fi
-
-if [ -n "$palette_files" ]; then
-  (cd services/image-palette && bun ./node_modules/oxfmt/bin/oxfmt --write $palette_relative_files)
-fi
-
-if [ -n "$shared_files" ]; then
-  (cd services/image-shared && bun ./node_modules/oxfmt/bin/oxfmt --write $shared_relative_files)
-fi
-
-if [ -n "$url_shared_files" ]; then
-  (cd services/url-unfurl-shared && bun ./node_modules/oxfmt/bin/oxfmt --write $url_shared_relative_files)
-fi
-
-if [ -n "$url_resolution_files" ]; then
-  (cd services/url-resolution && bun ./node_modules/oxfmt/bin/oxfmt --write $url_resolution_relative_files)
-fi
-
-if [ -n "$resource_media_files" ]; then
-  (cd services/resource-media && bun ./node_modules/oxfmt/bin/oxfmt --write $resource_media_relative_files)
-fi
-
-if [ -n "$client_files$server_files$variant_files$palette_files$shared_files$url_shared_files$url_resolution_files$resource_media_files" ]; then
-  git add $client_files $server_files $variant_files $palette_files $shared_files $url_shared_files $url_resolution_files $resource_media_files
-fi
+format_package client 'css|js|jsx|json|ts|tsx'
+format_package server 'json|ts'
+for service in image-variants image-palette image-shared url-unfurl-shared url-resolution video-processor; do
+  format_package "services/$service" 'json|ts'
+done
