@@ -16,7 +16,8 @@
     "agent:eval": "bun run src/scripts/agent-eval.ts",
     "test:agent": "bun test --path-ignore-patterns=\"**/*.integration.test.ts\" src/agent",
     "test:watch": "vitest",
-    "lambda:typecheck": "tsc --noEmit -p tsconfig.lambda.json"
+    "lambda:typecheck": "tsc --noEmit -p tsconfig.lambda.json",
+    "db:check": "drizzle-kit generate && git diff --exit-code -- drizzle"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1081.0",

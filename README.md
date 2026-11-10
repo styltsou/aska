@@ -96,9 +96,12 @@ cd apps/server && bun run dev
 For normal end-to-end development, use real AWS S3 and SQS through SST instead
 of the isolated package commands; see [SST deployment](./docs/sst-deployment.md).
 
-Run the full package-local quality suite with `bun run lint`,
-`bun run typecheck`, `bun run format`, and `bun run test`. The same commands run
-in CI, which only runs the checks for packages a change touches. Running
+Run every package's lint, typecheck, format and tests from the repository root
+with `bun run check`, which uses Turborepo and replays cached results for
+packages that haven't changed. Inside a package, `bun run lint`,
+`bun run typecheck`, `bun run format` and `bun run test` run them for that
+package alone. CI runs the same checks through Turbo, only for the packages a
+change touches and the packages that depend on them. Running
 `bun install` at the repository root installs every workspace package and the tracked
 pre-commit hook, which formats staged source files with Oxfmt.
 

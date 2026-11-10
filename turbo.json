@@ -1,0 +1,43 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  // Every package reads these, so a change to any of them reruns everything.
+  // sst.config.ts and sst-env.d.ts feed the server's Lambda typecheck and the
+  // deploy; the workflow file decides what CI runs.
+  "globalDependencies": [
+    "bunfig.toml",
+    "sst.config.ts",
+    "sst-env.d.ts",
+    ".github/workflows/ci.yml"
+  ],
+  // Tests read DATABASE_URL and the other CI variables directly.
+  "envMode": "loose",
+  "tasks": {
+    // Shared packages ship TypeScript source with no build step, so nothing
+    // runs before a dependent's typecheck or tests. This empty task still makes
+    // a dependency's source part of the dependent's cache key: a change in
+    // packages/url-unfurl-shared reruns the server's checks.
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "lint": {},
+    "format": {},
+    "typecheck": {
+      "dependsOn": ["transit"]
+    },
+    "lambda:typecheck": {
+      "dependsOn": ["transit"]
+    },
+    "test": {
+      "dependsOn": ["transit"]
+    },
+    "build": {
+      "dependsOn": ["transit"],
+      "outputs": ["dist/**", ".output/**"]
+    },
+    // Compares generated migrations with the committed ones through git, so
+    // its result depends on more than the package's files.
+    "db:check": {
+      "cache": false
+    }
+  }
+}

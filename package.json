@@ -1,7 +1,10 @@
 {
   "name": "mnemee",
   "private": true,
+  "packageManager": "bun@1.4.4",
   "scripts": {
+    "check": "turbo run lint typecheck lambda:typecheck format test",
+    "build": "turbo run build",
     "prepare": "git config core.hooksPath .githooks",
     "sst": "eval \"$(aws configure export-credentials --profile default --format env)\" && sst",
     "deploy": "bun run sst -- deploy",
@@ -17,7 +20,8 @@
   ],
   "devDependencies": {
     "concurrently": "^10.0.4",
-    "sst": "^4.17.1"
+    "sst": "^4.17.1",
+    "turbo": "^2.11.10"
   },
   "patchedDependencies": {
     "@tiptap/extension-drag-handle@3.32.2": "apps/web/patches/@tiptap%2Fextension-drag-handle@3.32.2.patch"

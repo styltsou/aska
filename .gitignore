@@ -11,3 +11,6 @@ blog-drafts/
 
 # Local test caches
 apps/web/.tmp-test/
+
+# Turborepo cache
+.turbo/
