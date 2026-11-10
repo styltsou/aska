@@ -1,0 +1,12 @@
+{
+  "extends": ["./base.json"],
+  "plugins": ["typescript", "unicorn", "oxc", "import", "node", "vitest"],
+  "rules": {
+    // Type parameters on every vi.fn() add noise without catching bugs.
+    "vitest/require-mock-type-parameters": "off",
+    "vitest/no-conditional-expect": "warn",
+    // Vitest accepts a failure message as expect()'s second argument.
+    "vitest/valid-expect": ["error", { "maxArgs": 2 }],
+    "vitest/require-to-throw-message": "off"
+  }
+}

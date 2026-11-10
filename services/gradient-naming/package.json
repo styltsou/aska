@@ -15,6 +15,7 @@
     "ai": "^7.0.0"
   },
   "devDependencies": {
+    "@mnemee/oxlint-config": "workspace:*",
     "@mnemee/tsconfig": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",

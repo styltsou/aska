@@ -13,6 +13,7 @@
     "@sentry/aws-serverless": "^10.69.0"
   },
   "devDependencies": {
+    "@mnemee/oxlint-config": "workspace:*",
     "@mnemee/tsconfig": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",

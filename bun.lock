@@ -20,10 +20,13 @@
         "react-dom": "^19.0.0",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
         "@tailwindcss/vite": "^4.3.2",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
         "@wxt-dev/module-react": "^1.0.0",
+        "oxfmt": "catalog:",
+        "oxlint": "catalog:",
         "tailwindcss": "^4.3.2",
         "typescript": "catalog:",
         "wxt": "^0.20.0",
@@ -60,6 +63,7 @@
         "zod": "^4.4.3",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
         "@types/aws-lambda": "catalog:",
         "@types/node": "catalog:",
         "dotenv": "^17.4.2",
@@ -141,6 +145,7 @@
         "zustand": "^5.0.14",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
         "@sentry/vite-plugin": "^5.4.0",
         "@types/hast": "^3.0.4",
         "@types/node": "catalog:",
@@ -169,6 +174,8 @@
         "sharp": "^0.35.3",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
+        "oxlint": "catalog:",
         "wrangler": "^4.112.0",
       },
     },
@@ -178,6 +185,7 @@
         "@sentry/aws-serverless": "^10.69.0",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
         "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "catalog:",
         "@types/node": "catalog:",
@@ -185,6 +193,9 @@
         "oxlint": "catalog:",
         "typescript": "catalog:",
       },
+    },
+    "packages/oxlint-config": {
+      "name": "@mnemee/oxlint-config",
     },
     "packages/tsconfig": {
       "name": "@mnemee/tsconfig",
@@ -195,6 +206,7 @@
         "ipaddr.js": "^2.2.0",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
         "@mnemee/tsconfig": "workspace:*",
         "@types/node": "catalog:",
         "oxfmt": "catalog:",
@@ -212,6 +224,7 @@
         "ai": "^7.0.0",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
         "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "catalog:",
         "@types/node": "catalog:",
@@ -230,6 +243,7 @@
         "sharp": "^0.35.3",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
         "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "catalog:",
         "@types/node": "catalog:",
@@ -249,6 +263,7 @@
         "sharp": "^0.35.3",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
         "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "catalog:",
         "@types/node": "catalog:",
@@ -267,6 +282,7 @@
         "htmlparser2": "^10.0.0",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
         "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "catalog:",
         "@types/node": "catalog:",
@@ -287,6 +303,7 @@
         "sharp": "^0.35.3",
       },
       "devDependencies": {
+        "@mnemee/oxlint-config": "workspace:*",
         "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "catalog:",
         "@types/node": "catalog:",
@@ -771,6 +788,8 @@
     "@mermaid-js/parser": ["@mermaid-js/parser@2.0.0", "", { "dependencies": { "@chevrotain/types": "~11.1.2" } }, "sha512-K8BeapFUfrfxbRAUQAG5oBOCwo1+bNWzaVnPxTCutkfrTBn6T/j91FIhqxWJ32SUeQ9T3iy1zcmPZ5ROZEvDrg=="],
 
     "@mnemee/image-shared": ["@mnemee/image-shared@workspace:packages/image-shared"],
+
+    "@mnemee/oxlint-config": ["@mnemee/oxlint-config@workspace:packages/oxlint-config"],
 
     "@mnemee/tsconfig": ["@mnemee/tsconfig@workspace:packages/tsconfig"],
 

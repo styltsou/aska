@@ -10,7 +10,8 @@
     "build": "astro build",
     "deploy": "bun run build && wrangler deploy",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "lint": "oxlint ."
   },
   "dependencies": {
     "@astrojs/react": "^6.0.1",
@@ -24,6 +25,8 @@
     "sharp": "^0.35.3"
   },
   "devDependencies": {
+    "@mnemee/oxlint-config": "workspace:*",
+    "oxlint": "catalog:",
     "wrangler": "^4.112.0"
   }
 }

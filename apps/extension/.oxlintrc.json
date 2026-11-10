@@ -1,0 +1,4 @@
+{
+  "extends": ["../../packages/oxlint-config/react.json"],
+  "ignorePatterns": [".output/**", ".wxt/**"]
+}
