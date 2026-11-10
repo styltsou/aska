@@ -2,6 +2,8 @@
   "name": "gradient-naming",
   "private": true,
   "scripts": {
+    "lint": "oxlint .",
+    "format": "oxfmt --check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "evaluate": "bun src/evaluate.ts"
@@ -9,11 +11,14 @@
   "dependencies": {
     "@ai-sdk/google": "^3.0.0",
     "@ai-sdk/openai": "^3.0.0",
+    "@mnemee/image-shared": "workspace:*",
     "ai": "^7.0.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.152",
     "@types/node": "^26.1.1",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }

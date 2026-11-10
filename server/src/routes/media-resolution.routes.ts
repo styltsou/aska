@@ -15,7 +15,7 @@ import {
 import {
   SafeFetchError,
   safeInspectContentType,
-} from "../../../services/url-unfurl-shared/src/safe-fetch";
+} from "@mnemee/url-unfurl-shared/safe-fetch";
 
 const ResolveMediaUrlSchema = z.object({ url: z.url() });
 

@@ -1,6 +1,6 @@
 import { Parser } from "htmlparser2";
 
-import { safeFetch } from "../../../services/url-unfurl-shared/src/safe-fetch";
+import { safeFetch } from "@mnemee/url-unfurl-shared/safe-fetch";
 
 const MAX_HTML_BYTES = 1024 * 1024;
 const PHOTO_PATH = /^\/photos\/[^/]+\/?$/;

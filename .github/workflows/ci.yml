@@ -21,6 +21,7 @@ jobs:
       url-unfurl-shared: ${{ steps.filter.outputs.url-unfurl-shared }}
       url-resolution: ${{ steps.filter.outputs.url-resolution }}
       video-processor: ${{ steps.filter.outputs.video-processor }}
+      gradient-naming: ${{ steps.filter.outputs.gradient-naming }}
       extension: ${{ steps.filter.outputs.extension }}
       website: ${{ steps.filter.outputs.website }}
       infra: ${{ steps.filter.outputs.infra }}
@@ -51,6 +52,8 @@ jobs:
               - 'services/url-resolution/**'
             video-processor:
               - 'services/video-processor/**'
+            gradient-naming:
+              - 'services/gradient-naming/**'
             extension:
               - 'extension/**'
             website:
@@ -102,9 +105,12 @@ jobs:
           - name: Server
             directory: server
             command: ""
-            # Server also typechecks the Lambda code in the shared service
-            # packages and reads the SST config.
+            # Server depends on both shared packages and reads the SST config.
             changed: ${{ needs.changes.outputs.server == 'true' || needs.changes.outputs.infra == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
+          - name: Image shared
+            directory: services/image-shared
+            command: bun run lint && bun run typecheck && bun run format
+            changed: ${{ needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Image variants
             directory: services/image-variants
             command: bun run lint && bun run typecheck && bun run format && bun run test
@@ -125,6 +131,10 @@ jobs:
             directory: services/video-processor
             command: bun run lint && bun run typecheck && bun run format && bun run test
             changed: ${{ needs.changes.outputs.video-processor == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
+          - name: Gradient naming
+            directory: services/gradient-naming
+            command: bun run lint && bun run typecheck && bun run format && bun run test
+            changed: ${{ needs.changes.outputs.gradient-naming == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
           - name: Extension
             directory: extension
             command: bun run build

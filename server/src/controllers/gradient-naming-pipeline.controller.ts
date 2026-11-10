@@ -11,7 +11,7 @@ import {
 import {
   parseGradientNamingJob,
   type GradientNamingFailure,
-} from "../../../services/gradient-naming/src/job";
+} from "@mnemee/image-shared/gradient-naming-job";
 
 function readJob(value: unknown) {
   try {

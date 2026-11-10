@@ -1,6 +1,6 @@
 import type { S3Event } from "aws-lambda";
-import { initializeSentry } from "../../image-shared/src/observability";
-import { createTaskHandler } from "../../image-shared/src/task-handler";
+import { initializeSentry } from "@mnemee/image-shared/observability";
+import { createTaskHandler } from "@mnemee/image-shared/task-handler";
 import {
   processExistingVideoStoryboard,
   processRemoteVideo,

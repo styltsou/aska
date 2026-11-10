@@ -8,7 +8,7 @@ import type { IObjectStorageService } from "@/services/object-storage.service";
 import {
   isYouTubeVideoUrl,
   YOUTUBE_RESOLVER_KEY,
-} from "../../../../services/url-unfurl-shared/src/youtube-url";
+} from "@mnemee/url-unfurl-shared/youtube-url";
 
 export type LinkProjectionRow = {
   assetId: number;

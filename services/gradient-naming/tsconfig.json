@@ -7,5 +7,5 @@
     "skipLibCheck": true,
     "types": ["node", "aws-lambda"]
   },
-  "include": ["src/**/*.ts", "../image-shared/src/pipeline-client.ts"]
+  "include": ["src/**/*.ts"]
 }

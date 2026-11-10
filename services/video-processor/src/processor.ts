@@ -16,11 +16,11 @@ import {
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
 
-import { callPipeline } from "../../image-shared/src/pipeline-client";
+import { callPipeline } from "@mnemee/image-shared/pipeline-client";
 import {
   safeFetchToFile,
   SafeFetchError,
-} from "../../url-unfurl-shared/src/safe-fetch";
+} from "@mnemee/url-unfurl-shared/safe-fetch";
 
 const run = promisify(execFile);
 const s3 = new S3Client({});

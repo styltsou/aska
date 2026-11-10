@@ -1,8 +1,8 @@
-import { initializeSentry } from "../../image-shared/src/observability";
-import { callPipeline } from "../../image-shared/src/pipeline-client";
-import { createTaskHandler } from "../../image-shared/src/task-handler";
-import { parseUrlResolutionJob } from "../../url-unfurl-shared/src/resolution-job";
-import { SafeFetchError } from "../../url-unfurl-shared/src/safe-fetch";
+import { initializeSentry } from "@mnemee/image-shared/observability";
+import { callPipeline } from "@mnemee/image-shared/pipeline-client";
+import { createTaskHandler } from "@mnemee/image-shared/task-handler";
+import { parseUrlResolutionJob } from "@mnemee/url-unfurl-shared/resolution-job";
+import { SafeFetchError } from "@mnemee/url-unfurl-shared/safe-fetch";
 import { GenericHtmlResolver } from "./generic-resolver";
 import { resolveWithRegistry } from "./types";
 import { YouTubeDataApiResolver } from "./youtube-resolver";

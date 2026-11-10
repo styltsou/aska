@@ -7,9 +7,5 @@
     "skipLibCheck": true,
     "types": ["node", "aws-lambda"]
   },
-  "include": [
-    "src/**/*.ts",
-    "../url-unfurl-shared/src/**/*.ts",
-    "../image-shared/src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

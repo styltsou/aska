@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, count, eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS } from "../../../../services/image-shared/src/task-timing";
+import { TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS } from "@mnemee/image-shared/task-timing";
 
 import { db } from "@/db";
 import {

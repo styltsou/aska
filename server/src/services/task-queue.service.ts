@@ -1,8 +1,8 @@
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 import { Resource } from "sst";
-import { resourceMediaRenditionJob } from "../../../services/image-shared/src/variant-job";
-import { urlResolutionJob } from "../../../services/url-unfurl-shared/src/resolution-job";
-import type { GradientNamingJob } from "../../../services/gradient-naming/src/job";
+import { resourceMediaRenditionJob } from "@mnemee/image-shared/variant-job";
+import { urlResolutionJob } from "@mnemee/url-unfurl-shared/resolution-job";
+import type { GradientNamingJob } from "@mnemee/image-shared/gradient-naming-job";
 
 import { env } from "@/config";
 

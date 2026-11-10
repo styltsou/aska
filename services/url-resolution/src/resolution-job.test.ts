@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseUrlResolutionJob,
   urlResolutionJob,
-} from "../../url-unfurl-shared/src/resolution-job";
+} from "@mnemee/url-unfurl-shared/resolution-job";
 
 describe("URL resolution queue contract", () => {
   it("round-trips a versioned command", () => {

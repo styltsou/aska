@@ -1,6 +1,14 @@
 {
-  "name": "image-shared",
+  "name": "@mnemee/image-shared",
   "private": true,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format": "oxfmt --check",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@sentry/aws-serverless": "^10.69.0"
   },

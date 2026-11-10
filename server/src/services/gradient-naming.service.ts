@@ -17,7 +17,7 @@ import { env } from "@/config";
 import type {
   GradientNamingFailure,
   GradientNamingJob,
-} from "../../../services/gradient-naming/src/job";
+} from "@mnemee/image-shared/gradient-naming-job";
 
 const queue = new TaskQueueService();
 

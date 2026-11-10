@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseResourceMediaRenditionJob,
   resourceMediaRenditionJob,
-} from "../../image-shared/src/variant-job";
+} from "@mnemee/image-shared/variant-job";
 
 describe("image variants queue contract", () => {
   it("round-trips a resource media rendition command", () => {

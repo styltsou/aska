@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { safeFetchMock } = vi.hoisted(() => ({ safeFetchMock: vi.fn() }));
 
-vi.mock("../../url-unfurl-shared/src/safe-fetch", () => ({
+vi.mock("@mnemee/url-unfurl-shared/safe-fetch", () => ({
   safeFetch: safeFetchMock,
 }));
 

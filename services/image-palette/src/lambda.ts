@@ -1,11 +1,11 @@
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
-import { initializeSentry, log } from "../../image-shared/src/observability";
-import { sendCallback } from "../../image-shared/src/pipeline-callback";
+import { initializeSentry, log } from "@mnemee/image-shared/observability";
+import { sendCallback } from "@mnemee/image-shared/pipeline-callback";
 import {
   createSqsHandler,
   type SourceImage,
-} from "../../image-shared/src/sqs-handler";
+} from "@mnemee/image-shared/sqs-handler";
 import { processImagePalette } from "./processor";
 
 initializeSentry("image-palette");

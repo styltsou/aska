@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { google } from "@ai-sdk/google";
 import { openai } from "@ai-sdk/openai";
-import type { GradientNamingFailure } from "./job";
+import type { GradientNamingFailure } from "@mnemee/image-shared/gradient-naming-job";
 
 export type NameInput = {
   type: "linear" | "radial";
