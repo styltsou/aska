@@ -8,11 +8,11 @@ set -eu
 root="$(git rev-parse --show-toplevel)"
 
 staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
+[ -n "$staged_files" ] || exit 0
 
 format_package() {
   package="$1"
-  pattern="$2"
-  files="$(printf '%s\n' "$staged_files" | grep -E "^$package/.*\.($pattern)$" || true)"
+  files="$(printf '%s\n' "$staged_files" | grep -E "^$package/.*\.(css|js|jsx|mjs|json|jsonc|ts|tsx)$" || true)"
   [ -n "$files" ] || return 0
 
   relative_files="$(printf '%s\n' "$files" | sed "s#^$package/##")"
@@ -22,11 +22,12 @@ format_package() {
   (cd "$root" && git add $files)
 }
 
-format_package apps/web 'css|js|jsx|json|ts|tsx'
-format_package apps/server 'json|ts'
-for service in gradient-naming image-variants image-palette url-resolution video-processor; do
-  format_package "services/$service" 'json|ts'
-done
-for package in image-shared url-unfurl-shared; do
-  format_package "packages/$package" 'json|ts'
+# Every workspace package with a format script, so new packages are covered
+# without editing this hook.
+for manifest in "$root"/apps/*/package.json "$root"/services/*/package.json "$root"/packages/*/package.json; do
+  [ -f "$manifest" ] || continue
+  grep -q '"format":' "$manifest" || continue
+  package_dir="$(dirname "$manifest")"
+  [ -f "$package_dir/node_modules/oxfmt/bin/oxfmt" ] || continue
+  format_package "${package_dir#"$root"/}"
 done

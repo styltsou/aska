@@ -9,13 +9,13 @@
     "stylesheet": "./apps/web/src/index.css"
   },
   "ignorePatterns": [
-    "node_modules/**",
-    "coverage/**",
-    "drizzle/**",
-    "src/routeTree.gen.ts",
-    "src/openapi.json",
-    "AGENTS.md",
-    "worker-configuration.d.ts",
-    ".vscode/**"
+    "**/node_modules/**",
+    "**/coverage/**",
+    "**/drizzle/**",
+    "**/src/routeTree.gen.ts",
+    "**/src/openapi.json",
+    "**/AGENTS.md",
+    "**/worker-configuration.d.ts",
+    "**/.vscode/**"
   ]
 }
