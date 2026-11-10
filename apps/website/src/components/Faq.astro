@@ -83,7 +83,8 @@ const faqs = [
 
 	/*
 	 * Items are rounded tiles that echo the 12px crossings. Motion follows Emil Kowalski's rules:
-	 * a strong ease-out, under 300ms, a quicker close than open, and only transform/opacity on the content.
+	 * one strong custom ease-out at 240ms for open and close alike — the accordion is a state toggle
+	 * the user drives in both directions, so both halves of the motion share curve and timing.
 	 */
 	.faq__list { --ease-out: cubic-bezier(.23, 1, .32, 1); --tile: color-mix(in oklch, var(--ink) 3.5%, var(--faq-bg)); display: grid; }
 	/*
@@ -104,10 +105,10 @@ const faqs = [
 	.faq__item[open] .faq__icon svg { rotate: -180deg; }
 	summary:active .faq__icon { transform: scale(.92); }
 
-	.faq__item::details-content { block-size: 0; overflow: clip; transition: block-size 180ms var(--ease-out), content-visibility 180ms allow-discrete; }
-	.faq__item[open]::details-content { block-size: auto; transition-duration: 260ms; }
-	.faq__answer { padding: 0 clamp(16px, 2vw, 24px) 24px; opacity: 0; translate: 0 -6px; transition: opacity 120ms ease, translate 180ms var(--ease-out); }
-	.faq__item[open] .faq__answer { opacity: 1; translate: 0 0; transition: opacity 220ms ease 40ms, translate 260ms var(--ease-out) 40ms; }
+	.faq__item::details-content { block-size: 0; overflow: clip; transition: block-size 240ms var(--ease-out), content-visibility 240ms allow-discrete; }
+	.faq__item[open]::details-content { block-size: auto; }
+	.faq__answer { padding: 0 clamp(16px, 2vw, 24px) 24px; opacity: 0; translate: 0 -6px; transition: opacity 240ms var(--ease-out), translate 240ms var(--ease-out); }
+	.faq__item[open] .faq__answer { opacity: 1; translate: 0 0; }
 	.faq__answer p { max-width: 560px; margin: 0; color: var(--ink-muted); font-size: 15px; line-height: 1.65; }
 
 	:global(html[data-theme='dark']) .faq__list { --tile: color-mix(in oklch, var(--ink) 5%, var(--faq-bg)); }
@@ -136,7 +137,7 @@ const faqs = [
 	/* Reduced motion keeps the fades and colour changes, drops height, lift and rotation. */
 	@media (prefers-reduced-motion: reduce) {
 		.faq__item::details-content, .faq__item[open]::details-content { transition: none; }
-		.faq__answer, .faq__item[open] .faq__answer { translate: none; transition: opacity 160ms ease; }
+		.faq__answer, .faq__item[open] .faq__answer { translate: none; transition: opacity 240ms var(--ease-out); }
 		.faq__icon, .faq__icon svg { transition: color 160ms ease; }
 		summary:active .faq__icon { transform: none; }
 	}
