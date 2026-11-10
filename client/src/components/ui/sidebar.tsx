@@ -229,38 +229,35 @@ function Sidebar({
 
   return (
     <div
-      className="group peer hidden shrink-0 text-sidebar-foreground md:block"
+      className={cn(
+        "group peer sticky top-0 z-10 hidden h-svh w-(--sidebar-width) shrink-0 text-sidebar-foreground transition-[width] duration-(--sidebar-duration) ease-(--sidebar-ease) group-data-[sidebar-resizing]/sidebar-wrapper:transition-none motion-reduce:transition-none md:block",
+        collapsible === "icon" &&
+          state === "collapsed" &&
+          (variant === "sidebar"
+            ? "w-(--sidebar-width-icon)"
+            : "w-[calc(var(--sidebar-width-icon)+1rem)]"),
+        state === "collapsed" &&
+          collapsible === "offcanvas" &&
+          (variant === "sidebar" ? "w-0" : "w-(--app-shell-inset)"),
+      )}
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
     >
-      {/* This is what handles the sidebar gap on desktop */}
-      <div
-        data-slot="sidebar-gap"
-        className={cn(
-          "relative bg-transparent transition-[width] duration-(--sidebar-duration) ease-(--sidebar-ease) group-data-[sidebar-resizing]/sidebar-wrapper:transition-none motion-reduce:transition-none",
-          "w-(--sidebar-width)",
-          "group-data-[collapsible=offcanvas]:w-0",
-          "group-data-[side=right]:rotate-180",
-          variant === "floating" || variant === "inset"
-            ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
-        )}
-      />
       <div
         id={props.id ?? panelId}
         data-slot="sidebar-container"
         data-side={side}
+        aria-hidden={state === "collapsed" && collapsible === "offcanvas"}
+        inert={state === "collapsed" && collapsible === "offcanvas"}
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[width,opacity,transform,translate] duration-(--sidebar-duration) ease-(--sidebar-ease) data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:-translate-x-full data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:translate-x-full motion-reduce:transition-none md:flex",
-          "translate-x-0 opacity-100",
-          "group-data-[sidebar-resizing]/sidebar-wrapper:transition-none",
+          "absolute inset-0 hidden w-full overflow-hidden md:flex",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            ? "p-2"
+            : "group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className,
         )}
         {...props}
@@ -268,14 +265,19 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          className={cn(
+            "flex h-full shrink-0 flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border group-data-[collapsible=icon]:w-full",
+            variant === "floating" || variant === "inset"
+              ? "w-[calc(var(--sidebar-width)-1rem)]"
+              : "w-(--sidebar-width)",
+          )}
         >
           {children}
         </div>
-        {state === "expanded" ? (
-          <SidebarResizeHandle side={side} controls={props.id ?? panelId} />
-        ) : null}
       </div>
+      {state === "expanded" ? (
+        <SidebarResizeHandle side={side} controls={props.id ?? panelId} />
+      ) : null}
     </div>
   );
 }
@@ -431,7 +433,7 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
     <main
       data-slot="sidebar-inset"
       className={cn(
-        "relative flex w-full min-w-0 flex-1 flex-col md:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:rounded-tl-xl",
+        "relative flex w-full min-w-0 flex-1 flex-col md:peer-data-[variant=inset]:rounded-tl-xl",
         className,
       )}
       {...props}

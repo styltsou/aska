@@ -275,7 +275,7 @@ export function AppHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-20 flex h-12 min-w-0 shrink-0 items-center gap-2 bg-sidebar px-2 transition-[height] duration-(--sidebar-duration) ease-(--sidebar-ease) group-has-[[data-slot=sidebar][data-state=collapsed]]/sidebar-wrapper:h-12 motion-reduce:transition-none md:h-14 md:px-0">
+    <header className="sticky top-0 z-20 flex h-12 min-w-0 shrink-0 items-center gap-2 bg-sidebar px-2 md:h-14 md:px-0">
       <SidebarTrigger />
       <AppBreadcrumbs />
       <div className="ml-auto flex shrink-0 items-center gap-2">
