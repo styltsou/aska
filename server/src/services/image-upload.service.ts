@@ -21,7 +21,7 @@ import {
 } from "@/dto/upload.dto";
 import { AppError, ErrorCode } from "@/lib/errors";
 import { first } from "@/lib/query";
-import { isOriginalImageObjectKey } from "../../../services/image-shared/src/pipeline-callback";
+import { isOriginalImageObjectKey } from "@mnemee/image-shared/pipeline-callback";
 import { resolveCollectionTargetBySlug } from "@/services/collection/collection-target-resolver";
 import { resolvePipelineCallbackAction } from "@/services/image-upload/callback-state";
 import { finalizeImageUpload } from "@/services/image-upload/image-upload-finalizer";
@@ -43,7 +43,7 @@ import { type IPexelsService, PexelsService } from "@/services/pexels.service";
 import {
   SafeFetchError,
   safeFetch,
-} from "../../../services/url-unfurl-shared/src/safe-fetch";
+} from "@mnemee/url-unfurl-shared/safe-fetch";
 
 export type ImageUploadStatus = {
   id: number;

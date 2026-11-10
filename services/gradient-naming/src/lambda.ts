@@ -1,6 +1,6 @@
 import type { SQSEvent, SQSBatchResponse } from "aws-lambda";
-import { callPipeline } from "../../image-shared/src/pipeline-client";
-import { parseGradientNamingJob } from "./job";
+import { callPipeline } from "@mnemee/image-shared/pipeline-client";
+import { parseGradientNamingJob } from "@mnemee/image-shared/gradient-naming-job";
 import {
   classifyGradientNamingFailure,
   generateGradientName,

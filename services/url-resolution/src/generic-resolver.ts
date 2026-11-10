@@ -1,4 +1,4 @@
-import { safeFetch } from "../../url-unfurl-shared/src/safe-fetch";
+import { safeFetch } from "@mnemee/url-unfurl-shared/safe-fetch";
 import { parseHtmlMetadata } from "./html-metadata";
 import type { ResolverResult, UrlResolver } from "./types";
 

@@ -4,22 +4,22 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 
-import { initializeSentry, log } from "../../image-shared/src/observability";
-import { callPipeline } from "../../image-shared/src/pipeline-client";
+import { initializeSentry, log } from "@mnemee/image-shared/observability";
+import { callPipeline } from "@mnemee/image-shared/pipeline-client";
 import {
   imageIdentityFromOriginalKey,
   sendCallback,
-} from "../../image-shared/src/pipeline-callback";
+} from "@mnemee/image-shared/pipeline-callback";
 import {
   sourceImagesFromSqsBody,
   type SourceImage,
-} from "../../image-shared/src/sqs-handler";
-import { parseResourceMediaRenditionJob } from "../../image-shared/src/variant-job";
-import { createTaskHandler } from "../../image-shared/src/task-handler";
+} from "@mnemee/image-shared/sqs-handler";
+import { parseResourceMediaRenditionJob } from "@mnemee/image-shared/variant-job";
+import { createTaskHandler } from "@mnemee/image-shared/task-handler";
 import {
   SafeFetchError,
   safeFetch,
-} from "../../url-unfurl-shared/src/safe-fetch";
+} from "@mnemee/url-unfurl-shared/safe-fetch";
 import { processImageVariants } from "./processor";
 
 initializeSentry("image-variants");

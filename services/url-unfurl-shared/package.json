@@ -1,6 +1,9 @@
 {
-  "name": "url-unfurl-shared",
+  "name": "@mnemee/url-unfurl-shared",
   "private": true,
+  "exports": {
+    "./*": "./src/*.ts"
+  },
   "scripts": {
     "lint": "oxlint .",
     "format": "oxfmt --check",

@@ -8,5 +8,5 @@
     "skipLibCheck": true,
     "types": ["node", "aws-lambda"]
   },
-  "include": ["src", "../image-shared/src", "../url-unfurl-shared/src"]
+  "include": ["src"]
 }

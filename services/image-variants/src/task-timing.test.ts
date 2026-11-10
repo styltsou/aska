@@ -6,7 +6,7 @@ import {
   TASK_MAINTENANCE_REQUEUE_AFTER_MS,
   TASK_MAX_PROCESSING_ATTEMPTS,
   TASK_QUEUE_VISIBILITY_TIMEOUT_SECONDS,
-} from "../../image-shared/src/task-timing";
+} from "@mnemee/image-shared/task-timing";
 
 describe("shared worker timing", () => {
   it("lets an SQS retry reclaim work before maintenance dispatches a replacement", () => {

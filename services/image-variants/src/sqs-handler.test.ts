@@ -1,7 +1,7 @@
 import type { SQSEvent } from "aws-lambda";
 import { describe, expect, it, vi } from "vitest";
 
-import { createSqsHandler } from "../../image-shared/src/sqs-handler";
+import { createSqsHandler } from "@mnemee/image-shared/sqs-handler";
 
 const sourceEvent = {
   Records: [

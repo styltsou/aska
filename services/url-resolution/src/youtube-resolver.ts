@@ -1,9 +1,9 @@
-import { safeFetch } from "../../url-unfurl-shared/src/safe-fetch";
+import { safeFetch } from "@mnemee/url-unfurl-shared/safe-fetch";
 import {
   getYouTubeVideoId,
   YOUTUBE_RESOLVER_KEY,
   YOUTUBE_RESOLVER_VERSION,
-} from "../../url-unfurl-shared/src/youtube-url";
+} from "@mnemee/url-unfurl-shared/youtube-url";
 import type { ResolverMedia, ResolverResult, UrlResolver } from "./types";
 
 const DATA_API_ORIGIN = "https://www.googleapis.com";

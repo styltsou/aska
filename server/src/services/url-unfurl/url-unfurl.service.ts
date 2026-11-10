@@ -49,12 +49,12 @@ import {
 import {
   TASK_CLAIM_LEASE_MS,
   TASK_MAINTENANCE_REQUEUE_AFTER_MS,
-} from "../../../../services/image-shared/src/task-timing";
+} from "@mnemee/image-shared/task-timing";
 import {
   isYouTubeVideoUrl,
   YOUTUBE_RESOLVER_KEY,
   YOUTUBE_RESOLVER_VERSION,
-} from "../../../../services/url-unfurl-shared/src/youtube-url";
+} from "@mnemee/url-unfurl-shared/youtube-url";
 
 const RESOLVER_KEY = "generic-html";
 const RESOLVER_VERSION = "1";
