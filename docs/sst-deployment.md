@@ -344,42 +344,37 @@ for hybrid development.
 
 ## Continuous deployment
 
-GitHub Actions runs the client, server, image-pipeline, and URL-resource worker quality checks for
-pull requests and pushes to `main`. After the checks pass for a push to `main`,
-the workflow deploys real Lambda code to the stable SST `dev` stage.
+GitHub Actions runs the quality checks for pull requests and pushes to `main`.
+After the checks pass for a push to `main`, the workflow deploys real Lambda
+code to the stable SST `dev` stage.
 
-### Path-based job filtering
+### What CI runs
 
-The workflow gates both the quality jobs and the deployment on which files
-actually changed (`dorny/paths-filter` in a `changes` job). Only the affected
-parts run, so a client-only change does not rebuild the server or the image
-workers:
+The `Checks` job runs every package's `lint`, `typecheck`, `lambda:typecheck`,
+`format`, `test`, `build` and `db:check` scripts through Turborepo with
+`--affected`. Turbo compares the change with the pull request's base (or the
+previous `main` commit) and runs only the packages that changed, plus every
+package that depends on them through `workspace:*` dependencies. A change to
+`packages/url-unfurl-shared`, for example, also checks the server and the three
+Lambdas that use it. A change to a file listed in `turbo.json`'s
+`globalDependencies` (`sst.config.ts`, `sst-env.d.ts`, `bunfig.toml`, the CI
+workflow) runs every check. Turbo's cache is kept between runs, so unchanged
+tasks are replayed instead of rerun.
 
-| Change                          | Quality jobs run                            | Deploys `dev` |
-| ------------------------------- | ------------------------------------------- | ------------- |
-| `apps/web/**`                     | Client                                      | Yes           |
-| `apps/server/**`                     | Server                                      | Yes           |
-| `services/image-variants/**`    | Image variants                              | Yes           |
-| `services/image-palette/**`     | Image palette                               | Yes           |
-| `packages/image-shared/**`      | Server, variants, palette, and URL resolver | Yes           |
-| `packages/url-unfurl-shared/**` | Server, URL resolver, and image variants    | Yes           |
-| `services/url-resolution/**`    | URL resolver                                | Yes           |
-| SST config / root deps / CI     | Server (plus jobs matching other paths)     | Yes           |
-| Docs / Markdown only            | None                                        | No            |
+Run the same checks locally with `bun run check` (lint, typecheck,
+`lambda:typecheck`, format and test across the repo) or
+`bunx turbo run <task> --filter <package>` for one package.
 
-`packages/image-shared` and `packages/url-unfurl-shared` are dependencies, not
-deployment targets. Their changes re-run every package that follows their
-source imports. A change to the SST config, the root
-`package.json`/`bun.lock`, or `.github/workflows/**`
-forces the Server job (and the deployment), since those are the closest signal
-that the wired-up stack still compiles. `sst.config.ts` changes always deploy
-because SST reconciles the whole stack in one run.
+Deployment is decided separately by path: a push to `main` deploys `dev` when it
+touches `apps/web`, `apps/server`, `services`, `packages`, `scripts`, the SST
+config, the root `package.json`/`bun.lock`/`bunfig.toml`/`turbo.json`, or the
+workflows. Docs-only, extension-only and website-only changes don't deploy; the
+website deploys to Cloudflare on its own.
 
-**When you add a new worker service**, register its directory in two places in
-`.github/workflows/ci.yml`: add a filter entry (and a matching `image-shared`
-dependency if it consumes the shared package) and add its path to the `deploy`
-filter. Forgetting either silently disables that service's checks or its
-deployment.
+**When you add a package**, give it the standard scripts and declare the
+workspace packages it imports as `workspace:*` dependencies; Turbo picks it up
+with no CI change. Add its path to the `deploy` filter in
+`.github/workflows/ci.yml` only if it is deployed by SST.
 
 The deployment job exchanges a GitHub OIDC token for short-lived AWS
 credentials and does not use AWS access keys. Runtime secrets, including the

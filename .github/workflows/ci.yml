@@ -10,64 +10,19 @@ permissions:
 
 jobs:
   changes:
-    name: Detect changed paths
+    name: Detect deploy changes
     runs-on: ubuntu-latest
     outputs:
-      client: ${{ steps.filter.outputs.client }}
-      server: ${{ steps.filter.outputs.server }}
-      image-variants: ${{ steps.filter.outputs.image-variants }}
-      image-palette: ${{ steps.filter.outputs.image-palette }}
-      image-shared: ${{ steps.filter.outputs.image-shared }}
-      url-unfurl-shared: ${{ steps.filter.outputs.url-unfurl-shared }}
-      url-resolution: ${{ steps.filter.outputs.url-resolution }}
-      video-processor: ${{ steps.filter.outputs.video-processor }}
-      gradient-naming: ${{ steps.filter.outputs.gradient-naming }}
-      extension: ${{ steps.filter.outputs.extension }}
-      website: ${{ steps.filter.outputs.website }}
-      infra: ${{ steps.filter.outputs.infra }}
-      workspace: ${{ steps.filter.outputs.workspace }}
       deploy: ${{ steps.filter.outputs.deploy }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           list-files: "none"
           filters: |
-            client:
-              - 'apps/web/**'
-            server:
-              - 'apps/server/**'
-            image-variants:
-              - 'services/image-variants/**'
-            image-palette:
-              - 'services/image-palette/**'
-            image-shared:
-              - 'packages/image-shared/**'
-            url-unfurl-shared:
-              - 'packages/url-unfurl-shared/**'
-            url-resolution:
-              - 'services/url-resolution/**'
-            video-processor:
-              - 'services/video-processor/**'
-            gradient-naming:
-              - 'services/gradient-naming/**'
-            extension:
-              - 'apps/extension/**'
-            website:
-              - 'apps/website/**'
-            infra:
-              - 'sst.config.ts'
-              - 'sst-env.d.ts'
-            # The single workspace install (and this workflow) affects every
-            # package, so changes here run every quality job.
-            workspace:
-              - 'package.json'
-              - 'bun.lock'
-              - 'bunfig.toml'
-              - '.github/workflows/ci.yml'
             # Deploy on a push to main iff something that can affect the running
             # app changed. Docs/MD-only, extension-only and website-only changes
             # are skipped; the website deploys to Cloudflare on its own.
@@ -82,104 +37,42 @@ jobs:
               - 'package.json'
               - 'bun.lock'
               - 'bunfig.toml'
+              - 'turbo.json'
               - '.github/workflows/**'
 
   quality:
-    name: ${{ matrix.name }}
-    needs: changes
+    name: Checks
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aska
       BETTER_AUTH_SECRET: 01234567890123456789012345678901
       BETTER_AUTH_URL: http://localhost:3000
       RESEND_API_KEY: re_test
-    strategy:
-      fail-fast: false
-      matrix:
-        # Filter outputs are the strings 'true'/'false', and a non-empty string
-        # is truthy in expressions, so compare each one explicitly.
-        include:
-          - name: Client
-            directory: apps/web
-            command: bun run lint && bun run typecheck && bun run format && bun run test && bun run build
-            changed: ${{ needs.changes.outputs.client == 'true' || needs.changes.outputs.workspace == 'true' }}
-          - name: Server
-            directory: apps/server
-            command: ""
-            # Server depends on both shared packages and reads the SST config.
-            changed: ${{ needs.changes.outputs.server == 'true' || needs.changes.outputs.infra == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
-          - name: Image shared
-            directory: packages/image-shared
-            command: bun run lint && bun run typecheck && bun run format
-            changed: ${{ needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
-          - name: Image variants
-            directory: services/image-variants
-            command: bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.image-variants == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
-          - name: Image palette
-            directory: services/image-palette
-            command: bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.image-palette == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
-          - name: URL unfurl shared
-            directory: packages/url-unfurl-shared
-            command: bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
-          - name: URL resolution
-            directory: services/url-resolution
-            command: bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.url-resolution == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
-          - name: Video processor
-            directory: services/video-processor
-            command: bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.video-processor == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.url-unfurl-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
-          - name: Gradient naming
-            directory: services/gradient-naming
-            command: bun run lint && bun run typecheck && bun run format && bun run test
-            changed: ${{ needs.changes.outputs.gradient-naming == 'true' || needs.changes.outputs.image-shared == 'true' || needs.changes.outputs.workspace == 'true' }}
-          - name: Extension
-            directory: apps/extension
-            command: bun run build
-            changed: ${{ needs.changes.outputs.extension == 'true' || needs.changes.outputs.workspace == 'true' }}
-          - name: Website
-            directory: apps/website
-            command: bun run build
-            changed: ${{ needs.changes.outputs.website == 'true' || needs.changes.outputs.workspace == 'true' }}
-    defaults:
-      run:
-        working-directory: ${{ matrix.directory }}
+      TURBO_TELEMETRY_DISABLED: 1
+      # Turbo runs only the packages a change touches, plus every package that
+      # depends on them (from the workspace dependencies in package.json). A
+      # change to a file listed in turbo.json's globalDependencies runs all.
+      TURBO_SCM_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
     steps:
-      # A job-level `if` is evaluated before matrix expansion, so guard every
-      # step instead. This leaves unchanged matrix entries as successful no-ops.
-      - if: fromJSON(matrix.changed)
-        uses: actions/checkout@v4
-      - if: fromJSON(matrix.changed)
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.4"
-      - if: fromJSON(matrix.changed)
-        uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
+      - uses: actions/cache@v6
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
       # One install at the repo root covers every workspace package.
-      - if: fromJSON(matrix.changed)
-        working-directory: ${{ github.workspace }}
-        run: bun install --frozen-lockfile
-      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
-        run: bun run lint
-      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
-        run: bun run typecheck
-      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
-        run: bun run lambda:typecheck
-      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
-        run: bun run format
-      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
-        run: bun run test
-      - if: fromJSON(matrix.changed) && matrix.name != 'Server'
-        run: ${{ matrix.command }}
-      - if: fromJSON(matrix.changed) && matrix.name == 'Server'
-        run: bun run db:generate && git diff --exit-code
+      - run: bun install --frozen-lockfile
+      - run: bunx turbo run lint typecheck lambda:typecheck format test build db:check --affected --continue
 
   deploy-dev:
     name: Deploy AWS dev
@@ -198,11 +91,11 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.4.4"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
