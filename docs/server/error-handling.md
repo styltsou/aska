@@ -1,7 +1,7 @@
 # Error Handling
 
-Server errors use `AppError` from `server/src/lib/errors.ts` and are normalized
-by the global Hono error handler in `server/src/app.ts`.
+Server errors use `AppError` from `apps/server/src/lib/errors.ts` and are normalized
+by the global Hono error handler in `apps/server/src/app.ts`.
 
 ## Error Codes
 
@@ -67,5 +67,5 @@ as controller and service errors.
 Whenever an error response changes, update:
 
 ```txt
-server/src/openapi.json
+apps/server/src/openapi.json
 ```

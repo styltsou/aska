@@ -224,7 +224,7 @@ disposable database if you need data isolation from the shared `dev` stage.
 
 ## React/Vite client: CloudFront + custom domain
 
-SST's `Client` StaticSite builds `client/` with Bun, stores only the resulting
+SST's `Client` StaticSite builds `apps/web/` with Bun, stores only the resulting
 `dist/` files in a private S3 bucket, and serves them through CloudFront. The
 build receives `VITE_SERVER_URL` automatically from the API Gateway URL; there
 is no client production `.env` file to create or maintain.
@@ -291,7 +291,7 @@ For client-only work against the deployed backend, leave the normal local
 configuration pointed at your `hybrid` API and start Vite in cloud mode instead:
 
 ```sh
-cd client
+cd apps/web
 bun run dev:cloud
 ```
 
@@ -308,7 +308,7 @@ or modify the `hybrid` SST stage.
    ```
 
    The first run provisions the personal resources. It uses the hybrid API URL
-   in `client/.env.local`. The underlying `dev:aws` script refuses `dev` or an
+   in `apps/web/.env.local`. The underlying `dev:aws` script refuses `dev` or an
    omitted stage so a shared deployed client cannot accidentally be turned into
    a forwarding target.
 
@@ -357,17 +357,17 @@ workers:
 
 | Change                          | Quality jobs run                            | Deploys `dev` |
 | ------------------------------- | ------------------------------------------- | ------------- |
-| `client/**`                     | Client                                      | Yes           |
-| `server/**`                     | Server                                      | Yes           |
+| `apps/web/**`                     | Client                                      | Yes           |
+| `apps/server/**`                     | Server                                      | Yes           |
 | `services/image-variants/**`    | Image variants                              | Yes           |
 | `services/image-palette/**`     | Image palette                               | Yes           |
-| `services/image-shared/**`      | Server, variants, palette, and URL resolver | Yes           |
-| `services/url-unfurl-shared/**` | Server, URL resolver, and image variants    | Yes           |
+| `packages/image-shared/**`      | Server, variants, palette, and URL resolver | Yes           |
+| `packages/url-unfurl-shared/**` | Server, URL resolver, and image variants    | Yes           |
 | `services/url-resolution/**`    | URL resolver                                | Yes           |
 | SST config / root deps / CI     | Server (plus jobs matching other paths)     | Yes           |
 | Docs / Markdown only            | None                                        | No            |
 
-`services/image-shared` and `services/url-unfurl-shared` are dependencies, not
+`packages/image-shared` and `packages/url-unfurl-shared` are dependencies, not
 deployment targets. Their changes re-run every package that follows their
 source imports. A change to the SST config, the root
 `package.json`/`bun.lock`, or `.github/workflows/**`
@@ -431,7 +431,7 @@ a production-like rehearsal environment.
 
 ## Local-only commands
 
-`server/.env` is retained for direct server runs, Drizzle commands, and tests.
+`apps/server/.env` is retained for direct server runs, Drizzle commands, and tests.
 The pipeline fixture is retained for narrow, fast handler debugging. Neither
 can exercise browser uploads through S3 and SQS end-to-end, so neither is the
 main development workflow.

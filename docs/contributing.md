@@ -39,7 +39,7 @@ the pin they would bring a second copy of Tiptap and ProseMirror into the
 client bundle. Move the pin and every `@tiptap/*` dependency together when
 upgrading Tiptap.
 
-Copy `server/.env.example` to `server/.env` for direct server development and
+Copy `apps/server/.env.example` to `apps/server/.env` for direct server development and
 set the required values. The normal end-to-end path uses real AWS development
 resources through the `hybrid` SST Live stage: `bun run dev`. Do not attempt to
 emulate the full S3/SNS/SQS pipeline with a direct local server process. For
@@ -66,15 +66,15 @@ working-tree changes intact.
 
 ## Backend change recipe
 
-1. Define or update the Zod DTO in `server/src/dto/`.
-2. Add the route and its middleware in `server/src/routes/`.
+1. Define or update the Zod DTO in `apps/server/src/dto/`.
+2. Add the route and its middleware in `apps/server/src/routes/`.
 3. Keep the controller thin: validate, read auth context, call one service,
    return the standard response envelope.
 4. Implement the business operation in a service. Authorize and scope data
    there; use `AppError` for expected failures.
 5. Add/update focused unit tests and a database integration test when a real
    query, transaction, or constraint changed.
-6. Update `server/src/openapi.json` and any relevant docs.
+6. Update `apps/server/src/openapi.json` and any relevant docs.
 
 Do not query Drizzle from a controller, put HTTP types in a service, catch an
 `AppError` only to rethrow it, or create ad-hoc service instances outside the
@@ -83,7 +83,7 @@ composition root. See the linked server conventions for examples.
 ## Client change recipe
 
 1. Keep API fetchers, types, hooks, and query keys together under
-   `client/src/api/<feature>/`.
+   `apps/web/src/api/<feature>/`.
 2. Use React Query for data from the server. Use Zustand only for non-server
    interaction state that needs to survive across components or local sessions.
 3. Put route-specific loading and error behavior in the route/component layer.
@@ -93,7 +93,7 @@ composition root. See the linked server conventions for examples.
    transformations; add a component test only when it protects meaningful UI
    behavior.
 
-The generated `client/src/routeTree.gen.ts` should not be edited by hand. Let
+The generated `apps/web/src/routeTree.gen.ts` should not be edited by hand. Let
 the router/Vite tooling regenerate it when routes change.
 
 ## Data and async-work rules
@@ -119,8 +119,8 @@ package whose contract changed. Before merging a cross-cutting feature, run
 the full package matrix:
 
 ```sh
-cd client && bun run lint && bun run typecheck && bun run format && bun run test && bun run build
-cd server && bun run lint && bun run typecheck && bun run lambda:typecheck && bun run format && bun run test
+cd apps/web && bun run lint && bun run typecheck && bun run format && bun run test && bun run build
+cd apps/server && bun run lint && bun run typecheck && bun run lambda:typecheck && bun run format && bun run test
 cd services/image-variants && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test
@@ -131,7 +131,7 @@ For persistence changes, also run integration tests against a disposable
 database:
 
 ```sh
-cd server
+cd apps/server
 TEST_DATABASE_URL=postgresql://... bun run test:integration
 ```
 

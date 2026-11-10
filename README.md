@@ -89,8 +89,8 @@ also available for isolated work:
 
 ```sh
 bun install              # once, at the repository root: installs every package
-cd client && bun run dev
-cd server && bun run dev
+cd apps/web && bun run dev
+cd apps/server && bun run dev
 ```
 
 For normal end-to-end development, use real AWS S3 and SQS through SST instead
@@ -102,6 +102,6 @@ in CI, which only runs the checks for packages a change touches. Running
 `bun install` at the repository root installs every workspace package and the tracked
 pre-commit hook, which formats staged source files with Oxfmt.
 
-The marketing site at mnemee.space lives in [`website/`](./website) (Astro,
-deployed to Cloudflare Workers). Run it with `bun run --cwd website dev` and
-deploy it with `bun run --cwd website deploy`.
+The marketing site at mnemee.space lives in [`apps/website/`](./apps/website) (Astro,
+deployed to Cloudflare Workers). Run it with `bun run --cwd apps/website dev` and
+deploy it with `bun run --cwd apps/website deploy`.

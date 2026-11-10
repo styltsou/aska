@@ -24,7 +24,7 @@ tests use `bun run test:integration`; they are excluded from the normal unit
 suite and require `TEST_DATABASE_URL` to point to a disposable database.
 
 ```sh
-cd server && TEST_DATABASE_URL=postgresql://... bun run test:integration
+cd apps/server && TEST_DATABASE_URL=postgresql://... bun run test:integration
 ```
 
 The client and workers use Vitest with `--passWithNoTests` so package checks
@@ -33,8 +33,8 @@ remain valid even before a worker gains its first focused test.
 Run the package-local checks before pushing:
 
 ```sh
-cd client && bun run lint && bun run typecheck && bun run format && bun run test && bun run build
-cd server && bun run lint && bun run typecheck && bun run lambda:typecheck && bun run format && bun run test
+cd apps/web && bun run lint && bun run typecheck && bun run format && bun run test && bun run build
+cd apps/server && bun run lint && bun run typecheck && bun run lambda:typecheck && bun run format && bun run test
 cd services/image-variants && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/image-palette && bun run lint && bun run typecheck && bun run format && bun run test
 cd services/url-unfurl-shared && bun run lint && bun run typecheck && bun run format && bun run test

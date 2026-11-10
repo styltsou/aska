@@ -81,18 +81,18 @@ result limit. A low-quality palette match is omitted.
 
 ## Implementation Map
 
-- `server/src/dto/color-search.dto.ts`: validated public contract.
-- `server/src/routes/color-search.routes.ts` and
-  `server/src/controllers/color-search.controller.ts`: authenticated HTTP
+- `apps/server/src/dto/color-search.dto.ts`: validated public contract.
+- `apps/server/src/routes/color-search.routes.ts` and
+  `apps/server/src/controllers/color-search.controller.ts`: authenticated HTTP
   entry point.
-- `server/src/services/color-search.service.ts`: scope resolution, ranking,
+- `apps/server/src/services/color-search.service.ts`: scope resolution, ranking,
   response materialization, and telemetry.
-- `server/src/services/color-search/`: palette assignment, ranking, and
+- `apps/server/src/services/color-search/`: palette assignment, ranking, and
   PostgreSQL retrieval repository.
-- `client/src/lib/oklab.ts`: matching sRGB-to-OKLab conversion.
-- `client/src/api/color-search/`: typed API client and debounced React Query
+- `apps/web/src/lib/oklab.ts`: matching sRGB-to-OKLab conversion.
+- `apps/web/src/api/color-search/`: typed API client and debounced React Query
   hook.
-- `client/src/components/filter-bar/` and route components: filter state,
+- `apps/web/src/components/filter-bar/` and route components: filter state,
   loading status, Inbox retrieval, and collection navigator.
 
 ## Deliberate Boundaries

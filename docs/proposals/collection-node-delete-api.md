@@ -23,9 +23,9 @@ DELETE /workspace/:workspaceSlug/collections/:collectionSlug/nodes/:nodeId
 ```
 
 Handled by `deleteCollectionNode` → `CollectionDeleteService.deleteNode`
-(`server/src/services/collection/collection-delete.service.ts`).
+(`apps/server/src/services/collection/collection-delete.service.ts`).
 
-The node id parser (`server/src/lib/collection-node-id.ts`) accepts three kinds:
+The node id parser (`apps/server/src/lib/collection-node-id.ts`) accepts three kinds:
 
 - `folder-<id>`
 - `image-<id>`

@@ -4,23 +4,23 @@ Use these recipes when adding backend functionality.
 
 ## Add A Protected Endpoint
 
-1. Add request schemas in `server/src/dto/<feature>.dto.ts`.
-2. Add service methods in `server/src/services/<feature>.service.ts`, following
+1. Add request schemas in `apps/server/src/dto/<feature>.dto.ts`.
+2. Add service methods in `apps/server/src/services/<feature>.service.ts`, following
    [Service Method Pattern](./service-method-pattern.md).
-3. Construct the service explicitly in `server/src/container.ts`, passing its
+3. Construct the service explicitly in `apps/server/src/container.ts`, passing its
    dependencies to the constructor.
-4. Add controller handlers in `server/src/controllers/<feature>.controller.ts`,
+4. Add controller handlers in `apps/server/src/controllers/<feature>.controller.ts`,
    following [Controller Pattern](./controller-pattern.md).
 5. Add `authMiddleware` to protected controller handlers.
-6. Add route wiring in `server/src/routes`, chaining Hono route calls and
+6. Add route wiring in `apps/server/src/routes`, chaining Hono route calls and
    assigning the returned app value.
-7. Update `server/src/openapi.json`.
+7. Update `apps/server/src/openapi.json`.
 8. Run `bun run lint && bun run typecheck && bun run format && bun run test`.
 
 ## Add A Database Table
 
-1. Add the table in `server/src/db/schema/<area>.ts`.
-2. Export it from `server/src/db/schema/index.ts`.
+1. Add the table in `apps/server/src/db/schema/<area>.ts`.
+2. Export it from `apps/server/src/db/schema/index.ts`.
 3. Use Drizzle-inferred types in services.
 4. Generate and review a migration with `bun run db:generate` before applying
    it with `bun run db:migrate`.
@@ -31,7 +31,7 @@ Use these recipes when adding backend functionality.
 ## Add Or Change An API Response
 
 1. Change service/controller code.
-2. Update the response schema in `server/src/openapi.json`.
+2. Update the response schema in `apps/server/src/openapi.json`.
 3. Update examples in docs if the response is part of a documented convention.
 4. Run `bun run lint && bun run typecheck && bun run format && bun run test`.
 

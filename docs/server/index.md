@@ -5,19 +5,19 @@ OpenAPI documentation, and Scalar API docs.
 
 ## Runtime Shape
 
-- `server/src/app.ts`: Hono app, global middleware, health, auth, OpenAPI,
+- `apps/server/src/app.ts`: Hono app, global middleware, health, auth, OpenAPI,
   Scalar, and API route mounting.
-- `server/src/index.ts`: Bun local-development entrypoint.
-- `server/src/lambda.ts`: AWS Lambda handler entrypoint.
-- `server/src/routes`: route grouping.
-- `server/src/controllers`: HTTP adapters.
-- `server/src/services`: business operations and feature-local helpers such as
+- `apps/server/src/index.ts`: Bun local-development entrypoint.
+- `apps/server/src/lambda.ts`: AWS Lambda handler entrypoint.
+- `apps/server/src/routes`: route grouping.
+- `apps/server/src/controllers`: HTTP adapters.
+- `apps/server/src/services`: business operations and feature-local helpers such as
   repositories, resolvers, mappers, and finalizers.
-- `server/src/dto`: Zod request schemas and inferred request types.
-- `server/src/db/schema`: Drizzle schema and inferred database row types.
-- `server/src/lib`: shared backend primitives and reusable feature libraries.
-- `server/src/instrument.ts`: Sentry initialization and privacy defaults.
-- `server/src/openapi.json`: source-controlled OpenAPI document.
+- `apps/server/src/dto`: Zod request schemas and inferred request types.
+- `apps/server/src/db/schema`: Drizzle schema and inferred database row types.
+- `apps/server/src/lib`: shared backend primitives and reusable feature libraries.
+- `apps/server/src/instrument.ts`: Sentry initialization and privacy defaults.
+- `apps/server/src/openapi.json`: source-controlled OpenAPI document.
 
 ## Core Conventions
 
@@ -25,23 +25,23 @@ OpenAPI documentation, and Scalar API docs.
 - Do not use a domain layer by default.
 - Use Drizzle inferred row types for database models.
 - Use Zod `z.infer` for request DTO types.
-- `server/src/container.ts` is the composition root: explicitly construct shared
+- `apps/server/src/container.ts` is the composition root: explicitly construct shared
   dependencies once and export the resulting `container` object.
 - Chain Hono route registration and assign the returned app value so exported
   route types carry endpoint schemas.
 - Services own business logic and database queries.
 - Controllers validate requests, call services, and return HTTP responses.
-- Controllers do not catch normal service errors; `server/src/app.ts` has the
+- Controllers do not catch normal service errors; `apps/server/src/app.ts` has the
   global error handler.
 - Protected API routes use `authMiddleware`, which reads Better Auth sessions
   and throws `AppError` for unauthorized requests.
 - Successful JSON responses use `success(...)`.
 - Errors use `errorResponse(...)`.
-- Every API change updates `server/src/openapi.json`.
+- Every API change updates `apps/server/src/openapi.json`.
 
 ## Service Composition
 
-The server uses manual dependency injection. `server/src/container.ts` creates
+The server uses manual dependency injection. `apps/server/src/container.ts` creates
 the object graph explicitly, in dependency order, and exports the shared
 instances:
 
@@ -122,7 +122,7 @@ directly outside SST.
 `CORS_ORIGINS` is also passed to Better Auth as its trusted-origin list. Keep
 `BETTER_AUTH_URL` aligned with the URL where `/api/auth/*` is served.
 
-Use `server/.env.example` as the local template.
+Use `apps/server/.env.example` as the local template.
 
 ## Public Backend Docs
 
