@@ -1,0 +1,330 @@
+---
+import { Image, getImage } from 'astro:assets';
+import heroBlue01 from '../assets/images/hero-blue-01.webp';
+import heroBlue02 from '../assets/images/hero-blue-02.webp';
+import heroBlue03 from '../assets/images/hero-blue-03.webp';
+import heroBlue04 from '../assets/images/hero-blue-04.webp';
+import heroBlue05 from '../assets/images/hero-blue-05.webp';
+import heroFuchsia01 from '../assets/images/hero-fuchsia-01.webp';
+import heroFuchsia02 from '../assets/images/hero-fuchsia-02.webp';
+import heroFuchsia03 from '../assets/images/hero-fuchsia-03.webp';
+import heroFuchsia04 from '../assets/images/hero-fuchsia-04.webp';
+import heroGreen01 from '../assets/images/hero-green-01.webp';
+import heroGreen02 from '../assets/images/hero-green-02.webp';
+import heroGreen03 from '../assets/images/hero-green-03.webp';
+import heroGreen04 from '../assets/images/hero-green-04.webp';
+import heroGreen05 from '../assets/images/hero-green-05.webp';
+import heroOrange01 from '../assets/images/hero-orange-01.webp';
+import heroOrange02 from '../assets/images/hero-orange-02.webp';
+import heroOrange03 from '../assets/images/hero-orange-03.webp';
+import heroOrange04 from '../assets/images/hero-orange-04.webp';
+import heroRed01 from '../assets/images/hero-red-01.webp';
+import heroRed02 from '../assets/images/hero-red-02.webp';
+import heroRed03 from '../assets/images/hero-red-03.webp';
+import heroRed04 from '../assets/images/hero-red-04.webp';
+import heroRed05 from '../assets/images/hero-red-05.webp';
+const referenceImageProps = { width: 240, densities: [1, 2], quality: 78 };
+const referenceImages = [
+	heroRed01,
+	heroFuchsia02,
+	heroBlue02,
+	heroOrange01,
+	heroRed02,
+	heroGreen03,
+	heroBlue01,
+	heroFuchsia01,
+	heroOrange03,
+	heroGreen02,
+	heroGreen01,
+	heroFuchsia03,
+	heroOrange02,
+	heroBlue04,
+	heroRed04,
+	heroBlue03,
+	heroRed03,
+	heroOrange04,
+	heroGreen05,
+	heroFuchsia04,
+	heroGreen04,
+	heroBlue05,
+	heroRed05,
+];
+const getBlurStyle = async (image) => {
+	const placeholder = await getImage({ src: image, width: 28, format: 'webp', quality: 30 });
+	return `--blur-image: url("${placeholder.src}");`;
+};
+const referenceBlurStyles = Object.fromEntries(
+	await Promise.all(referenceImages.map(async (image) => [image.src, await getBlurStyle(image)])),
+);
+const withReferenceBlur = (image) => ({ ...referenceImageProps, src: image, class: 'blur-image', style: referenceBlurStyles[image.src] });
+---
+
+<div class="hero-reference-field" aria-hidden="true">
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--brick">
+		<Image {...withReferenceBlur(heroRed01)} alt="" loading="eager" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--left-edge">
+		<Image {...withReferenceBlur(heroFuchsia02)} alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note">
+		<p><strong>Keep the rough edge.</strong></p>
+		<p>Let the material lead.</p>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note-left-one">
+		<p><strong>## Layout study</strong></p>
+		<p>spacing / hierarchy / weight</p>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note-left-two">
+		<p><strong>Materials to compare</strong></p>
+		<p>glass / paper / concrete</p>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--blue">
+		<Image {...withReferenceBlur(heroBlue02)} alt="" loading="eager" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--plinth">
+		<Image {...withReferenceBlur(heroOrange01)} alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-material">
+		<div class="reference-folder__preview">
+			<Image {...withReferenceBlur(heroRed02)} alt="" loading="eager" />
+			<Image {...withReferenceBlur(heroGreen03)} alt="" loading="eager" />
+			<Image {...withReferenceBlur(heroBlue01)} alt="" loading="eager" />
+			<span></span>
+		</div>
+		<div class="reference-folder__label"><strong>Material studies</strong><small>24</small></div>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-working">
+		<div class="reference-folder__preview">
+			<Image {...withReferenceBlur(heroFuchsia01)} alt="" />
+			<span></span>
+			<Image {...withReferenceBlur(heroOrange03)} alt="" />
+			<Image {...withReferenceBlur(heroGreen02)} alt="" />
+		</div>
+		<div class="reference-folder__label"><strong>Working set</strong><small>16</small></div>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--curve">
+		<Image {...withReferenceBlur(heroGreen01)} alt="" loading="eager" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-prelude">
+		<Image {...withReferenceBlur(heroFuchsia03)} alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note-right">
+		<p><strong>## Search cues</strong></p>
+		<p>material / colour / shape</p>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--shadow-wide">
+		<Image {...withReferenceBlur(heroOrange02)} alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-blue">
+		<Image {...withReferenceBlur(heroBlue04)} alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--image reference-canvas-card--right-shadows">
+		<Image {...withReferenceBlur(heroRed04)} alt="" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-soft">
+		<div class="reference-folder__preview">
+			<Image {...withReferenceBlur(heroBlue03)} alt="" />
+			<Image {...withReferenceBlur(heroRed03)} alt="" />
+			<span></span>
+			<Image {...withReferenceBlur(heroOrange04)} alt="" />
+		</div>
+		<div class="reference-folder__label"><strong>Soft systems</strong><small>12</small></div>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--sculptures reference-canvas-card--sculptures">
+		<Image {...withReferenceBlur(heroOrange04)} alt="" loading="eager" />
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--folder reference-canvas-card--folder-archive">
+		<div class="reference-folder__preview">
+			<Image {...withReferenceBlur(heroFuchsia04)} alt="" />
+			<Image {...withReferenceBlur(heroGreen04)} alt="" />
+			<Image {...withReferenceBlur(heroBlue05)} alt="" />
+			<Image {...withReferenceBlur(heroRed05)} alt="" />
+		</div>
+		<div class="reference-folder__label"><strong>Archive fragments</strong><small>36</small></div>
+	</article>
+	<article class="reference-field__item reference-canvas-card reference-field__item--note reference-canvas-card--note-lower">
+		<p><strong>In progress, on purpose.</strong></p>
+		<p>Hold the useful uncertainty.</p>
+	</article>
+</div>
+
+<script>
+	const cards = Array.from(document.querySelectorAll<HTMLElement>('.reference-canvas-card'));
+	const listeners = new AbortController();
+
+	cards.forEach((card) => {
+		let x = 0;
+		let y = 0;
+		let animationFrame: number | undefined;
+
+		const renderPosition = () => {
+			card.style.setProperty('--drag-x', `${x}px`);
+			card.style.setProperty('--drag-y', `${y}px`);
+			animationFrame = undefined;
+		};
+
+		card.addEventListener(
+			'pointerdown',
+			(event) => {
+				if (event.button !== 0) return;
+
+				event.preventDefault();
+				const pointerId = event.pointerId;
+				const startX = event.clientX;
+				const startY = event.clientY;
+				const originX = x;
+				const originY = y;
+
+				card.classList.add('is-dragging');
+				card.setPointerCapture(pointerId);
+
+				const move = (moveEvent: PointerEvent) => {
+					if (moveEvent.pointerId !== pointerId) return;
+					x = Math.round(originX + moveEvent.clientX - startX);
+					y = Math.round(originY + moveEvent.clientY - startY);
+					if (animationFrame === undefined) animationFrame = requestAnimationFrame(renderPosition);
+				};
+
+				const release = (releaseEvent: PointerEvent) => {
+					if (releaseEvent.pointerId !== pointerId) return;
+					if (animationFrame !== undefined) {
+						cancelAnimationFrame(animationFrame);
+						renderPosition();
+					}
+					card.classList.remove('is-dragging');
+					card.removeEventListener('pointermove', move);
+					card.removeEventListener('pointerup', release);
+					card.removeEventListener('pointercancel', release);
+				};
+
+				card.addEventListener('pointermove', move);
+				card.addEventListener('pointerup', release);
+				card.addEventListener('pointercancel', release);
+			},
+			{ signal: listeners.signal },
+		);
+		card.addEventListener('dragstart', (event) => event.preventDefault(), { signal: listeners.signal });
+	});
+
+	document.addEventListener('astro:before-swap', () => listeners.abort(), { once: true });
+</script>
+
+<style>
+	.hero-reference-field { --reference-card-muted-line: rgb(21 21 21 / 7%); --reference-card-line: var(--line); --reference-card-hover-line: var(--line-strong); position: absolute; inset: 30% 0 0; pointer-events: none; }
+	.reference-canvas-card { position: absolute; z-index: 1; contain: paint; isolation: isolate; cursor: grab; transform: translate(var(--drag-x, 0), var(--drag-y, 0)); backface-visibility: hidden; touch-action: none; user-select: none; will-change: transform; pointer-events: auto; transition: border-color 0.1s cubic-bezier(0.16, 1, 0.3, 1); }
+	.reference-canvas-card.is-dragging { z-index: 5; cursor: grabbing; }
+	.reference-canvas-card.reference-field__item--folder { position: absolute; }
+	.reference-field__item { min-width: 0; overflow: hidden; border: 1px solid var(--reference-card-muted-line); border-radius: 8px; }
+	.reference-field__item img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; -webkit-user-drag: none; }
+	.reference-field__item--image { background: transparent; }
+	.reference-field__item--note, .reference-field__item--folder { border-color: var(--reference-card-line); }
+	.reference-field__item--note { display: flex; flex-direction: column; justify-content: flex-start; gap: 10px; padding: 15px; background: #fff; color: #353532; text-align: left; }
+	.reference-field__item--note p { margin: 0; color: #777771; font-size: 10px; line-height: 1.45; }
+	.reference-field__item--note p:first-child { color: #353532; font-size: 14px; line-height: 1.16; }
+	.reference-field__item--note strong { font-weight: 600; }
+	.reference-field__item--sculptures span { position: absolute; bottom: 11px; left: 12px; color: rgb(255 255 255 / 88%); font-size: 8px; letter-spacing: .07em; }
+	.reference-field__item--blue img { object-position: center 32%; }
+	.reference-field__item--folder { position: relative; background: #fff; }
+	.reference-folder__preview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px; padding: 6px; aspect-ratio: 1; }
+	.reference-folder__preview img, .reference-folder__preview span { min-width: 0; min-height: 0; overflow: hidden; border-radius: 2px; background: #eef0ed; aspect-ratio: 1; }
+	.reference-folder__label { position: absolute; right: 1px; bottom: 1px; left: 1px; display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: 0 0 7px 7px; background: #fff; }
+	.reference-folder__label strong { overflow: hidden; font-size: 9px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+	.reference-folder__label small { margin-left: auto; color: #878780; font-size: 8px; }
+
+	.reference-canvas-card--brick { top: 12px; left: max(18px, calc(50% - 786px)); width: 176px; height: 186px; }
+	.reference-canvas-card--left-edge { top: 116px; left: -78px; width: 176px; height: 122px; }
+	.reference-canvas-card--note { top: 154px; left: max(210px, calc(50% - 594px)); width: 176px; height: 120px; }
+	.reference-canvas-card--note-left-one { top: 118px; left: 112px; width: 176px; height: 112px; }
+	.reference-canvas-card--note-left-two { top: -96px; left: 174px; width: 176px; height: 112px; }
+	.reference-canvas-card--blue { top: 12px; left: max(210px, calc(50% - 594px)); width: 176px; height: 128px; }
+	.reference-canvas-card--plinth { top: 315px; left: max(210px, calc(50% - 594px)); width: 176px; height: 140px; }
+	.reference-canvas-card--folder-material { top: 239px; left: max(18px, calc(50% - 786px)); width: 176px; height: 190px; }
+	.reference-canvas-card--folder-working { top: -155px; left: -10px; width: 176px; height: 190px; }
+	.reference-canvas-card--curve { top: 334px; right: -62px; width: 176px; height: 208px; }
+	.reference-canvas-card--right-prelude { top: -2px; right: max(210px, calc(50% - 594px)); width: 176px; height: 124px; }
+	.reference-canvas-card--note-right { top: -38px; right: max(18px, calc(50% - 786px)); z-index: 2; width: 176px; height: 112px; }
+	.reference-canvas-card--shadow-wide { top: 138px; right: max(210px, calc(50% - 594px)); width: 176px; height: 112px; }
+	.reference-canvas-card--right-blue { top: 184px; right: max(18px, calc(50% - 786px)); width: 176px; height: 134px; }
+	.reference-canvas-card--right-shadows { top: 166px; right: max(210px, calc(50% - 594px)); width: 176px; height: 112px; }
+	.reference-canvas-card--folder-soft { top: -22px; right: -32px !important; left: auto !important; width: 176px; height: 190px; }
+	.reference-canvas-card--sculptures { position: absolute; top: 558px; right: max(18px, calc(50% - 786px)); width: 176px; height: 184px; }
+	.reference-canvas-card--folder-archive { top: 385px; left: 30px; z-index: 3; width: 176px; height: 190px; }
+	.reference-canvas-card--note-lower { display: none; }
+
+
+	@media (hover: hover) {
+		.reference-canvas-card:hover { border-color: var(--reference-card-hover-line); }
+	}
+
+	.reference-canvas-card.is-dragging { border-color: var(--reference-card-hover-line); }
+
+	:global(html[data-theme='dark']) .hero-reference-field { --reference-card-muted-line: rgb(241 243 238 / 8%); --reference-card-line: var(--line); --reference-card-hover-line: var(--line-strong); }
+	:global(html[data-theme='dark']) .reference-field__item--note,
+	:global(html[data-theme='dark']) .reference-field__item--folder { background: var(--surface); }
+	:global(html[data-theme='dark']) .reference-field__item--note { color: var(--ink); }
+	:global(html[data-theme='dark']) .reference-field__item--note p { color: var(--ink-muted); }
+	:global(html[data-theme='dark']) .reference-field__item--note p:first-child { color: var(--ink); }
+	:global(html[data-theme='dark']) .reference-folder__preview img,
+	:global(html[data-theme='dark']) .reference-folder__preview span { background: var(--surface-muted); }
+	:global(html[data-theme='dark']) .reference-folder__label { background: var(--surface); }
+	:global(html[data-theme='dark']) .reference-folder__label small { color: var(--ink-muted); }
+
+	@media (min-width: 1281px) and (max-width: 2315px) {
+		.reference-canvas-card--left-edge,
+		.reference-canvas-card--note-left-one,
+		.reference-canvas-card--note-left-two,
+		.reference-canvas-card--folder-working {
+			display: none;
+		}
+	}
+
+	@media (max-width: 1280px) {
+		.hero-reference-field { inset: 31% 0 0; }
+		.reference-canvas-card--left-edge, .reference-canvas-card--note-left-one, .reference-canvas-card--note-left-two, .reference-canvas-card--folder-working, .reference-canvas-card--right-prelude, .reference-canvas-card--note-right, .reference-canvas-card--right-blue, .reference-canvas-card--right-shadows, .reference-canvas-card--folder-soft, .reference-canvas-card--folder-archive { display: none; }
+		.reference-canvas-card--brick { top: 10px; left: max(18px, calc(50% - 560px)); }
+		.reference-canvas-card--blue { top: 18px; left: max(214px, calc(50% - 364px)); }
+		.reference-canvas-card--note { top: 166px; left: max(214px, calc(50% - 364px)); }
+		.reference-canvas-card--folder-material { top: 222px; left: max(18px, calc(50% - 560px)); }
+		.reference-canvas-card--plinth { top: 312px; left: max(214px, calc(50% - 364px)); }
+		.reference-canvas-card--shadow-wide { top: 34px; right: max(214px, calc(50% - 364px)); }
+		.reference-canvas-card--curve { top: 172px; right: max(18px, calc(50% - 560px)); }
+		.reference-canvas-card--sculptures { top: 406px; right: max(18px, calc(50% - 560px)); }
+	}
+
+	@media (max-width: 900px) {
+		.hero-reference-field { inset: 32% 0 0; }
+		.reference-canvas-card--note-right, .reference-canvas-card--note-left-one, .reference-canvas-card--note-left-two, .reference-canvas-card--folder-working, .reference-canvas-card--left-edge, .reference-canvas-card--right-prelude, .reference-canvas-card--right-blue, .reference-canvas-card--right-shadows, .reference-canvas-card--folder-archive { display: none; }
+		.reference-canvas-card--brick { left: max(18px, calc(50% - 448px)); }
+		.reference-canvas-card--note { left: max(174px, calc(50% - 300px)); }
+		.reference-canvas-card--blue { left: max(174px, calc(50% - 300px)); }
+		.reference-canvas-card--plinth { left: max(174px, calc(50% - 300px)); }
+		.reference-canvas-card--folder-material { left: max(18px, calc(50% - 448px)); }
+		.reference-canvas-card--curve { right: max(18px, calc(50% - 448px)); }
+		.reference-canvas-card--shadow-wide { right: max(174px, calc(50% - 300px)); }
+		.reference-canvas-card--folder-soft { right: max(18px, calc(50% - 448px)) !important; }
+		.reference-canvas-card--sculptures { right: max(18px, calc(50% - 448px)); }
+	}
+
+	@media (max-width: 1100px) {
+		.reference-canvas-card--note-left-two { display: none; }
+	}
+
+	@media (max-width: 640px) {
+		.hero-reference-field { inset: 0; height: auto; }
+		.reference-canvas-card { pointer-events: none; }
+		.reference-canvas-card--brick { top: max(70px, calc(50% - 316px)); left: -18px; width: clamp(80px, 23vw, 98px); height: clamp(112px, 33vw, 132px); }
+		.reference-canvas-card--note { top: auto; bottom: max(72px, calc(50% - 326px)); left: 28px; width: clamp(94px, 28vw, 116px); height: clamp(76px, 22vw, 92px); }
+		.reference-canvas-card--blue { top: calc(50% - 184px); left: 18px; width: clamp(78px, 22vw, 94px); height: clamp(88px, 27vw, 110px); }
+		.reference-canvas-card--plinth, .reference-canvas-card--shadow-wide { display: none; }
+		.reference-canvas-card--folder-material { top: max(94px, calc(50% - 282px)); right: 14px; left: auto; width: clamp(86px, 25vw, 106px); height: clamp(92px, 26vw, 112px); }
+		.reference-canvas-card--curve { top: calc(50% + 104px); right: -14px; width: clamp(78px, 23vw, 98px); height: clamp(104px, 31vw, 128px); }
+		.reference-canvas-card--folder-soft, .reference-canvas-card--folder-archive, .reference-canvas-card--folder-working, .reference-canvas-card--note-right, .reference-canvas-card--note-left-one, .reference-canvas-card--note-left-two, .reference-canvas-card--note-lower, .reference-canvas-card--right-blue, .reference-canvas-card--right-shadows, .reference-canvas-card--left-edge, .reference-canvas-card--right-prelude { display: none; }
+		.reference-canvas-card--sculptures { top: auto; right: 58px; bottom: max(56px, calc(50% - 340px)); width: clamp(82px, 24vw, 104px); height: clamp(108px, 32vw, 132px); }
+		.reference-field__item--note { padding: 8px; }
+		.reference-field__item--note p { font-size: 7px; }
+		.reference-field__item--note p:first-child { font-size: 10px; }
+		.reference-folder__preview { gap: 2px; padding: 4px; }
+		.reference-folder__label { padding: 5px; }
+		.reference-folder__label strong, .reference-folder__label small { font-size: 7px; }
+	}
+</style>

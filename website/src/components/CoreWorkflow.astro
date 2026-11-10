@@ -1,0 +1,184 @@
+---
+import { Image } from 'astro:assets';
+import bauhausFurniture01 from '../assets/images/bauhaus-furniture-01.jpg';
+import bauhausFurniture02 from '../assets/images/bauhaus-furniture-02.jpg';
+import bauhausRoom01 from '../assets/images/bauhaus-room-01.jpg';
+import blueRedWall from '../assets/images/blue-red-wall.jpg';
+import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
+import curvedArchitecture from '../assets/images/curved-architecture.jpg';
+import greenAbstract02 from '../assets/images/green-abstract-02.webp';
+import greenAbstract03 from '../assets/images/green-abstract-03.webp';
+import greenAbstract05 from '../assets/images/green-abstract-05.webp';
+---
+
+<section class="feature-details page-width" aria-labelledby="feature-details-heading">
+	<h2 id="feature-details-heading">From loose references to a visual workspace.</h2>
+
+	<div class="feature-detail-group">
+		<header class="feature-detail-group__heading"><span>01</span><h3>Inbox</h3></header>
+		<article class="feature-detail">
+			<div class="feature-detail__copy">
+				<h4>A landing place for every reference.</h4>
+				<p>Save an image, link, post, or file first. Sort it into the right collection when the direction is clearer.</p>
+			</div>
+			<div class="feature-detail__visual feature-detail__visual--inbox" role="img" aria-label="A web reference and image being collected in the Mnemee inbox">
+				<div class="detail-source-card detail-source-card--image"><Image src={blueRedWall} width={230} densities={[1, 2]} quality={78} alt="" /></div>
+				<div class="detail-source-card detail-source-card--link"><span>archdaily.com</span><strong>Curved concrete gallery</strong></div>
+				<svg class="detail-source-flow" viewBox="0 0 280 170" aria-hidden="true"><path d="M22 45 C105 44 102 92 184 98"></path><path d="M36 133 C109 135 116 106 184 102"></path></svg>
+				<div class="detail-inbox-window">
+					<div class="detail-window-bar"><i></i><strong>Inbox</strong><span>12 new</span></div>
+					<div class="detail-inbox-item"><Image src={blueRedWall} width={80} densities={[1, 2]} quality={78} alt="" /><span>Blue / red wall</span></div>
+					<div class="detail-inbox-item"><i class="detail-file-icon"></i><span>Curved concrete gallery</span></div>
+				</div>
+			</div>
+		</article>
+
+		<article class="feature-detail feature-detail--reverse">
+			<div class="feature-detail__copy">
+				<h4>Keep the thought with the reference.</h4>
+				<p>Add a note while something is still fresh, so the context does not disappear into a folder name later.</p>
+			</div>
+			<div class="feature-detail__visual feature-detail__visual--note" role="img" aria-label="An Mnemee reference with an attached note">
+				<div class="detail-note-reference"><Image src={curvedArchitecture} width={320} densities={[1, 2]} quality={78} alt="" /><span>Curved concrete gallery</span></div>
+				<div class="detail-note-card"><small>Note</small><strong>Look at how the light softens the hard edge.</strong><p>Could work for the entrance study.</p><div><i></i><span>Material studies</span></div></div>
+			</div>
+		</article>
+	</div>
+
+	<div class="feature-detail-group">
+		<header class="feature-detail-group__heading"><span>02</span><h3>Canvas</h3></header>
+		<article class="feature-detail">
+			<div class="feature-detail__copy">
+				<h4>Arrange material without flattening it.</h4>
+				<p>Move references into the same space and compare them at the scale and distance that helps the connection emerge.</p>
+			</div>
+			<div class="feature-detail__visual feature-detail__visual--canvas" role="img" aria-label="An Mnemee canvas with references positioned in a composition">
+				<div class="detail-canvas-window"><div class="detail-window-bar"><i></i><strong>Entrance study</strong><span>46 items</span></div><div class="detail-canvas-grid"></div><Image class="detail-canvas-image detail-canvas-image--one" src={bauhausRoom01} width={210} densities={[1, 2]} quality={78} alt="" /><Image class="detail-canvas-image detail-canvas-image--two" src={curvedArchitecture} width={180} densities={[1, 2]} quality={78} alt="" /><div class="detail-canvas-note">The curved form needs a quieter neighbour.</div><div class="detail-canvas-selection" aria-hidden="true"></div></div>
+			</div>
+		</article>
+
+		<article class="feature-detail feature-detail--reverse">
+			<div class="feature-detail__copy">
+				<h4>Group related material in place.</h4>
+				<p>Use folders on the canvas to make a cluster readable without losing its relationship to the rest of the work.</p>
+			</div>
+			<div class="feature-detail__visual feature-detail__visual--folder" role="img" aria-label="A folder grouping related references on an Mnemee canvas">
+				<div class="detail-folder-canvas"><div class="detail-canvas-grid"></div><Image class="detail-folder-loose" src={concreteSculptures} width={120} densities={[1, 2]} quality={78} alt="" /><div class="detail-folder"><div class="detail-folder-grid"><Image src={bauhausFurniture01} width={120} densities={[1, 2]} quality={78} alt="" /><Image src={bauhausFurniture02} width={120} densities={[1, 2]} quality={78} alt="" /><Image src={blueRedWall} width={120} densities={[1, 2]} quality={78} alt="" /><span>+ 21</span></div><div class="detail-folder-label"><strong>Furniture</strong><small>24</small></div></div></div>
+			</div>
+		</article>
+	</div>
+
+	<div class="feature-detail-group">
+		<header class="feature-detail-group__heading"><span>03</span><h3>Archive</h3></header>
+		<article class="feature-detail">
+			<div class="feature-detail__copy">
+				<h4>Search by visual cues.</h4>
+				<p>Filter by colour to return to a visual direction, even when you cannot remember a file name or where it was saved.</p>
+			</div>
+			<div class="feature-detail__visual feature-detail__visual--search" role="img" aria-label="An Mnemee colour search with green reference results">
+				<div class="detail-search-window"><div class="detail-window-bar"><i></i><strong>All references</strong><span>1,284 items</span></div><div class="detail-search-body"><div class="detail-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><span>forest green</span><kbd>⌘ K</kbd></div><div class="detail-colour-filter"><i></i><i></i><i></i><i></i><span>Colour match</span></div><div class="detail-search-results"><Image src={greenAbstract05} width={160} densities={[1, 2]} quality={78} alt="" /><Image src={greenAbstract02} width={160} densities={[1, 2]} quality={78} alt="" /><Image src={greenAbstract03} width={160} densities={[1, 2]} quality={78} alt="" /></div></div></div>
+			</div>
+		</article>
+
+		<article class="feature-detail feature-detail--reverse">
+			<div class="feature-detail__copy">
+				<h4>Find the details you wrote down.</h4>
+				<p>Search the notes, source titles, and labels around your references when a phrase is the quickest way back in.</p>
+			</div>
+			<div class="feature-detail__visual feature-detail__visual--text-search" role="img" aria-label="An Mnemee text search returning notes and reference results">
+				<div class="detail-text-search-window"><div class="detail-window-bar"><i></i><strong>Search</strong><span>6 results</span></div><div class="detail-search-body"><div class="detail-search-input"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><span>hard edge</span><kbd>↵</kbd></div><div class="detail-text-result"><Image src={blueRedWall} width={86} densities={[1, 2]} quality={78} alt="" /><div><strong>Blue / red wall</strong><p>…the hard edge makes the colour feel structural.</p><small>Material studies</small></div></div><div class="detail-text-result detail-text-result--note"><i></i><div><strong>Entrance study</strong><p>…light softens the hard edge without losing the form.</p><small>Note · 2 days ago</small></div></div></div></div>
+			</div>
+		</article>
+	</div>
+</section>
+
+<style>
+	.feature-details { max-width: 980px; padding-block: clamp(92px, 12vw, 164px); }
+	.feature-details > h2 { max-width: 545px; margin: 0 auto clamp(72px, 10vw, 120px); font-size: clamp(27px, 3vw, 39px); line-height: 1.12; text-align: center; }
+	.feature-detail-group + .feature-detail-group { margin-top: clamp(98px, 14vw, 174px); }
+	.feature-detail-group__heading { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin-bottom: clamp(48px, 7vw, 76px); }
+	.feature-detail-group__heading span { color: var(--ink-muted); font-size: 11px; }
+	.feature-detail-group__heading h3 { margin: 0; font-size: 18px; font-weight: 600; }
+	.feature-detail-group { display: grid; gap: clamp(70px, 10vw, 118px); }
+	.feature-detail { display: grid; grid-template-columns: minmax(0, .76fr) minmax(0, 1.24fr); align-items: center; gap: clamp(32px, 6vw, 88px); }
+	.feature-detail--reverse .feature-detail__copy { grid-column: 2; grid-row: 1; }
+	.feature-detail--reverse .feature-detail__visual { grid-column: 1; grid-row: 1; }
+	.feature-detail__copy { max-width: 305px; }
+	.feature-detail__copy h4 { margin-bottom: 13px; font-size: clamp(20px, 2.25vw, 27px); font-weight: 560; line-height: 1.1; }
+	.feature-detail__copy p { margin: 0; color: var(--ink-muted); font-size: 14px; line-height: 1.58; }
+	.feature-detail__visual { position: relative; min-height: 330px; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-muted); }
+	.feature-detail img { display: block; width: 100%; height: 100%; object-fit: cover; }
+	.detail-source-card, .detail-inbox-window, .detail-note-reference, .detail-note-card, .detail-canvas-window, .detail-folder-canvas, .detail-search-window, .detail-text-search-window { position: absolute; overflow: hidden; border: 1px solid rgb(21 21 21 / 11%); border-radius: 6px; background: #fff; box-shadow: 0 10px 25px rgb(21 21 21 / 9%); color: #262622; }
+	.detail-source-card--image { top: 43px; left: -14px; width: 41%; height: 205px; transform: rotate(-6deg); }
+	.detail-source-card--link { bottom: 34px; left: 19px; z-index: 1; display: grid; width: 43%; gap: 5px; padding: 11px; transform: rotate(3deg); }
+	.detail-source-card--link span { color: #777770; font-size: 8px; }
+	.detail-source-card--link strong { font-size: 10px; line-height: 1.2; }
+	.detail-source-flow { position: absolute; inset: 56px 15% 0 0; width: 75%; height: 170px; fill: none; stroke: #a0a099; stroke-dasharray: 3 4; stroke-width: 1.2; }
+	.detail-inbox-window { top: 39px; right: 19px; z-index: 2; width: 55%; }
+	.detail-window-bar { display: flex; align-items: center; height: 32px; gap: 7px; padding: 0 9px; border-bottom: 1px solid #e4e4df; color: #6e6e68; font-size: 8px; }
+	.detail-window-bar i { width: 7px; height: 7px; border-radius: 50%; background: #cecec8; }
+	.detail-window-bar strong { color: #55554f; font-weight: 600; }
+	.detail-window-bar span { margin-left: auto; }
+	.detail-inbox-item { display: flex; align-items: center; min-height: 61px; gap: 8px; padding: 7px; border-bottom: 1px solid #ecece8; font-size: 8px; }
+	.detail-inbox-item:last-child { border: 0; }
+	.detail-inbox-item img, .detail-file-icon { width: 44px; height: 44px; border-radius: 3px; }
+	.detail-file-icon { display: block; background: #e6e4dc; }
+	.detail-note-reference { top: 38px; left: 12%; width: 48%; height: 225px; transform: rotate(-4deg); }
+	.detail-note-reference span { position: absolute; right: 0; bottom: 0; left: 0; padding: 9px; background: rgb(255 255 255 / 88%); font-size: 9px; }
+	.detail-note-card { right: 9%; bottom: 33px; z-index: 2; width: 48%; padding: 13px; transform: rotate(4deg); }
+	.detail-note-card small { color: #898981; font-size: 8px; }
+	.detail-note-card strong { display: block; margin-block: 8px 6px; font-size: 11px; line-height: 1.3; }
+	.detail-note-card p { margin: 0 0 13px; color: #71716a; font-size: 9px; line-height: 1.35; }
+	.detail-note-card div { display: flex; align-items: center; gap: 5px; color: #797970; font-size: 8px; }
+	.detail-note-card div i { width: 7px; height: 7px; border-radius: 50%; background: #84a098; }
+	.detail-canvas-window { inset: 21px 13px; }
+	.detail-canvas-grid { position: absolute; inset: 32px 0 0; background-image: radial-gradient(#d6d6d0 .65px, transparent .65px); background-size: 11px 11px; }
+	.detail-canvas-image, .detail-canvas-note, .detail-canvas-selection { position: absolute; z-index: 1; }
+	.detail-canvas-image { overflow: hidden; border: 1px solid rgb(21 21 21 / 14%); border-radius: 4px; box-shadow: 0 4px 10px rgb(21 21 21 / 10%); }
+	.detail-canvas-image--one { top: 58px; left: 10%; width: 43%; height: 54%; transform: rotate(-4deg); }
+	.detail-canvas-image--two { right: 10%; bottom: 27px; width: 39%; height: 45%; transform: rotate(5deg); }
+	.detail-canvas-note { top: 52px; right: 10%; width: 42%; padding: 10px; background: #e6e4dc; color: #45453f; font-size: 8px; line-height: 1.35; transform: rotate(3deg); }
+	.detail-canvas-selection { bottom: 34px; left: 7%; width: 58%; height: 62%; border: 1px solid #4a6dcc; border-radius: 4px; }
+	.detail-canvas-selection::before, .detail-canvas-selection::after { position: absolute; width: 5px; height: 5px; border: 1px solid #4a6dcc; border-radius: 1px; background: #fff; content: ''; }
+	.detail-canvas-selection::before { top: -3px; left: -3px; }
+	.detail-canvas-selection::after { right: -3px; bottom: -3px; }
+	.detail-folder-canvas { inset: 27px 17px; background: #f7f7f4; }
+	.detail-folder-loose { position: absolute; bottom: 24px; left: 8%; z-index: 1; width: 30%; height: 37%; overflow: hidden; border: 1px solid rgb(21 21 21 / 12%); border-radius: 4px; box-shadow: 0 5px 12px rgb(21 21 21 / 12%); transform: rotate(-5deg); }
+	.detail-folder { position: absolute; top: 42px; right: 10%; z-index: 2; width: 55%; overflow: hidden; border: 1px solid rgb(21 21 21 / 11%); border-radius: 6px; background: #fff; box-shadow: 0 8px 18px rgb(21 21 21 / 11%); }
+	.detail-folder-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 5px; }
+	.detail-folder-grid > * { min-width: 0; height: 71px; overflow: hidden; border-radius: 3px; }
+	.detail-folder-grid span { display: grid; background: #e5e4dc; color: #6f6f68; font-size: 9px; place-items: center; }
+	.detail-folder-label { display: flex; align-items: center; padding: 8px 9px; border-top: 1px solid #ecece8; font-size: 9px; }
+	.detail-folder-label small { margin-left: auto; color: #8a8a83; }
+	.detail-search-window, .detail-text-search-window { inset: 29px 18px; }
+	.detail-search-body { padding: 11px; }
+	.detail-search-input { display: flex; align-items: center; height: 31px; gap: 7px; padding: 0 8px; border: 1px solid #d8d8d2; border-radius: 4px; color: #3f3f3a; font-size: 9px; }
+	.detail-search-input svg { width: 13px; height: 13px; fill: none; stroke: #777770; stroke-width: 1.7; }
+	.detail-search-input kbd { margin-left: auto; color: #92928b; font-size: 7px; }
+	.detail-colour-filter { display: flex; align-items: center; gap: 3px; padding: 11px 2px 8px; color: #777770; font-size: 8px; }
+	.detail-colour-filter i { width: 9px; height: 9px; border-radius: 50%; }
+	.detail-colour-filter i:nth-child(1) { background: #173a2a; }.detail-colour-filter i:nth-child(2) { background: #315a40; }.detail-colour-filter i:nth-child(3) { background: #5d7858; }.detail-colour-filter i:nth-child(4) { background: #a0b091; }
+	.detail-colour-filter span { margin-left: 4px; }
+	.detail-search-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+	.detail-search-results img { aspect-ratio: .82; border-radius: 3px; }
+	.detail-text-result { display: flex; gap: 9px; padding: 11px 2px; border-bottom: 1px solid #ecece8; }
+	.detail-text-result:last-child { border: 0; }
+	.detail-text-result img, .detail-text-result > i { width: 47px; height: 47px; flex: 0 0 47px; overflow: hidden; border-radius: 3px; }
+	.detail-text-result > i { background: #e6e4dc; }
+	.detail-text-result strong { display: block; font-size: 9px; }
+	.detail-text-result p { margin: 4px 0; color: #5e5e57; font-size: 8px; line-height: 1.35; }
+	.detail-text-result small { color: #93938c; font-size: 7px; }
+	:global(html[data-theme='dark']) .feature-detail__visual { background: #242824; }
+	@media (max-width: 760px) {
+		.feature-detail { grid-template-columns: 1fr; gap: 30px; }
+		.feature-detail--reverse .feature-detail__copy, .feature-detail--reverse .feature-detail__visual { grid-column: auto; grid-row: auto; }
+		.feature-detail__visual { min-height: 300px; }
+	}
+	@media (max-width: 640px) {
+		.feature-details { padding-block: 78px; }
+		.feature-details > h2 { margin-bottom: 66px; }
+		.feature-detail-group { gap: 64px; }
+		.feature-detail-group + .feature-detail-group { margin-top: 94px; }
+		.feature-detail__visual { min-height: 270px; }
+	}
+</style>
