@@ -48,7 +48,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 <section id="workflow" class="features page-width scroll-anchor" aria-label="Mnemee features" data-header-surface="canvas">
 	<article class="feature feature--semantic">
 		<div class="feature__copy">
-			<div class="feature__eyebrow"><span>Semantic search</span><span class="feature__planned">Planned</span></div>
+			<div class="feature__eyebrow"><span>Semantic search</span><span class="feature__planned">Coming soon</span></div>
 			<h2>Find the idea, even when you can't name the file.</h2>
 			<p>Search across a collection using the meaning and visual qualities of what you've saved.</p>
 		</div>
@@ -155,7 +155,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 
 	<article class="feature feature--notes">
 		<div class="feature__copy">
-			<div class="feature__eyebrow"><span>AI in notes</span></div>
+			<div class="feature__eyebrow"><span>AI writing</span></div>
 			<h2>Make more of the thoughts you save.</h2>
 			<p>Ask AI to help write or refine a passage, right where your ideas live.</p>
 		</div>
@@ -181,7 +181,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 						<p>The curve softens the space, and the light does most of the work in the morning.</p>
 						<div class="note-editor__passage">
 							<span class="agent-rail" data-rail></span>
-							<p class="note-editor__empty" data-empty><span data-hint>Press space for AI or '/' for blocks…</span><kbd class="note-editor__space" data-space>space</kbd></p>
+							<p class="note-editor__empty" data-empty><span data-hint>Press <kbd class="note-editor__key" data-space>space</kbd> for AI or <kbd class="note-editor__key">/</kbd> for blocks…</span></p>
 							<p class="note-editor__draft" data-draft-row hidden><span data-draft></span></p>
 							<div class="agent-prompt" data-prompt data-phase="prompt" hidden>
 								<div class="agent-prompt__status"><span class="agent-shimmer">Writing…</span><span class="agent-prompt__ghost">Stop <kbd>Esc</kbd></span></div>
@@ -378,7 +378,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 			startDemo(note, async (wait) => {
 				empty.hidden = false;
 				hint.hidden = false;
-				space.classList.remove('is-visible', 'is-pressed');
+				space.classList.remove('is-pressed');
 				draftRow.hidden = true;
 				draft.textContent = '';
 				prompt.hidden = true;
@@ -389,8 +389,6 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 				cursor.park();
 				cursor.show(false);
 				await wait(500);
-				space.classList.add('is-visible');
-				await wait(450);
 				space.classList.add('is-pressed');
 				await wait(150);
 				empty.hidden = true;

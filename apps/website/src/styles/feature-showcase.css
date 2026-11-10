@@ -14,7 +14,7 @@
 	.feature--notes { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr); align-items: center; }
 	.feature__copy { padding: clamp(28px, 3vw, 42px); }
 	.feature__eyebrow { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; color: var(--ink-muted); font-size: 11px; font-weight: 600; letter-spacing: .035em; text-transform: uppercase; }
-	.feature__planned { padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; font-size: 10px; letter-spacing: 0; text-transform: none; }
+	.feature__planned { padding: 3px 9px; border: 1px dashed var(--line-strong); border-radius: 999px; font-size: 10px; letter-spacing: 0; text-transform: none; }
 	.feature h2 { max-width: 20ch; margin: 0; color: var(--ink); font-size: clamp(24px, 2.3vw, 32px); font-weight: 550; letter-spacing: -.04em; line-height: 1.12; text-wrap: balance; }
 	.feature p { max-width: 36ch; margin: 12px 0 0; color: var(--ink-muted); font-size: 14px; line-height: 1.55; text-wrap: pretty; }
 
@@ -124,11 +124,11 @@
 	.note-editor__title { margin-bottom: 16px; font-size: 30px; font-weight: 600; letter-spacing: -.025em; line-height: 1.25; }
 	.note-editor__body { color: color-mix(in oklch, var(--a-fg) 80%, transparent); font-size: 16px; line-height: 28px; }
 	.note-editor__body p { margin: 10px 0; }
-	.note-editor__body .note-editor__empty { display: flex; align-items: center; gap: 10px; color: var(--a-muted-fg); }
+	.note-editor__body .note-editor__empty { color: var(--a-muted-fg); }
 	.note-editor__body .note-editor__draft { font-size: 18px; line-height: 30px; }
 	.note-editor__empty[hidden], .note-editor__draft[hidden] { display: none; }
-	.note-editor__space { opacity: 0; font-size: 10px; }
-	.note-editor__space.is-visible { opacity: 1; }
+	/* The editor hint's inline keycaps: a touch larger than the mock's chips so they hold their own in the 28px line. */
+	.note-editor__key { height: 20px; padding: 0 7px; font-size: 11px; vertical-align: middle; }
 	.agent-prompt { margin: 6px 0; font-size: 14px; line-height: 20px; }
 	.agent-prompt__input { display: flex; align-items: center; height: 40px; padding: 0 6px 0 12px; border: 1px solid color-mix(in oklch, var(--a-fg) 20%, transparent); border-radius: var(--a-radius); color: var(--a-fg); }
 	html[data-theme='dark'] .agent-prompt__input { background: color-mix(in oklch, var(--a-input) 30%, transparent); }
