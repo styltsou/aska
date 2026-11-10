@@ -43,6 +43,14 @@ const { loginHref, signupHref } = Astro.props;
 		updateTheme(theme);
 	}));
 	systemTheme.addEventListener('change', (event) => { if (!readSavedTheme()) updateTheme(event.matches ? 'dark' : 'light'); });
+	const footer = document.querySelector<HTMLElement>('.site-footer');
+	const syncFooterReveal = () => {
+		if (footer) root.style.setProperty('--footer-reveal', `${footer.offsetHeight}px`);
+	};
+	if (footer) {
+		new ResizeObserver(syncFooterReveal).observe(footer);
+		syncFooterReveal();
+	}
 	document.querySelector<HTMLButtonElement>('[data-scroll-top]')?.addEventListener('click', () => {
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 		if (window.location.hash) window.history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -50,7 +58,7 @@ const { loginHref, signupHref } = Astro.props;
 </script>
 
 <style>
-	.site-footer { border-top: 1px solid var(--line); background: var(--footer-surface); }
+	.site-footer { position: fixed; right: 0; bottom: 0; left: 0; z-index: 0; background: var(--footer-surface); }
 	.site-footer__inner { padding-block: clamp(66px, 8vw, 110px) 26px; }
 	.site-footer__main { display: grid; grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(120px, 1fr)); gap: clamp(24px, 4vw, 70px); padding-bottom: clamp(74px, 10vw, 150px); }
 	.site-footer__brand { display: inline-block; margin-bottom: 19px; }.site-footer__brand img { display: block; width: 125px; height: auto; }

@@ -30,7 +30,15 @@ const signupHref = `${appBaseUrl}/signup`;
 </Layout>
 
 <style>
-	main { position: relative; z-index: 1; background: var(--canvas); }
+	main {
+		position: relative;
+		z-index: 1;
+		margin-bottom: var(--footer-reveal, 0px);
+		background: var(--canvas);
+		border-bottom: 1px solid var(--line);
+		border-radius: 0 0 var(--sheet-radius) var(--sheet-radius);
+		box-shadow: var(--sheet-shadow);
+	}
 	.intro-surface { display: grid; min-height: calc(100svh - 52px + 48px); background: var(--surface); }
 	.hero-transition { height: clamp(160px, 18vw, 220px); background: linear-gradient(to bottom, var(--surface), var(--canvas)); }
 	@media (max-width: 640px) { .hero-transition { height: 160px; } }

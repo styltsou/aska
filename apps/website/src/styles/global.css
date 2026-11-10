@@ -27,6 +27,8 @@
 	--feature-frame-shadow-mid: 0 0 0 5px rgb(255 255 255 / 55%), 0 0 0 6px rgb(184 188 180 / 32%), 0 8px 20px rgb(21 21 21 / 5%);
 	--feature-frame-shadow-end: 0 0 0 4px rgb(255 255 255 / 48%), 0 0 0 5px rgb(184 188 180 / 28%), 0 7px 18px rgb(21 21 21 / 4%);
 	--radius: 8px;
+	--sheet-radius: 28px;
+	--sheet-shadow: 0 22px 44px rgb(21 21 21 / 14%), 0 6px 14px rgb(21 21 21 / 6%);
 	--page-width: 1200px;
 	--anchor-offset: 70px;
 	color-scheme: light;
@@ -91,6 +93,7 @@ h1, h2 { font-weight: 560; letter-spacing: 0; }
 	--glass-surface-strong: rgb(12 12 12 / 92%);
 	--glass-line: rgb(255 255 255 / 12%);
 	--glass-shadow: 0 9px 24px rgb(0 0 0 / 32%);
+	--sheet-shadow: 0 22px 44px rgb(0 0 0 / 55%), 0 6px 14px rgb(0 0 0 / 40%);
 	--feature-frame-border-mid: rgb(94 101 94 / 82%);
 	--feature-frame-border-end: rgb(94 101 94 / 76%);
 	--feature-frame-shadow-start: 0 0 0 0 rgb(255 255 255 / 0%), 0 0 0 0 rgb(0 0 0 / 0%);
