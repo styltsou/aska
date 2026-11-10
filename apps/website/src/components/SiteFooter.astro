@@ -1,36 +1,23 @@
 ---
-interface Props {
-	loginHref: string;
-	signupHref: string;
-}
-
+interface Props { loginHref: string; signupHref: string; }
 const { loginHref, signupHref } = Astro.props;
 ---
 
-<footer class="site-footer">
-	<div class="page-width site-footer__topline">
-		<div class="site-footer__credit-block">
-			<span>Made by <a href="https://styltsoum.com" target="_blank" rel="noreferrer" class="site-footer__credit">styltsou</a></span>
-			<a href="https://github.com/styltsou/mnemee" target="_blank" rel="noreferrer" class="site-footer__github">GitHub</a>
+<footer class="site-footer" data-header-surface="footer">
+	<div class="site-footer__inner page-width">
+		<div class="site-footer__main">
+			<div class="site-footer__about">
+				<a class="site-footer__brand" href="/" aria-label="Mnemee home"><img src="/mnemee-logo.svg" alt="Mnemee" width="125" height="32" /></a>
+				<p>A visual workspace for the references you want to keep and the ideas you want to make.</p>
+			</div>
+			<nav aria-label="Footer product links"><h2>Explore</h2><a href="#workflow">How it works</a><a href="#canvas">Canvas</a><a href="#color-search">Color search</a></nav>
+			<nav aria-label="Footer account links"><h2>Your space</h2><a href={signupHref}>Create account</a><a href={loginHref}>Log in</a></nav>
+			<div class="site-footer__elsewhere"><h2>Elsewhere</h2><a href="https://github.com/styltsou/mnemee" target="_blank" rel="noreferrer">GitHub ↗</a><a href="https://styltsoum.com" target="_blank" rel="noreferrer">Made by styltsou ↗</a></div>
 		</div>
-		<span>&copy; {new Date().getFullYear()} Mnemee</span>
-	</div>
-	<div class="site-footer__wordmark" aria-hidden="true">mnemee</div>
-	<div class="page-width site-footer__inner">
-		<div class="site-footer__meta">
-			<div class="site-footer__meta-group site-footer__meta-group--start">
-				<button type="button" data-scroll-top>Back to top</button>
-				<div class="theme-control" role="group" aria-label="Theme">
-					<span aria-hidden="true">Theme:</span>
-					<button type="button" data-theme-option="light" aria-pressed="false">Light</button>
-					<span aria-hidden="true">/</span>
-					<button type="button" data-theme-option="dark" aria-pressed="false">Dark</button>
-				</div>
-			</div>
-			<div class="site-footer__meta-group site-footer__meta-group--end">
-				<a href={signupHref}>Create account</a>
-				<a href={loginHref}>Log in</a>
-			</div>
+		<div class="site-footer__bottom">
+			<span>© {new Date().getFullYear()} Mnemee</span>
+			<div class="theme-control" role="group" aria-label="Theme"><span>Appearance</span><button type="button" data-theme-option="light" aria-pressed="false">Light</button><button type="button" data-theme-option="dark" aria-pressed="false">Dark</button></div>
+			<button type="button" class="site-footer__top" data-scroll-top>Back to top ↑</button>
 		</div>
 	</div>
 </footer>
@@ -38,116 +25,43 @@ const { loginHref, signupHref } = Astro.props;
 <script>
 	const storageKey = 'mnemee-theme';
 	const root = document.documentElement;
-	const scrollTopButton = document.querySelector<HTMLButtonElement>("[data-scroll-top]");
-
-	scrollTopButton?.addEventListener("click", () => {
-		window.scrollTo({ top: 0, behavior: "smooth" });
-		if (window.location.hash) {
-			window.history.replaceState(null, "", window.location.pathname + window.location.search);
-		}
-	});
-
 	const themeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-theme-option]'));
 	const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
-
 	const updateTheme = (theme: 'light' | 'dark') => {
 		root.dataset.theme = theme;
 		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? 'oklch(0.145 0 0)' : '#ffffff');
 		themeButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.themeOption === theme)));
 	};
-
-	const savedTheme = (() => {
-		try {
-			const theme = localStorage.getItem(storageKey);
-			return theme === 'light' || theme === 'dark' ? theme : null;
-		} catch {
-			return null;
-		}
-	})();
-
-	updateTheme(savedTheme ?? (systemTheme.matches ? 'dark' : 'light'));
-
-	themeButtons.forEach((button) => {
-		button.addEventListener('click', () => {
-			const theme = button.dataset.themeOption as 'light' | 'dark';
-			try {
-				localStorage.setItem(storageKey, theme);
-			} catch {
-				// Keep the selected theme for this visit when storage is unavailable.
-			}
-			updateTheme(theme);
-		});
-	});
-
-	systemTheme.addEventListener('change', (event) => {
-		try {
-			const theme = localStorage.getItem(storageKey);
-			if (theme === 'light' || theme === 'dark') return;
-		} catch {
-			// Without storage, continue tracking the system preference.
-		}
-		updateTheme(event.matches ? 'dark' : 'light');
+	const readSavedTheme = () => {
+		try { const theme = localStorage.getItem(storageKey); return theme === 'light' || theme === 'dark' ? theme : null; }
+		catch { return null; }
+	};
+	updateTheme(readSavedTheme() ?? (systemTheme.matches ? 'dark' : 'light'));
+	themeButtons.forEach((button) => button.addEventListener('click', () => {
+		const theme = button.dataset.themeOption as 'light' | 'dark';
+		try { localStorage.setItem(storageKey, theme); } catch { /* Keep the selected theme for this visit. */ }
+		updateTheme(theme);
+	}));
+	systemTheme.addEventListener('change', (event) => { if (!readSavedTheme()) updateTheme(event.matches ? 'dark' : 'light'); });
+	document.querySelector<HTMLButtonElement>('[data-scroll-top]')?.addEventListener('click', () => {
+		window.scrollTo({ top: 0, behavior: 'smooth' });
+		if (window.location.hash) window.history.replaceState(null, '', window.location.pathname + window.location.search);
 	});
 </script>
 
 <style>
-	.site-footer { --footer-wordmark-shift: 53px; position: sticky; bottom: 0; z-index: 0; min-height: min(72vh, 650px); margin-top: -84px; padding-top: 144px; overflow: hidden; background: var(--footer-surface); }
-	.site-footer__topline { --footer-topline-size: 11px; position: absolute; top: 116px; left: 50%; z-index: 1; display: flex; align-items: center; justify-content: space-between; color: #72726c; font-size: var(--footer-topline-size); line-height: 1; transform: translateX(-50%); }
-	.site-footer__credit-block { display: grid; justify-items: start; gap: 7px; }
-	.site-footer__topline span, .site-footer__topline a { font-size: var(--footer-topline-size); text-decoration: none; }
-	.site-footer a.site-footer__credit { color: var(--ink); transition: color 100ms ease; }
-	.site-footer__github { color: inherit; }
-	.site-footer__inner { position: relative; z-index: 1; display: flex; align-items: flex-end; min-height: min(58vh, 506px); padding-bottom: 34px; }
-	.site-footer__wordmark { position: absolute; top: calc(50% + var(--footer-wordmark-shift)); left: 0; width: 100%; color: #20201e; font-size: clamp(150px, 27vw, 410px); font-weight: 600; letter-spacing: 0; line-height: .77; text-align: center; transform: translateY(-50%); }
-	.site-footer__meta { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 22px; padding-top: 18px; border-top: 1px solid rgb(21 21 21 / 16%); font-size: 12px; font-weight: 400; line-height: 1; letter-spacing: 0; }
-	.site-footer__meta-group { display: flex; align-items: center; gap: 22px; }
-	.site-footer p, .site-footer a, .site-footer button { margin: 0; color: #5e5e58; font-size: inherit; font-weight: inherit; line-height: inherit; letter-spacing: inherit; }
-	.site-footer a, .site-footer button { transition: color 100ms ease; }
-	.site-footer button { padding: 0; border: 0; background: transparent; font: inherit; cursor: pointer; }
-	.theme-control { display: inline-flex; align-items: center; gap: 5px; color: #5e5e58; font-size: 12px; }
-	.theme-control button { padding: 0; border: 0; color: inherit; background: transparent; font: inherit; cursor: pointer; }
-	:global(html[data-theme=dark]) .site-footer button { color: var(--ink-muted); }
-	.theme-control button[aria-pressed='true'] { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-
-	:global(html[data-theme='dark']) .site-footer__topline {
-		color: var(--ink-muted);
-	}
-	:global(html[data-theme='dark']) .site-footer__wordmark { color: #e7eae4; }
-	:global(html[data-theme='dark']) .site-footer__meta { border-color: rgb(241 243 238 / 16%); }
-	:global(html[data-theme='dark']) .site-footer p,
-	:global(html[data-theme='dark']) .site-footer a { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .theme-control { color: var(--ink-muted); }
-	:global(html[data-theme='dark']) .site-footer a.site-footer__credit,
-	:global(html[data-theme='dark']) .site-footer .theme-control button[aria-pressed='true'] { color: var(--ink); }
-
-	@media (hover: hover) {
-		.site-footer__credit:hover { text-decoration: underline; text-underline-offset: 2px; }
-		.site-footer__github:hover, .site-footer a:hover, .site-footer button:hover { color: var(--ink); }
-		:global(html[data-theme='dark']) .site-footer a:hover,
-		:global(html[data-theme='dark']) .site-footer button:hover { color: var(--ink); }
-		:global(html[data-theme='dark']) .site-footer__credit:hover { text-decoration-color: var(--ink); }
-	}
-
-	@media (hover: none) {
-		.site-footer__credit:active { text-decoration: underline; text-underline-offset: 2px; }
-		.site-footer a:active, .site-footer button:active, .theme-control button:active { color: var(--ink); }
-		:global(html[data-theme='dark']) .site-footer a:active,
-		:global(html[data-theme='dark']) .site-footer button:active,
-		:global(html[data-theme='dark']) .theme-control button:active { color: var(--ink); }
-		:global(html[data-theme='dark']) .site-footer__credit:active { text-decoration-color: var(--ink); }
-	}
-
-	@media (max-width: 640px) {
-		.site-footer { --footer-wordmark-shift: 32px; min-height: 430px; margin-top: -48px; padding-top: 94px; }
-		.site-footer__topline { top: 76px; font-size: 10px; }
-		.site-footer__inner { min-height: 336px; padding-bottom: 24px; }
-		.site-footer__wordmark { font-size: clamp(116px, 35vw, 160px); line-height: .82; }
-		.site-footer__meta { align-items: flex-start; }
-		.site-footer__meta-group { flex-direction: column; align-items: flex-start; gap: 12px; }
-		.site-footer__meta-group--end { align-items: flex-end; text-align: right; }
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.site-footer a, .site-footer button { transition: none; }
-	}
+	.site-footer { border-top: 1px solid var(--line); background: var(--footer-surface); }
+	.site-footer__inner { padding-block: clamp(66px, 8vw, 110px) 26px; }
+	.site-footer__main { display: grid; grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(120px, 1fr)); gap: clamp(24px, 4vw, 70px); padding-bottom: clamp(74px, 10vw, 150px); }
+	.site-footer__brand { display: inline-block; margin-bottom: 19px; }.site-footer__brand img { display: block; width: 125px; height: auto; }
+	.site-footer__about p { max-width: 300px; margin: 0; color: var(--ink-muted); font-size: 14px; line-height: 1.55; }
+	.site-footer nav, .site-footer__elsewhere { display: flex; flex-direction: column; align-items: flex-start; gap: 15px; }
+	.site-footer h2 { margin: 2px 0 10px; color: var(--ink-muted); font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+	.site-footer nav a, .site-footer__elsewhere a { font-size: 14px; line-height: 1.25; }
+	.site-footer a:hover, .site-footer button:hover { color: var(--ink-muted); }
+	.site-footer__bottom { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding-top: 21px; border-top: 1px solid var(--line); color: var(--ink-muted); font-size: 12px; }
+	.theme-control { display: flex; align-items: center; gap: 11px; }.theme-control > span { margin-right: 7px; }.theme-control button, .site-footer__top { padding: 0; border: 0; background: none; color: var(--ink-muted); font: inherit; cursor: pointer; }.theme-control button[aria-pressed='true'] { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+	:global(html[data-theme='dark']) .site-footer__brand img { filter: invert(1); }
+	@media (max-width: 780px) { .site-footer__main { grid-template-columns: repeat(3, 1fr); }.site-footer__about { grid-column: 1 / -1; margin-bottom: 18px; } }
+	@media (max-width: 520px) { .site-footer__main { grid-template-columns: repeat(2, 1fr); gap: 42px 20px; padding-bottom: 88px; }.site-footer__about { grid-column: 1 / -1; margin: 0; }.site-footer__bottom { flex-wrap: wrap; }.theme-control { order: 3; width: 100%; } }
 </style>

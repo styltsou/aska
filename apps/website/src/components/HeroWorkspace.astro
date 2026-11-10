@@ -1,7 +1,16 @@
+---
+import { Image } from 'astro:assets';
+import blueRedWall from '../assets/images/blue-red-wall.jpg';
+import curvedArchitecture from '../assets/images/curved-architecture.jpg';
+import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
+import bauhausRoom from '../assets/images/bauhaus-room-01.jpg';
+import greenAbstract from '../assets/images/green-abstract-05.webp';
+---
+
 <div
 	class="hero-workspace"
 	role="img"
-	aria-label="An example Mnemee workspace with an inbox and a collection canvas"
+	aria-label="An example Mnemee inbox with saved images and a note"
 >
 	<div class="hero-workspace__browser">
 		<div class="browser-bar">
@@ -25,11 +34,11 @@
 					<span class="workspace-heading__add">Add</span>
 				</div>
 				<div class="reference-grid" aria-hidden="true">
-					<article class="reference reference--blue reference--tall"><span>Form study</span><i></i><i></i></article>
-					<article class="reference reference--paper"><span>Material index</span><b></b><b></b><b></b></article>
-					<article class="reference reference--ink reference--wide"><span>Quiet objects</span><em></em></article>
-					<article class="reference reference--coral"><span>Catalogue</span><i></i><i></i><i></i></article>
-					<article class="reference reference--green"><span>Archive 04</span><b></b><b></b></article>
+					<article class="reference reference--blue reference--tall"><Image src={blueRedWall} alt="" width={280} quality={78} /></article>
+					<article class="reference reference--paper"><Image src={concreteSculptures} alt="" width={280} quality={78} /></article>
+					<article class="reference reference--ink reference--wide"><Image src={curvedArchitecture} alt="" width={420} quality={78} /></article>
+					<article class="reference reference--coral"><Image src={bauhausRoom} alt="" width={280} quality={78} /></article>
+					<article class="reference reference--green"><Image src={greenAbstract} alt="" width={280} quality={78} /></article>
 					<article class="reference reference--note"><span>Hold on to the things you return to.</span></article>
 				</div>
 			</div>
@@ -39,18 +48,18 @@
 
 <style>
 	.hero-workspace { position: relative; display: flex; width: 100%; min-width: 0; padding: 14px 12px 12px; border: 1px solid var(--glass-line); border-radius: 9px; background: transparent; box-shadow: 0 10px 25px rgb(21 21 21 / 6%); aspect-ratio: 16 / 10; }
-	.hero-workspace__browser { display: flex; flex: 1; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid #d1d2ce; border-radius: 7px; background: #f9f9f7; }
+	.hero-workspace__browser { display: flex; flex: 1; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
 	.browser-bar { display: flex; align-items: center; height: 33px; gap: 9px; padding: 0 10px; border-bottom: 1px solid #deded9; color: #888883; font-size: 8px; }
 	.browser-bar__dots { display: flex; gap: 3px; }
 	.browser-bar__dots i { display: block; width: 5px; height: 5px; border-radius: 50%; background: #c6c7c2; }
 	.browser-bar__profile { display: grid; width: 16px; height: 16px; margin-left: auto; color: #fff; border-radius: 50%; background: #30302e; font-size: 7px; place-items: center; }
 	.workspace-body { display: grid; flex: 1; grid-template-columns: 104px minmax(0, 1fr); min-height: 0; }
-	.workspace-sidebar { display: flex; flex-direction: column; gap: 5px; padding: 15px 8px; border-right: 1px solid #e2e2de; background: #f3f3f0; color: #7e7e78; font-size: 8px; }
+	.workspace-sidebar { display: flex; flex-direction: column; gap: 5px; padding: 15px 8px; background: var(--surface); color: var(--ink-muted); font-size: 8px; }
 	.workspace-sidebar__brand { margin: 0 4px 15px; color: #20201e; font-size: 11px; font-weight: 700; }
 	.workspace-nav-item { padding: 6px 7px; border-radius: 4px; }
 	.workspace-nav-item--active { color: #22221f; background: #e1e3e5; font-weight: 600; }
 	.workspace-sidebar__label { margin: 15px 5px 2px; color: #a3a39c; font-size: 7px; letter-spacing: .08em; }
-	.workspace-content { display: flex; flex-direction: column; min-width: 0; padding: 18px; }
+	.workspace-content { display: flex; flex-direction: column; min-width: 0; padding: 18px; background: var(--canvas); }
 	.workspace-heading { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 15px; }
 	.workspace-heading div { display: grid; gap: 3px; }
 	.workspace-heading strong { font-size: 14px; font-weight: 650; }
@@ -59,8 +68,9 @@
 	.reference-grid { display: grid; flex: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 7px; min-height: 0; }
 	.reference { position: relative; display: block; overflow: hidden; padding: 8px; border: 1px solid rgb(0 0 0 / 5%); border-radius: 5px; color: #fff; font-size: 7px; }
 	.reference span { position: relative; z-index: 1; }
+	.reference img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
 	.reference--tall { grid-row: span 2; }
-	.reference--wide { grid-column: span 2; }
+	.reference--wide { grid-column: span 1; }
 	.reference--blue { background: #6d8499; }
 	.reference--paper { color: #45423d; background: #d7d2c8; }
 	.reference--ink { background: #373d44; }

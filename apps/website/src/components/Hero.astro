@@ -1,6 +1,5 @@
 ---
 import HeroWorkspace from './HeroWorkspace.astro';
-import HeroReferenceField from './HeroReferenceField.astro';
 
 interface Props {
 	signupHref: string;
@@ -11,52 +10,33 @@ const { signupHref } = Astro.props;
 
 <section class="hero">
 	<div class="hero__copy">
-		<h1>A visual workspace for creative research.</h1>
+		<p class="hero__eyebrow">A home for the things you notice</p>
+		<h1>Keep the reference.<br /><span>Find the direction.</span></h1>
 		<p class="hero__lede">
-			Collect images, links, posts, and notes on an infinite canvas that keeps inspiration connected to the work.
+			Mnemee brings images, videos, links, and notes into one visual workspace. Collect what catches your eye, arrange it on a canvas, and find it again when it matters.
 		</p>
 		<div class="hero__actions">
-			<a class="button button--primary" href={signupHref}>Create account</a>
-			<a class="button button--quiet" href="#workflow">See how it works</a>
+			<a class="button button--primary" href={signupHref}>Create your workspace</a>
+			<a class="hero__text-link" href="#workflow">Explore how it works <span aria-hidden="true">↗</span></a>
 		</div>
 	</div>
-	<HeroReferenceField />
-	<div class="hero-workspace-stage"><HeroWorkspace /></div>
+	<div class="hero-workspace-stage"><HeroWorkspace /><p>References in a space made to think with.</p></div>
 </section>
 
 <style>
-	.hero { --hero-surface-rgb: 243 244 241; --hero-fade-rgb: var(--hero-surface-rgb); --hero-surface: var(--canvas); --hero-dot: rgb(21 21 21 / 10%); --hero-fade-depth: 64px; --hero-fade-one: 56px; --hero-fade-two: 48px; --hero-fade-three: 38px; --hero-fade-four: 28px; --hero-fade-five: 18px; --hero-fade-six: 8px; position: relative; height: calc(100dvh + var(--hero-fade-depth)); padding-top: clamp(132px, 18dvh, 180px); overflow: hidden; text-align: center; }
+	.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; gap: clamp(36px, 5vw, 84px); width: min(calc(100% - 64px), 1200px); min-height: min(740px, calc(100dvh - 74px)); margin-inline: auto; padding-block: clamp(80px, 9vw, 130px); }
 	.hero__copy { position: relative; z-index: 20; max-width: 670px; margin-inline: auto; }
-	h1 { max-width: 660px; margin-bottom: 14px; font-size: clamp(40px, 4.2vw, 58px); line-height: 1.04; }
-	.hero__lede { max-width: 500px; margin-right: auto; margin-bottom: 20px; margin-left: auto; color: var(--ink-muted); font-size: 14px; line-height: 1.55; }
-	.hero__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-	.hero-workspace-stage { position: absolute; right: 0; bottom: 0; left: 0; z-index: 10; width: min(1280px, calc(100vw - 96px), 125dvh); height: min(533.333px, calc(41.6667vw - 40px), 52.083dvh); margin-inline: auto; border-radius: 9px; background: rgb(var(--hero-surface-rgb) / 82%); -webkit-backdrop-filter: blur(30px) saturate(145%); backdrop-filter: blur(30px) saturate(145%); }
-	.hero-workspace-stage::after { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to bottom, transparent 0, transparent calc(100% - var(--hero-fade-depth)), rgb(var(--hero-fade-rgb) / 2%) calc(100% - var(--hero-fade-one)), rgb(var(--hero-fade-rgb) / 7%) calc(100% - var(--hero-fade-two)), rgb(var(--hero-fade-rgb) / 18%) calc(100% - var(--hero-fade-three)), rgb(var(--hero-fade-rgb) / 36%) calc(100% - var(--hero-fade-four)), rgb(var(--hero-fade-rgb) / 61%) calc(100% - var(--hero-fade-five)), rgb(var(--hero-fade-rgb) / 86%) calc(100% - var(--hero-fade-six)), rgb(var(--hero-fade-rgb) / 100%) 100%); content: ""; pointer-events: none; }
-
-	:global(html[data-theme='dark']) .hero { --hero-surface-rgb: 22 24 22; }
-	.hero::before { position: absolute; inset: 0; z-index: 0; background-image: radial-gradient(circle, var(--hero-dot) .6px, transparent .75px); background-position: center top; background-size: 24px 24px; content: ''; pointer-events: none; }
-	.hero-workspace-stage { background: color-mix(in srgb, var(--hero-surface) 82%, transparent); }
-	.hero-workspace-stage::after { background: linear-gradient(to bottom, transparent 0, transparent calc(100% - var(--hero-fade-depth)), color-mix(in srgb, var(--hero-surface) 2%, transparent) calc(100% - var(--hero-fade-one)), color-mix(in srgb, var(--hero-surface) 7%, transparent) calc(100% - var(--hero-fade-two)), color-mix(in srgb, var(--hero-surface) 18%, transparent) calc(100% - var(--hero-fade-three)), color-mix(in srgb, var(--hero-surface) 36%, transparent) calc(100% - var(--hero-fade-four)), color-mix(in srgb, var(--hero-surface) 61%, transparent) calc(100% - var(--hero-fade-five)), color-mix(in srgb, var(--hero-surface) 86%, transparent) calc(100% - var(--hero-fade-six)), var(--hero-surface) 100%); }
-	:global(html[data-theme='dark']) .hero { --hero-dot: rgb(241 243 238 / 13%); }
-
-	@media (max-width: 900px) {
-		.hero { padding-top: clamp(94px, 12dvh, 112px); }
-		.hero__copy { max-width: 620px; }
-		.hero-workspace-stage { width: min(960px, calc(100vw - 48px), 125dvh); height: min(400px, calc(41.6667vw - 20px), 52.083dvh); }
-	}
-
-	@media (min-width: 1200px) and (min-height: 1100px) {
-		.hero { padding-top: clamp(180px, 20dvh, 280px); }
-	}
-
-	@media (max-width: 640px) {
-		.hero { --hero-fade-depth: 40px; --hero-fade-one: 35px; --hero-fade-two: 30px; --hero-fade-three: 24px; --hero-fade-four: 17px; --hero-fade-five: 10px; --hero-fade-six: 4px; display: grid; min-height: 100svh; height: calc(100svh + var(--hero-fade-depth)); align-items: center; padding: 0 20px var(--hero-fade-depth); }
-		.hero__copy { width: 100%; max-width: 350px; transform: translateY(-8px); }
-		h1 { font-size: clamp(36px, 10vw, 44px); }
-		.hero-workspace-stage { display: none; }
-	}
-
-	@media (prefers-reduced-transparency: reduce) {
-		.hero-workspace-stage { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
-	}
+	.hero__eyebrow { margin-bottom: 24px; color: var(--ink-muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+	h1 { max-width: 660px; margin-bottom: 24px; font-size: clamp(44px, 4.2vw, 64px); font-weight: 560; letter-spacing: -.052em; line-height: 1.02; }
+	h1 span { color: var(--ink-muted); }
+	.hero__lede { max-width: 460px; margin-bottom: 26px; color: var(--ink-muted); font-size: 16px; line-height: 1.6; }
+	.hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; }
+	.hero__actions .button { min-height: 42px; padding-inline: 16px; font-size: 13px; }
+	.hero__text-link { font-size: 13px; font-weight: 550; }
+	.hero__text-link span { margin-left: 4px; }
+	.hero-workspace-stage { min-width: 0; }
+	.hero-workspace-stage p { margin: 10px 0 0; color: var(--ink-muted); font-size: 11px; text-align: right; }
+	@media (max-width: 1180px) { .hero { grid-template-columns: 1fr; gap: 48px; min-height: 0; padding-top: 92px; }.hero__copy { max-width: 720px; margin: 0; }.hero-workspace-stage { width: min(100%, 760px); } }
+	@media (max-width: 640px) { .hero { width: min(calc(100% - 32px), 1200px); gap: 42px; padding-block: 70px 86px; }.hero__eyebrow { font-size: 10px; } h1 { font-size: clamp(39px, 10vw, 58px); } .hero__lede { font-size: 15px; } .hero-workspace-stage p { font-size: 10px; } }
+	@media (max-width: 370px) { h1 { font-size: 36px; } }
 </style>

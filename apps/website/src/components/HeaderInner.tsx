@@ -43,15 +43,14 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 
 	return (
 		<div className="site-header__inner" data-menu-open={isOpen || undefined}>
-			<div className="site-header__chrome" aria-hidden="true" />
 			<div className="site-header__row">
 				<a className="brand" href="/" aria-label="Mnemee home" onClick={scrollToTop}>
 					<img className="brand__logo" src="/mnemee-logo.svg" alt="" />
 				</a>
 				<nav className="desktop-nav" aria-label="Primary navigation">
-					<a href="#product">Product</a>
-					<a href="#workflow">Workflow</a>
-					<a href="#archive">Archive</a>
+					<a href="#workflow">How it works</a>
+					<a href="#canvas">Canvas</a>
+					<a href="#color-search">Color search</a>
 				</nav>
 				<div className="desktop-actions">
 					<a className="text-link" href={loginHref}>Log in</a>
@@ -74,9 +73,9 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 
 			<div className="mobile-menu-content" id="mobile-menu" aria-hidden={!isOpen}>
 				<nav className="mobile-menu-nav" aria-label="Mobile navigation">
-					<a onClick={close} href="#product">Product</a>
-					<a onClick={close} href="#workflow">Workflow</a>
-					<a onClick={close} href="#archive">Archive</a>
+					<a onClick={close} href="#workflow">How it works</a>
+					<a onClick={close} href="#canvas">Canvas</a>
+					<a onClick={close} href="#color-search">Color search</a>
 				</nav>
 				<div className="mobile-menu-footer">
 					<a onClick={close} className="button button--primary" href={signupHref}>Create account</a>

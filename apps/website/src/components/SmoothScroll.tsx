@@ -4,11 +4,8 @@ import 'lenis/dist/lenis.css';
 
 export function SmoothScroll() {
 	useEffect(() => {
-		const anchorOffset = Number.parseFloat(
-			getComputedStyle(document.documentElement).getPropertyValue('--anchor-offset'),
-		);
 		const lenis = new Lenis({
-			anchors: { offset: -anchorOffset },
+			anchors: true,
 			lerp: 0.22,
 			smoothWheel: true,
 			wheelMultiplier: 1.05,

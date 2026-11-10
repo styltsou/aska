@@ -41,11 +41,11 @@ const mockBlurStyles = Object.fromEntries(
 const withMockBlur = (image) => ({ ...mockImageProps, src: image, class: 'blur-image', style: mockBlurStyles[image.src] });
 ---
 
-<section id="workflow" class="feature-showcase page-width scroll-anchor" aria-label="Mnemee features">
+<section id="workflow" class="feature-showcase page-width scroll-anchor" aria-label="Mnemee features" data-header-surface="canvas">
 	<article class="feature-panel feature-panel--capture">
 		<div class="feature-panel__copy">
 			<h2>Everything lands in one place first.</h2>
-			<p>Images, videos, rich links, and quick notes arrive in the Inbox until you are ready to sort them.</p>
+			<p>Images, videos, links, and quick notes land in the Inbox until you are ready to give them a place.</p>
 		</div>
 		<div class="capture-preview" role="img" aria-label="An Mnemee inbox containing different kinds of saved references">
 			<div class="capture-topbar" aria-hidden="true">
@@ -70,7 +70,7 @@ const withMockBlur = (image) => ({ ...mockImageProps, src: image, class: 'blur-i
 		</div>
 	</article>
 
-	<article id="archive" class="feature-panel feature-panel--search scroll-anchor">
+	<article id="color-search" class="feature-panel feature-panel--search scroll-anchor">
 		<div class="feature-panel__copy">
 			<h2>Search beyond file names.</h2>
 			<p>Use color-based search and text search to find the references you saved in a collection.</p>
@@ -94,7 +94,7 @@ const withMockBlur = (image) => ({ ...mockImageProps, src: image, class: 'blur-i
 		</div>
 	</article>
 
-	<article class="feature-panel feature-panel--canvas">
+	<article id="canvas" class="feature-panel feature-panel--canvas scroll-anchor">
 		<div class="feature-panel__copy">
 			<h2>Arrange ideas as they start to take shape.</h2>
 			<p>Move references, notes and folders on a canvas as the project continues to evolve.</p>
