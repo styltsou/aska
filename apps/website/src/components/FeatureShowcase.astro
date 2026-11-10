@@ -181,7 +181,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 						<p>The curve softens the space, and the light does most of the work in the morning.</p>
 						<div class="note-editor__passage">
 							<span class="agent-rail" data-rail></span>
-							<p class="note-editor__empty" data-empty><span data-hint>Press <kbd class="note-editor__key" data-space>space</kbd> for AI or <kbd class="note-editor__key">/</kbd> for blocks…</span></p>
+							<p class="note-editor__empty" data-empty><span data-hint>Press space for AI or @ for mentions…</span></p>
 							<p class="note-editor__draft" data-draft-row hidden><span data-draft></span></p>
 							<div class="agent-prompt" data-prompt data-phase="prompt" hidden>
 								<div class="agent-prompt__status"><span class="agent-shimmer">Writing…</span><span class="agent-prompt__ghost">Stop <kbd>Esc</kbd></span></div>
@@ -350,7 +350,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 			});
 		}
 
-		// 3. Note: press Space on an empty paragraph, generate formatted text, then keep it.
+		// 3. Note: open the agent from the empty line's placeholder, generate formatted text, then keep it.
 		const note = document.querySelector<HTMLElement>('[data-demo="note"]');
 		const noteMock = note?.querySelector<HTMLElement>('[data-mock]');
 		const noteCursor = note?.querySelector<SVGElement>('[data-cursor]');
@@ -360,12 +360,11 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 		const keep = note?.querySelector<HTMLElement>('[data-keep]');
 		const empty = note?.querySelector<HTMLElement>('[data-empty]');
 		const hint = note?.querySelector<HTMLElement>('[data-hint]');
-		const space = note?.querySelector<HTMLElement>('[data-space]');
 		const draftRow = note?.querySelector<HTMLElement>('[data-draft-row]');
 		const draft = note?.querySelector<HTMLElement>('[data-draft]');
 		const rail = note?.querySelector<HTMLElement>('[data-rail]');
 		const saveStatus = note?.querySelector<HTMLElement>('[data-save-status]');
-		if (note && noteMock && noteCursor && prompt && instruction && send && keep && empty && hint && space && draftRow && draft && rail && saveStatus) {
+		if (note && noteMock && noteCursor && prompt && instruction && send && keep && empty && hint && draftRow && draft && rail && saveStatus) {
 			const cursor = cursorMover(noteMock, noteCursor);
 			const INSTRUCTION = instruction.textContent ?? '';
 			const REWRITE = [
@@ -378,7 +377,6 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 			startDemo(note, async (wait) => {
 				empty.hidden = false;
 				hint.hidden = false;
-				space.classList.remove('is-pressed');
 				draftRow.hidden = true;
 				draft.textContent = '';
 				prompt.hidden = true;
@@ -388,9 +386,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 				saveStatus.textContent = 'Edited 2m ago';
 				cursor.park();
 				cursor.show(false);
-				await wait(500);
-				space.classList.add('is-pressed');
-				await wait(150);
+				await wait(900);
 				empty.hidden = true;
 				prompt.hidden = false;
 				cursor.show(true);

@@ -127,8 +127,6 @@
 	.note-editor__body .note-editor__empty { color: var(--a-muted-fg); }
 	.note-editor__body .note-editor__draft { font-size: 18px; line-height: 30px; }
 	.note-editor__empty[hidden], .note-editor__draft[hidden] { display: none; }
-	/* The editor hint's inline keycaps: a touch larger than the mock's chips so they hold their own in the 28px line. */
-	.note-editor__key { height: 20px; padding: 0 7px; font-size: 11px; vertical-align: middle; }
 	.agent-prompt { margin: 6px 0; font-size: 14px; line-height: 20px; }
 	.agent-prompt__input { display: flex; align-items: center; height: 40px; padding: 0 6px 0 12px; border: 1px solid color-mix(in oklch, var(--a-fg) 20%, transparent); border-radius: var(--a-radius); color: var(--a-fg); }
 	html[data-theme='dark'] .agent-prompt__input { background: color-mix(in oklch, var(--a-input) 30%, transparent); }
