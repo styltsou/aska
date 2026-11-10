@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/input-group";
 import { clearAuthStateCache, redirectIfSignedIn } from "@/lib/auth-flow";
 import { signUp } from "@/lib/auth-client";
+import { clearLastLoginMethod } from "@/lib/last-login-method";
 
 export const Route = createFileRoute("/signup")({
   beforeLoad: redirectIfSignedIn,
@@ -64,6 +65,7 @@ function SignupPage() {
     }
 
     clearAuthStateCache();
+    clearLastLoginMethod();
     await router.invalidate();
     void navigate({ to: "/onboarding", replace: true });
   }
@@ -84,7 +86,7 @@ function SignupPage() {
         </div>
         <GoogleSignIn />
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <label className="text-sm font-medium" htmlFor="email">
               Email
             </label>
@@ -99,7 +101,7 @@ function SignupPage() {
               onChange={(event) => setEmail(event.target.value)}
             />
           </div>
-          <Field className="gap-2">
+          <Field className="flex flex-col gap-2 space-y-0">
             <FieldLabel htmlFor="password">Password</FieldLabel>
             <InputGroup className="h-10">
               <InputGroupInput
@@ -130,7 +132,7 @@ function SignupPage() {
               </InputGroupAddon>
             </InputGroup>
           </Field>
-          <Field className="gap-2">
+          <Field className="flex flex-col gap-2 space-y-0">
             <FieldLabel htmlFor="confirm-password">Confirm password</FieldLabel>
             <InputGroup className="h-10">
               <InputGroupInput

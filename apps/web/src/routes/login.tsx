@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
 import { Eye, EyeOff, LoaderCircleIcon, LogInIcon } from "lucide-react";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
@@ -12,22 +17,41 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import {
-  clearAuthStateCache,
-  getSignedInDestination,
-  redirectIfSignedIn,
-} from "@/lib/auth-flow";
+import { clearAuthStateCache, getSignedInDestination } from "@/lib/auth-flow";
 import { signIn } from "@/lib/auth-client";
+import {
+  clearGoogleSignInAttempt,
+  clearLastLoginMethod,
+  completeGoogleSignIn,
+} from "@/lib/last-login-method";
 
 type AuthSearch = {
   redirect?: string;
+  google?: "success";
 };
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search): AuthSearch => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+    google: search.google === "success" ? "success" : undefined,
   }),
-  beforeLoad: redirectIfSignedIn,
+  beforeLoad: async ({ search }) => {
+    const destination = await getSignedInDestination();
+    if (search.google === "success") {
+      completeGoogleSignIn(destination.to !== "/login");
+    } else {
+      clearGoogleSignInAttempt();
+    }
+    if (destination.to !== "/login") {
+      if (
+        search.redirect?.startsWith("/") &&
+        !search.redirect.startsWith("//")
+      ) {
+        throw redirect({ href: search.redirect, replace: true });
+      }
+      throw redirect(destination);
+    }
+  },
   head: () => ({
     meta: [{ title: "Sign in | Mnemee" }],
   }),
@@ -73,7 +97,9 @@ function LoginPage() {
       return;
     }
 
-    if (search.redirect?.startsWith("/")) {
+    clearLastLoginMethod();
+
+    if (search.redirect?.startsWith("/") && !search.redirect.startsWith("//")) {
       void navigate({ href: search.redirect, replace: true });
       return;
     }
@@ -95,9 +121,9 @@ function LoginPage() {
             Continue to your workspace.
           </p>
         </div>
-        <GoogleSignIn redirect={search.redirect} />
+        <GoogleSignIn redirect={search.redirect} showLastUsed />
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <label className="text-sm font-medium" htmlFor="email">
               Email
             </label>
@@ -112,7 +138,7 @@ function LoginPage() {
               onChange={(event) => setEmail(event.target.value)}
             />
           </div>
-          <Field className="gap-2">
+          <Field className="flex flex-col gap-2 space-y-0">
             <FieldLabel htmlFor="password">Password</FieldLabel>
             <InputGroup className="h-10">
               <InputGroupInput
