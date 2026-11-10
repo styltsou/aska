@@ -178,6 +178,7 @@
         "@sentry/aws-serverless": "^10.69.0",
       },
       "devDependencies": {
+        "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "^8.10.152",
         "@types/node": "^26.1.1",
         "oxfmt": "^0.58.0",
@@ -185,12 +186,16 @@
         "typescript": "^5.5.2",
       },
     },
+    "packages/tsconfig": {
+      "name": "@mnemee/tsconfig",
+    },
     "packages/url-unfurl-shared": {
       "name": "@mnemee/url-unfurl-shared",
       "dependencies": {
         "ipaddr.js": "^2.2.0",
       },
       "devDependencies": {
+        "@mnemee/tsconfig": "workspace:*",
         "@types/node": "^26.1.1",
         "oxfmt": "^0.58.0",
         "oxlint": "^1.73.0",
@@ -207,6 +212,7 @@
         "ai": "^7.0.0",
       },
       "devDependencies": {
+        "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "^8.10.152",
         "@types/node": "^26.1.1",
         "oxfmt": "^0.58.0",
@@ -224,6 +230,7 @@
         "sharp": "^0.35.3",
       },
       "devDependencies": {
+        "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "^8.10.152",
         "@types/node": "^26.1.1",
         "oxfmt": "^0.58.0",
@@ -242,6 +249,7 @@
         "sharp": "^0.35.3",
       },
       "devDependencies": {
+        "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "^8.10.152",
         "@types/node": "^26.1.1",
         "oxfmt": "^0.58.0",
@@ -259,6 +267,7 @@
         "htmlparser2": "^10.0.0",
       },
       "devDependencies": {
+        "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "^8.10.152",
         "@types/node": "^26.1.1",
         "oxfmt": "^0.58.0",
@@ -278,6 +287,7 @@
         "sharp": "^0.35.3",
       },
       "devDependencies": {
+        "@mnemee/tsconfig": "workspace:*",
         "@types/aws-lambda": "^8.10.152",
         "@types/node": "^26.1.1",
         "oxfmt": "^0.58.0",
@@ -753,6 +763,8 @@
     "@mermaid-js/parser": ["@mermaid-js/parser@2.0.0", "", { "dependencies": { "@chevrotain/types": "~11.1.2" } }, "sha512-K8BeapFUfrfxbRAUQAG5oBOCwo1+bNWzaVnPxTCutkfrTBn6T/j91FIhqxWJ32SUeQ9T3iy1zcmPZ5ROZEvDrg=="],
 
     "@mnemee/image-shared": ["@mnemee/image-shared@workspace:packages/image-shared"],
+
+    "@mnemee/tsconfig": ["@mnemee/tsconfig@workspace:packages/tsconfig"],
 
     "@mnemee/url-unfurl-shared": ["@mnemee/url-unfurl-shared@workspace:packages/url-unfurl-shared"],
 
