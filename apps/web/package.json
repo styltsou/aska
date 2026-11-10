@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:client": "VITE_SERVER_URL=https://api.mnemee.space vite",
     "build": "tsc -b && vite build",
-    "lint": "oxlint .",
+    "lint": "oxlint . --max-warnings 251",
     "lint:fix": "oxlint . --fix",
     "format": "oxfmt --check",
     "format:fix": "oxfmt --write",
