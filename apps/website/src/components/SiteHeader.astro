@@ -92,18 +92,20 @@ const { loginHref, signupHref } = Astro.props;
 				}
 			};
 
-			// Sections are in page order; any gap between them is plain page canvas.
+			// Sections are in page order; any gap between them is plain page canvas. Before the first section, on narrow
+			// screens, the bar is over the hero (or nothing at the very top), which sits on the page surface.
+			const lead = desktop.matches ? 'var(--canvas)' : 'var(--surface)';
 			let cursor = 0;
 			for (const section of sections) {
 				const bounds = section.getBoundingClientRect();
 				const start = Math.max(bounds.top - bar.top, 0);
 				const end = Math.min(bounds.bottom - bar.top, height);
 				if (end <= start || end <= cursor) continue;
-				if (start > cursor) paint('var(--canvas)', cursor, start);
+				if (start > cursor) paint(cursor === 0 ? lead : 'var(--canvas)', cursor, start);
 				paint(colorFor(section), Math.max(start, cursor), end);
 				cursor = end;
 			}
-			if (cursor < height) paint('var(--canvas)', cursor, height);
+			if (cursor < height) paint(cursor === 0 ? lead : 'var(--canvas)', cursor, height);
 			header.dataset.surface = 'mirror';
 			header.style.backgroundImage = stops.length ? `linear-gradient(to bottom, ${stops.join(', ')})` : '';
 		};
