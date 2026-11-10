@@ -17,6 +17,10 @@ const executable = existsSync("/usr/bin/ffmpeg")
 if (executable) process.env.FFMPEG_PATH = executable;
 const { InvalidVideoError, probeVideo } = await import("./processor");
 const canProbe = Boolean(executable);
+// Each test encodes short clips with ffmpeg first. That takes well under a
+// second alone but can pass Vitest's 5 s default when every package tests in
+// parallel, so allow as long as the encodes themselves may take.
+const ENCODE_TEST_TIMEOUT_MS = 30_000;
 let folder: string;
 
 describe.skipIf(!canProbe)("actual video stream validation", () => {
@@ -52,26 +56,34 @@ describe.skipIf(!canProbe)("actual video stream validation", () => {
     return output;
   };
 
-  it("accepts supported MP4 and WebM streams", async () => {
-    const mp4 = await make("supported.mp4", "libx264");
-    const webm = await make("supported.webm", "libvpx");
-    await expect(probeVideo(mp4, "video/mp4")).resolves.toMatchObject({
-      width: 64,
-      height: 48,
-    });
-    await expect(probeVideo(webm, "video/webm")).resolves.toMatchObject({
-      width: 64,
-      height: 48,
-    });
-  });
+  it(
+    "accepts supported MP4 and WebM streams",
+    async () => {
+      const mp4 = await make("supported.mp4", "libx264");
+      const webm = await make("supported.webm", "libvpx");
+      await expect(probeVideo(mp4, "video/mp4")).resolves.toMatchObject({
+        width: 64,
+        height: 48,
+      });
+      await expect(probeVideo(webm, "video/webm")).resolves.toMatchObject({
+        width: 64,
+        height: 48,
+      });
+    },
+    ENCODE_TEST_TIMEOUT_MS,
+  );
 
-  it("rejects a mismatched container and unsupported codec", async () => {
-    const mp4 = await make("unsupported.mp4", "mpeg4");
-    await expect(probeVideo(mp4, "video/mp4")).rejects.toBeInstanceOf(
-      InvalidVideoError,
-    );
-    await expect(probeVideo(mp4, "video/webm")).rejects.toBeInstanceOf(
-      InvalidVideoError,
-    );
-  });
+  it(
+    "rejects a mismatched container and unsupported codec",
+    async () => {
+      const mp4 = await make("unsupported.mp4", "mpeg4");
+      await expect(probeVideo(mp4, "video/mp4")).rejects.toBeInstanceOf(
+        InvalidVideoError,
+      );
+      await expect(probeVideo(mp4, "video/webm")).rejects.toBeInstanceOf(
+        InvalidVideoError,
+      );
+    },
+    ENCODE_TEST_TIMEOUT_MS,
+  );
 });
