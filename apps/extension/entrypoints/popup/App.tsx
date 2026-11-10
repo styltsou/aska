@@ -98,7 +98,9 @@ export default function App() {
           <BookmarkPlus size={18} strokeWidth={1.7} />
         </div>
         <h1 id="popup-title">Save this page</h1>
-        <p>Add the page you’re viewing to your Mnemee Inbox and keep it close.</p>
+        <p>
+          Add the page you’re viewing to your Mnemee Inbox and keep it close.
+        </p>
       </section>
 
       <button
@@ -166,7 +168,9 @@ export default function App() {
           </p>
         ) : null}
         {pickerError ? (
-          <p role="alert" className="picker-error">{pickerError}</p>
+          <p role="alert" className="picker-error">
+            {pickerError}
+          </p>
         ) : null}
       </section>
 

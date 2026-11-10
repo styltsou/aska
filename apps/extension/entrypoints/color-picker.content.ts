@@ -1,8 +1,4 @@
-import {
-  browser,
-  createShadowRootUi,
-  defineContentScript,
-} from "#imports";
+import { browser, createShadowRootUi, defineContentScript } from "#imports";
 import {
   CAPTURE_COLOR_PICKER,
   PENDING_COLOR_KEY,
@@ -76,20 +72,20 @@ export default defineContentScript({
               '<div class="mnemee-picker__preview is-hidden">',
               '  <span class="mnemee-picker__swatch"></span>',
               '  <span class="mnemee-picker__values"><strong></strong><small></small><small></small></span>',
-              '</div>',
+              "</div>",
               '<div class="mnemee-picker__result-backdrop is-hidden">',
               '  <div class="mnemee-picker__result" role="dialog" aria-modal="true" aria-label="Selected color">',
               '    <span class="mnemee-picker__result-swatch"></span>',
               '    <span class="mnemee-picker__result-kicker">COLOR READY</span>',
               '    <strong class="mnemee-picker__result-hex"></strong>',
               '    <span class="mnemee-picker__result-formats"></span>',
-              '    <p>Ready in the Mnemee extension for saving when your account is connected.</p>',
+              "    <p>Ready in the Mnemee extension for saving when your account is connected.</p>",
               '    <div class="mnemee-picker__result-actions">',
               '      <button class="mnemee-picker__copy" type="button">Copy HEX</button>',
               '      <button class="mnemee-picker__done" type="button">Done</button>',
-              '    </div>',
-              '  </div>',
-              '</div>',
+              "    </div>",
+              "  </div>",
+              "</div>",
               '<div class="mnemee-picker__error is-hidden" role="alert"></div>',
             ].join("");
             container.append(root);
@@ -131,14 +127,18 @@ export default defineContentScript({
                 buffer.width - 1,
                 Math.max(
                   0,
-                  Math.floor(((clientX - rect.left) / rect.width) * buffer.width),
+                  Math.floor(
+                    ((clientX - rect.left) / rect.width) * buffer.width,
+                  ),
                 ),
               );
               const y = Math.min(
                 buffer.height - 1,
                 Math.max(
                   0,
-                  Math.floor(((clientY - rect.top) / rect.height) * buffer.height),
+                  Math.floor(
+                    ((clientY - rect.top) / rect.height) * buffer.height,
+                  ),
                 ),
               );
               const pixel = context.getImageData(x, y, 1, 1).data;
@@ -245,9 +245,15 @@ export default defineContentScript({
                 event.stopPropagation();
                 stop();
               } else if (
-                [" ", "ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End"].includes(
-                  event.key,
-                )
+                [
+                  " ",
+                  "ArrowDown",
+                  "ArrowUp",
+                  "PageDown",
+                  "PageUp",
+                  "Home",
+                  "End",
+                ].includes(event.key)
               ) {
                 event.preventDefault();
               }
@@ -256,18 +262,15 @@ export default defineContentScript({
 
             surface.addEventListener("pointermove", onPointerMove);
             surface.addEventListener("click", onSelect);
-            root.querySelector(".mnemee-picker__cancel")!.addEventListener(
-              "click",
-              stop,
-            );
-            root.querySelector(".mnemee-picker__done")!.addEventListener(
-              "click",
-              stop,
-            );
-            root.querySelector(".mnemee-picker__copy")!.addEventListener(
-              "click",
-              onCopy,
-            );
+            root
+              .querySelector(".mnemee-picker__cancel")!
+              .addEventListener("click", stop);
+            root
+              .querySelector(".mnemee-picker__done")!
+              .addEventListener("click", stop);
+            root
+              .querySelector(".mnemee-picker__copy")!
+              .addEventListener("click", onCopy);
             document.addEventListener("keydown", onKey, true);
             document.addEventListener("wheel", blockScroll, {
               capture: true,

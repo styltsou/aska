@@ -96,9 +96,12 @@ export default defineContentScript({
         onMount(container) {
           const root: Root = createRoot(container);
           root.render(
-            <ImageAction onEnter={() => {
-              if (closeTimer) clearTimeout(closeTimer);
-            }} onLeave={closeSoon} />,
+            <ImageAction
+              onEnter={() => {
+                if (closeTimer) clearTimeout(closeTimer);
+              }}
+              onLeave={closeSoon}
+            />,
           );
           return root;
         },
@@ -125,7 +128,8 @@ export default defineContentScript({
         if (!(target instanceof HTMLImageElement)) return;
 
         const bounds = target.getBoundingClientRect();
-        if (bounds.width < 80 || bounds.height < 60 || !target.currentSrc) return;
+        if (bounds.width < 80 || bounds.height < 60 || !target.currentSrc)
+          return;
         void showForImage(target);
       },
       true,
