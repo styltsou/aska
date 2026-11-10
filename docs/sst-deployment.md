@@ -382,12 +382,14 @@ filter. Forgetting either silently disables that service's checks or its
 deployment.
 
 The deployment job exchanges a GitHub OIDC token for short-lived AWS
-
-The deployment job exchanges a GitHub OIDC token for short-lived AWS
 credentials and does not use AWS access keys. Runtime secrets, including the
 CloudFront private key and Sentry DSN, are stage-scoped SST secrets set
-separately from CI. The AWS role trusts only the
-`styltsou/mnemee` repository's `main` branch.
+separately from CI. The AWS role (`aska-github-actions-deploy`) trusts only the
+`styltsou/mnemee` repository's `main` branch. Because the repository was
+renamed from `aska`, GitHub sends its OIDC subject in the ID-based form
+`repo:styltsou@43079666/mnemee@1289138602:ref:refs/heads/main`, and that is
+the exact value the role's trust policy matches. The IDs do not change on a
+rename, so a future rename needs no trust-policy change.
 
 The job also requires these GitHub Actions repository secrets:
 
