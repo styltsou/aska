@@ -1,0 +1,113 @@
+---
+import { Image } from 'astro:assets';
+import bauhausRoom01 from '../assets/images/bauhaus-room-01.jpg';
+import blueRedWall from '../assets/images/blue-red-wall.jpg';
+import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
+import curvedArchitecture from '../assets/images/curved-architecture.jpg';
+import greenAbstract02 from '../assets/images/green-abstract-02.webp';
+import greenAbstract03 from '../assets/images/green-abstract-03.webp';
+import greenAbstract05 from '../assets/images/green-abstract-05.webp';
+---
+
+<section class="reference-workflow page-width" aria-labelledby="reference-workflow-heading">
+	<header class="reference-workflow__intro">
+		<p class="eyebrow">A working archive</p>
+		<h2 id="reference-workflow-heading">Keep the trail of an idea intact.</h2>
+		<p>A reference is more useful when its source, the thought it sparked, and the work it informed can stay connected.</p>
+	</header>
+
+	<div class="reference-workflow__stages">
+		<article class="workflow-stage workflow-stage--capture">
+			<div class="workflow-stage__copy">
+				<span>01</span>
+				<h3>Capture the original, with its context.</h3>
+				<p>Save a page, image, video, or note before the useful detail disappears. Mnemee keeps the source alongside the material you collect.</p>
+			</div>
+			<div class="capture-story" role="img" aria-label="A web reference and a visual asset arriving in an Mnemee collection">
+				<div class="source-window">
+					<div class="source-window__bar"><i></i><i></i><i></i><span>archdaily.com</span></div>
+					<Image src={curvedArchitecture} width={480} densities={[1, 2]} quality={80} alt="" />
+					<div class="source-window__title"><small>Architecture</small><strong>A curved concrete gallery in Lisbon</strong></div>
+				</div>
+				<svg class="capture-story__path" viewBox="0 0 240 126" aria-hidden="true"><path d="M28 40C87 40 79 99 157 99"></path><path d="M121 17c30 0 31 53 39 80"></path></svg>
+				<div class="capture-story__asset"><Image src={blueRedWall} width={230} densities={[1, 2]} quality={78} alt="" /></div>
+				<div class="capture-story__inbox"><span>Inbox</span><strong>Saved just now</strong></div>
+			</div>
+		</article>
+
+		<article class="workflow-stage workflow-stage--context">
+			<div class="workflow-stage__copy">
+				<span>02</span>
+				<h3>Let related material become a point of view.</h3>
+				<p>Bring references, notes, colour, and folders into the same canvas. Make the relationships visible while the direction is still taking shape.</p>
+			</div>
+			<div class="context-story" role="img" aria-label="An Mnemee canvas connecting visual references, a note, and a folder">
+				<div class="context-story__bar"><i></i><strong>Entrance study</strong><span>48 items</span></div>
+				<div class="context-story__canvas">
+					<svg class="context-story__line context-story__line--one" viewBox="0 0 180 100" aria-hidden="true"><path d="M9 90C74 82 74 25 170 11"></path></svg>
+					<svg class="context-story__line context-story__line--two" viewBox="0 0 150 95" aria-hidden="true"><path d="M7 8c67 15 63 57 137 80"></path></svg>
+					<div class="context-card context-card--image-one"><Image src={bauhausRoom01} width={250} densities={[1, 2]} quality={78} alt="" /></div>
+					<div class="context-card context-card--note"><small>Note</small><strong>Let the hard edge sit beside a softer curve.</strong><p>The contrast makes the entry feel deliberate.</p></div>
+					<div class="context-card context-card--image-two"><Image src={concreteSculptures} width={220} densities={[1, 2]} quality={78} alt="" /></div>
+					<div class="context-card context-card--folder"><div><Image src={blueRedWall} width={84} densities={[1, 2]} quality={76} alt="" /><Image src={curvedArchitecture} width={84} densities={[1, 2]} quality={76} alt="" /><Image src={bauhausRoom01} width={84} densities={[1, 2]} quality={76} alt="" /><b>+21</b></div><span>Material studies <small>24</small></span></div>
+				</div>
+			</div>
+		</article>
+
+		<article class="workflow-stage workflow-stage--return">
+			<div class="workflow-stage__copy">
+				<span>03</span>
+				<h3>Return to a direction by any clue.</h3>
+				<p>Find material by colour, source, or a phrase you wrote down. The archive stays useful when you no longer remember where you put something.</p>
+			</div>
+			<div class="return-story" role="img" aria-label="An Mnemee search for forest green with visual results and a related note">
+				<div class="return-story__search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><span>forest green</span><kbd>⌘ K</kbd></div>
+				<div class="return-story__filters"><i></i><i></i><i></i><i></i><span>Colour match</span></div>
+				<div class="return-story__results"><Image src={greenAbstract05} width={180} densities={[1, 2]} quality={78} alt="" /><Image src={greenAbstract02} width={180} densities={[1, 2]} quality={78} alt="" /><Image src={greenAbstract03} width={180} densities={[1, 2]} quality={78} alt="" /></div>
+				<div class="return-story__note"><small>Found in a note</small><strong>Use the deeper green as the anchor.</strong><span>Colour studies · 2 days ago</span></div>
+			</div>
+		</article>
+	</div>
+</section>
+
+<style>
+	.reference-workflow { max-width: 980px; padding-block: clamp(108px, 14vw, 176px) clamp(114px, 14vw, 168px); }
+	.reference-workflow__intro { max-width: 580px; margin: 0 auto clamp(54px, 7vw, 82px); text-align: center; }
+	.eyebrow { margin: 0 0 14px; color: var(--ink-muted); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+	.reference-workflow h2 { margin: 0 0 14px; font-size: clamp(30px, 3.4vw, 44px); line-height: 1.08; }
+	.reference-workflow__intro > p:last-child { max-width: 470px; margin: 0 auto; color: var(--ink-muted); font-size: 14px; line-height: 1.58; }
+	.reference-workflow__stages { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
+	.workflow-stage { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 2px 9px rgb(21 21 21 / 3%); }
+	.workflow-stage--capture { grid-column: span 5; }
+	.workflow-stage--context { grid-column: span 7; }
+	.workflow-stage--return { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(215px, .55fr) minmax(0, 1.45fr); align-items: center; gap: clamp(36px, 6vw, 82px); }
+	.workflow-stage__copy { padding: 31px 31px 0; }
+	.workflow-stage--return .workflow-stage__copy { padding: 38px; }
+	.workflow-stage__copy > span { display: block; margin-bottom: 28px; color: var(--ink-muted); font-size: 11px; }
+	.workflow-stage__copy h3 { max-width: 310px; margin: 0 0 11px; font-size: clamp(21px, 2.2vw, 28px); font-weight: 570; line-height: 1.12; }
+	.workflow-stage__copy p { max-width: 340px; margin: 0; color: var(--ink-muted); font-size: 13px; line-height: 1.58; }
+	.capture-story, .context-story, .return-story { position: relative; overflow: hidden; border: 1px solid rgb(21 21 21 / 10%); border-radius: 7px; background: #fff; color: #282824; }
+	.capture-story { min-height: 302px; margin: 38px -30px -38px 38px; }
+	.source-window { position: absolute; top: 30px; left: -18px; width: 68%; overflow: hidden; border: 1px solid rgb(21 21 21 / 12%); border-radius: 6px; background: #fff; box-shadow: 0 8px 22px rgb(21 21 21 / 12%); transform: rotate(-3deg); }
+	.source-window__bar, .context-story__bar { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px; border-bottom: 1px solid #e5e5df; color: #7d7d75; font-size: 7px; }
+	.source-window__bar i, .context-story__bar i { width: 5px; height: 5px; border-radius: 50%; background: #bdbdb5; }
+	.source-window__bar i:nth-child(2) { background: #d1d1c8; }.source-window__bar i:nth-child(3) { background: #e0e0da; }.source-window__bar span { margin-left: 4px; }
+	.source-window > img { display: block; width: 100%; height: 134px; object-fit: cover; }
+	.source-window__title { display: grid; gap: 4px; padding: 10px; }.source-window__title small { color: #86867e; font-size: 7px; }.source-window__title strong { font-size: 10px; line-height: 1.25; }
+	.capture-story__path { position: absolute; top: 75px; right: 12px; width: 70%; height: 128px; fill: none; stroke: #98988f; stroke-dasharray: 3 4; stroke-width: 1.2; }
+	.capture-story__asset { position: absolute; right: 22px; bottom: 38px; z-index: 2; width: 37%; height: 130px; overflow: hidden; border: 1px solid rgb(21 21 21 / 12%); border-radius: 5px; box-shadow: 0 7px 18px rgb(21 21 21 / 12%); transform: rotate(5deg); }.capture-story__asset img { width: 100%; height: 100%; object-fit: cover; }
+	.capture-story__inbox { position: absolute; right: 13px; bottom: 10px; z-index: 3; display: grid; gap: 2px; padding: 7px 9px; border: 1px solid rgb(21 21 21 / 9%); border-radius: 5px; background: rgb(255 255 255 / 88%); box-shadow: 0 3px 8px rgb(21 21 21 / 7%); backdrop-filter: blur(8px); }.capture-story__inbox span { color: #83837b; font-size: 7px; }.capture-story__inbox strong { font-size: 8px; }
+	.context-story { min-height: 405px; margin: 32px 32px -42px -10px; background: #fff; }.context-story__bar { position: relative; z-index: 2; height: 38px; gap: 7px; padding-inline: 10px; font-size: 8px; }.context-story__bar strong { color: #474740; font-weight: 600; }.context-story__bar span { margin-left: auto; color: #92928a; }
+	.context-story__canvas { position: relative; height: 367px; overflow: hidden; background-color: #f5f5f1; background-image: radial-gradient(#cdcdc6 .65px, transparent .7px); background-size: 15px 15px; }
+	.context-story__line { position: absolute; z-index: 0; overflow: visible; fill: none; stroke: #9d9d94; stroke-dasharray: 3 4; stroke-width: 1.1; }.context-story__line--one { top: 118px; left: 15%; width: 45%; }.context-story__line--two { right: 8%; bottom: 50px; width: 37%; }
+	.context-card { position: absolute; z-index: 1; overflow: hidden; border: 1px solid rgb(21 21 21 / 12%); border-radius: 5px; background: #fff; box-shadow: 0 5px 13px rgb(21 21 21 / 10%); }.context-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+	.context-card--image-one { top: 42px; left: 9%; width: 31%; height: 180px; transform: rotate(-4deg); }.context-card--image-two { right: 8%; bottom: 33px; width: 29%; height: 125px; transform: rotate(5deg); }
+	.context-card--note { top: 57px; right: 9%; width: 36%; padding: 12px; transform: rotate(3deg); }.context-card--note small { color: #8b8b83; font-size: 7px; }.context-card--note strong { display: block; margin: 7px 0 6px; font-size: 10px; line-height: 1.28; }.context-card--note p { margin: 0; color: #73736c; font-size: 8px; line-height: 1.35; }
+	.context-card--folder { bottom: 24px; left: 27%; width: 32%; }.context-card--folder > div { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 5px; }.context-card--folder img, .context-card--folder b { min-width: 0; height: 41px; border-radius: 2px; object-fit: cover; }.context-card--folder b { display: grid; background: #e5e5df; color: #6d6d66; font-size: 8px; place-items: center; }.context-card--folder > span { display: flex; padding: 7px 8px; border-top: 1px solid #ededE8; font-size: 8px; font-weight: 600; }.context-card--folder small { margin-left: auto; color: #93938b; font-size: 7px; font-weight: 400; }
+	.return-story { min-height: 318px; margin: 26px 34px 26px -16px; padding: 36px; background: #f8f8f5; }.return-story__search { display: flex; align-items: center; max-width: 470px; height: 39px; gap: 9px; padding: 0 11px; border: 1px solid #d9d9d2; border-radius: 5px; background: #fff; box-shadow: 0 1px 3px rgb(21 21 21 / 3%); font-size: 10px; }.return-story__search svg { width: 15px; height: 15px; fill: none; stroke: #74746d; stroke-width: 1.7; }.return-story__search kbd { margin-left: auto; color: #989890; font-size: 8px; }
+	.return-story__filters { display: flex; align-items: center; gap: 4px; padding: 13px 2px 10px; color: #7c7c74; font-size: 8px; }.return-story__filters i { width: 13px; height: 13px; border-radius: 50%; }.return-story__filters i:nth-child(1) { background: #173a2a; }.return-story__filters i:nth-child(2) { background: #315a40; }.return-story__filters i:nth-child(3) { background: #5d7858; }.return-story__filters i:nth-child(4) { background: #a0b091; }.return-story__filters span { margin-left: 5px; }
+	.return-story__results { display: grid; max-width: 470px; grid-template-columns: repeat(3, 1fr); gap: 7px; }.return-story__results img { width: 100%; height: 142px; border: 1px solid rgb(21 21 21 / 8%); border-radius: 4px; object-fit: cover; }.return-story__note { position: absolute; right: 22px; bottom: 19px; width: 33%; padding: 12px; border: 1px solid rgb(21 21 21 / 10%); border-radius: 5px; background: rgb(255 255 255 / 94%); box-shadow: 0 7px 16px rgb(21 21 21 / 8%); }.return-story__note small, .return-story__note span { display: block; color: #85857d; font-size: 7px; }.return-story__note strong { display: block; margin: 7px 0; font-size: 9px; line-height: 1.3; }
+	:global(html[data-theme='dark']) .workflow-stage { box-shadow: 0 2px 10px rgb(0 0 0 / 20%); }.context-story, .capture-story { background: #000; }.source-window, .capture-story__inbox, .context-card, .return-story__search, .return-story__note { border-color: var(--line); background: var(--surface); color: var(--ink); }.source-window__bar, .context-story__bar, .context-card--folder > span { border-color: var(--line); }.source-window__title small, .capture-story__inbox span, .context-story__bar span, .context-card--note small, .context-card--note p, .context-card--folder small, .return-story__filters, .return-story__note small, .return-story__note span { color: var(--ink-muted); }.context-story__canvas, .return-story { background-color: var(--canvas); }.context-story__canvas { background-image: radial-gradient(rgb(241 243 238 / 28%) .65px, transparent .7px); }.context-card--folder b { background: var(--surface-muted); color: var(--ink-muted); }.return-story__search svg { stroke: var(--ink-muted); }.return-story__results img { border-color: var(--line); }
+	@media (max-width: 800px) { .workflow-stage--capture, .workflow-stage--context, .workflow-stage--return { grid-column: 1 / -1; }.workflow-stage--return { grid-template-columns: 1fr; gap: 2px; }.workflow-stage--return .workflow-stage__copy { padding-bottom: 0; }.capture-story { margin-left: 30px; }.context-story { margin-left: 18px; }.return-story { margin: 30px 22px -18px; }.workflow-stage--return { padding-bottom: 24px; } }
+	@media (max-width: 560px) { .reference-workflow { padding-block: 84px 94px; }.reference-workflow__intro { margin-bottom: 48px; }.workflow-stage__copy, .workflow-stage--return .workflow-stage__copy { padding: 24px 22px 0; }.workflow-stage__copy > span { margin-bottom: 20px; }.capture-story { min-height: 274px; margin: 28px -20px -34px 22px; }.source-window { top: 25px; width: 72%; }.source-window > img { height: 115px; }.capture-story__asset { right: 18px; width: 35%; height: 110px; }.context-story { min-height: 327px; margin: 28px -18px -22px 14px; }.context-story__canvas { height: 289px; }.context-card--image-one { width: 34%; height: 142px; }.context-card--note { width: 42%; padding: 9px; }.context-card--folder { width: 37%; left: 21%; }.context-card--image-two { width: 31%; height: 96px; }.context-card--folder img, .context-card--folder b { height: 32px; }.return-story { min-height: 280px; margin: 24px 12px 0; padding: 22px; }.return-story__results img { height: 105px; }.return-story__note { right: 13px; bottom: 13px; width: 43%; }.return-story__search { font-size: 9px; } }
+</style>

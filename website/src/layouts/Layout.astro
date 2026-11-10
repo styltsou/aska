@@ -1,0 +1,53 @@
+---
+import '../styles/global.css';
+import { SmoothScroll } from '../components/SmoothScroll';
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const {
+	title = 'Mnemee',
+	description = 'A visual archive for creative work.',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="description" content={description} />
+		<meta name="theme-color" content="#ffffff" />
+		<script is:inline>
+			(() => {
+				const storageKey = 'mnemee-theme';
+				let savedTheme = null;
+
+				try {
+					savedTheme = localStorage.getItem(storageKey);
+				} catch {
+					// Storage can be unavailable in private browsing contexts.
+				}
+
+				const theme = savedTheme === 'light' || savedTheme === 'dark'
+					? savedTheme
+					: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+				document.documentElement.dataset.theme = theme;
+				document.querySelector('meta[name="theme-color"]')?.setAttribute(
+					'content',
+					theme === 'dark' ? 'oklch(0.145 0 0)' : '#ffffff',
+				);
+			})();
+		</script>
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<title>{title}</title>
+	</head>
+	<body>
+		<slot />
+		<SmoothScroll client:load />
+	</body>
+</html>

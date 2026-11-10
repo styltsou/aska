@@ -22,6 +22,7 @@ jobs:
       url-resolution: ${{ steps.filter.outputs.url-resolution }}
       video-processor: ${{ steps.filter.outputs.video-processor }}
       extension: ${{ steps.filter.outputs.extension }}
+      website: ${{ steps.filter.outputs.website }}
       infra: ${{ steps.filter.outputs.infra }}
       workspace: ${{ steps.filter.outputs.workspace }}
       deploy: ${{ steps.filter.outputs.deploy }}
@@ -52,6 +53,8 @@ jobs:
               - 'services/video-processor/**'
             extension:
               - 'extension/**'
+            website:
+              - 'website/**'
             infra:
               - 'sst.config.ts'
               - 'sst-env.d.ts'
@@ -63,7 +66,8 @@ jobs:
               - 'bunfig.toml'
               - '.github/workflows/ci.yml'
             # Deploy on a push to main iff something that can affect the running
-            # app changed. Docs/MD-only and extension-only changes are skipped.
+            # app changed. Docs/MD-only, extension-only and website-only changes
+            # are skipped; the website deploys to Cloudflare on its own.
             deploy:
               - 'client/**'
               - 'server/**'
@@ -125,6 +129,10 @@ jobs:
             directory: extension
             command: bun run build
             changed: ${{ needs.changes.outputs.extension == 'true' || needs.changes.outputs.workspace == 'true' }}
+          - name: Website
+            directory: website
+            command: bun run build
+            changed: ${{ needs.changes.outputs.website == 'true' || needs.changes.outputs.workspace == 'true' }}
     defaults:
       run:
         working-directory: ${{ matrix.directory }}
