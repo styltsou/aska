@@ -260,7 +260,6 @@ export function YouTubeVideoViewer({
     onClose,
     peekVideo,
   ]);
-  if (!displayedAsset && !loading) return null;
   const open = controlledOpen ?? asset !== undefined;
   const split = Boolean(peekTarget) && !isMobile;
   const presentation = split ? "split" : expanded ? "fullscreen" : "modal";
@@ -308,6 +307,10 @@ export function YouTubeVideoViewer({
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [displayedAsset, isMobile, location, onClose, open, peekVideo]);
+
+  // Every hook above runs on every render; returning before any of them
+  // would change the hook count when the asset disappears.
+  if (!displayedAsset && !loading) return null;
 
   if (isMobile) {
     return (
