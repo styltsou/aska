@@ -291,8 +291,7 @@ For client-only work against the deployed backend, leave the normal local
 configuration pointed at your `hybrid` API and start Vite in cloud mode instead:
 
 ```sh
-cd apps/web
-bun run dev:cloud
+bun run dev:client
 ```
 
 This changes only Vite's API target for that process; it does not start, stop,

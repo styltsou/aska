@@ -97,7 +97,7 @@ workspace cookie through `DELETE /api/v1/media/session` before revoking the
 Better Auth session.
 
 `SameSite=None` keeps the deployed application working as a normal same-site
-flow while allowing the supported `dev:cloud` localhost client to send media
+flow while allowing the supported `dev:client` localhost client to send media
 cookies to the CDN. Browsers that block all third-party cookies still need the
 same-site HTTPS tunnel workflow for local browser testing.
 

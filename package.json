@@ -11,7 +11,8 @@
     "backfill:resolver-version": "bun run scripts/backfill-resolver-version.ts",
     "dev:aws": "if [ \"$SST_STAGE\" != \"hybrid\" ]; then echo \"Run Live forwarding only as: SST_STAGE=hybrid bun run dev:aws\"; exit 1; fi; bun run sst -- dev --stage \"$SST_STAGE\"",
     "dev": "concurrently --kill-others-on-fail --names sst,vite --prefix-colors blue,magenta \"SST_STAGE=hybrid bun run dev:aws\" \"bun run --cwd apps/web dev\"",
-    "dev:cloud": "bun run --cwd apps/web dev:cloud"
+    "dev:client": "bun run --cwd apps/web dev:client",
+    "dev:website": "bun run --cwd apps/website dev"
   },
   "workspaces": {
     "packages": [

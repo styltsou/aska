@@ -43,7 +43,7 @@ Copy `apps/server/.env.example` to `apps/server/.env` for direct server developm
 set the required values. The normal end-to-end path uses real AWS development
 resources through the `hybrid` SST Live stage: `bun run dev`. Do not attempt to
 emulate the full S3/SNS/SQS pipeline with a direct local server process. For
-client-only work against the stable cloud deployment, use `bun run dev:cloud`.
+client-only work against the stable cloud deployment, use `bun run dev:client`.
 The shared `dev` stage is never a Live stage. See
 [AWS workflow](./sst-deployment.md).
 

@@ -77,11 +77,12 @@ workflow is documented in [SST deployment](./docs/sst-deployment.md).
 
 ## Development
 
-For end-to-end browser development, use one root command per mode:
+From the repository root, choose the development mode you need:
 
 ```sh
-bun run dev        # local Vite + personal hybrid SST Live backend
-bun run dev:cloud  # local Vite + stable deployed cloud backend
+bun run dev         # local Vite + personal hybrid SST Live backend
+bun run dev:client  # local Vite + stable deployed cloud backend
+bun run dev:website # local Astro marketing website
 ```
 
 `bun run dev` stops both processes when you press Ctrl-C. Package commands are
@@ -111,5 +112,5 @@ Shared dev tools (TypeScript, Oxlint, Oxfmt, Vitest, `@types/node`,
 one place.
 
 The marketing site at mnemee.space lives in [`apps/website/`](./apps/website) (Astro,
-deployed to Cloudflare Workers). Run it with `bun run --cwd apps/website dev` and
+deployed to Cloudflare Workers). Run it with `bun run dev:website` and
 deploy it with `bun run --cwd apps/website deploy`.
