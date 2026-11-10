@@ -121,24 +121,6 @@ const withMockBlur = (image) => ({ ...mockImageProps, src: image, class: 'blur-i
 	</article>
 </section>
 
-<script>
-	const featurePanels = Array.from(document.querySelectorAll<HTMLElement>('.feature-panel'));
-	const featureListeners = new AbortController();
-
-	if (window.matchMedia('(hover: hover)').matches) {
-		featurePanels.forEach((panel) => {
-			panel.addEventListener('mouseenter', () => panel.classList.add('is-preview-active'), {
-				signal: featureListeners.signal,
-			});
-			panel.addEventListener('mouseleave', () => panel.classList.remove('is-preview-active'), {
-				signal: featureListeners.signal,
-			});
-		});
-
-		document.addEventListener('astro:before-swap', () => featureListeners.abort(), { once: true });
-	}
-</script>
-
 <style>
 	.feature-showcase { --mock-asset-border: rgb(21 21 21 / 10%); --mock-muted-card-border: rgb(222 222 217 / 72%); display: grid; max-width: 980px; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
 	.feature-panel, .feature-detail { min-width: 0; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); box-shadow: 0 2px 8px rgb(21 21 21 / 3%); }
@@ -151,10 +133,9 @@ const withMockBlur = (image) => ({ ...mockImageProps, src: image, class: 'blur-i
 	.feature-panel__copy p { margin: 0; color: var(--ink-muted); font-size: 13px; line-height: 1.55; }
 	.feature-panel--capture .capture-preview { --preview-x: 18px; --preview-y: 74px; width: calc(100% + 58px); transform: translate(var(--preview-x), var(--preview-y)); }
 	.feature-panel--search .search-preview { --preview-x: 18px; --preview-y: 66px; width: calc(100% + 54px); margin-top: auto; transform: translate(var(--preview-x), var(--preview-y)); }
-	.feature-panel--canvas .canvas-preview { --preview-x: 70px; --preview-y: 76px; --preview-hover-x: calc(var(--preview-x) - 22px); width: calc(100% + 92px); transform: translate(var(--preview-x), var(--preview-y)); }
+	.feature-panel--canvas .canvas-preview { --preview-x: 70px; --preview-y: 76px; width: calc(100% + 92px); transform: translate(var(--preview-x), var(--preview-y)); }
 
 	.capture-preview, .search-preview, .canvas-preview { border: 1px solid var(--feature-frame-border-mid); border-radius: 8px; background: rgb(255 255 255 / 64%); box-shadow: var(--feature-frame-shadow-mid); }
-	.feature-showcase .capture-preview, .feature-showcase .search-preview, .feature-showcase .canvas-preview { transition: transform 460ms cubic-bezier(.22, .8, .24, 1); will-change: transform; }
 	.capture-preview { position: relative; min-height: 350px; overflow: hidden; padding: 0 8px 8px; background: #fff; }
 	.capture-topbar, .search-topbar { display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 8px 0 0; border-radius: 8px 8px 0 0; background: transparent; color: #252522; }
 	.capture-topbar button, .search-topbar button, .canvas-preview__top button { display: grid; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #252522; place-items: center; }
@@ -215,12 +196,6 @@ const withMockBlur = (image) => ({ ...mockImageProps, src: image, class: 'blur-i
 	.canvas-object--note p { margin: 0; font-size: 10px; line-height: 1.35; }
 	.canvas-object--note p + p { margin-top: 7px; color: #777771; }
 	.canvas-object--note strong { font-weight: 600; }
-	@media (hover: hover) {
-		.feature-panel--capture:is(:hover, .is-preview-active) .capture-preview, .feature-panel--search:is(:hover, .is-preview-active) .search-preview { transform: translate3d(var(--preview-x), calc(var(--preview-y) - 22px), 0); }
-		.feature-panel--canvas:is(:hover, .is-preview-active) .canvas-preview { transform: translate3d(var(--preview-hover-x), calc(var(--preview-y) - 22px), 0); }
-	}
-
-
 	:global(html[data-theme='dark']) .feature-showcase { --mock-asset-border: oklch(1 0 0 / 10%); --mock-muted-card-border: oklch(1 0 0 / 10%); }
 	:global(html[data-theme='dark']) .feature-panel { box-shadow: 0 2px 10px rgb(0 0 0 / 18%); }
 	:global(html[data-theme='dark']) .capture-preview,
@@ -261,14 +236,14 @@ const withMockBlur = (image) => ({ ...mockImageProps, src: image, class: 'blur-i
 		.feature-panel--capture, .feature-panel--search, .feature-panel--canvas { grid-column: 1 / -1; }
 		.feature-panel--canvas { grid-template-columns: 1fr; gap: 30px; }
 		.feature-panel--capture .capture-preview, .feature-panel--search .search-preview { --preview-x: 12px; --preview-y: 58px; width: calc(100% + 38px); transform: translate(var(--preview-x), var(--preview-y)); }
-		.feature-panel--canvas .canvas-preview { --preview-x: 28px; --preview-y: 62px; --preview-hover-x: var(--preview-x); width: calc(100% + 58px); transform: translate(var(--preview-x), var(--preview-y)); }
+		.feature-panel--canvas .canvas-preview { --preview-x: 28px; --preview-y: 62px; width: calc(100% + 58px); transform: translate(var(--preview-x), var(--preview-y)); }
 	}
 
 	@media (max-width: 640px) {
 		.feature-showcase { gap: 8px; }
 		.feature-panel { padding: 22px; }
 		.feature-panel--capture .capture-preview, .feature-panel--search .search-preview { --preview-x: 12px; --preview-y: 48px; width: calc(100% + 34px); transform: translate(var(--preview-x), var(--preview-y)); }
-		.feature-panel--canvas .canvas-preview { --preview-x: 18px; --preview-y: 48px; --preview-hover-x: var(--preview-x); width: calc(100% + 54px); transform: translate(var(--preview-x), var(--preview-y)); }
+		.feature-panel--canvas .canvas-preview { --preview-x: 18px; --preview-y: 48px; width: calc(100% + 54px); transform: translate(var(--preview-x), var(--preview-y)); }
 		.capture-preview { min-height: 314px; }
 		.search-preview { min-height: 296px; }
 		.canvas-preview { min-height: 316px; }
