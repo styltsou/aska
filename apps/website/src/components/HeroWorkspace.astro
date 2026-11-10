@@ -276,6 +276,10 @@ const collections = [
 			else at = mix(centreOf(noteButton), exit, ease(span(p, .86, .93)));
 			const press = (from: number, to: number) => Math.min(ease(span(p, from, from + .005)), 1 - ease(span(p, to - .005, to)));
 			const pressed = Math.max(press(.12, .31), press(.43, .45), press(.59, .61), press(.65, .67), press(.83, .85));
+			// Where the camera should look (app px): the middle of the app, easing onto the dragged card, then the cursor.
+			// The hero uses this to pan a mock-up that's larger than its panel (phones).
+			const look = (b: Point): Point => ({ x: 240 + b.x, y: 56 + b.y });
+			root.dispatchEvent(new CustomEvent('demo:focus', { detail: p < .13 ? mix({ x: 640, y: 400 }, look(start), ease(span(p, 0, .13))) : look(at) }));
 			cursor.style.opacity = (span(p, 0, .03) * (1 - span(p, .95, .99))).toFixed(3);
 			cursor.style.transform = `translate(${at.x.toFixed(1)}px, ${at.y.toFixed(1)}px) scale(${lerp(1, .94, pressed).toFixed(4)})`;
 		};

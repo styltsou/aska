@@ -33,7 +33,7 @@ const { signupHref } = Astro.props;
 
 <script>
 	/*
-	 * Scroll-pinned hero (desktop only, see the CSS). The stage stays pinned while the page scrolls through the hero's
+	 * Scroll-pinned hero (see the CSS; phones get their own choreography, described at the end). The stage stays pinned while the page scrolls through the hero's
 	 * extra height:
 	 *   1. Expand: the image panel grows from the right half to cover the whole hero, its top settling under the navbar,
 	 *      sliding over the copy, while the mock-up glides from its cropped spot to the centre at full size.
@@ -41,6 +41,10 @@ const { signupHref } = Astro.props;
 	 *   3. Release: the pin ends and the hero scrolls off like any other section.
 	 * The panel keeps its final box the whole time and is revealed with clip-path, so nothing reflows while scrolling.
 	 * `data-state` on the hero tells the navbar when to leave its over-the-image layout.
+	 *
+	 * Phones ("compact"): the navbar stays a normal bar above the hero. The copy sits on top and the image card below it; on
+	 * scroll the copy lifts away while the card grows upward to fill the screen and the mock-up scales from a cropped peek to
+	 * fitting the width. Then the hold plays the same demo, and the pin releases.
 	 */
 	const hero = document.querySelector<HTMLElement>('.hero');
 	const media = hero?.querySelector<HTMLElement>('.hero__media');
@@ -48,7 +52,9 @@ const { signupHref } = Astro.props;
 	const backdrop = hero?.querySelector<HTMLElement>('.hero__backdrop');
 	const copy = hero?.querySelector<HTMLElement>('.hero__copy');
 	const header = document.querySelector<HTMLElement>('.site-header');
-	const pinned = window.matchMedia('(min-width: 1024px) and (min-height: 620px) and (prefers-reduced-motion: no-preference)');
+	const wide = window.matchMedia('(min-width: 1024px) and (min-height: 620px) and (prefers-reduced-motion: no-preference)');
+	const compact = window.matchMedia('(max-width: 1023px) and (min-height: 560px) and (prefers-reduced-motion: no-preference)');
+	const NAV = 52; // the navbar's height: on phones the pinned stage sticks right below it
 
 	// How far the panel's top edge drops: from 16px (under the transparent navbar) to the navbar's bottom edge at 52px,
 	// so the band above the panel is exactly the bar and its content sits centred in it.
@@ -64,7 +70,7 @@ const { signupHref } = Astro.props;
 	const easeOut = (t: number) => 1 - (1 - t) ** 3;
 
 	if (hero && media && win && backdrop) {
-		let geo: { boxW: number; startX: number; startY: number; startW: number; endX: number; endY: number; endW: number; expand: number; travel: number } | null = null;
+		let geo: { compact: boolean; stuck: number; startTop: number; boxH: number; boxW: number; startX: number; startY: number; startW: number; endX: number; endY: number; endW: number; expand: number; travel: number } | null = null;
 		let lastDemo = -1;
 		const workspace = win.querySelector<HTMLElement>('.hero-workspace');
 		let frame = 0;
@@ -93,20 +99,28 @@ const { signupHref } = Astro.props;
 		const measure = () => {
 			const boxW = media.clientWidth;
 			const boxH = media.clientHeight;
+			const isCompact = compact.matches;
+			// Phones: the card starts just under the copy (the copy's offsets are relative to the stage, the panel's to its inset).
+			const startTop = isCompact && copy ? Math.max(copy.offsetTop + copy.offsetHeight + 28 - media.offsetTop, boxH * .3) : 0;
 			// Start: the same spot the CSS gives the mock-up (9% into the visible right half, overflowing to the right).
-			const startW = Math.max(boxW * .64, 780);
-			// End: as large as fits under the navbar with some air around it.
-			const endW = Math.min(boxW - 144, (boxH - DROP - 88) / RATIO, 1280);
+			const startW = isCompact ? boxW * 1.55 : Math.max(boxW * .64, 780);
+			// End: as large as fits under the navbar with some air around it (phones: the full width less a margin).
+			const endW = isCompact ? boxW * 2.3 : Math.min(boxW - 144, (boxH - DROP - 88) / RATIO, 1280);
+			const stageH = hero.querySelector<HTMLElement>('.hero__stage')?.offsetHeight ?? window.innerHeight;
 			geo = {
+				compact: isCompact,
+				stuck: isCompact ? NAV : 0,
+				startTop,
+				boxH,
 				boxW,
-				startX: boxW * .545,
-				startY: Math.max(96, boxH * .14),
+				startX: isCompact ? boxW * .05 : boxW * .545,
+				startY: isCompact ? startTop + 22 : Math.max(96, boxH * .14),
 				startW,
 				endX: (boxW - endW) / 2,
-				endY: DROP + (boxH - DROP - endW * RATIO) / 2,
+				endY: isCompact ? (boxH - endW * RATIO) / 2 : DROP + (boxH - DROP - endW * RATIO) / 2,
 				endW,
-				expand: (hero.offsetHeight - window.innerHeight) * EXPAND_SHARE,
-				travel: hero.offsetHeight - window.innerHeight,
+				expand: (hero.offsetHeight - stageH) * (isCompact ? .26 : EXPAND_SHARE),
+				travel: hero.offsetHeight - stageH,
 			};
 			// The mock-up is laid out at its final size and scaled down at the start, so it rests sharp at the end.
 			win.style.left = '0px';
@@ -114,31 +128,56 @@ const { signupHref } = Astro.props;
 			win.style.width = `${endW}px`;
 		};
 
+		// Phones: the mock-up is wider than the panel, so its resting spot pans to keep the demo's focus point centred.
+		let focus = { x: 640, y: 400 }; // in app px (the app is 1280 × 800), reported by the demo
+		let lastT = 0;
+		const clampTo = (v: number, lo: number, hi: number) => (lo > hi ? (lo + hi) / 2 : Math.min(Math.max(v, lo), hi));
+		const place = () => {
+			if (!geo) return;
+			let endX = geo.endX;
+			let endY = geo.endY;
+			if (geo.compact) {
+				const k = geo.endW / 1280;
+				const margin = 12;
+				endX = clampTo(geo.boxW / 2 - focus.x * k, geo.boxW - geo.endW - margin, margin);
+				endY = clampTo(geo.boxH / 2 - focus.y * k, geo.boxH - geo.endW * RATIO - margin, margin);
+			}
+			const scale = lerp(geo.startW / geo.endW, 1, lastT);
+			win.style.transform = `translate3d(${lerp(geo.startX, endX, lastT).toFixed(2)}px, ${lerp(geo.startY, endY, lastT).toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
+		};
+		workspace?.addEventListener('demo:focus', (event) => {
+			focus = (event as CustomEvent<{ x: number; y: number }>).detail;
+			if (geo?.compact) place();
+		});
+
 		const render = () => {
 			frame = 0;
-			if (!pinned.matches) {
+			if (!wide.matches && !compact.matches) {
 				if (geo) reset();
 				return;
 			}
 			if (!geo) measure();
 			if (!geo) return;
 
-			const scrolled = -hero.getBoundingClientRect().top;
+			const scrolled = geo.stuck - hero.getBoundingClientRect().top;
 			const progress = clamp(scrolled / geo.expand);
 			const t = easeInOut(progress);
 			// The top edge drops below the navbar early, before the panel reaches the logo and links.
-			const top = easeOut(clamp(progress / .3)) * DROP;
-			const left = (geo.boxW / 2) * (1 - t);
+			const top = geo.compact ? lerp(geo.startTop, 0, t) : easeOut(clamp(progress / .3)) * DROP;
+			const left = geo.compact ? 0 : (geo.boxW / 2) * (1 - t);
 			media.style.clipPath = `inset(${top.toFixed(2)}px 0 0 ${left.toFixed(2)}px round ${RADIUS}px)`;
 
-			const scale = lerp(geo.startW / geo.endW, 1, t);
-			win.style.transform = `translate3d(${lerp(geo.startX, geo.endX, t).toFixed(2)}px, ${lerp(geo.startY, geo.endY, t).toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
+			lastT = t;
+			place();
 			backdrop.style.transform = `scale(${lerp(1.1, 1.03, t).toFixed(4)})`;
 			// The copy fades out slowly over the whole expansion, so it's mostly gone by the time the panel covers it.
-			if (copy) copy.style.opacity = (1 - easeInOut(clamp(progress / .9))).toFixed(3);
+			if (copy) {
+				copy.style.opacity = (1 - easeInOut(clamp(progress / (geo.compact ? .6 : .9)))).toFixed(3);
+				if (geo.compact) copy.style.transform = `translate3d(0, ${(-48 * t).toFixed(2)}px, 0)`;
+			}
 
 			// The navbar morphs with the scroll too (full width and dropped → page width and centred), not on a timer.
-			if (header) {
+			if (header && !geo.compact) {
 				header.dataset.morph = '';
 				header.style.setProperty('--hero-drop', (1 - easeInOut(clamp(progress / .3))).toFixed(4));
 				// It contracts to the page width only once the pin has ended and the hero is scrolling away, so it stays aligned
@@ -155,7 +194,7 @@ const { signupHref } = Astro.props;
 				workspace?.dispatchEvent(new CustomEvent('demo:progress', { detail: demo }));
 			}
 
-			setState(progress < .3 ? 'split' : 'open');
+			if (!geo.compact) setState(progress < .3 ? 'split' : 'open');
 		};
 
 		const schedule = () => {
@@ -169,11 +208,13 @@ const { signupHref } = Astro.props;
 		render();
 		window.addEventListener('scroll', schedule, { passive: true });
 		window.addEventListener('resize', remeasure);
-		pinned.addEventListener('change', remeasure);
+		wide.addEventListener('change', remeasure);
+		compact.addEventListener('change', remeasure);
 		document.addEventListener('astro:before-swap', () => {
 			window.removeEventListener('scroll', schedule);
 			window.removeEventListener('resize', remeasure);
-			pinned.removeEventListener('change', remeasure);
+			wide.removeEventListener('change', remeasure);
+			compact.removeEventListener('change', remeasure);
 		}, { once: true });
 	}
 </script>
@@ -251,4 +292,17 @@ const { signupHref } = Astro.props;
 		.hero__window { top: 12%; left: 8%; width: 165%; }
 	}
 	@media (max-width: 370px) { h1 { font-size: 34px; } }
+
+	/*
+	 * Pinned on phones and tablets (the script drives it): the stage sticks right under the navbar. The panel takes its final,
+	 * full box and is clipped down to the card below the copy; scrolling grows it upward to cover the stage.
+	 */
+	@media (max-width: 1023px) and (min-height: 560px) and (prefers-reduced-motion: no-preference) {
+		.hero { --travel: 240svh; height: calc(100svh - 52px + var(--travel)); padding: 0; }
+		.hero__stage { position: sticky; top: 52px; display: block; height: calc(100svh - 52px); }
+		.hero__inner { padding-top: 24px; }
+		.hero__media { position: absolute; inset: var(--inset); z-index: 2; width: auto; margin: 0; aspect-ratio: auto; box-shadow: none; clip-path: inset(62% 0 0 0 round 12px); }
+		.hero__backdrop { transform: scale(1.1); will-change: transform; }
+		.hero__window { top: 0; left: 0; width: 100%; will-change: transform; }
+	}
 </style>

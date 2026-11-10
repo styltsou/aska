@@ -169,9 +169,14 @@ const folderImage = { widths: [120, 240], sizes: '120px', quality: 74, alt: '' }
 	}
 	@media (max-width: 640px) {
 		.closing__frame { min-height: 0; }
-		.card--link, .card--concrete, .card--ink, .card--towers { display: none; }
+		.card--ink, .card--towers { display: none; }
 		.card--leaf { top: -36px; left: -14px; width: 124px; }
 		.card--folder { top: -36px; right: -12px; width: 136px; }
-		.closing__content { padding: 156px 20px 48px; }
+		/* Only the top edge of the bottom pair shows, so the corners aren't bare; they still slide in with the scroll. */
+		.card--link { bottom: -104px; left: -22px; width: 150px; }
+		.card--concrete { bottom: -64px; right: -14px; width: 112px; }
+		.closing__content { padding: 148px 20px 132px; }
+		h2 { max-width: 16ch; margin-bottom: 24px; font-size: clamp(30px, 8.6vw, 38px); letter-spacing: -.04em; line-height: 1.04; }
+		.closing__actions .app-button { height: 40px; padding-inline: 16px; font-size: 14px; }
 	}
 </style>
