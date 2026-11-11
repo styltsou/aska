@@ -29,9 +29,9 @@ const tile = { width: 200, densities: [1, 2], quality: 76, alt: '' } as const;
 // The palette's results: an image, a note, then more images, as the app lists them.
 const searchResults = [
 	{ image: curvedArchitecture, label: 'Curved concrete stair', detail: 'Studio archive', kind: 'Image' },
+	{ image: blueRedWall, label: 'Painted wall, late light', detail: 'Spring campaign', kind: 'Image' },
 	{ image: brutalistShadows, label: 'Brutalist shadows at noon', detail: 'Material library', kind: 'Image' },
 	{ note: true, label: 'Light studies', detail: 'Soft light reads flat on raw concrete, so…', kind: 'Note' },
-	{ image: blueRedWall, label: 'Painted wall, late light', detail: 'Spring campaign', kind: 'Image' },
 	{ image: concreteSculptures, label: 'Concrete sculptures', detail: 'Studio archive', kind: 'Image' },
 ];
 // The filter bar's eight preset colours (apps/web/src/components/filter-bar).
@@ -47,6 +47,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 
 <section id="workflow" class="features page-width scroll-anchor" aria-label="Mnemee features" data-header-surface="canvas">
 	<article class="feature feature--semantic">
+		<div class="feature__aura" aria-hidden="true"></div>
 		<div class="feature__copy">
 		<div class="feature__eyebrow"><span>Semantic search</span><span class="coming-soon-pill">Coming soon</span></div>
 			<h2>Find the idea, even when you can't name the file.</h2>
@@ -111,6 +112,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 	</article>
 
 	<article id="color-search" class="feature feature--color scroll-anchor">
+		<div class="feature__aura" aria-hidden="true"></div>
 		<div class="feature__copy">
 			<div class="feature__eyebrow"><span>Color search</span></div>
 			<h2>Follow a color back to the image.</h2>
@@ -154,6 +156,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 	</article>
 
 	<article class="feature feature--notes">
+		<div class="feature__aura" aria-hidden="true"></div>
 		<div class="feature__copy">
 			<div class="feature__eyebrow"><span>AI writing</span></div>
 			<h2>Make more of the thoughts you save.</h2>
@@ -213,6 +216,57 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 	const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 	const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 	const scrollVisuals = Array.from(document.querySelectorAll<HTMLElement>('.feature-visual'));
+	const auras = Array.from(document.querySelectorAll<HTMLElement>('.feature__aura'));
+	const smooth = (a: number, b: number, x: number) => {
+		const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+		return t * t * (3 - 2 * t);
+	};
+	// The aura grows in as its panel rises into view and drifts slower than the mock-up, so it trails behind it.
+	const updateAuras = () => {
+		const height = window.innerHeight;
+		const rects = auras.map((aura) => aura.parentElement!.getBoundingClientRect());
+		auras.forEach((aura, i) => {
+			if (motionPreference.matches) {
+				['--aura-x', '--aura-y', '--aura-s', '--aura-o'].forEach((name) => aura.style.removeProperty(name));
+				return;
+			}
+			const rect = rects[i];
+			const p = Math.max(0, Math.min(1, (height - rect.top) / (height + rect.height)));
+			const lead = .5 - p;
+			aura.style.setProperty('--aura-s', (.78 + .3 * smooth(0, .5, p)).toFixed(3));
+			aura.style.setProperty('--aura-x', (lead * -55).toFixed(1));
+			aura.style.setProperty('--aura-y', (lead * 120).toFixed(1));
+			aura.style.setProperty('--aura-o', (smooth(0, .22, p) * (1 - .6 * smooth(.8, 1, p))).toFixed(3));
+		});
+	};
+	const setAura = (from: Element, color: string) => {
+		from.closest('.feature')?.querySelector<HTMLElement>('.feature__aura')?.style.setProperty('--aura-c', color);
+	};
+	// Reads an image's dominant colour (weighted toward the saturated pixels, so a grey wall doesn't win over a red door).
+	const swatchCache = new WeakMap<HTMLImageElement, string>();
+	async function dominantColor(img: HTMLImageElement) {
+		const cached = swatchCache.get(img);
+		if (cached) return cached;
+		try {
+			await img.decode();
+			const canvas = document.createElement('canvas');
+			canvas.width = canvas.height = 24;
+			const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+			ctx.drawImage(img, 0, 0, 24, 24);
+			const { data } = ctx.getImageData(0, 0, 24, 24);
+			let r = 0, g = 0, b = 0, total = 0;
+			for (let i = 0; i < data.length; i += 4) {
+				const max = Math.max(data[i], data[i + 1], data[i + 2]);
+				const weight = .1 + (max - Math.min(data[i], data[i + 1], data[i + 2])) / 255;
+				r += data[i] * weight; g += data[i + 1] * weight; b += data[i + 2] * weight; total += weight;
+			}
+			const hex = `rgb(${Math.round(r / total)} ${Math.round(g / total)} ${Math.round(b / total)})`;
+			swatchCache.set(img, hex);
+			return hex;
+		} catch {
+			return null;
+		}
+	}
 	const visualOffsets = new WeakMap<HTMLElement, number>();
 	let scrollFrame = 0;
 	const updateScrollVisuals = () => {
@@ -225,6 +279,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 			const remaining = 1 - progress * progress * (3 - 2 * progress);
 			return motionPreference.matches ? 0 : remaining;
 		});
+		updateAuras();
 		scrollVisuals.forEach((visual, index) => {
 			const remaining = offsets[index];
 			visualOffsets.set(visual, remaining * 48);
@@ -309,6 +364,39 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 		}
 	}
 
+	// The search aura follows the selected result's artwork. A colour that would vanish against the page (near-black on the
+	// dark theme, near-white on the light one) is swapped for a light or mid grey, and the note, which has no artwork, is grey.
+	const isDark = () => document.documentElement.dataset.theme === 'dark';
+	const visibleOnTheme = (rgb: string | null) => {
+		const grey = isDark() ? '#d2d2d2' : '#6a6a6a';
+		const parts = rgb?.match(/\d+/g)?.map(Number);
+		if (!parts || parts.length < 3) return grey;
+		const [r, g, b] = parts;
+		const lum = (.2126 * r + .7152 * g + .0722 * b) / 255;
+		if (isDark()) {
+			if (lum < .22) return grey;
+			// Dim colours are lifted toward white so the grain still reads.
+			const lift = Math.max(0, .5 - lum) * .9;
+			return `rgb(${[r, g, b].map((c) => Math.round(c + (255 - c) * lift)).join(' ')})`;
+		}
+		return lum > .78 ? grey : rgb!;
+	};
+	let tintToken = 0;
+	let tinted: HTMLElement | undefined;
+	async function tintSearch(result: HTMLElement | undefined) {
+		const token = ++tintToken;
+		tinted = result;
+		const root = document.querySelector('[data-demo="search"]');
+		if (!root) return;
+		const img = result?.querySelector('img');
+		const colour = visibleOnTheme(img ? await dominantColor(img) : null);
+		if (token !== tintToken) return;
+		setAura(root, colour);
+		root.closest('.feature')?.querySelector('.feature__aura')?.classList.toggle('is-quiet', !result);
+	}
+	void tintSearch(document.querySelector<HTMLElement>('[data-demo="search"] [data-result]') ?? undefined);
+	new MutationObserver(() => void tintSearch(tinted)).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
 	if (!reduced) {
 		// 1. Search: type the query, results come in, the selection steps down with the arrow key, then Enter.
 		const search = document.querySelector<HTMLElement>('[data-demo="search"]');
@@ -320,7 +408,10 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 		const keyEnter = search?.querySelector<HTMLElement>('[data-key-enter]');
 		if (search && query && placeholder && resultsList && results.length && keyDown && keyEnter) {
 			const QUERY = query.textContent ?? '';
-			const select = (index: number) => results.forEach((el, i) => el.classList.toggle('palette__item--selected', i === index));
+			const select = (index: number) => {
+				results.forEach((el, i) => el.classList.toggle('palette__item--selected', i === index));
+				void tintSearch(results[index]);
+			};
 			const press = async (key: HTMLElement, wait: (ms: number) => Promise<void>) => {
 				key.classList.add('is-pressed');
 				await wait(140);
@@ -362,6 +453,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 				const grid = grids.find((g) => g.dataset.resultsFor === hex);
 				grids.forEach((g) => g.classList.toggle('is-shown', g === grid));
 				count.textContent = grid?.dataset.countFor ?? '0';
+				setAura(color, hex);
 			};
 			startDemo(color, async (wait) => {
 				cursor.show(false);
@@ -410,7 +502,10 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 				{ text: 'deliberate contrast', tag: 'em' },
 				{ text: '. Keep the surfaces honest: let the light reveal their textures, while a quieter palette gives the entrance room to breathe. Use the changing daylight to bring warmth and depth to the space.' },
 			] as const;
+			// The aura is quiet while idle, shifts to a soft violet while the agent writes, and returns once kept.
+			const IDLE = '#9a96a8', WRITING = '#a58bf2';
 			startDemo(note, async (wait) => {
+				setAura(note, IDLE);
 				empty.hidden = false;
 				hint.hidden = false;
 				draftRow.hidden = true;
@@ -429,6 +524,8 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 				await flash(send, wait);
 				// Stream the generated draft into the empty paragraph.
 				prompt.dataset.phase = 'streaming';
+				setAura(note, WRITING);
+				note.closest('.feature')?.querySelector('.feature__aura')?.classList.add('is-writing');
 				rail.classList.add('is-on', 'is-streaming');
 				draftRow.hidden = false;
 				for (const part of REWRITE) {
@@ -441,10 +538,13 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 				}
 				// Review: Retry / Discard / Keep, with the rail still marking the draft.
 				rail.classList.remove('is-streaming');
+				note.closest('.feature')?.querySelector('.feature__aura')?.classList.remove('is-writing');
+				setAura(note, IDLE);
 				prompt.dataset.phase = 'review';
 				instruction.textContent = '';
 				await wait(800);
 				await flash(keep, wait);
+				setAura(note, IDLE);
 				prompt.hidden = true;
 				rail.classList.remove('is-on');
 				saveStatus.textContent = 'Saving…';

@@ -8,7 +8,32 @@
 		--a-bg: oklch(.145 0 0); --a-fg: oklch(.985 0 0); --a-card: oklch(.205 0 0); --a-muted: oklch(.269 0 0); --a-muted-fg: oklch(.708 0 0);
 		--a-border: oklch(1 0 0 / 10%); --a-input: oklch(1 0 0 / 15%); --a-popover: oklch(.205 0 0);
 	}
-	.feature { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+	.feature { position: relative; isolation: isolate; min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+
+	/*
+	 * Aura: a diffused, grainy wash of the demo's current colour behind each mock-up (the way a music player tints its
+	 * background from the artwork). The script sets `--aura-c` on the layer (a registered colour, so it cross-fades) and
+	 * scroll drives `--aura-x/-y/-s/-o`, so the wash grows in and drifts a little slower than the mock-up it sits behind.
+	 */
+	@property --aura-c { syntax: '<color>'; inherits: true; initial-value: #8d8d88; }
+	.features { --aura-glow: 12%; --aura-grain: .42; --aura-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 -1.15'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+	html[data-theme='dark'] .features { --aura-glow: 11%; --aura-grain: .24; }
+	.feature__aura { position: absolute; inset: -8% -6%; z-index: -1; pointer-events: none; --aura-c: #8d8d88; opacity: var(--aura-o, 1); scale: var(--aura-s, 1); translate: calc(var(--aura-x, 0) * 1px) calc(var(--aura-y, 0) * 1px); transition: --aura-c 1100ms cubic-bezier(.23, 1, .32, 1); }
+	.feature--semantic .feature__aura { --aura-c: #a79c8e; --aura-at: 38% 58%; }
+	.feature--color .feature__aura { --aura-c: #22c55e; --aura-at: 40% 52%; }
+	.feature--notes .feature__aura { --aura-c: #9a96a8; --aura-at: 44% 52%; }
+	.feature__aura::before, .feature__aura::after { content: ''; position: absolute; inset: 0; transition: opacity 900ms ease; }
+	/* Before a result is chosen (the query is still being typed) the wash is a barely-there grey. */
+	.feature__aura.is-quiet::before { opacity: .3; }
+	.feature__aura::before { background: radial-gradient(ellipse 52% 44% at var(--aura-at), color-mix(in srgb, var(--aura-c) var(--aura-glow), transparent), transparent 100%); }
+	/* The grain is the colour itself, masked by tiled noise and then by a falloff, so it thins out toward the edges. */
+	.feature__aura.is-quiet::after { opacity: calc(var(--aura-grain) * .3); }
+	.feature__aura::after { background: var(--aura-c); opacity: var(--aura-grain); -webkit-mask-image: var(--aura-noise), radial-gradient(ellipse 45% 38% at var(--aura-at), #000 0%, transparent 100%); -webkit-mask-composite: source-in; mask-image: var(--aura-noise), radial-gradient(ellipse 45% 38% at var(--aura-at), #000 0%, transparent 100%); mask-composite: intersect; }
+	html[data-theme='dark'] .feature__aura::after { mix-blend-mode: screen; }
+	/* While the agent writes, the grain breathes. */
+	.feature__aura.is-writing::after { animation: aura-pulse 1.6s ease-in-out infinite; }
+	@keyframes aura-pulse { 0%, 100% { opacity: calc(var(--aura-grain) * .45); } 50% { opacity: calc(var(--aura-grain) * 1.25); } }
+	@media (prefers-reduced-motion: reduce) { .feature__aura.is-writing::after { animation: none; } }
 	.feature--semantic { grid-column: span 7; }
 	.feature--color { display: flex; grid-column: span 5; flex-direction: column; }
 	.feature--notes { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr); align-items: center; }

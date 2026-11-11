@@ -1,6 +1,6 @@
 ---
 import { Image } from 'astro:assets';
-import blueRedWall from '../assets/images/blue-red-wall.jpg';
+import blueMinimalWall from '../assets/images/blue-minimal-wall.jpg';
 import bauhausRoom from '../assets/images/bauhaus-room-02.jpg';
 import concrete from '../assets/images/concrete-sculptures.jpg';
 import curvedArchitecture from '../assets/images/curved-architecture.jpg';
@@ -100,7 +100,7 @@ const collections = [
 				</svg>
 				<!-- Canvas units, as on the app's board: cards are 280 wide, shown here at 80% zoom. -->
 				<div class="canvas">
-					<div class="card card--image" style="left: 64px; top: 48px; width: 280px; height: 350px;"><Image src={blueRedWall} {...cardImage} /></div>
+					<div class="card card--image" style="left: 64px; top: 48px; width: 280px; height: 350px;"><Image src={blueMinimalWall} {...cardImage} /></div>
 					<div class="card card--note" style="left: 64px; top: 422px; width: 280px;">
 						<div class="note__title">Studio notes</div>
 						<p>Pull in the fragments before the direction is obvious. Keep what still feels right a week later.</p>
@@ -130,9 +130,9 @@ const collections = [
 					<!-- Demo 1: dragged into the empty top-right slot. -->
 					<div class="card card--image" data-demo-drag style="left: 1010px; top: 474px; width: 280px; height: 350px;"><Image src={towers} {...cardImage} /><svg class="demo-grab" data-demo-grab viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a1.5 1.5 0 0 1 3 0v2.5-4a1.5 1.5 0 0 1 3 0v4-3a1.5 1.5 0 0 1 3 0v3.5-1.5a1.5 1.5 0 0 1 3 0v5.2c0 3.9-2.4 6.8-6 6.8h-1c-2.1 0-3.6-.8-5-2.5l-3-3.8a1.6 1.6 0 0 1 2.3-2.2L8 14" /></svg></div>
 					<!-- Demo 2: a new colour card appears. -->
-					<div class="card card--color" data-demo-new style="left: 976px; top: 428px; width: 280px; --swatch: #2f4a8a;">
+					<div class="card card--color" data-demo-new style="left: 976px; top: 428px; width: 280px; --swatch: #7f9c85;">
 						<div class="color__swatch"></div>
-						<div class="color__footer"><span>Ink blue</span><span class="color__hex">#2F4A8A</span></div>
+						<div class="color__footer"><span>Sage</span><span class="color__hex">#7F9C85</span></div>
 					</div>
 					<!-- Demo 3: a text label typed onto the canvas (canvas-text-node.tsx: Sans, medium). -->
 					<div class="text-node" data-demo-text style="left: 368px; top: 684px;"><span data-demo-text-content></span><i class="text-node__caret"></i></div>
@@ -160,7 +160,7 @@ const collections = [
 	const APP_W = 1280;
 	const LABEL = 'Spring direction';
 	const NOTE_TITLE = 'Direction';
-	const NOTE_BODY = 'Ink blue for headlines, clay for the accents.';
+	const NOTE_BODY = 'Sage for headlines, clay for the accents.';
 
 	type Point = { x: number; y: number };
 	const clamp = (v: number) => Math.min(Math.max(v, 0), 1);
