@@ -64,7 +64,7 @@
 	 * centred near the top; the search body is bg-background/50 with a foreground/10 bottom edge, the shortcuts sit on the glass. */
 	.palette { top: 22px; left: 50%; z-index: 2; width: 560px; overflow: hidden; border-radius: var(--a-radius); background: color-mix(in oklch, var(--a-popover) 80%, transparent); box-shadow: 0 0 0 1px color-mix(in oklch, var(--a-fg) 10%, transparent), 0 20px 40px -12px rgb(0 0 0 / 22%); -webkit-backdrop-filter: blur(40px) saturate(1.5); backdrop-filter: blur(40px) saturate(1.5); transform: translateX(-50%) scale(var(--mock-scale)); transform-origin: 50% 0; }
 	.palette__body { padding: 6px; border-bottom: 1px solid color-mix(in oklch, var(--a-fg) 10%, transparent); border-radius: 0 0 var(--a-radius) var(--a-radius); background: color-mix(in oklch, var(--a-bg) 50%, transparent); }
-	.palette__input { display: flex; align-items: center; height: 40px; margin: 0 -6px; padding: 0 12px 6px 16px; border-bottom: 1px solid color-mix(in oklch, var(--a-border) 40%, transparent); }
+	.palette__input { display: flex; align-items: center; height: 40px; margin: 0 -6px; padding: 0 12px 6px 16px; border-bottom: 1px solid color-mix(in oklch, var(--a-border) 60%, transparent); }
 	.palette__search { margin-right: 10px; color: var(--a-muted-fg); }
 	.palette__list { padding: 4px; }
 	.palette__heading { padding: 6px 8px; color: var(--a-muted-fg); font-size: 12px; font-weight: 500; }
