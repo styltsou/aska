@@ -25,6 +25,7 @@ const { loginHref, signupHref } = Astro.props;
 	const hero = document.querySelector<HTMLElement>('.hero');
 	const heroMedia = document.querySelector<HTMLElement>('.hero__media');
 	const canvasFrame = document.querySelector<HTMLElement>('.canvas-surface');
+	const canvasTransition = document.querySelector<HTMLElement>('.hero-transition');
 	const desktop = window.matchMedia('(min-width: 1024px)');
 	const surfaceColor: Record<string, string> = {
 		surface: 'var(--surface)',
@@ -74,7 +75,8 @@ const { loginHref, signupHref } = Astro.props;
 
 			const height = bar.height;
 			const frameBounds = canvasFrame?.getBoundingClientRect();
-			if (frameBounds && frameBounds.top < bar.bottom && frameBounds.bottom > bar.top) header.dataset.frame = 'canvas';
+			const frameStart = canvasTransition?.getBoundingClientRect().top ?? frameBounds?.top;
+			if (frameBounds && frameStart !== undefined && frameStart < bar.bottom && frameBounds.bottom > bar.top) header.dataset.frame = 'canvas';
 			else delete header.dataset.frame;
 			const zones = fades.map((el) => fadeZone(el, bar.top)).filter((zone) => zone.bottom > 0 && zone.top < height);
 			const stops: string[] = [];
@@ -165,7 +167,7 @@ const { loginHref, signupHref } = Astro.props;
 		 * With the pinned hero the morph follows the scroll. --hero-drop (1 → 0) lifts the row as the image drops below the bar;
 		 * --hero-w (0 → 1) contracts it to the page width only as the hero ends, so it stays aligned with the full-width image until then.
 		 */
-		.site-header[data-morph] .site-header__inner { width: calc(100% - 56px + (min(100% - 48px, 1200px) - (100% - 56px)) * var(--hero-w, 1)); translate: 0 calc(20px * var(--hero-drop, 0)); transition: none; }
+		.site-header[data-morph] .site-header__inner { --hero-row-width: calc(100% - 32px - 24px * var(--hero-drop, 0)); width: calc(var(--hero-row-width) + (min(100% - 48px, 1200px) - var(--hero-row-width)) * var(--hero-w, 1)); translate: 0 calc(20px * var(--hero-drop, 0)); transition: none; }
 	}
 	.desktop-nav a, .text-link { color: var(--ink-muted); font-size: 13px; font-weight: 500; transition: color 140ms ease; }
 

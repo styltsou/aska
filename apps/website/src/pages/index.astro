@@ -99,6 +99,8 @@ const signupHref = `${appBaseUrl}/signup`;
 		position: relative;
 	}
 	.hero-transition { --from: var(--surface); --to: var(--canvas); height: max(80px, calc(var(--section-gap) - 40px)); background: linear-gradient(to bottom, var(--ramp)); }
+	/* Fade the frame in with the same smootherstep progression as the background. */
+	.hero-transition::before { content: ''; position: absolute; z-index: 1; inset: 0; border-inline: 1px solid var(--line); pointer-events: none; mask-image: linear-gradient(to bottom, transparent, rgb(0 0 0 / .0086) 10%, rgb(0 0 0 / .0579) 20%, rgb(0 0 0 / .1631) 30%, rgb(0 0 0 / .3174) 40%, rgb(0 0 0 / .5) 50%, rgb(0 0 0 / .6826) 60%, rgb(0 0 0 / .8369) 70%, rgb(0 0 0 / .9421) 80%, rgb(0 0 0 / .9914) 90%, #000); }
 
 	/*
 	 * The fades around the FAQ are long washes rather than blocks: each one is a background layer (z-index -1, so under
