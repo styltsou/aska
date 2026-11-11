@@ -87,7 +87,8 @@ const signupHref = `${appBaseUrl}/signup`;
 	 */
 	.surface-fade { --fade-pad: clamp(56px, 7vw, 96px); --reach: clamp(140px, 24vh, 280px); height: clamp(160px, 18vw, 240px); }
 	.surface-fade--in { --from: var(--canvas); --to: var(--surface); height: clamp(48px, 6vw, 80px); }
-	.surface-fade--out { --from: var(--surface); --to: var(--canvas); }
+	/* Both fades set the same gap, so the FAQ sits evenly between the use cases above and the closing call to action below. */
+	.surface-fade--out { --from: var(--surface); --to: var(--canvas); height: clamp(48px, 6vw, 80px); }
 	.surface-fade::before { content: ''; position: absolute; right: 0; left: 0; z-index: -1; background: linear-gradient(to bottom, var(--ramp)); pointer-events: none; }
 	.surface-fade--in::before { top: calc(-1 * var(--reach)); bottom: calc(-1 * var(--fade-pad)); }
 	.surface-fade--out::before { top: calc(-1 * var(--fade-pad)); bottom: calc(-1 * var(--reach)); }
@@ -100,5 +101,5 @@ const signupHref = `${appBaseUrl}/signup`;
 	:global(html[data-theme='dark']) .surface-fade--in::after { top: calc(-1 * var(--reach)); bottom: calc(-1 * var(--fade-pad)); }
 	:global(html[data-theme='dark']) .surface-fade--out::after { top: calc(-1 * var(--fade-pad)); bottom: calc(-1 * var(--reach)); }
 
-	@media (max-width: 640px) { .hero-transition { height: 128px; } .surface-fade { --reach: 120px; height: 140px; } .surface-fade--in { height: 48px; } }
+	@media (max-width: 640px) { .hero-transition { height: 128px; } .surface-fade { --reach: 120px; height: 48px; } }
 </style>

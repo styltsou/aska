@@ -22,7 +22,7 @@ const collections = [
 ---
 
 <!--
-	A static copy of the app's collection canvas (apps/web: app-shell, ui/sidebar, app-header, board/board-action-rail,
+	A static copy of the app's collection canvas (apps/web: app-shell, ui/sidebar, app-header,
 	board/cards). It is laid out at a fixed 1280 × 800 like a real window and scaled to fit, so every size, radius and
 	font matches the app. The hero's scroll drives a short demo through `demo:progress` events (see the script).
 -->
@@ -125,40 +125,19 @@ const collections = [
 
 					<!-- Demo 1: dragged into the empty top-right slot. -->
 					<div class="card card--image" data-demo-drag style="left: 1010px; top: 474px; width: 280px; height: 350px;"><Image src={towers} {...cardImage} /></div>
-					<!-- Demo 2: added from the rail's Colour button. -->
+					<!-- Demo 2: a new colour card appears. -->
 					<div class="card card--color" data-demo-new style="left: 976px; top: 428px; width: 280px; --swatch: #2f4a8a;">
 						<div class="color__swatch"></div>
 						<div class="color__footer"><span>Ink blue</span><span class="color__hex">#2F4A8A</span></div>
 					</div>
-					<!-- Demo 3: a text label typed with the Text tool (canvas-text-node.tsx: Sans, medium). -->
+					<!-- Demo 3: a text label typed onto the canvas (canvas-text-node.tsx: Sans, medium). -->
 					<div class="text-node" data-demo-text style="left: 368px; top: 684px;"><span data-demo-text-content></span><i class="text-node__caret"></i></div>
-					<!-- Demo 4: a note added from the rail's Note button, then written into. -->
+					<!-- Demo 4: a new note appears, then is written into. -->
 					<div class="card card--note card--new-note" data-demo-note style="left: 672px; top: 588px; width: 280px;">
 						<div class="note__title"><span data-demo-note-title></span><i class="note__caret" data-demo-caret-title></i></div>
 						<p><span data-demo-note-body></span><i class="note__caret" data-demo-caret-body></i></p>
 					</div>
 				</div>
-
-				<div class="rail">
-					<div class="rail__frame">
-						<div class="island">
-							<span class="rail__button"><svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m17 8-5-5-5 5" /><path d="M12 3v12" /></svg></span>
-							<span class="rail__button" data-demo-note-tool><svg class="icon" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" /></svg></span>
-							<span class="rail__button" data-demo-color><svg class="icon" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" /></svg></span>
-							<span class="rail__button"><svg class="icon" viewBox="0 0 24 24"><path d="M12 10v6" /><path d="M9 13h6" /><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg></span>
-						</div>
-						<div class="island">
-							<span class="rail__button" data-demo-text-tool><svg class="icon icon--sm" viewBox="0 0 24 24"><path d="M4 7V4h16v3" /><path d="M9 20h6" /><path d="M12 4v16" /></svg></span>
-							<span class="island__sep"></span>
-							<span class="rail__button"><svg class="icon icon--lg" viewBox="0 0 24 24"><path d="M7 7h10v10" /><path d="M7 17 17 7" /></svg></span>
-						</div>
-						<div class="island">
-							<span class="rail__button"><svg class="icon" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg></span>
-						</div>
-					</div>
-				</div>
-
-				<svg class="cursor" data-demo-cursor viewBox="0 0 24 24"><path d="M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z" /></svg>
 			</div>
 		</div>
 	</div>
@@ -168,14 +147,13 @@ const collections = [
 	/*
 	 * Fits the fixed 1280 × 800 app into whatever width the mock-up has, and plays the demo from the scroll position the
 	 * hero sends (0 → 1 across its hold). Every frame is a pure function of that progress, so scrolling back rewinds it.
-	 *   1. Drag the loose orange card into the empty top-right slot.
-	 *   2. Click Colour in the rail: a new colour card appears in the freed space.
-	 *   3. Pick the Text tool, click the canvas and type a label.
-	 *   4. Click Note in the rail: a new note appears and gets written into.
+	 * There is no pointer or action bar: the cards simply move and appear on their own.
+	 *   1. The loose orange card slides into the empty top-right slot.
+	 *   2. A new colour card appears in the freed space.
+	 *   3. A text label is typed onto the canvas.
+	 *   4. A new note appears and gets written into.
 	 */
 	const APP_W = 1280;
-	const ZOOM = .8; // canvas zoom, matching `.canvas` in the CSS
-	const ORIGIN = { x: -12, y: 4 }; // canvas offset inside the board, matching `.canvas`
 	const LABEL = 'Spring direction';
 	const NOTE_TITLE = 'Direction';
 	const NOTE_BODY = 'Ink blue for headlines, clay for the accents.';
@@ -192,96 +170,71 @@ const collections = [
 	for (const root of document.querySelectorAll<HTMLElement>('.hero-workspace')) {
 		const q = <T extends Element = HTMLElement>(selector: string) => root.querySelector<T>(selector);
 		const app = q('.app');
-		const board = q('[data-demo-board]');
 		const drag = q('[data-demo-drag]');
 		const added = q('[data-demo-new]');
-		const colorButton = q('[data-demo-color]');
-		const textTool = q('[data-demo-text-tool]');
 		const text = q('[data-demo-text]');
 		const textContent = q('[data-demo-text-content]');
-		const noteButton = q('[data-demo-note-tool]');
 		const note = q('[data-demo-note]');
 		const noteTitle = q('[data-demo-note-title]');
 		const noteBody = q('[data-demo-note-body]');
 		const caretTitle = q('[data-demo-caret-title]');
 		const caretBody = q('[data-demo-caret-body]');
-		const cursor = q<SVGElement>('[data-demo-cursor]');
-		if (!app || !board || !drag || !added || !colorButton || !textTool || !text || !textContent || !noteButton || !note || !noteTitle || !noteBody || !caretTitle || !caretBody || !cursor) continue;
+		if (!app || !drag || !added || !text || !textContent || !note || !noteTitle || !noteBody || !caretTitle || !caretBody) continue;
 
 		new ResizeObserver(() => app.style.setProperty('--app-scale', String(root.clientWidth / APP_W))).observe(root);
 
-		// Canvas units → board pixels.
-		const toBoard = (p: Point): Point => ({ x: ORIGIN.x + p.x * ZOOM, y: ORIGIN.y + p.y * ZOOM });
-		// An element's centre in board px, measured through any outer transforms (the hero scales the whole mock-up).
-		const centreOf = (el: Element): Point => {
-			const b = board.getBoundingClientRect();
-			const r = el.getBoundingClientRect();
-			const k = b.width / board.offsetWidth || 1;
-			return { x: (r.left + r.width / 2 - b.left) / k, y: (r.top + r.height / 2 - b.top) / k };
-		};
+		// Canvas units → app px (the canvas sits at 80% zoom, offset inside the board, which sits right of the sidebar).
+		const toApp = (p: Point): Point => ({ x: 240 - 12 + p.x * .8, y: 56 + 4 + p.y * .8 });
 
 		const dragFrom = { x: 1010, y: 474 };
 		const dragTo = { x: 976, y: 48 };
-		const grip = { x: 150, y: 120 }; // where the cursor holds the card
-		const textAt = { x: 376, y: 704 }; // where the label is clicked in (canvas units)
-		const enter = { x: 930, y: 700 };
-		const exit = { x: 1000, y: 560 };
+		// Where the camera looks at each stage (canvas units: the centre of whatever is happening).
+		const cardHalf = { x: 140, y: 175 };
+		const overview = { x: 560, y: 360 };
+		const colourAt = { x: 1116, y: 590 };
+		const labelAt = { x: 470, y: 718 };
+		const noteAt = { x: 812, y: 650 };
 
 		const render = (p: number) => {
 			// 1. Drag
-			const move = ease(span(p, .15, .3));
+			const move = ease(span(p, .1, .28));
 			const card = mix(dragFrom, dragTo, move);
 			drag.style.transform = `translate3d(${(card.x - dragFrom.x).toFixed(2)}px, ${(card.y - dragFrom.y).toFixed(2)}px, 0)`;
-			drag.toggleAttribute('data-lifted', between(p, .13, .31));
-			drag.toggleAttribute('data-selected', between(p, .13, .45));
+			drag.toggleAttribute('data-lifted', between(p, .08, .3));
+			drag.toggleAttribute('data-selected', between(p, .08, .4));
 
 			// 2. Colour
-			const appear = ease(span(p, .45, .52));
-			added.style.opacity = p >= .45 ? appear.toFixed(3) : '0';
+			const appear = ease(span(p, .4, .47));
+			added.style.opacity = p >= .4 ? appear.toFixed(3) : '0';
 			added.style.transform = `scale(${lerp(.96, 1, appear).toFixed(4)})`;
-			added.toggleAttribute('data-selected', between(p, .46, .6));
-			colorButton.toggleAttribute('data-hover', between(p, .41, .48));
-			colorButton.toggleAttribute('data-pressed', between(p, .43, .45));
+			added.toggleAttribute('data-selected', between(p, .41, .54));
 
 			// 3. Text
-			textTool.toggleAttribute('data-hover', between(p, .57, .61));
-			textTool.toggleAttribute('data-active', between(p, .59, .66));
-			text.style.opacity = p >= .66 ? '1' : '0';
-			textContent.textContent = typed(LABEL, p, .67, .77);
-			text.toggleAttribute('data-editing', between(p, .66, .8));
+			text.style.opacity = p >= .56 ? '1' : '0';
+			textContent.textContent = typed(LABEL, p, .57, .68);
+			text.toggleAttribute('data-editing', between(p, .56, .74));
 
 			// 4. Note
-			noteButton.toggleAttribute('data-hover', between(p, .8, .86));
-			noteButton.toggleAttribute('data-pressed', between(p, .83, .85));
-			const noteIn = ease(span(p, .85, .89));
-			note.style.opacity = p >= .85 ? noteIn.toFixed(3) : '0';
+			const noteIn = ease(span(p, .76, .81));
+			note.style.opacity = p >= .76 ? noteIn.toFixed(3) : '0';
 			note.style.transform = `scale(${lerp(.96, 1, noteIn).toFixed(4)})`;
-			note.toggleAttribute('data-selected', p >= .86);
-			noteTitle.textContent = typed(NOTE_TITLE, p, .88, .91);
-			noteBody.textContent = typed(NOTE_BODY, p, .92, .98);
-			caretTitle.toggleAttribute('data-on', between(p, .86, .92));
-			caretBody.toggleAttribute('data-on', p >= .92);
+			note.toggleAttribute('data-selected', p >= .77);
+			noteTitle.textContent = typed(NOTE_TITLE, p, .82, .86);
+			noteBody.textContent = typed(NOTE_BODY, p, .87, .96);
+			caretTitle.toggleAttribute('data-on', between(p, .77, .87));
+			caretBody.toggleAttribute('data-on', p >= .87);
 
-			// Cursor path, segment by segment.
-			const start = toBoard({ x: dragFrom.x + grip.x, y: dragFrom.y + grip.y });
-			const held = toBoard({ x: card.x + grip.x, y: card.y + grip.y });
-			const textPoint = toBoard(textAt);
+			// Where the camera should look: the whole canvas, easing onto the dragged card, following it, then each new item in
+			// turn. The hero uses this to pan a mock-up that's larger than its panel (phones).
+			const cardCentre = { x: card.x + cardHalf.x, y: card.y + cardHalf.y };
 			let at: Point;
-			if (p < .13) at = mix(enter, start, ease(span(p, .03, .12)));
-			else if (p < .33) at = held;
-			else if (p < .45) at = mix(held, centreOf(colorButton), ease(span(p, .33, .42)));
-			else if (p < .6) at = mix(centreOf(colorButton), centreOf(textTool), ease(span(p, .52, .59)));
-			else if (p < .79) at = mix(centreOf(textTool), textPoint, ease(span(p, .6, .66)));
-			else if (p < .85) at = mix(textPoint, centreOf(noteButton), ease(span(p, .79, .83)));
-			else at = mix(centreOf(noteButton), exit, ease(span(p, .86, .93)));
-			const press = (from: number, to: number) => Math.min(ease(span(p, from, from + .005)), 1 - ease(span(p, to - .005, to)));
-			const pressed = Math.max(press(.12, .31), press(.43, .45), press(.59, .61), press(.65, .67), press(.83, .85));
-			// Where the camera should look (app px): the middle of the app, easing onto the dragged card, then the cursor.
-			// The hero uses this to pan a mock-up that's larger than its panel (phones).
-			const look = (b: Point): Point => ({ x: 240 + b.x, y: 56 + b.y });
-			root.dispatchEvent(new CustomEvent('demo:focus', { detail: p < .13 ? mix({ x: 640, y: 400 }, look(start), ease(span(p, 0, .13))) : look(at) }));
-			cursor.style.opacity = (span(p, 0, .03) * (1 - span(p, .95, .99))).toFixed(3);
-			cursor.style.transform = `translate(${at.x.toFixed(1)}px, ${at.y.toFixed(1)}px) scale(${lerp(1, .94, pressed).toFixed(4)})`;
+			if (p < .1) at = mix(overview, { x: dragFrom.x + cardHalf.x, y: dragFrom.y + cardHalf.y }, ease(span(p, 0, .1)));
+			else if (p < .34) at = cardCentre;
+			else if (p < .5) at = mix(cardCentre, colourAt, ease(span(p, .32, .44)));
+			else if (p < .6) at = mix(colourAt, labelAt, ease(span(p, .5, .58)));
+			else if (p < .78) at = mix(labelAt, noteAt, ease(span(p, .68, .76)));
+			else at = noteAt;
+			root.dispatchEvent(new CustomEvent('demo:focus', { detail: toApp(at) }));
 		};
 
 		render(0);
@@ -400,21 +353,7 @@ const collections = [
 	.note__caret { display: none; width: 1.5px; height: 1.05em; margin-left: 1px; vertical-align: -.15em; background: currentColor; }
 	.note__caret[data-on] { display: inline-block; }
 
-	/* Action rail (board-action-rail.tsx + lib/glass.ts). */
-	.rail { position: absolute; right: 0; bottom: 12px; left: 0; z-index: 3; display: flex; justify-content: center; }
-	.rail__frame { display: flex; align-items: center; padding: 4px; border-radius: var(--a-radius); background: color-mix(in oklch, var(--a-popover) 80%, transparent); box-shadow: 0 0 0 1px color-mix(in oklch, var(--a-fg) 10%, transparent); backdrop-filter: blur(40px) saturate(1.5); }
-	.island { display: flex; align-items: center; border: 1px solid var(--a-border); border-radius: calc(var(--a-radius) * .8); background: var(--a-bg); box-shadow: 0 1px 3px color-mix(in oklch, var(--a-fg) 5%, transparent); }
-	.island + .island { margin-left: 4px; }
-	.island__sep { align-self: stretch; width: 1px; background: var(--a-border); }
-	.rail__button { display: grid; width: 36px; height: 36px; place-items: center; border-radius: calc(var(--a-radius) * .8 - 1px); transition: background 150ms cubic-bezier(.16, 1, .3, 1); }
-	.rail__button[data-hover] { background: color-mix(in oklch, var(--a-muted) 80%, transparent); }
-	/* Pressed, and the active tool: bg-sidebar-active. */
-	.rail__button[data-pressed], .rail__button[data-active] { background: var(--a-sidebar-active); }
-
-	/* Demo pointer. */
-	.cursor { position: absolute; top: 0; left: 0; z-index: 4; width: 22px; height: 22px; margin: -3px 0 0 -5px; fill: #111; stroke: #fff; stroke-width: 1.4; stroke-linejoin: round; opacity: 0; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 30%)); transform-origin: 5px 3px; pointer-events: none; }
-
 	@media (prefers-reduced-motion: reduce) {
-		.card, .rail__button { transition: none; }
+		.card { transition: none; }
 	}
 </style>

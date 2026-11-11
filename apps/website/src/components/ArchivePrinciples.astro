@@ -117,7 +117,12 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 
 		const render = () => {
 			frame = 0;
-			if (section.dataset.pinned !== 'true') return;
+			if (section.dataset.pinned !== 'true') {
+				// Phones and short screens: the cards scroll natively, so the bar follows the viewport's own scroll position.
+				const max = viewport.scrollWidth - viewport.clientWidth;
+				progress.style.transform = `scaleX(${max > 0 ? Math.min(Math.max(viewport.scrollLeft / max, 0), 1) : 0})`;
+				return;
+			}
 			const scrolled = Math.min(distance, Math.max(0, -section.getBoundingClientRect().top));
 			track.style.transform = `translate3d(${-scrolled}px, 0, 0)`;
 			progress.style.transform = `scaleX(${distance ? scrolled / distance : 0})`;
@@ -131,7 +136,7 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 			track.style.transform = '';
 			progress.style.transform = '';
 			section.style.height = '';
-			if (!enabled) return;
+			if (!enabled) { requestRender(); return; }
 			distance = Math.max(0, track.scrollWidth - viewport.clientWidth);
 			section.style.height = `${window.innerHeight + distance}px`;
 			requestRender();
@@ -140,6 +145,7 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 		new ResizeObserver(measure).observe(viewport);
 		window.addEventListener('resize', measure, { passive: true });
 		window.addEventListener('scroll', requestRender, { passive: true });
+		viewport.addEventListener('scroll', requestRender, { passive: true });
 		desktop.addEventListener('change', measure);
 		reducedMotion.addEventListener('change', measure);
 		measure();
@@ -210,7 +216,6 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 	.principles__footer { display: flex; justify-content: flex-end; align-items: center; }
 	.principles__progress { display: block; width: 130px; height: 2px; background: var(--line); }
 	.principles__progress span { display: block; width: 100%; height: 100%; background: var(--ink); transform: scaleX(0); transform-origin: left center; }
-	.principles:not([data-pinned='true']) .principles__progress span { transform: scaleX(.25) !important; }
 	:global(html[data-theme='dark']) .story-card { box-shadow: 0 6px 24px rgb(0 0 0 / 13%); }
 	:global(html[data-theme='dark']) .story-card__visual { background-color: color-mix(in oklab, var(--tone) 22%, var(--surface-muted)); }
 	@media (max-width: 760px), (max-height: 649px) {

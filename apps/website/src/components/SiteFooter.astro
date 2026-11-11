@@ -47,6 +47,9 @@ const { loginHref, signupHref } = Astro.props;
 	const main = document.querySelector<HTMLElement>('main');
 	const motionTargets = footer ? Array.from(footer.querySelectorAll<HTMLElement>('.site-footer__about, .site-footer__main > nav, .site-footer__elsewhere, .site-footer__bottom')) : [];
 	const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+	// On phones the footer is nearly a screen tall, so its content stays put: animating it would keep it blurred and dim
+	// until the very bottom of the page.
+	const compactFooter = window.matchMedia('(max-width: 780px)');
 	let revealFrame = 0;
 	const checkMotion = () => {
 		revealFrame = 0;
@@ -56,7 +59,7 @@ const { loginHref, signupHref } = Astro.props;
 		const progress = Math.max(0, Math.min(1, (footerRect.bottom - pageEdge) / Math.max(footerRect.height, 1)));
 		const remaining = 1 - progress;
 		motionTargets.forEach((target) => {
-			if (reducedMotion.matches) {
+			if (reducedMotion.matches || compactFooter.matches) {
 				target.style.removeProperty('opacity');
 				target.style.removeProperty('filter');
 				target.style.removeProperty('transform');
@@ -73,6 +76,7 @@ const { loginHref, signupHref } = Astro.props;
 	window.addEventListener('scroll', scheduleMotion, { passive: true });
 	window.addEventListener('resize', scheduleMotion);
 	reducedMotion.addEventListener('change', scheduleMotion);
+	compactFooter.addEventListener('change', scheduleMotion);
 	const syncFooterReveal = () => {
 		if (footer) root.style.setProperty('--footer-reveal', `${footer.offsetHeight}px`);
 		scheduleMotion();
