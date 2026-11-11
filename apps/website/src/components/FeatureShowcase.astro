@@ -212,6 +212,35 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 	 * screenshots (the markup's default state).
 	 */
 	const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+	const scrollVisuals = Array.from(document.querySelectorAll<HTMLElement>('.feature-visual'));
+	let scrollFrame = 0;
+	const updateScrollVisuals = () => {
+		scrollFrame = 0;
+		const height = window.innerHeight;
+		for (const visual of scrollVisuals) {
+			// Remove the previous translation from the measurement to avoid feeding motion back into progress.
+			const previousOffset = Number.parseFloat(visual.style.translate) || 0;
+			const top = visual.getBoundingClientRect().top - previousOffset;
+			const progress = Math.max(0, Math.min(1, (height - top) / (height * .45)));
+			const offset = (1 - progress) * 48;
+			if (motionPreference.matches) visual.style.removeProperty('translate');
+			else visual.style.translate = `${offset}px ${offset}px`;
+		}
+	};
+	const scheduleScrollVisuals = () => {
+		if (!scrollFrame) scrollFrame = requestAnimationFrame(updateScrollVisuals);
+	};
+	window.addEventListener('scroll', scheduleScrollVisuals, { passive: true });
+	window.addEventListener('resize', scheduleScrollVisuals);
+	motionPreference.addEventListener('change', scheduleScrollVisuals);
+	updateScrollVisuals();
+	document.addEventListener('astro:before-swap', () => {
+		window.removeEventListener('scroll', scheduleScrollVisuals);
+		window.removeEventListener('resize', scheduleScrollVisuals);
+		motionPreference.removeEventListener('change', scheduleScrollVisuals);
+		cancelAnimationFrame(scrollFrame);
+	}, { once: true });
 	const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 	const easeInOut = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
 
