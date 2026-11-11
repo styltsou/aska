@@ -31,6 +31,8 @@
 	--sheet-radius: calc(.45rem * 2.6);
 	--sheet-shadow: 0 22px 44px rgb(21 21 21 / 14%), 0 6px 14px rgb(21 21 21 / 6%);
 	--page-width: 1200px;
+	/* The empty space between the page's major sections (what you see between one section's content and the next). */
+	--section-gap: clamp(96px, 13.5vw, 200px);
 	--anchor-offset: 70px;
 	color-scheme: light;
 	font-family: 'Inter Variable', "Helvetica Neue", Helvetica, Arial, sans-serif;

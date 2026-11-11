@@ -112,7 +112,9 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 	const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 	if (section && viewport && track && progress) {
+		const sticky = section.querySelector<HTMLElement>('.principles__sticky');
 		let distance = 0;
+		let pinTop = 0; // where the pinned box sticks: centred in the viewport
 		let frame = 0;
 
 		const render = () => {
@@ -123,7 +125,7 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 				progress.style.transform = `scaleX(${max > 0 ? Math.min(Math.max(viewport.scrollLeft / max, 0), 1) : 0})`;
 				return;
 			}
-			const scrolled = Math.min(distance, Math.max(0, -section.getBoundingClientRect().top));
+			const scrolled = Math.min(distance, Math.max(0, pinTop - section.getBoundingClientRect().top));
 			track.style.transform = `translate3d(${-scrolled}px, 0, 0)`;
 			progress.style.transform = `scaleX(${distance ? scrolled / distance : 0})`;
 		};
@@ -136,9 +138,13 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 			track.style.transform = '';
 			progress.style.transform = '';
 			section.style.height = '';
-			if (!enabled) { requestRender(); return; }
+			section.style.removeProperty('--pin-top');
+			if (!enabled || !sticky) { requestRender(); return; }
 			distance = Math.max(0, track.scrollWidth - viewport.clientWidth);
-			section.style.height = `${window.innerHeight + distance}px`;
+			const boxHeight = sticky.offsetHeight;
+			pinTop = Math.max(0, (window.innerHeight - boxHeight) / 2);
+			section.style.setProperty('--pin-top', `${pinTop}px`);
+			section.style.height = `${boxHeight + distance}px`;
 			requestRender();
 		};
 
@@ -153,9 +159,11 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 </script>
 
 <style>
-	.principles { position: relative; margin-block: clamp(100px, 12vw, 170px) 0; }
-	.principles__sticky { display: flex; flex-direction: column; justify-content: center; min-height: 100svh; gap: clamp(22px, 3vh, 36px); overflow: clip; }
-	.principles[data-pinned='true'] .principles__sticky { position: sticky; top: 0; height: 100svh; min-height: 0; }
+	.principles { position: relative; margin-block: var(--section-gap) 0; }
+	/* The pinned box is only as tall as its content and is centred in the viewport by `--pin-top` (set by the script), so the
+	   space around the section is always exactly the section gap, whatever the screen height. */
+	.principles__sticky { display: flex; flex-direction: column; gap: clamp(22px, 3vh, 36px); overflow: clip; }
+	.principles[data-pinned='true'] .principles__sticky { position: sticky; top: var(--pin-top, 0px); }
 	h2 { max-width: 680px; margin: 0; font-size: clamp(36px, 4.5vw, 64px); font-weight: 560; letter-spacing: -.047em; line-height: 1.05; text-wrap: balance; }
 	.principles__viewport { width: 100%; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; }
 	.principles__viewport::-webkit-scrollbar { display: none; }
@@ -219,7 +227,7 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 	:global(html[data-theme='dark']) .story-card { box-shadow: 0 6px 24px rgb(0 0 0 / 13%); }
 	:global(html[data-theme='dark']) .story-card__visual { background-color: color-mix(in oklab, var(--tone) 22%, var(--surface-muted)); }
 	@media (max-width: 760px), (max-height: 649px) {
-		.principles__sticky { min-height: 0; gap: 30px; overflow: visible; }
+		.principles__sticky { gap: 30px; overflow: visible; }
 		.principles__track { gap: 12px; padding-inline: 24px; }
 		/* The card is sized to the screen (heading, gaps and navbar taken off) so it shows whole; the visual takes what the copy leaves. */
 		.story-card { flex-basis: min(86vw, 540px); height: clamp(440px, calc(100svh - 206px), 600px); grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
@@ -227,7 +235,6 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 		.story-card__visual--search { padding: 16px; }
 	}
 	@media (max-width: 500px) {
-		.principles { margin-block: 100px 0; }
 		.principles__track { padding-inline: 16px; }
 		.story-card { flex-basis: calc(100vw - 32px); height: clamp(440px, calc(100svh - 206px), 640px); grid-template-rows: auto minmax(0, 1fr); }
 		.story-card__copy { gap: 18px; padding: 21px; }
