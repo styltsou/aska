@@ -172,10 +172,15 @@ const { signupHref } = Astro.props;
 			lastT = t;
 			place();
 			backdrop.style.transform = `scale(${lerp(1.1, 1.03, t).toFixed(4)})`;
-			// The copy fades out slowly over the whole expansion, so it's mostly gone by the time the panel covers it.
+			// The copy gently recedes toward the growing panel, with blur arriving as it fades.
 			if (copy) {
-				copy.style.opacity = (1 - easeInOut(clamp(progress / (geo.compact ? .6 : .9)))).toFixed(3);
-				if (geo.compact) copy.style.transform = `translate3d(0, ${(-48 * t).toFixed(2)}px, 0)`;
+				const fade = easeInOut(clamp(progress / (geo.compact ? .6 : .9)));
+				const blur = 3 * easeInOut(clamp((fade - .2) / .8));
+				const x = geo.compact ? 0 : 12 * fade;
+				const y = geo.compact ? 12 * fade : 0;
+				copy.style.opacity = (1 - fade).toFixed(3);
+				copy.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${(1 - .03 * fade).toFixed(4)})`;
+				copy.style.filter = `blur(${blur.toFixed(2)}px)`;
 			}
 
 			// The navbar morphs with the scroll too (full width and dropped → page width and centred), not on a timer.
