@@ -230,6 +230,9 @@
 	html[data-theme='dark'] .agent-button--secondary { border-color: oklch(1 0 0 / 14%); background: oklch(.255 0 0); }
 	html[data-theme='dark'] .agent-button--primary { border-color: #c9c9c9; background: linear-gradient(to bottom, #fff, #e5e5e5); color: #171717; }
 	html[data-theme='dark'] .agent-button--primary kbd { background: rgb(0 0 0 / 8%); color: rgb(0 0 0 / 60%); }
+	.agent-prompt__send, .agent-button--primary { transition: transform 100ms cubic-bezier(.23, 1, .32, 1); }
+	.agent-prompt__send.is-pressed, .agent-button--primary.is-pressed { background: linear-gradient(to bottom, #202020, #0f0f0f); transform: scale(.98); }
+	html[data-theme='dark'] .agent-prompt__send.is-pressed, html[data-theme='dark'] .agent-button--primary.is-pressed { background: linear-gradient(to bottom, #d4d4d4, #c4c4c4); }
 	/* Placeholders by phase, as in the app; the send button dims while the input is empty. */
 	.agent-prompt [data-instruction]:empty::before { color: var(--a-muted-fg); }
 	.agent-prompt[data-phase='prompt'] [data-instruction]:empty::before { content: 'Ask AI to write anything, @ to mention…'; }

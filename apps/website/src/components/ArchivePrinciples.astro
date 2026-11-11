@@ -1,10 +1,11 @@
 ---
 import { Image } from 'astro:assets';
-import blueRedWall from '../assets/images/blue-red-wall.jpg';
+import redChair from '../assets/images/bauhaus-furniture-03.jpg';
 import bauhausRoom from '../assets/images/bauhaus-room-01.jpg';
 import bauhausFurniture from '../assets/images/bauhaus-furniture-01.jpg';
-import bauhausArchitecture from '../assets/images/bauhaus-architecture-01.jpg';
-import brutalistShadows from '../assets/images/brutalist-shadows.jpg';
+import illustratorSketch from '../assets/images/illustrator-sketching.webp';
+import terracottaPaper from '../assets/images/terracotta-paper.webp';
+import architectureGlass from '../assets/images/architecture-glass.webp';
 import concreteSculptures from '../assets/images/concrete-sculptures.jpg';
 import curvedArchitecture from '../assets/images/curved-architecture.jpg';
 import greenAbstract02 from '../assets/images/green-abstract-02.webp';
@@ -27,15 +28,15 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 					<div class="story-card__copy">
 						<span class="story-card__role">Brand designer</span>
 						<div>
-							<h3>Pull a moodboard together in an afternoon.</h3>
+							<h3>Pull a moodboard together.</h3>
 							<p>Drop every find into your Inbox while you research. Then move the strongest into a collection and arrange them on its canvas, next to your notes.</p>
 						</div>
 						<ul class="story-card__tags"><li>Inbox</li><li>Collection canvas</li><li>Notes</li></ul>
 					</div>
-					<div class="story-card__visual story-card__visual--canvas" aria-hidden="true">
+					<div class="story-card__visual story-card__visual--canvas" aria-hidden="true" style={`--paper-texture: url('${terracottaPaper.src}')`}>
 						<div class="story-card__board">
 							<Image src={bauhausFurniture} {...imageProps} alt="" />
-							<Image src={blueRedWall} {...imageProps} alt="" />
+							<Image src={redChair} {...imageProps} alt="" />
 							<Image src={bauhausRoom} {...imageProps} alt="" />
 							<div class="story-card__board-note">Keep the red. Drop everything warmer.</div>
 							<div class="story-card__board-folder"><span>Palette studies</span><small>12 items</small></div>
@@ -47,17 +48,17 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 					<div class="story-card__copy">
 						<span class="story-card__role">Architect</span>
 						<div>
-							<h3>Keep the site research, and where it came from.</h3>
+							<h3>Keep the source close.</h3>
 							<p>Save photos and articles as you walk the neighborhood. Every item keeps its source link, so the original is one click away when the drawings need it.</p>
 						</div>
-						<ul class="story-card__tags"><li>Images &amp; links</li><li>Source links</li><li>Folders</li></ul>
+						<ul class="story-card__tags"><li>Images</li><li>Source links</li><li>Folders</li></ul>
 					</div>
-					<div class="story-card__visual story-card__visual--capture" aria-hidden="true">
-						<Image src={brutalistShadows} {...imageProps} alt="" />
+					<div class="story-card__visual story-card__visual--capture">
+						<Image src={architectureGlass} width={720} quality={78} alt="" />
 						<div class="story-card__list">
 							<div class="story-card__list-head"><span>Inbox</span><small>2 new</small></div>
-							<div class="story-card__row"><Image src={concreteSculptures} width={96} alt="" /><span><strong>Concrete sculptures</strong><small>archdaily.com ↗</small></span></div>
-							<div class="story-card__row"><Image src={curvedArchitecture} width={96} alt="" /><span><strong>Curved concrete gallery</strong><small>dezeen.com ↗</small></span></div>
+							<a class="story-card__row" href="https://www.archdaily.com/1026355/the-virtues-and-vices-of-our-time-300-years-later" target="_blank" rel="noopener noreferrer" aria-label="Concrete sculptures on ArchDaily (opens in a new tab)"><Image src={concreteSculptures} width={96} alt="" /><span><strong>Concrete sculptures</strong><small>archdaily.com ↗</small></span></a>
+							<a class="story-card__row" href="https://www.archdaily.com/798961/40-impressive-details-using-concrete" target="_blank" rel="noopener noreferrer" aria-label="Concrete architecture details on ArchDaily (opens in a new tab)"><Image src={curvedArchitecture} width={96} alt="" /><span><strong>Concrete architecture details</strong><small>archdaily.com ↗</small></span></a>
 						</div>
 					</div>
 				</article>
@@ -66,7 +67,7 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 					<div class="story-card__copy">
 						<span class="story-card__role">Art director</span>
 						<div>
-							<h3>Find “that green one” without remembering its name.</h3>
+							<h3>Find “that green one”.</h3>
 							<p>Pick a color and Mnemee finds the matching images in your Inbox or a collection. Or search the words from a title or note.</p>
 						</div>
 						<ul class="story-card__tags"><li>Color search</li><li>Text search</li></ul>
@@ -81,18 +82,16 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 					<div class="story-card__copy">
 						<span class="story-card__role">Freelance illustrator</span>
 						<div>
-							<h3>Walk into the review with the reasons attached.</h3>
-							<p>Open a reference to see its source and the note you left beside it. You get back why you saved it, not only what it is.</p>
+							<h3>Keep ideas close as you sketch.</h3>
+							<p>Collect the gestures, palettes, and details that catch your eye. Leave a note beside each reference so you remember what to try in your next illustration.</p>
 						</div>
-						<ul class="story-card__tags"><li>Asset details</li><li>Notes</li><li>Source links</li></ul>
+						<ul class="story-card__tags"><li>Notes</li><li>Mentions</li><li>Source links</li></ul>
 					</div>
-					<div class="story-card__visual story-card__visual--return" aria-hidden="true">
-						<Image src={bauhausArchitecture} {...imageProps} alt="" />
+					<div class="story-card__visual story-card__visual--return">
+						<Image src={illustratorSketch} width={500} quality={78} alt="" />
 						<div class="story-card__detail">
-							<span>Reference</span>
-							<strong>Bauhaus stair hall</strong>
-							<p>Client liked the proportions, not the red. Use the stair rhythm for the cover.</p>
-							<small>Original source ↗</small>
+							<div class="story-card__detail-view" data-detail-view="note"><strong>Digital sketching</strong><p class="story-card__detail-text">Try these loose, searching lines for <button type="button" class="story-card__mention" aria-expanded="false" aria-label="Open reference: Character study"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>Character study</button>.</p></div>
+							<div class="story-card__detail-view" data-detail-view="mention" aria-hidden="true"><div class="story-card__detail-header"><button type="button" class="story-card__detail-close" aria-label="Back to Digital sketching"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 19-7-7 7-7M3 12h18"/></svg></button><strong>Character study</strong></div><p class="story-card__detail-text">Explore loose gestures, expressive poses, and a quieter palette for the next character. Start with simple shapes, then let the linework stay a little imperfect.</p><p class="story-card__detail-text story-card__detail-extra">Keep a few variations of each pose. Look for the one that feels most natural before adding the smaller details.</p></div>
 						</div>
 					</div>
 				</article>
@@ -110,6 +109,35 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 	const progress = section?.querySelector<HTMLElement>('[data-stories-progress]');
 	const desktop = window.matchMedia('(min-width: 761px) and (min-height: 650px)');
 	const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+	const mentionCard = section?.querySelector<HTMLElement>('.story-card__detail');
+	const mentionTrigger = mentionCard?.querySelector<HTMLButtonElement>('.story-card__mention');
+	const mentionClose = mentionCard?.querySelector<HTMLButtonElement>('.story-card__detail-close');
+	const noteView = mentionCard?.querySelector<HTMLElement>('[data-detail-view="note"]');
+	const mentionView = mentionCard?.querySelector<HTMLElement>('[data-detail-view="mention"]');
+	const sizeMentionCard = (expanded: boolean) => {
+		const view = expanded ? mentionView : noteView;
+		if (!mentionCard || !view) return;
+		const style = getComputedStyle(mentionCard);
+		const chrome = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+		mentionCard.style.height = `${view.getBoundingClientRect().height + chrome}px`;
+	};
+	const showMention = (expanded: boolean) => {
+		sizeMentionCard(expanded);
+		mentionTrigger?.setAttribute('aria-expanded', String(expanded));
+		noteView?.setAttribute('aria-hidden', String(expanded));
+		mentionView?.setAttribute('aria-hidden', String(!expanded));
+		(expanded ? mentionClose : mentionTrigger)?.focus();
+	};
+	if (mentionCard && noteView && mentionView) {
+		sizeMentionCard(false);
+		mentionCard.dataset.ready = '';
+		const noteResizeObserver = new ResizeObserver(() => sizeMentionCard(mentionTrigger?.getAttribute('aria-expanded') === 'true'));
+		noteResizeObserver.observe(noteView);
+		noteResizeObserver.observe(mentionView);
+		document.addEventListener('astro:before-swap', () => noteResizeObserver.disconnect(), { once: true });
+	}
+	mentionTrigger?.addEventListener('click', () => showMention(true));
+	mentionClose?.addEventListener('click', () => showMention(false));
 
 	if (section && viewport && track && progress) {
 		const sticky = section.querySelector<HTMLElement>('.principles__sticky');
@@ -180,7 +208,7 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 	.story-card__tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
 	.story-card__tags li { padding: 5px 10px; border: 1px solid color-mix(in oklab, var(--tone) 24%, var(--line)); border-radius: 6px; background: color-mix(in oklab, var(--tone) 10%, var(--surface-muted)); color: var(--ink); font-size: 12px; font-weight: 500; }
 
-	.story-card__visual { position: relative; min-width: 0; overflow: hidden; background: color-mix(in oklab, var(--tone) 14%, var(--surface-muted)); }
+	.story-card__visual { position: relative; min-width: 0; overflow: hidden; border-left: 1px solid var(--line); border-radius: 10px; background: color-mix(in oklab, var(--tone) 14%, var(--surface-muted)); }
 	.story-card__visual > img { width: 100%; height: 100%; object-fit: cover; }
 
 	/* Shared mock-UI chrome: follows the theme tokens so it reads correctly in light and dark. */
@@ -188,23 +216,36 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 	.story-card small { color: var(--ink-muted); font-size: 11px; }
 
 	/* 01 canvas */
-	.story-card__visual--canvas { background-image: radial-gradient(color-mix(in oklab, var(--tone) 38%, transparent) .8px, transparent 1px); background-size: 19px 19px; }
+	.story-card__visual--canvas { background-image: linear-gradient(rgb(255 250 246 / 48%), rgb(255 250 246 / 48%)), var(--paper-texture); background-position: center; background-size: cover; }
+	:global(html[data-theme='dark']) .story-card__visual--canvas { background-image: linear-gradient(rgb(32 21 19 / 58%), rgb(32 21 19 / 58%)), var(--paper-texture); }
 	.story-card__board { position: absolute; inset: 0; }
-	.story-card__board img { position: absolute; border: 5px solid #fff; border-radius: 5px; box-shadow: 0 7px 20px rgb(0 0 0 / 14%); object-fit: cover; }
+	.story-card__board img { position: absolute; border-radius: .45rem; object-fit: cover; }
 	.story-card__board img:nth-of-type(1) { top: 8%; left: 8%; width: 34%; height: 44%; transform: rotate(-4deg); }
 	.story-card__board img:nth-of-type(2) { top: 6%; right: 9%; width: 36%; height: 30%; transform: rotate(3deg); }
 	.story-card__board img:nth-of-type(3) { right: 12%; bottom: 8%; width: 40%; height: 40%; transform: rotate(-2deg); }
-	.story-card__board-note { position: absolute; top: 42%; left: 36%; width: 30%; padding: 14px; border: 0; border-radius: 5px; background: #f9f5df; color: #565443; font-size: 12px; line-height: 1.4; transform: rotate(4deg); }
+	.story-card__board-note { position: absolute; top: 42%; left: 36%; width: 30%; padding: 14px; border: 1px solid oklch(.922 0 0); border-radius: .45rem; background: oklch(1 0 0); color: color-mix(in oklch, oklch(.145 0 0) 80%, transparent); box-shadow: none; font-size: 12px; line-height: 1.4; transform: rotate(4deg); }
+	:global(html[data-theme='dark']) .story-card__board-note { border-color: oklch(1 0 0 / 10%); background: oklch(.145 0 0); color: color-mix(in oklch, oklch(.985 0 0) 80%, transparent); }
 	.story-card__board-folder { position: absolute; bottom: 12%; left: 8%; display: grid; gap: 3px; width: 30%; padding: 12px 14px; border-radius: 8px; font-size: 12px; font-weight: 550; }
 
 	/* 02 capture + source links */
-	.story-card__list { position: absolute; right: 20px; bottom: 20px; left: 20px; display: grid; gap: 4px; padding: 10px; border-radius: 10px; }
-	.story-card__list-head { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 6px; font-size: 12px; font-weight: 600; }
-	.story-card__row { display: flex; align-items: center; gap: 12px; padding: 6px; border-radius: 7px; background: var(--surface-muted); }
+	.story-card__list { position: absolute; right: 20px; bottom: 20px; left: 20px; display: grid; overflow: hidden; border-radius: 10px; }
+	@supports ((-webkit-backdrop-filter: blur(40px)) or (backdrop-filter: blur(40px))) {
+		.story-card__list { background: color-mix(in oklch, oklch(1 0 0) 80%, transparent); -webkit-backdrop-filter: blur(40px) saturate(1.5); backdrop-filter: blur(40px) saturate(1.5); }
+		:global(html[data-theme='dark']) .story-card__list { background: color-mix(in oklch, oklch(.205 0 0) 80%, transparent); }
+	}
+	.story-card__list-head { display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 600; line-height: 1.25; }
+	.story-card__row { display: flex; align-items: center; gap: 12px; margin-inline: 6px; padding: 6px 8px; border-radius: 6px; }
+	.story-card__list-head + .story-card__row { margin-top: 6px; }
+	.story-card__row + .story-card__row { margin-top: 2px; }
+	.story-card__row:last-child { margin-bottom: 6px; }
+	.story-card__row:focus-visible { outline-offset: -2px; }
 	.story-card__row img { width: 44px; height: 44px; border-radius: 5px; object-fit: cover; }
 	.story-card__row span { display: grid; gap: 3px; min-width: 0; }
 	.story-card__row strong { overflow: hidden; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-	.story-card__row small { color: var(--accent); }
+	.story-card__row small { color: var(--ink-muted); transition: color 100ms ease; }
+	@media (hover: hover) { .story-card__row:hover { background: color-mix(in oklch, var(--ink) 6%, transparent); }.story-card__row:hover small { color: var(--ink); } }
+	.story-card__row:active { background: color-mix(in oklch, var(--ink) 11%, transparent); }
+	@media (prefers-reduced-motion: reduce) { .story-card__row small { transition: none; } }
 
 	/* 03 color search */
 	.story-card__visual--search { display: flex; flex-direction: column; gap: 14px; padding: 28px; }
@@ -212,14 +253,28 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 	.story-card__search-bar small { margin-left: auto; }
 	.story-card__swatch { width: 18px; height: 18px; border-radius: 5px; background: #31543d; }
 	.story-card__search-results { display: grid; flex: 1; min-height: 0; grid-template: repeat(2, minmax(0, 1fr)) / repeat(2, minmax(0, 1fr)); gap: 12px; }
-	.story-card__search-results img { width: 100%; height: 100%; min-height: 0; border: 5px solid #fff; border-radius: 6px; box-shadow: 0 5px 13px rgb(0 0 0 / 10%); object-fit: cover; }
+	.story-card__search-results img { width: 100%; height: 100%; min-height: 0; border-radius: .45rem; object-fit: cover; }
 
 	/* 04 return to the reason */
-	.story-card__detail { position: absolute; right: 20px; bottom: 20px; left: 20px; display: grid; gap: 8px; padding: 18px; border-radius: 10px; }
-	.story-card__detail span { color: var(--ink-muted); font-size: 10px; font-weight: 650; letter-spacing: .07em; text-transform: uppercase; }
-	.story-card__detail strong { font-size: 15px; font-weight: 600; }
-	.story-card__detail p { margin: 0; color: var(--ink-muted); font-size: 12px; line-height: 1.45; }
-	.story-card__detail small { padding-top: 8px; border-top: 1px solid var(--line); color: var(--accent); }
+	.story-card__detail { position: absolute; right: 20px; bottom: 20px; left: 20px; display: grid; grid-template-rows: minmax(0, 1fr); overflow: hidden; padding: 16px; border-radius: .45rem; text-align: left; }
+	.story-card__detail[data-ready] { transition: height 220ms cubic-bezier(.23, 1, .32, 1); }
+	.story-card__detail-view { grid-area: 1 / 1; align-self: start; display: grid; align-content: start; gap: 8px; min-width: 0; transition: opacity 180ms cubic-bezier(.23, 1, .32, 1), transform 180ms cubic-bezier(.23, 1, .32, 1), visibility 0s linear 180ms; }
+	.story-card__detail-view[aria-hidden='true'] { opacity: 0; visibility: hidden; transform: translateX(8px); }
+	.story-card__detail-view[data-detail-view='mention'][aria-hidden='true'] { transform: translateX(-8px); }
+	.story-card__detail-view:not([aria-hidden='true']) { opacity: 1; visibility: visible; transform: translateX(0); transition-delay: 0s; }
+	.story-card__detail strong { font-size: 20px; font-weight: 600; letter-spacing: -.025em; line-height: 1.25; }
+	.story-card__detail-text { margin: 0; color: color-mix(in oklch, var(--ink) 80%, transparent); font-size: 13px; line-height: 1.4; }
+	.story-card__detail-view .story-card__detail-text { transition: opacity 160ms cubic-bezier(.23, 1, .32, 1) 45ms; }
+	.story-card__detail-view[aria-hidden='true'] .story-card__detail-text { opacity: 0; transition-delay: 0s; }
+	.story-card__detail-extra { margin-top: 8px; }
+	.story-card__mention { display: inline-flex; align-items: center; gap: 4px; margin-inline: .08em; padding: 2px 6px; border: 1px solid color-mix(in oklab, var(--ink) 10%, transparent); border-radius: 6px; background: color-mix(in oklab, var(--surface) 90%, var(--ink)); color: var(--ink); font-family: inherit; font-size: .875em; font-weight: 500; line-height: 1.2; vertical-align: baseline; cursor: pointer; }
+	.story-card__mention svg, .story-card__detail-close svg { width: 14px; height: 14px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+	.story-card__detail-close svg { stroke-width: 2.75; }
+	.story-card__detail-header { display: flex; align-items: center; gap: 4px; min-width: 0; }
+	.story-card__detail-close { display: grid; width: 28px; height: 28px; flex-shrink: 0; margin-left: -4px; padding: 0; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--ink-muted); cursor: pointer; }
+	@media (hover: hover) { .story-card__mention:hover, .story-card__detail-close:hover { background: color-mix(in oklab, var(--surface) 85%, var(--ink)); } }
+	.story-card__mention:active { background: color-mix(in oklab, var(--surface) 80%, var(--ink)); }
+	@media (prefers-reduced-motion: reduce) { .story-card__detail[data-ready], .story-card__detail-view, .story-card__detail-view .story-card__detail-text { transition: none; } }
 
 	.principles__footer { display: flex; justify-content: flex-end; align-items: center; }
 	.principles__progress { display: block; width: 130px; height: 2px; background: var(--line); }
@@ -232,6 +287,7 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 		/* The card is sized to the screen (heading, gaps and navbar taken off) so it shows whole; the visual takes what the copy leaves. */
 		.story-card { flex-basis: min(86vw, 540px); height: clamp(440px, calc(100svh - 206px), 600px); grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
 		.story-card__copy { padding: 25px; }
+		.story-card__visual { border-top: 1px solid var(--line); border-left: 0; }
 		.story-card__visual--search { padding: 16px; }
 	}
 	@media (max-width: 500px) {

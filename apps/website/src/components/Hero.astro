@@ -166,6 +166,8 @@ const { signupHref } = Astro.props;
 			const top = geo.compact ? lerp(geo.startTop, 0, t) : easeOut(clamp(progress / .3)) * DROP;
 			const left = geo.compact ? 0 : (geo.boxW / 2) * (1 - t);
 			media.style.clipPath = `inset(${top.toFixed(2)}px 0 0 ${left.toFixed(2)}px round ${RADIUS}px)`;
+			media.style.setProperty('--border-top', `${top.toFixed(2)}px`);
+			media.style.setProperty('--border-left', `${left.toFixed(2)}px`);
 
 			lastT = t;
 			place();
@@ -244,6 +246,7 @@ const { signupHref } = Astro.props;
 
 	/* The page-width split always lands on the hero's centre line. */
 	.hero__media { position: absolute; top: var(--inset); right: var(--inset); bottom: var(--inset); left: 50%; overflow: hidden; border-radius: 12px; background: #6f9fc4; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 6%); isolation: isolate; }
+	.hero__media::before { content: ''; position: absolute; z-index: 3; inset: var(--border-top, 0px) 0 0 var(--border-left, 0px); border: 1px solid var(--line); border-radius: inherit; pointer-events: none; }
 	/* Light mode: a cobalt-to-navy wash multiplied over the watercolour deepens it without greying it the way brightness() does. */
 	.hero__media::after { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(165deg, rgb(52 98 168 / 30%), rgb(16 38 84 / 50%)); mix-blend-mode: multiply; pointer-events: none; }
 	.hero__backdrop { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; filter: saturate(1.4) contrast(1.12) brightness(.9); transform: scale(1.04); }
@@ -266,7 +269,7 @@ const { signupHref } = Astro.props;
 	@media (min-width: 1024px) and (min-height: 620px) and (prefers-reduced-motion: no-preference) {
 		.hero { --travel: 290svh; height: calc(100svh + var(--travel)); }
 		.hero__stage { position: sticky; top: 0; height: 100svh; }
-		.hero__media { z-index: 2; left: var(--inset); box-shadow: none; clip-path: inset(0 0 0 50% round 12px); }
+		.hero__media { --border-left: 50%; z-index: 2; left: var(--inset); box-shadow: none; clip-path: inset(0 0 0 50% round 12px); }
 		.hero__backdrop { transform: scale(1.1); will-change: transform; }
 		.hero__window { top: max(96px, 14%); left: 54.5%; width: max(64%, 780px); will-change: transform; }
 	}
@@ -301,7 +304,7 @@ const { signupHref } = Astro.props;
 		.hero { --travel: 240svh; height: calc(100svh - 52px + var(--travel)); padding: 0; }
 		.hero__stage { position: sticky; top: 52px; display: block; height: calc(100svh - 52px); }
 		.hero__inner { padding-top: 24px; }
-		.hero__media { position: absolute; inset: var(--inset); z-index: 2; width: auto; margin: 0; aspect-ratio: auto; box-shadow: none; clip-path: inset(62% 0 0 0 round 12px); }
+		.hero__media { --border-top: 62%; --border-left: 0px; position: absolute; inset: var(--inset); z-index: 2; width: auto; margin: 0; aspect-ratio: auto; box-shadow: none; clip-path: inset(62% 0 0 0 round 12px); }
 		.hero__backdrop { transform: scale(1.1); will-change: transform; }
 		.hero__window { top: 0; left: 0; width: 100%; will-change: transform; }
 	}

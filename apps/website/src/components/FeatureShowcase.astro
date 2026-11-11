@@ -199,7 +199,6 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 						</div>
 					</div>
 				</div>
-				<svg class="mock-cursor" data-cursor viewBox="0 0 24 24"><path d={pointer} /></svg>
 			</div>
 		</div>
 	</article>
@@ -253,8 +252,9 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 		const wait = async (ms: number) => {
 			let left = ms;
 			while (left > 0) {
-				await sleep(50);
-				if (visible && !document.hidden) left -= 50;
+				const step = Math.min(left, 20);
+				await sleep(step);
+				if (visible && !document.hidden) left -= step;
 			}
 		};
 		void (async () => {
@@ -276,12 +276,12 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 		};
 		place(at);
 		return {
-			async moveTo(target: Element | Point, wait: (ms: number) => Promise<void>, duration = 520) {
+			async moveTo(target: Element | Point, wait: (ms: number) => Promise<void>, duration = 340) {
 				const to = target instanceof Element ? centreOf(target) : target;
 				const from = at;
-				const steps = Math.max(1, Math.round(duration / 50));
+				const steps = Math.max(1, Math.round(duration / 20));
 				for (let i = 1; i <= steps; i++) {
-					await wait(50);
+					await wait(duration / steps);
 					const t = easeInOut(i / steps);
 					place({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t });
 				}
@@ -297,7 +297,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 		};
 	}
 
-	async function type(el: HTMLElement, text: string, wait: (ms: number) => Promise<void>, perChar = 55) {
+	async function type(el: HTMLElement, text: string, wait: (ms: number) => Promise<void>, perChar = 30) {
 		for (let i = 1; i <= text.length; i++) {
 			el.textContent = text.slice(0, i);
 			await wait(perChar);
@@ -328,7 +328,7 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 				select(-1);
 				await wait(700);
 				placeholder.hidden = true;
-				await type(query, QUERY, wait, 60);
+				await type(query, QUERY, wait, 30);
 				await wait(250);
 				resultsList.classList.remove('is-empty');
 				select(0);
@@ -368,21 +368,19 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 				for (const grid of grids.slice(1).concat(grids[0])) {
 					const target = swatch(grid.dataset.resultsFor ?? '');
 					if (!target) continue;
-					await cursor.moveTo(target, wait, 620);
+					await cursor.moveTo(target, wait, 300);
 					await wait(150);
 					await cursor.click(wait);
 					pick(grid.dataset.resultsFor ?? '');
 					await wait(1800);
 				}
-				await cursor.moveTo({ x: colorMock.offsetWidth + 40, y: colorMock.offsetHeight * .6 }, wait, 600);
+				await cursor.moveTo({ x: colorMock.offsetWidth + 40, y: colorMock.offsetHeight * .6 }, wait, 285);
 				await wait(600);
 			});
 		}
 
 		// 3. Note: open the agent from the empty line's placeholder, generate formatted text, then keep it.
 		const note = document.querySelector<HTMLElement>('[data-demo="note"]');
-		const noteMock = note?.querySelector<HTMLElement>('[data-mock]');
-		const noteCursor = note?.querySelector<SVGElement>('[data-cursor]');
 		const prompt = note?.querySelector<HTMLElement>('[data-prompt]');
 		const instruction = note?.querySelector<HTMLElement>('[data-instruction]');
 		const send = note?.querySelector<HTMLElement>('[data-send]');
@@ -393,8 +391,12 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 		const draft = note?.querySelector<HTMLElement>('[data-draft]');
 		const rail = note?.querySelector<HTMLElement>('[data-rail]');
 		const saveStatus = note?.querySelector<HTMLElement>('[data-save-status]');
-		if (note && noteMock && noteCursor && prompt && instruction && send && keep && empty && hint && draftRow && draft && rail && saveStatus) {
-			const cursor = cursorMover(noteMock, noteCursor);
+		if (note && prompt && instruction && send && keep && empty && hint && draftRow && draft && rail && saveStatus) {
+			const flash = async (button: HTMLElement, wait: (ms: number) => Promise<void>) => {
+				button.classList.add('is-pressed');
+				await wait(160);
+				button.classList.remove('is-pressed');
+			};
 			const INSTRUCTION = instruction.textContent ?? '';
 			const REWRITE = [
 				{ text: 'Let the ' },
@@ -413,30 +415,23 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 				instruction.textContent = '';
 				rail.classList.remove('is-on', 'is-streaming');
 				saveStatus.textContent = 'Edited 2m ago';
-				cursor.park();
-				cursor.show(false);
 				await wait(900);
 				empty.hidden = true;
 				prompt.hidden = false;
-				cursor.show(true);
-				await cursor.moveTo({ x: noteMock.offsetWidth * .9, y: noteMock.offsetHeight * .62 }, wait, 500);
 				await wait(400);
-				await type(instruction, INSTRUCTION, wait, 50);
+				await type(instruction, INSTRUCTION, wait, 25);
 				await wait(200);
-				await cursor.moveTo(send, wait, 480);
-				await wait(120);
-				await cursor.click(wait);
+				await flash(send, wait);
 				// Stream the generated draft into the empty paragraph.
 				prompt.dataset.phase = 'streaming';
 				rail.classList.add('is-on', 'is-streaming');
-				await cursor.moveTo({ x: noteMock.offsetWidth * .92, y: noteMock.offsetHeight * .5 }, wait, 500);
 				draftRow.hidden = false;
 				for (const part of REWRITE) {
 					const container = 'tag' in part ? document.createElement(part.tag) : draft;
 					if (container !== draft) draft.append(container);
 					for (const chunk of part.text.match(/\S+\s*|\s+/g) ?? []) {
 						container.append(document.createTextNode(chunk));
-						await wait(50);
+						await wait(25);
 					}
 				}
 				// Review: Retry / Discard / Keep, with the rail still marking the draft.
@@ -444,13 +439,10 @@ const pointer = 'M5 3.2v15.6l4.2-4 2.8 6.3 2.6-1.1-2.8-6.2h5.9z';
 				prompt.dataset.phase = 'review';
 				instruction.textContent = '';
 				await wait(800);
-				await cursor.moveTo(keep, wait, 520);
-				await wait(150);
-				await cursor.click(wait);
+				await flash(keep, wait);
 				prompt.hidden = true;
 				rail.classList.remove('is-on');
 				saveStatus.textContent = 'Saving…';
-				await cursor.moveTo({ x: noteMock.offsetWidth + 40, y: noteMock.offsetHeight * .8 }, wait, 600);
 				await wait(500);
 				saveStatus.textContent = 'Edited just now';
 				await wait(800);
