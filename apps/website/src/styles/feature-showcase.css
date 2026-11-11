@@ -163,9 +163,11 @@
 		/* The palette sits left of centre and runs off the panel's right edge, like the other cropped mock-ups. */
 		.palette { --mock-scale: .46; top: 62px; left: 25%; transform: scale(var(--mock-scale)); transform-origin: 0 0; }
 		/* The board behind is zoomed further out, without the action rail, so it reads as a canvas of small cards. */
-		.search-board { --mock-scale: .3; height: 1000px; translate: 0 130px; background-image: none; }
+		.search-board { --mock-scale: .36; height: 1000px; translate: clamp(14px, 7cqw, 30px) clamp(14px, 6cqw, 26px); background-image: none; }
+		/* The frame is a size container so the board's offset scales with the panel: the cards keep air from its left edge. */
+		.board-frame { container-type: size; }
 		/* The dots live on the frame so the shifted board doesn't leave a bare strip at the top. */
-		.board-frame { background-image: radial-gradient(circle, color-mix(in oklch, var(--a-fg) 30%, transparent) .5px, transparent .8px); background-size: 15.6px 15.6px; }
+		.board-frame { background-image: radial-gradient(circle, color-mix(in oklch, var(--a-fg) 30%, transparent) .5px, transparent .8px); background-size: 18.7px 18.7px; }
 		.board-rail { display: none; }
 		/* The cards are tiny here, so the backdrop blur eases off or they'd smear into a haze. */
 		.palette-backdrop { -webkit-backdrop-filter: blur(1.5px); backdrop-filter: blur(1.5px); }
