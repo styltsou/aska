@@ -78,6 +78,47 @@ const folderImage = { widths: [120, 240], sizes: '120px', quality: 74, alt: '' }
 	</div>
 </section>
 
+<script>
+	const frame = document.querySelector<HTMLElement>('.closing__frame');
+	const cards = Array.from(document.querySelectorAll<HTMLElement>('.closing__board .card'));
+	const motion = window.matchMedia('(prefers-reduced-motion: no-preference)');
+	const nativeTimeline = CSS.supports('animation-timeline: view()') && CSS.supports('view-timeline: --closing-entry block') && CSS.supports('animation-range: entry 0% entry 100%');
+	let scheduled = 0;
+	const update = () => {
+		scheduled = 0;
+		if (!frame) return;
+		if (!motion.matches || nativeTimeline) {
+			cards.forEach((card) => card.style.removeProperty('translate'));
+			return;
+		}
+		const bounds = frame.getBoundingClientRect();
+		const progress = Math.max(0, Math.min(1, (window.innerHeight - bounds.top) / Math.max(1, Math.min(bounds.height, window.innerHeight))));
+		const remaining = 1 - progress;
+		const extra = window.innerWidth * .12;
+		const positions = cards.map((card) => {
+			const horizontal = card.matches('.card--clay, .card--link, .card--note');
+			const reverse = card.matches('.card--leaf, .card--ink, .card--folder, .card--clay, .card--link');
+			const distance = ((horizontal ? card.offsetWidth : card.offsetHeight) + extra) * remaining * (reverse ? -1 : 1);
+			return horizontal ? `${distance}px 0px` : `0px ${distance}px`;
+		});
+		cards.forEach((card, index) => { card.style.translate = positions[index]; });
+	};
+	const schedule = () => { if (!scheduled) scheduled = requestAnimationFrame(update); };
+	if (!nativeTimeline) {
+		window.addEventListener('scroll', schedule, { passive: true });
+		window.addEventListener('resize', schedule);
+		motion.addEventListener('change', schedule);
+		update();
+		document.addEventListener('astro:before-swap', () => {
+			window.removeEventListener('scroll', schedule);
+			window.removeEventListener('resize', schedule);
+			motion.removeEventListener('change', schedule);
+			cancelAnimationFrame(scheduled);
+			cards.forEach((card) => card.style.removeProperty('translate'));
+		}, { once: true });
+	}
+</script>
+
 <style>
 	.closing { --app-radius: .45rem; --app-border: oklch(0.922 0 0); --app-fg-muted: color-mix(in oklch, var(--ink) 60%, transparent); padding-bottom: clamp(64px, 8vw, 110px); }
 	.closing__frame { position: relative; display: grid; min-height: clamp(580px, 50vw, 680px); overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); isolation: isolate; place-items: center; }
@@ -149,7 +190,7 @@ const folderImage = { widths: [120, 240], sizes: '120px', quality: 74, alt: '' }
 	:global(html[data-theme='dark']) .card--image { border-color: transparent; }
 
 	@media (prefers-reduced-motion: no-preference) {
-		@supports (animation-timeline: view()) {
+		@supports (animation-timeline: view()) and (view-timeline: --closing-entry block) and (animation-range: entry 0% entry 100%) {
 			.closing__frame { view-timeline: --closing-entry block; }
 			.card { --enter-x: 0px; --enter-y: 0px; animation: card-enter linear both; animation-timeline: --closing-entry; animation-range: entry 0% entry 100%; }
 			.card--leaf, .card--ink, .card--folder { --enter-y: calc(-100% - 12vw); }
