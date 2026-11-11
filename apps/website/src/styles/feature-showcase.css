@@ -161,7 +161,7 @@
 	@media (max-width: 440px) {
 		.semantic-visual { height: 310px; }
 		/* The palette sits left of centre and runs off the panel's right edge, like the other cropped mock-ups. */
-		.palette { --mock-scale: .46; top: 62px; left: 25%; transform: scale(var(--mock-scale)); transform-origin: 0 0; }
+		.palette { --mock-scale: .54; top: 46px; left: 12%; transform: scale(var(--mock-scale)); transform-origin: 0 0; }
 		/* The board behind is zoomed further out, without the action rail, so it reads as a canvas of small cards. */
 		.search-board { --mock-scale: .36; height: 1000px; translate: clamp(14px, 7cqw, 30px) clamp(14px, 6cqw, 26px); background-image: none; }
 		/* The frame is a size container so the board's offset scales with the panel: the cards keep air from its left edge. */
