@@ -64,6 +64,9 @@ const signupHref = `${appBaseUrl}/signup`;
 		border-radius: 0 0 var(--sheet-radius) var(--sheet-radius);
 		box-shadow: var(--sheet-shadow);
 	}
+	/* Keep the footer-reveal shadow below the sheet, away from the transparent hero navbar. */
+	:global(html:not([data-theme='dark'])) main { box-shadow: none; }
+	:global(html:not([data-theme='dark'])) main::after { content: ''; position: absolute; z-index: -1; right: 0; bottom: 0; left: 0; height: 1px; border-radius: 0 0 var(--sheet-radius) var(--sheet-radius); box-shadow: var(--sheet-shadow); clip-path: inset(100% -80px -80px -80px); pointer-events: none; }
 	.canvas-surface { border: 1px solid var(--line); border-top: 0; border-radius: 0 0 var(--sheet-radius) var(--sheet-radius); }
 	.intro-surface { display: grid; min-height: calc(100svh - 52px); background: var(--surface); }
 	/*
