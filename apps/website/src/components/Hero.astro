@@ -104,7 +104,7 @@ const { signupHref } = Astro.props;
 			const startTop = isCompact && copy ? Math.max(copy.offsetTop + copy.offsetHeight + 28 - media.offsetTop, boxH * .3) : 0;
 			// Start: the same spot the CSS gives the mock-up (9% into the visible right half, overflowing to the right).
 			// Phones zoom in to a cropped, panned view of the app; wider tablets show it nearly whole, so the zoom eases off with width.
-			const zoom = lerp(2.3, .94, clamp((boxW - 420) / 480));
+			const zoom = lerp(2.3, .94, clamp((boxW - 360) / 300));
 			const endW = isCompact ? boxW * zoom : Math.min(boxW - 144, (boxH - DROP - 88) / RATIO, 1280);
 			const startW = isCompact ? endW * .674 : Math.max(boxW * .64, 780);
 			// End: as large as fits under the navbar with some air around it (phones: the full width less a margin).
@@ -115,7 +115,7 @@ const { signupHref } = Astro.props;
 				startTop,
 				boxH,
 				boxW,
-				startX: isCompact ? lerp(boxW * .05, (boxW - startW) / 2, clamp((boxW - 420) / 480)) : boxW * .545,
+				startX: isCompact ? lerp(boxW * .05, (boxW - startW) / 2, clamp((boxW - 360) / 300)) : boxW * .545,
 				startY: isCompact ? startTop + 22 : Math.max(96, boxH * .14),
 				startW,
 				endX: (boxW - endW) / 2,
@@ -144,7 +144,7 @@ const { signupHref } = Astro.props;
 				endX = clampTo(geo.boxW / 2 - focus.x * k, geo.boxW - geo.endW - margin, margin);
 				endY = clampTo(geo.boxH / 2 - focus.y * k, geo.boxH - geo.endW * RATIO - margin, margin);
 				// Wider tablets show the app nearly whole, so the pan toward the demo's focus gives way to centring it in the image.
-				const centred = clamp((geo.boxW - 420) / 480);
+				const centred = clamp((geo.boxW - 360) / 300);
 				endX = lerp(endX, geo.endX, centred);
 				endY = lerp(endY, geo.endY, centred);
 			}

@@ -39,6 +39,7 @@ import watercolor from '../assets/images/extension-watercolor-rose.webp';
 	const cursor = scene?.querySelector<SVGElement>('.extension-preview__cursor');
 	const preview = scene?.querySelector<HTMLElement>('.extension-preview');
 	const windowMock = scene?.querySelector<HTMLElement>('.browser-window');
+	const visual = scene?.querySelector<HTMLElement>('.browser-extension__visual');
 	const extensionButton = scene?.querySelector<HTMLElement>('.browser-window__mark');
 	const saveButton = scene?.querySelector<HTMLElement>('.extension-preview__save');
 	const saveDefault = scene?.querySelector<HTMLElement>('.extension-preview__save-default');
@@ -54,6 +55,7 @@ import watercolor from '../assets/images/extension-watercolor-rose.webp';
 			scene.style.removeProperty('--extension-inset');
 			panel.style.removeProperty('height');
 			windowMock.style.removeProperty('transform');
+				visual?.style.removeProperty('height');
 			for (const element of [cursor, preview, saveDefault, saveDone]) element.removeAttribute('style');
 		};
 		const configure = () => {
@@ -61,8 +63,18 @@ import watercolor from '../assets/images/extension-watercolor-rose.webp';
 			if (!motion.matches) return;
 			initialHeight = panel.getBoundingClientRect().height;
 			const available = window.innerHeight - 84;
-			// Leave short screens and unusually tall content in their natural, scrollable layout.
-			if (available < 420 || initialHeight > available) return;
+			// Leave very short screens in their natural, scrollable layout.
+			if (available < 420) return;
+			// A panel a little taller than the screen (split-screen laptops, small tablets) gets a shorter browser preview so the
+			// whole scene still fits and plays; only if even that cannot make it fit does it fall back to the static layout.
+			if (initialHeight > available) {
+				const visualHeight = visual?.getBoundingClientRect().height ?? 0;
+				const shrunk = visualHeight - (initialHeight - available);
+				if (!visual || shrunk < 230) return;
+				visual.style.height = `${shrunk}px`;
+				initialHeight = panel.getBoundingClientRect().height;
+				if (initialHeight > available + 1) { visual.style.removeProperty('height'); return; }
+			}
 			scene.style.setProperty('--extension-inset', `${(available - initialHeight) / 2}px`);
 			scene.dataset.active = '';
 			render();
