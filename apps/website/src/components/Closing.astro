@@ -93,13 +93,13 @@ const folderImage = { widths: [120, 240], sizes: '120px', quality: 74, alt: '' }
 	.card__media { position: absolute; inset: 0; overflow: hidden; border-radius: 6px; }
 	.card--leaf { --r: -4deg; top: -28px; left: 4%; width: clamp(130px, 13vw, 168px); aspect-ratio: 4 / 5; }
 	.card--concrete { --r: -3deg; right: 11%; bottom: -50px; width: clamp(130px, 13vw, 168px); aspect-ratio: 1; }
-	.card--color.card--ink { --r: -2deg; --swatch: #2f4a8a; top: -66px; left: 41%; width: clamp(120px, 11vw, 144px); }
+	.card--color.card--ink { --r: -2deg; --swatch: #2f4a8a; top: -66px; left: 41%; width: clamp(138px, 11vw, 144px); }
 	.card--towers { --r: 3deg; bottom: -96px; left: 43.5%; width: clamp(120px, 11vw, 148px); aspect-ratio: 4 / 5; }
 
 	.card--color { --r: 4deg; top: 39%; left: 7.5%; display: flex; flex-direction: column; width: clamp(128px, 12.5vw, 160px); aspect-ratio: 280 / 329; }
 	.card__swatch { flex: 1; border-bottom: 1px solid var(--app-border); border-radius: 0 0 var(--app-radius) var(--app-radius); background: var(--swatch, #c8643b); }
 	.card__footer { display: flex; align-items: baseline; gap: 8px; padding: 9px 10px; line-height: 1.25; }
-	.card__label { font-size: 14px; font-weight: 500; }
+	.card__label { font-size: 14px; font-weight: 500; white-space: nowrap; }
 	.card__hex { margin-left: auto; color: var(--app-fg-muted); font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace; font-size: 11.5px; letter-spacing: .025em; }
 
 	.card--link { --r: -2deg; bottom: -36px; left: 3.5%; width: clamp(180px, 17vw, 220px); }
@@ -164,7 +164,8 @@ const folderImage = { widths: [120, 240], sizes: '120px', quality: 74, alt: '' }
 	}
 
 	@media (max-width: 1000px) {
-		.card--color, .card--note { display: none; }
+		/* Only the clay swatch and the note drop out here; the ink-blue card (also a colour card) stays in the top middle. */
+		.card--clay, .card--note { display: none; }
 		.card--concrete { right: 3%; }
 	}
 	@media (max-width: 640px) {
