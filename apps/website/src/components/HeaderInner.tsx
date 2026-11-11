@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { MouseEvent } from "react";
+import { setMenuScrollLocked } from "./menu-scroll-lock";
 
 interface Props {
 	loginHref: string;
@@ -10,12 +11,17 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 	const [isOpen, setIsOpen] = useState(false);
 
 	const close = useCallback(() => {
+		setMenuScrollLocked(false);
 		setIsOpen(false);
 	}, []);
 
 	const toggle = useCallback(() => {
-		setIsOpen((current) => !current);
-	}, []);
+		if (isOpen) close();
+		else {
+			setMenuScrollLocked(true);
+			setIsOpen(true);
+		}
+	}, [close, isOpen]);
 
 	const scrollToTop = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
 		event.preventDefault();
@@ -26,19 +32,23 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 		}
 	}, [close]);
 
-	useEffect(() => {
-		document.documentElement.classList.toggle("has-mobile-menu", isOpen);
-		return () => document.documentElement.classList.remove("has-mobile-menu");
-	}, [isOpen]);
+	useEffect(() => () => setMenuScrollLocked(false), []);
 
 	useEffect(() => {
 		if (!isOpen) return;
+		const desktop = window.matchMedia("(min-width: 641px)");
+		const onResize = () => { if (desktop.matches) close(); };
 
 		function onKeyDown(e: KeyboardEvent) {
 			if (e.key === "Escape") close();
 		}
 		document.addEventListener("keydown", onKeyDown);
-		return () => document.removeEventListener("keydown", onKeyDown);
+		desktop.addEventListener("change", onResize);
+		onResize();
+		return () => {
+			document.removeEventListener("keydown", onKeyDown);
+			desktop.removeEventListener("change", onResize);
+		};
 	}, [close, isOpen]);
 
 	return (
@@ -71,7 +81,7 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 				</button>
 			</div>
 
-			<div className="mobile-menu-content" id="mobile-menu" aria-hidden={!isOpen}>
+			<div className="mobile-menu-content" id="mobile-menu" aria-hidden={!isOpen} data-lenis-prevent>
 				<nav className="mobile-menu-nav" aria-label="Mobile navigation">
 					<a onClick={close} href="#workflow">Features</a>
 					<a onClick={close} href="#canvas">Use cases</a>

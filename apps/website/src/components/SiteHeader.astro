@@ -180,24 +180,26 @@ const { loginHref, signupHref } = Astro.props;
 		.site-header { top: 0; z-index: 100; }
 		.site-header__inner { position: relative; z-index: 1; width: calc(100% - 32px); height: 52px; min-height: 0; margin-inline: auto; padding: 4px 0; overflow: visible; display: flex; flex-direction: column; align-items: stretch; }
 		.site-header:has([data-menu-open]) { --header-surface: var(--surface); background-image: none !important; }
-		.site-header__row { flex-shrink: 0; gap: 0; pointer-events: auto; }
+		.site-header__row { z-index: 2; flex-shrink: 0; gap: 0; pointer-events: auto; }
 		.mobile-menu-toggle, .mobile-menu-content { display: flex; }
 		.desktop-nav, .desktop-actions { display: none; }
 		.mobile-menu-toggle { width: 38px; height: 38px; flex: 0 0 38px; padding: 0; border: 0; border-radius: 8px; color: var(--ink); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 140ms ease; }
 		.mobile-menu-toggle__icon { position: relative; width: 21px; height: 14px; display: block; }
-		.mobile-menu-toggle__icon span { position: absolute; top: 50%; right: 0; height: 2px; border-radius: 2px; background: currentColor; transform-origin: center; transition: width 260ms cubic-bezier(.22, .8, .24, 1), transform 320ms cubic-bezier(.22, .8, .24, 1); }
+		.mobile-menu-toggle__icon span { position: absolute; top: 50%; right: 0; height: 2px; border-radius: 2px; background: currentColor; transform-origin: center; transition: width 240ms cubic-bezier(.23, 1, .32, 1), transform 240ms cubic-bezier(.23, 1, .32, 1); }
 		.mobile-menu-toggle__icon span:first-child { width: 21px; transform: translateY(-3px); }
 		.mobile-menu-toggle__icon span:last-child { width: 13px; transform: translateY(3px); }
 		.mobile-menu-toggle[aria-expanded="true"] .mobile-menu-toggle__icon span { width: 19px; }
 		.mobile-menu-toggle[aria-expanded="true"] .mobile-menu-toggle__icon span:first-child { transform: translateY(-1px) rotate(45deg); }
 		.mobile-menu-toggle[aria-expanded="true"] .mobile-menu-toggle__icon span:last-child { transform: translateY(-1px) rotate(-45deg); }
 
-		.mobile-menu-content { position: fixed; z-index: 1; top: 52px; left: 0; right: 0; bottom: 0; width: 100%; min-height: 0; flex-direction: column; justify-content: space-between; padding: 34px 24px max(24px, env(safe-area-inset-bottom)); background: var(--surface); opacity: 0; visibility: hidden; transform: translateY(-8px); transition: opacity 180ms ease, transform 220ms cubic-bezier(.22, .8, .24, 1), visibility 180ms ease; pointer-events: none; }
-		.site-header__inner[data-menu-open] .mobile-menu-content { opacity: 1; visibility: visible; transform: translateY(0); transition-delay: 90ms; pointer-events: auto; }
+		.mobile-menu-content { position: fixed; z-index: 1; top: 0; left: 0; right: 0; bottom: 0; width: 100%; min-height: 0; overflow-y: auto; flex-direction: column; justify-content: space-between; padding: 86px 24px max(24px, env(safe-area-inset-bottom)); background: var(--surface); opacity: 0; visibility: hidden; clip-path: inset(7px 16px calc(100% - 45px) calc(100% - 54px) round 12px); transition: opacity 260ms cubic-bezier(.32, .72, 0, 1), clip-path 260ms cubic-bezier(.32, .72, 0, 1), visibility 0s linear 260ms; pointer-events: none; }
+		@supports ((-webkit-backdrop-filter: blur(24px)) or (backdrop-filter: blur(24px))) {
+			.mobile-menu-content { background: color-mix(in srgb, var(--glass-surface-strong) 94%, transparent); -webkit-backdrop-filter: blur(24px) saturate(1.2); backdrop-filter: blur(24px) saturate(1.2); }
+		}
+		.site-header__inner[data-menu-open] .mobile-menu-content { opacity: 1; visibility: visible; clip-path: inset(0 round 0); transition: opacity 260ms cubic-bezier(.32, .72, 0, 1), clip-path 260ms cubic-bezier(.32, .72, 0, 1), visibility 0s; pointer-events: auto; }
 		.mobile-menu-nav { display: grid; width: 100%; align-content: center; justify-items: stretch; flex: 1; gap: 14px; }
 		.mobile-menu-nav a { display: flex; width: 100%; min-height: 50px; align-items: center; justify-content: flex-start; padding: 0 2px; text-align: left; font-size: clamp(30px, 10vw, 44px); font-weight: 560; line-height: 1; color: var(--ink); transition: color 140ms ease, padding 140ms ease; }
-		.mobile-menu-footer { display: grid; width: 100%; grid-template-columns: 1fr; gap: 10px; padding-top: 20px; opacity: 0; transform: translateY(18px); transition: opacity 220ms ease, transform 320ms cubic-bezier(.22, .8, .24, 1); }
-		.site-header__inner[data-menu-open] .mobile-menu-footer { opacity: 1; transform: translateY(0); transition-delay: 90ms; }
+		.mobile-menu-footer { display: grid; width: 100%; grid-template-columns: 1fr; gap: 10px; padding-top: 20px; }
 		.mobile-menu-footer .app-button { width: 100%; height: 44px; font-size: 14px; }
 	}
 
@@ -209,6 +211,8 @@ const { loginHref, signupHref } = Astro.props;
 	@media (prefers-reduced-motion: reduce) {
 		.site-header__inner { transition: none; }
 		.site-header, .mobile-menu-content, .mobile-menu-footer, .desktop-nav a, .text-link, .mobile-menu-nav a, .mobile-menu-toggle, .mobile-menu-toggle__icon span { transition: none; }
+		.mobile-menu-content, .site-header__inner[data-menu-open] .mobile-menu-content { clip-path: none; transition: opacity 120ms ease, visibility 0s linear 120ms; }
+		.site-header__inner[data-menu-open] .mobile-menu-content { transition-delay: 0s; }
 	}
 
 </style>
