@@ -156,6 +156,15 @@
 		.note-window__page { padding-inline: 48px; }
 	}
 
+	/* Mid widths, where the panel is narrower than the palette: instead of centring (and cropping both sides and the bottom
+	   evenly), drop the palette in from the top-left so it's cropped at the right and bottom like the other mock-ups. */
+	.semantic-visual { container: semantic / inline-size; }
+	@media (min-width: 641px) {
+		@container semantic (max-width: 560px) {
+			.palette { --mock-scale: .8; top: 54px; left: 64px; transform: scale(var(--mock-scale)); transform-origin: 0 0; }
+		}
+	}
+
 	/* Narrow phones: shrink the palette so it fits inside the panel with the canvas showing around and beneath it, rather than
 	   filling the panel edge to edge and hiding that it's a dialog floating over the board. */
 	@media (max-width: 440px) {
