@@ -156,6 +156,13 @@
 		.note-window__page { padding-inline: 48px; }
 	}
 
+	/* Narrow phones: shrink the palette so it fits inside the panel with the canvas showing around and beneath it, rather than
+	   filling the panel edge to edge and hiding that it's a dialog floating over the board. */
+	@media (max-width: 440px) {
+		.semantic-visual { height: 310px; }
+		.palette { --mock-scale: .54; top: 18px; left: 50%; transform: translateX(-50%) scale(var(--mock-scale)); transform-origin: 50% 0; }
+	}
+
 	/* ---- Demo states (driven by the script in FeatureShowcase.astro) ---- */
 	.mock-cursor { position: absolute; top: 0; left: 0; z-index: 5; width: 20px; height: 20px; margin: -3px 0 0 -5px; fill: #111; stroke: #fff; stroke-width: 1.4; stroke-linejoin: round; opacity: 0; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 30%)); transform-origin: 5px 3px; transition: opacity 200ms ease, transform 60ms linear; pointer-events: none; }
 
