@@ -24,6 +24,7 @@ const { loginHref, signupHref } = Astro.props;
 	const fades = Array.from(document.querySelectorAll<HTMLElement>('[data-fade]'));
 	const hero = document.querySelector<HTMLElement>('.hero');
 	const heroMedia = document.querySelector<HTMLElement>('.hero__media');
+	const canvasFrame = document.querySelector<HTMLElement>('.canvas-surface');
 	const desktop = window.matchMedia('(min-width: 1024px)');
 	const surfaceColor: Record<string, string> = {
 		surface: 'var(--surface)',
@@ -65,12 +66,16 @@ const { loginHref, signupHref } = Astro.props;
 				? hero.dataset.state === 'split'
 				: !!heroMedia && heroMedia.getBoundingClientRect().bottom > bar.top + 8;
 			if (desktop.matches && overHero) {
+				delete header.dataset.frame;
 				header.dataset.surface = 'hero';
 				header.style.removeProperty('background-image');
 				return;
 			}
 
 			const height = bar.height;
+			const frameBounds = canvasFrame?.getBoundingClientRect();
+			if (frameBounds && frameBounds.top < bar.bottom && frameBounds.bottom > bar.top) header.dataset.frame = 'canvas';
+			else delete header.dataset.frame;
 			const zones = fades.map((el) => fadeZone(el, bar.top)).filter((zone) => zone.bottom > 0 && zone.top < height);
 			const stops: string[] = [];
 			const band = (color: string, start: number, end: number) => stops.push(`${color} ${start.toFixed(2)}px`, `${color} ${end.toFixed(2)}px`);
@@ -134,6 +139,9 @@ const { loginHref, signupHref } = Astro.props;
 	.site-header__inner { transition: translate 240ms cubic-bezier(.23, 1, .32, 1); }
 	.site-header[data-surface='canvas'] { --header-surface: var(--canvas); }
 	.site-header[data-surface='footer'] { --header-surface: var(--footer-surface); }
+	/* Let the canvas border pass through the narrow sides of the sticky bar. */
+	.site-header[data-frame='canvas'] { -webkit-mask-image: linear-gradient(to right, transparent 1px, #000 1px calc(100% - 1px), transparent calc(100% - 1px)); mask-image: linear-gradient(to right, transparent 1px, #000 1px calc(100% - 1px), transparent calc(100% - 1px)); }
+	.site-header:has([data-menu-open]) { -webkit-mask-image: none; mask-image: none; }
 	.site-header__inner { position: relative; width: min(calc(100% - 48px), 1200px); min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-inline: auto; padding: 4px 0; }
 	.site-header__row { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%; }
 	.brand { display: inline-flex; align-items: center; }
