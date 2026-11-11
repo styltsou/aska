@@ -17,6 +17,9 @@
 	--line-strong: #c7c7c1;
 	--accent: #315cca;
 	--accent-soft: #dce6ff;
+	--coming-soon-ink: #151515;
+	--coming-soon-border: #d5d5d5;
+	--coming-soon-bg: #ededed;
 	--glass-surface: rgb(255 255 255 / 62%);
 	--glass-surface-strong: rgb(255 255 255 / 82%);
 	--glass-line: rgb(255 255 255 / 78%);
@@ -29,7 +32,7 @@
 	--radius: 8px;
 	/* The app's --radius-4xl (its base --radius of .45rem × 2.6), the largest corner in its scale. */
 	--sheet-radius: calc(.45rem * 2.6);
-	--sheet-shadow: 0 22px 44px rgb(21 21 21 / 14%), 0 6px 14px rgb(21 21 21 / 6%);
+	--sheet-shadow: 0 12px 32px rgb(21 21 21 / 6%), 0 3px 8px rgb(21 21 21 / 3%);
 	--page-width: 1200px;
 	/* The empty space between the page's major sections (what you see between one section's content and the next). */
 	--section-gap: clamp(96px, 13.5vw, 200px);
@@ -57,6 +60,8 @@ h1, h2 { font-weight: 560; letter-spacing: 0; }
 ::-webkit-scrollbar-thumb { border: 3px solid var(--canvas); border-radius: 999px; background: #777772; }
 
 .page-width { width: min(calc(100% - 48px), var(--page-width)); margin-inline: auto; }
+
+.coming-soon-pill { display: inline-flex; align-items: center; padding: 4px 10px; border: 1px solid var(--coming-soon-border); border-radius: 999px; background: var(--coming-soon-bg); color: var(--coming-soon-ink); font-size: 10px; font-weight: 650; letter-spacing: 0; line-height: 1.2; text-transform: none; white-space: nowrap; }
 
 .button {
 	display: inline-flex;
@@ -144,11 +149,14 @@ html[data-theme='dark'] .app-button--outline:active { background: oklch(0.225 0 
 	--line-strong: oklch(1 0 0 / 15%);
 	--accent: #86a8ff;
 	--accent-soft: #25365f;
+	--coming-soon-ink: #f1f3ee;
+	--coming-soon-border: #454545;
+	--coming-soon-bg: #2b2b2b;
 	--glass-surface: rgb(12 12 12 / 78%);
 	--glass-surface-strong: rgb(12 12 12 / 92%);
 	--glass-line: rgb(255 255 255 / 12%);
 	--glass-shadow: 0 9px 24px rgb(0 0 0 / 32%);
-	--sheet-shadow: 0 22px 44px rgb(0 0 0 / 55%), 0 6px 14px rgb(0 0 0 / 40%);
+	--sheet-shadow: 0 12px 32px rgb(0 0 0 / 24%), 0 3px 8px rgb(0 0 0 / 12%);
 	--feature-frame-border-mid: rgb(94 101 94 / 82%);
 	--feature-frame-border-end: rgb(94 101 94 / 76%);
 	--feature-frame-shadow-start: 0 0 0 0 rgb(255 255 255 / 0%), 0 0 0 0 rgb(0 0 0 / 0%);
