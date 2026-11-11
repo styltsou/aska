@@ -16,7 +16,7 @@ const { loginHref, signupHref } = Astro.props;
 		</div>
 		<div class="site-footer__bottom">
 			<span>© {new Date().getFullYear()} Mnemee</span>
-			<div class="theme-control" role="group" aria-label="Theme"><span>Appearance</span><button type="button" data-theme-option="light" aria-pressed="false">Light</button><button type="button" data-theme-option="dark" aria-pressed="false">Dark</button></div>
+			<div class="theme-control" role="group" aria-label="Appearance"><span>Appearance</span><div class="theme-control__options"><button type="button" data-theme-option="system" aria-pressed="false">System</button><button type="button" data-theme-option="light" aria-pressed="false">Light</button><button type="button" data-theme-option="dark" aria-pressed="false">Dark</button><div class="theme-control__thumb" aria-hidden="true"><div class="theme-control__thumb-labels"><span>System</span><span>Light</span><span>Dark</span></div></div></div></div>
 			<button type="button" class="site-footer__top" data-scroll-top>Back to top ↑</button>
 		</div>
 	</div>
@@ -26,23 +26,50 @@ const { loginHref, signupHref } = Astro.props;
 	const storageKey = 'mnemee-theme';
 	const root = document.documentElement;
 	const themeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-theme-option]'));
+	const themeOptions = document.querySelector<HTMLElement>('.theme-control__options');
+	const themeThumb = document.querySelector<HTMLElement>('.theme-control__thumb');
+	const themeThumbLabels = document.querySelector<HTMLElement>('.theme-control__thumb-labels');
+	const positionThumb = (animate = false) => {
+		const selected = themeButtons.find((button) => button.getAttribute('aria-pressed') === 'true');
+		if (!selected || !themeOptions || !themeThumb || !themeThumbLabels) return;
+		themeOptions.toggleAttribute('data-animate', animate);
+		themeThumb.style.width = `${selected.offsetWidth}px`;
+		themeThumb.style.transform = `translateX(${selected.offsetLeft}px)`;
+		themeThumbLabels.style.transform = `translateX(${-selected.offsetLeft}px)`;
+	};
 	const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
-	const updateTheme = (theme: 'light' | 'dark') => {
+	type ThemePreference = 'system' | 'light' | 'dark';
+	const updateTheme = (preference: ThemePreference, animateThumb = false) => {
+		const theme = preference === 'system' ? (systemTheme.matches ? 'dark' : 'light') : preference;
 		root.dataset.theme = theme;
 		document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? 'oklch(0.145 0 0)' : '#ffffff');
-		themeButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.themeOption === theme)));
+		themeButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.themeOption === preference)));
+		positionThumb(animateThumb);
 	};
 	const readSavedTheme = () => {
-		try { const theme = localStorage.getItem(storageKey); return theme === 'light' || theme === 'dark' ? theme : null; }
-		catch { return null; }
+		try { const theme = localStorage.getItem(storageKey); return theme === 'light' || theme === 'dark' ? theme : 'system'; }
+		catch { return 'system'; }
 	};
-	updateTheme(readSavedTheme() ?? (systemTheme.matches ? 'dark' : 'light'));
-	themeButtons.forEach((button) => button.addEventListener('click', () => {
-		const theme = button.dataset.themeOption as 'light' | 'dark';
-		try { localStorage.setItem(storageKey, theme); } catch { /* Keep the selected theme for this visit. */ }
-		updateTheme(theme);
+	let preference: ThemePreference = readSavedTheme();
+	updateTheme(preference);
+	positionThumb();
+	if (themeOptions) {
+		const themeResizeObserver = new ResizeObserver(() => positionThumb());
+		themeResizeObserver.observe(themeOptions);
+		themeButtons.forEach((button) => themeResizeObserver.observe(button));
+		document.addEventListener('astro:before-swap', () => themeResizeObserver.disconnect(), { once: true });
+	}
+	themeButtons.forEach((button) => button.addEventListener('click', (event) => {
+		preference = button.dataset.themeOption as ThemePreference;
+		try { localStorage.setItem(storageKey, preference); } catch { /* Keep the selected theme for this visit. */ }
+		updateTheme(preference, event.detail > 0);
 	}));
-	systemTheme.addEventListener('change', (event) => { if (!readSavedTheme()) updateTheme(event.matches ? 'dark' : 'light'); });
+	systemTheme.addEventListener('change', () => { if (preference === 'system') updateTheme(preference); });
+	window.addEventListener('storage', (event) => {
+		if (event.key !== storageKey && event.key !== null) return;
+		preference = readSavedTheme();
+		updateTheme(preference);
+	});
 	const footer = document.querySelector<HTMLElement>('.site-footer');
 	const main = document.querySelector<HTMLElement>('main');
 	const motionTargets = footer ? Array.from(footer.querySelectorAll<HTMLElement>('.site-footer__about, .site-footer__main > nav, .site-footer__elsewhere, .site-footer__bottom')) : [];
@@ -93,7 +120,7 @@ const { loginHref, signupHref } = Astro.props;
 
 <style>
 	.site-footer { position: fixed; right: 0; bottom: 0; left: 0; z-index: 0; background: var(--footer-surface); }
-	.site-footer__inner { padding-block: clamp(48px, 5vw, 72px) 22px; }
+	.site-footer__inner { padding-block: clamp(48px, 5vw, 72px) 14px; }
 	.site-footer__main { display: grid; grid-template-columns: minmax(240px, 2fr) repeat(3, minmax(120px, 1fr)); gap: clamp(24px, 4vw, 70px); padding-bottom: clamp(48px, 6vw, 80px); }
 	.site-footer__brand { display: inline-block; margin-bottom: 19px; }.site-footer__brand img { display: block; width: 125px; height: auto; }
 	.site-footer__about p { max-width: 300px; margin: 0; color: var(--ink-muted); font-size: 14px; line-height: 1.55; }
@@ -101,9 +128,15 @@ const { loginHref, signupHref } = Astro.props;
 	.site-footer h2 { margin: 2px 0 10px; color: var(--ink-muted); font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
 	.site-footer nav a, .site-footer__elsewhere a { font-size: 14px; line-height: 1.25; }
 	.site-footer a:hover, .site-footer button:hover { color: var(--ink-muted); }
-	.site-footer__bottom { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding-top: 21px; border-top: 1px solid var(--line); color: var(--ink-muted); font-size: 12px; }
-	.theme-control { display: flex; align-items: center; gap: 11px; }.theme-control > span { margin-right: 7px; }.theme-control button, .site-footer__top { padding: 0; border: 0; background: none; color: var(--ink-muted); font: inherit; cursor: pointer; }.theme-control button[aria-pressed='true'] { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+	.site-footer__bottom { display: flex; align-items: center; justify-content: space-between; gap: 14px 22px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--ink-muted); font-size: 12px; }
+	.theme-control { display: flex; align-items: center; gap: 13px; }.theme-control button, .site-footer__top { padding: 0; border: 0; background: none; color: var(--ink-muted); font: inherit; cursor: pointer; }.theme-control__options { position: relative; display: flex; align-items: center; }.theme-control button, .theme-control__thumb-labels span { display: flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 8px; white-space: nowrap; }.theme-control button { border-radius: 6px; }.theme-control__thumb { position: absolute; inset: 5px auto 5px 0; overflow: hidden; border-radius: 6px; background: var(--ink); color: var(--surface); pointer-events: none; }.theme-control__thumb-labels { position: relative; top: -5px; display: flex; width: max-content; }
+	.theme-control__thumb { border: 1px solid #0e0e0e; background: linear-gradient(to bottom, #373737, #171717); color: #fafafa; box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 1px 2px rgb(0 0 0 / 12%); }
+	.theme-control__thumb-labels { margin-left: -1px; top: -6px; }
+	.theme-control__options[data-animate] .theme-control__thumb { transition: transform 160ms cubic-bezier(.23, 1, .32, 1), width 160ms cubic-bezier(.23, 1, .32, 1); }
+	.theme-control__options[data-animate] .theme-control__thumb-labels { transition: transform 160ms cubic-bezier(.23, 1, .32, 1); }
+	:global(html[data-theme='dark']) .theme-control__thumb { border-color: #c9c9c9; background: linear-gradient(to bottom, #fff, #e5e5e5); color: #171717; box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%), 0 1px 2px rgb(0 0 0 / 20%); }
+	@media (prefers-reduced-motion: reduce) { .theme-control__options[data-animate] .theme-control__thumb, .theme-control__options[data-animate] .theme-control__thumb-labels { transition: none; } }
 	:global(html[data-theme='dark']) .site-footer__brand img { filter: invert(1); }
 	@media (max-width: 780px) { .site-footer__main { grid-template-columns: repeat(3, 1fr); }.site-footer__about { grid-column: 1 / -1; margin-bottom: 18px; } }
-	@media (max-width: 520px) { .site-footer__main { grid-template-columns: repeat(2, 1fr); gap: 42px 20px; padding-bottom: 48px; }.site-footer__about { grid-column: 1 / -1; margin: 0; }.site-footer__bottom { flex-wrap: wrap; }.theme-control { order: 3; width: 100%; } }
+	@media (max-width: 520px) { .site-footer__main { grid-template-columns: repeat(2, 1fr); gap: 42px 20px; padding-bottom: 48px; }.site-footer__about { grid-column: 1 / -1; margin: 0; }.site-footer__bottom { flex-wrap: wrap; }.theme-control { order: 3; width: 100%; }.theme-control > span { display: none; } }
 </style>
