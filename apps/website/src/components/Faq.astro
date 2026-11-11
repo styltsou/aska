@@ -123,7 +123,8 @@ const faqs = [
 		.faq__head, .faq__body { grid-template-columns: 1fr; }
 		.faq__head { gap: 24px; }
 		.faq__intro, .faq__label { padding-inline: 24px; }
-		.faq__aside { position: relative; order: 2; align-self: start; padding: 24px; }
+		/* Stacked under the list it gets real height of its own, with the text resting on the bottom like it does beside the list on desktop. */
+		.faq__aside { position: relative; display: flex; flex-direction: column; justify-content: flex-end; order: 2; align-self: stretch; min-height: 150px; padding: 24px; }
 		.faq__aside::before { content: ''; position: absolute; top: 0; right: 24px; left: 24px; height: 1px; background: var(--line); }
 	}
 	@media (max-width: 640px) {
