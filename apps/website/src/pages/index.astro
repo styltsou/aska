@@ -35,6 +35,52 @@ const signupHref = `${appBaseUrl}/signup`;
 	<SiteFooter loginHref={loginHref} signupHref={signupHref} />
 </Layout>
 
+<script>
+	// Match the native scrollbar track to the page surface at the center of the viewport.
+	const root = document.documentElement;
+	const heroFade = document.querySelector<HTMLElement>('.hero-transition');
+	const faqIn = document.querySelector<HTMLElement>('.surface-fade--in');
+	const faqOut = document.querySelector<HTMLElement>('.surface-fade--out');
+	const main = document.querySelector<HTMLElement>('main');
+	const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+	let scrollbarFrame = 0;
+	let previousTrack = '';
+	const smooth = (t: number) => { const v = Math.max(0, Math.min(1, t)); return v * v * v * (v * (v * 6 - 15) + 10); };
+	const updateScrollbar = () => {
+		scrollbarFrame = 0;
+		// Classic scrollbars consume layout width; mirror that width on the left.
+		const gutter = finePointer.matches ? Math.max(0, window.innerWidth - root.clientWidth) : 0;
+		root.style.setProperty('--left-scrollbar-gutter', `${gutter}px`);
+		if (!finePointer.matches || !heroFade || !faqIn || !faqOut || !main) return;
+		const point = window.innerHeight / 2;
+		const hero = heroFade.getBoundingClientRect();
+		const beforeFaq = faqIn.getBoundingClientRect();
+		const afterFaq = faqOut.getBoundingClientRect();
+		const reach = Math.max(140, Math.min(280, window.innerHeight * .24));
+		const pad = Math.max(56, Math.min(96, window.innerWidth * .07));
+		let surface = 0;
+		if (point < hero.bottom) surface = 1 - smooth((point - hero.top) / hero.height);
+		else if (point >= beforeFaq.top - reach && point < afterFaq.bottom + reach) {
+			surface = Math.min(smooth((point - (beforeFaq.top - reach)) / (beforeFaq.height + reach + pad)), 1 - smooth((point - (afterFaq.top - pad)) / (afterFaq.height + reach + pad)));
+		}
+		const track = main.getBoundingClientRect().bottom <= point ? 'var(--footer-surface)' : `color-mix(in oklab, var(--surface) ${(surface * 100).toFixed(1)}%, var(--canvas))`;
+		if (track !== previousTrack) { root.style.setProperty('--scrollbar-track', track); previousTrack = track; }
+	};
+	const scheduleScrollbar = () => { if (!scrollbarFrame) scrollbarFrame = requestAnimationFrame(updateScrollbar); };
+	window.addEventListener('scroll', scheduleScrollbar, { passive: true });
+	window.addEventListener('resize', scheduleScrollbar);
+	finePointer.addEventListener('change', scheduleScrollbar);
+	updateScrollbar();
+	document.addEventListener('astro:before-swap', () => {
+		window.removeEventListener('scroll', scheduleScrollbar);
+		window.removeEventListener('resize', scheduleScrollbar);
+		finePointer.removeEventListener('change', scheduleScrollbar);
+		cancelAnimationFrame(scrollbarFrame);
+		root.style.removeProperty('--scrollbar-track');
+		root.style.removeProperty('--left-scrollbar-gutter');
+	}, { once: true });
+</script>
+
 <style>
 	main {
 		position: relative;

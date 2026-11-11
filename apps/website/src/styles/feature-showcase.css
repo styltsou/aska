@@ -207,11 +207,12 @@
 
 	/* Note: the agent's rail beside the passage, its status, review and input rows by phase. */
 	.note-editor__passage { position: relative; }
-	/* The rail runs from the draft down to the agent controls (note-agent-rail: 2px, oklch(.68 .14 255), 0.875rem into the gutter). */
-	.agent-rail { position: absolute; top: 12px; bottom: 0; left: -14px; width: 2px; border-radius: 999px; background: oklch(.68 .14 255); opacity: 0; transition: opacity 150ms ease-out; }
+	/* The rail marks the draft and uses the same neutral tones as the writing status. */
+	.agent-rail { position: absolute; top: 12px; bottom: 0; left: -14px; width: 2px; border-radius: 999px; background: var(--a-muted-fg); opacity: 0; transition: opacity 150ms ease-out; }
 	.agent-rail.is-on { opacity: 1; }
-	.agent-rail.is-streaming { animation: agent-rail-pulse 1.6s ease-in-out infinite; }
-	@keyframes agent-rail-pulse { 50% { opacity: .45; } }
+	.agent-rail.is-streaming { background: linear-gradient(180deg, var(--a-muted-fg) 0%, var(--a-muted-fg) 40%, var(--a-fg) 50%, var(--a-muted-fg) 60%, var(--a-muted-fg) 100%) 0 0 / 100% 300%; animation: agent-rail-shimmer 1.8s linear infinite; }
+	@keyframes agent-rail-shimmer { from { background-position: 0 100%; } to { background-position: 0 0; } }
+	@media (prefers-reduced-motion: reduce) { .agent-rail.is-streaming { animation: none; background: var(--a-muted-fg); } }
 	[data-draft] { animation: none; }
 	.agent-prompt__status, .agent-prompt__review { display: none; align-items: center; height: 32px; }
 	.agent-prompt[data-phase='streaming'] .agent-prompt__status { display: flex; justify-content: space-between; }
