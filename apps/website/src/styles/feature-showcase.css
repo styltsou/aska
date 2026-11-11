@@ -161,7 +161,7 @@
 	@media (max-width: 440px) {
 		.semantic-visual { height: 310px; }
 		/* The palette sits left of centre and runs off the panel's right edge, like the other cropped mock-ups. */
-		.palette { --mock-scale: .58; top: 18px; left: 14px; transform: scale(var(--mock-scale)); transform-origin: 0 0; }
+		.palette { --mock-scale: .46; top: 16px; left: 25%; transform: scale(var(--mock-scale)); transform-origin: 0 0; }
 		/* The board behind is zoomed further out, without the action rail, so it reads as a canvas of small cards. */
 		.search-board { --mock-scale: .3; height: 1000px; translate: 0 130px; background-image: none; }
 		/* The dots live on the frame so the shifted board doesn't leave a bare strip at the top. */
