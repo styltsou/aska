@@ -9,15 +9,20 @@ import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import StatementBand from '../components/StatementBand.astro';
 import Layout from '../layouts/Layout.astro';
+import { product } from '../lib/content';
+import { appBaseUrl } from '../lib/site-urls';
+import { landingStructuredData } from '../lib/structured-data';
 
-const appBaseUrl = (import.meta.env.PUBLIC_APP_URL ?? 'https://app.mnemee.space').replace(/\/+$/, '');
 const loginHref = `${appBaseUrl}/login`;
 const signupHref = `${appBaseUrl}/signup`;
 ---
 
 <Layout
-	title="Mnemee | A visual workspace for your references"
-	description="Collect images, videos, links, and notes. Arrange ideas on a canvas and find the references you need with Mnemee."
+	title={product.title}
+	description={product.description}
+	path="/"
+	markdownPath="/index.md"
+	jsonLd={landingStructuredData(Astro.site!, appBaseUrl)}
 >
 	<SiteHeader loginHref={loginHref} signupHref={signupHref} />
 	<main>

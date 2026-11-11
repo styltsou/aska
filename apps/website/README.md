@@ -17,3 +17,10 @@ Set `PUBLIC_APP_URL` to the deployed application base URL. The landing page uses
 ```sh
 bun run build
 ```
+
+## SEO and sharing
+
+- `SITE_URL` sets the canonical origin used for canonical and Open Graph URLs, the sitemap, `robots.txt` and `llms.txt` (default `https://mnemee.space`).
+- Page copy that is shared between the page, the JSON-LD, `llms.txt` and `/index.md` lives in `src/lib/content.ts`; edit it there.
+- `/index.md` is a markdown version of the landing page and `/llms.txt` is a short guide for language models. Both are generated at build time.
+- The social preview image is `public/og-image.png`. Regenerate it with `bun run og` after changing the tagline or artwork.
