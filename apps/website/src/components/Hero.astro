@@ -60,7 +60,7 @@ const { signupHref } = Astro.props;
 	// so the band above the panel is exactly the bar and its content sits centred in it.
 	const DROP = 52 - 16;
 	const RADIUS = 12;
-	const EXPAND_SHARE = .3; // share of the pinned scroll spent expanding; the rest is the hold, where the demo plays
+	const EXPAND_SHARE = .24; // share of the pinned scroll spent expanding; the rest is the hold, where the demo plays
 	const RATIO = .625; // the mock-up is 16:10
 
 	const clamp = (value: number) => Math.min(Math.max(value, 0), 1);
@@ -119,7 +119,7 @@ const { signupHref } = Astro.props;
 				endX: (boxW - endW) / 2,
 				endY: isCompact ? (boxH - endW * RATIO) / 2 : DROP + (boxH - DROP - endW * RATIO) / 2,
 				endW,
-				expand: (hero.offsetHeight - stageH) * (isCompact ? .26 : EXPAND_SHARE),
+				expand: (hero.offsetHeight - stageH) * (isCompact ? .21 : EXPAND_SHARE),
 				travel: hero.offsetHeight - stageH,
 			};
 			// The mock-up is laid out at its final size and scaled down at the start, so it rests sharp at the end.
@@ -195,7 +195,7 @@ const { signupHref } = Astro.props;
 
 			// The mock-up's demo plays across the hold, with a little rest at each end.
 			const hold = clamp((scrolled - geo.expand) / (geo.travel - geo.expand));
-			const demo = clamp((hold - .05) / .88);
+			const demo = clamp((hold - .01) / .92);
 			if (demo !== lastDemo) {
 				lastDemo = demo;
 				workspace?.dispatchEvent(new CustomEvent('demo:progress', { detail: demo }));

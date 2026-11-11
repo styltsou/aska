@@ -128,7 +128,7 @@ const collections = [
 					<div class="card card--image" style="left: 672px; top: 352px; width: 280px; height: 210px;"><Image src={concrete} {...cardImage} /></div>
 
 					<!-- Demo 1: dragged into the empty top-right slot. -->
-					<div class="card card--image" data-demo-drag style="left: 1010px; top: 474px; width: 280px; height: 350px;"><Image src={towers} {...cardImage} /></div>
+					<div class="card card--image" data-demo-drag style="left: 1010px; top: 474px; width: 280px; height: 350px;"><Image src={towers} {...cardImage} /><svg class="demo-grab" data-demo-grab viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a1.5 1.5 0 0 1 3 0v2.5-4a1.5 1.5 0 0 1 3 0v4-3a1.5 1.5 0 0 1 3 0v3.5-1.5a1.5 1.5 0 0 1 3 0v5.2c0 3.9-2.4 6.8-6 6.8h-1c-2.1 0-3.6-.8-5-2.5l-3-3.8a1.6 1.6 0 0 1 2.3-2.2L8 14" /></svg></div>
 					<!-- Demo 2: a new colour card appears. -->
 					<div class="card card--color" data-demo-new style="left: 976px; top: 428px; width: 280px; --swatch: #2f4a8a;">
 						<div class="color__swatch"></div>
@@ -151,7 +151,7 @@ const collections = [
 	/*
 	 * Fits the fixed 1280 × 800 app into whatever width the mock-up has, and plays the demo from the scroll position the
 	 * hero sends (0 → 1 across its hold). Every frame is a pure function of that progress, so scrolling back rewinds it.
-	 * There is no pointer or action bar: the cards simply move and appear on their own.
+	 * A grabbing cursor follows the first card; the later items appear and are edited in place.
 	 *   1. The loose orange card slides into the empty top-right slot.
 	 *   2. A new colour card appears in the freed space.
 	 *   3. A text label is typed onto the canvas.
@@ -175,6 +175,7 @@ const collections = [
 		const q = <T extends Element = HTMLElement>(selector: string) => root.querySelector<T>(selector);
 		const app = q('.app');
 		const drag = q('[data-demo-drag]');
+		const grab = q<SVGElement>('[data-demo-grab]');
 		const added = q('[data-demo-new]');
 		const text = q('[data-demo-text]');
 		const textContent = q('[data-demo-text-content]');
@@ -183,7 +184,7 @@ const collections = [
 		const noteBody = q('[data-demo-note-body]');
 		const caretTitle = q('[data-demo-caret-title]');
 		const caretBody = q('[data-demo-caret-body]');
-		if (!app || !drag || !added || !text || !textContent || !note || !noteTitle || !noteBody || !caretTitle || !caretBody) continue;
+		if (!app || !drag || !grab || !added || !text || !textContent || !note || !noteTitle || !noteBody || !caretTitle || !caretBody) continue;
 
 		new ResizeObserver(() => app.style.setProperty('--app-scale', String(root.clientWidth / APP_W))).observe(root);
 
@@ -201,11 +202,12 @@ const collections = [
 
 		const render = (p: number) => {
 			// 1. Drag
-			const move = ease(span(p, .1, .28));
+			const move = ease(span(p, .04, .22));
 			const card = mix(dragFrom, dragTo, move);
 			drag.style.transform = `translate3d(${(card.x - dragFrom.x).toFixed(2)}px, ${(card.y - dragFrom.y).toFixed(2)}px, 0)`;
-			drag.toggleAttribute('data-lifted', between(p, .08, .3));
-			drag.toggleAttribute('data-selected', between(p, .08, .4));
+			drag.toggleAttribute('data-lifted', between(p, .025, .24));
+			drag.toggleAttribute('data-selected', between(p, .025, .4));
+			grab.style.opacity = String(ease(span(p, .01, .025)) * (1 - ease(span(p, .22, .25))));
 
 			// 2. Colour
 			const appear = ease(span(p, .4, .47));
@@ -232,7 +234,7 @@ const collections = [
 			// turn. The hero uses this to pan a mock-up that's larger than its panel (phones).
 			const cardCentre = { x: card.x + cardHalf.x, y: card.y + cardHalf.y };
 			let at: Point;
-			if (p < .1) at = mix(overview, { x: dragFrom.x + cardHalf.x, y: dragFrom.y + cardHalf.y }, ease(span(p, 0, .1)));
+			if (p < .04) at = mix(overview, { x: dragFrom.x + cardHalf.x, y: dragFrom.y + cardHalf.y }, ease(span(p, 0, .04)));
 			else if (p < .34) at = cardCentre;
 			else if (p < .5) at = mix(cardCentre, colourAt, ease(span(p, .32, .44)));
 			else if (p < .6) at = mix(colourAt, labelAt, ease(span(p, .5, .58)));
@@ -323,6 +325,7 @@ const collections = [
 	.card :global(img) { display: block; width: 100%; height: 100%; object-fit: cover; }
 	.card--image { border-color: transparent; background: none; }
 	.card--image :global(img) { border-radius: 6px; }
+	.demo-grab { position: absolute; z-index: 3; top: 45%; left: 50%; width: 32px; height: 32px; opacity: 0; fill: #fff; stroke: #111; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 2px rgb(0 0 0 / 35%)); pointer-events: none; }
 	/* Note: px-4 py-4 text-sm; compact markdown: 19px title, paragraphs at 80% ink, 13px h2. */
 	.card--note { padding: 16px; max-height: 320px; }
 	.note__title { margin-bottom: 4px; font-size: 19px; font-weight: 600; letter-spacing: -.025em; line-height: 1.25; }
