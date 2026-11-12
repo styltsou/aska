@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoaderCircleIcon, MailIcon } from "lucide-react";
-import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { CenteredAuthLayout } from "@/components/auth/centered-auth-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
@@ -62,13 +62,10 @@ function VerifyEmailPage() {
   }
 
   return (
-    <AuthPageLayout>
+    <CenteredAuthLayout>
       <div aria-labelledby="verify-title">
         <div className="space-y-1.5">
-          <h1
-            className="text-2xl font-semibold tracking-[-0.035em]"
-            id="verify-title"
-          >
+          <h1 className="text-xl font-semibold" id="verify-title">
             {sentTo ? "Check your email" : "Verify your email"}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -149,6 +146,6 @@ function VerifyEmailPage() {
           </Link>
         </p>
       </div>
-    </AuthPageLayout>
+    </CenteredAuthLayout>
   );
 }

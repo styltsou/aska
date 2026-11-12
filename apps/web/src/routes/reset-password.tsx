@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { KeyRoundIcon, LoaderCircleIcon } from "lucide-react";
-import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { CenteredAuthLayout } from "@/components/auth/centered-auth-layout";
 import { PasswordField } from "@/components/auth/password-field";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
@@ -53,13 +53,10 @@ function ResetPasswordPage() {
   }
 
   return (
-    <AuthPageLayout>
+    <CenteredAuthLayout>
       <div aria-labelledby="reset-title">
         <div className="space-y-1.5">
-          <h1
-            className="text-2xl font-semibold tracking-[-0.035em]"
-            id="reset-title"
-          >
+          <h1 className="text-xl font-semibold" id="reset-title">
             {linkInvalid ? "Link expired" : "Set a new password"}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -115,6 +112,6 @@ function ResetPasswordPage() {
           </form>
         )}
       </div>
-    </AuthPageLayout>
+    </CenteredAuthLayout>
   );
 }
