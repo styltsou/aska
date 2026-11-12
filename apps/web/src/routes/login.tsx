@@ -39,13 +39,6 @@ export const Route = createFileRoute("/login")({
     } else {
       clearGoogleSignInAttempt();
     }
-    if (destination.to === "/login" && search.error?.includes("not_linked")) {
-      throw redirect({
-        to: "/verify-email",
-        search: { reason: "google" },
-        replace: true,
-      });
-    }
     if (destination.to !== "/login") {
       if (
         search.redirect?.startsWith("/") &&

@@ -2,11 +2,39 @@ import { betterAuth } from "better-auth";
 import { organization } from "better-auth/plugins";
 import { apiKey } from "@better-auth/api-key";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { and, eq } from "drizzle-orm";
 
 import { env } from "@/config/env";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { sendEmail } from "@/lib/email";
+
+/**
+ * Pre-hijacking defence (Microsoft, "Pre-hijacked accounts", and OWASP
+ * guidance). Someone can register a victim's email with a password they
+ * control before the victim ever signs up. When a federated login whose email
+ * the identity provider has verified is linked into a local account that was
+ * never verified, the provider has just proven who really owns the address, so
+ * the unverified credentials and sessions must not survive the link.
+ */
+async function discardUnverifiedLocalCredentials(userId: string) {
+  const [existing] = await db
+    .select({ emailVerified: schema.user.emailVerified })
+    .from(schema.user)
+    .where(eq(schema.user.id, userId))
+    .limit(1);
+  if (!existing || existing.emailVerified) return;
+
+  await db
+    .delete(schema.account)
+    .where(
+      and(
+        eq(schema.account.userId, userId),
+        eq(schema.account.providerId, "credential"),
+      ),
+    );
+  await db.delete(schema.session).where(eq(schema.session.userId, userId));
+}
 
 let _auth: ReturnType<typeof createAuth> | undefined;
 
@@ -33,10 +61,11 @@ function createAuth() {
     account: {
       accountLinking: {
         enabled: true,
-        // Keep the default (requireLocalEmailVerified: true). Linking Google
-        // into an unverified email+password account would let whoever
-        // pre-registered that address keep their password after the real
-        // owner signs in with Google. The web app tells such users to verify.
+        // Linking requires the provider to report a verified email (Google
+        // does). If the local account was never verified, the databaseHooks
+        // below wipe its password and sessions, so a pre-registered attacker
+        // password cannot survive the link.
+        requireLocalEmailVerified: false,
       },
     },
     rateLimit: {
@@ -88,6 +117,17 @@ If you did not request this, you can ignore this email.`,
             },
           }
         : {}),
+    },
+    databaseHooks: {
+      account: {
+        create: {
+          before: async (account) => {
+            if (account.providerId !== "credential") {
+              await discardUnverifiedLocalCredentials(account.userId);
+            }
+          },
+        },
+      },
     },
     emailVerification: {
       sendVerificationEmail: async ({ user, url }) => {

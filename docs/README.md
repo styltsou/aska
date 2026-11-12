@@ -28,6 +28,9 @@ it safely. Start here rather than reconstructing architecture from file names.
   and ranking boundaries.
 - [Note Agent](./note-agent.md) — the in-editor agent: writing, rewriting,
   mentions, the streaming pipeline, invariants, and planned work.
+- [Authentication](./authentication.md) — sign-in methods, email
+  verification, Google linking, password reset, route guards, and server
+  configuration. Open follow-ups: [Auth hardening](./auth_hardening.md).
 - [Ambient Interface Spec](./ambient-interface-spec.md) — the implemented
   auth canvas treatment and remaining ambient-surface direction.
 
