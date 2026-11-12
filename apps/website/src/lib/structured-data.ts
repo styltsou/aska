@@ -11,7 +11,7 @@ export function landingStructuredData(site: URL, appUrl: string) {
 				'@id': `${origin}/#organization`,
 				name: product.name,
 				url: `${origin}/`,
-				logo: { '@type': 'ImageObject', url: `${origin}/favicon.svg` },
+				logo: { '@type': 'ImageObject', url: `${origin}/apple-touch-icon.png` },
 				sameAs: [product.github],
 			},
 			{
