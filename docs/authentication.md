@@ -20,21 +20,23 @@ the session.
 
 ### Sign up (email + password)
 
-1. `/signup` calls `signUp.email` with an absolute `callbackURL` of `/login`.
-2. The server creates the account, sends the verification link, and returns no
-   session (`requireEmailVerification: true`).
-3. The web app goes to `/verify-email?email=…` ("Check your email", with a
-   resend button and a 30s cooldown).
-4. Opening the link verifies the email and signs the user in
-   (`autoSignInAfterVerification`), then redirects to `/login`, whose guard sends
-   them on to onboarding or their workspace.
+1. `/signup` calls `signUp.email`.
+2. The server creates the account, mails a 6-digit code, and returns no session
+   (`requireEmailVerification: true`).
+3. The web app goes to `/verify-email?email=…`: a code input (shadcn
+   `InputOTP`) that submits when the sixth digit is typed, plus "Resend code"
+   with a 30s cooldown.
+4. A correct code verifies the email and signs the user in
+   (`autoSignInAfterVerification`) on the device that entered it, then the page
+   goes to `/login`, whose guard sends them on to onboarding or their workspace.
+   The code works from any device, so opening the email on a phone is fine.
 
 ### Sign in (email + password)
 
 - Correct password and verified email: session created, the user is sent to their
   destination.
-- Correct password, **unverified** email: no session. The server sends a fresh
-  verification link (`sendOnSignIn`) and returns `EMAIL_NOT_VERIFIED`; the web
+- Correct password, **unverified** email: no session. The server mails a fresh
+  code (`sendOnSignIn`) and returns `EMAIL_NOT_VERIFIED`; the web
   app goes to `/verify-email?email=…`.
 - Wrong password, unknown email, or an account with no password: the same generic
   "Invalid email or password" error, so nothing leaks about which accounts exist.
@@ -59,15 +61,24 @@ the session.
 
 ### Forgot and reset password
 
-1. "Forgot password?" (right-aligned on the Password label row of `/login`) goes
-   to `/forgot-password`, which calls `requestPasswordReset` and always says "If
-   an account exists…".
-2. The emailed link (valid 1 hour) opens `/reset-password?token=…`. The page sets
-   the new password, then goes to `/login`.
-3. A reset revokes all existing sessions (`revokeSessionsOnPasswordReset`). If the
-   account had no password (Google-only), the reset creates one.
-4. An invalid or expired link shows "Link expired" with a button to request a new
+1. "Forgot password?" (right-aligned under the password input on `/login`) goes to
+   `/forgot-password`, which calls `emailOtp.requestPasswordReset` and always
+   continues to `/reset-password?email=…`, whether or not the account exists.
+2. `/reset-password` takes the 6-digit code plus the new password and calls
+   `emailOtp.resetPassword`, then goes to `/login`. Its copy says "If an account
+   exists…" so nothing leaks.
+3. A reset revokes all existing sessions (`revokeSessionsOnPasswordReset`), marks
+   the email verified, and, if the account had no password (Google-only), creates
    one.
+4. A wrong, expired or used-up code shows the server's message; "Resend code" sends
+   a new one.
+
+### Codes (email OTP)
+
+Verification and reset use the Better Auth `emailOTP` plugin, not links. Codes are
+6 digits, valid 10 minutes, stored hashed, and invalidated after 3 wrong guesses.
+Sign-in and change-email codes are never delivered and `disableSignUp` is on, so
+the plugin's routes cannot be used as a passwordless login or to create accounts.
 
 ## Web routes and guards
 
@@ -76,13 +87,13 @@ the session.
 | `/login`           | signed out                                  | signed in → their destination   |
 | `/signup`          | signed out                                  | signed in → their destination   |
 | `/forgot-password` | signed out                                  | signed in → their destination   |
-| `/reset-password`  | signed out, URL has `token` or `error`      | no params → `/forgot-password`  |
+| `/reset-password`  | signed out, URL has `email`                 | no email → `/forgot-password`   |
 | `/verify-email`    | signed out, URL has `email`                 | no email → `/login`             |
 
 - Guards run in each route's `beforeLoad`, before any component mounts, using
   `redirectIfSignedIn` from `auth-flow.ts`.
-- `/login` and `/signup` use the two-column `AuthPageLayout`. The secondary
-  pages (`/verify-email`, `/forgot-password`, `/reset-password`) use the
+- `/login`, `/signup`, `/forgot-password` and `/reset-password` use the
+  two-column `AuthPageLayout` (form plus canvas mockup). `/verify-email` uses the
   standalone `CenteredAuthLayout`, like onboarding.
 - Every one of these routes must be listed in `SHELLLESS_ROUTE_IDS`
   (`apps/web/src/lib/root-shell.ts`) so the workspace app shell never renders
@@ -96,13 +107,13 @@ the session.
 | Setting                                           | Why                                                      |
 | ------------------------------------------------- | -------------------------------------------------------- |
 | `emailAndPassword.requireEmailVerification`       | no session until the email link is opened                |
-| `emailVerification.sendOnSignUp` / `sendOnSignIn` | link on signup and on every unverified sign-in           |
-| `emailVerification.autoSignInAfterVerification`   | opening the link signs the user in                       |
-| `emailAndPassword.sendResetPassword`              | reset email through `sendEmail`                          |
+| `emailVerification.sendOnSignUp` / `sendOnSignIn` | code on signup and on every unverified sign-in           |
+| `emailVerification.autoSignInAfterVerification`   | a correct code signs the user in                         |
+| `emailOTP` plugin                                 | codes for verification and reset, mailed via `sendEmail` |
 | `emailAndPassword.revokeSessionsOnPasswordReset`  | a reset signs out everywhere                             |
 | `account.accountLinking`                          | automatic linking as described above                     |
 | `rateLimit.storage: "database"`                   | counters in the `rate_limit` table; Lambda has no shared memory |
-| `rateLimit.customRules`                           | 3 requests per 60s on the two email-sending endpoints    |
+| `rateLimit.customRules` + plugin rules            | 3 requests per 60s on every email and code endpoint      |
 
 Callback and redirect URLs sent from the web app are always absolute, and must
 belong to `BETTER_AUTH_URL` or `CORS_ORIGINS` (trusted origins).

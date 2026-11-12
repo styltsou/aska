@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth";
-import { organization } from "better-auth/plugins";
+import { emailOTP, organization } from "better-auth/plugins";
 import { apiKey } from "@better-auth/api-key";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { and, eq } from "drizzle-orm";
@@ -74,8 +74,8 @@ function createAuth() {
       storage: "database",
       customRules: {
         // Endpoints that send email: keep them from being used to spam an inbox.
+        // The email OTP plugin adds its own 3 per 60s limits on its routes.
         "/send-verification-email": { window: 60, max: 3 },
-        "/request-password-reset": { window: 60, max: 3 },
       },
     },
     emailAndPassword: {
@@ -85,16 +85,9 @@ function createAuth() {
       // rejected with EMAIL_NOT_VERIFIED and re-sends the verification email.
       requireEmailVerification: true,
       // A reset means the old password may be compromised: sign out everywhere.
+      // Resets go through the email OTP plugin; there is no link-based reset
+      // (`sendResetPassword` is deliberately not configured).
       revokeSessionsOnPasswordReset: true,
-      sendResetPassword: async ({ user, url }) => {
-        await sendEmail({
-          to: user.email,
-          subject: "Reset your password",
-          text: `Click the link to reset your password: ${url}
-
-If you did not request this, you can ignore this email.`,
-        });
-      },
     },
     advanced: {
       useSecureCookies: true,
@@ -130,18 +123,44 @@ If you did not request this, you can ignore this email.`,
       },
     },
     emailVerification: {
-      sendVerificationEmail: async ({ user, url }) => {
-        await sendEmail({
-          to: user.email,
-          subject: "Verify your email address",
-          text: `Click the link to verify your email: ${url}`,
-        });
-      },
+      // The emailOTP plugin (overrideDefaultEmailVerification) supplies the
+      // sender, so sign-up and unverified sign-in mail a code, not a link.
       sendOnSignUp: true,
       sendOnSignIn: true,
       autoSignInAfterVerification: true,
     },
     plugins: [
+      emailOTP({
+        overrideDefaultEmailVerification: true,
+        otpLength: 6,
+        expiresIn: 600,
+        // Wrong guesses allowed per code before it is invalidated.
+        allowedAttempts: 3,
+        storeOTP: "hashed",
+        // We only use OTPs for verification and reset. Never let the plugin
+        // create accounts, and never deliver sign-in or change-email codes, so
+        // those routes cannot be used as a passwordless login.
+        disableSignUp: true,
+        sendVerificationOTP: async ({ email, otp, type }) => {
+          if (type === "email-verification") {
+            await sendEmail({
+              to: email,
+              subject: `${otp} is your Mnemee verification code`,
+              text: `Your Mnemee verification code is ${otp}
+
+It expires in 10 minutes. If you did not request it, you can ignore this email.`,
+            });
+          } else if (type === "forget-password") {
+            await sendEmail({
+              to: email,
+              subject: `${otp} is your Mnemee password reset code`,
+              text: `Your Mnemee password reset code is ${otp}
+
+It expires in 10 minutes. If you did not request it, you can ignore this email.`,
+            });
+          }
+        },
+      }),
       organization({
         allowUserToCreateOrganization: true,
         creatorRole: "owner",

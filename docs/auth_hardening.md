@@ -9,18 +9,19 @@ No automated coverage yet. Add:
 
 - Route guards: signed-in users are redirected away from `/login`, `/signup`,
   `/forgot-password`, `/reset-password`, `/verify-email`; `/verify-email` with no
-  `email` goes to `/login`; `/reset-password` with no token or error goes to
+  `email` goes to `/login`; `/reset-password` with no `email` goes to
   `/forgot-password`.
 - Server (integration): linking Google into an unverified credential account
   deletes its password and sessions, and into a verified one keeps them;
-  unverified sign-in returns `EMAIL_NOT_VERIFIED` and sends a mail; a reset
-  revokes sessions; the email rate limits trigger.
+  unverified sign-in returns `EMAIL_NOT_VERIFIED` and mails a code; a reset
+  revokes sessions; a code dies after 3 wrong guesses; sign-in OTP is not
+  deliverable; the email rate limits trigger.
 
 ## Error mapping on `/login` (low)
 
 `google-sign-in.tsx` shows "Google sign-in could not be completed" for any
 unrecognised `?error=` value, including non-Google ones. Map known codes
-(`token_expired`, `invalid_token`, `account_not_linked`) explicitly and show a
+(`account_not_linked`, access denied) explicitly and show a
 neutral message otherwise.
 
 ## Hint for password sign-in after a Google link (low)
@@ -41,7 +42,7 @@ Limits are keyed by IP. Confirm Better Auth reads the real client IP behind
 CloudFront / API Gateway (`advanced.ipAddress.ipAddressHeaders`, default
 `x-forwarded-for`). If it reads the wrong value, all users share one limit (or
 none). Check after deploy: hit a limited endpoint (for example
-`/request-password-reset`, 3 per 60s) from two different networks and confirm one
+`/email-otp/request-password-reset`, 3 per 60s) from two different networks and confirm one
 does not trip the other's limit, and look at the stored `rate_limit.key` values in
 Postgres to see which IP is recorded.
 
@@ -57,4 +58,3 @@ Redis and set `rateLimit.storage` to `"secondary-storage"`. Once done, drop the
 
 - 2FA or passkeys for sensitive accounts.
 - Notify the user by email when their password is changed or reset.
-- Referrer-Policy on auth pages so reset tokens in the URL are never leaked.
