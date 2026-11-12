@@ -11,7 +11,7 @@ import {
   MentionGlyph,
   mentionSwatchBackground,
   NOTE_MENTION_CHIP_CLASS,
-} from "@/components/board/note-editor/mentions/note-mentions";
+} from "@/components/board/note-editor/mentions/note-mention-visuals";
 import { cn } from "@/lib/utils";
 
 /**

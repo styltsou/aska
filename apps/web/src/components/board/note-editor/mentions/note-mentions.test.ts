@@ -1,3 +1,8 @@
+import {
+  NOTE_MENTION_CHIP_CLASS,
+  NOTE_MENTION_CHIP_HOVER_CLASS,
+  MentionPillBody,
+} from "./note-mention-visuals";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -9,10 +14,7 @@ import Suggestion from "@tiptap/suggestion";
 
 import {
   AssetMention,
-  NOTE_MENTION_CHIP_CLASS,
-  NOTE_MENTION_CHIP_HOVER_CLASS,
   NoteMentionProvider,
-  MentionPillBody,
   createMentionScopeQuery,
   createMentionsExtension,
   filterRecentMentionTargets,
