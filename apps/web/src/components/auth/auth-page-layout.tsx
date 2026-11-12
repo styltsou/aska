@@ -37,7 +37,13 @@ export function AuthPageLayout({
         </p>
       </section>
       <section className="relative col-start-1 row-start-1 grid min-h-[100svh] content-center p-[clamp(2rem,5vw,5rem)] max-[62rem]:p-[5rem_1.25rem_2rem]">
-        <BrandLogo className="absolute top-[1rem] left-[1rem] max-[62rem]:top-6 max-[62rem]:left-6" />
+        <a
+          aria-label="Mnemee home"
+          className="absolute top-[1rem] left-[1rem] cursor-pointer max-[62rem]:top-6 max-[62rem]:left-6"
+          href="https://mnemee.space"
+        >
+          <BrandLogo />
+        </a>
         <div className="w-[min(100%,23rem)] justify-self-center">
           {children}
         </div>
