@@ -13,6 +13,13 @@ describe("root shell routing", () => {
     expect(shouldRenderWithoutAppShell(undefined, "/login")).toBe(true);
     expect(shouldRenderWithoutAppShell(undefined, "/signup/")).toBe(true);
     expect(shouldRenderWithoutAppShell(undefined, "/onboarding")).toBe(true);
+    expect(shouldRenderWithoutAppShell(undefined, "/verify-email")).toBe(true);
+    expect(shouldRenderWithoutAppShell(undefined, "/forgot-password")).toBe(
+      true,
+    );
+    expect(shouldRenderWithoutAppShell(undefined, "/reset-password")).toBe(
+      true,
+    );
   });
 
   it("uses the committed match while a destination is pending", () => {

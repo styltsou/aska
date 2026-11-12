@@ -156,7 +156,7 @@ function LoginPage() {
             autoComplete="current-password"
             labelAction={
               <Link
-                className="text-xs text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground"
+                className="text-sm text-muted-foreground transition-colors duration-150 ease-[ease] hover:text-foreground"
                 to="/forgot-password"
               >
                 Forgot password?
@@ -183,7 +183,7 @@ function LoginPage() {
         <p className="mt-6 text-center text-sm text-muted-foreground">
           New here?{" "}
           <Link
-            className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
+            className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current"
             to="/signup"
           >
             Create an account
