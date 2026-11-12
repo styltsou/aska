@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -10,15 +10,20 @@ import {
 export function PasswordField({
   label,
   id,
+  labelAction,
   ...props
 }: Omit<ComponentProps<typeof InputGroupInput>, "type" | "id"> & {
   label: string;
   id: string;
+  labelAction?: ReactNode;
 }) {
   const [visible, setVisible] = useState(false);
   return (
     <Field className="flex flex-col gap-2 space-y-0">
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <div className="flex items-center justify-between gap-3">
+        <FieldLabel htmlFor={id}>{label}</FieldLabel>
+        {labelAction}
+      </div>
       <InputGroup className="h-10">
         <InputGroupInput
           {...props}

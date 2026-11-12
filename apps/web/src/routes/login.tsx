@@ -154,6 +154,14 @@ function LoginPage() {
             label="Password"
             id="password"
             autoComplete="current-password"
+            labelAction={
+              <Link
+                className="text-xs text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground hover:decoration-foreground"
+                to="/forgot-password"
+              >
+                Forgot password?
+              </Link>
+            }
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}

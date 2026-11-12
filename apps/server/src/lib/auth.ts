@@ -45,6 +45,15 @@ function createAuth() {
       // No session until the email is verified. Signing in unverified is
       // rejected with EMAIL_NOT_VERIFIED and re-sends the verification email.
       requireEmailVerification: true,
+      sendResetPassword: async ({ user, url }) => {
+        await sendEmail({
+          to: user.email,
+          subject: "Reset your password",
+          text: `Click the link to reset your password: ${url}
+
+If you did not request this, you can ignore this email.`,
+        });
+      },
     },
     advanced: {
       useSecureCookies: true,
