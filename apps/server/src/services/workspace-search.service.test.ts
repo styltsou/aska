@@ -76,6 +76,87 @@ const imageRow = {
 };
 
 describe("WorkspaceSearchService", () => {
+  it("shows excerpts only for note and link content matches", async () => {
+    const rows = [
+      {
+        ...imageRow,
+        assetId: 1,
+        assetType: "note",
+        title: "Meeting",
+        noteContent: `${"Context ".repeat(30)}needle and more`,
+      },
+      {
+        ...imageRow,
+        assetId: 2,
+        assetType: "note",
+        title: "Needle",
+        noteContent: "needle in the content",
+      },
+      {
+        ...imageRow,
+        assetId: 3,
+        assetType: "link",
+        title: "Article",
+        linkDescription: "A needle in a description",
+      },
+      {
+        ...imageRow,
+        assetId: 4,
+        assetType: "image",
+        title: "Photo",
+        imageAlt: "needle",
+      },
+      {
+        ...imageRow,
+        assetId: 5,
+        assetType: "link",
+        title: "Video",
+        linkDescription: "needle",
+        linkResolverKey: "youtube-oembed",
+        linkResourceKind: "video",
+      },
+      {
+        ...imageRow,
+        assetId: 6,
+        assetType: "link",
+        title: "Other",
+        linkDescription: "Unrelated description",
+      },
+      {
+        ...imageRow,
+        assetId: 7,
+        assetType: "note",
+        title: "Early match",
+        noteContent: `${"Context ".repeat(6)}needle and more`,
+      },
+    ];
+    selectMock.mockImplementationOnce(() => queryReturning(rows));
+    selectMock.mockImplementationOnce(() => queryReturning([]));
+    selectMock.mockImplementationOnce(() => queryReturning([]));
+    const service = new WorkspaceSearchService({
+      objectStorageService: {
+        createPresignedGetUrls: vi.fn().mockResolvedValue(new Map()),
+      } as unknown as IObjectStorageService,
+    });
+
+    const { results } = await service.search("workspace-1", {
+      q: "needle",
+      limit: 20,
+      recent: [],
+    });
+    const snippets = Object.fromEntries(
+      results.map((result) => [result.id, result.snippet]),
+    );
+    expect(snippets["note-1"]).toContain("needle");
+    expect(snippets["note-1"]).toMatch(/^…/);
+    expect(snippets["note-2"]).toBeNull();
+    expect(snippets["link-3"]).toBe("A needle in a description");
+    expect(snippets["image-4"]).toBeNull();
+    expect(snippets["link-5"]).toBeNull();
+    expect(snippets["link-6"]).toBeNull();
+    expect(snippets["note-7"]).toBe(`${"Context ".repeat(6)}needle and more`);
+  });
+
   it("returns a signed preview URL and keeps blur data as a placeholder", async () => {
     selectMock.mockImplementationOnce(() => queryReturning([imageRow]));
     selectMock.mockImplementationOnce(() => queryReturning([]));

@@ -302,7 +302,7 @@ async function searchAssets(
       id: `${type}-${row.assetId}`,
       type,
       label: resultLabel,
-      snippet: getAssetSnippet(row, query),
+      snippet: getAssetSnippet(row, resultLabel, query, isVideo),
       locationLabel:
         row.pathFolderNames?.at(-1) ?? row.collectionName ?? "Inbox",
       location,
@@ -476,35 +476,43 @@ async function searchCollections(
 
 function getAssetSnippet(
   row: {
+    assetType: string;
     noteContent: string | null;
-    imageAlt: string | null;
-    imageNote: string | null;
     linkDescription: string | null;
     linkNote: string | null;
-    linkSiteName: string | null;
   },
+  label: string,
   query: string,
+  isVideo: boolean,
 ): string | null {
-  const candidates = [
-    row.noteContent,
-    row.imageNote,
-    row.imageAlt,
-    row.linkNote,
-    row.linkDescription,
-    row.linkSiteName,
-  ];
-  const selected =
-    candidates.find(
-      (value) =>
-        value && query && value.toLowerCase().includes(query.toLowerCase()),
-    ) ?? candidates.find(Boolean);
-  if (!selected) return null;
-  return selected
-    .replace(/^---[\s\S]*?---\s*/u, "")
-    .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, " ")
-    .replace(/!?(?:\[([^\]]*)\])\([^)]*\)/g, "$1")
-    .replace(/[#>*_~`|\]-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 160);
+  const needle = query.toLowerCase();
+  if (!needle || label.toLowerCase().includes(needle) || isVideo) return null;
+
+  const candidates =
+    row.assetType === "note"
+      ? [row.noteContent]
+      : row.assetType === "link"
+        ? [row.linkNote, row.linkDescription]
+        : [];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const text = candidate
+      .replace(/^---[\s\S]*?---\s*/u, "")
+      .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, " ")
+      .replace(/!?(?:\[([^\]]*)\])\([^)]*\)/g, "$1")
+      .replace(/[#>*_~`|\]-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const matchIndex = text.toLowerCase().indexOf(needle);
+    if (matchIndex < 0) continue;
+    // Keep the beginning when the match is likely to fit in the palette row.
+    const start =
+      matchIndex + query.length <= 60 ? 0 : Math.max(0, matchIndex - 40);
+    const end = Math.min(
+      text.length,
+      Math.max(start + 160, matchIndex + query.length),
+    );
+    return `${start ? "…" : ""}${text.slice(start, end)}${end < text.length ? "…" : ""}`;
+  }
+  return null;
 }

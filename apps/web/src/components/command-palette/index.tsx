@@ -973,7 +973,10 @@ function WorkspaceSearchResults({
               {result.isVideo ? <YouTubeSearchResultIcon /> : null}
               <span className="truncate">{result.label}</span>
             </span>
-            {result.snippet ? (
+            {query.trim() &&
+            (result.type === "note" ||
+              (result.type === "link" && !result.isVideo)) &&
+            result.snippet ? (
               <span className="block truncate text-xs text-muted-foreground">
                 {result.snippet}
               </span>
