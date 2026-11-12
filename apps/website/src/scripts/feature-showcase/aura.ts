@@ -1,14 +1,7 @@
 /*
- * The grain aura behind each bento mock-up: its colour follows the demo, and it grows in and drifts with scroll.
+ * The grain aura behind each bento mock-up follows the demo's colour.
  */
 export const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-const auras = Array.from(document.querySelectorAll<HTMLElement>('.feature__aura'));
-
-const smooth = (a: number, b: number, x: number) => {
-	const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
-	return t * t * (3 - 2 * t);
-};
 
 /** The aura belonging to the panel `from` sits in. */
 export const auraOf = (from: Element) => from.closest('.feature')?.querySelector<HTMLElement>('.feature__aura') ?? null;
@@ -16,25 +9,6 @@ export const auraOf = (from: Element) => from.closest('.feature')?.querySelector
 export const setAura = (from: Element, color: string) => {
 	auraOf(from)?.style.setProperty('--aura-c', color);
 };
-
-/** The aura grows in as its panel rises into view and drifts slower than the mock-up, so it trails behind it. */
-export function updateAuras() {
-	const height = window.innerHeight;
-	const rects = auras.map((aura) => aura.parentElement!.getBoundingClientRect());
-	auras.forEach((aura, i) => {
-		if (motionPreference.matches) {
-			['--aura-x', '--aura-y', '--aura-s', '--aura-o'].forEach((name) => aura.style.removeProperty(name));
-			return;
-		}
-		const rect = rects[i];
-		const p = Math.max(0, Math.min(1, (height - rect.top) / (height + rect.height)));
-		const lead = .5 - p;
-		aura.style.setProperty('--aura-s', (.78 + .3 * smooth(0, .5, p)).toFixed(3));
-		aura.style.setProperty('--aura-x', (lead * -55).toFixed(1));
-		aura.style.setProperty('--aura-y', (lead * 120).toFixed(1));
-		aura.style.setProperty('--aura-o', (smooth(0, .22, p) * (1 - .6 * smooth(.8, 1, p))).toFixed(3));
-	});
-}
 
 // Reads an image's dominant colour (weighted toward the saturated pixels, so a grey wall doesn't win over a red door).
 const swatchCache = new WeakMap<HTMLImageElement, string>();

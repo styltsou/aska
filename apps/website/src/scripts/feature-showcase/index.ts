@@ -6,10 +6,8 @@
 import { motionPreference } from './aura';
 import { initColorDemo } from './color-demo';
 import { initNoteDemo } from './note-demo';
-import { initScrollVisuals } from './scroll-visuals';
 import { initSearchDemo, initSearchTint } from './search-demo';
 
-initScrollVisuals();
 initSearchTint();
 
 if (!motionPreference.matches) {

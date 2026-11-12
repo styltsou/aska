@@ -12,13 +12,12 @@
 
 	/*
 	 * Aura: a diffused, grainy wash of the demo's current colour behind each mock-up (the way a music player tints its
-	 * background from the artwork). The script sets `--aura-c` on the layer (a registered colour, so it cross-fades) and
-	 * scroll drives `--aura-x/-y/-s/-o`, so the wash grows in and drifts a little slower than the mock-up it sits behind.
+	 * background from the artwork). The script sets `--aura-c` on the layer (a registered colour, so it cross-fades).
 	 */
 	@property --aura-c { syntax: '<color>'; inherits: true; initial-value: #8d8d88; }
 	.features { --aura-glow: 12%; --aura-grain: .42; --aura-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 -1.15'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 	html[data-theme='dark'] .features { --aura-glow: 11%; --aura-grain: .24; }
-	.feature__aura { position: absolute; inset: -8% -6%; z-index: -1; pointer-events: none; --aura-c: #8d8d88; opacity: var(--aura-o, 1); scale: var(--aura-s, 1); translate: calc(var(--aura-x, 0) * 1px) calc(var(--aura-y, 0) * 1px); transition: --aura-c 1100ms cubic-bezier(.23, 1, .32, 1); }
+	.feature__aura { position: absolute; inset: -8% -6%; z-index: -1; pointer-events: none; --aura-c: #8d8d88; transition: --aura-c 1100ms cubic-bezier(.23, 1, .32, 1); }
 	.feature--semantic .feature__aura { --aura-c: #a79c8e; --aura-at: 38% 58%; }
 	.feature--color .feature__aura { --aura-c: #22c55e; --aura-at: 40% 52%; }
 	.feature--notes .feature__aura { --aura-c: #9a96a8; --aura-at: 44% 52%; }
