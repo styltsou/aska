@@ -195,7 +195,7 @@ Request schema and limits:
 the eval baseline (`--pipeline baseline`).
 
 **`agent/note-model.ts`.** `createNoteModel()` is the only code that knows the
-provider (Gemini `gemini-2.5-flash`, `maxRetries: 1` so usage-limit errors
+provider (Gemini `gemini-3.5-flash` (moved from `gemini-2.5-flash`, whose Gemini API shutdown date was 2026-10-16), `maxRetries: 1` so usage-limit errors
 surface quickly). Everything downstream accepts any LangChain chat model, so
 switching providers means changing this function and its secret.
 
