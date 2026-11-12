@@ -81,8 +81,8 @@ if (hero && media && win && backdrop) {
 			startTop,
 			boxH,
 			boxW,
-			startX: isCompact ? lerp(boxW * .05, (boxW - startW) / 2, clamp((boxW - 360) / 300)) : boxW * .545,
-			startY: isCompact ? startTop + 22 : Math.max(96, boxH * .14),
+			startX: isCompact ? (startW <= boxW ? (boxW - startW) / 2 : boxW * .05) : boxW * .545,
+			startY: isCompact ? startTop + (startW * RATIO <= boxH - startTop ? (boxH - startTop - startW * RATIO) / 2 : 22) : Math.max(96, boxH * .14),
 			startW,
 			endX: (boxW - endW) / 2,
 			endY: isCompact ? (boxH - endW * RATIO) / 2 : DROP + (boxH - DROP - endW * RATIO) / 2,
@@ -94,6 +94,7 @@ if (hero && media && win && backdrop) {
 		win.style.left = '0px';
 		win.style.top = '0px';
 		win.style.width = `${endW}px`;
+		workspace?.dispatchEvent(new Event('demo:resize'));
 	};
 
 	// Phones: the mock-up is wider than the panel, so its resting spot pans to keep the demo's focus point centred.
@@ -113,6 +114,8 @@ if (hero && media && win && backdrop) {
 			const centred = clamp((geo.boxW - 360) / 300);
 			endX = lerp(endX, geo.endX, centred);
 			endY = lerp(endY, geo.endY, centred);
+			if (geo.endW <= geo.boxW) endX = geo.endX;
+			if (geo.endW * RATIO <= geo.boxH) endY = geo.endY;
 		}
 		const scale = lerp(geo.startW / geo.endW, 1, lastT);
 		win.style.transform = `translate3d(${lerp(geo.startX, endX, lastT).toFixed(2)}px, ${lerp(geo.startY, endY, lastT).toFixed(2)}px, 0) scale(${scale.toFixed(4)})`;
@@ -180,11 +183,13 @@ if (hero && media && win && backdrop) {
 		if (!frame) frame = requestAnimationFrame(render);
 	};
 	const remeasure = () => {
-		geo = null;
+		if (!wide.matches && !compact.matches) reset();
+		else geo = null;
 		schedule();
 	};
 
 	render();
+	win.dataset.positioned = '';
 	window.addEventListener('scroll', schedule, { passive: true });
 	window.addEventListener('resize', remeasure);
 	wide.addEventListener('change', remeasure);

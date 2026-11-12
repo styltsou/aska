@@ -36,7 +36,13 @@ for (const root of document.querySelectorAll<HTMLElement>('.hero-workspace')) {
 	const caretBody = q('[data-demo-caret-body]');
 	if (!app || !drag || !grab || !added || !text || !textContent || !note || !noteTitle || !noteBody || !caretTitle || !caretBody) continue;
 
-	new ResizeObserver(() => app.style.setProperty('--app-scale', String(root.clientWidth / APP_W))).observe(root);
+	const scaleApp = () => {
+		app.style.setProperty('--app-scale', String(root.clientWidth / APP_W));
+		root.dataset.scaled = '';
+	};
+	scaleApp();
+	new ResizeObserver(scaleApp).observe(root);
+	root.addEventListener('demo:resize', scaleApp);
 
 	// Canvas units → app px (the canvas sits at 80% zoom, offset inside the board, which sits right of the sidebar).
 	const toApp = (p: Point): Point => ({ x: 240 - 12 + p.x * .8, y: 56 + 4 + p.y * .8 });
