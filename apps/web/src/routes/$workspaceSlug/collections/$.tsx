@@ -178,19 +178,17 @@ function CollectionPage() {
     ?.collections.find((c) => c.slug === collectionSlug)?.name;
 
   useEffect(() => {
-    const parts: string[] = [];
-    if (data) {
-      parts.push(data.collection.name);
-      if (data.breadcrumbs.length > 0) {
-        parts.unshift(data.breadcrumbs.at(-1)!.name);
-      }
-    } else if (cachedCollectionName) {
-      parts.push(cachedCollectionName);
-    }
-    if (parts.length > 0) {
-      document.title = `${parts.join(" · ")} | Mnemee`;
-    }
-  }, [data, cachedCollectionName]);
+    const matchesLocation =
+      data?.collection.slug === collectionSlug &&
+      data.breadcrumbs.map((breadcrumb) => breadcrumb.slug).join("/") ===
+        folderPath;
+    const name = folderPath
+      ? (matchesLocation ? data.breadcrumbs.at(-1)?.name : undefined) ||
+        "Folder"
+      : (matchesLocation ? data.collection.name : cachedCollectionName) ||
+        "Collection";
+    document.title = `${name} | Mnemee`;
+  }, [data, cachedCollectionName, collectionSlug, folderPath]);
 
   const nodes = data?.nodes ?? EMPTY_COLLECTION_NODES;
   const activeFolder = data?.breadcrumbs.at(-1);
