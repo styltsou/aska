@@ -1,6 +1,12 @@
 import { useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from "@tanstack/react-router";
 import { KeyRoundIcon, LoaderCircleIcon } from "lucide-react";
+import { AuthPending } from "@/components/auth/auth-pending";
 import { CenteredAuthLayout } from "@/components/auth/centered-auth-layout";
 import { PasswordField } from "@/components/auth/password-field";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -14,7 +20,15 @@ export const Route = createFileRoute("/reset-password")({
     token: typeof search.token === "string" ? search.token : undefined,
     error: typeof search.error === "string" ? search.error : undefined,
   }),
-  beforeLoad: redirectIfSignedIn,
+  beforeLoad: async ({ search }) => {
+    await redirectIfSignedIn();
+    // Reached only through an emailed link, which carries a token or error.
+    if (!search.token && !search.error) {
+      throw redirect({ to: "/forgot-password", replace: true });
+    }
+  },
+  pendingComponent: AuthPending,
+  pendingMs: 0,
   head: () => ({
     meta: [{ title: "Reset password | Mnemee" }],
   }),

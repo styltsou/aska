@@ -39,12 +39,24 @@ function createAuth() {
         // owner signs in with Google. The web app tells such users to verify.
       },
     },
+    rateLimit: {
+      // Lambda instances don't share memory, so the default in-memory counters
+      // would not actually limit anything. Keep them in Postgres.
+      storage: "database",
+      customRules: {
+        // Endpoints that send email: keep them from being used to spam an inbox.
+        "/send-verification-email": { window: 60, max: 3 },
+        "/request-password-reset": { window: 60, max: 3 },
+      },
+    },
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,
       // No session until the email is verified. Signing in unverified is
       // rejected with EMAIL_NOT_VERIFIED and re-sends the verification email.
       requireEmailVerification: true,
+      // A reset means the old password may be compromised: sign out everywhere.
+      revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
         await sendEmail({
           to: user.email,

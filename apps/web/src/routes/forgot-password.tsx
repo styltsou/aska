@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoaderCircleIcon, MailIcon } from "lucide-react";
+import { AuthPending } from "@/components/auth/auth-pending";
 import { CenteredAuthLayout } from "@/components/auth/centered-auth-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,8 @@ import { redirectIfSignedIn } from "@/lib/auth-flow";
 
 export const Route = createFileRoute("/forgot-password")({
   beforeLoad: redirectIfSignedIn,
+  pendingComponent: AuthPending,
+  pendingMs: 0,
   head: () => ({
     meta: [{ title: "Forgot password | Mnemee" }],
   }),

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { LoaderCircleIcon, UserPlusIcon } from "lucide-react";
+import { AuthPending } from "@/components/auth/auth-pending";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import { clearLastLoginMethod } from "@/lib/last-login-method";
 
 export const Route = createFileRoute("/signup")({
   beforeLoad: redirectIfSignedIn,
+  pendingComponent: AuthPending,
+  pendingMs: 0,
   head: () => ({
     meta: [{ title: "Create account | Mnemee" }],
   }),

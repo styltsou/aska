@@ -6,6 +6,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { LoaderCircleIcon, LogInIcon } from "lucide-react";
+import { AuthPending } from "@/components/auth/auth-pending";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,8 @@ export const Route = createFileRoute("/login")({
       throw redirect(destination);
     }
   },
+  pendingComponent: AuthPending,
+  pendingMs: 0,
   head: () => ({
     meta: [{ title: "Sign in | Mnemee" }],
   }),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { LoaderCircleIcon, MailIcon } from "lucide-react";
+import { AuthPending } from "@/components/auth/auth-pending";
 import { CenteredAuthLayout } from "@/components/auth/centered-auth-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,16 @@ export const Route = createFileRoute("/verify-email")({
     email: typeof search.email === "string" ? search.email : undefined,
     reason: search.reason === "google" ? "google" : undefined,
   }),
-  beforeLoad: redirectIfSignedIn,
+  beforeLoad: async ({ search }) => {
+    await redirectIfSignedIn();
+    // Only reachable from signup, an unverified sign-in, or the Google
+    // not-linked redirect, all of which set one of these.
+    if (!search.email && !search.reason) {
+      throw redirect({ to: "/login", replace: true });
+    }
+  },
+  pendingComponent: AuthPending,
+  pendingMs: 0,
   head: () => ({
     meta: [{ title: "Verify your email | Mnemee" }],
   }),
