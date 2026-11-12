@@ -40,11 +40,14 @@ export function GoogleSignIn({
 }) {
   const [pending, setPending] = useState(false);
   const [lastUsed] = useState(() => showLastUsed && wasGoogleLastUsed());
-  const [error, setError] = useState<string | null>(() =>
-    new URLSearchParams(window.location.search).has("error")
-      ? "Google sign-in could not be completed. If you already have an account, verify its email or connect Google in Account settings."
-      : null,
-  );
+  const [error, setError] = useState<string | null>(() => {
+    const code = new URLSearchParams(window.location.search).get("error");
+    if (!code) return null;
+    if (code === "token_expired" || code === "invalid_token") {
+      return "That verification link has expired. Sign in below to get a new one.";
+    }
+    return "Google sign-in could not be completed. Please try again.";
+  });
 
   async function handleSignIn() {
     setPending(true);
@@ -67,7 +70,7 @@ export function GoogleSignIn({
       const result = await signIn.social({
         provider: "google",
         callbackURL: callbackURL.href,
-        errorCallbackURL: window.location.origin + "/login?error=google",
+        errorCallbackURL: window.location.origin + "/login",
       });
       if (result.error) {
         clearGoogleSignInAttempt();

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
@@ -20,6 +21,11 @@ import { Route as WorkspaceSlugInboxSplatRouteImport } from './routes/$workspace
 import { Route as WorkspaceSlugCollectionsSplatRouteImport } from './routes/$workspaceSlug/collections/$'
 import { Route as WorkspaceSlugAssetAssetIdRouteImport } from './routes/$workspaceSlug/asset.$assetId'
 
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRouteWithChildren
   '/$workspaceSlug/': typeof WorkspaceSlugIndexRoute
   '/$workspaceSlug/asset/$assetId': typeof WorkspaceSlugAssetAssetIdRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRouteWithChildren
   '/$workspaceSlug': typeof WorkspaceSlugIndexRoute
   '/$workspaceSlug/asset/$assetId': typeof WorkspaceSlugAssetAssetIdRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/$workspaceSlug/inbox': typeof WorkspaceSlugInboxRouteWithChildren
   '/$workspaceSlug/': typeof WorkspaceSlugIndexRoute
   '/$workspaceSlug/asset/$assetId': typeof WorkspaceSlugAssetAssetIdRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/signup'
+    | '/verify-email'
     | '/$workspaceSlug/inbox'
     | '/$workspaceSlug/'
     | '/$workspaceSlug/asset/$assetId'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/signup'
+    | '/verify-email'
     | '/$workspaceSlug/inbox'
     | '/$workspaceSlug'
     | '/$workspaceSlug/asset/$assetId'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/onboarding'
     | '/signup'
+    | '/verify-email'
     | '/$workspaceSlug/inbox'
     | '/$workspaceSlug/'
     | '/$workspaceSlug/asset/$assetId'
@@ -153,10 +165,18 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   SignupRoute: typeof SignupRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   SignupRoute: SignupRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

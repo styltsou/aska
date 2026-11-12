@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  createFileRoute,
-  Link,
-  useNavigate,
-  useRouter,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { LoaderCircleIcon, UserPlusIcon } from "lucide-react";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
@@ -25,8 +20,6 @@ export const Route = createFileRoute("/signup")({
 
 function SignupPage() {
   const navigate = useNavigate();
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -48,6 +41,7 @@ function SignupPage() {
       name: email.split("@")[0] ?? email,
       email,
       password,
+      callbackURL: new URL("/login", window.location.origin).href,
     });
 
     if (error) {
@@ -56,10 +50,10 @@ function SignupPage() {
       return;
     }
 
+    // No session exists until the email is verified.
     clearAuthStateCache();
     clearLastLoginMethod();
-    await router.invalidate();
-    void navigate({ to: "/onboarding", replace: true });
+    void navigate({ to: "/verify-email", search: { email }, replace: true });
   }
 
   return (

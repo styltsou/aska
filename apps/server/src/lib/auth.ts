@@ -30,10 +30,21 @@ function createAuth() {
             },
           }
         : {},
-    account: { accountLinking: { enabled: true } },
+    account: {
+      accountLinking: {
+        enabled: true,
+        // Keep the default (requireLocalEmailVerified: true). Linking Google
+        // into an unverified email+password account would let whoever
+        // pre-registered that address keep their password after the real
+        // owner signs in with Google. The web app tells such users to verify.
+      },
+    },
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,
+      // No session until the email is verified. Signing in unverified is
+      // rejected with EMAIL_NOT_VERIFIED and re-sends the verification email.
+      requireEmailVerification: true,
     },
     advanced: {
       useSecureCookies: true,
@@ -66,6 +77,8 @@ function createAuth() {
         });
       },
       sendOnSignUp: true,
+      sendOnSignIn: true,
+      autoSignInAfterVerification: true,
     },
     plugins: [
       organization({

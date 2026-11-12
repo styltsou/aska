@@ -22,12 +22,14 @@ import {
 type AuthSearch = {
   redirect?: string;
   google?: "success";
+  error?: string;
 };
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search): AuthSearch => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
     google: search.google === "success" ? "success" : undefined,
+    error: typeof search.error === "string" ? search.error : undefined,
   }),
   beforeLoad: async ({ search }) => {
     const destination = await getSignedInDestination();
@@ -35,6 +37,13 @@ export const Route = createFileRoute("/login")({
       completeGoogleSignIn(destination.to !== "/login");
     } else {
       clearGoogleSignInAttempt();
+    }
+    if (destination.to === "/login" && search.error?.includes("not_linked")) {
+      throw redirect({
+        to: "/verify-email",
+        search: { reason: "google" },
+        replace: true,
+      });
     }
     if (destination.to !== "/login") {
       if (
@@ -65,12 +74,22 @@ function LoginPage() {
     setError(null);
     setIsSubmitting(true);
 
+    const verifyCallback = new URL("/login", window.location.origin);
+    if (search.redirect?.startsWith("/") && !search.redirect.startsWith("//")) {
+      verifyCallback.searchParams.set("redirect", search.redirect);
+    }
     const { error } = await signIn.email({
       email,
       password,
+      callbackURL: verifyCallback.href,
     });
 
     if (error) {
+      if (error.code === "EMAIL_NOT_VERIFIED") {
+        // The server has already sent a fresh verification link.
+        void navigate({ to: "/verify-email", search: { email } });
+        return;
+      }
       setError(error.message ?? "Unable to sign in.");
       setIsSubmitting(false);
       return;
