@@ -26,7 +26,7 @@ export function PasswordField({
           className="h-10 px-3"
           type={visible ? "text" : "password"}
         />
-        <InputGroupAddon align="end">
+        <InputGroupAddon align="end" className="pl-1.5">
           <button
             aria-label={visible ? "Hide password" : "Show password"}
             className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
