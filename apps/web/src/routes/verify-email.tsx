@@ -69,7 +69,7 @@ function VerifyEmailPage() {
       <div aria-labelledby="verify-title">
         <div className="space-y-1.5">
           <h1 className="text-xl font-semibold" id="verify-title">
-            Check your email
+            Verify your email
           </h1>
           <p className="text-sm text-muted-foreground">
             <>
@@ -86,7 +86,7 @@ function VerifyEmailPage() {
             disabled={isSending || cooldown > 0}
             onClick={() => void resend()}
             type="button"
-            variant="outline"
+            variant={cooldown > 0 ? "outline" : "default"}
           >
             {isSending ? (
               <LoaderCircleIcon className="animate-spin" />
