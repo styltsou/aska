@@ -124,3 +124,22 @@ belong to `BETTER_AUTH_URL` or `CORS_ORIGINS` (trusted origins).
   the right layout; add it to `SHELLLESS_ROUTE_IDS` and `root-shell.test.ts`.
 - Add a server option or hook: keep it in `auth.ts` and document it here.
 - Open follow-ups live in [Auth hardening](./auth_hardening.md).
+
+## Transactional emails
+
+Templates are React Email components in `apps/server/src/emails/`: a shared
+`EmailLayout` (logo, white card, footer), a `CodeEmail` body, and one file per
+template (`verification-code.tsx`, `reset-password-code.tsx`). `buildOtpEmail`
+(`otp-emails.tsx`) maps an OTP type to its subject and component; `sendEmail`
+(`lib/email.ts`) renders HTML plus a plain-text part and sends through Resend.
+
+- Preview and edit live with `bun run --cwd apps/server email:dev`
+  (http://localhost:3010).
+- These files use React, not the server's default Hono JSX, so each starts with
+  `/** @jsxImportSource react */`.
+- The logo is a PNG at `apps/website/public/email/mnemee-logo.png`, served at
+  `https://mnemee.space/email/mnemee-logo.png` (email clients block SVG). It ships
+  with the website deploy, which is separate from the app's; deploy the website
+  before relying on a new or moved logo.
+- Colours are inline and light-only on purpose: clients recolour dark-mode emails
+  unpredictably.

@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { env } from "@/config/env";
 import { db } from "@/db";
 import * as schema from "@/db/schema";
+import { buildOtpEmail, OTP_EXPIRES_IN_SECONDS } from "@/emails/otp-emails";
 import { sendEmail } from "@/lib/email";
 
 /**
@@ -133,7 +134,7 @@ function createAuth() {
       emailOTP({
         overrideDefaultEmailVerification: true,
         otpLength: 6,
-        expiresIn: 600,
+        expiresIn: OTP_EXPIRES_IN_SECONDS,
         // Wrong guesses allowed per code before it is invalidated.
         allowedAttempts: 3,
         storeOTP: "hashed",
@@ -142,23 +143,8 @@ function createAuth() {
         // those routes cannot be used as a passwordless login.
         disableSignUp: true,
         sendVerificationOTP: async ({ email, otp, type }) => {
-          if (type === "email-verification") {
-            await sendEmail({
-              to: email,
-              subject: `${otp} is your Mnemee verification code`,
-              text: `Your Mnemee verification code is ${otp}
-
-It expires in 10 minutes. If you did not request it, you can ignore this email.`,
-            });
-          } else if (type === "forget-password") {
-            await sendEmail({
-              to: email,
-              subject: `${otp} is your Mnemee password reset code`,
-              text: `Your Mnemee password reset code is ${otp}
-
-It expires in 10 minutes. If you did not request it, you can ignore this email.`,
-            });
-          }
+          const message = buildOtpEmail(type, otp);
+          if (message) await sendEmail({ to: email, ...message });
         },
       }),
       organization({

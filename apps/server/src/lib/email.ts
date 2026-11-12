@@ -1,5 +1,7 @@
+import { render } from "@react-email/render";
 import * as Sentry from "@sentry/hono/node";
 import { Resend } from "resend";
+import type { ReactElement } from "react";
 
 import { env } from "@/config/env";
 import { LoggerService } from "@/services/logger.service";
@@ -15,21 +17,28 @@ function getResend(): Resend {
 export async function sendEmail({
   to,
   subject,
-  text,
+  react,
 }: {
   to: string;
   subject: string;
-  text: string;
+  react: ReactElement;
 }) {
   // Better Auth runs verification and reset sends in a way that swallows
   // errors (and must, so a reset never reveals whether an account exists). A
   // failure here is therefore invisible to the user, so report it as a Sentry
   // issue, not just a log line, or it goes unnoticed.
   try {
+    // Send both parts: HTML for the branded template, plain text as the
+    // fallback that spam filters and text-only clients expect.
+    const [html, text] = await Promise.all([
+      render(react),
+      render(react, { plainText: true }),
+    ]);
     const { error } = await getResend().emails.send({
       from: "Mnemee <noreply@mnemee.space>",
       to,
       subject,
+      html,
       text,
     });
     if (error) throw new Error(`${error.name}: ${error.message}`);
