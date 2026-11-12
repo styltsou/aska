@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoaderCircleIcon, MailIcon } from "lucide-react";
 import { AuthPending } from "@/components/auth/auth-pending";
-import { CenteredAuthLayout } from "@/components/auth/centered-auth-layout";
+import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
@@ -41,10 +41,13 @@ function ForgotPasswordPage() {
   }
 
   return (
-    <CenteredAuthLayout>
+    <AuthPageLayout>
       <div aria-labelledby="forgot-title">
         <div className="space-y-1.5">
-          <h1 className="text-xl font-semibold" id="forgot-title">
+          <h1
+            className="text-2xl font-semibold tracking-[-0.035em]"
+            id="forgot-title"
+          >
             {sentTo ? "Check your email" : "Forgot password"}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -94,6 +97,6 @@ function ForgotPasswordPage() {
           </Link>
         </p>
       </div>
-    </CenteredAuthLayout>
+    </AuthPageLayout>
   );
 }

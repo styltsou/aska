@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { LoaderCircleIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BrandLogo } from "@/components/brand-logo";
+import { CenteredAuthLayout } from "@/components/auth/centered-auth-layout";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { clearAuthStateCache, getAuthState } from "@/lib/auth-flow";
@@ -70,15 +70,14 @@ function OnboardingPage() {
   }
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center bg-background px-4 py-8">
-      <BrandLogo className="mb-8" />
-      <div className="w-full max-w-md space-y-1">
+    <CenteredAuthLayout>
+      <div className="space-y-1">
         <h1 className="text-xl font-semibold">Create workspace</h1>
         <p className="text-sm text-muted-foreground">
           This is where your collections will live.
         </p>
       </div>
-      <form className="mt-6 w-full max-w-md space-y-4" onSubmit={handleSubmit}>
+      <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <Input
           id="workspace-name"
           autoComplete="organization"
@@ -100,6 +99,6 @@ function OnboardingPage() {
           </span>
         </Button>
       </form>
-    </main>
+    </CenteredAuthLayout>
   );
 }

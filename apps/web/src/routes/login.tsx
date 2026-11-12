@@ -146,22 +146,22 @@ function LoginPage() {
               onChange={(event) => setEmail(event.target.value)}
             />
           </div>
-          <PasswordField
-            label="Password"
-            id="password"
-            autoComplete="current-password"
-            labelAction={
-              <Link
-                className="text-sm text-muted-foreground transition-colors duration-150 ease-[ease] hover:text-foreground"
-                to="/forgot-password"
-              >
-                Forgot password?
-              </Link>
-            }
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+          <div className="flex flex-col gap-2">
+            <PasswordField
+              label="Password"
+              id="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <Link
+              className="self-end text-sm text-muted-foreground transition-colors duration-150 ease-[ease] hover:text-foreground"
+              to="/forgot-password"
+            >
+              Forgot password?
+            </Link>
+          </div>
           {error ? (
             <p className="text-sm text-destructive" role="alert">
               {error}
