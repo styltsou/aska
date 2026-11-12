@@ -159,23 +159,24 @@ function ResetPasswordPage() {
           </Button>
         </form>
 
-        <p className="mt-5 text-center text-sm text-muted-foreground">
-          Didn&apos;t get it?{" "}
-          <button
-            className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
-            disabled={isSending || cooldown > 0}
-            onClick={() => void resend()}
-            type="button"
-          >
-            {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
-          </button>
-        </p>
-        <p className="mt-3 text-center text-sm text-muted-foreground">
+        <p className="mt-5 flex flex-wrap items-center justify-center gap-x-2 text-sm text-muted-foreground">
+          <span>
+            Didn&apos;t get it?{" "}
+            <button
+              className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+              disabled={isSending || cooldown > 0}
+              onClick={() => void resend()}
+              type="button"
+            >
+              {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+            </button>
+          </span>
+          <span aria-hidden="true">·</span>
           <Link
-            className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current"
-            to="/login"
+            className="transition-colors duration-150 ease-[ease] hover:text-foreground"
+            to="/forgot-password"
           >
-            Back to sign in
+            Wrong email?
           </Link>
         </p>
       </div>
