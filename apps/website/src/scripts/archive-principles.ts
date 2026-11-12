@@ -2,7 +2,7 @@ const section = document.querySelector<HTMLElement>('[data-scroll-stories]');
 const viewport = section?.querySelector<HTMLElement>('[data-stories-viewport]');
 const track = section?.querySelector<HTMLElement>('[data-stories-track]');
 const progress = section?.querySelector<HTMLElement>('[data-stories-progress]');
-const desktop = window.matchMedia('(min-width: 761px) and (min-height: 650px)');
+const compactTouch = window.matchMedia('(max-width: 760px) and (any-pointer: coarse)');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const mentionCard = section?.querySelector<HTMLElement>('.story-card__detail');
 const mentionTrigger = mentionCard?.querySelector<HTMLButtonElement>('.story-card__mention');
@@ -39,11 +39,12 @@ if (section && viewport && track && progress) {
 	let distance = 0;
 	let pinTop = 0; // where the pinned box sticks: centred in the viewport
 	let frame = 0;
+	let gesture: { pointerId: number; x: number; y: number; scrollY: number; active: boolean } | undefined;
 
 	const render = () => {
 		frame = 0;
 		if (section.dataset.pinned !== 'true') {
-			// Phones and short screens: the cards scroll natively, so the bar follows the viewport's own scroll position.
+			// Unpinned layouts scroll horizontally, so the bar follows the viewport's own scroll position.
 			const max = viewport.scrollWidth - viewport.clientWidth;
 			progress.style.transform = `scaleX(${max > 0 ? Math.min(Math.max(viewport.scrollLeft / max, 0), 1) : 0})`;
 			return;
@@ -56,8 +57,14 @@ if (section && viewport && track && progress) {
 		if (!frame) frame = requestAnimationFrame(render);
 	};
 	const measure = () => {
-		const enabled = desktop.matches && !reducedMotion.matches;
+		// Narrow touch screens stay swipeable. Other layouts pin only when the whole stage fits.
+		const enabled = !reducedMotion.matches && !compactTouch.matches
+			&& !!sticky && sticky.offsetHeight <= window.innerHeight;
 		section.dataset.pinned = enabled ? 'true' : '';
+		if (enabled) viewport.scrollLeft = 0;
+		viewport.setAttribute('aria-label', enabled
+			? 'Use cases; scroll vertically to explore, or swipe on a touch screen'
+			: 'Use cases; swipe or scroll horizontally to explore');
 		track.style.transform = '';
 		progress.style.transform = '';
 		section.style.height = '';
@@ -70,12 +77,35 @@ if (section && viewport && track && progress) {
 		section.style.height = `${boxHeight + distance}px`;
 		requestRender();
 	};
+	viewport.addEventListener('pointerdown', (event) => {
+		if (section.dataset.pinned !== 'true' || event.pointerType !== 'touch' || !event.isPrimary) return;
+		if ((event.target as Element).closest('a, button')) return;
+		const pinStart = section.getBoundingClientRect().top + window.scrollY - pinTop;
+		if (window.scrollY < pinStart - 1 || window.scrollY > pinStart + distance + 1) return;
+		gesture = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, scrollY: window.scrollY, active: false };
+	});
+	viewport.addEventListener('pointermove', (event) => {
+		if (!gesture || event.pointerId !== gesture.pointerId) return;
+		const dx = event.clientX - gesture.x;
+		if (!gesture.active) {
+			if (Math.abs(dx) < 6 || Math.abs(dx) <= Math.abs(event.clientY - gesture.y)) return;
+			gesture.active = true;
+			viewport.setPointerCapture(event.pointerId);
+		}
+		const pinStart = section.getBoundingClientRect().top + window.scrollY - pinTop;
+		window.scrollTo(0, Math.min(pinStart + distance, Math.max(pinStart, gesture.scrollY - dx)));
+	});
+	const endGesture = (event: PointerEvent) => {
+		if (gesture?.pointerId === event.pointerId) gesture = undefined;
+	};
+	viewport.addEventListener('pointerup', endGesture);
+	viewport.addEventListener('pointercancel', endGesture);
 
 	new ResizeObserver(measure).observe(viewport);
 	window.addEventListener('resize', measure, { passive: true });
 	window.addEventListener('scroll', requestRender, { passive: true });
 	viewport.addEventListener('scroll', requestRender, { passive: true });
-	desktop.addEventListener('change', measure);
+	compactTouch.addEventListener('change', measure);
 	reducedMotion.addEventListener('change', measure);
 	measure();
 }

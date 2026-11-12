@@ -22,7 +22,7 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 			<h2 id="principles-title">Put references to work.</h2>
 		</div>
 
-		<div class="principles__viewport" data-stories-viewport tabindex="0" role="region" aria-label="Use cases; scroll horizontally to explore">
+		<div class="principles__viewport" data-stories-viewport tabindex="0" role="region" aria-label="Use cases; swipe or scroll horizontally to explore">
 			<div class="principles__track" data-stories-track>
 				<article class="story-card" style="--tone: #d4623f">
 					<div class="story-card__copy">
@@ -115,7 +115,7 @@ const imageProps = { width: 720, densities: [1, 2], quality: 78 };
 	h2 { max-width: 680px; margin: 0; font-size: clamp(36px, 4.5vw, 64px); font-weight: 560; letter-spacing: -.047em; line-height: 1.05; text-wrap: balance; }
 	.principles__viewport { width: 100%; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; }
 	.principles__viewport::-webkit-scrollbar { display: none; }
-	.principles[data-pinned='true'] .principles__viewport { overflow: hidden; scroll-snap-type: none; }
+	.principles[data-pinned='true'] .principles__viewport { overflow: hidden; scroll-snap-type: none; touch-action: pan-y; }
 	.principles__track { display: flex; width: max-content; gap: 16px; padding-inline: max(24px, calc((100vw - var(--page-width)) / 2)); }
 
 	/* Each card carries a --tone; the visual's background and the role dot are tinted from it so the cards read as distinct. */
