@@ -3,7 +3,8 @@ import { Heading, Section, Text } from "@react-email/components";
 import { colors, EmailLayout, textStyles } from "./layout";
 
 export type CodeEmailProps = {
-  /** The one-time code, already formatted for display is not required. */
+  /** The one-time code. Rendered as one unbroken string so it copies whole
+   * and mail apps can detect it for autofill. */
   code: string;
   /** Minutes until the code expires. */
   expiresInMinutes: number;
@@ -18,8 +19,6 @@ export function CodeEmail({
   code,
   expiresInMinutes,
 }: CodeEmailProps & { preview: string; title: string; intro: string }) {
-  // 123456 -> "123 456", matching the grouped input on the sign-in pages.
-  const spaced = `${code.slice(0, 3)} ${code.slice(3)}`.trim();
   return (
     <EmailLayout preview={preview}>
       <Heading as="h1" style={textStyles.heading}>
@@ -45,9 +44,12 @@ export function CodeEmail({
             letterSpacing: "0.18em",
             lineHeight: "40px",
             margin: 0,
+            // One click or tap selects the whole code; Outlook ignores this.
+            userSelect: "all",
+            WebkitUserSelect: "all",
           }}
         >
-          {spaced}
+          {code}
         </Text>
       </Section>
       <Text style={textStyles.small}>
