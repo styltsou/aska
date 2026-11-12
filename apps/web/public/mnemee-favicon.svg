@@ -1,8 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Follows the system theme on its own; the pages swap in favicon-light/dark.svg to follow the user's chosen theme. -->
+  <style>
+    .tile { fill: #151515; } .bar { fill: #fff; }
+    @media (prefers-color-scheme: dark) { .tile { fill: #fff; } .bar { fill: #151515; } }
+  </style>
   <g transform="rotate(-6 16 16)">
-    <rect x="2" y="2" width="28" height="28" rx="8" fill="#fff"/>
-    <rect x="9" y="15" width="5" height="10" rx="1.5" fill="#151515"/>
-    <rect x="15" y="11" width="5" height="14" rx="1.5" fill="#151515"/>
-    <rect x="21" y="7" width="5" height="18" rx="1.5" fill="#151515"/>
+    <rect class="tile" x="2" y="2" width="28" height="28" rx="8"/>
+    <rect class="bar" x="9" y="15" width="5" height="10" rx="1.5"/>
+    <rect class="bar" x="15" y="11" width="5" height="14" rx="1.5"/>
+    <rect class="bar" x="21" y="7" width="5" height="18" rx="1.5"/>
   </g>
 </svg>

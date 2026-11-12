@@ -1,0 +1,53 @@
+---
+/*
+ * Source of the social preview image (public/og-image.png). It exists only in dev: `bun run og` screenshots it at
+ * 1200 × 630. It renders the same HeroWorkspace the landing page uses, so the cards match the app exactly.
+ */
+import '../../styles/global.css';
+import { getImage } from 'astro:assets';
+import HeroWorkspace from '../../components/HeroWorkspace.astro';
+import hero from '../../assets/images/hero.webp';
+
+export function getStaticPaths() {
+	return import.meta.env.DEV ? [{ params: { name: 'og-card' } }] : [];
+}
+
+const backdrop = await getImage({ src: hero, width: 1400, format: 'jpeg', quality: 90 });
+---
+
+<!doctype html>
+<html lang="en" data-theme="light">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="robots" content="noindex" />
+		<title>OG card</title>
+	</head>
+	<body>
+		<div class="card" id="og-card">
+			<img class="card__backdrop" src={backdrop.src} alt="" />
+			<div class="card__wash"></div>
+			<div class="card__window"><HeroWorkspace /></div>
+			<div class="card__copy">
+				<img class="card__logo" src="/mnemee-logo.svg" alt="Mnemee" />
+				<h1>Keep the reference.<br /><span>Find the direction.</span></h1>
+				<p>Everything you collect, on one canvas. Images, videos, links, notes and more.</p>
+			</div>
+		</div>
+	</body>
+</html>
+
+<style is:global>
+	html, body { margin: 0; background: #0b1a38; }
+	#og-card { position: relative; width: 1200px; height: 630px; overflow: hidden; color: #fff; font-family: 'Inter Variable', sans-serif; -webkit-font-smoothing: antialiased; }
+	.card__backdrop { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: saturate(1.35) contrast(1.1) brightness(.92); }
+	/* Navy on the left where the copy sits, clearing toward the mock-up. */
+	.card__wash { position: absolute; inset: 0; background: linear-gradient(90deg, rgb(8 20 48 / 88%), rgb(10 24 56 / 62%) 44%, rgb(10 24 56 / 14%)); }
+	/* The app window, anchored right and clipped by the card's right and bottom edges. */
+	.card__window { position: absolute; top: 100px; left: 540px; width: 940px; filter: drop-shadow(0 34px 44px rgb(4 14 36 / 42%)) drop-shadow(0 8px 14px rgb(4 14 36 / 22%)); }
+	.card__window .hero-workspace { box-shadow: 0 0 0 1px rgb(255 255 255 / 50%); border-radius: 12px; }
+	.card__copy { position: absolute; top: 100px; left: 64px; width: 470px; }
+	.card__logo { display: block; width: 150px; height: auto; margin-bottom: 38px; filter: invert(1); }
+	.card__copy h1 { margin: 0 0 22px; font-size: 49px; font-weight: 560; letter-spacing: -.045em; line-height: 1.04; }
+	.card__copy h1 span { color: rgb(255 255 255 / 62%); }
+	.card__copy p { margin: 0; max-width: 400px; color: rgb(255 255 255 / 78%); font-size: 21px; line-height: 1.45; letter-spacing: -.01em; }
+</style>

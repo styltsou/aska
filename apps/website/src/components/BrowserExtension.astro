@@ -40,7 +40,7 @@ import watercolor from '../assets/images/extension-watercolor-rose.webp';
 	.browser-extension-scene { margin-top: var(--section-gap); }
 	/* The centered sticky stage adds space above the panel; count that toward the section gap. */
 	.browser-extension-scene[data-active] { margin-top: max(0px, calc(var(--section-gap) - var(--extension-inset))); }
-	.browser-extension-scene[data-active] { height: calc(100svh - 84px + 115svh); }
+	.browser-extension-scene[data-active] { height: calc(100svh - 84px + 190svh); }
 	.browser-extension-scene[data-active] .browser-extension-stage { position: sticky; top: 68px; display: flex; align-items: center; height: calc(100svh - 84px); }
 	.browser-extension { position: relative; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(20px, 3vw, 44px); align-items: center; overflow: hidden; padding: clamp(36px, 5vw, 68px) 0 0 clamp(32px, 5vw, 68px); border-radius: 12px; background: linear-gradient(165deg, rgb(183 111 110 / 22%), rgb(125 66 76 / 30%)), var(--extension-art) center / cover; background-blend-mode: multiply, normal; }
 	.browser-extension::after { content: ''; position: absolute; z-index: 4; inset: 0; border: 1px solid var(--line); border-radius: inherit; pointer-events: none; }

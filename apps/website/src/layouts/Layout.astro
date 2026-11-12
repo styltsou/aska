@@ -48,6 +48,10 @@ const imageUrl = new URL(image, site).href;
 		{markdownPath && <link rel="alternate" type="text/markdown" href={new URL(markdownPath, site).href} title={`${product.name} (Markdown)`} />}
 		<link rel="alternate" type="text/plain" href={new URL('/llms.txt', site).href} title="llms.txt" />
 		<meta name="theme-color" content="#ffffff" />
+		<!-- The SVG icon follows the user's chosen theme (swapped below and by the theme switch); it adapts to the system theme on its own until then. -->
+		<link rel="icon" href="/favicon.ico" sizes="32x32" />
+		<link rel="icon" id="site-icon" type="image/svg+xml" href="/favicon.svg" sizes="any" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content={product.name} />
@@ -83,15 +87,13 @@ const imageUrl = new URL(image, site).href;
 					: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 
 				document.documentElement.dataset.theme = theme;
+				document.getElementById('site-icon')?.setAttribute('href', theme === 'dark' ? '/favicon-dark.svg' : '/favicon-light.svg');
 				document.querySelector('meta[name="theme-color"]')?.setAttribute(
 					'content',
 					theme === 'dark' ? 'oklch(0.145 0 0)' : '#ffffff',
 				);
 			})();
 		</script>
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 		{jsonLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
 	</head>
 	<body>

@@ -81,7 +81,7 @@ const { signupHref } = Astro.props;
 	 * looks exactly like the static layout above.
 	 */
 	@media (min-width: 1024px) and (min-height: 620px) and (prefers-reduced-motion: no-preference) {
-		.hero { --travel: 290svh; height: calc(100svh + var(--travel)); }
+		.hero { --travel: 260svh; height: calc(100svh + var(--travel)); }
 		.hero__stage { position: sticky; top: 0; height: 100svh; }
 		.hero__media { --border-left: 50%; z-index: 2; left: var(--inset); box-shadow: none; clip-path: inset(0 0 0 50% round 12px); }
 		.hero__backdrop { transform: scale(1.1); will-change: transform; }
@@ -115,7 +115,7 @@ const { signupHref } = Astro.props;
 	 * full box and is clipped down to the card below the copy; scrolling grows it upward to cover the stage.
 	 */
 	@media (max-width: 1023px) and (min-height: 560px) and (prefers-reduced-motion: no-preference) {
-		.hero { --travel: 240svh; height: calc(100svh - 52px + var(--travel)); padding: 0; }
+		.hero { --travel: 220svh; height: calc(100svh - 52px + var(--travel)); padding: 0; }
 		.hero__stage { position: sticky; top: 52px; display: block; height: calc(100svh - 52px); }
 		.hero__inner { padding-top: 24px; }
 		.hero__media { --border-top: 62%; --border-left: 0px; position: absolute; inset: var(--inset); z-index: 2; width: auto; margin: 0; aspect-ratio: auto; box-shadow: none; clip-path: inset(62% 0 0 0 round 12px); }

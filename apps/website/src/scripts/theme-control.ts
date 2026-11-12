@@ -18,6 +18,7 @@ type ThemePreference = 'system' | 'light' | 'dark';
 const updateTheme = (preference: ThemePreference, animateThumb = false) => {
 	const theme = preference === 'system' ? (systemTheme.matches ? 'dark' : 'light') : preference;
 	root.dataset.theme = theme;
+	document.getElementById('site-icon')?.setAttribute('href', theme === 'dark' ? '/favicon-dark.svg' : '/favicon-light.svg');
 	document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? 'oklch(0.145 0 0)' : '#ffffff');
 	themeButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.themeOption === preference)));
 	positionThumb(animateThumb);

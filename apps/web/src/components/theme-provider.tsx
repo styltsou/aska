@@ -40,6 +40,29 @@ function getSystemTheme(): ResolvedTheme {
   return "light";
 }
 
+/** Keeps the tab icon and the browser's UI colour in step with the theme the user chose, not just the system's. */
+function syncBrowserChrome(theme: ResolvedTheme) {
+  document
+    .querySelector('link[rel="icon"]')
+    ?.setAttribute(
+      "href",
+      theme === "dark"
+        ? "/mnemee-favicon-dark.svg"
+        : "/mnemee-favicon-light.svg",
+    );
+
+  let meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) {
+    meta = document.createElement("meta");
+    meta.setAttribute("name", "theme-color");
+    document.head.appendChild(meta);
+  }
+  meta.setAttribute(
+    "content",
+    theme === "dark" ? "oklch(0.145 0 0)" : "#ffffff",
+  );
+}
+
 function disableTransitionsTemporarily() {
   const style = document.createElement("style");
   style.appendChild(
@@ -94,6 +117,7 @@ export function ThemeProvider({
 
       root.classList.remove("light", "dark");
       root.classList.add(resolvedTheme);
+      syncBrowserChrome(resolvedTheme);
 
       if (restoreTransitions) {
         restoreTransitions();
