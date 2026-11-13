@@ -301,7 +301,7 @@ describe("asset modal morph", () => {
   ])(
     "carries a $name into the modal hero area",
     async ({ name, cardHeight, modalHeight, cardRadius, modalRadius }) => {
-      const checks = heroChecks[name];
+      const checks = heroChecks[name as keyof typeof heroChecks];
       const animation = () => ({
         finished: Promise.resolve(),
         cancel: vi.fn(),
