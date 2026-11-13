@@ -102,7 +102,6 @@ if (root) {
 		panelAnimation?.cancel();
 		panel.inert = false;
 		const oldHeight = panel.getBoundingClientRect().height;
-		const oldWidth = primary?.getBoundingClientRect().width ?? 0;
 		const animateChange = !reducedMotion.matches && !wasHidden && !editing;
 		const oldLabel = animateChange && label ? label.cloneNode(true) as HTMLElement : null;
 		if (oldLabel && primary) {
@@ -120,26 +119,24 @@ if (root) {
 		if (label) label.textContent = 'Save preferences';
 		if (animateChange) {
 			const newHeight = panel.getBoundingClientRect().height;
-			panelAnimation = panel.animate([{ height: `${oldHeight}px`, overflow: 'hidden' }, { height: `${newHeight}px`, overflow: 'hidden' }], { duration: 180, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
-			preferences?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
+			panelAnimation = panel.animate([{ height: `${oldHeight}px`, overflow: 'hidden' }, { height: `${newHeight}px`, overflow: 'hidden' }], { duration: 140, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+			preferences?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, easing: 'ease-out' });
 			if (primary && label && oldLabel) {
-				const newWidth = primary.getBoundingClientRect().width;
-				primary.animate([{ width: `${oldWidth}px` }, { width: `${newWidth}px` }], { duration: 180, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
 				label.animate(
 					[
-						{ opacity: 0, filter: 'blur(2px)' },
-						{ offset: .25, opacity: 0, filter: 'blur(2px)' },
-						{ opacity: 1, filter: 'blur(0)' },
+						{ opacity: 0, filter: 'blur(2px)', transform: 'translateY(2px)' },
+						{ offset: .25, opacity: 0, filter: 'blur(2px)', transform: 'translateY(2px)' },
+						{ opacity: 1, filter: 'blur(0)', transform: 'translateY(0)' },
 					],
-					{ duration: 180, easing: 'cubic-bezier(0.77, 0, 0.175, 1)', fill: 'backwards' },
+					{ duration: 140, easing: 'cubic-bezier(0.77, 0, 0.175, 1)', fill: 'backwards' },
 				);
 				oldLabel.animate(
 					[
-						{ opacity: 1, filter: 'blur(0)' },
-						{ offset: .6, opacity: 0, filter: 'blur(2px)' },
-						{ opacity: 0, filter: 'blur(2px)' },
+						{ opacity: 1, filter: 'blur(0)', transform: 'translateY(0)' },
+						{ offset: .6, opacity: 0, filter: 'blur(2px)', transform: 'translateY(-2px)' },
+						{ opacity: 0, filter: 'blur(2px)', transform: 'translateY(-2px)' },
 					],
-					{ duration: 180, easing: 'cubic-bezier(0.77, 0, 0.175, 1)' },
+					{ duration: 140, easing: 'cubic-bezier(0.77, 0, 0.175, 1)' },
 				).finished.finally(() => oldLabel.remove());
 			}
 		}
