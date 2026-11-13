@@ -120,7 +120,7 @@ if (root) {
 		if (label) label.textContent = 'Save preferences';
 		if (animateChange) {
 			const newHeight = panel.getBoundingClientRect().height;
-			panelAnimation = panel.animate([{ height: `${oldHeight}px`, overflow: 'hidden' }, { height: `${newHeight}px`, overflow: 'hidden' }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+			panelAnimation = panel.animate([{ height: `${oldHeight}px`, overflow: 'hidden' }, { height: `${newHeight}px`, overflow: 'hidden' }], { duration: 180, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
 			preferences?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
 			if (primary && label && oldLabel) {
 				const newWidth = primary.getBoundingClientRect().width;
