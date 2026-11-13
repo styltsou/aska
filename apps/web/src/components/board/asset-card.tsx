@@ -74,7 +74,9 @@ export const AssetCard = memo(function AssetCard({
     // Modifier-click toggles selection; this wrapper has no role of its own.
     // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
-      className={cn("relative min-w-0 rounded-lg")}
+      className={cn(
+        "relative min-w-0 rounded-lg data-[onboarding-target]:outline-2 data-[onboarding-target]:outline-offset-4 data-[onboarding-target]:outline-ring",
+      )}
       data-asset-card-id={asset.id}
       data-selection-node-id={selectable ? asset.id : undefined}
       aria-selected={selectable ? isSelected : undefined}

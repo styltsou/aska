@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AppSidebar } from "@/components/app-shell/app-sidebar";
 import { AppHeader } from "@/components/app-shell/app-header";
+import { OnboardingTour } from "@/components/app-shell/onboarding-tour";
 import { GlobalScratchpad } from "@/components/app-shell/global-scratchpad";
 import { CanvasActionsProvider } from "@/components/canvas/canvas-actions-context";
 import { CommandPalette } from "@/components/command-palette";
@@ -133,6 +134,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 workspaceSlug={workspaceSlug}
                 collectionSlug={collectionSlug}
                 parentFolderPath={folderPath}
+              />
+            ) : null}
+            {workspaceSlug && sidebarUserId ? (
+              <OnboardingTour
+                key={sidebarUserId}
+                userId={sidebarUserId}
+                workspaceSlug={workspaceSlug}
+                pathname={pathname}
               />
             ) : null}
           </SidebarProvider>

@@ -63,6 +63,7 @@ import { usePersistedStore, useTransientStore } from "@/store";
 import { toast } from "sonner";
 
 import { getPlatformModifier } from "@/lib/platform";
+import { emitOnboardingTourAction } from "@/lib/onboarding-tour";
 import { EmptyStateShortcuts } from "@/components/asset-grid/empty-state-shortcuts";
 import { cn } from "@/lib/utils";
 import { makeBoardKey } from "./canvas-key";
@@ -2849,6 +2850,15 @@ function CanvasSurface({
               pendingNodePositionsRef.current.set(clientId, position);
             }
             return;
+          }
+
+          if (movedNode.data.collectionNode.type === "note") {
+            emitOnboardingTourAction({
+              type: "note-moved",
+              workspaceSlug,
+              collectionSlug,
+              noteId: movedNode.data.collectionNode.id,
+            });
           }
 
           const version = (dragVersionRef.current.get(movedNode.id) ?? 0) + 1;

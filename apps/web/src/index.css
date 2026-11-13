@@ -221,26 +221,3 @@
     }
   }
 }
-
-[data-onboarding-target] {
-  outline: 2px solid var(--ring);
-  outline-offset: 5px;
-}
-
-@keyframes onboarding-drag-hint {
-  0%,
-  15%,
-  85%,
-  100% {
-    transform: translateX(0);
-  }
-  55% {
-    transform: translateX(18px);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .onboarding-drag-hint {
-    animation: onboarding-drag-hint 2.2s ease-in-out infinite;
-  }
-}

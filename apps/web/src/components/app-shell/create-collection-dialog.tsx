@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { LoaderCircleIcon } from "lucide-react";
 import { useCreateCollection } from "@/api/collection";
 import { useWorkspaceOverlayNavigation } from "./use-workspace-overlay-navigation";
+import { emitOnboardingTourAction } from "@/lib/onboarding-tour";
 
 export function CreateCollectionDialog({
   workspaceSlug,
@@ -49,6 +50,11 @@ export function CreateCollectionDialog({
 
     try {
       const data = await createCollection.mutateAsync({ name });
+      emitOnboardingTourAction({
+        type: "collection-created",
+        workspaceSlug,
+        collectionSlug: data.collection.slug,
+      });
       setIsNavigating(true);
 
       await navigateOverlay(

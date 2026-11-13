@@ -107,6 +107,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useBlocker } from "@tanstack/react-router";
 import { parseWorkspaceAssetPath } from "@/lib/workspace-asset-url";
+import { emitOnboardingTourAction } from "@/lib/onboarding-tour";
 import {
   clearEditDraft,
   clearDeletedNoteDrafts,
@@ -761,6 +762,14 @@ export function NoteDetailDrawer({
           });
           return;
         }
+        if (createOptions.target !== "inbox") {
+          emitOnboardingTourAction({
+            type: "note-created",
+            workspaceSlug,
+            collectionSlug,
+            noteId: nextNote.id,
+          });
+        }
         const completion = resolveNoteSaveCompletion(
           submittedSnapshot,
           latestSnapshot,
@@ -834,6 +843,7 @@ export function NoteDetailDrawer({
       createDraftId,
       createOptions?.placement,
       createOptions?.target,
+      collectionSlug,
       closeWorkspace,
       deleteEmptyNote,
       getLatestSaveSnapshot,
@@ -842,6 +852,7 @@ export function NoteDetailDrawer({
       parentFolderPath,
       saveCurrentEditDraft,
       title,
+      workspaceSlug,
     ],
   );
 

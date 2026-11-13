@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ChevronsUpDownIcon,
+  CompassIcon,
   LifeBuoyIcon,
   LoaderCircleIcon,
   LogOutIcon,
@@ -40,6 +41,7 @@ import { authClient, signOut, type AuthUser } from "@/lib/auth-client";
 import { clearAuthStateCache } from "@/lib/auth-flow";
 import { clearMediaSession } from "@/lib/media-session";
 import { openSettings } from "@/lib/settings-dialog";
+import { restartOnboardingTour } from "@/lib/onboarding-tour";
 import { useRouter } from "@tanstack/react-router";
 
 export function NavUser({
@@ -108,6 +110,10 @@ export function NavUser({
                 <DropdownMenuItem disabled>
                   <LifeBuoyIcon />
                   Support
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={restartOnboardingTour}>
+                  <CompassIcon />
+                  Take the tour
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled>
                   <SendIcon />
