@@ -7,8 +7,15 @@ interface Props {
 	signupHref: string;
 }
 
+const navItems = [
+	{ id: "workflow", label: "Features" },
+	{ id: "canvas", label: "Use cases" },
+	{ id: "faq", label: "FAQ" },
+] as const;
+
 export function HeaderInner({ loginHref, signupHref }: Props) {
 	const [isOpen, setIsOpen] = useState(false);
+	const [activeSection, setActiveSection] = useState<string | null>(null);
 
 	const close = useCallback(() => {
 		setMenuScrollLocked(false);
@@ -35,6 +42,33 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 	useEffect(() => () => setMenuScrollLocked(false), []);
 
 	useEffect(() => {
+		const sections = navItems.map(({ id }) => document.getElementById(id));
+		let frame = 0;
+		const syncActiveSection = () => {
+			frame = 0;
+			const offset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--anchor-offset")) || 70;
+			let current: string | null = null;
+			for (let i = 0; i < sections.length; i++) {
+				const bounds = sections[i]?.getBoundingClientRect();
+				if (bounds && bounds.top <= offset + 1) current = navItems[i].id;
+			}
+			if (current === "faq" && (sections[2]?.getBoundingClientRect().bottom ?? 0) <= offset) current = null;
+			setActiveSection(current);
+		};
+		const schedule = () => {
+			if (!frame) frame = requestAnimationFrame(syncActiveSection);
+		};
+		syncActiveSection();
+		window.addEventListener("scroll", schedule, { passive: true });
+		window.addEventListener("resize", schedule);
+		return () => {
+			cancelAnimationFrame(frame);
+			window.removeEventListener("scroll", schedule);
+			window.removeEventListener("resize", schedule);
+		};
+	}, []);
+
+	useEffect(() => {
 		if (!isOpen) return;
 		const desktop = window.matchMedia("(min-width: 641px)");
 		const onResize = () => { if (desktop.matches) close(); };
@@ -58,9 +92,9 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 					<img className="brand__logo" src="/mnemee-logo.svg" alt="" />
 				</a>
 				<nav className="desktop-nav" aria-label="Primary navigation">
-					<a href="#workflow">Features</a>
-					<a href="#canvas">Use cases</a>
-					<a href="#faq">FAQ</a>
+					{navItems.map(({ id, label }) => (
+						<a key={id} href={`#${id}`} aria-current={activeSection === id ? "location" : undefined}>{label}</a>
+					))}
 				</nav>
 				<div className="desktop-actions">
 					<a className="app-button app-button--compact app-button--secondary" href={loginHref}>Log in</a>
@@ -83,9 +117,9 @@ export function HeaderInner({ loginHref, signupHref }: Props) {
 
 			<div className="mobile-menu-content" id="mobile-menu" aria-hidden={!isOpen} data-lenis-prevent>
 				<nav className="mobile-menu-nav" aria-label="Mobile navigation">
-					<a onClick={close} href="#workflow">Features</a>
-					<a onClick={close} href="#canvas">Use cases</a>
-					<a onClick={close} href="#faq">FAQ</a>
+					{navItems.map(({ id, label }) => (
+						<a key={id} onClick={close} href={`#${id}`} aria-current={activeSection === id ? "location" : undefined}>{label}</a>
+					))}
 				</nav>
 				<div className="mobile-menu-footer">
 					<a onClick={close} className="app-button app-button--primary" href={signupHref}>Create account</a>
