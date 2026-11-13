@@ -6,11 +6,11 @@ const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog
 {(import.meta.env.DEV || posthogKey) && (
 	<div class="consent" data-consent data-key={posthogKey} data-host={posthogHost}>
 		<section class="consent__panel" data-consent-panel hidden aria-label="Analytics preferences">
-			<h2>Help us improve Mnemee</h2>
-			<p>Essential cookies and storage keep Mnemee working, including account sign-in. With your permission, we use PostHog analytics to understand visits to this website. You can change your choice at any time. <a href="/privacy">Privacy details</a></p>
+			<h2>Cookie preferences</h2>
+			<p>Essential cookies keep Mnemee working. Optional analytics help us improve. <a href="/privacy">Learn more</a></p>
 			<div class="consent__preferences" data-consent-preferences hidden>
-				<label class="consent__option"><span><strong>Essential</strong><small>Needed for the service, including account sign-in.</small></span><input type="checkbox" checked disabled aria-label="Essential cookies, always enabled" /></label>
-				<label class="consent__option"><span><strong>Analytics (PostHog)</strong><small>Helps us understand visits to the website.</small></span><input type="checkbox" data-consent-analytics /></label>
+				<label class="consent__option"><span><strong>Essential</strong><small>Required for features like sign-in.</small></span><input type="checkbox" checked disabled aria-label="Essential cookies, always enabled" /></label>
+				<label class="consent__option"><span><strong>Analytics (PostHog)</strong><small>Measures visits to this website.</small></span><input type="checkbox" data-consent-analytics /></label>
 			</div>
 			<div class="consent__actions" data-consent-initial-actions>
 				<button type="button" class="app-button app-button--secondary" data-consent-edit>Edit preferences</button>

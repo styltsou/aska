@@ -15,6 +15,9 @@ if (root) {
 	const host = root.dataset.host;
 	let choice: Consent | null = null;
 	let loaded = false;
+	let panelAnimation: Animation | undefined;
+	let loader: HTMLScriptElement | undefined;
+	const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 	try {
 		const saved = localStorage.getItem(storageKey);
@@ -27,6 +30,7 @@ if (root) {
 		if (loaded || !key || !host) return;
 		loaded = true;
 		const script = document.createElement('script');
+		loader = script;
 		const assetsHost = host.replace('.i.posthog.com', '-assets.i.posthog.com');
 		script.src = `${assetsHost}/static/loader.js`;
 		script.async = true;
@@ -50,26 +54,63 @@ if (root) {
 		document.head.append(script);
 	};
 
+	const closePanel = (reload: boolean) => {
+		if (!panel) return;
+		panelAnimation?.cancel();
+		panel.inert = true;
+		const finish = () => {
+			if (panel.contains(document.activeElement)) settings[0]?.focus({ preventScroll: true });
+			panel.hidden = true;
+			panel.inert = false;
+			if (reload) window.location.reload();
+		};
+		if (reducedMotion.matches) { finish(); return; }
+		panelAnimation = panel.animate(
+			[{ opacity: 1, transform: 'translateX(-50%) translateY(0)' }, { opacity: 0, transform: 'translateX(-50%) translateY(8px)' }],
+			{ duration: 160, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' },
+		);
+		panelAnimation.finished.then(finish).catch(() => {});
+	};
+
 	const choose = (value: Consent) => {
 		choice = value;
+		const shouldReload = value === 'rejected' && loaded;
 		try { localStorage.setItem(storageKey, value); } catch { /* Apply this choice for the current page. */ }
-		if (panel) panel.hidden = true;
-		if (value === 'accepted') loadAnalytics();
-		else if (loaded) {
-			// Clear the SDK's persisted data when it has loaded; reload also cancels an in-flight loader.
-			window.posthog?.opt_out_capturing();
-			window.location.reload();
+		if (value === 'accepted') {
+			if (loaded && window.posthog) {
+				window.posthog.opt_in_capturing({ captureEventName: false });
+			} else {
+				loadAnalytics();
+			}
 		}
+		else if (loaded) {
+			// Stop capture immediately, then reload once the exit completes to clear an in-flight loader.
+			window.posthog?.opt_out_capturing();
+			loader?.remove();
+			if (!window.posthog) loaded = false;
+		}
+		closePanel(shouldReload);
 	};
 
 	if (panel) panel.hidden = choice !== null;
 	if (choice === 'accepted') loadAnalytics();
 	const openPreferences = () => {
+		if (!panel) return;
+		const wasHidden = panel.hidden;
+		panelAnimation?.cancel();
+		panel.inert = false;
+		const oldHeight = panel.getBoundingClientRect().height;
 		if (analytics) analytics.checked = choice === 'accepted';
-		if (panel) panel.hidden = false;
+		panel.hidden = false;
 		if (preferences) preferences.hidden = false;
 		if (initialActions) initialActions.hidden = true;
 		if (preferenceActions) preferenceActions.hidden = false;
+		if (!reducedMotion.matches && !wasHidden) {
+			const newHeight = panel.getBoundingClientRect().height;
+			panelAnimation = panel.animate([{ height: `${oldHeight}px`, overflow: 'hidden' }, { height: `${newHeight}px`, overflow: 'hidden' }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+			preferences?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
+		}
+		analytics?.focus({ preventScroll: true });
 	};
 	settings.forEach((button) => button.addEventListener('click', openPreferences));
 	root.querySelector('[data-consent-edit]')?.addEventListener('click', openPreferences);
