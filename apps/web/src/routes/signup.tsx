@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { LoaderCircleIcon, UserPlusIcon } from "lucide-react";
 import { AuthPending } from "@/components/auth/auth-pending";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
-import { Button } from "@/components/ui/button";
+import {
+  AuthActionButton,
+  AuthError,
+} from "@/components/auth/auth-form-controls";
+import { TermsNotice } from "@/components/auth/terms-notice";
 import { PasswordField } from "@/components/auth/password-field";
+import { PasswordStrengthFeedback } from "@/components/auth/password-strength-feedback";
 import { Input } from "@/components/ui/input";
 import { clearAuthStateCache, redirectIfSignedIn } from "@/lib/auth-flow";
 import { signUp } from "@/lib/auth-client";
@@ -24,7 +28,9 @@ export const Route = createFileRoute("/signup")({
 function SignupPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [passwordStep, setPasswordStep] = useState(false);
   const [password, setPassword] = useState("");
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,6 +38,11 @@ function SignupPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (!passwordStep) {
+      setPasswordStep(true);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -60,7 +71,7 @@ function SignupPage() {
   }
 
   return (
-    <AuthPageLayout>
+    <AuthPageLayout footer={<TermsNotice />} anchorContent>
       <div aria-labelledby="sign-up-title">
         <div className="space-y-1.5">
           <h1
@@ -73,7 +84,7 @@ function SignupPage() {
             Set up your first workspace next.
           </p>
         </div>
-        <GoogleSignIn />
+        {!passwordStep ? <GoogleSignIn /> : null}
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium" htmlFor="email">
@@ -90,37 +101,60 @@ function SignupPage() {
               onChange={(event) => setEmail(event.target.value)}
             />
           </div>
-          <PasswordField
-            label="Password"
-            id="password"
-            autoComplete="new-password"
-            minLength={8}
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-          <PasswordField
-            label="Confirm password"
-            id="confirm-password"
-            autoComplete="new-password"
-            minLength={8}
-            required
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-          />
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
+          {passwordStep ? (
+            <>
+              <div>
+                <PasswordField
+                  label="Password"
+                  id="password"
+                  // Deliberate: the email step is done, so this is the next input.
+                  // oxlint-disable-next-line jsx-a11y/no-autofocus
+                  autoFocus
+                  autoComplete="new-password"
+                  aria-describedby={password ? "password-feedback" : undefined}
+                  minLength={8}
+                  required
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setError(null);
+                  }}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                />
+                <PasswordStrengthFeedback
+                  password={password}
+                  email={email}
+                  expanded={passwordFocused}
+                />
+              </div>
+              <div>
+                <PasswordField
+                  label="Confirm password"
+                  id="confirm-password"
+                  autoComplete="new-password"
+                  aria-invalid={Boolean(error)}
+                  minLength={8}
+                  required
+                  value={confirmPassword}
+                  onChange={(event) => {
+                    setConfirmPassword(event.target.value);
+                    setError(null);
+                  }}
+                />
+                <AuthError message={error} />
+              </div>
+            </>
           ) : null}
-          <Button className="h-10 w-full" disabled={isSubmitting} type="submit">
-            {isSubmitting ? (
-              <LoaderCircleIcon className="animate-spin" />
-            ) : (
-              <UserPlusIcon />
-            )}
-            <span>{isSubmitting ? "Creating account" : "Create account"}</span>
-          </Button>
+          <AuthActionButton disabled={isSubmitting} type="submit">
+            <span>
+              {isSubmitting
+                ? "Creating account"
+                : passwordStep
+                  ? "Create account"
+                  : "Continue"}
+            </span>
+          </AuthActionButton>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{" "}

@@ -5,11 +5,14 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { LoaderCircleIcon, LogInIcon } from "lucide-react";
 import { AuthPending } from "@/components/auth/auth-pending";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
-import { Button } from "@/components/ui/button";
+import {
+  AuthActionButton,
+  AuthError,
+} from "@/components/auth/auth-form-controls";
+import { TermsNotice } from "@/components/auth/terms-notice";
 import { PasswordField } from "@/components/auth/password-field";
 import { Input } from "@/components/ui/input";
 import { clearAuthStateCache, getSignedInDestination } from "@/lib/auth-flow";
@@ -116,7 +119,7 @@ function LoginPage() {
   }
 
   return (
-    <AuthPageLayout>
+    <AuthPageLayout footer={<TermsNotice />}>
       <div aria-labelledby="sign-in-title">
         <div className="space-y-1.5">
           <h1
@@ -143,38 +146,38 @@ function LoginPage() {
               required
               type="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setError(null);
+              }}
             />
           </div>
-          <div className="flex flex-col gap-2">
+          <div>
             <PasswordField
               label="Password"
+              labelAction={
+                <Link
+                  className="text-sm text-muted-foreground transition-colors duration-150 ease-[ease] hover:text-foreground"
+                  to="/forgot-password"
+                >
+                  Forgot password?
+                </Link>
+              }
               id="password"
               autoComplete="current-password"
+              aria-invalid={Boolean(error)}
               required
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setError(null);
+              }}
             />
-            <Link
-              className="self-end text-sm text-muted-foreground transition-colors duration-150 ease-[ease] hover:text-foreground"
-              to="/forgot-password"
-            >
-              Forgot password?
-            </Link>
+            <AuthError message={error} />
           </div>
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button className="h-10 w-full" disabled={isSubmitting} type="submit">
-            {isSubmitting ? (
-              <LoaderCircleIcon className="animate-spin" />
-            ) : (
-              <LogInIcon />
-            )}
+          <AuthActionButton disabled={isSubmitting} type="submit">
             <span>{isSubmitting ? "Signing in" : "Sign in"}</span>
-          </Button>
+          </AuthActionButton>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">
           New here?{" "}

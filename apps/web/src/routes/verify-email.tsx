@@ -5,11 +5,14 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { LoaderCircleIcon } from "lucide-react";
 import { AuthPending } from "@/components/auth/auth-pending";
+import {
+  AuthActionButton,
+  AuthError,
+  ResendCodeLabel,
+} from "@/components/auth/auth-form-controls";
 import { CenteredAuthLayout } from "@/components/auth/centered-auth-layout";
 import { OTP_LENGTH, OtpField } from "@/components/auth/otp-field";
-import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { clearAuthStateCache, redirectIfSignedIn } from "@/lib/auth-flow";
 
@@ -114,30 +117,29 @@ function VerifyEmailPage() {
             void verify(code);
           }}
         >
-          <OtpField
-            // Deliberate: this step exists only to enter the code.
-            // oxlint-disable-next-line jsx-a11y/no-autofocus
-            autoFocus
-            disabled={isVerifying}
-            id="verify-code"
-            invalid={Boolean(error)}
-            onChange={setCode}
-            onComplete={(value) => void verify(value)}
-            value={code}
-          />
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button
-            className="h-10 w-full"
+          <div>
+            <OtpField
+              // Deliberate: this step exists only to enter the code.
+              // oxlint-disable-next-line jsx-a11y/no-autofocus
+              autoFocus
+              disabled={isVerifying}
+              id="verify-code"
+              invalid={Boolean(error)}
+              onChange={(value) => {
+                setCode(value);
+                setError(null);
+              }}
+              onComplete={(value) => void verify(value)}
+              value={code}
+            />
+            <AuthError message={error} />
+          </div>
+          <AuthActionButton
             disabled={isVerifying || code.length !== OTP_LENGTH}
             type="submit"
           >
-            {isVerifying ? <LoaderCircleIcon className="animate-spin" /> : null}
-            Verify email
-          </Button>
+            {isVerifying ? "Verifying email" : "Verify email"}
+          </AuthActionButton>
         </form>
 
         <p className="mt-5 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
@@ -149,7 +151,7 @@ function VerifyEmailPage() {
               onClick={() => void resend()}
               type="button"
             >
-              {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
+              <ResendCodeLabel seconds={cooldown} />
             </button>
           </span>
           <span aria-hidden="true">·</span>

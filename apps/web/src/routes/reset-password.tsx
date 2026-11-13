@@ -5,18 +5,27 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { KeyRoundIcon, LoaderCircleIcon } from "lucide-react";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { AuthPending } from "@/components/auth/auth-pending";
 import { OTP_LENGTH, OtpField } from "@/components/auth/otp-field";
 import { PasswordField } from "@/components/auth/password-field";
-import { Button } from "@/components/ui/button";
+import { PasswordStrengthFeedback } from "@/components/auth/password-strength-feedback";
+import {
+  AuthActionButton,
+  AuthError,
+  ResendCodeLabel,
+} from "@/components/auth/auth-form-controls";
 import { authClient } from "@/lib/auth-client";
 import { redirectIfSignedIn } from "@/lib/auth-flow";
 
 type ResetSearch = { email?: string };
 
 const RESEND_COOLDOWN_SECONDS = 30;
+const OTP_ERROR_CODES = new Set([
+  "INVALID_OTP",
+  "OTP_EXPIRED",
+  "TOO_MANY_ATTEMPTS",
+]);
 
 export const Route = createFileRoute("/reset-password")({
   validateSearch: (search): ResetSearch => ({
@@ -40,8 +49,10 @@ export const Route = createFileRoute("/reset-password")({
 function ResetPasswordPage() {
   const { email } = Route.useSearch();
   const navigate = useNavigate();
+  const [step, setStep] = useState<"code" | "password">("code");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,14 +65,29 @@ function ResetPasswordPage() {
     return () => window.clearTimeout(timer);
   }, [cooldown]);
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function verifyCode(value: string) {
+    if (!email || isSubmitting || value.length !== OTP_LENGTH) return;
+    setError(null);
+    setIsSubmitting(true);
+    // Checks the code without consuming it; resetPassword verifies it again.
+    const { error } = await authClient.emailOtp.checkVerificationOtp({
+      email,
+      type: "forget-password",
+      otp: value,
+    });
+    setIsSubmitting(false);
+    if (error) {
+      setError(error.message ?? "That code didn't work. Please try again.");
+      setCode("");
+      return;
+    }
+    setStep("password");
+  }
+
+  async function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!email) return;
     setError(null);
-    if (code.length !== OTP_LENGTH) {
-      setError("Enter the 6-digit code from your email.");
-      return;
-    }
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -73,8 +99,17 @@ function ResetPasswordPage() {
       password,
     });
     if (error) {
-      setError(error.message ?? "Unable to reset your password.");
       setIsSubmitting(false);
+      // The code expired or ran out of attempts between the two steps.
+      if (error.code && OTP_ERROR_CODES.has(error.code)) {
+        setCode("");
+        setPassword("");
+        setConfirmPassword("");
+        setStep("code");
+        setError("That code has expired. Enter a new one.");
+        return;
+      }
+      setError(error.message ?? "Unable to reset your password.");
       return;
     }
     void navigate({ to: "/login", replace: true });
@@ -97,7 +132,7 @@ function ResetPasswordPage() {
   }
 
   return (
-    <AuthPageLayout>
+    <AuthPageLayout anchorContent>
       <div aria-labelledby="reset-title">
         <div className="space-y-1.5">
           <h1
@@ -109,78 +144,136 @@ function ResetPasswordPage() {
           <p className="text-sm text-muted-foreground">
             If an account exists for{" "}
             <span className="font-medium text-foreground">{email}</span>, we
-            sent it a 6-digit code. Enter it with a new password.
+            sent it a 6-digit code.
           </p>
         </div>
-        <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium" htmlFor="reset-code">
-              Code
-            </label>
-            <OtpField
-              // Deliberate: this step exists only to enter the code.
-              // oxlint-disable-next-line jsx-a11y/no-autofocus
-              autoFocus
-              disabled={isSubmitting}
-              id="reset-code"
-              invalid={Boolean(error)}
-              onChange={setCode}
-              value={code}
-            />
-          </div>
-          <PasswordField
-            label="New password"
-            id="password"
-            autoComplete="new-password"
-            minLength={8}
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-          <PasswordField
-            label="Confirm password"
-            id="confirm-password"
-            autoComplete="new-password"
-            minLength={8}
-            required
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-          />
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          <Button className="h-10 w-full" disabled={isSubmitting} type="submit">
-            {isSubmitting ? (
-              <LoaderCircleIcon className="animate-spin" />
-            ) : (
-              <KeyRoundIcon />
-            )}
-            Reset password
-          </Button>
-        </form>
-
-        <p className="mt-5 flex flex-wrap items-center justify-center gap-x-2 text-sm text-muted-foreground">
-          <span>
-            Didn&apos;t get it?{" "}
-            <button
-              className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
-              disabled={isSending || cooldown > 0}
-              onClick={() => void resend()}
-              type="button"
+        {step === "code" ? (
+          <>
+            <form
+              className="mt-6 space-y-5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void verifyCode(code);
+              }}
             >
-              {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
-            </button>
-          </span>
-          <span aria-hidden="true">·</span>
-          <Link
-            className="transition-colors duration-150 ease-[ease] hover:text-foreground"
-            to="/forgot-password"
-          >
-            Wrong email?
-          </Link>
-        </p>
+              <div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium" htmlFor="reset-code">
+                    Code
+                  </label>
+                  <OtpField
+                    // Deliberate: this step exists only to enter the code.
+                    // oxlint-disable-next-line jsx-a11y/no-autofocus
+                    autoFocus
+                    disabled={isSubmitting}
+                    id="reset-code"
+                    invalid={Boolean(error)}
+                    onChange={(value) => {
+                      setCode(value);
+                      setError(null);
+                    }}
+                    onComplete={(value) => void verifyCode(value)}
+                    value={code}
+                  />
+                </div>
+                <AuthError message={error} />
+              </div>
+              <AuthActionButton
+                disabled={isSubmitting || code.length !== OTP_LENGTH}
+                type="submit"
+              >
+                {isSubmitting ? "Checking code" : "Continue"}
+              </AuthActionButton>
+            </form>
+
+            <p className="mt-5 flex flex-wrap items-center justify-center gap-x-2 text-sm text-muted-foreground">
+              <span>
+                Didn&apos;t get it?{" "}
+                <button
+                  className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+                  disabled={isSending || cooldown > 0}
+                  onClick={() => void resend()}
+                  type="button"
+                >
+                  <ResendCodeLabel seconds={cooldown} />
+                </button>
+              </span>
+              <span aria-hidden="true">·</span>
+              <Link
+                className="transition-colors duration-150 ease-[ease] hover:text-foreground"
+                to="/forgot-password"
+              >
+                Wrong email?
+              </Link>
+            </p>
+          </>
+        ) : (
+          <>
+            <form
+              className="mt-6 space-y-5"
+              onSubmit={(event) => void handlePasswordSubmit(event)}
+            >
+              <div>
+                <PasswordField
+                  label="New password"
+                  id="password"
+                  autoComplete="new-password"
+                  aria-describedby={password ? "password-feedback" : undefined}
+                  // Deliberate: the code is verified, so this is the next input.
+                  // oxlint-disable-next-line jsx-a11y/no-autofocus
+                  autoFocus
+                  minLength={8}
+                  required
+                  value={password}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    setError(null);
+                  }}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
+                />
+                <PasswordStrengthFeedback
+                  password={password}
+                  email={email ?? ""}
+                  expanded={passwordFocused}
+                />
+              </div>
+              <div>
+                <PasswordField
+                  label="Confirm password"
+                  id="confirm-password"
+                  autoComplete="new-password"
+                  aria-invalid={Boolean(error)}
+                  minLength={8}
+                  required
+                  value={confirmPassword}
+                  onChange={(event) => {
+                    setConfirmPassword(event.target.value);
+                    setError(null);
+                  }}
+                />
+                <AuthError message={error} />
+              </div>
+              <AuthActionButton disabled={isSubmitting} type="submit">
+                {isSubmitting ? "Resetting password" : "Reset password"}
+              </AuthActionButton>
+            </form>
+
+            <p className="mt-5 text-center text-sm text-muted-foreground">
+              <button
+                className="transition-colors duration-150 ease-[ease] hover:text-foreground"
+                onClick={() => {
+                  setError(null);
+                  setCode("");
+                  setStep("code");
+                }}
+                type="button"
+              >
+                Back
+              </button>
+            </p>
+          </>
+        )}
       </div>
     </AuthPageLayout>
   );

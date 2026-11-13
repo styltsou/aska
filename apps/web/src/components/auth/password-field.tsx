@@ -1,4 +1,4 @@
-import { useState, type ComponentProps } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Field, FieldLabel } from "@/components/ui/field";
 import {
@@ -6,24 +6,38 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { cn } from "@/lib/utils";
 
 export function PasswordField({
   label,
+  labelAction,
   id,
   ...props
 }: Omit<ComponentProps<typeof InputGroupInput>, "type" | "id"> & {
   label: string;
+  labelAction?: ReactNode;
   id: string;
 }) {
   const [visible, setVisible] = useState(false);
+  const invalid =
+    props["aria-invalid"] === true || props["aria-invalid"] === "true";
   return (
     <Field className="flex flex-col gap-2 space-y-0">
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <InputGroup className="h-10">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <FieldLabel htmlFor={id}>{label}</FieldLabel>
+        {labelAction}
+      </div>
+      <InputGroup
+        className={cn(
+          "h-10",
+          invalid &&
+            "border-destructive focus-within:border-destructive focus-within:ring-destructive/20",
+        )}
+      >
         <InputGroupInput
           {...props}
           id={id}
-          className="h-10 px-3"
+          className="h-full -translate-y-px px-3"
           type={visible ? "text" : "password"}
         />
         <InputGroupAddon align="end" className="pl-1.5">

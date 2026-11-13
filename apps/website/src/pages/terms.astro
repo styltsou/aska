@@ -1,0 +1,45 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Terms and Conditions | Mnemee" description="Terms and conditions for using Mnemee." path="/terms">
+	<main class="terms">
+		<a class="brand" href="/" aria-label="Mnemee home"><img src="/mnemee-logo.svg" alt="Mnemee" width="125" height="32" /></a>
+		<article>
+			<p class="eyebrow">Mnemee</p>
+			<h1>Terms and Conditions</h1>
+			<p>These terms apply to your use of Mnemee, a visual workspace for collecting and organizing references. By creating an account or using the service, you agree to these terms.</p>
+
+			<h2>Your account</h2>
+			<p>Provide a valid email address and keep your sign-in credentials secure. You are responsible for activity under your account and should contact us if you believe it has been accessed without permission.</p>
+
+			<h2>Your content</h2>
+			<p>You retain your rights to the content you add to Mnemee. You are responsible for ensuring you have the rights needed to upload, store, and use that content. You give Mnemee permission to store and process it as needed to provide the service to you.</p>
+
+			<h2>Using the service</h2>
+			<p>Do not use Mnemee to break the law, infringe others' rights, access another person's account without permission, or disrupt the service. Links and content from third parties remain subject to their own terms.</p>
+
+			<h2>Availability and changes</h2>
+			<p>Mnemee may change or be temporarily unavailable. Please keep your own copies of content that matters to you. We may update these terms as the service changes; the current version will be available on this page.</p>
+
+			<h2>Applicable law</h2>
+			<p>These terms are governed by the laws of Greece, without limiting any mandatory consumer protections that apply to you.</p>
+
+			<h2>Contact</h2>
+			<p>For questions about these terms, contact <a href="mailto:hello@mnemee.space">hello@mnemee.space</a>.</p>
+		</article>
+	</main>
+</Layout>
+
+<style>
+	.terms { min-height: 100svh; padding: 32px clamp(24px, 6vw, 80px) 96px; background: var(--surface); }
+	.brand { display: inline-block; }
+	.brand img { display: block; height: auto; }
+	:global(html[data-theme='dark']) .brand img { filter: invert(1); }
+	article { width: min(100%, 680px); margin: clamp(80px, 12vw, 144px) auto 0; }
+	.eyebrow { margin-bottom: 16px; color: var(--ink-muted); font-size: 13px; font-weight: 600; }
+	h1 { margin-bottom: 28px; font-size: clamp(36px, 6vw, 56px); line-height: 1.1; letter-spacing: -.035em; }
+	h2 { margin: 40px 0 12px; font-size: 19px; }
+	article p:not(.eyebrow) { color: var(--ink-muted); font-size: 16px; line-height: 1.75; }
+	article a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+</style>

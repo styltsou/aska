@@ -13,9 +13,13 @@ const DEFAULT_CAPTION = (
 export function AuthPageLayout({
   children,
   caption,
+  footer,
+  anchorContent = false,
 }: {
   children: ReactNode;
   caption?: ReactNode;
+  footer?: ReactNode;
+  anchorContent?: boolean;
 }) {
   return (
     <main className="grid min-h-[100svh] grid-cols-2 bg-background max-[62rem]:grid-cols-1">
@@ -36,7 +40,15 @@ export function AuthPageLayout({
           {caption ?? DEFAULT_CAPTION}
         </p>
       </section>
-      <section className="relative col-start-1 row-start-1 grid min-h-[100svh] content-center p-[clamp(2rem,5vw,5rem)] max-[62rem]:p-[5rem_1.25rem_2rem]">
+      <section
+        className={
+          footer
+            ? `relative col-start-1 row-start-1 grid min-h-[100svh] px-[clamp(2rem,5vw,5rem)] py-4 max-[62rem]:px-5 max-[62rem]:pt-6 max-[62rem]:pb-6 ${anchorContent ? "grid-rows-[clamp(7rem,16svh,11rem)_auto_minmax(3rem,1fr)]" : "grid-rows-[minmax(4rem,1fr)_auto_minmax(3rem,1fr)]"}`
+            : anchorContent
+              ? "relative col-start-1 row-start-1 grid min-h-[100svh] grid-rows-[clamp(7rem,16svh,11rem)_auto_minmax(3rem,1fr)] px-[clamp(2rem,5vw,5rem)] py-4 max-[62rem]:px-5 max-[62rem]:pt-6 max-[62rem]:pb-6"
+              : "relative col-start-1 row-start-1 grid min-h-[100svh] content-center p-[clamp(2rem,5vw,5rem)] max-[62rem]:p-[5rem_1.25rem_2rem]"
+        }
+      >
         <a
           aria-label="Mnemee home"
           className="absolute top-[1rem] left-[1rem] cursor-pointer max-[62rem]:top-6 max-[62rem]:left-6"
@@ -44,9 +56,18 @@ export function AuthPageLayout({
         >
           <BrandLogo />
         </a>
-        <div className="w-[min(100%,23rem)] justify-self-center">
+        <div
+          className={
+            footer || anchorContent
+              ? "row-start-2 w-[min(100%,23rem)] justify-self-center"
+              : "w-[min(100%,23rem)] justify-self-center"
+          }
+        >
           {children}
         </div>
+        {footer ? (
+          <div className="row-start-3 w-full self-end">{footer}</div>
+        ) : null}
       </section>
     </main>
   );

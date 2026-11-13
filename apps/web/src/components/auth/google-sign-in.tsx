@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { LoaderCircleIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  AuthActionButton,
+  AuthError,
+} from "@/components/auth/auth-form-controls";
 import { signIn } from "@/lib/auth-client";
 import {
   beginGoogleSignIn,
@@ -85,10 +88,9 @@ export function GoogleSignIn({
   }
 
   return (
-    <div className="mt-6 space-y-6">
+    <div className="mt-6">
       <div className="relative">
-        <Button
-          className="h-10 w-full"
+        <AuthActionButton
           type="button"
           disabled={pending}
           onClick={handleSignIn}
@@ -99,24 +101,20 @@ export function GoogleSignIn({
             <GoogleIcon />
           )}
           Continue with Google
-        </Button>
+        </AuthActionButton>
         {lastUsed ? (
           <span className="pointer-events-none absolute -top-3 right-3 rounded-full border border-border bg-background px-3 py-1.5 text-xs leading-none font-medium text-foreground shadow-sm">
             Last used
           </span>
         ) : null}
+        <AuthError message={error} />
       </div>
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
       <div
-        className="flex items-center gap-3 text-xs text-muted-foreground"
+        className="mt-6 flex items-center gap-3 text-xs text-muted-foreground"
         aria-hidden="true"
       >
         <span className="h-px flex-1 bg-border" />
-        or
+        or continue with email
         <span className="h-px flex-1 bg-border" />
       </div>
     </div>
