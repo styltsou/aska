@@ -101,7 +101,7 @@ export function GoogleSignIn({
           Continue with Google
         </Button>
         {lastUsed ? (
-          <span className="pointer-events-none absolute -top-2.5 right-3 rounded-full border border-border bg-background px-2.5 py-1 text-xs leading-none font-medium text-foreground shadow-sm">
+          <span className="pointer-events-none absolute -top-3 right-3 rounded-full border border-border bg-background px-3 py-1.5 text-xs leading-none font-medium text-foreground shadow-sm">
             Last used
           </span>
         ) : null}
