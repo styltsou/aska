@@ -22,13 +22,13 @@ const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog
 
 <style>
 	.consent { position: relative; z-index: 100; }
-	.consent__panel { position: fixed; right: auto; bottom: clamp(20px, 4vh, 44px); left: 50%; width: min(760px, calc(100vw - 40px)); padding: clamp(24px, 4vw, 36px); transform: translateX(-50%); border: 1px solid #3c3c3c; border-radius: 14px; background: #171717; color: #f5f5f5; box-shadow: 0 12px 44px rgb(0 0 0 / 30%); }
+	.consent__panel { position: fixed; right: auto; bottom: 20px; left: 50%; width: min(480px, calc(100vw - 32px)); padding: 18px 20px; transform: translateX(-50%); border: 1px solid #3c3c3c; border-radius: 12px; background: #171717; color: #f5f5f5; box-shadow: 0 10px 36px rgb(0 0 0 / 30%); }
 	.consent__panel[hidden] { display: none; }
-	.consent__panel h2 { margin: 0 0 12px; font-size: clamp(18px, 2vw, 21px); }
-	.consent__panel p { margin: 0; color: #c9c9c9; font-size: 14px; line-height: 1.6; }
+	.consent__panel h2 { margin: 0 0 8px; font-size: 17px; }
+	.consent__panel p { margin: 0; color: #c9c9c9; font-size: 13px; line-height: 1.5; }
 	.consent__panel a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
-	.consent__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
-	.consent__actions button { min-width: 156px; min-height: 44px; padding: 10px 16px; border: 1px solid #888; border-radius: 6px; background: transparent; color: #fff; cursor: pointer; font-size: 13px; font-weight: 600; }
+	.consent__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+	.consent__actions button { min-width: 124px; min-height: 38px; padding: 8px 12px; border: 1px solid #888; border-radius: 6px; background: transparent; color: #fff; cursor: pointer; font-size: 12px; font-weight: 600; }
 	.consent__actions button[data-consent-accept] { border-color: #fff; background: #fff; color: #171717; }
 	.consent__actions button:hover { opacity: .82; }
 	:global(html[data-theme='dark']) .consent__panel { border-color: #d7d7d7; background: #fff; color: #171717; box-shadow: 0 12px 44px rgb(0 0 0 / 55%); }
@@ -36,5 +36,5 @@ const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog
 	:global(html[data-theme='dark']) .consent__panel a { color: #171717; }
 	:global(html[data-theme='dark']) .consent__actions button { border-color: #777; color: #171717; }
 	:global(html[data-theme='dark']) .consent__actions button[data-consent-accept] { border-color: #171717; background: #171717; color: #fff; }
-	@media (max-width: 520px) { .consent__panel { bottom: 16px; width: calc(100vw - 28px); padding: 22px; }.consent__actions { flex-direction: column-reverse; }.consent__actions button { width: 100%; } }
+	@media (max-width: 380px) { .consent__panel { bottom: 14px; width: calc(100vw - 24px); padding: 16px; }.consent__actions button { min-width: 0; flex: 1; padding-inline: 8px; } }
 </style>
