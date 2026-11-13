@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AvatarPicker } from "@/components/auth/avatar-picker";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
@@ -53,6 +54,7 @@ export function AccountSettings() {
   return (
     <section className="space-y-5">
       <h2 className="text-xl font-semibold tracking-tight">Account</h2>
+      <AvatarPicker googleLinked={linked === true} />
       <div className="space-y-3">
         <div>
           <h3 className="text-sm font-medium">Google sign-in</h3>

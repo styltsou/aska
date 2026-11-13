@@ -1,11 +1,22 @@
 import { createAuthClient } from "better-auth/react";
-import { emailOTPClient, organizationClient } from "better-auth/client/plugins";
+import {
+  emailOTPClient,
+  inferAdditionalFields,
+  organizationClient,
+} from "better-auth/client/plugins";
 
 const DEFAULT_SERVER_URL = "http://localhost:3000";
 
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_SERVER_URL ?? DEFAULT_SERVER_URL,
-  plugins: [organizationClient(), emailOTPClient()],
+  plugins: [
+    organizationClient(),
+    emailOTPClient(),
+    // Mirrors `user.additionalFields` in the server's auth config.
+    inferAdditionalFields({
+      user: { avatar: { type: "string", required: false } },
+    }),
+  ],
   sessionOptions: {
     // Route guards own session refreshes. Avoid network requests just because
     // a user switches back to this browser tab.

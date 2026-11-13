@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/user-avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,14 +36,14 @@ import {
   SendIcon,
   SettingsIcon,
 } from "lucide-react";
-import { signOut, type AuthUser } from "@/lib/auth-client";
+import { authClient, signOut, type AuthUser } from "@/lib/auth-client";
 import { clearAuthStateCache } from "@/lib/auth-flow";
 import { clearMediaSession } from "@/lib/media-session";
 import { openSettings } from "@/lib/settings-dialog";
 import { useRouter } from "@tanstack/react-router";
 
 export function NavUser({
-  user,
+  user: routeUser,
   onMenuOpenChange,
 }: {
   user: AuthUser;
@@ -51,9 +51,11 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
-  const avatarUrl = user.image ?? undefined;
-  const fallback =
-    user.name?.charAt(0).toUpperCase() ?? user.email.charAt(0).toUpperCase();
+  // The route's session is cached for a while; the live session reflects an
+  // avatar change as soon as it is saved.
+  const { data: liveSession } = authClient.useSession();
+  const user = liveSession?.user ?? routeUser;
+  const displayName = user.name || user.email;
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -70,10 +72,7 @@ export function NavUser({
                 />
               }
             >
-              <Avatar>
-                <AvatarImage src={avatarUrl} alt={user.name} />
-                <AvatarFallback>{fallback}</AvatarFallback>
-              </Avatar>
+              <UserAvatar user={user} name={displayName} />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
                 <span className="truncate text-xs">{user.email}</span>
@@ -89,10 +88,7 @@ export function NavUser({
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                    <Avatar>
-                      <AvatarImage src={avatarUrl} alt={user.name} />
-                      <AvatarFallback>{fallback}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar user={user} name={displayName} />
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-medium">{user.name}</span>
                       <span className="truncate text-xs">{user.email}</span>

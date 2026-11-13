@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 import { emailOTP, organization } from "better-auth/plugins";
 import { apiKey } from "@better-auth/api-key";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -37,6 +37,9 @@ async function discardUnverifiedLocalCredentials(userId: string) {
   await db.delete(schema.session).where(eq(schema.session.userId, userId));
 }
 
+/** `gradient:<id>` today; `upload:<key>` joins it when avatar uploads ship. */
+const AVATAR_PATTERN = /^gradient:[a-z0-9-]{1,32}$/;
+
 let _auth: ReturnType<typeof createAuth> | undefined;
 
 function createAuth() {
@@ -56,12 +59,21 @@ function createAuth() {
             google: {
               clientId: env.GOOGLE_CLIENT_ID,
               clientSecret: env.GOOGLE_CLIENT_SECRET,
+              // Keeps `user.image` current. It never touches `user.avatar`,
+              // which holds the user's own choice and always wins.
+              overrideUserInfoOnSignIn: true,
             },
           }
         : {},
+    user: {
+      additionalFields: {
+        avatar: { type: "string", required: false, input: true },
+      },
+    },
     account: {
       accountLinking: {
         enabled: true,
+        updateUserInfoOnLink: true,
         // Linking requires the provider to report a verified email (Google
         // does). If the local account was never verified, the databaseHooks
         // below wipe its password and sessions, so a pre-registered attacker
@@ -113,6 +125,21 @@ function createAuth() {
         : {}),
     },
     databaseHooks: {
+      user: {
+        update: {
+          before: async (data) => {
+            if (data.avatar === undefined) return { data };
+            // "" clears the choice. Anything else must be a known source kind.
+            const avatar = data.avatar === "" ? null : data.avatar;
+            if (avatar !== null && !AVATAR_PATTERN.test(String(avatar))) {
+              throw new APIError("BAD_REQUEST", {
+                message: "Invalid avatar.",
+              });
+            }
+            return { data: { ...data, avatar } };
+          },
+        },
+      },
       account: {
         create: {
           before: async (account) => {
