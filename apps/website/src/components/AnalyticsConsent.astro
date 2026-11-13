@@ -40,10 +40,10 @@ const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog
 	.consent__option span { display: grid; gap: 3px; }.consent__option strong { font-size: 13px; }.consent__option small { color: #c9c9c9; font-size: 12px; line-height: 1.4; }
 	.consent__option input { appearance: none; display: grid; place-content: center; width: 18px; height: 18px; margin: 0; flex: none; border: 1px solid rgb(255 255 255 / 25%); border-radius: 4px; background: #292929; cursor: pointer; transition: background 100ms ease-out, border-color 100ms ease-out, box-shadow 100ms ease-out; }
 	.consent__option input:checked { border-color: #c9c9c9; background: linear-gradient(to bottom, #fff, #e5e5e5); box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%), 0 1px 2px rgb(0 0 0 / 20%); }
-	.consent__option input:checked::after { content: ''; width: 9px; height: 5px; border: solid #171717; border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg); }
+	.consent__option input:checked::after { content: ''; width: 13px; height: 13px; background: #171717; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12l4 4L19 6' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
 	.consent__option input:disabled { opacity: .5; cursor: not-allowed; }
 	.consent__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-	.consent__actions .app-button { min-width: 0; height: 34px; padding-inline: 10px; border-radius: .45rem; font-size: 12px; }
+	.consent__actions .app-button { min-width: 0; height: 34px; padding-inline: 10px; border-radius: .45rem; font-size: 12px; cursor: pointer; }
 	.consent__actions .app-button--primary { border-color: #dedede; background: #f5f5f5; color: #171717; box-shadow: inset 0 1px 0 rgb(255 255 255 / 45%), 0 1px 2px rgb(0 0 0 / 15%); }
 	.consent__actions .app-button--secondary { border-color: #555; background: #292929; color: #f5f5f5; box-shadow: 0 1px 1px rgb(0 0 0 / 15%); }
 	:global(html[data-theme='dark']) .consent__panel { border-color: #d7d7d7; background: #fff; color: #171717; box-shadow: 0 12px 44px rgb(0 0 0 / 55%); }
@@ -52,7 +52,7 @@ const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog
 	:global(html[data-theme='dark']) .consent__option small { color: #555; }
 	:global(html[data-theme='dark']) .consent__option input { border-color: rgb(0 0 0 / 25%); background: #f5f5f5; }
 	:global(html[data-theme='dark']) .consent__option input:checked { border-color: #0e0e0e; background: linear-gradient(to bottom, #373737, #171717); box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 1px 2px rgb(0 0 0 / 12%); }
-	:global(html[data-theme='dark']) .consent__option input:checked::after { border-color: #fafafa; }
+	:global(html[data-theme='dark']) .consent__option input:checked::after { background: #fafafa; }
 	:global(html[data-theme='dark']) .consent__actions .app-button--primary { border-color: #292929; background: #171717; color: #f5f5f5; }
 	:global(html[data-theme='dark']) .consent__actions .app-button--secondary { border-color: #dedede; background: #f5f5f5; color: #171717; }
 	@media (max-width: 380px) { .consent__panel { bottom: 8px; width: calc(100vw - 24px); padding: 12px; }.consent__actions { flex-wrap: wrap; }.consent__actions .app-button { flex: 1; padding-inline: 8px; } }
