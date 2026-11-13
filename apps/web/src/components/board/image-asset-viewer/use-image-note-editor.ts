@@ -85,6 +85,8 @@ export function useImageNoteEditor({
 
   useEffect(() => {
     serverNoteRef.current = asset?.note;
+    // Re-runs when asset?.id changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [asset?.id, asset?.note]);
 
   const persist = useCallback(

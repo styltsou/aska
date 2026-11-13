@@ -766,6 +766,8 @@ export const NoteRichText = forwardRef<
     agentPendingDraftRef.current = restored;
     lastSessionSaveRef.current = stored.baseMarkdown;
     setAgentSession({ widget, restored });
+    // Re-runs when markdown changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [agentWidget, editable, editor, markdown, sourceNoteId]);
 
   const handleAgentDraft = useCallback(

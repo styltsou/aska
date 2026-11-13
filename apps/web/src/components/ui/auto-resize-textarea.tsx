@@ -33,6 +33,8 @@ const AutoResizeTextarea = React.forwardRef<
 
   React.useLayoutEffect(() => {
     resize();
+    // Re-runs when value, defaultValue change; they are not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [resize, value, defaultValue]);
 
   React.useEffect(() => {

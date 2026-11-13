@@ -497,6 +497,8 @@ export function PexelsBrowserPanel({
   }, [open, width]);
 
   useEffect(() => {
+    // Resets the search box to the saved query when the scope changes (not when the saved query itself changes).
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
     setInput(savedQuery);
     setQuery(savedQuery);
   }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps

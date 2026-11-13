@@ -695,6 +695,8 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
     }, [flatItems, loading, selectedKey]);
     useEffect(() => {
       if (listRef.current) listRef.current.scrollTop = 0;
+      // Re-runs when parsed.search, parsed.scope change; they are not read inside the effect.
+      // oxlint-disable-next-line react/exhaustive-effect-dependencies
     }, [parsed.search, parsed.scope]);
     useEffect(() => {
       const list = listRef.current;
@@ -706,6 +708,8 @@ const MentionMenu = forwardRef<MentionMenuHandle, MentionMenuProps>(
         list.scrollTop += rowRect.top - listRect.top;
       else if (rowRect.bottom > listRect.bottom)
         list.scrollTop += rowRect.bottom - listRect.bottom;
+      // Re-runs when flatItems changes; it is not read inside the effect.
+      // oxlint-disable-next-line react/exhaustive-effect-dependencies
     }, [selectedIndex, flatItems]);
 
     function select(index: number) {

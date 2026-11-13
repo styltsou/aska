@@ -851,6 +851,8 @@ export function YouTubeVideoContent({
       playerRef.current?.destroy();
       playerRef.current = null;
     };
+    // Re-runs when asset.video.videoId changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [asset.video.videoId, open]);
 
   const media = (
@@ -1050,6 +1052,8 @@ function VideoViewerMetadata({
     const observer = new ResizeObserver(measure);
     observer.observe(descriptionElement);
     return () => observer.disconnect();
+    // Re-runs when large, compact change; they are not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [descriptionElement, description, descriptionIsLong, large, compact]);
 
   const descriptionParagraph = description ? (

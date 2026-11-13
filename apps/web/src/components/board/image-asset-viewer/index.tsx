@@ -688,6 +688,8 @@ function ProgressiveViewerImage({
       cancelAnimationFrame(samplingFrameRef.current);
       samplingFrameRef.current = null;
     }
+    // Re-runs when pickMode changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [pickMode]);
 
   const updatePreviewPosition = useCallback(
@@ -1254,6 +1256,8 @@ export function ImageAssetViewer({
   useEffect(() => {
     setEditedAsset(null);
     setOptimisticCropPreviewUrl(null);
+    // Re-runs when selectedAsset?.id changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [selectedAsset?.id]);
 
   const applicableEditedAsset =
@@ -1410,6 +1414,8 @@ export function ImageAssetViewer({
     setHasCopiedImage(false);
     setHasCopiedColor(false);
     setIsEyeDropping(false);
+    // Re-runs when asset?.id changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [asset?.id]);
 
   const commitMediaSize = useCallback((size: Size) => {

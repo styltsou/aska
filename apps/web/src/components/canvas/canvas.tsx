@@ -1958,6 +1958,8 @@ function CanvasSurface({
       maxZoom: 1.15,
       duration: 150,
     });
+    // Re-runs when focusRequestId changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [fitView, focusRequestId, focusedNodeId, getNode]);
 
   const previewTranslatedArrows = useCallback(

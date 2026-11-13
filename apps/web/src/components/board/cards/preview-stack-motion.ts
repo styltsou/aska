@@ -113,6 +113,8 @@ export function usePreviewStackLayout(active: boolean, previewIds: string) {
     cards.forEach((card) => observer.observe(card));
     update();
     return () => observer.disconnect();
+    // Re-runs when previewIds changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [active, previewIds]);
   return { containerRef, poses };
 }

@@ -28,6 +28,8 @@ export function NoteBacklinks({
   useEffect(() => {
     setOpen(false);
     setOpeningAssetId(undefined);
+    // Re-runs when assetId changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [assetId]);
 
   const count = summary.data?.count ?? 0;

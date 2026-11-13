@@ -158,6 +158,8 @@ export function AssetBoard({
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
     return () => cancelAnimationFrame(frame);
+    // Re-runs when focusRequestId changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [assets, focusedAssetId, focusRequestId]);
 
   useIsomorphicLayoutEffect(() => {
@@ -201,6 +203,8 @@ export function AssetBoard({
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
+    // Re-runs when assets.length changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [assets.length, hasMore, isLoadingMore, onLoadMore]);
 
   useEffect(() => {

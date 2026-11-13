@@ -182,6 +182,8 @@ export function NoteTableControls({ editor }: { editor: Editor }) {
       dom.removeEventListener("pointermove", onPointerMove);
       dom.removeEventListener("pointerleave", onLeave);
     };
+    // Re-attaches the pointer listeners when the editor changes; clearPreview is left out so they are not re-attached on every render.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [editor]);
 
   useEffect(() => {
@@ -195,6 +197,8 @@ export function NoteTableControls({ editor }: { editor: Editor }) {
     observer.observe(table);
     measureTable(table);
     return () => observer.disconnect();
+    // Re-observes when the wrapper changes; measureTable is left out so the observer is not recreated on every render.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [wrapper]);
 
   function changeSize(axis: Axis, amount: number) {

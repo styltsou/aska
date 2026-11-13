@@ -380,6 +380,8 @@ export function AssetContextMenu({
       imagePrefetchRef.current?.controller.abort();
       imagePrefetchRef.current = undefined;
     };
+    // Re-runs when asset.id, workspaceSlug change; they are not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [asset.id, workspaceSlug]);
 
   useEffect(() => {

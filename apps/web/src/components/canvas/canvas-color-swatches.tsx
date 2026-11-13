@@ -36,6 +36,8 @@ export function CanvasColorSwatches({
 
   useEffect(() => {
     setMoreOpen(false);
+    // Re-runs when dismissKey changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [dismissKey]);
 
   useEffect(() => {

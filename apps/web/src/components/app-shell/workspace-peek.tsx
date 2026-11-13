@@ -414,6 +414,8 @@ export function WorkspacePeekProvider({
 
   useEffect(() => {
     peekSwitchSequenceRef.current += 1;
+    // Re-runs when peekId, workspaceSlug change; they are not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [peekId, workspaceSlug]);
 
   useBlocker({
@@ -574,6 +576,8 @@ export function WorkspacePeekProvider({
     };
   }, [
     peekId,
+    // Reloads the peek when its id, retry counter, scope, descendants flag or workspace changes (search state is read through peekSearch).
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
     peekRetry,
     peekSearch.peekScope,
     peekSearch.peekDescendants,

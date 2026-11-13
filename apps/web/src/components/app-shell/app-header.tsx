@@ -58,6 +58,8 @@ function CrumbLabel({
     const observer = new ResizeObserver(update);
     observer.observe(element);
     return () => observer.disconnect();
+    // Re-runs when label changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [label]);
   return (
     <Tooltip disabled={!truncated}>
@@ -148,6 +150,8 @@ function AppBreadcrumbs() {
     observer.observe(container);
     observer.observe(measure);
     return () => observer.disconnect();
+    // Re-runs when labelsKey changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [labelsKey]);
   const tailStart = Math.max(1, crumbs.length - layout.tailCount);
   const hidden =

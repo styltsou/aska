@@ -48,6 +48,8 @@ export function NoteMiniature({
     observer.observe(container);
     observer.observe(contentElement);
     return () => observer.disconnect();
+    // Re-runs when content, title, mentionColors change; they are not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [content, title, mentionColors, scale]);
 
   const contentStyle: CSSProperties = {

@@ -201,6 +201,8 @@ export function UploadMediaDialog({
 
     textarea.style.height = "0px";
     textarea.style.height = `${textarea.scrollHeight}px`;
+    // Re-runs when remoteUrl changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [remoteUrl]);
 
   useLayoutEffect(() => {

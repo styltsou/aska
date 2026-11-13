@@ -126,6 +126,8 @@ export function LinkInteractionPopover({ editor }: { editor: Editor }) {
       editorElement.removeEventListener("focusin", handleFocusIn);
       editorElement.removeEventListener("focusout", handleFocusOut);
     };
+    // Re-attaches the editor listeners when the editor or the hovered/edited link changes; the handler functions are left out so they are not re-attached on every render.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [editingLink, editor, hoveredLink]);
 
   function getLinkRange(link: ActiveNoteLink | null) {

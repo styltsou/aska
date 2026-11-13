@@ -393,6 +393,8 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
       navigationDirectionRef.current = null;
       setSelectedIndex(0);
       if (listRef.current) listRef.current.scrollTop = 0;
+      // Re-runs when flatItems changes; it is not read inside the effect.
+      // oxlint-disable-next-line react/exhaustive-effect-dependencies
     }, [flatItems]);
 
     useLayoutEffect(() => {
@@ -412,6 +414,8 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
         list.removeEventListener("scroll", updateFade);
         observer.disconnect();
       };
+      // Re-runs when flatItems changes; it is not read inside the effect.
+      // oxlint-disable-next-line react/exhaustive-effect-dependencies
     }, [flatItems]);
 
     useLayoutEffect(() => {
@@ -505,6 +509,8 @@ const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(
         window.removeEventListener("resize", updatePosition);
         window.removeEventListener("scroll", updatePosition, true);
       };
+      // Re-runs when flatItems changes; it is not read inside the effect.
+      // oxlint-disable-next-line react/exhaustive-effect-dependencies
     }, [flatItems, selectedIndex]);
 
     function select(index: number) {

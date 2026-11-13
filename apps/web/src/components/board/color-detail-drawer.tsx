@@ -181,6 +181,8 @@ export function ColorDetailDrawer({
     ? resolveGradientCss(displayedColor!.gradient!)
     : undefined;
 
+  // Re-runs when displayedColor?.id changes; it is not read inside the effect.
+  // oxlint-disable-next-line react/exhaustive-effect-dependencies
   useEffect(() => setIncludeDescendants(false), [displayedColor?.id]);
 
   function copyValue() {

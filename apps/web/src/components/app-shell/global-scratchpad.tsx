@@ -43,6 +43,8 @@ export function GlobalScratchpad() {
     input.focus();
     input.style.height = "0px";
     input.style.height = `${input.scrollHeight}px`;
+    // Re-runs when content changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [content, open]);
 
   function closeScratchpad() {

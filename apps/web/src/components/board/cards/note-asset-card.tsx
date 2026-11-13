@@ -767,6 +767,8 @@ export function NoteAssetCard({
     return () => {
       resizeObserver.disconnect();
     };
+    // Re-runs when asset.content changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [asset.content, updateOverflow]);
 
   const measuredHeight = cardHeights

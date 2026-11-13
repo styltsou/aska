@@ -125,6 +125,8 @@ export function CanvasTextEditor({
     if (!textarea) return;
     textarea.style.height = "0px";
     textarea.style.height = `${Math.max(24, textarea.scrollHeight)}px`;
+    // Re-runs when content, object.font, object.size change; they are not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [content, object.font, object.size]);
 
   const commit = () => {

@@ -296,6 +296,8 @@ const CollectionGridContent = memo(function CollectionGridContent({
 
   useEffect(() => {
     allEligibleRef.current = new Set();
+    // Re-runs when selectionFilterKey changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [selectionFilterKey]);
 
   useEffect(() => {
@@ -334,6 +336,8 @@ const CollectionGridContent = memo(function CollectionGridContent({
     );
     observer.observe(target);
     return () => observer.disconnect();
+    // Re-runs when assets.length changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [assets.length, hasMoreAssets, isLoadingMore, onLoadMore]);
 
   useEffect(() => {

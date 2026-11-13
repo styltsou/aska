@@ -202,6 +202,8 @@ export function Masonry({
         frameRef.current = undefined;
       }
     };
+    // Re-runs when items changes; it is not read inside the effect.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [items, measure, width]);
 
   // Appending a page should not hide cards that already have valid positions.
