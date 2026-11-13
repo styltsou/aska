@@ -112,7 +112,7 @@ if (root) {
 			primary.append(oldLabel);
 		}
 		editing = true;
-		if (analytics) analytics.checked = choice === 'accepted';
+		if (analytics) analytics.checked = choice === null || choice === 'accepted';
 		panel.hidden = false;
 		panel.dataset.view = 'preferences';
 		if (preferences) preferences.hidden = false;
