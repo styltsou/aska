@@ -33,6 +33,8 @@ export function OtpField({
     <InputOTP
       aria-label="Verification code"
       autoComplete="one-time-code"
+      // Deliberate: the code screens exist only to enter this code.
+      // oxlint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       containerClassName="w-full justify-between"
       disabled={disabled}

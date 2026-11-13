@@ -118,6 +118,8 @@ function ResetPasswordPage() {
               Code
             </label>
             <OtpField
+              // Deliberate: this step exists only to enter the code.
+              // oxlint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
               disabled={isSubmitting}
               id="reset-code"

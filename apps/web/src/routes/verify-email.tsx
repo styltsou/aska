@@ -115,6 +115,8 @@ function VerifyEmailPage() {
           }}
         >
           <OtpField
+            // Deliberate: this step exists only to enter the code.
+            // oxlint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
             disabled={isVerifying}
             id="verify-code"
