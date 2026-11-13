@@ -64,17 +64,32 @@ export function OnboardingCursor({
       initial={false}
       animate={
         reduceMotion
-          ? { x: 0, y: 0, scale: 1 }
+          ? { transform: "translate3d(0, 0, 0) scale(1)" }
           : click
-            ? { x: [36, 0, 0, 36], y: [26, 0, 0, 26], scale: [1, 1, 0.88, 1] }
-            : { x: [0, 0, 70, 70, 0], y: [0, 0, 42, 42, 0], scale: 1 }
+            ? {
+                transform: [
+                  "translate3d(36px, 26px, 0) scale(1)",
+                  "translate3d(0, 0, 0) scale(1)",
+                  "translate3d(0, 0, 0) scale(0.88)",
+                  "translate3d(36px, 26px, 0) scale(1)",
+                ],
+              }
+            : {
+                transform: [
+                  "translate3d(0, 0, 0)",
+                  "translate3d(0, 0, 0)",
+                  "translate3d(70px, 42px, 0)",
+                  "translate3d(70px, 42px, 0)",
+                  "translate3d(0, 0, 0)",
+                ],
+              }
       }
       transition={
         reduceMotion
           ? { duration: 0 }
           : {
               duration: click ? 2.6 : 3.2,
-              ease: "easeInOut",
+              ease: [0.77, 0, 0.175, 1],
               times: click ? [0, 0.3, 0.7, 1] : [0, 0.18, 0.6, 0.78, 1],
               repeat: Infinity,
             }
@@ -84,7 +99,15 @@ export function OnboardingCursor({
         {click && !reduceMotion ? (
           <motion.span
             className="absolute -top-1 -left-1 size-4 rounded-full border-2 border-primary"
-            animate={{ opacity: [0, 0, 0.8, 0], scale: [0.5, 0.5, 1.7, 1.7] }}
+            animate={{
+              opacity: [0, 0, 0.8, 0],
+              transform: [
+                "scale(0.5)",
+                "scale(0.5)",
+                "scale(1.7)",
+                "scale(1.7)",
+              ],
+            }}
             transition={{
               duration: 2.6,
               times: [0, 0.3, 0.65, 1],
