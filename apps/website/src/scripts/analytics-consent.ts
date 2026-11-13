@@ -125,8 +125,22 @@ if (root) {
 			if (primary && label && oldLabel) {
 				const newWidth = primary.getBoundingClientRect().width;
 				primary.animate([{ width: `${oldWidth}px` }, { width: `${newWidth}px` }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
-				label.animate([{ opacity: 0 }, { opacity: 1 }], { delay: 80, duration: 110, easing: 'ease-out', fill: 'backwards' });
-				oldLabel.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 80, easing: 'ease-out' }).finished.finally(() => oldLabel.remove());
+				label.animate(
+					[
+						{ opacity: 0, filter: 'blur(2px)' },
+						{ offset: .25, opacity: 0, filter: 'blur(2px)' },
+						{ opacity: 1, filter: 'blur(0)' },
+					],
+					{ duration: 180, easing: 'cubic-bezier(0.77, 0, 0.175, 1)', fill: 'backwards' },
+				);
+				oldLabel.animate(
+					[
+						{ opacity: 1, filter: 'blur(0)' },
+						{ offset: .6, opacity: 0, filter: 'blur(2px)' },
+						{ opacity: 0, filter: 'blur(2px)' },
+					],
+					{ duration: 180, easing: 'cubic-bezier(0.77, 0, 0.175, 1)' },
+				).finished.finally(() => oldLabel.remove());
 			}
 		}
 		analytics?.focus({ preventScroll: true });
