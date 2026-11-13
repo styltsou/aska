@@ -13,7 +13,7 @@ const { loginHref, signupHref } = Astro.props;
 				<p>A visual workspace for the references you want to keep and the ideas you want to make.</p>
 			</div>
 			<nav aria-label="Footer product links"><h2>Explore</h2><a href="#workflow">Features</a><a href="#color-search">Color search</a><a href="#canvas">Use cases</a><a href="#faq">FAQ</a></nav>
-			<nav aria-label="Footer account links"><h2>Your space</h2><a href={signupHref}>Create account</a><a href={loginHref}>Log in</a><a href="/terms">Terms and Conditions</a><a href="/privacy">Privacy</a></nav>
+			<nav aria-label="Footer account links"><h2>Your space</h2><a href={signupHref}>Create account</a><a href={loginHref}>Log in</a><a href="/terms">Terms and Conditions</a><a href="/privacy">Privacy</a><button type="button" class="site-footer__cookie-settings" data-consent-settings>Cookie preferences</button></nav>
 			<div class="site-footer__elsewhere"><h2>Elsewhere</h2><a href="https://github.com/styltsou/mnemee" target="_blank" rel="noreferrer">GitHub ↗</a><a href="https://styltsoum.com" target="_blank" rel="noreferrer">Made by styltsou ↗</a></div>
 		</div>
 		<div class="site-footer__bottom">
@@ -47,7 +47,7 @@ const { loginHref, signupHref } = Astro.props;
 	.site-footer__about p { max-width: 300px; margin: 0; color: var(--ink-muted); font-size: 14px; line-height: 1.55; }
 	.site-footer nav, .site-footer__elsewhere { display: flex; flex-direction: column; align-items: flex-start; gap: 15px; }
 	.site-footer h2 { margin: 2px 0 10px; color: var(--ink-muted); font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
-	.site-footer nav a, .site-footer__elsewhere a { font-size: 14px; line-height: 1.25; }
+	.site-footer nav a, .site-footer__elsewhere a, .site-footer__cookie-settings { font-size: 14px; line-height: 1.25; }.site-footer__cookie-settings { padding: 0; border: 0; background: none; color: var(--ink); text-align: left; cursor: pointer; }
 	.site-footer a:hover, .site-footer button:hover { color: var(--ink-muted); }
 	.site-footer__bottom { display: flex; align-items: center; justify-content: space-between; gap: 14px 22px; padding-top: 13px; border-top: 1px solid var(--line); color: var(--ink-muted); font-size: 12px; }
 	.theme-control { display: flex; align-items: center; gap: 13px; }.theme-control button, .site-footer__top { padding: 0; border: 0; background: none; color: var(--ink-muted); font: inherit; cursor: pointer; }.theme-control__options { position: relative; display: flex; align-items: center; }.theme-control button, .theme-control__thumb-labels span { display: flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 8px; white-space: nowrap; }.theme-control button { border-radius: 6px; }.theme-control__thumb { position: absolute; inset: 5px auto 5px 0; overflow: hidden; border-radius: 6px; background: var(--ink); color: var(--surface); pointer-events: none; }.theme-control__thumb-labels { position: relative; top: -5px; display: flex; width: max-content; }
@@ -63,4 +63,5 @@ const { loginHref, signupHref } = Astro.props;
 	@media (max-width: 780px) { .site-footer__main { grid-template-columns: repeat(3, 1fr); }.site-footer__about { grid-column: 1 / -1; margin-bottom: 18px; } }
 	@media (max-width: 520px) { .site-footer__main { grid-template-columns: repeat(2, 1fr); gap: 42px 20px; padding-bottom: 48px; }.site-footer__about { grid-column: 1 / -1; margin: 0; }.site-footer__bottom { flex-wrap: wrap; }.theme-control { order: 3; width: 100%; }.theme-control > span { display: none; } }
 </style>
+
 
