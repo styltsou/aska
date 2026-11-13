@@ -24,3 +24,11 @@ bun run build
 - Page copy that is shared between the page, the JSON-LD, `llms.txt` and `/index.md` lives in `src/lib/content.ts`; edit it there.
 - `/index.md` is a markdown version of the landing page and `/llms.txt` is a short guide for language models. Both are generated at build time.
 - The social preview image is `public/og-image.png`. Regenerate it with `bun run og` after changing the tagline or artwork.
+
+## Website analytics
+
+Set `PUBLIC_POSTHOG_KEY` to the public project token from PostHog and `PUBLIC_POSTHOG_HOST` to the matching regional ingestion host at build time. The default host is the EU cloud (`https://eu.i.posthog.com`); use the host shown in your PostHog project settings. Never use a personal API key here. The consent prompt is available during Astro development for design testing, but analytics never loads in development. In production builds, both are disabled when the project token is absent. The marketing site is deployed separately to Cloudflare; set these as Cloudflare build variables for the live deployment. Rebuild and deploy after changing these values.
+
+The website loads PostHog only after a visitor accepts analytics. It tracks page views, with interaction autocapture, session replay, and surveys disabled. Visitors can change their choice using Analytics preferences. This setup does not instrument the separately deployed app.
+
+

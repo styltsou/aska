@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import AnalyticsConsent from '../components/AnalyticsConsent.astro';
 import { SmoothScroll } from '../components/SmoothScroll';
 import { product } from '../lib/content';
 
@@ -99,5 +100,7 @@ const imageUrl = new URL(image, site).href;
 	<body>
 		<slot />
 		<SmoothScroll client:load />
+		<AnalyticsConsent />
 	</body>
 </html>
+

@@ -13,7 +13,7 @@ const { loginHref, signupHref } = Astro.props;
 				<p>A visual workspace for the references you want to keep and the ideas you want to make.</p>
 			</div>
 			<nav aria-label="Footer product links"><h2>Explore</h2><a href="#workflow">Features</a><a href="#color-search">Color search</a><a href="#canvas">Use cases</a><a href="#faq">FAQ</a></nav>
-			<nav aria-label="Footer account links"><h2>Your space</h2><a href={signupHref}>Create account</a><a href={loginHref}>Log in</a><a href="/terms">Terms and Conditions</a></nav>
+			<nav aria-label="Footer account links"><h2>Your space</h2><a href={signupHref}>Create account</a><a href={loginHref}>Log in</a><a href="/terms">Terms and Conditions</a><a href="/privacy">Privacy</a></nav>
 			<div class="site-footer__elsewhere"><h2>Elsewhere</h2><a href="https://github.com/styltsou/mnemee" target="_blank" rel="noreferrer">GitHub ↗</a><a href="https://styltsoum.com" target="_blank" rel="noreferrer">Made by styltsou ↗</a></div>
 		</div>
 		<div class="site-footer__bottom">
@@ -63,3 +63,4 @@ const { loginHref, signupHref } = Astro.props;
 	@media (max-width: 780px) { .site-footer__main { grid-template-columns: repeat(3, 1fr); }.site-footer__about { grid-column: 1 / -1; margin-bottom: 18px; } }
 	@media (max-width: 520px) { .site-footer__main { grid-template-columns: repeat(2, 1fr); gap: 42px 20px; padding-bottom: 48px; }.site-footer__about { grid-column: 1 / -1; margin: 0; }.site-footer__bottom { flex-wrap: wrap; }.theme-control { order: 3; width: 100%; }.theme-control > span { display: none; } }
 </style>
+

@@ -1,0 +1,38 @@
+---
+const posthogKey = import.meta.env.PROD ? import.meta.env.PUBLIC_POSTHOG_KEY : undefined;
+const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog.com';
+---
+
+{(import.meta.env.DEV || posthogKey) && (
+	<div class="consent" data-consent data-key={posthogKey} data-host={posthogHost}>
+		<section class="consent__panel" data-consent-panel hidden aria-label="Analytics preferences">
+			<h2>Help us improve Mnemee</h2>
+			<p>With your permission, we use PostHog to understand visits to this website. You can change your choice at any time. <a href="/privacy">Privacy details</a></p>
+			<div class="consent__actions">
+				<button type="button" data-consent-reject>Reject analytics</button>
+				<button type="button" data-consent-accept>Accept analytics</button>
+			</div>
+		</section>
+		<button class="consent__settings" type="button" data-consent-settings>Analytics preferences</button>
+	</div>
+)}
+
+<script>
+	import '../scripts/analytics-consent';
+</script>
+
+<style>
+	.consent { position: relative; z-index: 100; }
+	.consent__panel { position: fixed; right: 20px; bottom: 64px; width: min(410px, calc(100vw - 40px)); padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 32px rgb(0 0 0 / 15%); }
+	.consent__panel[hidden] { display: none; }
+	.consent__panel h2 { margin: 0 0 10px; font-size: 17px; }
+	.consent__panel p { margin: 0; color: var(--ink-muted); font-size: 14px; line-height: 1.55; }
+	.consent__panel a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+	.consent__actions { display: flex; gap: 8px; margin-top: 18px; }
+	.consent__actions button { flex: 1; min-height: 42px; padding: 8px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); cursor: pointer; font-size: 13px; font-weight: 600; }
+	.consent__actions button:hover { background: var(--surface-muted); }
+	.consent__settings { position: fixed; right: 20px; bottom: 16px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink-muted); cursor: pointer; font-size: 12px; }
+	@media (max-width: 420px) { .consent__actions { flex-direction: column; } }
+</style>
+
+
