@@ -75,7 +75,6 @@ if (root) {
 	root.querySelector('[data-consent-edit]')?.addEventListener('click', openPreferences);
 	root.querySelector('[data-consent-save]')?.addEventListener('click', () => choose(analytics?.checked ? 'accepted' : 'rejected'));
 	root.querySelector('[data-consent-accept]')?.addEventListener('click', () => choose('accepted'));
-	root.querySelector('[data-consent-reject]')?.addEventListener('click', () => choose('rejected'));
 }
 
 

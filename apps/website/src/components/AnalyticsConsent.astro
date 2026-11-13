@@ -13,7 +13,6 @@ const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog
 				<label class="consent__option"><span><strong>Analytics (PostHog)</strong><small>Helps us understand visits to the website.</small></span><input type="checkbox" data-consent-analytics /></label>
 			</div>
 			<div class="consent__actions" data-consent-initial-actions>
-				<button type="button" class="app-button app-button--secondary" data-consent-reject>Reject analytics</button>
 				<button type="button" class="app-button app-button--secondary" data-consent-edit>Edit preferences</button>
 				<button type="button" class="app-button app-button--primary" data-consent-accept>Accept analytics</button>
 			</div>
@@ -30,7 +29,7 @@ const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog
 
 <style>
 	.consent { position: relative; z-index: 100; }
-	.consent__panel { position: fixed; right: auto; bottom: 16px; left: 50%; width: min(440px, calc(100vw - 32px)); padding: 14px; transform: translateX(-50%); border: 1px solid #3c3c3c; border-radius: 21px; background: #171717; color: #f5f5f5; box-shadow: 0 10px 36px rgb(0 0 0 / 30%); }
+	.consent__panel { position: fixed; right: auto; bottom: 8px; left: 50%; width: min(440px, calc(100vw - 32px)); padding: 14px; transform: translateX(-50%); border: 1px solid #3c3c3c; border-radius: 8px; background: #171717; color: #f5f5f5; box-shadow: 0 10px 36px rgb(0 0 0 / 30%); }
 	.consent__panel[hidden] { display: none; }
 	.consent__panel h2 { margin: 0 0 6px; font-size: 16px; }
 	.consent__panel p { margin: 0; color: #c9c9c9; font-size: 12px; line-height: 1.5; }
@@ -53,5 +52,5 @@ const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog
 	:global(html[data-theme='dark']) .consent__option input { accent-color: #171717; }
 	:global(html[data-theme='dark']) .consent__actions .app-button--primary { border-color: #292929; background: #171717; color: #f5f5f5; }
 	:global(html[data-theme='dark']) .consent__actions .app-button--secondary { border-color: #dedede; background: #f5f5f5; color: #171717; }
-	@media (max-width: 380px) { .consent__panel { bottom: 12px; width: calc(100vw - 24px); padding: 12px; border-radius: 19px; }.consent__actions { flex-wrap: wrap; }.consent__actions .app-button { flex: 1; padding-inline: 8px; } }
+	@media (max-width: 380px) { .consent__panel { bottom: 8px; width: calc(100vw - 24px); padding: 12px; }.consent__actions { flex-wrap: wrap; }.consent__actions .app-button { flex: 1; padding-inline: 8px; } }
 </style>
