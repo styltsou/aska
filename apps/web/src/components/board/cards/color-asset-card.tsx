@@ -6,6 +6,7 @@ import { resolveGradientCss } from "@/lib/color-gradient";
 import { hasSelectionModifier } from "@/lib/selection";
 import type { ColorAsset } from "@/types/asset";
 import { useGradientNaming } from "@/lib/gradient-naming";
+import { GRADIENT_NAME_SHIMMER } from "@/lib/gradient-name-shimmer";
 
 export function ColorAssetCard({
   asset,
@@ -112,7 +113,7 @@ export function ColorAssetCard({
         <span
           className={cn(
             "truncate font-medium",
-            naming && "gradient-name-shimmer",
+            naming && GRADIENT_NAME_SHIMMER,
             name
               ? "text-base"
               : hex

@@ -146,12 +146,6 @@
   }
 }
 
-.auth-canvas-tilted-plane {
-  transform: perspective(1200px) rotateX(4deg) rotateY(-11deg) rotateZ(-7deg)
-    scale(1.02);
-  transform-origin: center;
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -172,29 +166,60 @@
   }
 }
 
-@keyframes icon-swap-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes caret-blink {
-  0%,
-  70%,
-  100% {
-    opacity: 1;
-  }
-  20%,
-  50% {
-    opacity: 0;
-  }
-}
-
 @theme inline {
   --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+  --animate-icon-swap-in: icon-swap-in 150ms ease-in-out;
+  --animate-gradient-name-sweep: gradient-name-sweep 1.6s linear infinite;
+  --animate-skeleton-sweep: skeleton-sweep 1.6s linear infinite;
+  --animate-image-shimmer: image-shimmer 1.6s linear infinite;
+
+  @keyframes icon-swap-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes gradient-name-sweep {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
+  }
+
+  @keyframes skeleton-sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes image-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -100% 0;
+    }
+  }
 }
 
 [data-onboarding-target] {

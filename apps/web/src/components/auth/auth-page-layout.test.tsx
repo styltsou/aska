@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AuthPageLayout } from "./auth-page-layout";
+import { AUTH_TILTED_PLANE } from "./auth-tilted-plane";
 
 describe("AuthPageLayout canvas preview", () => {
   it("uses the same tilted plane for the dots and preview cards", () => {
@@ -14,7 +15,7 @@ describe("AuthPageLayout canvas preview", () => {
       </QueryClientProvider>,
     );
 
-    expect(html.match(/auth-canvas-tilted-plane/g)).toHaveLength(2);
+    expect(html.split(AUTH_TILTED_PLANE)).toHaveLength(3);
   });
 
   it("renders preview note headings as titles without Untitled fallbacks", () => {

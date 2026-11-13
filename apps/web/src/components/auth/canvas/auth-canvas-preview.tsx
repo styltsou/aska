@@ -1,3 +1,4 @@
+import { AUTH_TILTED_PLANE } from "../auth-tilted-plane";
 import { FolderAssetCard } from "@/components/board/cards/folder-asset-card";
 import { ImageAssetCard } from "@/components/board/cards/image-asset-card";
 import { NoteAssetCard } from "@/components/board/cards/note-asset-card";
@@ -341,7 +342,9 @@ export function AuthCanvasPreview() {
       className="pointer-events-none absolute inset-0 z-[1]"
     >
       <div className="absolute top-1/2 left-[68%] w-[51rem] -translate-x-1/2 -translate-y-1/2">
-        <div className="auth-canvas-tilted-plane grid grid-cols-[repeat(4,10.5rem)] gap-7 p-8">
+        <div
+          className={`${AUTH_TILTED_PLANE} grid grid-cols-[repeat(4,10.5rem)] gap-7 p-8`}
+        >
           {CANVAS_COLUMNS.map((column, columnIndex) => (
             <div
               key={`column-${columnIndex}`}

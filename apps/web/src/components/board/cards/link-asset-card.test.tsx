@@ -201,7 +201,7 @@ describe("LinkAssetCard", () => {
 
     expect(html).toContain("aspect-video w-full");
     expect(html).toContain('data-slot="optimistic-link-preview"');
-    expect(html).toContain("image-shimmer");
+    expect(html).toContain("animate-image-shimmer");
     expect(html).not.toContain("Resolving");
   });
 
@@ -316,7 +316,7 @@ describe("LinkCardPreview", () => {
     );
 
     expect(html).toContain('data-slot="youtube-thumbnail-loading"');
-    expect(html).toContain("image-shimmer");
+    expect(html).toContain("animate-image-shimmer");
     expect(html).toContain('data-slot="youtube-thumbnail-content"');
     expect(html).toContain('style="opacity:0"');
     expect(html).not.toContain('viewBox="0 0 68 48"');

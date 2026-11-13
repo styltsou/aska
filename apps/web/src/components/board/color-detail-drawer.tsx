@@ -69,6 +69,7 @@ import { useWorkspacePeek } from "@/components/app-shell/workspace-peek";
 import { useAssetFullscreenMorph } from "@/components/board/use-asset-fullscreen-morph";
 import { cn } from "@/lib/utils";
 import { useGradientNaming } from "@/lib/gradient-naming";
+import { GRADIENT_NAME_SHIMMER } from "@/lib/gradient-name-shimmer";
 
 const EMPTY_RESULTS: never[] = [];
 const COLOR_VIEWER_LAYOUT_TRANSITION = {
@@ -321,7 +322,7 @@ export function ColorDetailDrawer({
                 <DrawerTitle
                   className={cn(
                     "truncate text-base leading-tight font-medium",
-                    naming && "gradient-name-shimmer",
+                    naming && GRADIENT_NAME_SHIMMER,
                   )}
                 >
                   {displayedColor.title?.trim() ||
@@ -785,7 +786,7 @@ function ColorDetailModal({
             <span
               className={cn(
                 "max-w-[min(32rem,calc(100vw-14rem))] min-w-0 truncate px-1 text-sm font-medium text-foreground",
-                naming && "gradient-name-shimmer",
+                naming && GRADIENT_NAME_SHIMMER,
               )}
             >
               {title}
