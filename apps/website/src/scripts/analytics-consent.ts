@@ -125,8 +125,8 @@ if (root) {
 			if (primary && label && oldLabel) {
 				const newWidth = primary.getBoundingClientRect().width;
 				primary.animate([{ width: `${oldWidth}px` }, { width: `${newWidth}px` }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
-				label.animate([{ opacity: 0, transform: 'translateY(3px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 180, easing: 'ease-out' });
-				oldLabel.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-3px)' }], { duration: 150, easing: 'ease-out' }).finished.finally(() => oldLabel.remove());
+				label.animate([{ opacity: 0, transform: 'translateY(3px)' }, { opacity: 1, transform: 'translateY(0)' }], { delay: 40, duration: 140, easing: 'ease-out', fill: 'backwards' });
+				oldLabel.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-3px)' }], { duration: 120, easing: 'ease-out' }).finished.finally(() => oldLabel.remove());
 			}
 		}
 		analytics?.focus({ preventScroll: true });
