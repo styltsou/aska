@@ -7,7 +7,8 @@ import {
 } from "@tanstack/react-router";
 import { LoaderCircleIcon, PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CenteredAuthLayout } from "@/components/auth/centered-auth-layout";
+import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { AuthSlot } from "@/components/auth/auth-slot";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { clearAuthStateCache, getAuthState } from "@/lib/auth-flow";
@@ -70,37 +71,47 @@ function OnboardingPage() {
   }
 
   return (
-    <CenteredAuthLayout>
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold">Create workspace</h1>
-        <p className="text-sm text-muted-foreground">
-          This is where your collections will live.
-        </p>
+    <AuthPageLayout anchorContent>
+      <div className="space-y-1.5">
+        <AuthSlot kind="text" name="title">
+          <h1 className="text-2xl font-semibold tracking-[-0.035em]">
+            Create workspace
+          </h1>
+        </AuthSlot>
+        <AuthSlot kind="text" name="subtitle">
+          <p className="text-sm text-muted-foreground">
+            This is where your collections will live.
+          </p>
+        </AuthSlot>
       </div>
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-        <Input
-          id="workspace-name"
-          autoComplete="organization"
-          placeholder="Workspace name"
-          // Deliberate: focus the field as soon as this opens.
-          // oxlint-disable-next-line jsx-a11y/no-autofocus
-          autoFocus
-          required
-          value={workspaceName}
-          onChange={(event) => setWorkspaceName(event.target.value)}
-        />
+        <AuthSlot name="workspace">
+          <Input
+            id="workspace-name"
+            autoComplete="organization"
+            placeholder="Workspace name"
+            // Deliberate: focus the field as soon as this opens.
+            // oxlint-disable-next-line jsx-a11y/no-autofocus
+            autoFocus
+            required
+            value={workspaceName}
+            onChange={(event) => setWorkspaceName(event.target.value)}
+          />
+        </AuthSlot>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        <Button className="w-full" disabled={isSubmitting} type="submit">
-          {isSubmitting ? (
-            <LoaderCircleIcon className="animate-spin" />
-          ) : (
-            <PlusIcon />
-          )}
-          <span>
-            {isSubmitting ? "Creating workspace" : "Create workspace"}
-          </span>
-        </Button>
+        <AuthSlot name="submit">
+          <Button className="w-full" disabled={isSubmitting} type="submit">
+            {isSubmitting ? (
+              <LoaderCircleIcon className="animate-spin" />
+            ) : (
+              <PlusIcon />
+            )}
+            <span>
+              {isSubmitting ? "Creating workspace" : "Create workspace"}
+            </span>
+          </Button>
+        </AuthSlot>
       </form>
-    </CenteredAuthLayout>
+    </AuthPageLayout>
   );
 }

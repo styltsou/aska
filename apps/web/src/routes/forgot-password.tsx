@@ -2,6 +2,13 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AuthPending } from "@/components/auth/auth-pending";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { AuthSlot } from "@/components/auth/auth-slot";
+import { useAuthEmail } from "@/lib/auth-email";
+import { AuthBackLabel, authBackClassName } from "@/components/auth/auth-back";
+import {
+  AUTH_REVERSE_VIEW_TRANSITION,
+  AUTH_VIEW_TRANSITION,
+} from "@/components/auth/auth-view-transition";
 import {
   AuthActionButton,
   AuthError,
@@ -13,7 +20,7 @@ import { redirectIfSignedIn } from "@/lib/auth-flow";
 export const Route = createFileRoute("/forgot-password")({
   beforeLoad: redirectIfSignedIn,
   pendingComponent: AuthPending,
-  pendingMs: 0,
+  pendingMs: 300,
   head: () => ({
     meta: [{ title: "Forgot password | Mnemee" }],
   }),
@@ -22,7 +29,7 @@ export const Route = createFileRoute("/forgot-password")({
 
 function ForgotPasswordPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useAuthEmail();
   const [error, setError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
 
@@ -38,25 +45,45 @@ function ForgotPasswordPage() {
     }
     // The response is identical whether or not the account exists, so always
     // continue to the code step.
-    void navigate({ to: "/reset-password", search: { email } });
+    void navigate({
+      to: "/reset-password",
+      search: { email },
+      viewTransition: AUTH_VIEW_TRANSITION,
+    });
   }
 
   return (
-    <AuthPageLayout>
+    <AuthPageLayout
+      anchorContent
+      back={
+        <Link
+          aria-label="Back to sign in"
+          className={authBackClassName}
+          to="/login"
+          viewTransition={AUTH_REVERSE_VIEW_TRANSITION}
+        >
+          <AuthBackLabel />
+        </Link>
+      }
+    >
       <div aria-labelledby="forgot-title">
         <div className="space-y-1.5">
-          <h1
-            className="text-2xl font-semibold tracking-[-0.035em]"
-            id="forgot-title"
-          >
-            Forgot password
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Enter your email and we&apos;ll send you a 6-digit code.
-          </p>
+          <AuthSlot kind="text" name="title">
+            <h1
+              className="text-2xl font-semibold tracking-[-0.035em]"
+              id="forgot-title"
+            >
+              Forgot password
+            </h1>
+          </AuthSlot>
+          <AuthSlot kind="text" name="subtitle">
+            <p className="text-sm text-muted-foreground">
+              Enter your email and we&apos;ll send you a 6-digit code.
+            </p>
+          </AuthSlot>
         </div>
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div>
+          <AuthSlot name="email">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium" htmlFor="email">
                 Email
@@ -77,20 +104,13 @@ function ForgotPasswordPage() {
               />
             </div>
             <AuthError message={error} />
-          </div>
-          <AuthActionButton disabled={isSending} type="submit">
-            {isSending ? "Sending code" : "Send code"}
-          </AuthActionButton>
+          </AuthSlot>
+          <AuthSlot name="submit">
+            <AuthActionButton disabled={isSending} type="submit">
+              {isSending ? "Sending code" : "Send code"}
+            </AuthActionButton>
+          </AuthSlot>
         </form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Remembered it?{" "}
-          <Link
-            className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current"
-            to="/login"
-          >
-            Back to sign in
-          </Link>
-        </p>
       </div>
     </AuthPageLayout>
   );

@@ -1,0 +1,233 @@
+/*
+ * Auth view transitions.
+ *
+ * Every region of an auth view that can persist is named (see AuthSlot), so a
+ * view change reads as one surface being edited rather than a page swap:
+ *   - static chrome (logo, canvas panel, terms) does not move or flash;
+ *   - paired fields glide to their new position and crossfade;
+ *   - paired copy swaps with a short, directional, blurred crossfade;
+ *   - unpaired regions fade out quickly and fade in a beat later, staggered.
+ * Exits are faster than entrances so the old view gets out of the way.
+ */
+@keyframes auth-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+    filter: blur(2px);
+  }
+}
+
+@keyframes auth-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(2px);
+  }
+}
+
+@keyframes auth-text-out {
+  to {
+    opacity: 0;
+    transform: translateX(-6px);
+    filter: blur(2px);
+  }
+}
+
+@keyframes auth-text-in {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+    filter: blur(2px);
+  }
+}
+
+@keyframes auth-text-out-reverse {
+  to {
+    opacity: 0;
+    transform: translateX(6px);
+    filter: blur(2px);
+  }
+}
+
+@keyframes auth-text-in-reverse {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+    filter: blur(2px);
+  }
+}
+
+@keyframes auth-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes auth-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The page background never needs to crossfade with itself. */
+html:active-view-transition-type(auth-switch)::view-transition-old(root) {
+  display: none;
+}
+
+html:active-view-transition-type(auth-switch)::view-transition-new(root) {
+  animation: none;
+}
+
+/* Static chrome: paired copies are identical, so show only the new one. */
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-group(*.auth-static) {
+  animation: none;
+}
+
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-old(*.auth-static) {
+  display: none;
+}
+
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-new(*.auth-static) {
+  animation: none;
+}
+
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-old(*.auth-static):only-child {
+  display: block;
+  animation: auth-fade-out 100ms ease-out both;
+}
+
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-new(*.auth-static):only-child {
+  animation: auth-fade-in 160ms ease-out 40ms both;
+}
+
+/* Fields and copy that exist on both sides glide to their new position. */
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-group(*.auth-field),
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-group(*.auth-text) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Paired fields are near-identical, so a plain crossfade (no blur) is calm. */
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-old(*.auth-field),
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-new(*.auth-field) {
+  animation-duration: 160ms;
+  animation-timing-function: ease-out;
+}
+
+/* Paired copy: old text leaves, new text arrives a beat later. */
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-old(*.auth-text) {
+  animation: auth-text-out 90ms ease-out both;
+}
+
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-new(*.auth-text) {
+  animation: auth-text-in 160ms ease-out 40ms both;
+}
+
+html:active-view-transition-type(
+  auth-reverse
+)::view-transition-old(*.auth-text) {
+  animation-name: auth-text-out-reverse;
+}
+
+html:active-view-transition-type(
+  auth-reverse
+)::view-transition-new(*.auth-text) {
+  animation-name: auth-text-in-reverse;
+}
+
+/* Same-view steps: unchanged copy stays put instead of re-swapping. */
+html:active-view-transition-type(auth-step)::view-transition-old(*.auth-text) {
+  display: none;
+}
+
+html:active-view-transition-type(auth-step)::view-transition-new(*.auth-text) {
+  animation: none;
+}
+
+/* Unpaired fields and copy: leave fast, arrive after the layout has moved. */
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-old(*.auth-field):only-child,
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-old(*.auth-text):only-child {
+  animation: auth-out 90ms ease-out both;
+}
+
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-new(*.auth-field):only-child,
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-new(*.auth-text):only-child {
+  animation: auth-in 180ms ease-out 40ms both;
+}
+
+/* Stagger the fields that follow the first one. */
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-new(auth-password):only-child,
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-new(auth-otp):only-child {
+  animation-delay: 40ms;
+}
+
+html:active-view-transition-type(
+  auth-switch
+)::view-transition-new(auth-confirm):only-child {
+  animation-delay: 70ms;
+}
+
+/* Reduced motion keeps the opacity change and drops movement and blur. */
+@media (prefers-reduced-motion: reduce) {
+  html:active-view-transition-type(auth-switch)::view-transition-group(*) {
+    animation: none;
+  }
+
+  html:active-view-transition-type(
+    auth-switch
+  )::view-transition-old(*.auth-field),
+  html:active-view-transition-type(
+    auth-switch
+  )::view-transition-old(*.auth-text),
+  html:active-view-transition-type(
+    auth-switch
+  )::view-transition-old(*.auth-static):only-child {
+    animation: auth-fade-out 100ms linear both;
+  }
+
+  html:active-view-transition-type(
+    auth-switch
+  )::view-transition-new(*.auth-field),
+  html:active-view-transition-type(
+    auth-switch
+  )::view-transition-new(*.auth-text),
+  html:active-view-transition-type(
+    auth-switch
+  )::view-transition-new(*.auth-static):only-child {
+    animation: auth-fade-in 120ms linear both;
+  }
+}

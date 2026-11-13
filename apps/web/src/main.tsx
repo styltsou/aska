@@ -5,6 +5,7 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import * as Sentry from "@sentry/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ApiError } from "@/lib/api";
+import { authHistoryTransitionTypes } from "@/components/auth/auth-view-transition";
 import { initializeSentry } from "@/lib/sentry";
 import { routeTree } from "./routeTree.gen";
 import { synchronizeGridCaches } from "@/api/collection/grid-cache";
@@ -38,6 +39,21 @@ const router = createRouter({
   notFoundMode: "root",
   defaultPreload: "intent",
   defaultPendingMinMs: 0,
+  defaultViewTransition:
+    "startViewTransition" in document &&
+    CSS.supports("selector(:active-view-transition-type(auth-switch))")
+      ? {
+          types: ({ fromLocation, toLocation, pathChanged }) =>
+            pathChanged
+              ? authHistoryTransitionTypes(
+                  fromLocation?.pathname,
+                  toLocation.pathname,
+                  fromLocation?.state.__TSR_index,
+                  toLocation.state.__TSR_index,
+                )
+              : false,
+        }
+      : false,
 });
 
 declare module "@tanstack/react-router" {

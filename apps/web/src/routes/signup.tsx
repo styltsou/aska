@@ -2,6 +2,14 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AuthPending } from "@/components/auth/auth-pending";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { AuthSlot } from "@/components/auth/auth-slot";
+import { useAuthEmail } from "@/lib/auth-email";
+import { AuthBackLabel, authBackClassName } from "@/components/auth/auth-back";
+import {
+  AUTH_REVERSE_STEP_TRANSITION,
+  AUTH_VIEW_TRANSITION,
+  transitionAuthStep,
+} from "@/components/auth/auth-view-transition";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import {
   AuthActionButton,
@@ -18,7 +26,7 @@ import { clearLastLoginMethod } from "@/lib/last-login-method";
 export const Route = createFileRoute("/signup")({
   beforeLoad: redirectIfSignedIn,
   pendingComponent: AuthPending,
-  pendingMs: 0,
+  pendingMs: 300,
   head: () => ({
     meta: [{ title: "Create account | Mnemee" }],
   }),
@@ -27,7 +35,7 @@ export const Route = createFileRoute("/signup")({
 
 function SignupPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useAuthEmail();
   const [passwordStep, setPasswordStep] = useState(false);
   const [password, setPassword] = useState("");
   const [passwordFocused, setPasswordFocused] = useState(false);
@@ -40,7 +48,7 @@ function SignupPage() {
     setError(null);
 
     if (!passwordStep) {
-      setPasswordStep(true);
+      transitionAuthStep(() => setPasswordStep(true));
       return;
     }
 
@@ -67,26 +75,59 @@ function SignupPage() {
     // No session exists until the email is verified.
     clearAuthStateCache();
     clearLastLoginMethod();
-    void navigate({ to: "/verify-email", search: { email }, replace: true });
+    void navigate({
+      to: "/verify-email",
+      search: { email },
+      replace: true,
+      viewTransition: AUTH_VIEW_TRANSITION,
+    });
   }
 
   return (
-    <AuthPageLayout footer={<TermsNotice />} anchorContent>
+    <AuthPageLayout
+      footer={<TermsNotice />}
+      anchorContent
+      back={
+        passwordStep ? (
+          <button
+            aria-label="Back to email"
+            className={authBackClassName}
+            onClick={() => {
+              transitionAuthStep(() => {
+                setError(null);
+                setPasswordStep(false);
+              }, AUTH_REVERSE_STEP_TRANSITION);
+            }}
+            type="button"
+          >
+            <AuthBackLabel />
+          </button>
+        ) : undefined
+      }
+    >
       <div aria-labelledby="sign-up-title">
         <div className="space-y-1.5">
-          <h1
-            className="text-2xl font-semibold tracking-[-0.035em]"
-            id="sign-up-title"
-          >
-            Create account
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Set up your first workspace next.
-          </p>
+          <AuthSlot kind="text" name="title">
+            <h1
+              className="text-2xl font-semibold tracking-[-0.035em]"
+              id="sign-up-title"
+            >
+              Create account
+            </h1>
+          </AuthSlot>
+          <AuthSlot kind="text" name="subtitle">
+            <p className="text-sm text-muted-foreground">
+              Set up your first workspace next.
+            </p>
+          </AuthSlot>
         </div>
-        {!passwordStep ? <GoogleSignIn /> : null}
+        {!passwordStep ? (
+          <AuthSlot name="google">
+            <GoogleSignIn />
+          </AuthSlot>
+        ) : null}
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="flex flex-col gap-2">
+          <AuthSlot name="email" className="flex flex-col gap-2">
             <label className="text-sm font-medium" htmlFor="email">
               Email
             </label>
@@ -100,10 +141,10 @@ function SignupPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
-          </div>
+          </AuthSlot>
           {passwordStep ? (
             <>
-              <div>
+              <AuthSlot name="password">
                 <PasswordField
                   label="Password"
                   id="password"
@@ -127,8 +168,8 @@ function SignupPage() {
                   email={email}
                   expanded={passwordFocused}
                 />
-              </div>
-              <div>
+              </AuthSlot>
+              <AuthSlot name="confirm">
                 <PasswordField
                   label="Confirm password"
                   id="confirm-password"
@@ -143,28 +184,36 @@ function SignupPage() {
                   }}
                 />
                 <AuthError message={error} />
-              </div>
+              </AuthSlot>
             </>
           ) : null}
-          <AuthActionButton disabled={isSubmitting} type="submit">
-            <span>
-              {isSubmitting
-                ? "Creating account"
-                : passwordStep
-                  ? "Create account"
-                  : "Continue"}
-            </span>
-          </AuthActionButton>
+          <AuthSlot name="submit">
+            <AuthActionButton disabled={isSubmitting} type="submit">
+              <span>
+                {isSubmitting
+                  ? "Creating account"
+                  : passwordStep
+                    ? "Create account"
+                    : "Continue"}
+              </span>
+            </AuthActionButton>
+          </AuthSlot>
         </form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <AuthSlot
+          as="p"
+          kind="text"
+          name="switch"
+          className="mt-6 text-center text-sm text-muted-foreground"
+        >
           Already have an account?{" "}
           <Link
             className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current"
             to="/login"
+            viewTransition={AUTH_VIEW_TRANSITION}
           >
             Sign in
           </Link>
-        </p>
+        </AuthSlot>
       </div>
     </AuthPageLayout>
   );

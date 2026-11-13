@@ -6,6 +6,14 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { AuthSlot } from "@/components/auth/auth-slot";
+import { AuthBackLabel, authBackClassName } from "@/components/auth/auth-back";
+import {
+  AUTH_REVERSE_STEP_TRANSITION,
+  AUTH_REVERSE_VIEW_TRANSITION,
+  AUTH_VIEW_TRANSITION,
+  transitionAuthStep,
+} from "@/components/auth/auth-view-transition";
 import { AuthPending } from "@/components/auth/auth-pending";
 import { OTP_LENGTH, OtpField } from "@/components/auth/otp-field";
 import { PasswordField } from "@/components/auth/password-field";
@@ -39,7 +47,7 @@ export const Route = createFileRoute("/reset-password")({
     }
   },
   pendingComponent: AuthPending,
-  pendingMs: 0,
+  pendingMs: 300,
   head: () => ({
     meta: [{ title: "Reset password | Mnemee" }],
   }),
@@ -81,7 +89,7 @@ function ResetPasswordPage() {
       setCode("");
       return;
     }
-    setStep("password");
+    transitionAuthStep(() => setStep("password"));
   }
 
   async function handlePasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -102,17 +110,23 @@ function ResetPasswordPage() {
       setIsSubmitting(false);
       // The code expired or ran out of attempts between the two steps.
       if (error.code && OTP_ERROR_CODES.has(error.code)) {
-        setCode("");
-        setPassword("");
-        setConfirmPassword("");
-        setStep("code");
-        setError("That code has expired. Enter a new one.");
+        transitionAuthStep(() => {
+          setCode("");
+          setPassword("");
+          setConfirmPassword("");
+          setStep("code");
+          setError("That code has expired. Enter a new one.");
+        }, AUTH_REVERSE_STEP_TRANSITION);
         return;
       }
       setError(error.message ?? "Unable to reset your password.");
       return;
     }
-    void navigate({ to: "/login", replace: true });
+    void navigate({
+      to: "/login",
+      replace: true,
+      viewTransition: AUTH_VIEW_TRANSITION,
+    });
   }
 
   async function resend() {
@@ -132,21 +146,55 @@ function ResetPasswordPage() {
   }
 
   return (
-    <AuthPageLayout anchorContent>
+    <AuthPageLayout
+      anchorContent
+      back={
+        step === "code" ? (
+          <Link
+            aria-label="Change email address"
+            className={authBackClassName}
+            to="/forgot-password"
+            viewTransition={AUTH_REVERSE_VIEW_TRANSITION}
+          >
+            <AuthBackLabel />
+          </Link>
+        ) : (
+          <button
+            aria-label="Back to verification code"
+            className={authBackClassName}
+            onClick={() => {
+              transitionAuthStep(() => {
+                setError(null);
+                setCode("");
+                setStep("code");
+              }, AUTH_REVERSE_STEP_TRANSITION);
+            }}
+            type="button"
+          >
+            <AuthBackLabel />
+          </button>
+        )
+      }
+    >
       <div aria-labelledby="reset-title">
-        <div className="space-y-1.5">
+        <AuthSlot kind="text" name="title">
           <h1
             className="text-2xl font-semibold tracking-[-0.035em]"
             id="reset-title"
           >
             Reset your password
           </h1>
-          <p className="text-sm text-muted-foreground">
-            If an account exists for{" "}
-            <span className="font-medium text-foreground">{email}</span>, we
-            sent it a 6-digit code.
-          </p>
-        </div>
+        </AuthSlot>
+        <AuthSlot
+          as="p"
+          kind="text"
+          name="subtitle"
+          className="mt-1.5 text-sm text-muted-foreground"
+        >
+          If an account exists for{" "}
+          <span className="font-medium text-foreground">{email}</span>, we sent
+          it a 6-digit code.
+        </AuthSlot>
         {step === "code" ? (
           <>
             <form
@@ -156,7 +204,7 @@ function ResetPasswordPage() {
                 void verifyCode(code);
               }}
             >
-              <div>
+              <AuthSlot name="otp">
                 <div className="flex flex-col gap-2">
                   <label className="text-sm font-medium" htmlFor="reset-code">
                     Code
@@ -177,35 +225,33 @@ function ResetPasswordPage() {
                   />
                 </div>
                 <AuthError message={error} />
-              </div>
-              <AuthActionButton
-                disabled={isSubmitting || code.length !== OTP_LENGTH}
-                type="submit"
-              >
-                {isSubmitting ? "Checking code" : "Continue"}
-              </AuthActionButton>
+              </AuthSlot>
+              <AuthSlot name="submit">
+                <AuthActionButton
+                  disabled={isSubmitting || code.length !== OTP_LENGTH}
+                  type="submit"
+                >
+                  {isSubmitting ? "Checking code" : "Continue"}
+                </AuthActionButton>
+              </AuthSlot>
             </form>
 
-            <p className="mt-5 flex flex-wrap items-center justify-center gap-x-2 text-sm text-muted-foreground">
-              <span>
-                Didn&apos;t get it?{" "}
-                <button
-                  className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
-                  disabled={isSending || cooldown > 0}
-                  onClick={() => void resend()}
-                  type="button"
-                >
-                  <ResendCodeLabel seconds={cooldown} />
-                </button>
-              </span>
-              <span aria-hidden="true">·</span>
-              <Link
-                className="transition-colors duration-150 ease-[ease] hover:text-foreground"
-                to="/forgot-password"
+            <AuthSlot
+              as="p"
+              kind="text"
+              name="switch"
+              className="mt-5 text-center text-sm text-muted-foreground"
+            >
+              Didn&apos;t get it?{" "}
+              <button
+                className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current disabled:cursor-not-allowed disabled:text-muted-foreground disabled:no-underline"
+                disabled={isSending || cooldown > 0}
+                onClick={() => void resend()}
+                type="button"
               >
-                Wrong email?
-              </Link>
-            </p>
+                <ResendCodeLabel seconds={cooldown} />
+              </button>
+            </AuthSlot>
           </>
         ) : (
           <>
@@ -213,7 +259,7 @@ function ResetPasswordPage() {
               className="mt-6 space-y-5"
               onSubmit={(event) => void handlePasswordSubmit(event)}
             >
-              <div>
+              <AuthSlot name="password">
                 <PasswordField
                   label="New password"
                   id="password"
@@ -237,8 +283,8 @@ function ResetPasswordPage() {
                   email={email ?? ""}
                   expanded={passwordFocused}
                 />
-              </div>
-              <div>
+              </AuthSlot>
+              <AuthSlot name="confirm">
                 <PasswordField
                   label="Confirm password"
                   id="confirm-password"
@@ -253,25 +299,13 @@ function ResetPasswordPage() {
                   }}
                 />
                 <AuthError message={error} />
-              </div>
-              <AuthActionButton disabled={isSubmitting} type="submit">
-                {isSubmitting ? "Resetting password" : "Reset password"}
-              </AuthActionButton>
+              </AuthSlot>
+              <AuthSlot name="submit">
+                <AuthActionButton disabled={isSubmitting} type="submit">
+                  {isSubmitting ? "Resetting password" : "Reset password"}
+                </AuthActionButton>
+              </AuthSlot>
             </form>
-
-            <p className="mt-5 text-center text-sm text-muted-foreground">
-              <button
-                className="transition-colors duration-150 ease-[ease] hover:text-foreground"
-                onClick={() => {
-                  setError(null);
-                  setCode("");
-                  setStep("code");
-                }}
-                type="button"
-              >
-                Back
-              </button>
-            </p>
           </>
         )}
       </div>

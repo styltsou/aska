@@ -6,12 +6,18 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { AuthPending } from "@/components/auth/auth-pending";
+import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { AuthSlot } from "@/components/auth/auth-slot";
+import { AuthBackLabel, authBackClassName } from "@/components/auth/auth-back";
+import {
+  AUTH_REVERSE_VIEW_TRANSITION,
+  AUTH_VIEW_TRANSITION,
+} from "@/components/auth/auth-view-transition";
 import {
   AuthActionButton,
   AuthError,
   ResendCodeLabel,
 } from "@/components/auth/auth-form-controls";
-import { CenteredAuthLayout } from "@/components/auth/centered-auth-layout";
 import { OTP_LENGTH, OtpField } from "@/components/auth/otp-field";
 import { authClient } from "@/lib/auth-client";
 import { clearAuthStateCache, redirectIfSignedIn } from "@/lib/auth-flow";
@@ -35,7 +41,7 @@ export const Route = createFileRoute("/verify-email")({
     }
   },
   pendingComponent: AuthPending,
-  pendingMs: 0,
+  pendingMs: 300,
   head: () => ({
     meta: [{ title: "Verify your email | Mnemee" }],
   }),
@@ -77,7 +83,11 @@ function VerifyEmailPage() {
       return;
     }
     clearAuthStateCache();
-    void navigate({ to: "/login", replace: true });
+    void navigate({
+      to: "/login",
+      replace: true,
+      viewTransition: AUTH_VIEW_TRANSITION,
+    });
   }
 
   async function resend() {
@@ -98,16 +108,35 @@ function VerifyEmailPage() {
   }
 
   return (
-    <CenteredAuthLayout>
+    <AuthPageLayout
+      anchorContent
+      back={
+        <Link
+          aria-label="Wrong email? Go back"
+          className={authBackClassName}
+          to="/signup"
+          viewTransition={AUTH_REVERSE_VIEW_TRANSITION}
+        >
+          <AuthBackLabel />
+        </Link>
+      }
+    >
       <div aria-labelledby="verify-title">
         <div className="space-y-1.5">
-          <h1 className="text-xl font-semibold" id="verify-title">
-            Verify your email
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Enter the 6-digit code we sent to{" "}
-            <span className="font-medium text-foreground">{email}</span>.
-          </p>
+          <AuthSlot kind="text" name="title">
+            <h1
+              className="text-2xl font-semibold tracking-[-0.035em]"
+              id="verify-title"
+            >
+              Verify your email
+            </h1>
+          </AuthSlot>
+          <AuthSlot kind="text" name="subtitle">
+            <p className="text-sm text-muted-foreground">
+              Enter the 6-digit code we sent to{" "}
+              <span className="font-medium text-foreground">{email}</span>.
+            </p>
+          </AuthSlot>
         </div>
 
         <form
@@ -117,7 +146,7 @@ function VerifyEmailPage() {
             void verify(code);
           }}
         >
-          <div>
+          <AuthSlot name="otp">
             <OtpField
               // Deliberate: this step exists only to enter the code.
               // oxlint-disable-next-line jsx-a11y/no-autofocus
@@ -133,16 +162,23 @@ function VerifyEmailPage() {
               value={code}
             />
             <AuthError message={error} />
-          </div>
-          <AuthActionButton
-            disabled={isVerifying || code.length !== OTP_LENGTH}
-            type="submit"
-          >
-            {isVerifying ? "Verifying email" : "Verify email"}
-          </AuthActionButton>
+          </AuthSlot>
+          <AuthSlot name="submit">
+            <AuthActionButton
+              disabled={isVerifying || code.length !== OTP_LENGTH}
+              type="submit"
+            >
+              {isVerifying ? "Verifying email" : "Verify email"}
+            </AuthActionButton>
+          </AuthSlot>
         </form>
 
-        <p className="mt-5 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+        <AuthSlot
+          as="p"
+          kind="text"
+          name="switch"
+          className="mt-5 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground"
+        >
           <span>
             Didn&apos;t get it?{" "}
             <button
@@ -154,15 +190,8 @@ function VerifyEmailPage() {
               <ResendCodeLabel seconds={cooldown} />
             </button>
           </span>
-          <span aria-hidden="true">·</span>
-          <Link
-            className="transition-colors duration-150 ease-[ease] hover:text-foreground"
-            to="/signup"
-          >
-            Wrong email?
-          </Link>
-        </p>
+        </AuthSlot>
       </div>
-    </CenteredAuthLayout>
+    </AuthPageLayout>
   );
 }

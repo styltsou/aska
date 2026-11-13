@@ -7,6 +7,9 @@ import {
 } from "@tanstack/react-router";
 import { AuthPending } from "@/components/auth/auth-pending";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { AuthSlot } from "@/components/auth/auth-slot";
+import { setAuthEmail, useAuthEmail } from "@/lib/auth-email";
+import { AUTH_VIEW_TRANSITION } from "@/components/auth/auth-view-transition";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import {
   AuthActionButton,
@@ -53,7 +56,7 @@ export const Route = createFileRoute("/login")({
     }
   },
   pendingComponent: AuthPending,
-  pendingMs: 0,
+  pendingMs: 300,
   head: () => ({
     meta: [{ title: "Sign in | Mnemee" }],
   }),
@@ -63,7 +66,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useAuthEmail();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -86,7 +89,11 @@ function LoginPage() {
     if (error) {
       if (error.code === "EMAIL_NOT_VERIFIED") {
         // The server has already sent a fresh verification link.
-        void navigate({ to: "/verify-email", search: { email } });
+        void navigate({
+          to: "/verify-email",
+          search: { email },
+          viewTransition: AUTH_VIEW_TRANSITION,
+        });
         return;
       }
       setError(error.message ?? "Unable to sign in.");
@@ -109,6 +116,7 @@ function LoginPage() {
     }
 
     clearLastLoginMethod();
+    setAuthEmail("");
 
     if (search.redirect?.startsWith("/") && !search.redirect.startsWith("//")) {
       void navigate({ href: search.redirect, replace: true });
@@ -119,22 +127,28 @@ function LoginPage() {
   }
 
   return (
-    <AuthPageLayout footer={<TermsNotice />}>
+    <AuthPageLayout footer={<TermsNotice />} anchorContent>
       <div aria-labelledby="sign-in-title">
         <div className="space-y-1.5">
-          <h1
-            className="text-2xl font-semibold tracking-[-0.035em]"
-            id="sign-in-title"
-          >
-            Sign in
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Continue to your workspace.
-          </p>
+          <AuthSlot kind="text" name="title">
+            <h1
+              className="text-2xl font-semibold tracking-[-0.035em]"
+              id="sign-in-title"
+            >
+              Sign in
+            </h1>
+          </AuthSlot>
+          <AuthSlot kind="text" name="subtitle">
+            <p className="text-sm text-muted-foreground">
+              Continue to your workspace.
+            </p>
+          </AuthSlot>
         </div>
-        <GoogleSignIn redirect={search.redirect} showLastUsed />
+        <AuthSlot name="google">
+          <GoogleSignIn redirect={search.redirect} showLastUsed />
+        </AuthSlot>
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
-          <div className="flex flex-col gap-2">
+          <AuthSlot name="email" className="flex flex-col gap-2">
             <label className="text-sm font-medium" htmlFor="email">
               Email
             </label>
@@ -151,14 +165,15 @@ function LoginPage() {
                 setError(null);
               }}
             />
-          </div>
-          <div>
+          </AuthSlot>
+          <AuthSlot name="password">
             <PasswordField
               label="Password"
               labelAction={
                 <Link
                   className="text-sm text-muted-foreground transition-colors duration-150 ease-[ease] hover:text-foreground"
                   to="/forgot-password"
+                  viewTransition={AUTH_VIEW_TRANSITION}
                 >
                   Forgot password?
                 </Link>
@@ -174,20 +189,28 @@ function LoginPage() {
               }}
             />
             <AuthError message={error} />
-          </div>
-          <AuthActionButton disabled={isSubmitting} type="submit">
-            <span>{isSubmitting ? "Signing in" : "Sign in"}</span>
-          </AuthActionButton>
+          </AuthSlot>
+          <AuthSlot name="submit">
+            <AuthActionButton disabled={isSubmitting} type="submit">
+              <span>{isSubmitting ? "Signing in" : "Sign in"}</span>
+            </AuthActionButton>
+          </AuthSlot>
         </form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <AuthSlot
+          as="p"
+          kind="text"
+          name="switch"
+          className="mt-6 text-center text-sm text-muted-foreground"
+        >
           New here?{" "}
           <Link
             className="font-medium text-foreground underline decoration-transparent underline-offset-4 transition-[text-decoration-color] duration-150 ease-[ease] hover:decoration-current"
             to="/signup"
+            viewTransition={AUTH_VIEW_TRANSITION}
           >
             Create an account
           </Link>
-        </p>
+        </AuthSlot>
       </div>
     </AuthPageLayout>
   );
