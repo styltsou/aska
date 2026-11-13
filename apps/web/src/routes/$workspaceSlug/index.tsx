@@ -65,7 +65,10 @@ export function WorkspacePage() {
           workspaceSlug={workspaceSlug}
           onOpenChange={setCreateDialogOpen}
         >
-          <Button>
+          <Button
+            data-onboarding-action="create-collection"
+            className="relative data-[onboarding-target]:outline-2 data-[onboarding-target]:outline-offset-4 data-[onboarding-target]:outline-ring"
+          >
             <PlusIcon />
             <span>Create collection</span>
           </Button>

@@ -256,7 +256,7 @@ export const CanvasCard = memo(function CanvasCard({
   return (
     <motion.div
       className={cn(
-        "relative w-full rounded-lg transition-[filter,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+        "relative w-full rounded-lg transition-[filter,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none data-[onboarding-target]:outline-2 data-[onboarding-target]:outline-offset-4 data-[onboarding-target]:outline-ring",
         dragging && "drop-shadow-xl",
         isExiting && "pointer-events-none",
         data.isColorDimmed && "pointer-events-none opacity-30 saturate-50",

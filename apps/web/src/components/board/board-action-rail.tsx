@@ -89,6 +89,9 @@ export function BoardActionRail({
   const isRailVisible = usePersistedStore(
     (state) => state.boardActionRailVisible,
   );
+  const onboardingRailVisible = useTransientStore(
+    (state) => state.onboardingRailBoardKey === boardKey,
+  );
   const reduceMotion = useReducedMotion();
   const enterTransition = reduceMotion
     ? { duration: 0 }
@@ -103,7 +106,7 @@ export function BoardActionRail({
   return (
     <div className="absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-20 flex items-end justify-center px-2">
       <AnimatePresence initial={false}>
-        {isRailVisible ? (
+        {isRailVisible || onboardingRailVisible ? (
           <motion.div
             key="actions-dock"
             initial={
@@ -173,7 +176,11 @@ export function BoardActionRail({
                               size="icon-lg"
                               variant="ghost"
                               aria-label="New note"
-                              className={RAIL_BUTTON_CLASS}
+                              data-onboarding-action="create-note"
+                              className={cn(
+                                RAIL_BUTTON_CLASS,
+                                "relative data-[onboarding-target]:outline-2 data-[onboarding-target]:outline-offset-4 data-[onboarding-target]:outline-ring",
+                              )}
                             >
                               <FileTextIcon />
                             </Button>

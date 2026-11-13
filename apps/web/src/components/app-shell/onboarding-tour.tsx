@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { MousePointer2Icon, XIcon } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { CreateCollectionDialog } from "./create-collection-dialog";
-import { CreateNoteDialog } from "./create-note-dialog";
+import { makeBoardKey } from "@/components/canvas";
+import { useTransientStore } from "@/store";
+import { cn } from "@/lib/utils";
+import { OnboardingCursor, useOnboardingTarget } from "./onboarding-cursor";
 import {
   getOnboardingTour,
   ONBOARDING_TOUR_EVENT,
@@ -32,8 +33,9 @@ export function OnboardingTour({
     queryFn: getOnboardingTour,
     retry: 1,
   });
-  const [noteEditorOpen, setNoteEditorOpen] = useState(false);
-  const reduceMotion = useReducedMotion();
+  const setOnboardingRailBoardKey = useTransientStore(
+    (state) => state.setOnboardingRailBoardKey,
+  );
   const [failedAction, setFailedAction] = useState<OnboardingTourAction | null>(
     null,
   );
@@ -70,61 +72,59 @@ export function OnboardingTour({
     };
   }, [mutate, tour]);
 
+  const railBoardKey =
+    tour?.status === "active" &&
+    (tour.step === "note" || tour.step === "move") &&
+    tour.workspaceSlug === workspaceSlug &&
+    tour.collectionSlug
+      ? makeBoardKey(workspaceSlug, tour.collectionSlug, undefined)
+      : undefined;
   useEffect(() => {
-    if (
-      tour?.status !== "active" ||
-      tour.step !== "move" ||
-      !tour.noteId ||
-      tour.workspaceSlug !== workspaceSlug
-    )
-      return;
-    const markNote = () => {
-      const card = document.querySelector<HTMLElement>(
-        `[data-asset-card-id="${CSS.escape(tour.noteId!)}"]`,
-      );
-      card?.setAttribute("data-onboarding-target", "");
-      return card;
-    };
-    let card = markNote();
-    const observer = new MutationObserver(() => {
-      if (card?.isConnected) return;
-      card = markNote();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => {
-      observer.disconnect();
-      card?.removeAttribute("data-onboarding-target");
-    };
-  }, [tour, workspaceSlug]);
+    setOnboardingRailBoardKey(railBoardKey);
+    return () => setOnboardingRailBoardKey(undefined);
+  }, [railBoardKey, setOnboardingRailBoardKey]);
 
-  if (tour?.status !== "active" || !tour.step) return null;
-
-  const stepNumber =
-    tour.step === "collection" ? 1 : tour.step === "note" ? 2 : 3;
-  const targetWorkspaceSlug = tour.workspaceSlug ?? workspaceSlug;
-  const collectionPath = tour.collectionSlug
+  const active = tour?.status === "active" && Boolean(tour.step);
+  const targetWorkspaceSlug = tour?.workspaceSlug ?? workspaceSlug;
+  const collectionPath = tour?.collectionSlug
     ? `/${targetWorkspaceSlug}/collections/${tour.collectionSlug}`
     : null;
   const isOnTargetPage =
-    tour.step === "collection"
+    tour?.step === "collection"
       ? pathname === `/${workspaceSlug}`
       : pathname === collectionPath;
+  const targetSelector =
+    active && isOnTargetPage
+      ? tour.step === "collection"
+        ? '[data-onboarding-action="create-collection"]'
+        : tour.step === "note"
+          ? '[data-onboarding-action="create-note"]'
+          : tour.noteId
+            ? `[data-canvas-asset-id="${CSS.escape(tour.noteId)}"]`
+            : null
+      : null;
+  const target = useOnboardingTarget(targetSelector, active && isOnTargetPage);
+
+  if (!active || !tour?.step) return null;
+
+  const stepNumber =
+    tour.step === "collection" ? 1 : tour.step === "note" ? 2 : 3;
 
   return (
     <>
-      {tour.step !== "collection" &&
-      tour.collectionSlug &&
-      targetWorkspaceSlug === workspaceSlug ? (
-        <CreateNoteDialog
-          workspaceSlug={workspaceSlug}
-          collectionPath={tour.collectionSlug}
-          open={noteEditorOpen}
-          onOpenChange={setNoteEditorOpen}
+      {target ? (
+        <OnboardingCursor
+          key={`${tour.step}:${targetSelector}`}
+          target={target}
+          gesture={tour.step === "move" ? "drag" : "click"}
         />
       ) : null}
       <section
         aria-label="Getting started"
-        className="fixed right-4 bottom-4 z-40 w-[min(21rem,calc(100vw-2rem))] rounded-xl border border-border bg-card p-4 shadow-xl motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2"
+        className={cn(
+          "fixed right-4 z-40 w-[min(21rem,calc(100vw-2rem))] rounded-xl border border-border bg-card p-4 shadow-xl motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2",
+          tour.step === "collection" ? "bottom-4" : "bottom-20 md:bottom-4",
+        )}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -155,7 +155,7 @@ export function OnboardingTour({
             ? "Create a collection for your first board. Give it any name you like."
             : tour.step === "note"
               ? "Write down an idea, a project name, or anything you want to remember."
-              : "Close the note, then drag its card to a new spot on the canvas."}
+              : "Close the note, then drag its card to a new spot on the canvas. Switch to canvas view if needed."}
         </p>
         {failedAction ? (
           <div className="mt-3 flex items-center gap-2 text-xs text-destructive">
@@ -172,37 +172,17 @@ export function OnboardingTour({
         ) : null}
         <div className="mt-4 flex items-center justify-between gap-3">
           {isOnTargetPage ? (
-            tour.step === "collection" ? (
-              <CreateCollectionDialog workspaceSlug={workspaceSlug}>
-                <Button size="sm" disabled={isPending}>
-                  Create collection
-                </Button>
-              </CreateCollectionDialog>
-            ) : tour.step === "note" ? (
-              <Button
-                size="sm"
-                disabled={isPending}
-                onClick={() => setNoteEditorOpen(true)}
-              >
-                Write a note
-              </Button>
-            ) : (
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <motion.span
-                  aria-hidden="true"
-                  className="inline-flex"
-                  animate={reduceMotion ? { x: 0 } : { x: [0, 18, 0] }}
-                  transition={
-                    reduceMotion
-                      ? { duration: 0 }
-                      : { duration: 2.2, ease: "easeInOut", repeat: Infinity }
-                  }
-                >
-                  <MousePointer2Icon className="size-3.5" />
-                </motion.span>
-                Drag the note to continue
-              </span>
-            )
+            <span aria-live="polite" className="text-xs text-muted-foreground">
+              {!target
+                ? tour.step === "move"
+                  ? "Open canvas view to find your note"
+                  : "Finding the next control…"
+                : tour.step === "collection"
+                  ? "Click the highlighted collection button"
+                  : tour.step === "note"
+                    ? "Click the highlighted note button"
+                    : "Drag the highlighted note"}
+            </span>
           ) : tour.step === "collection" ? (
             <Link
               to="/$workspaceSlug"

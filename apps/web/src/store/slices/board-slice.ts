@@ -46,6 +46,8 @@ export const createPersistedBoardSlice: StateCreator<PersistedBoardSlice> = (
 });
 
 export interface TransientBoardSlice {
+  onboardingRailBoardKey: string | undefined;
+  setOnboardingRailBoardKey: (boardKey?: string) => void;
   boardVisibleBounds: Record<string, BoardVisibleBounds | undefined>;
   insertionPositions: Record<string, XYPosition | undefined>;
   canvasViewportActivity: Record<string, number | undefined>;
@@ -72,6 +74,9 @@ export interface TransientBoardSlice {
 export const createTransientBoardSlice: StateCreator<TransientBoardSlice> = (
   set,
 ) => ({
+  onboardingRailBoardKey: undefined,
+  setOnboardingRailBoardKey: (boardKey) =>
+    set({ onboardingRailBoardKey: boardKey }),
   boardVisibleBounds: {},
   insertionPositions: {},
   canvasViewportActivity: {},

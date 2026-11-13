@@ -287,7 +287,12 @@ export function AppHeader() {
           {collectionsSegment === "inbox" ? <GridDensityControl /> : null}
           {isCollectionsView ? (
             <CreateCollectionDialog workspaceSlug={workspaceSlug}>
-              <Button type="button" size="sm">
+              <Button
+                type="button"
+                size="sm"
+                data-onboarding-action="create-collection"
+                className="relative data-[onboarding-target]:outline-2 data-[onboarding-target]:outline-offset-4 data-[onboarding-target]:outline-ring"
+              >
                 <PlusIcon />
                 <span>New collection</span>
               </Button>
