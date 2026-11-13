@@ -7,10 +7,10 @@ const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog
 	<div class="consent" data-consent data-key={posthogKey} data-host={posthogHost}>
 		<section class="consent__panel" data-consent-panel hidden aria-label="Analytics preferences">
 			<h2>Help us improve Mnemee</h2>
-			<p>With your permission, we use PostHog to understand visits to this website. You can change your choice at any time. <a href="/privacy">Privacy details</a></p>
+			<p>Essential cookies and storage keep Mnemee working, including account sign-in. With your permission, we use PostHog analytics to understand visits to this website. You can change your choice at any time. <a href="/privacy">Privacy details</a></p>
 			<div class="consent__actions">
-				<button type="button" data-consent-reject>Reject analytics</button>
-				<button type="button" data-consent-accept>Accept analytics</button>
+				<button type="button" class="app-button app-button--secondary" data-consent-reject>Reject analytics</button>
+				<button type="button" class="app-button app-button--primary" data-consent-accept>Accept analytics</button>
 			</div>
 		</section>
 	</div>
@@ -28,13 +28,9 @@ const posthogHost = import.meta.env.PUBLIC_POSTHOG_HOST || 'https://eu.i.posthog
 	.consent__panel p { margin: 0; color: #c9c9c9; font-size: 13px; line-height: 1.5; }
 	.consent__panel a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 	.consent__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-	.consent__actions button { min-width: 124px; min-height: 38px; padding: 8px 12px; border: 1px solid #888; border-radius: 6px; background: transparent; color: #fff; cursor: pointer; font-size: 12px; font-weight: 600; }
-	.consent__actions button[data-consent-accept] { border-color: #fff; background: #fff; color: #171717; }
-	.consent__actions button:hover { opacity: .82; }
+	.consent__actions .app-button { min-width: 124px; height: 36px; padding-inline: 12px; }
 	:global(html[data-theme='dark']) .consent__panel { border-color: #d7d7d7; background: #fff; color: #171717; box-shadow: 0 12px 44px rgb(0 0 0 / 55%); }
 	:global(html[data-theme='dark']) .consent__panel p { color: #555; }
 	:global(html[data-theme='dark']) .consent__panel a { color: #171717; }
-	:global(html[data-theme='dark']) .consent__actions button { border-color: #777; color: #171717; }
-	:global(html[data-theme='dark']) .consent__actions button[data-consent-accept] { border-color: #171717; background: #171717; color: #fff; }
-	@media (max-width: 380px) { .consent__panel { bottom: 14px; width: calc(100vw - 24px); padding: 16px; }.consent__actions button { min-width: 0; flex: 1; padding-inline: 8px; } }
+	@media (max-width: 380px) { .consent__panel { bottom: 14px; width: calc(100vw - 24px); padding: 16px; }.consent__actions .app-button { min-width: 0; flex: 1; padding-inline: 8px; } }
 </style>

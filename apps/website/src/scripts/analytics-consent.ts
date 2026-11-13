@@ -6,7 +6,7 @@ type Consent = 'accepted' | 'rejected';
 
 if (root) {
 	const panel = root.querySelector<HTMLElement>('[data-consent-panel]');
-	const settings = root.querySelector<HTMLButtonElement>('[data-consent-settings]');
+	const settings = document.querySelectorAll<HTMLButtonElement>('[data-consent-settings]');
 	const key = root.dataset.key;
 	const host = root.dataset.host;
 	let choice: Consent | null = null;
@@ -60,7 +60,7 @@ if (root) {
 
 	if (panel) panel.hidden = choice !== null;
 	if (choice === 'accepted') loadAnalytics();
-	settings?.addEventListener('click', () => { if (panel) panel.hidden = false; });
+	settings.forEach((button) => button.addEventListener('click', () => { if (panel) panel.hidden = false; }));
 	root.querySelector('[data-consent-accept]')?.addEventListener('click', () => choose('accepted'));
 	root.querySelector('[data-consent-reject]')?.addEventListener('click', () => choose('rejected'));
 }
