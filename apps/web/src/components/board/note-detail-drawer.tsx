@@ -1,3 +1,5 @@
+import { persistNoteEdit } from "@/components/board/note-editor/save/persist-note-edit";
+import { prepareNoteForSwitch } from "@/components/board/note-editor/save/prepare-note-for-switch";
 import { useAssetFullscreenShortcut } from "@/components/board/use-asset-fullscreen-shortcut";
 import {
   lazy,
@@ -849,169 +851,39 @@ export function NoteDetailDrawer({
       closeAfterSave = false,
       nextTitle = title,
       force = false,
-    ) => {
-      if (!noteId || syncedNoteIdRef.current !== noteId) return;
-      if (conflictRef.current) {
-        toast.error("Compare versions before saving your edits.");
-        return;
-      }
-      const submittedSnapshot: NoteSaveSnapshot = {
+    ) =>
+      persistNoteEdit(
+        {
+          noteId,
+          activeNote,
+          isPending,
+          syncedNoteIdRef,
+          conflictRef,
+          editRevisionRef,
+          failedSaveSnapshotRef,
+          activeSaveSnapshotRef,
+          queuedSaveSnapshotRef,
+          closeAfterSaveRef,
+          hasLocalEditRef,
+          committedNoteRef,
+          draftRef,
+          titleRef,
+          getLatestSaveSnapshot,
+          mutate,
+          setSaveState,
+          setServerNote,
+          setCreatedNote,
+          saveCurrentEditDraft,
+          deleteEmptyNote,
+          closeWorkspace,
+          onNoteChange,
+          syncPeekNote,
+        },
         content,
-        title: nextTitle,
-        revision: editRevisionRef.current,
-      };
-
-      if (isNoteContentTooLong(content)) {
-        failedSaveSnapshotRef.current = submittedSnapshot;
-        closeAfterSaveRef.current = false;
-        setSaveState("error");
-        toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
-        return;
-      }
-
-      if (activeSaveSnapshotRef.current || isPending) {
-        queuedSaveSnapshotRef.current = submittedSnapshot;
-        closeAfterSaveRef.current ||= closeAfterSave;
-        return;
-      }
-
-      if (!hasSaveableNote(nextTitle, content)) {
-        queuedSaveSnapshotRef.current = undefined;
-        hasLocalEditRef.current = true;
-        saveCurrentEditDraft(noteId, content, nextTitle);
-        if (closeAfterSave || closeAfterSaveRef.current) {
-          closeAfterSaveRef.current = false;
-          void deleteEmptyNote(noteId, closeWorkspace);
-        } else {
-          setSaveState("empty");
-        }
-        return;
-      }
-
-      if (
-        !force &&
-        content === committedNoteRef.current?.content &&
-        (nextTitle.trim() || null) === (committedNoteRef.current?.title ?? null)
-      ) {
-        if (isSameSaveSnapshot(submittedSnapshot, getLatestSaveSnapshot())) {
-          hasLocalEditRef.current = false;
-          queuedSaveSnapshotRef.current = undefined;
-          clearEditDraft(noteId, committedNoteRef.current);
-          setSaveState(hasSaveableNote(nextTitle, content) ? "saved" : "empty");
-        }
-        if (closeAfterSave) closeWorkspace();
-        return;
-      }
-
-      const base = committedNoteRef.current;
-      if (!base || base.id !== noteId) return;
-      closeAfterSaveRef.current ||= closeAfterSave;
-      activeSaveSnapshotRef.current = submittedSnapshot;
-      setSaveState("saving");
-      mutate(
-        {
-          assetId: noteId,
-          content,
-          title: nextTitle.trim() || null,
-          expectedContent: base.content,
-          expectedTitle: base.title ?? null,
-        },
-        {
-          onSuccess: ({ note: updatedNote }) => {
-            activeSaveSnapshotRef.current = undefined;
-            conflictRef.current = false;
-            setServerNote(undefined);
-            committedNoteRef.current = { ...base, ...updatedNote };
-            setCreatedNote((current) =>
-              current?.id === updatedNote.id
-                ? { ...current, ...updatedNote }
-                : current,
-            );
-            if (activeNote && onNoteChange) {
-              onNoteChange({
-                ...activeNote,
-                ...updatedNote,
-              });
-            }
-            syncPeekNote({ ...activeNote, ...updatedNote });
-            const latestSnapshot = getLatestSaveSnapshot();
-            const completion = resolveNoteSaveCompletion(
-              submittedSnapshot,
-              latestSnapshot,
-            );
-            if (
-              !hasSaveableNote(latestSnapshot.title, latestSnapshot.content)
-            ) {
-              queuedSaveSnapshotRef.current = undefined;
-              hasLocalEditRef.current = true;
-              saveCurrentEditDraft(
-                noteId,
-                latestSnapshot.content,
-                latestSnapshot.title,
-              );
-              failedSaveSnapshotRef.current = undefined;
-              if (closeAfterSaveRef.current) {
-                closeAfterSaveRef.current = false;
-                void deleteEmptyNote(noteId, closeWorkspace);
-              } else {
-                setSaveState("empty");
-              }
-              return;
-            }
-            if (completion.status === "acknowledged") {
-              hasLocalEditRef.current = false;
-              queuedSaveSnapshotRef.current = undefined;
-              clearEditDraft(noteId, updatedNote);
-              failedSaveSnapshotRef.current = undefined;
-              setSaveState("saved");
-              if (closeAfterSaveRef.current) {
-                closeAfterSaveRef.current = false;
-                closeWorkspace();
-              }
-              return;
-            }
-
-            queuedSaveSnapshotRef.current = completion.snapshot;
-            hasLocalEditRef.current = true;
-            saveCurrentEditDraft(
-              noteId,
-              completion.snapshot.content,
-              completion.snapshot.title,
-            );
-            failedSaveSnapshotRef.current = undefined;
-            setSaveState("saving");
-          },
-          onError: (error) => {
-            activeSaveSnapshotRef.current = undefined;
-            if (isNoteEditConflict(error)) {
-              conflictRef.current = true;
-              queuedSaveSnapshotRef.current = undefined;
-              failedSaveSnapshotRef.current = undefined;
-              closeAfterSaveRef.current = false;
-              saveCurrentEditDraft(noteId, draftRef.current, titleRef.current);
-              setServerNote(undefined);
-              setSaveState("conflict");
-              toast.error(
-                getNoteSaveErrorMessage(error, "Could not save note."),
-              );
-              return;
-            }
-            const latestSnapshot = getLatestSaveSnapshot();
-            if (!isSameSaveSnapshot(submittedSnapshot, latestSnapshot)) {
-              queuedSaveSnapshotRef.current = latestSnapshot;
-              hasLocalEditRef.current = true;
-              failedSaveSnapshotRef.current = undefined;
-              setSaveState("saving");
-              return;
-            }
-            failedSaveSnapshotRef.current = submittedSnapshot;
-            closeAfterSaveRef.current = false;
-            setSaveState("error");
-            toast.error(getNoteSaveErrorMessage(error, "Could not save note."));
-          },
-        },
-      );
-    },
+        closeAfterSave,
+        nextTitle,
+        force,
+      ),
     [
       closeWorkspace,
       deleteEmptyNote,
@@ -1105,112 +977,40 @@ export function NoteDetailDrawer({
     serverNote,
   ]);
 
-  const prepareCurrentNoteForSwitch = useCallback(async (): Promise<
-    NoteAsset | false
-  > => {
-    if (
-      conflictRef.current ||
-      isCreateMode ||
-      isPending ||
-      activeSaveSnapshotRef.current ||
-      !activeNote ||
-      syncedNoteIdRef.current !== activeNote.id
-    )
-      return false;
-
-    const content = draftRef.current;
-    if (!hasSaveableNote(titleRef.current, content)) {
-      toast.error("Add a title or content before opening another note.");
-      return false;
-    }
-    const submittedSnapshot = getLatestSaveSnapshot();
-    if (isNoteContentTooLong(content)) {
-      failedSaveSnapshotRef.current = submittedSnapshot;
-      setSaveState("error");
-      toast.error(NOTE_CONTENT_LIMIT_MESSAGE);
-      return false;
-    }
-
-    const base = committedNoteRef.current;
-    if (!base || base.id !== activeNote.id) return false;
-    let currentMainNote = activeNote;
-    const nextTitle = titleRef.current.trim() || null;
-    const titleChanged = nextTitle !== (base.title ?? null);
-    if (content !== base.content || titleChanged) {
-      activeSaveSnapshotRef.current = submittedSnapshot;
-      setSaveState("saving");
-      try {
-        const { note: updatedNote } = await mutateAsync({
-          assetId: activeNote.id,
-          content,
-          title: nextTitle,
-          expectedContent: base.content,
-          expectedTitle: base.title ?? null,
-        });
-        currentMainNote = {
-          ...activeNote,
-          ...updatedNote,
-        };
-        committedNoteRef.current = currentMainNote;
-        activeSaveSnapshotRef.current = undefined;
-        onNoteChange?.(currentMainNote);
-        syncPeekNote(currentMainNote);
-        if (!isSameSaveSnapshot(submittedSnapshot, getLatestSaveSnapshot())) {
-          const latestSnapshot = getLatestSaveSnapshot();
-          queuedSaveSnapshotRef.current = latestSnapshot;
-          hasLocalEditRef.current = true;
-          saveCurrentEditDraft(
-            activeNote.id,
-            latestSnapshot.content,
-            latestSnapshot.title,
-          );
-          setSaveState("saving");
-          return false;
-        }
-        hasLocalEditRef.current = false;
-        clearEditDraft(activeNote.id, currentMainNote);
-        setSaveState("saved");
-      } catch (error) {
-        activeSaveSnapshotRef.current = undefined;
-        if (isNoteEditConflict(error)) {
-          conflictRef.current = true;
-          queuedSaveSnapshotRef.current = undefined;
-          saveCurrentEditDraft(
-            activeNote.id,
-            draftRef.current,
-            titleRef.current,
-          );
-          setServerNote(undefined);
-          setSaveState("conflict");
-          toast.error(getNoteSaveErrorMessage(error, "Could not save note."));
-          return false;
-        }
-        const latestSnapshot = getLatestSaveSnapshot();
-        if (!isSameSaveSnapshot(submittedSnapshot, latestSnapshot)) {
-          queuedSaveSnapshotRef.current = latestSnapshot;
-          hasLocalEditRef.current = true;
-          failedSaveSnapshotRef.current = undefined;
-          setSaveState("saving");
-          return false;
-        }
-        failedSaveSnapshotRef.current = submittedSnapshot;
-        setSaveState("error");
-        toast.error(getNoteSaveErrorMessage(error, "Could not save note."));
-        return false;
-      }
-    }
-
-    return currentMainNote;
-  }, [
-    activeNote,
-    getLatestSaveSnapshot,
-    isCreateMode,
-    isPending,
-    mutateAsync,
-    onNoteChange,
-    saveCurrentEditDraft,
-    syncPeekNote,
-  ]);
+  const prepareCurrentNoteForSwitch = useCallback(
+    () =>
+      prepareNoteForSwitch({
+        activeNote,
+        isCreateMode,
+        isPending,
+        conflictRef,
+        activeSaveSnapshotRef,
+        queuedSaveSnapshotRef,
+        failedSaveSnapshotRef,
+        syncedNoteIdRef,
+        committedNoteRef,
+        draftRef,
+        titleRef,
+        hasLocalEditRef,
+        getLatestSaveSnapshot,
+        mutateAsync,
+        setSaveState,
+        setServerNote,
+        onNoteChange,
+        syncPeekNote,
+        saveCurrentEditDraft,
+      }),
+    [
+      activeNote,
+      isCreateMode,
+      isPending,
+      getLatestSaveSnapshot,
+      mutateAsync,
+      onNoteChange,
+      syncPeekNote,
+      saveCurrentEditDraft,
+    ],
+  );
 
   useEffect(() => {
     if (!isWorkspaceOpen || !activeNote || isPeekMirror) return;
