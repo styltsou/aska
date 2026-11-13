@@ -15,12 +15,19 @@ const smooth = (value: number) => { const t = clamp(value); return t * t * (3 - 
 if (scene && stage && panel && cursor && preview && windowMock && extensionButton && saveButton && saveDefault && saveDone) {
 	let initialHeight = 0;
 	let frame = 0;
+	let savedTimer: ReturnType<typeof setTimeout> | null = null;
+	let isSaved = false;
 	const reset = () => {
+		cancelAnimationFrame(frame);
+		frame = 0;
+		if (savedTimer !== null) clearTimeout(savedTimer);
+		savedTimer = null;
+		isSaved = false;
 		delete scene.dataset.active;
 		scene.style.removeProperty('--extension-inset');
 		panel.style.removeProperty('height');
 		windowMock.style.removeProperty('transform');
-			visual?.style.removeProperty('height');
+		visual?.style.removeProperty('height');
 		for (const element of [cursor, preview, saveDefault, saveDone]) element.removeAttribute('style');
 	};
 	const configure = () => {
@@ -61,7 +68,18 @@ if (scene && stage && panel && cursor && preview && windowMock && extensionButto
 		const appear = smooth((progress - .29) / .035);
 		const leave = smooth((progress - .88) / .06);
 		const press = smooth((progress - .69) / .02) * (1 - smooth((progress - .72) / .02));
-		const saved = smooth((progress - .72) / .04);
+		if (progress < .69) {
+			if (savedTimer !== null) clearTimeout(savedTimer);
+			savedTimer = null;
+			isSaved = false;
+		} else if (!isSaved && savedTimer === null) {
+			// The click stays scroll-driven; its confirmation completes on its own.
+			savedTimer = setTimeout(() => {
+				savedTimer = null;
+				isSaved = true;
+				schedule();
+			}, 180);
+		}
 		const close = smooth((progress - .88) / .08);
 		const bounds = windowMock.getBoundingClientRect();
 		const toolbar = extensionButton.getBoundingClientRect();
@@ -77,8 +95,8 @@ if (scene && stage && panel && cursor && preview && windowMock && extensionButto
 		const visibility = open * (1 - close);
 		preview.style.opacity = String(visibility);
 		preview.style.transform = `translateY(${(1 - visibility) * -4}px) scale(${.98 + visibility * .02})`;
-		saveDefault.style.opacity = String(1 - saved);
-		saveDone.style.opacity = String(saved);
+		saveDefault.style.opacity = isSaved ? '0' : '1';
+		saveDone.style.opacity = isSaved ? '1' : '0';
 	};
 	const schedule = () => { if (!frame) frame = requestAnimationFrame(render); };
 	configure();
