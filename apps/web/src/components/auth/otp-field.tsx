@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import {
   InputOTP,
+  InputOTPFocusRing,
   InputOTPGroup,
   InputOTPSeparator,
   InputOTPSlot,
@@ -36,7 +37,7 @@ export function OtpField({
       // Deliberate: the code screens exist only to enter this code.
       // oxlint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
-      containerClassName="w-full justify-between"
+      containerClassName="relative w-full justify-between"
       disabled={disabled}
       id={id}
       maxLength={OTP_LENGTH}
@@ -45,6 +46,7 @@ export function OtpField({
       pattern={REGEXP_ONLY_DIGITS}
       value={value}
     >
+      <InputOTPFocusRing invalid={invalid} />
       {[0, 1].map((group) => (
         <Fragment key={group}>
           {group > 0 ? <InputOTPSeparator className="px-2" /> : null}

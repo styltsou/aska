@@ -37,6 +37,56 @@ function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
+function InputOTPFocusRing({ invalid }: { invalid?: boolean }) {
+  const context = React.useContext(OTPInputContext);
+  const activeIndex = context?.slots.findIndex((slot) => slot.isActive) ?? -1;
+  const ringRef = React.useRef<HTMLDivElement>(null);
+
+  React.useLayoutEffect(() => {
+    const ring = ringRef.current;
+    const container = ring?.parentElement;
+    if (!ring || !container) return;
+
+    const position = () => {
+      const slot = container.querySelector<HTMLElement>(
+        `[data-slot="input-otp-slot"][data-index="${activeIndex}"]`,
+      );
+      if (!slot) {
+        ring.hidden = true;
+        return;
+      }
+
+      const bounds = slot.getBoundingClientRect();
+      const parentBounds = container.getBoundingClientRect();
+      ring.style.width = `${bounds.width}px`;
+      ring.style.height = `${bounds.height}px`;
+      ring.style.transform = `translate(${bounds.left - parentBounds.left}px, ${bounds.top - parentBounds.top}px)`;
+      ring.style.borderRadius = getComputedStyle(slot).borderRadius;
+      ring.dataset.invalid = String(Boolean(invalid));
+      ring.hidden = false;
+      if (!ring.dataset.ready) {
+        requestAnimationFrame(() => {
+          ring.dataset.ready = "true";
+        });
+      }
+    };
+
+    position();
+    const observer = new ResizeObserver(position);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [activeIndex, invalid]);
+
+  return (
+    <div
+      ref={ringRef}
+      aria-hidden="true"
+      hidden
+      className="pointer-events-none absolute top-0 left-0 z-10 border border-ring ring-3 ring-ring/50 data-[invalid=true]:border-destructive data-[invalid=true]:ring-destructive/20 data-[ready=true]:transition-[transform,width,height,border-radius] data-[ready=true]:duration-120 data-[ready=true]:ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none dark:data-[invalid=true]:ring-destructive/40"
+    />
+  );
+}
+
 function InputOTPSlot({
   index,
   className,
@@ -50,9 +100,10 @@ function InputOTPSlot({
   return (
     <div
       data-slot="input-otp-slot"
+      data-index={index}
       data-active={isActive}
       className={cn(
-        "relative flex size-8 items-center justify-center border-y border-r border-input text-sm transition-all outline-none first:rounded-l-lg first:border-l last:rounded-r-lg aria-invalid:border-destructive data-[active=true]:z-10 data-[active=true]:border-ring data-[active=true]:ring-3 data-[active=true]:ring-ring/50 data-[active=true]:aria-invalid:border-destructive data-[active=true]:aria-invalid:ring-destructive/20 dark:bg-input/30 dark:data-[active=true]:aria-invalid:ring-destructive/40",
+        "relative flex size-8 items-center justify-center border-y border-r border-input text-sm outline-none first:rounded-l-lg first:border-l last:rounded-r-lg aria-invalid:border-destructive dark:bg-input/30",
         className,
       )}
       {...props}
@@ -80,4 +131,10 @@ function InputOTPSeparator({ ...props }: React.ComponentProps<"div">) {
   );
 }
 
-export { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator };
+export {
+  InputOTP,
+  InputOTPFocusRing,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+};

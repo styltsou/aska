@@ -29,7 +29,7 @@ export function PasswordField({
       </div>
       <InputGroup
         className={cn(
-          "h-10",
+          "h-10 transition-[background-color,color]",
           invalid &&
             "border-destructive focus-within:border-destructive focus-within:ring-destructive/20",
         )}

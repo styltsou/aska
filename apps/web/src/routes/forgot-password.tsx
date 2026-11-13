@@ -62,7 +62,7 @@ function ForgotPasswordPage() {
                 Email
               </label>
               <Input
-                className="h-10 px-3"
+                className="h-10 px-3 transition-[background-color,color]"
                 id="email"
                 autoComplete="email"
                 inputMode="email"

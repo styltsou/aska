@@ -32,8 +32,12 @@ export function AuthError({ message }: { message: string | null }) {
           key="error"
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: "auto", opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.18, ease: easeOut }}
+          exit={{
+            height: 0,
+            opacity: 0,
+            transition: { duration: reduceMotion ? 0 : 0.09, ease: easeOut },
+          }}
+          transition={{ duration: reduceMotion ? 0 : 0.12, ease: easeOut }}
           className="overflow-hidden"
         >
           <p
