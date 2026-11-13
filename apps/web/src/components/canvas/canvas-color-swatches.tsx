@@ -68,6 +68,8 @@ export function CanvasColorSwatches({
       <Popover modal open={moreOpen} onOpenChange={setMoreOpen}>
         <PopoverTrigger
           render={
+            // Labelled by the trigger's aria-label (applied through render, which the lint cannot see).
+            // oxlint-disable-next-line jsx-a11y/control-has-associated-label
             <button
               type="button"
               className={cn(

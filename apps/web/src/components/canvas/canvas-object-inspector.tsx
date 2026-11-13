@@ -162,6 +162,8 @@ function ArrowControls({
       <DropdownMenu key={`pattern-${dismissKey}`}>
         <DropdownMenuTrigger
           render={
+            // Labelled by the trigger's aria-label (applied through render, which the lint cannot see).
+            // oxlint-disable-next-line jsx-a11y/control-has-associated-label
             <button
               type="button"
               className="flex h-7 items-center gap-1 rounded-md px-2 text-xs capitalize transition-colors hover:bg-foreground/5 data-popup-open:bg-foreground/10"
@@ -233,6 +235,8 @@ function ArrowControls({
       <DropdownMenu key={`head-${dismissKey}`}>
         <DropdownMenuTrigger
           render={
+            // Labelled by the trigger's aria-label (applied through render, which the lint cannot see).
+            // oxlint-disable-next-line jsx-a11y/control-has-associated-label
             <button
               type="button"
               className="flex h-7 items-center gap-1 rounded-md px-1.5 transition-colors hover:bg-foreground/5 data-popup-open:bg-foreground/10"
@@ -298,6 +302,8 @@ function TextControls({
       <DropdownMenu key={`font-${dismissKey}`}>
         <DropdownMenuTrigger
           render={
+            // Labelled by the trigger's aria-label (applied through render, which the lint cannot see).
+            // oxlint-disable-next-line jsx-a11y/control-has-associated-label
             <button
               type="button"
               className="flex h-7 cursor-pointer items-center gap-1 rounded-md px-1.5 text-xs transition-colors hover:bg-foreground/5 aria-expanded:bg-foreground/10"

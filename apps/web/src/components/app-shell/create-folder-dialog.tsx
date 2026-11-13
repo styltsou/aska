@@ -93,6 +93,8 @@ export function CreateFolderDialog({
               <Input
                 aria-label="Folder name"
                 autoComplete="off"
+                // Deliberate: focus the field as soon as this opens.
+                // oxlint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
                 disabled={isSubmitting}
                 placeholder="Folder name"

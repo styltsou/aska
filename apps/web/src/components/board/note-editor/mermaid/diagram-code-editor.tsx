@@ -104,6 +104,8 @@ export function DiagramCodeEditor({
     <CodeMirror
       value={value}
       onChange={onChange}
+      // Deliberate: focus the field as soon as this opens.
+      // oxlint-disable-next-line jsx-a11y/no-autofocus
       autoFocus
       readOnly={readOnly}
       editable={!readOnly}

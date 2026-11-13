@@ -260,6 +260,8 @@ export function AssetBoard({
   }, [bulkDelete, clearSelection, scopeKey, selectedIds]);
 
   return (
+    // Pointer-gesture surface (marquee selection and click capture).
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       ref={surfaceRef}
       className="relative min-h-0"

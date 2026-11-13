@@ -659,6 +659,8 @@ export function CommandPalette() {
               }}
             >
               <CommandInput
+                // Deliberate: focus the field as soon as this opens.
+                // oxlint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
                 value={query}
                 onValueChange={(value) => {

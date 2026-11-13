@@ -470,7 +470,7 @@ export function SettingsDialog() {
                 <XIcon />
                 <span className="sr-only">Close settings</span>
               </DialogClose>
-              <nav
+              <div
                 aria-label="Settings sections"
                 aria-orientation="vertical"
                 className="mt-2 space-y-0.5"
@@ -513,7 +513,7 @@ export function SettingsDialog() {
                     </button>
                   ),
                 )}
-              </nav>
+              </div>
             </div>
           </aside>
           <main

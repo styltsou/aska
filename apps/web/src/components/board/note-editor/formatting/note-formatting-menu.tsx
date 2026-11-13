@@ -219,6 +219,8 @@ export function InlineFormattingMenu({
           onSubmit={applyLink}
         >
           <input
+            // Deliberate: focus the field as soon as this opens.
+            // oxlint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
             className="h-8 w-56 bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground"
             placeholder="Paste or type a link"

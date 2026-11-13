@@ -64,6 +64,8 @@ export function FolderAssetCard({
   );
 
   return (
+    // role and tabIndex are set when onOpen is provided (the lint cannot see the conditional).
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       className={cn(
         "group relative aspect-square cursor-pointer overflow-hidden rounded-lg border bg-sidebar text-sidebar-foreground transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none",

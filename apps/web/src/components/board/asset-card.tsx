@@ -71,6 +71,8 @@ export const AssetCard = memo(function AssetCard({
   const selectable = isPersistedSelectableAsset(asset);
 
   return (
+    // Modifier-click toggles selection; this wrapper has no role of its own.
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className={cn("relative min-w-0 rounded-lg")}
       data-asset-card-id={asset.id}

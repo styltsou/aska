@@ -64,6 +64,8 @@ export function CanvasTextNode({
   const typography = canvasTextTypography(data.object.font, data.object.size);
 
   return (
+    // Pointer selection surface for the canvas node.
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
     <div
       className={cn(
         "group/text relative inline-block min-h-7 rounded-sm px-2 py-1.5",

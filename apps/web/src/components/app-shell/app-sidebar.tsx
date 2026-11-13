@@ -157,6 +157,8 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           )}
         </SidebarFooter>
       </Sidebar>
+      {/* Closes the peek on any click inside it; keyboard activation of its links also arrives as a click. */}
+      {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
       <aside
         ref={peekRef}
         aria-label="Sidebar preview"

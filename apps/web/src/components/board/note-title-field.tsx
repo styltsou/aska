@@ -37,6 +37,8 @@ export const NoteTitleField = forwardRef<
           onEnter?.();
         }
       }}
+      // Deliberate: focus the field as soon as this opens.
+      // oxlint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       readOnly={readOnly}
       maxLength={255}

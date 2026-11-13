@@ -25,6 +25,8 @@ export function ImageAssetCard({
   const queryClient = useQueryClient();
 
   return (
+    // role and tabIndex are set when onOpen is provided (the lint cannot see the conditional).
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       data-asset-card-surface
       role={onOpen ? "button" : undefined}

@@ -82,6 +82,7 @@ export function GlobalScratchpad() {
   return createPortal(
     open ? (
       <div
+        role="presentation"
         className="fixed inset-0 z-[100] bg-black/10 px-3 pt-[18vh] supports-backdrop-filter:backdrop-blur-xs"
         onMouseDown={(event) => {
           if (event.target === event.currentTarget) {

@@ -245,6 +245,8 @@ export function BoardUploadZone({
           ? "h-full min-h-0"
           : "min-h-[calc(100svh-5rem)] md:min-h-[calc(100svh-5.5rem)]",
       )}
+      // Focusable so paste works while the board is focused; no role of its own.
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

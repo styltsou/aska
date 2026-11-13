@@ -82,6 +82,8 @@ function OnboardingPage() {
           id="workspace-name"
           autoComplete="organization"
           placeholder="Workspace name"
+          // Deliberate: focus the field as soon as this opens.
+          // oxlint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
           required
           value={workspaceName}

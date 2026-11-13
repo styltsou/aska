@@ -86,6 +86,8 @@ export function FolderComposer({
         </div>
         <div className="relative flex-1">
           <Input
+            // Deliberate: focus the field as soon as this opens.
+            // oxlint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
             aria-label="New folder name"
             autoComplete="off"

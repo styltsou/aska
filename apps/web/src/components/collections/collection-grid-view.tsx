@@ -421,6 +421,8 @@ const CollectionGridContent = memo(function CollectionGridContent({
         verticalScrollbarClassName="w-[5px] p-0"
         verticalScrollbarStyle={{ top: 5, bottom: 5, right: 3 }}
       >
+        {/* Pointer-gesture surface (marquee selection and click capture). */}
+        {/* oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
         <div
           ref={surfaceRef}
           className="relative min-h-full w-full p-5 pb-20"

@@ -395,9 +395,13 @@ export function NativeVideoPlayer({
     "inline-flex size-8 shrink-0 items-center justify-center rounded-md border-0 bg-transparent p-0 text-white/85 shadow-none outline-none transition-colors duration-150 hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/60 active:bg-white/15";
 
   return (
+    // Keyboard-shortcut surface for the player (handleKeyDown); user media has no caption tracks.
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       ref={playerRef}
       className="group/player absolute inset-0 overflow-hidden bg-black outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      // Keyboard-shortcut surface for the player (handleKeyDown); user media has no caption tracks.
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onPointerMove={revealControls}
@@ -417,6 +421,8 @@ export function NativeVideoPlayer({
       onBlurCapture={scheduleControlsHide}
       aria-label={`${title} video player`}
     >
+      {/* Keyboard-shortcut surface for the player (handleKeyDown); user media has no caption tracks. */}
+      {/* oxlint-disable-next-line jsx-a11y/media-has-caption */}
       <video
         ref={videoRef}
         src={src}

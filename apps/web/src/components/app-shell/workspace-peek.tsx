@@ -2142,6 +2142,8 @@ function PeekNote({
               void openMentionTarget(identity, resolved)
             }
             editable={!readOnly && saveState !== "deleting"}
+            // Deliberate: focus the field as soon as this opens.
+            // oxlint-disable-next-line jsx-a11y/no-autofocus
             autoFocus={focusRequest > 0}
             scrollContainerRef={contentRef}
             highlightColor={highlightColor}

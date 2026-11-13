@@ -75,6 +75,8 @@ export function RenameCollectionDialog({
             <Input
               aria-label="Collection name"
               autoComplete="off"
+              // Deliberate: focus the field as soon as this opens.
+              // oxlint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
               maxLength={255}
               required

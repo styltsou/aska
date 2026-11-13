@@ -293,6 +293,8 @@ export function LinkInteractionPopover({ editor }: { editor: Editor }) {
               <label className="grid gap-1 px-1 text-xs font-medium text-muted-foreground">
                 Label
                 <input
+                  // Deliberate: focus the field as soon as this opens.
+                  // oxlint-disable-next-line jsx-a11y/no-autofocus
                   autoFocus
                   className="h-8 rounded-md border border-border/70 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
                   placeholder="Link text"

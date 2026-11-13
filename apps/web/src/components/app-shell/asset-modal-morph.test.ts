@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import {
   findVisibleAssetCard,
@@ -6,6 +6,83 @@ import {
 } from "./asset-modal-morph";
 
 afterEach(() => vi.unstubAllGlobals());
+
+type Animated = { animate: Mock; remove?: Mock };
+type MorphParts = {
+  card: HTMLElement;
+  modal: HTMLElement;
+  preview: Animated;
+  heroPreview: Animated;
+  modalHero: Animated;
+};
+
+// What each kind of asset must do beyond the shared morph checks. Plain functions (not branches inside the test)
+// so every assertion always runs for its case.
+function expectVideoThumbnailOpening({ heroPreview, modalHero }: MorphParts) {
+  expect(heroPreview.animate).toHaveBeenCalledWith(
+    expect.arrayContaining([
+      expect.objectContaining({ opacity: 1, offset: 1 }),
+    ]),
+    expect.objectContaining({ fill: "both" }),
+  );
+  expect(modalHero.animate).toHaveBeenCalledWith(
+    [{ opacity: 0 }, { opacity: 0 }],
+    expect.objectContaining({ fill: "both" }),
+  );
+}
+
+function expectColorSwatchOpening({
+  preview,
+  heroPreview,
+  modalHero,
+}: MorphParts) {
+  expect(preview.animate).toHaveBeenCalledWith(
+    expect.arrayContaining([
+      expect.objectContaining({ opacity: 0, offset: 0.6 }),
+    ]),
+    expect.objectContaining({ fill: "both" }),
+  );
+  expect(heroPreview.animate).toHaveBeenCalledWith(
+    expect.arrayContaining([
+      expect.objectContaining({ opacity: 1, offset: 0 }),
+      expect.objectContaining({ opacity: 1, offset: 1 }),
+    ]),
+    expect.objectContaining({ fill: "both" }),
+  );
+  expect(modalHero.animate).toHaveBeenCalledWith(
+    [{ opacity: 0 }, { opacity: 0 }],
+    expect.objectContaining({ fill: "both" }),
+  );
+}
+
+async function expectColorSwatchClosing({ card, modal, preview }: MorphParts) {
+  const closingMorph = startAssetModalMorph("close", card, modal, "");
+  expect(closingMorph).toBeDefined();
+  expect(card.style.visibility).toBe("");
+  expect(card.style.opacity).toBe("0.01");
+  expect(card.animate).toHaveBeenCalledWith(
+    expect.arrayContaining([
+      expect.objectContaining({ opacity: 1, offset: 0.92 }),
+    ]),
+    expect.objectContaining({ fill: "both" }),
+  );
+  await closingMorph?.finished;
+  expect(card.style.visibility).toBe("");
+  expect(card.style.opacity).toBe("");
+  expect(card.style.pointerEvents).toBe("");
+  expect(preview.remove).toHaveBeenCalledTimes(2);
+}
+
+const heroChecks = {
+  "video thumbnail": {
+    opening: expectVideoThumbnailOpening,
+    closing: async () => {},
+  },
+  "color swatch": {
+    opening: expectColorSwatchOpening,
+    closing: expectColorSwatchClosing,
+  },
+} as const;
 
 describe("asset modal morph source", () => {
   it("uses a visible card in the requested board view", () => {
@@ -224,6 +301,7 @@ describe("asset modal morph", () => {
   ])(
     "carries a $name into the modal hero area",
     async ({ name, cardHeight, modalHeight, cardRadius, modalRadius }) => {
+      const checks = heroChecks[name];
       const animation = () => ({
         finished: Promise.resolve(),
         cancel: vi.fn(),
@@ -338,37 +416,14 @@ describe("asset modal morph", () => {
         "[data-asset-card-surface]",
       );
       expect(clonedHero.style).toEqual({ visibility: "hidden" });
-      if (name === "color swatch") {
-        expect(preview.animate).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ opacity: 0, offset: 0.6 }),
-          ]),
-          expect.objectContaining({ fill: "both" }),
-        );
-        expect(heroPreview.animate).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ opacity: 1, offset: 0 }),
-            expect.objectContaining({ opacity: 1, offset: 1 }),
-          ]),
-          expect.objectContaining({ fill: "both" }),
-        );
-        expect(modalHero.animate).toHaveBeenCalledWith(
-          [{ opacity: 0 }, { opacity: 0 }],
-          expect.objectContaining({ fill: "both" }),
-        );
-      }
-      if (name === "video thumbnail") {
-        expect(heroPreview.animate).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ opacity: 1, offset: 1 }),
-          ]),
-          expect.objectContaining({ fill: "both" }),
-        );
-        expect(modalHero.animate).toHaveBeenCalledWith(
-          [{ opacity: 0 }, { opacity: 0 }],
-          expect.objectContaining({ fill: "both" }),
-        );
-      }
+      const parts = {
+        card,
+        modal,
+        preview,
+        heroPreview,
+        modalHero,
+      } as unknown as MorphParts;
+      checks.opening(parts);
       expect(heroPreview.animate).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
@@ -394,23 +449,7 @@ describe("asset modal morph", () => {
       expect(heroAnimation.cancel).toHaveBeenCalledOnce();
       expect(modalHeroAnimation.cancel).toHaveBeenCalledOnce();
 
-      if (name === "color swatch") {
-        const closingMorph = startAssetModalMorph("close", card, modal, "");
-        expect(closingMorph).toBeDefined();
-        expect(card.style.visibility).toBe("");
-        expect(card.style.opacity).toBe("0.01");
-        expect(card.animate).toHaveBeenCalledWith(
-          expect.arrayContaining([
-            expect.objectContaining({ opacity: 1, offset: 0.92 }),
-          ]),
-          expect.objectContaining({ fill: "both" }),
-        );
-        await closingMorph?.finished;
-        expect(card.style.visibility).toBe("");
-        expect(card.style.opacity).toBe("");
-        expect(card.style.pointerEvents).toBe("");
-        expect(preview.remove).toHaveBeenCalledTimes(2);
-      }
+      await checks.closing(parts);
     },
   );
 });

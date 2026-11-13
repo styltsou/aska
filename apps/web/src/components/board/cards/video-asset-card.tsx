@@ -65,6 +65,8 @@ export function VideoAssetCard({
   }, [dragging, reduceMotion]);
 
   return (
+    // role and tabIndex are set when the video is ready and onOpen is provided (the lint cannot see the conditional).
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       data-asset-card-surface
       className={cn(

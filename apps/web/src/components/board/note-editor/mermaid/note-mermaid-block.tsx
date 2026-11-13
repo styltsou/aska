@@ -360,6 +360,8 @@ function MermaidBlockView({
       </motion.div>
       {fullView && portalTarget
         ? createPortal(
+            // Only stops editor shortcuts from reaching the page behind the expanded editor.
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
             <div
               className="note-mermaid-full"
               role="region"
