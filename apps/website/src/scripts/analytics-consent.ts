@@ -124,7 +124,7 @@ if (root) {
 			preferences?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
 			if (primary && label && oldLabel) {
 				const newWidth = primary.getBoundingClientRect().width;
-				primary.animate([{ width: `${oldWidth}px` }, { width: `${newWidth}px` }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+				primary.animate([{ width: `${oldWidth}px` }, { width: `${newWidth}px` }], { duration: 180, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
 				label.animate(
 					[
 						{ opacity: 0, filter: 'blur(2px)' },
