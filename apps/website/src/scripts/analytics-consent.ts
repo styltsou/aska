@@ -8,8 +8,9 @@ if (root) {
 	const panel = root.querySelector<HTMLElement>('[data-consent-panel]');
 	const settings = document.querySelectorAll<HTMLButtonElement>('[data-consent-settings]');
 	const preferences = root.querySelector<HTMLElement>('[data-consent-preferences]');
-	const initialActions = root.querySelector<HTMLElement>('[data-consent-initial-actions]');
-	const preferenceActions = root.querySelector<HTMLElement>('[data-consent-preference-actions]');
+	const edit = root.querySelector<HTMLButtonElement>('[data-consent-edit]');
+	const primary = root.querySelector<HTMLButtonElement>('[data-consent-primary]');
+	const label = root.querySelector<HTMLElement>('[data-consent-label]');
 	const analytics = root.querySelector<HTMLInputElement>('[data-consent-analytics]');
 	const key = root.dataset.key;
 	const host = root.dataset.host;
@@ -17,6 +18,7 @@ if (root) {
 	let loaded = false;
 	let panelAnimation: Animation | undefined;
 	let loader: HTMLScriptElement | undefined;
+	let editing = false;
 	const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 	try {
@@ -100,22 +102,38 @@ if (root) {
 		panelAnimation?.cancel();
 		panel.inert = false;
 		const oldHeight = panel.getBoundingClientRect().height;
+		const oldWidth = primary?.getBoundingClientRect().width ?? 0;
+		const animateChange = !reducedMotion.matches && !wasHidden && !editing;
+		const oldLabel = animateChange && label ? label.cloneNode(true) as HTMLElement : null;
+		if (oldLabel && primary) {
+			oldLabel.removeAttribute('data-consent-label');
+			oldLabel.setAttribute('aria-hidden', 'true');
+			oldLabel.className = 'consent__old-label';
+			primary.append(oldLabel);
+		}
+		editing = true;
 		if (analytics) analytics.checked = choice === 'accepted';
 		panel.hidden = false;
+		panel.dataset.view = 'preferences';
 		if (preferences) preferences.hidden = false;
-		if (initialActions) initialActions.hidden = true;
-		if (preferenceActions) preferenceActions.hidden = false;
-		if (!reducedMotion.matches && !wasHidden) {
+		if (edit) edit.hidden = true;
+		if (label) label.textContent = 'Save preferences';
+		if (animateChange) {
 			const newHeight = panel.getBoundingClientRect().height;
 			panelAnimation = panel.animate([{ height: `${oldHeight}px`, overflow: 'hidden' }, { height: `${newHeight}px`, overflow: 'hidden' }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
 			preferences?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
+			if (primary && label && oldLabel) {
+				const newWidth = primary.getBoundingClientRect().width;
+				primary.animate([{ width: `${oldWidth}px` }, { width: `${newWidth}px` }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+				label.animate([{ opacity: 0, transform: 'translateY(3px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 180, easing: 'ease-out' });
+				oldLabel.animate([{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-3px)' }], { duration: 150, easing: 'ease-out' }).finished.finally(() => oldLabel.remove());
+			}
 		}
 		analytics?.focus({ preventScroll: true });
 	};
 	settings.forEach((button) => button.addEventListener('click', openPreferences));
-	root.querySelector('[data-consent-edit]')?.addEventListener('click', openPreferences);
-	root.querySelector('[data-consent-save]')?.addEventListener('click', () => choose(analytics?.checked ? 'accepted' : 'rejected'));
-	root.querySelector('[data-consent-accept]')?.addEventListener('click', () => choose('accepted'));
+	edit?.addEventListener('click', openPreferences);
+	primary?.addEventListener('click', () => choose(editing ? (analytics?.checked ? 'accepted' : 'rejected') : 'accepted'));
 }
 
 
