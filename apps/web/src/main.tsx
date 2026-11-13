@@ -9,6 +9,7 @@ import { authHistoryTransitionTypes } from "@/components/auth/auth-view-transiti
 import { initializeSentry } from "@/lib/sentry";
 import { routeTree } from "./routeTree.gen";
 import { synchronizeGridCaches } from "@/api/collection/grid-cache";
+import { AUTH_MOCK_ENABLED, installAuthMock } from "@/dev/auth-mock";
 
 import "./index.css";
 
@@ -63,6 +64,9 @@ declare module "@tanstack/react-router" {
 }
 
 initializeSentry(router);
+
+// Dev only: answer the auth API from an in-browser mock (see src/dev/auth-mock).
+if (AUTH_MOCK_ENABLED) installAuthMock(router);
 
 createRoot(document.getElementById("root")!, {
   onCaughtError: Sentry.reactErrorHandler(),

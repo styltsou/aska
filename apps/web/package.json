@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:client": "VITE_SERVER_URL=https://api.mnemee.space vite",
+    "dev:auth-mock": "VITE_AUTH_MOCK=true vite --port 5176 --strictPort",
     "build": "tsc -b && vite build",
     "lint": "oxlint . --max-warnings 151",
     "lint:fix": "oxlint . --fix",

@@ -5,10 +5,14 @@ import {
   organizationClient,
 } from "better-auth/client/plugins";
 
+import { AUTH_MOCK_ENABLED, mockFetch } from "@/dev/auth-mock";
+
 const DEFAULT_SERVER_URL = "http://localhost:3000";
 
 export const authClient = createAuthClient({
   baseURL: import.meta.env.VITE_SERVER_URL ?? DEFAULT_SERVER_URL,
+  // Dev only: `bun run dev:auth-mock` answers auth calls in the browser.
+  fetchOptions: AUTH_MOCK_ENABLED ? { customFetchImpl: mockFetch } : undefined,
   plugins: [
     organizationClient(),
     emailOTPClient(),

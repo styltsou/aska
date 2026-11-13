@@ -54,6 +54,7 @@ function ForgotPasswordPage() {
 
   return (
     <AuthPageLayout
+      canvasStop="write"
       anchorContent
       back={
         <Link

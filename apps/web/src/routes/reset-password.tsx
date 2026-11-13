@@ -147,6 +147,7 @@ function ResetPasswordPage() {
 
   return (
     <AuthPageLayout
+      canvasStop="write"
       anchorContent
       back={
         step === "code" ? (

@@ -1,16 +1,40 @@
 import type { ReactNode } from "react";
 import { BrandLogo } from "@/components/brand-logo";
-import { AUTH_TILTED_PLANE } from "./auth-tilted-plane";
 import { AuthSlot, authSlotStyle } from "./auth-slot";
 import { AuthCanvasPreview } from "./canvas/auth-canvas-preview";
+import type { AuthCanvasStop } from "./canvas/auth-canvas-scene";
 
-const DEFAULT_CAPTION = (
-  <>
-    Collect ideas and inspiration.
-    <br />
-    Keep it all on one canvas.
-  </>
-);
+/** One line of copy per camera stop, naming what the board is showing. */
+const STOP_CAPTIONS: Record<AuthCanvasStop, ReactNode> = {
+  overview: (
+    <>
+      Collect ideas and inspiration.
+      <br />
+      Keep it all on one canvas.
+    </>
+  ),
+  capture: (
+    <>
+      Paste a link or drop an image.
+      <br />
+      It lands right where you point.
+    </>
+  ),
+  organize: (
+    <>
+      Drag cards into folders
+      <br />
+      to keep each project together.
+    </>
+  ),
+  write: (
+    <>
+      Keep notes next to references.
+      <br />
+      Tick things off as you go.
+    </>
+  ),
+};
 
 export function AuthPageLayout({
   children,
@@ -18,7 +42,10 @@ export function AuthPageLayout({
   footer,
   anchorContent = false,
   back,
+  canvasStop = "overview",
 }: {
+  /** Which part of the canvas the preview camera frames for this view. */
+  canvasStop?: AuthCanvasStop;
   children: ReactNode;
   caption?: ReactNode;
   footer?: ReactNode;
@@ -33,18 +60,23 @@ export function AuthPageLayout({
         aria-label="A preview of an Mnemee canvas"
         style={authSlotStyle("panel", "static")}
       >
-        <div
-          aria-hidden="true"
-          className={`${AUTH_TILTED_PLANE} pointer-events-none absolute inset-[-18%] z-0 bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_17%,transparent)_1px,transparent_1px)] bg-[size:24px_24px]`}
-        />
-        <AuthCanvasPreview />
+        <AuthCanvasPreview stop={canvasStop} />
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 z-[2] shadow-[inset_0_0_7rem_color-mix(in_oklch,var(--background)_54%,transparent)]"
         />
-        <p className="absolute bottom-[clamp(1.5rem,4vw,3rem)] left-[clamp(1.5rem,4vw,3rem)] z-[3] max-w-[19rem] text-[clamp(1.125rem,1.5vw,1.375rem)] leading-[1.35] font-[550] tracking-[-0.025em] text-[color-mix(in_oklch,var(--foreground)_78%,transparent)]">
-          {caption ?? DEFAULT_CAPTION}
-        </p>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-44 bg-linear-to-t from-[color-mix(in_oklch,var(--background)_88%,transparent)] via-[color-mix(in_oklch,var(--background)_45%,transparent)] to-transparent"
+        />
+        <AuthSlot
+          name="caption"
+          kind="text"
+          as="p"
+          className="absolute bottom-[clamp(1.5rem,4vw,3rem)] left-[clamp(1.5rem,4vw,3rem)] z-[3] max-w-[19rem] text-[clamp(1.125rem,1.5vw,1.375rem)] leading-[1.35] font-[550] tracking-[-0.025em] text-[color-mix(in_oklch,var(--foreground)_78%,transparent)]"
+        >
+          {caption ?? STOP_CAPTIONS[canvasStop]}
+        </AuthSlot>
       </section>
       <section
         className={

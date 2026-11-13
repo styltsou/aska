@@ -85,6 +85,7 @@ function SignupPage() {
 
   return (
     <AuthPageLayout
+      canvasStop="capture"
       footer={<TermsNotice />}
       anchorContent
       back={
