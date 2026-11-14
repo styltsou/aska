@@ -88,6 +88,9 @@ const clock = { position: 0, started: false };
 // The camera's last pose, so it glides on from where the previous view left it.
 let lastCamera: { x: number; y: number; scale: number } | undefined;
 
+/** How far the whole board sits from the camera poses it was framed with. */
+const BOARD_ZOOM = 0.85;
+
 // The folder being looked inside right now, if any. A view that mounts while
 // one is open starts with it open and closes it as the camera pulls back.
 let insideFolder: FolderKey | null = null;
@@ -728,7 +731,9 @@ export function AuthCanvasPreview({ caption }: { caption?: ReactNode }) {
   // The panel's size relative to the one the camera poses were framed for.
   // Plain state on its own wrapper, so a resize can never disturb the camera.
   const [size, setSize] = useState({ w: 800, h: 700 });
-  const fit = Math.min(1.5, Math.max(0.55, size.w / 800));
+  // BOARD_ZOOM pulls every pose back a little, folders included, so more of
+  // the board is in view and the cards read at a calmer size.
+  const fit = Math.min(1.5, Math.max(0.55, size.w / 800)) * BOARD_ZOOM;
   const transform = useTransform(
     [cameraX, cameraY, cameraScale],
     ([x, y, zoom]: number[]) =>
