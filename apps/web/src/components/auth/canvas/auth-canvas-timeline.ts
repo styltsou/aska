@@ -10,7 +10,7 @@ import {
 /**
  * One long, looping sequence of things a person does on a board. It is not
  * tied to any auth view: every view shows the same timeline, and switching
- * views fast-forwards to the next checkpoint (the start of the next chapter).
+ * views simply carries on from the same step.
  *
  * The whole scene is a pure function of the step index (see FRAMES), so
  * jumping to any step is always consistent. Everything a step adds stays put
@@ -630,11 +630,3 @@ function build(): Frame[] {
 
 /** The complete scene at every step of the loop. */
 export const FRAMES: Frame[] = build();
-
-/** The first checkpoint after `index`, wrapping to the start of the loop. */
-export function nextCheckpoint(index: number): number {
-  for (let i = index + 1; i < FRAMES.length; i += 1) {
-    if (FRAMES[i].checkpoint) return i;
-  }
-  return 0;
-}

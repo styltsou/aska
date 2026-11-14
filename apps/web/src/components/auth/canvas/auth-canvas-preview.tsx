@@ -70,7 +70,6 @@ import {
   SEARCH_COLOR,
   SEARCH_MATCHES,
   TEXT_AT,
-  nextCheckpoint,
   type AgentPhase,
   type CanvasTool,
   type CursorState,
@@ -80,20 +79,16 @@ import {
 
 /**
  * Where the shared timeline is. Module state, so it survives the panel
- * remounting on each route: a new view fast-forwards to the next checkpoint
- * instead of starting over.
+ * remounting on each route: a new view carries on from where the last one
+ * was instead of starting over.
  */
-const clock = { position: 0, started: false };
+const clock = { position: 0 };
 
 // The camera's last pose, so it glides on from where the previous view left it.
 let lastCamera: { x: number; y: number; scale: number } | undefined;
 
 /** How far the whole board sits from the camera poses it was framed with. */
 const BOARD_ZOOM = 0.85;
-
-// The folder being looked inside right now, if any. A view that mounts while
-// one is open starts with it open and closes it as the camera pulls back.
-let insideFolder: FolderKey | null = null;
 
 const CAMERA_EASE = [0.65, 0, 0.35, 1] as const;
 const MOVE_EASE = [0.45, 0, 0.2, 1] as const;
@@ -440,7 +435,9 @@ function Breadcrumb({
     <div className="absolute top-4 left-4 z-[3] flex items-center rounded-lg border border-border bg-sidebar/85 px-1.5 py-1 text-xs font-medium text-sidebar-foreground backdrop-blur-sm">
       <span
         className={`px-1.5 py-0.5 transition-colors duration-150 ${
-          hot ? "text-sidebar-foreground" : "text-sidebar-foreground/60"
+          hot || !inside
+            ? "text-sidebar-foreground"
+            : "text-sidebar-foreground/60"
         }`}
       >
         Studio refresh
@@ -668,8 +665,6 @@ export function AuthCanvasPreview({ caption }: { caption?: ReactNode }) {
   const [armed, setArmed] = useState(false);
   const [typing, setTyping] = useState(false);
   const [wide, setWide] = useState(true);
-  const [leaving, setLeaving] = useState<FolderKey | null>(insideFolder);
-  const [leavingOpen, setLeavingOpen] = useState(true);
   const filterRef = useRef<HTMLDivElement>(null);
   // Where the controls in the panel's chrome are, measured once laid out.
   const [chromeTargets, setChromeTargets] = useState<
@@ -713,15 +708,12 @@ export function AuthCanvasPreview({ caption }: { caption?: ReactNode }) {
           ).primary;
     },
   );
-  // A view that mounts after another fast-forwards to the next checkpoint.
-  const [phase, setPhase] = useState(() =>
-    clock.started ? nextCheckpoint(clock.position) : 0,
-  );
+  // A view that mounts after another carries on from the same step.
+  const [phase, setPhase] = useState(() => clock.position);
   const frame = FRAMES[phase];
 
   useEffect(() => {
     clock.position = phase;
-    clock.started = true;
   }, [phase]);
 
   const initial = lastCamera ?? frame.cam;
@@ -840,22 +832,6 @@ export function AuthCanvasPreview({ caption }: { caption?: ReactNode }) {
     );
     return () => clearTimeout(timer);
   }, [active, frame]);
-
-  // Close a folder inherited from the previous view as the camera pulls back.
-  useEffect(() => {
-    if (!leaving) return;
-    const raf = requestAnimationFrame(() => setLeavingOpen(false));
-    const timer = setTimeout(() => setLeaving(null), 500);
-    return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(timer);
-    };
-  }, [leaving]);
-
-  // Let the next view know whether a folder is open right now.
-  useEffect(() => {
-    insideFolder = frame.inside;
-  }, [frame.inside]);
 
   // Hovering shows what a visitor's pointer would: a colour offers "Copy hex",
   // a folder fans out its stack. That state is internal to the cards, so
@@ -1025,9 +1001,8 @@ export function AuthCanvasPreview({ caption }: { caption?: ReactNode }) {
   const dimmed = searched ? DIM_CLASS : "";
   const focused = (index: number) => (frame.focus === index ? FOCUS_CLASS : "");
 
-  const crumbFolder = leaving && !frame.inside ? leaving : frame.mounted;
-  const crumbInside =
-    frame.inside !== null || (leaving !== null && leavingOpen);
+  const crumbFolder = frame.mounted;
+  const crumbInside = frame.inside !== null;
   const lines = CHAPTER_CAPTIONS[frame.chapter];
 
   return (
@@ -1229,18 +1204,6 @@ export function AuthCanvasPreview({ caption }: { caption?: ReactNode }) {
           </motion.div>
         </div>
 
-        {leaving ? (
-          <FolderBoard
-            key={`leaving-${leaving}`}
-            folder={leaving}
-            hasLamp={leaving === "lighting"}
-            open={leavingOpen}
-            fit={fit}
-            pasted
-            moved
-            lift={false}
-          />
-        ) : null}
         <FolderBoard
           key={frame.mounted}
           folder={frame.mounted}
