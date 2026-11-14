@@ -38,7 +38,7 @@ import { GLASS_FRAME_CLASS } from "@/lib/glass";
 import { cn } from "@/lib/utils";
 import { useSessionStore } from "@/store";
 
-import { AUTH_TILTED_PLANE } from "../auth-tilted-plane";
+import { AUTH_BOARD_PLANE } from "../auth-tilted-plane";
 import {
   COLORS,
   FOLDER_NAMES,
@@ -360,7 +360,7 @@ function FolderBoard({
       animate={{ opacity: open ? 1 : 0 }}
       transition={{ duration: open ? 0.25 : 0.2, ease: "easeOut" }}
     >
-      <div className={`${AUTH_TILTED_PLANE} absolute inset-0`}>
+      <div className={`${AUTH_BOARD_PLANE} absolute inset-0`}>
         <div className="absolute -inset-[60%] bg-[color-mix(in_oklch,var(--muted)_58%,var(--background))]" />
         <div className="absolute -inset-[60%] bg-[radial-gradient(color-mix(in_oklch,var(--foreground)_17%,transparent)_1px,transparent_1px)] bg-[size:24px_24px]" />
         <div
@@ -470,8 +470,8 @@ function KeyHint({ show }: { show: boolean }) {
     <motion.div
       className="absolute top-4 right-4 z-[4] flex items-center gap-1.5 text-sidebar-foreground"
       initial={false}
-      animate={{ opacity: show ? 0.8 : 0, y: show ? 0 : -4 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
+      animate={{ opacity: show ? 0.8 : 0 }}
+      transition={{ duration: 0.1, ease: "easeOut" }}
     >
       <Kbd className={KEY_HINT_CLASS}>⇧</Kbd>
       <Kbd className={KEY_HINT_CLASS}>V</Kbd>
@@ -500,18 +500,18 @@ function NoteSheet({
   const drafting = agent === "streaming" || agent === "review";
   return (
     // A centred modal on the board.s own tilted plane, over a dimmed backdrop.
-    <div className={`${AUTH_TILTED_PLANE} absolute inset-0 z-[5]`}>
+    <div className={`${AUTH_BOARD_PLANE} absolute inset-0 z-[5]`}>
       <motion.div
         className="absolute -inset-[60%] bg-black/35"
         initial={false}
         animate={{ opacity: open ? 1 : 0 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
       />
-      <div className="absolute top-[46%] left-1/2 w-[min(90%,37rem)] -translate-x-1/2 -translate-y-1/2">
+      <div className="absolute top-[48%] left-1/2 w-[min(94%,44rem)] -translate-x-1/2 -translate-y-1/2">
         <motion.div
           className={cn(
             GLASS_FRAME_CLASS,
-            "flex min-h-[27rem] flex-col overflow-hidden rounded-lg text-foreground shadow-2xl",
+            "flex min-h-[min(34rem,78vh)] flex-col overflow-hidden rounded-lg text-foreground shadow-2xl",
           )}
           initial={false}
           animate={{
@@ -521,11 +521,11 @@ function NoteSheet({
           }}
           transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="flex items-center gap-0.5 p-2 text-muted-foreground">
-            <span className="flex size-8 items-center justify-center rounded-lg">
+          <div className="flex items-center gap-0.5 px-2 py-1 text-muted-foreground">
+            <span className="flex size-7 items-center justify-center rounded-lg">
               <XIcon className="size-4" />
             </span>
-            <span className="flex size-8 items-center justify-center rounded-lg">
+            <span className="flex size-7 items-center justify-center rounded-lg">
               <PanelRightIcon className="size-4" />
             </span>
           </div>
@@ -1033,7 +1033,7 @@ export function AuthCanvasPreview({ caption }: { caption?: ReactNode }) {
         className="pointer-events-none absolute inset-0 z-[1]"
         inert
       >
-        <div className={`${AUTH_TILTED_PLANE} absolute inset-0`}>
+        <div className={`${AUTH_BOARD_PLANE} absolute inset-0`}>
           {/* Fades out for the cut where the loop starts over. */}
           <motion.div
             className="absolute top-[44%] left-[50%] size-0"
