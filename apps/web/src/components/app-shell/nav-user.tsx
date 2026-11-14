@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -40,6 +41,7 @@ import {
 import { authClient, signOut, type AuthUser } from "@/lib/auth-client";
 import { clearAuthStateCache } from "@/lib/auth-flow";
 import { clearMediaSession } from "@/lib/media-session";
+import { formatPlatformShortcut } from "@/lib/platform";
 import { openSettings } from "@/lib/settings-dialog";
 import { restartOnboardingTour } from "@/lib/onboarding-tour";
 import { useRouter } from "@tanstack/react-router";
@@ -106,6 +108,9 @@ export function NavUser({
                 >
                   <SettingsIcon />
                   Settings
+                  <DropdownMenuShortcut>
+                    {formatPlatformShortcut("⌘+,")}
+                  </DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled>
                   <LifeBuoyIcon />

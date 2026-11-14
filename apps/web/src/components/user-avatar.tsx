@@ -1,6 +1,12 @@
 import type { ComponentProps } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { resolveAvatar, type AvatarUser } from "@/lib/avatar";
+import {
+  AVATAR_GRADIENT_CLASS,
+  avatarGradientStyle,
+  resolveAvatar,
+  type AvatarUser,
+} from "@/lib/avatar";
+import { useOptimisticAvatar } from "@/lib/optimistic-avatar";
 
 /** The user's avatar: their choice, else the Google picture, else a gradient. */
 export function UserAvatar({
@@ -12,31 +18,25 @@ export function UserAvatar({
   user: AvatarUser;
   name: string;
 } & Omit<ComponentProps<typeof Avatar>, "children">) {
-  const avatar = resolveAvatar(user);
-  const initial = name.trim().charAt(0).toUpperCase();
-
-  if (avatar.kind === "gradient") {
-    return (
-      <Avatar className={className} {...props}>
-        <AvatarFallback
-          className="text-white"
-          style={{ background: avatar.gradient.background }}
-        >
-          {initial}
-        </AvatarFallback>
-      </Avatar>
-    );
-  }
+  const choice = useOptimisticAvatar();
+  const avatar = resolveAvatar(
+    choice.userId === user.id && choice.avatar !== null
+      ? { ...user, avatar: choice.avatar }
+      : user,
+  );
+  const gradient =
+    avatar.kind === "gradient" ? avatar.gradient : avatar.fallback;
 
   return (
     <Avatar className={className} {...props}>
-      <AvatarImage src={avatar.src} alt={name} referrerPolicy="no-referrer" />
+      {avatar.kind === "image" ? (
+        <AvatarImage src={avatar.src} alt={name} referrerPolicy="no-referrer" />
+      ) : null}
       <AvatarFallback
-        className="text-white"
-        style={{ background: avatar.fallback.background }}
-      >
-        {initial}
-      </AvatarFallback>
+        aria-hidden="true"
+        className={AVATAR_GRADIENT_CLASS}
+        style={avatarGradientStyle(gradient)}
+      />
     </Avatar>
   );
 }

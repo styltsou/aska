@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 /**
  * Avatar sources, in the order they win:
  *   1. the user's explicit choice (`user.avatar`): `gradient:<id>` today,
@@ -17,7 +19,16 @@ export type AvatarGradient = {
 };
 
 const radial = (at: string, from: string, to: string, base: string) =>
-  `radial-gradient(circle at ${at}, ${from} 0%, ${to} 55%, ${base} 100%)`;
+  `radial-gradient(circle at ${at} in srgb, ${from} 0%, ${to} 70%, ${base} 100%)`;
+
+export const AVATAR_GRADIENT_CLASS =
+  "bg-[image:var(--avatar-gradient)] bg-cover bg-no-repeat";
+
+export function avatarGradientStyle(gradient: AvatarGradient): CSSProperties {
+  return {
+    "--avatar-gradient": gradient.background,
+  } as CSSProperties;
+}
 
 // Ids are stored on the user, so never rename or reuse one.
 export const AVATAR_GRADIENTS: readonly AvatarGradient[] = [
@@ -81,9 +92,21 @@ export const AVATAR_GRADIENTS: readonly AvatarGradient[] = [
     label: "Slate",
     background: radial("30% 30%", "#e2e8f0", "#64748b", "#0f172a"),
   },
+  {
+    id: "amber",
+    label: "Amber",
+    background: radial("30% 25%", "#fff3b0", "#f59e0b", "#92400e"),
+  },
+  {
+    id: "terracotta",
+    label: "Terracotta",
+    background: radial("35% 25%", "#ffddc4", "#dc7854", "#7c2d24"),
+  },
 ];
 
 const GRADIENT_PREFIX = "gradient:";
+// Keep automatically assigned avatars stable when adding selectable colors.
+const DEFAULT_AVATAR_GRADIENT_COUNT = 12;
 
 export function gradientAvatarValue(id: string) {
   return `${GRADIENT_PREFIX}${id}`;
@@ -96,7 +119,7 @@ function findGradient(id: string) {
 function hashToGradient(seed: string) {
   let hash = 0;
   for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length]!;
+  return AVATAR_GRADIENTS[hash % DEFAULT_AVATAR_GRADIENT_COUNT]!;
 }
 
 export type AvatarUser = {

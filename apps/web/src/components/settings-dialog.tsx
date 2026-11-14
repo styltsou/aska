@@ -277,7 +277,7 @@ function AppearanceSection() {
           <span className="shrink-0 text-sm font-medium">Mode</span>
           <div
             aria-label="Mode"
-            className="flex items-center gap-2"
+            className="flex flex-wrap items-center justify-end gap-2"
             role="radiogroup"
           >
             {THEMES.map(({ value, label }, index) => (
@@ -427,7 +427,7 @@ export function SettingsDialog() {
       }}
     >
       <DialogContent
-        className="md:max-w-[700px] lg:max-w-[800px]"
+        className="top-0 left-0 h-dvh max-w-none translate-x-0 rounded-none bg-background md:top-1/2 md:left-1/2 md:h-[min(680px,85dvh)] md:max-w-[min(900px,calc(100vw-3rem))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-lg md:bg-popover/80"
         initialFocus={titleRef}
         finalFocus={() => {
           // Only return focus to a real, still-mounted opener (e.g. the user
@@ -446,11 +446,11 @@ export function SettingsDialog() {
         showCloseButton={false}
       >
         <DialogDescription className="sr-only">
-          Change the appearance of your workspace.
+          Manage your workspace appearance and account settings.
         </DialogDescription>
-        <div className="flex max-h-[min(560px,80dvh)] flex-col overflow-hidden rounded-lg bg-background/50 text-foreground md:min-h-96 md:flex-row">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background/50 text-foreground md:flex-row md:rounded-lg">
           <aside className="w-full shrink-0 md:w-48">
-            <div className="flex h-full flex-col p-3 md:p-4">
+            <div className="flex h-full flex-col px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 md:p-4">
               <DialogTitle
                 ref={titleRef}
                 tabIndex={-1}
@@ -463,7 +463,7 @@ export function SettingsDialog() {
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    className="absolute top-[1.125rem] right-[1.125rem] z-20"
+                    className="absolute top-[max(1.125rem,env(safe-area-inset-top))] right-[max(1.125rem,env(safe-area-inset-right))] z-20 md:top-[1.125rem] md:right-[1.125rem]"
                   />
                 }
               >
@@ -520,8 +520,8 @@ export function SettingsDialog() {
             id="settings-panel"
             aria-labelledby={`settings-tab-${section}`}
             role="tabpanel"
-            tabIndex={section === "appearance" ? -1 : 0}
-            className="min-w-0 flex-1 overflow-y-auto rounded-t-lg border-t border-foreground/10 bg-background px-4 py-5 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-ring md:rounded-l-xl md:rounded-tr-none md:border-t-0 md:border-l md:px-7"
+            tabIndex={-1}
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain rounded-t-lg border-t border-foreground/10 bg-background px-4 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-ring md:rounded-l-xl md:rounded-tr-none md:border-t-0 md:border-l md:px-7 md:py-5"
           >
             {section === "appearance" ? (
               <AppearanceSection />
