@@ -122,7 +122,7 @@ export function OnboardingTour({
       <section
         aria-label="Getting started"
         className={cn(
-          "fixed right-4 z-40 w-[min(21rem,calc(100vw-2rem))] rounded-xl border border-border bg-card p-4 shadow-xl motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2",
+          "fixed right-4 left-4 z-[60] rounded-xl border border-foreground/25 bg-card p-4 shadow-2xl ring-1 ring-foreground/10 md:right-auto md:left-[calc(var(--sidebar-width)+1.5rem)] md:w-[21rem] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2",
           tour.step === "collection" ? "bottom-4" : "bottom-20 md:bottom-4",
         )}
       >
