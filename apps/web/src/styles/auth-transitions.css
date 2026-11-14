@@ -107,7 +107,7 @@ html:active-view-transition-type(
 html:active-view-transition-type(
   auth-switch
 )::view-transition-new(*.auth-static):only-child {
-  animation: auth-fade-in 160ms ease-out 40ms both;
+  animation: auth-fade-in 120ms ease-out 20ms both;
 }
 
 /* Fields and copy that exist on both sides glide to their new position. */
@@ -117,7 +117,7 @@ html:active-view-transition-type(
 html:active-view-transition-type(
   auth-switch
 )::view-transition-group(*.auth-text) {
-  animation-duration: 220ms;
+  animation-duration: 160ms;
   animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
@@ -128,7 +128,7 @@ html:active-view-transition-type(
 html:active-view-transition-type(
   auth-switch
 )::view-transition-new(*.auth-field) {
-  animation-duration: 160ms;
+  animation-duration: 120ms;
   animation-timing-function: ease-out;
 }
 
@@ -136,13 +136,13 @@ html:active-view-transition-type(
 html:active-view-transition-type(
   auth-switch
 )::view-transition-old(*.auth-text) {
-  animation: auth-text-out 90ms ease-out both;
+  animation: auth-text-out 70ms ease-out both;
 }
 
 html:active-view-transition-type(
   auth-switch
 )::view-transition-new(*.auth-text) {
-  animation: auth-text-in 160ms ease-out 40ms both;
+  animation: auth-text-in 120ms ease-out 20ms both;
 }
 
 html:active-view-transition-type(
@@ -173,7 +173,7 @@ html:active-view-transition-type(
 html:active-view-transition-type(
   auth-switch
 )::view-transition-old(*.auth-text):only-child {
-  animation: auth-out 90ms ease-out both;
+  animation: auth-out 70ms ease-out both;
 }
 
 html:active-view-transition-type(
@@ -182,7 +182,7 @@ html:active-view-transition-type(
 html:active-view-transition-type(
   auth-switch
 )::view-transition-new(*.auth-text):only-child {
-  animation: auth-in 180ms ease-out 40ms both;
+  animation: auth-in 130ms ease-out 20ms both;
 }
 
 /* Stagger the fields that follow the first one. */
@@ -192,13 +192,13 @@ html:active-view-transition-type(
 html:active-view-transition-type(
   auth-switch
 )::view-transition-new(auth-otp):only-child {
-  animation-delay: 40ms;
+  animation-delay: 25ms;
 }
 
 html:active-view-transition-type(
   auth-switch
 )::view-transition-new(auth-confirm):only-child {
-  animation-delay: 70ms;
+  animation-delay: 45ms;
 }
 
 /* Reduced motion keeps the opacity change and drops movement and blur. */

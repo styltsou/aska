@@ -109,7 +109,6 @@ function VerifyEmailPage() {
 
   return (
     <AuthPageLayout
-      canvasStop="organize"
       anchorContent
       back={
         <Link

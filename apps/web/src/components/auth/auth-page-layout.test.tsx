@@ -16,9 +16,9 @@ function render() {
 }
 
 describe("AuthPageLayout canvas preview", () => {
-  it("tilts the board and the inside of a folder on the same plane", () => {
-    // One for the board (dots and cards together), one for the folder view.
-    expect(render().split(AUTH_TILTED_PLANE)).toHaveLength(3);
+  it("tilts the board, a folder and an open note on the same plane", () => {
+    // The board (dots and cards together), the folder view and the open note.
+    expect(render().split(AUTH_TILTED_PLANE)).toHaveLength(4);
   });
 
   it("renders a board a person could actually keep", () => {

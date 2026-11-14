@@ -5,6 +5,7 @@ import type {
   ImageAsset,
   LinkAsset,
   NoteAsset,
+  VideoAsset,
 } from "@/types/asset";
 
 /**
@@ -166,28 +167,63 @@ const LIGHTING_PREVIEWS: FolderAssetPreview[] = [
   preview("auth-lighting-3", IMAGES.room),
 ];
 
-export function lightingFolder(withLamp: boolean): FolderAsset {
+export function lightingFolder(
+  withLamp: boolean,
+  withLink = false,
+): FolderAsset {
+  // Newest first, as the real stack shows them.
+  const added: FolderAssetPreview[] = [];
+  if (withLink) {
+    added.push({
+      assetId: "auth-lighting-link",
+      type: "link",
+      url: LINK.previewImage?.url,
+      title: LINK.title,
+      hostname: LINK.hostname,
+      siteName: LINK.siteName,
+    });
+  }
+  if (withLamp) added.push(LAMP_PREVIEW);
   return {
     id: "auth-lighting-folder",
     type: "folder",
     name: "Lighting",
-    count: withLamp ? 5 : 4,
-    previews: withLamp
-      ? [LAMP_PREVIEW, ...LIGHTING_PREVIEWS]
-      : LIGHTING_PREVIEWS,
+    count: 4 + added.length,
+    previews: [...added, ...LIGHTING_PREVIEWS],
   };
 }
 
-export const FURNITURE_FOLDER: FolderAsset = {
-  id: "auth-furniture-folder",
-  type: "folder",
-  name: "Furniture",
-  count: 4,
-  previews: [
-    preview("auth-furniture-1", IMAGES.redChair),
-    preview("auth-furniture-2", IMAGES.chair),
-    preview("auth-furniture-3", IMAGES.studio),
-  ],
+const FURNITURE_PREVIEWS: FolderAssetPreview[] = [
+  preview("auth-furniture-1", IMAGES.redChair),
+  preview("auth-furniture-2", IMAGES.chair),
+  preview("auth-furniture-3", IMAGES.studio),
+];
+
+export function furnitureFolder(withRoom: boolean): FolderAsset {
+  return {
+    id: "auth-furniture-folder",
+    type: "folder",
+    name: "Furniture",
+    count: withRoom ? 5 : 4,
+    previews: withRoom
+      ? [preview("auth-furniture-room", IMAGES.room), ...FURNITURE_PREVIEWS]
+      : FURNITURE_PREVIEWS,
+  };
+}
+
+/** A short clip on the board. Only its poster is ever shown here. */
+export const VIDEO: VideoAsset = {
+  id: "auth-video",
+  type: "video",
+  // Never requested: the card shows the poster unless it is hovered.
+  url: "/auth-preview-clip.mp4",
+  posterUrl: photo("photo-1517842645767-c639042777db"),
+  contentType: "video/mp4",
+  width: 1280,
+  height: 720,
+  durationSeconds: 42,
+  title: "Desk setup walkthrough",
+  processingStatus: "completed",
 };
 
 /** Every card shares one width, as on a real board; heights follow content. */
@@ -209,14 +245,21 @@ export const LAYOUT = {
   wallNote: { x: 856, y: 586, w: W },
 } as const;
 
+interface Box {
+  x: number;
+  y: number;
+  w: number;
+}
+
 /**
  * Cards that are not on the board yet. Pasting brings them in one round at a
  * time and they stay: nothing on the canvas is ever taken away to be shown
  * again. They sit just past the right edge, so the board simply grows.
  */
 export type PoolItem =
-  | { key: string; kind: "image"; asset: ImageAsset; box: typeof LAYOUT.lamp }
-  | { key: string; kind: "link"; asset: LinkAsset; box: typeof LAYOUT.lamp };
+  | { key: string; kind: "image"; asset: ImageAsset; box: Box }
+  | { key: string; kind: "video"; asset: VideoAsset; box: Box }
+  | { key: string; kind: "link"; asset: LinkAsset; box: Box };
 
 export const POOL: PoolItem[] = [
   {
@@ -232,15 +275,12 @@ export const POOL: PoolItem[] = [
     box: { x: 1128, y: 381, w: W },
   },
   {
-    key: "pool-notebook",
-    kind: "image",
-    asset: IMAGES.notebook,
+    key: "pool-video",
+    kind: "video",
+    asset: VIDEO,
     box: { x: 1128, y: 672, w: W },
   },
 ];
-
-/** Which pool items each paste round brings in. */
-export const PASTE_ROUNDS: number[][] = [[0, 1], [2]];
 
 export interface InnerCard {
   key: string;
@@ -250,25 +290,51 @@ export interface InnerCard {
   asset: ImageAsset | NoteAsset;
 }
 
-/** What is inside each folder. The lamp joins Lighting once it is filed. */
-export function innerBoard(folder: FolderKey, hasLamp: boolean): InnerCard[] {
+/** Where the note sits inside either folder (its top-left corner). */
+export const INNER_NOTE_AT = { x: -90, y: -60 };
+
+/**
+ * What is inside each folder, placed loosely the way a hand-arranged board
+ * is. The lamp joins Lighting once it is filed, and `noteExtra` is what the
+ * agent added to the Lighting note.
+ */
+export function innerBoard(
+  folder: FolderKey,
+  hasLamp: boolean,
+  noteExtra = "",
+): InnerCard[] {
   if (folder === "lighting") {
     return [
-      { key: "in-wall-lamp", x: -392, y: -300, asset: IMAGES.wallLamp },
-      { key: "in-studio", x: -392, y: 41, asset: IMAGES.studio },
-      { key: "in-room", x: -120, y: -300, asset: IMAGES.room },
-      { key: "in-sconce", x: -120, y: -92, asset: SCONCE_NOTE },
+      { key: "in-wall-lamp", x: -428, y: -318, asset: IMAGES.wallLamp },
+      { key: "in-studio", x: -384, y: 62, asset: IMAGES.studio },
+      { key: "in-room", x: -112, y: -340, asset: IMAGES.room },
+      {
+        key: "in-sconce",
+        x: INNER_NOTE_AT.x,
+        y: INNER_NOTE_AT.y,
+        asset: noteExtra
+          ? {
+              ...SCONCE_NOTE,
+              content: `${SCONCE_NOTE.content}\n\n${noteExtra}`,
+            }
+          : SCONCE_NOTE,
+      },
       ...(hasLamp
-        ? [{ key: "in-lamp", x: 152, y: -300, asset: IMAGES.lamp }]
+        ? [{ key: "in-lamp", x: 196, y: -296, asset: IMAGES.lamp }]
         : []),
     ];
   }
   return [
-    { key: "in-red-chair", x: -392, y: -300, asset: IMAGES.redChair },
-    { key: "in-studio-f", x: -392, y: 41, asset: IMAGES.studio },
-    { key: "in-chair", x: -120, y: -300, asset: IMAGES.chair },
-    { key: "in-desk-note", x: -120, y: -92, asset: DESK_NOTE },
-    { key: "in-notebook", x: 152, y: -300, asset: IMAGES.notebook },
+    { key: "in-red-chair", x: -428, y: -326, asset: IMAGES.redChair },
+    { key: "in-studio-f", x: -376, y: 54, asset: IMAGES.studio },
+    { key: "in-chair", x: -118, y: -308, asset: IMAGES.chair },
+    {
+      key: "in-desk-note",
+      x: INNER_NOTE_AT.x,
+      y: INNER_NOTE_AT.y,
+      asset: DESK_NOTE,
+    },
+    { key: "in-notebook", x: 204, y: -338, asset: IMAGES.notebook },
   ];
 }
 
@@ -276,3 +342,12 @@ export const FOLDER_NAMES: Record<FolderKey, string> = {
   lighting: "Lighting",
   furniture: "Furniture",
 };
+
+/** What gets pasted into each folder while the camera is inside it. */
+export const INNER_PASTE: Record<FolderKey, ImageAsset | LinkAsset> = {
+  lighting: LINK,
+  furniture: IMAGES.room,
+};
+
+/** Where that card lands, relative to the middle of the folder's board. */
+export const INNER_PASTE_BOX = { x: 186, y: 84, w: 240 };
